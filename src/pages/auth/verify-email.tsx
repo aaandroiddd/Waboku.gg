@@ -5,8 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
 import { Mail } from "lucide-react";
+import dynamic from 'next/dynamic';
 
-export default function VerifyEmail() {
+const VerifyEmailComponent = () => {
   const { user, signOut } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
@@ -82,4 +83,9 @@ export default function VerifyEmail() {
       </Card>
     </div>
   );
-}
+};
+
+// Export with dynamic import to disable SSR
+export default dynamic(() => Promise.resolve(VerifyEmailComponent), {
+  ssr: false
+});
