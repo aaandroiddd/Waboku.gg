@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
 import { useRouter } from "next/router";
+import { Logo } from "@/components/Logo";
 
 export default function SignIn() {
   const router = useRouter();
@@ -18,7 +19,10 @@ export default function SignIn() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-background">
+      <Link href="/" className="mb-8">
+        <Logo className="w-32 h-auto" />
+      </Link>
       <Card className="w-[400px]">
         <CardHeader>
           <CardTitle>Sign In</CardTitle>
