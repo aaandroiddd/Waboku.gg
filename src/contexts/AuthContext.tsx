@@ -34,17 +34,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signUp = async (email: string, password: string) => {
     try {
-      // First, check if the user already exists
-      const { data: existingUser } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('email', email)
-        .single();
-
-      if (existingUser) {
-        return { error: new Error('This email is already registered. Please try signing in instead.') };
-      }
-
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -55,19 +44,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       if (error) {
         console.error('Sign up error:', error);
+        if (error.message.includes('User already registered')) {
+          return { 
+            error: new Error('This email is already registered. Please try signing in instead.')
+          };
+        }
         return { 
           error: new Error(error.message || 'An error occurred during sign up. Please try again.')
         };
       }
 
-      if (!data.user) {
+      // Check if the user was actually created
+      if (!data.user || data.user.identities?.length === 0) {
         return { 
-          error: new Error('No user data returned. Please try again.')
+          error: new Error('This email is already registered. Please try signing in instead.')
         };
       }
 
       return { error: null };
-    } catch (error) {
+    } catch (error: any) {
       console.error('Unexpected error during sign up:', error);
       return { 
         error: new Error('An unexpected error occurred. Please try again later.')
