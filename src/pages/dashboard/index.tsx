@@ -31,6 +31,8 @@ interface Message {
   unread: boolean;
 }
 
+'use client';
+
 export default function Dashboard() {
   const { user } = useAuth();
   const router = useRouter();
