@@ -39,13 +39,51 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       console.log('Starting sign up process for:', email);
       
+      // First check if the email exists
+      const signInMethods = await fetchSignInMethodsForEmail(auth, email);
+      if (signInMethods.length > 0) {
+        // Email exists, try to sign in to check verification status
+        try {
+          const userCredential = await signInWithEmailAndPassword(auth, email, password);
+          if (!userCredential.user.emailVerified) {
+            // User exists but not verified
+            await sendEmailVerification(userCredential.user, {
+              url: window.location.origin + '/dashboard',
+              handleCodeInApp: false,
+            });
+            await firebaseSignOut(auth);
+            return { 
+              error: new Error('This email is already registered but not verified. A new verification email has been sent.'),
+              user: null,
+              isExisting: true
+            };
+          } else {
+            // User exists and is verified
+            await firebaseSignOut(auth);
+            return {
+              error: new Error('This email is already registered and verified. Please sign in instead.'),
+              user: null,
+              isExisting: true
+            };
+          }
+        } catch (signInError: any) {
+          // If sign in fails, it means the password is different
+          return {
+            error: new Error('This email is already registered. Please sign in or reset your password.'),
+            user: null,
+            isExisting: true
+          };
+        }
+      }
+      
+      // If we get here, the email doesn't exist, so create new account
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       
       // Send email verification
       if (userCredential.user) {
         try {
           await sendEmailVerification(userCredential.user, {
-            url: window.location.origin + '/dashboard', // Redirect URL after verification
+            url: window.location.origin + '/dashboard',
             handleCodeInApp: false,
           });
           console.log('Verification email sent successfully');
