@@ -1,28 +1,21 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { Logo } from "@/components/Logo";
-import { useAuth } from "@/contexts/AuthContext";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import dynamic from 'next/dynamic'
 
-export default function SignUp() {
+const SignUpComponent = () => {
   const router = useRouter();
-  const { signUp, user } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
-
-  useEffect(() => {
-    if (user) {
-      router.push("/dashboard");
-    }
-  }, [user, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -42,6 +35,7 @@ export default function SignUp() {
     setIsLoading(true);
 
     try {
+      const { signUp } = await import('@/contexts/AuthContext').then(mod => ({ signUp: mod.useAuth().signUp }));
       await signUp(email, password);
       setSuccessMessage("Registration successful! Please check your email to confirm your account.");
       // Don't redirect immediately as user needs to confirm email
@@ -134,4 +128,8 @@ export default function SignUp() {
       </Card>
     </div>
   );
-}
+};
+
+export default dynamic(() => Promise.resolve(SignUpComponent), {
+  ssr: false
+});
