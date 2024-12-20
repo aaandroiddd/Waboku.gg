@@ -113,15 +113,10 @@ export default function App({ Component, pageProps }: AppProps) {
     setMounted(true);
   }, []);
 
-  // Prevent flash while theme loads
-  if (!mounted) {
-    return null;
-  }
-
   return (
-    <ThemeProvider defaultTheme="dark" storageKey="waboku-theme">
-      <div className={`min-h-screen ${inter.variable}`}>
-        <Component {...pageProps} />
+    <ThemeProvider>
+      <div className={`${inter.variable} font-sans antialiased`}>
+        {mounted ? <Component {...pageProps} /> : null}
         <Toaster />
       </div>
     </ThemeProvider>
