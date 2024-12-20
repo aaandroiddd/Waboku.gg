@@ -39,10 +39,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Check if the Supabase client is properly initialized
       if (!supabase.auth) {
         console.error('Supabase client not properly initialized');
-        return {
-          error: new Error('Service configuration error. Please try again later.'),
-          user: null
-        };
+        throw new Error('Service configuration error');
       }
 
       // Attempt to sign up the user
@@ -51,49 +48,49 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         password,
         options: {
           emailRedirectTo: `${window.location.origin}/auth/sign-in`,
+          data: {
+            email: email,
+          }
         }
       });
       
       if (error) {
         console.error('Supabase sign up error:', error);
         
-        // Handle specific error cases
+        // Map Supabase errors to user-friendly messages
         if (error.message.includes('User already registered')) {
-          return { 
-            error: new Error('This email is already registered. Please try signing in instead.'),
-            user: null
-          };
+          throw new Error('This email is already registered. Please try signing in instead.');
         }
 
-        if (error.message.includes('Database error')) {
-          console.error('Database error details:', error);
-          return {
-            error: new Error('Unable to create account due to a system error. Please try again later.'),
-            user: null
-          };
+        if (error.message.includes('rate limit')) {
+          throw new Error('Too many attempts. Please try again later.');
         }
-        
-        return { 
-          error: new Error(error.message || 'An error occurred during sign up. Please try again.'),
-          user: null
-        };
+
+        if (error.message.includes('valid email')) {
+          throw new Error('Please enter a valid email address.');
+        }
+
+        if (error.message.includes('password')) {
+          throw new Error('Password must be at least 6 characters long.');
+        }
+
+        // Generic error for other cases
+        throw error;
       }
 
-      // Verify the response data
+      // Check if we have a user in the response
       if (!data?.user) {
         console.error('Sign up response missing user data:', data);
-        return { 
-          error: new Error('Account created but unable to log in automatically. Please try signing in.'),
-          user: null
-        };
+        throw new Error('Unable to create account. Please try again.');
       }
 
-      console.log('Sign up successful:', data.user);
+      console.log('Sign up successful for user:', data.user.id);
       return { error: null, user: data.user };
+
     } catch (error: any) {
-      console.error('Unexpected error during sign up:', error);
+      console.error('Sign up process error:', error);
       return { 
-        error: new Error('An unexpected error occurred. Please try again later.'),
+        error: error instanceof Error ? error : new Error('An unexpected error occurred'),
         user: null
       };
     }
