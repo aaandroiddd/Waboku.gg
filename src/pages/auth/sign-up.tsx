@@ -54,11 +54,23 @@ const SignUpComponent = () => {
     setIsLoading(true);
 
     try {
-      const { error: signUpError, user: newUser } = await signUp(email, password);
+      const { error: signUpError, user: newUser, isExisting } = await signUp(email, password);
       
       if (signUpError) {
         console.error('Sign up error:', signUpError);
-        setError(signUpError.message);
+        
+        // If the email is already in use, check if it's verified
+        if (signUpError.message.includes('already registered')) {
+          const { error: resendError } = await resendVerificationEmail(email);
+          if (!resendError) {
+            setError("This email is already registered but not verified. We've sent a new verification email.");
+          } else {
+            setError("This email is already registered. Please try signing in instead.");
+          }
+        } else {
+          setError(signUpError.message);
+        }
+        
         setIsLoading(false);
         return;
       }
@@ -69,8 +81,11 @@ const SignUpComponent = () => {
         return;
       }
 
-      // Redirect to verification page immediately
-      router.push("/auth/verify-email");
+      setSuccessMessage("Account created successfully! Please check your email for verification.");
+      // Redirect to verification page after a short delay
+      setTimeout(() => {
+        router.push("/auth/verify-email");
+      }, 2000);
     } catch (err: any) {
       console.error('Sign up error:', err);
       setError(err.message || "An unexpected error occurred. Please try again.");
