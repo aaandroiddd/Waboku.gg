@@ -45,6 +45,8 @@ export default function Dashboard() {
     return null;
   }
 
+  const { toast } = useToast();
+  
   const EmailVerificationBanner = () => {
     if (user.emailVerified) return null;
 
@@ -62,11 +64,23 @@ export default function Dashboard() {
           className="mt-2"
           onClick={async () => {
             try {
-              await user.sendEmailVerification();
-              // You might want to show a success toast here
-            } catch (error) {
+              await user.sendEmailVerification({
+                url: window.location.origin + '/dashboard',
+                handleCodeInApp: false,
+              });
+              toast({
+                title: "Verification email sent",
+                description: "Please check your inbox and click the verification link.",
+                duration: 5000,
+              });
+            } catch (error: any) {
               console.error("Error sending verification email:", error);
-              // You might want to show an error toast here
+              toast({
+                title: "Error sending verification email",
+                description: error.message || "Please try again later.",
+                variant: "destructive",
+                duration: 5000,
+              });
             }
           }}
         >
