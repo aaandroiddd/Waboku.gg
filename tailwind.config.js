@@ -7,8 +7,7 @@ const config = {
   theme: {
   	extend: {
       fontFamily: {
-        sans: ['var(--font-styrene)', 'system-ui', 'sans-serif'],
-        heading: ['var(--font-styrene-a)', 'system-ui', 'sans-serif'],
+        sans: ['var(--font-sans)'],
       },
   		colors: {
   			primary: {
