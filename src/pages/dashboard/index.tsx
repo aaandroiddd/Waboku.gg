@@ -44,6 +44,8 @@ export default function Dashboard() {
   useEffect(() => {
     if (!user) {
       router.push("/auth/sign-in");
+    } else if (!user.emailVerified) {
+      router.push("/auth/verify-email");
     }
   }, [user, router]);
 
