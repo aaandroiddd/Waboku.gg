@@ -8,7 +8,7 @@ import { Mail } from "lucide-react";
 import dynamic from 'next/dynamic';
 
 const VerifyEmailComponent = () => {
-  const { user, signOut } = useAuth();
+  const { user, signOut, resendVerificationEmail } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
 
@@ -95,5 +95,5 @@ const VerifyEmailComponent = () => {
 
 // Export with dynamic import to disable SSR
 export default dynamic(() => Promise.resolve(VerifyEmailComponent), {
-  ssr: false
+  ssr: false,
 });
