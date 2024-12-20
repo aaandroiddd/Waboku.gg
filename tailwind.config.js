@@ -6,6 +6,10 @@ const config = {
   darkMode: ["selector", 'class'],
   theme: {
   	extend: {
+      fontFamily: {
+        sans: ['var(--font-styrene)', 'system-ui', 'sans-serif'],
+        heading: ['var(--font-styrene-a)', 'system-ui', 'sans-serif'],
+      },
   		colors: {
   			primary: {
   				'100': '#e6f5e6',
