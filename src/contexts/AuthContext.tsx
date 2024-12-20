@@ -6,7 +6,7 @@ type AuthContextType = {
   user: User | null
   loading: boolean
   signIn: (email: string, password: string) => Promise<void>
-  signUp: (email: string, password: string) => Promise<void>
+  signUp: (email: string, password: string) => Promise<{ error: any }>
   signOut: () => Promise<void>
 }
 
@@ -33,11 +33,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const signUp = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-    })
-    if (error) throw error
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/sign-in`,
+        }
+      })
+      
+      if (error) {
+        console.error('Sign up error:', error)
+        return { error }
+      }
+
+      if (data?.user?.identities?.length === 0) {
+        return { error: new Error('Email already registered') }
+      }
+
+      return { error: null }
+    } catch (error) {
+      console.error('Unexpected error during sign up:', error)
+      return { error }
+    }
   }
 
   const signIn = async (email: string, password: string) => {
