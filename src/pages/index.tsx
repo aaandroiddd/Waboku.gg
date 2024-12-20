@@ -80,7 +80,7 @@ export default function Home() {
           <div className="relative">
             {/* Background Cards */}
             <div className="absolute inset-0 overflow-hidden">
-              <div className="absolute inset-0 bg-[url('/images/rect.png')] opacity-5 bg-repeat transform rotate-12 scale-150" />
+              <div className="absolute inset-0 bg-[url('/images/cards-pattern.svg')] opacity-5 bg-repeat transform rotate-12 scale-150" />
               <div className="absolute inset-0 bg-gradient-to-b from-background via-background/95 to-background" />
             </div>
             <div className="absolute inset-0 bg-gradient-to-r from-blue-600/10 via-blue-400/10 to-blue-600/10" />
