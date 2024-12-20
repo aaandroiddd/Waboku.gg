@@ -126,10 +126,12 @@ export default function App({ Component, pageProps }: AppProps) {
 
   return (
     <ThemeProvider>
-      <div className={`${inter.variable} font-sans antialiased`}>
-        <Component {...pageProps} />
-        <Toaster />
-      </div>
+      <AuthProvider>
+        <div className={`${inter.variable} font-sans antialiased`}>
+          <Component {...pageProps} />
+          <Toaster />
+        </div>
+      </AuthProvider>
     </ThemeProvider>
   )
 }
