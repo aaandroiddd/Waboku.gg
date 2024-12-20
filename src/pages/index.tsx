@@ -171,27 +171,29 @@ export default function Home() {
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-[200px] p-0">
-                      <Command className="max-h-[calc(var(--vh,1vh)*50)] overflow-auto">
+                      <Command>
                         <CommandInput placeholder="Search state..." className="h-9" />
                         <CommandEmpty>No state found.</CommandEmpty>
-                        <CommandGroup>
-                          {usStates.map((state) => (
-                            <CommandItem
-                              key={state.value}
-                              value={state.value}
-                              onSelect={(currentValue) => {
-                                setSelectedState(currentValue);
-                              }}
-                            >
-                              <Check
-                                className={`mr-2 h-4 w-4 ${
-                                  selectedState === state.value ? "opacity-100" : "opacity-0"
-                                }`}
-                              />
-                              {state.label}
-                            </CommandItem>
-                          ))}
-                        </CommandGroup>
+                        <CommandList>
+                          <CommandGroup>
+                            {usStates.map((state) => (
+                              <CommandItem
+                                key={state.value}
+                                value={state.value}
+                                onSelect={(currentValue) => {
+                                  setSelectedState(currentValue);
+                                }}
+                              >
+                                <Check
+                                  className={`mr-2 h-4 w-4 ${
+                                    selectedState === state.value ? "opacity-100" : "opacity-0"
+                                  }`}
+                                />
+                                {state.label}
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
                       </Command>
                     </PopoverContent>
                   </Popover>
