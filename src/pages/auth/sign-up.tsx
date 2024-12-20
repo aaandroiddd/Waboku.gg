@@ -43,13 +43,19 @@ const SignUpComponent = () => {
     setIsLoading(true);
 
     try {
-      await signUp(email, password);
+      const { error: signUpError } = await signUp(email, password);
+      
+      if (signUpError) {
+        throw signUpError;
+      }
+
       setSuccessMessage("Registration successful! Please check your email to confirm your account.");
       setTimeout(() => {
         router.push("/auth/sign-in");
       }, 3000);
     } catch (err: any) {
-      setError(err.message || "Failed to create account");
+      console.error('Sign up error:', err);
+      setError(err.message || "Failed to create account. Please try again.");
     } finally {
       setIsLoading(false);
     }
