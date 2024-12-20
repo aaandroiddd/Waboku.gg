@@ -78,6 +78,11 @@ export default function Home() {
         <main className="flex-1">
           {/* Hero Section */}
           <div className="relative">
+            {/* Background Cards */}
+            <div className="absolute inset-0 overflow-hidden">
+              <div className="absolute inset-0 bg-[url('/images/rect.png')] opacity-5 bg-repeat transform rotate-12 scale-150" />
+              <div className="absolute inset-0 bg-gradient-to-b from-background via-background/95 to-background" />
+            </div>
             <div className="absolute inset-0 bg-gradient-to-r from-blue-600/10 via-blue-400/10 to-blue-600/10" />
             <div className="relative container mx-auto px-4 py-16 md:py-24">
               <div className="text-center max-w-3xl mx-auto">
