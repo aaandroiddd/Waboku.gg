@@ -158,18 +158,38 @@ export default function Home() {
                       onChange={(e) => setSearchQuery(e.target.value)}
                     />
                   </div>
-                  <Select value={selectedState} onValueChange={setSelectedState}>
-                    <SelectTrigger className="w-full md:w-[200px] h-12">
-                      <SelectValue placeholder="Select location" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {usStates.map((state) => (
-                        <SelectItem key={state.value} value={state.value}>
-                          {state.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        className="w-full md:w-[200px] h-12 justify-between"
+                      >
+                        {selectedState
+                          ? usStates.find((state) => state.value === selectedState)?.label
+                          : "Select location"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[200px] p-0">
+                      <Command>
+                        <CommandInput placeholder="Search state..." className="h-9" />
+                        <CommandEmpty>No state found.</CommandEmpty>
+                        <CommandGroup>
+                          {usStates.map((state) => (
+                            <CommandItem
+                              key={state.value}
+                              value={state.value}
+                              onSelect={(currentValue) => {
+                                setSelectedState(currentValue);
+                              }}
+                            >
+                              {state.label}
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
                   <Button className="h-12 px-8" size="lg">
                     Search
                   </Button>
