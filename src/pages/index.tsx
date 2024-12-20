@@ -171,7 +171,7 @@ export default function Home() {
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-[200px] p-0">
-                      <Command>
+                      <Command className="max-h-[calc(var(--vh,1vh)*50)] overflow-auto">
                         <CommandInput placeholder="Search state..." className="h-9" />
                         <CommandEmpty>No state found.</CommandEmpty>
                         <CommandGroup>
