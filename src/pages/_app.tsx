@@ -4,6 +4,12 @@ import { Toaster } from "@/components/ui/toaster"
 import { useRouter } from 'next/router';
 import { useEffect, useState } from 'react';
 import { ThemeProvider } from '@/components/ThemeProvider';
+import { Inter } from 'next/font/google';
+
+const inter = Inter({
+  subsets: ['latin'],
+  variable: '--font-sans',
+});
 
 export default function App({ Component, pageProps }: AppProps) {
   const router = useRouter();
@@ -114,7 +120,7 @@ export default function App({ Component, pageProps }: AppProps) {
 
   return (
     <ThemeProvider defaultTheme="dark" storageKey="waboku-theme">
-      <div className="min-h-screen">
+      <div className={`min-h-screen ${inter.variable}`}>
         <Component {...pageProps} />
         <Toaster />
       </div>
