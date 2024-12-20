@@ -36,30 +36,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       console.log('Starting sign up process for:', email);
       
-      // First, check if the user already exists
-      const { data: existingUser } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('email', email)
-        .single();
-
-      if (existingUser) {
-        console.log('User already exists in profiles table');
-        return { 
-          error: new Error('This email is already registered. Please try signing in instead.'),
-          user: null
-        };
-      }
-
-      // Proceed with sign up
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
           emailRedirectTo: `${window.location.origin}/auth/sign-in`,
-          data: {
-            email: email,
-          }
         }
       });
       
@@ -70,14 +51,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (error.message.includes('User already registered')) {
           return { 
             error: new Error('This email is already registered. Please try signing in instead.'),
-            user: null
-          };
-        }
-
-        if (error.message.includes('Database error')) {
-          console.error('Database error details:', error);
-          return { 
-            error: new Error('There was an issue creating your account. Please try again later.'),
             user: null
           };
         }
