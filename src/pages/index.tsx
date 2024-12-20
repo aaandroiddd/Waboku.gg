@@ -93,19 +93,7 @@ export default function Home() {
                   Buy, sell, and trade cards with collectors in your area
                 </p>
 
-                {/* CTA Buttons */}
-                <div className="flex justify-center gap-4 mb-12">
-                  <Link href="/auth/sign-up">
-                    <Button size="lg" className="bg-sky-400 hover:bg-sky-500">
-                      Get Started
-                    </Button>
-                  </Link>
-                  <Link href="/auth/sign-in">
-                    <Button size="lg" variant="outline">
-                      Sign In
-                    </Button>
-                  </Link>
-                </div>
+                {/* Search Section */}
 
                 {/* Search Section */}
                 <div className="flex flex-col md:flex-row gap-4 max-w-2xl mx-auto">
