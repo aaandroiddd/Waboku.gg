@@ -36,91 +36,80 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       console.log('Starting sign up process for:', email);
       
-      // Check if the Supabase client is properly initialized
-      if (!supabase.auth) {
-        console.error('Supabase client not properly initialized');
-        throw new Error('Service configuration error');
-      }
-
-      // Attempt to sign up the user
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/auth/sign-in`,
-          data: {
-            email: email,
-          }
-        }
-      });
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       
-      if (error) {
-        console.error('Supabase sign up error:', error);
-        
-        // Map Supabase errors to user-friendly messages
-        if (error.message.includes('User already registered')) {
-          throw new Error('This email is already registered. Please try signing in instead.');
-        }
-
-        if (error.message.includes('rate limit')) {
-          throw new Error('Too many attempts. Please try again later.');
-        }
-
-        if (error.message.includes('valid email')) {
-          throw new Error('Please enter a valid email address.');
-        }
-
-        if (error.message.includes('password')) {
-          throw new Error('Password must be at least 6 characters long.');
-        }
-
-        // Generic error for other cases
-        throw error;
+      // Send email verification
+      if (userCredential.user) {
+        await sendEmailVerification(userCredential.user);
       }
 
-      // Check if we have a user in the response
-      if (!data?.user) {
-        console.error('Sign up response missing user data:', data);
-        throw new Error('Unable to create account. Please try again.');
-      }
-
-      console.log('Sign up successful for user:', data.user.id);
-      return { error: null, user: data.user };
-
+      console.log('Sign up successful:', userCredential.user);
+      return { error: null, user: userCredential.user };
     } catch (error: any) {
-      console.error('Sign up process error:', error);
+      console.error('Sign up error:', error);
+      
+      // Map Firebase error codes to user-friendly messages
+      let errorMessage = 'An unexpected error occurred';
+      switch (error.code) {
+        case 'auth/email-already-in-use':
+          errorMessage = 'This email is already registered. Please try signing in instead.';
+          break;
+        case 'auth/invalid-email':
+          errorMessage = 'Please enter a valid email address.';
+          break;
+        case 'auth/operation-not-allowed':
+          errorMessage = 'Email/password accounts are not enabled. Please contact support.';
+          break;
+        case 'auth/weak-password':
+          errorMessage = 'Please choose a stronger password. It should be at least 6 characters long.';
+          break;
+        default:
+          errorMessage = error.message || 'Failed to create account. Please try again.';
+      }
+      
       return { 
-        error: error instanceof Error ? error : new Error('An unexpected error occurred'),
+        error: new Error(errorMessage),
         user: null
       };
     }
-  }
+  };
 
   const signIn = async (email: string, password: string) => {
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      })
-      
-      if (error) throw error
-      
-      return { error: null }
+      await signInWithEmailAndPassword(auth, email, password);
+      return { error: null };
     } catch (error: any) {
       console.error('Sign in error:', error);
-      return { error }
+      
+      // Map Firebase error codes to user-friendly messages
+      let errorMessage = 'An unexpected error occurred';
+      switch (error.code) {
+        case 'auth/invalid-email':
+          errorMessage = 'Invalid email address.';
+          break;
+        case 'auth/user-disabled':
+          errorMessage = 'This account has been disabled. Please contact support.';
+          break;
+        case 'auth/user-not-found':
+        case 'auth/wrong-password':
+          errorMessage = 'Invalid email or password.';
+          break;
+        default:
+          errorMessage = 'Failed to sign in. Please try again.';
+      }
+      
+      return { error: new Error(errorMessage) };
     }
-  }
+  };
 
   const signOut = async () => {
     try {
-      const { error } = await supabase.auth.signOut()
-      if (error) throw error
+      await firebaseSignOut(auth);
     } catch (error) {
       console.error('Sign out error:', error);
-      throw error
+      throw error;
     }
-  }
+  };
 
   return (
     <AuthContext.Provider value={{ user, loading, signIn, signUp, signOut }}>
