@@ -1,13 +1,16 @@
+import { useEffect } from "react";
+import { useRouter } from "next/router";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { MessageCircle, Heart, Star, AlertCircle } from "lucide-react";
+import { MessageCircle, AlertCircle } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
-// Mock data interfaces
 interface Listing {
-  id: number;
+  id: string;
   title: string;
   price: string;
   condition: string;
@@ -19,7 +22,7 @@ interface Listing {
 }
 
 interface Message {
-  id: number;
+  id: string;
   sender: string;
   listing: string;
   preview: string;
@@ -28,94 +31,58 @@ interface Message {
 }
 
 export default function Dashboard() {
-  // Mock data for active listings
-  const activeListings: Listing[] = [
-    {
-      id: 1,
-      title: "Charizard Holo 1st Edition",
-      price: "$1000",
-      condition: "Near Mint",
-      game: "Pokémon",
-      inquiries: 5,
-    },
-    {
-      id: 2,
-      title: "Blue-Eyes White Dragon",
-      price: "$500",
-      condition: "Excellent",
-      game: "Yu-Gi-Oh",
-      inquiries: 3,
-    },
-    {
-      id: 3,
-      title: "Monkey D. Luffy Leader",
-      price: "$50",
-      condition: "Mint",
-      game: "One Piece",
-      inquiries: 1,
-    },
-  ];
+  const { user } = useAuth();
+  const router = useRouter();
 
-  // Mock data for previous listings
-  const previousListings: Listing[] = [
-    {
-      id: 4,
-      title: "Dark Magician",
-      price: "$300",
-      condition: "Good",
-      game: "Yu-Gi-Oh",
-      status: "Sold",
-      buyer: "JohnDoe",
-      date: "2024-01-15",
-    },
-  ];
+  useEffect(() => {
+    if (!user) {
+      router.push("/auth/sign-in");
+    }
+  }, [user, router]);
 
-  // Mock data for purchases
-  const purchases: Listing[] = [
-    {
-      id: 5,
-      title: "Pikachu Illustrator",
-      price: "$200",
-      condition: "Excellent",
-      game: "Pokémon",
-      status: "Delivered",
-      date: "2024-01-10",
-    },
-  ];
+  if (!user) {
+    return null;
+  }
 
-  // Mock data for messages
-  const messages: Message[] = [
-    {
-      id: 1,
-      sender: "CardCollector123",
-      listing: "Charizard Holo 1st Edition",
-      preview: "Is this still available? I'm interested in...",
-      date: "2024-01-20",
-      unread: true,
-    },
-  ];
+  const EmailVerificationBanner = () => {
+    if (user.emailVerified) return null;
 
-  // Mock data for favorites
-  const favorites: Listing[] = [
-    {
-      id: 6,
-      title: "Ancient Dragon",
-      price: "$750",
-      condition: "Near Mint",
-      game: "Yu-Gi-Oh",
-    },
-  ];
-
-  const getConditionColor = (condition: string) => {
-    const colors: { [key: string]: string } = {
-      "Mint": "bg-green-500",
-      "Near Mint": "bg-emerald-500",
-      "Excellent": "bg-blue-500",
-      "Good": "bg-yellow-500",
-      "Poor": "bg-red-500",
-    };
-    return colors[condition] || "bg-gray-500";
+    return (
+      <Alert className="mb-6">
+        <AlertCircle className="h-4 w-4" />
+        <AlertTitle>Verify your email</AlertTitle>
+        <AlertDescription>
+          Please check your inbox and verify your email address to start trading cards.
+          If you haven't received the verification email, you can request a new one.
+        </AlertDescription>
+        <Button
+          variant="outline"
+          size="sm"
+          className="mt-2"
+          onClick={async () => {
+            try {
+              await user.sendEmailVerification();
+              // You might want to show a success toast here
+            } catch (error) {
+              console.error("Error sending verification email:", error);
+              // You might want to show an error toast here
+            }
+          }}
+        >
+          Resend verification email
+        </Button>
+      </Alert>
+    );
   };
+
+  const EmptyState = ({ title, description }: { title: string; description: string }) => (
+    <Card className="w-full">
+      <CardContent className="flex flex-col items-center justify-center py-12">
+        <h3 className="text-xl font-semibold mb-2">{title}</h3>
+        <p className="text-muted-foreground text-center mb-4">{description}</p>
+      </CardContent>
+    </Card>
+  );
 
   const ListingCard = ({ listing }: { listing: Listing }) => (
     <Card className="hover:shadow-lg transition-shadow">
@@ -129,7 +96,7 @@ export default function Dashboard() {
         <div className="space-y-2">
           <p className="text-2xl font-bold text-primary">{listing.price}</p>
           <div className="flex items-center gap-2">
-            <span className={`w-3 h-3 rounded-full ${getConditionColor(listing.condition)}`} />
+            <span className={`w-3 h-3 rounded-full bg-${listing.condition === "Mint" ? "green" : "gray"}-500`} />
             <span className="text-sm text-muted-foreground">{listing.condition}</span>
           </div>
           {listing.inquiries && (
@@ -144,15 +111,6 @@ export default function Dashboard() {
               <p>Date: {listing.date}</p>
             </div>
           )}
-          <div className="flex space-x-2 mt-4">
-            {!listing.status && (
-              <>
-                <Button variant="outline" size="sm">Edit</Button>
-                <Button variant="outline" size="sm">Mark as Sold</Button>
-                <Button variant="destructive" size="sm">Delete</Button>
-              </>
-            )}
-          </div>
         </div>
       </CardContent>
     </Card>
@@ -177,9 +135,11 @@ export default function Dashboard() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
+        <EmailVerificationBanner />
+        
         <div className="flex justify-between items-center">
           <h1 className="text-3xl font-bold">Dashboard</h1>
-          <Button>+ New Listing</Button>
+          <Button disabled={!user.emailVerified}>+ New Listing</Button>
         </div>
 
         <Tabs defaultValue="active" className="space-y-4">
@@ -191,46 +151,41 @@ export default function Dashboard() {
           </TabsList>
 
           <TabsContent value="active" className="space-y-4">
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {activeListings.map((listing) => (
-                <ListingCard key={listing.id} listing={listing} />
-              ))}
-            </div>
+            <EmptyState
+              title="No Active Listings"
+              description="You haven't created any listings yet. Click the 'New Listing' button to get started!"
+            />
           </TabsContent>
 
           <TabsContent value="previous" className="space-y-6">
             <div>
               <h2 className="text-xl font-semibold mb-4">Previous Sales</h2>
-              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                {previousListings.map((listing) => (
-                  <ListingCard key={listing.id} listing={listing} />
-                ))}
-              </div>
+              <EmptyState
+                title="No Previous Sales"
+                description="Your completed sales will appear here."
+              />
             </div>
             <div>
               <h2 className="text-xl font-semibold mb-4">Your Purchases</h2>
-              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                {purchases.map((listing) => (
-                  <ListingCard key={listing.id} listing={listing} />
-                ))}
-              </div>
+              <EmptyState
+                title="No Purchases Yet"
+                description="Cards you've bought will appear here."
+              />
             </div>
           </TabsContent>
 
           <TabsContent value="messages" className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-2">
-              {messages.map((message) => (
-                <MessageCard key={message.id} message={message} />
-              ))}
-            </div>
+            <EmptyState
+              title="No Messages"
+              description="When you receive messages about your listings, they'll appear here."
+            />
           </TabsContent>
 
           <TabsContent value="favorites" className="space-y-4">
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {favorites.map((listing) => (
-                <ListingCard key={listing.id} listing={listing} />
-              ))}
-            </div>
+            <EmptyState
+              title="No Favorites Yet"
+              description="Cards you've marked as favorites will appear here."
+            />
           </TabsContent>
         </Tabs>
       </div>
