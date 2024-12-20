@@ -8,6 +8,8 @@ import { Logo } from "@/components/Logo";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import dynamic from 'next/dynamic'
 import { useAuth } from "@/contexts/AuthContext";
+import { signInWithEmailAndPassword } from "firebase/auth";
+import { auth } from "@/lib/firebase";
 
 const SignInComponent = () => {
   const router = useRouter();
