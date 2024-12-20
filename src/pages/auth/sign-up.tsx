@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,6 +7,7 @@ import { useRouter } from "next/router";
 import { Logo } from "@/components/Logo";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import dynamic from 'next/dynamic'
+import { useAuth } from "@/contexts/AuthContext";
 
 const SignUpComponent = () => {
   const router = useRouter();
@@ -16,6 +17,13 @@ const SignUpComponent = () => {
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
+  const { user } = useAuth();
+
+  useEffect(() => {
+    if (user) {
+      router.push("/dashboard");
+    }
+  }, [user, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,7 +46,9 @@ const SignUpComponent = () => {
       const { signUp } = await import('@/contexts/AuthContext').then(mod => ({ signUp: mod.useAuth().signUp }));
       await signUp(email, password);
       setSuccessMessage("Registration successful! Please check your email to confirm your account.");
-      // Don't redirect immediately as user needs to confirm email
+      setTimeout(() => {
+        router.push("/auth/sign-in");
+      }, 3000);
     } catch (err: any) {
       setError(err.message || "Failed to create account");
     } finally {
@@ -82,6 +92,7 @@ const SignUpComponent = () => {
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 disabled={isLoading}
+                autoComplete="email"
               />
             </div>
             <div className="space-y-2">
@@ -96,6 +107,7 @@ const SignUpComponent = () => {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 disabled={isLoading}
+                autoComplete="new-password"
               />
             </div>
             <div className="space-y-2">
@@ -110,12 +122,20 @@ const SignUpComponent = () => {
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required
                 disabled={isLoading}
+                autoComplete="new-password"
               />
             </div>
           </CardContent>
           <CardFooter className="flex flex-col space-y-4">
             <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? "Creating Account..." : "Create Account"}
+              {isLoading ? (
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  Creating Account...
+                </div>
+              ) : (
+                "Create Account"
+              )}
             </Button>
             <p className="text-sm text-center">
               Already have an account?{" "}
