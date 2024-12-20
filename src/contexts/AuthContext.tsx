@@ -159,8 +159,42 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const resendVerificationEmail = async (email: string) => {
+    try {
+      // Check if email exists
+      const methods = await fetchSignInMethodsForEmail(auth, email);
+      if (methods.length === 0) {
+        return { error: new Error('No account exists with this email address.') };
+      }
+
+      // Temporarily sign in to send verification email
+      try {
+        const userCredential = await firebaseSignInWithEmailAndPassword(auth, email, password);
+        if (userCredential.user) {
+          if (userCredential.user.emailVerified) {
+            await firebaseSignOut(auth);
+            return { error: new Error('This email is already verified. Please sign in.') };
+          }
+          
+          await sendEmailVerification(userCredential.user, {
+            url: window.location.origin + '/dashboard',
+            handleCodeInApp: false,
+          });
+          
+          await firebaseSignOut(auth);
+          return { error: null };
+        }
+      } catch (error: any) {
+        return { error: new Error('Unable to send verification email. Please try again later.') };
+      }
+    } catch (error: any) {
+      console.error('Resend verification error:', error);
+      return { error: new Error('Failed to process request. Please try again.') };
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, loading, signIn, signUp, signOut }}>
+    <AuthContext.Provider value={{ user, loading, signIn, signUp, signOut, resendVerificationEmail }}>
       {children}
     </AuthContext.Provider>
   )
