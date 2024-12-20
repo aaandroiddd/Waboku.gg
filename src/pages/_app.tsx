@@ -157,7 +157,7 @@ export default function App({ Component, pageProps }: AppProps) {
 
   return (
     <ThemeProvider defaultTheme="dark" storageKey="waboku-theme">
-      <div className="min-h-screen">
+      <div className={`min-h-screen ${styrene.variable} ${styreneA.variable}`}>
         <Component {...pageProps} />
         <Toaster />
       </div>
