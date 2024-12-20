@@ -183,6 +183,11 @@ export default function Home() {
                                 setSelectedState(currentValue);
                               }}
                             >
+                              <Check
+                                className={`mr-2 h-4 w-4 ${
+                                  selectedState === state.value ? "opacity-100" : "opacity-0"
+                                }`}
+                              />
                               {state.label}
                             </CommandItem>
                           ))}
