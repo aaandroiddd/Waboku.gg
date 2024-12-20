@@ -31,17 +31,41 @@ const SignInComponent = () => {
     setIsLoading(true);
 
     try {
-      const { signIn } = await import('@/contexts/AuthContext').then(mod => ({ signIn: mod.useAuth().signIn }));
-      const { error } = await signIn(email, password);
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
       
-      if (error) {
-        setError(error.message);
+      // Check if email is verified
+      if (!userCredential.user.emailVerified) {
+        // Redirect to verify-resend page with email pre-filled
+        router.push({
+          pathname: '/auth/verify-resend',
+          query: { email }
+        });
         return;
       }
       
       router.push("/dashboard");
     } catch (err: any) {
-      setError(err.message || "Failed to sign in");
+      let errorMessage = "Failed to sign in";
+      
+      switch (err.code) {
+        case 'auth/invalid-email':
+          errorMessage = 'Invalid email address.';
+          break;
+        case 'auth/user-disabled':
+          errorMessage = 'This account has been disabled. Please contact support.';
+          break;
+        case 'auth/user-not-found':
+        case 'auth/wrong-password':
+          errorMessage = 'Invalid email or password.';
+          break;
+        case 'auth/network-request-failed':
+          errorMessage = 'Network connection error. Please check your internet connection and try again.';
+          break;
+        default:
+          errorMessage = err.message || 'Failed to sign in. Please try again.';
+      }
+      
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
