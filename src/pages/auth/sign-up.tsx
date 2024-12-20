@@ -69,7 +69,13 @@ const SignUpComponent = () => {
         return;
       }
 
+      // Show success message and redirect
       setSuccessMessage("Registration successful! Please check your email to confirm your account.");
+      
+      // Clear any existing errors
+      setError("");
+      
+      // Redirect after a delay
       setTimeout(() => {
         router.push("/auth/sign-in");
       }, 3000);
