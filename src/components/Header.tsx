@@ -1,33 +1,33 @@
-import { useRouter } from 'next/router';
-import Logo from './Logo';
-import { Button } from './ui/button';
-import { useTheme } from './ThemeProvider';
-import { Moon, Sun } from 'lucide-react';
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import Logo from "./Logo";
+import { useRouter } from "next/router";
 
-const Header = () => {
+export default function Header() {
   const router = useRouter();
-  const { theme, setTheme } = useTheme();
+  const isAuthPage = router.pathname.startsWith("/auth/");
 
   return (
-    <div className="w-full">
-      <div className="flex justify-between items-center py-4 px-4 sm:px-6 lg:px-8">
-        <div className="cursor-pointer" onClick={() => router.push("/")}>
+    <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <div className="container mx-auto px-4 h-16 flex items-center justify-between">
+        <Link href="/" className="flex items-center space-x-2">
           <Logo />
-        </div>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => setTheme(theme === "light" ? "dark" : "light")}
-        >
-          {theme === "light" ? (
-            <Sun className="h-5 w-5" />
-          ) : (
-            <Moon className="h-5 w-5" />
-          )}
-        </Button>
-      </div>
-    </div>
-  );
-};
+          <span className="font-bold text-xl">Waboku.gg</span>
+        </Link>
 
-export default Header;
+        <nav className="flex items-center gap-4">
+          {!isAuthPage && (
+            <>
+              <Link href="/auth/sign-in">
+                <Button variant="ghost">Sign In</Button>
+              </Link>
+              <Link href="/auth/sign-up">
+                <Button>Sign Up</Button>
+              </Link>
+            </>
+          )}
+        </nav>
+      </div>
+    </header>
+  );
+}
