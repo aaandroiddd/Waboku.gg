@@ -1,52 +1,9 @@
 import type { AppProps } from 'next/app'
-import localFont from 'next/font/local'
 import '../styles/globals.css';
 import { Toaster } from "@/components/ui/toaster"
 import { useRouter } from 'next/router';
 import { useEffect, useState } from 'react';
 import { ThemeProvider } from '@/components/ThemeProvider';
-
-const styrene = localFont({
-  src: [
-    {
-      path: '../../public/fonts/styrene-regular.woff2',
-      weight: '400',
-      style: 'normal',
-    },
-    {
-      path: '../../public/fonts/styrene-medium.woff2',
-      weight: '500',
-      style: 'normal',
-    },
-    {
-      path: '../../public/fonts/styrene-bold.woff2',
-      weight: '700',
-      style: 'normal',
-    },
-  ],
-  variable: '--font-styrene',
-});
-
-const styreneA = localFont({
-  src: [
-    {
-      path: '../../public/fonts/styrene-a-regular.woff2',
-      weight: '400',
-      style: 'normal',
-    },
-    {
-      path: '../../public/fonts/styrene-a-medium.woff2',
-      weight: '500',
-      style: 'normal',
-    },
-    {
-      path: '../../public/fonts/styrene-a-bold.woff2',
-      weight: '700',
-      style: 'normal',
-    },
-  ],
-  variable: '--font-styrene-a',
-});
 
 export default function App({ Component, pageProps }: AppProps) {
   const router = useRouter();
@@ -157,7 +114,7 @@ export default function App({ Component, pageProps }: AppProps) {
 
   return (
     <ThemeProvider defaultTheme="dark" storageKey="waboku-theme">
-      <div className={`min-h-screen ${styrene.variable} ${styreneA.variable}`}>
+      <div className="min-h-screen">
         <Component {...pageProps} />
         <Toaster />
       </div>
