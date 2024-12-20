@@ -89,8 +89,13 @@ export default function App({ Component, pageProps }: AppProps) {
       originalConsoleError.apply(console, args);
     };
 
+    setMounted(true);
+
     return () => {
       console.error = originalConsoleError;
+      window.onerror = null;
+      window.onunhandledrejection = null;
+      window.fetch = originalFetch;
     };
   }, []);
 
@@ -109,14 +114,20 @@ export default function App({ Component, pageProps }: AppProps) {
     };
   }, [router.events]);
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  if (!mounted) {
+    return (
+      <div className={`${inter.variable} font-sans antialiased`}>
+        <div style={{ visibility: 'hidden' }}>
+          <Component {...pageProps} />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <ThemeProvider>
       <div className={`${inter.variable} font-sans antialiased`}>
-        {mounted ? <Component {...pageProps} /> : null}
+        <Component {...pageProps} />
         <Toaster />
       </div>
     </ThemeProvider>
