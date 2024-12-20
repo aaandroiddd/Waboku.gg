@@ -40,7 +40,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       // Send email verification
       if (userCredential.user) {
-        await sendEmailVerification(userCredential.user);
+        try {
+          await sendEmailVerification(userCredential.user, {
+            url: window.location.origin + '/dashboard', // Redirect URL after verification
+            handleCodeInApp: false,
+          });
+          console.log('Verification email sent successfully');
+        } catch (verificationError) {
+          console.error('Error sending verification email:', verificationError);
+          // We don't want to fail the sign-up process if email verification fails
+          // The user can request a new verification email from the dashboard
+        }
       }
 
       console.log('Sign up successful:', userCredential.user);
