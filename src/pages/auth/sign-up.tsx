@@ -17,7 +17,7 @@ const SignUpComponent = () => {
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
-  const { user } = useAuth();
+  const { user, signUp } = useAuth();
 
   useEffect(() => {
     if (user) {
@@ -43,7 +43,6 @@ const SignUpComponent = () => {
     setIsLoading(true);
 
     try {
-      const { signUp } = await import('@/contexts/AuthContext').then(mod => ({ signUp: mod.useAuth().signUp }));
       await signUp(email, password);
       setSuccessMessage("Registration successful! Please check your email to confirm your account.");
       setTimeout(() => {
