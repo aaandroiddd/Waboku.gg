@@ -69,16 +69,18 @@ const SignUpComponent = () => {
         return;
       }
 
-      // Show success message and redirect
-      setSuccessMessage("Registration successful! Please check your email to confirm your account.");
+      // Show success message with clear instructions
+      setSuccessMessage(
+        "Account created successfully! Please check your email (including spam folder) to verify your account. You won't be able to sign in until you verify your email address."
+      );
       
       // Clear any existing errors
       setError("");
       
-      // Redirect after a delay
+      // Redirect after a longer delay to ensure user reads the message
       setTimeout(() => {
         router.push("/auth/sign-in");
-      }, 3000);
+      }, 5000);
     } catch (err: any) {
       console.error('Sign up error:', err);
       setError(err.message || "An unexpected error occurred. Please try again.");
