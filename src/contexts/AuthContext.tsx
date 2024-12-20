@@ -12,9 +12,10 @@ import { auth } from '@/lib/firebase';
 type AuthContextType = {
   user: User | null;
   loading: boolean;
-  signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
-  signUp: (email: string, password: string) => Promise<{ error: Error | null, user: User | null }>;
+  signIn: (email: string, password: string) => Promise<{ error: Error | null, isUnverified?: boolean }>;
+  signUp: (email: string, password: string) => Promise<{ error: Error | null, user: User | null, isExisting?: boolean }>;
   signOut: () => Promise<void>;
+  resendVerificationEmail: (email: string) => Promise<{ error: Error | null }>;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
