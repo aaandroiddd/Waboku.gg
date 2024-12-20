@@ -1,5 +1,5 @@
 import Link from "next/link";
-import Logo from "./Logo";
+import { Logo } from "./Logo";
 import { ThemeToggle } from "./ThemeToggle";
 import { Button } from "./ui/button";
 import { useRouter } from "next/router";
