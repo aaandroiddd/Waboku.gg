@@ -32,7 +32,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => unsubscribe();
   }, []);
 
-  const signUp = async (email: string, password: string) => {
+  const signUp = async (email: string, password: string, retryCount = 0) => {
     try {
       console.log('Starting sign up process for:', email);
       
@@ -48,6 +48,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (error: any) {
       console.error('Sign up error:', error);
       
+      // Handle network errors with retry mechanism
+      if (error.code === 'auth/network-request-failed' && retryCount < 2) {
+        console.log(`Retrying sign up attempt ${retryCount + 1}/2...`);
+        // Wait for 2 seconds before retrying
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        return signUp(email, password, retryCount + 1);
+      }
+      
       // Map Firebase error codes to user-friendly messages
       let errorMessage = 'An unexpected error occurred';
       switch (error.code) {
@@ -62,6 +70,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           break;
         case 'auth/weak-password':
           errorMessage = 'Please choose a stronger password. It should be at least 6 characters long.';
+          break;
+        case 'auth/network-request-failed':
+          errorMessage = 'Network connection error. Please check your internet connection and try again.';
           break;
         default:
           errorMessage = error.message || 'Failed to create account. Please try again.';
