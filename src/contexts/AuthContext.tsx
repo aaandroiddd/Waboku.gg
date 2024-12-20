@@ -5,7 +5,9 @@ import {
   signInWithEmailAndPassword,
   signOut as firebaseSignOut,
   onAuthStateChanged,
-  sendEmailVerification
+  sendEmailVerification,
+  fetchSignInMethodsForEmail,
+  signInWithEmailAndPassword as firebaseSignInWithEmailAndPassword
 } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 
