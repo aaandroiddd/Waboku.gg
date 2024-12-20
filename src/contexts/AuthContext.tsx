@@ -74,12 +74,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const signIn = async (email: string, password: string) => {
+  const signIn = async (email: string, password: string, retryCount = 0) => {
     try {
       await signInWithEmailAndPassword(auth, email, password);
       return { error: null };
     } catch (error: any) {
       console.error('Sign in error:', error);
+      
+      // Handle network errors with retry mechanism
+      if (error.code === 'auth/network-request-failed' && retryCount < 2) {
+        console.log(`Retrying sign in attempt ${retryCount + 1}/2...`);
+        // Wait for 2 seconds before retrying
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        return signIn(email, password, retryCount + 1);
+      }
       
       // Map Firebase error codes to user-friendly messages
       let errorMessage = 'An unexpected error occurred';
@@ -93,6 +101,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         case 'auth/user-not-found':
         case 'auth/wrong-password':
           errorMessage = 'Invalid email or password.';
+          break;
+        case 'auth/network-request-failed':
+          errorMessage = 'Network connection error. Please check your internet connection and try again.';
           break;
         default:
           errorMessage = 'Failed to sign in. Please try again.';
