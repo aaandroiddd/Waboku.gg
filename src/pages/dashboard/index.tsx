@@ -31,9 +31,11 @@ interface Message {
   unread: boolean;
 }
 
-export const config = {
-  unstable_runtimeJS: true
-};
+export async function getServerSideProps() {
+  return {
+    props: {}
+  };
+}
 
 export default function Dashboard() {
   const { user } = useAuth();
