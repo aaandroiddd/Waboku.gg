@@ -30,7 +30,13 @@ const SignInComponent = () => {
 
     try {
       const { signIn } = await import('@/contexts/AuthContext').then(mod => ({ signIn: mod.useAuth().signIn }));
-      await signIn(email, password);
+      const { error } = await signIn(email, password);
+      
+      if (error) {
+        setError(error.message);
+        return;
+      }
+      
       router.push("/dashboard");
     } catch (err: any) {
       setError(err.message || "Failed to sign in");
