@@ -78,10 +78,10 @@ export default function Home() {
             <div className="relative container mx-auto px-4 py-16 md:py-24">
               <div className="text-center max-w-3xl mx-auto">
                 <h1 className="text-4xl md:text-6xl font-bold mb-4" style={{ fontFamily: 'Helvetica, sans-serif' }}>
-                  Your Local TCG Marketplace
+                  Sell Your Cards With Confidence
                 </h1>
                 <p className="text-lg md:text-xl text-muted-foreground mb-8">
-                  Connect with local traders and find the cards you're looking for
+                  Join the growing card game community
                 </p>
                 
                 {/* Search Section */}
