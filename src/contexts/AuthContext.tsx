@@ -36,6 +36,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       console.log('Starting sign up process for:', email);
       
+      // Check if the Supabase client is properly initialized
+      if (!supabase.auth) {
+        console.error('Supabase client not properly initialized');
+        return {
+          error: new Error('Service configuration error. Please try again later.'),
+          user: null
+        };
+      }
+
+      // Attempt to sign up the user
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -54,6 +64,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             user: null
           };
         }
+
+        if (error.message.includes('Database error')) {
+          console.error('Database error details:', error);
+          return {
+            error: new Error('Unable to create account due to a system error. Please try again later.'),
+            user: null
+          };
+        }
         
         return { 
           error: new Error(error.message || 'An error occurred during sign up. Please try again.'),
@@ -65,7 +83,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (!data?.user) {
         console.error('Sign up response missing user data:', data);
         return { 
-          error: new Error('Failed to create account. Please try again.'),
+          error: new Error('Account created but unable to log in automatically. Please try signing in.'),
           user: null
         };
       }
