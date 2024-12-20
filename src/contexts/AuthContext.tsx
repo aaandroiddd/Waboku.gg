@@ -34,27 +34,44 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signUp = async (email: string, password: string) => {
     try {
+      // First, check if the user already exists
+      const { data: existingUser } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('email', email)
+        .single();
+
+      if (existingUser) {
+        return { error: new Error('This email is already registered. Please try signing in instead.') };
+      }
+
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
           emailRedirectTo: `${window.location.origin}/auth/sign-in`,
         }
-      })
+      });
       
       if (error) {
-        console.error('Sign up error:', error)
-        return { error }
+        console.error('Sign up error:', error);
+        return { 
+          error: new Error(error.message || 'An error occurred during sign up. Please try again.')
+        };
       }
 
-      if (data?.user?.identities?.length === 0) {
-        return { error: new Error('Email already registered') }
+      if (!data.user) {
+        return { 
+          error: new Error('No user data returned. Please try again.')
+        };
       }
 
-      return { error: null }
+      return { error: null };
     } catch (error) {
-      console.error('Unexpected error during sign up:', error)
-      return { error }
+      console.error('Unexpected error during sign up:', error);
+      return { 
+        error: new Error('An unexpected error occurred. Please try again later.')
+      };
     }
   }
 
