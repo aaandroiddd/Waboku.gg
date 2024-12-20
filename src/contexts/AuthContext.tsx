@@ -1,6 +1,13 @@
-import { createContext, useContext, useEffect, useState } from 'react'
-import { User, AuthError } from '@supabase/supabase-js'
-import { supabase } from '@/lib/supabase'
+import { createContext, useContext, useEffect, useState } from 'react';
+import { 
+  User,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  signOut as firebaseSignOut,
+  onAuthStateChanged,
+  sendEmailVerification
+} from 'firebase/auth';
+import { auth } from '@/lib/firebase';
 
 type AuthContextType = {
   user: User | null
