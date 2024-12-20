@@ -3,6 +3,7 @@ import '../styles/globals.css';
 import { Toaster } from "@/components/ui/toaster"
 import { useRouter } from 'next/router';
 import { useEffect, useState } from 'react';
+import { ThemeProvider } from '@/components/ThemeProvider';
 
 export default function App({ Component, pageProps }: AppProps) {
   const router = useRouter();
@@ -103,15 +104,6 @@ export default function App({ Component, pageProps }: AppProps) {
   }, [router.events]);
 
   useEffect(() => {
-    // Get the color-scheme value from :root
-    const root = document.documentElement;
-    const computedStyle = getComputedStyle(root);
-    const colorScheme = computedStyle.getPropertyValue('--mode').trim().replace(/"/g, '');
-    if (colorScheme === 'dark') {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.add('light');
-    }
     setMounted(true);
   }, []);
 
@@ -121,9 +113,11 @@ export default function App({ Component, pageProps }: AppProps) {
   }
 
   return (
-    <div className="min-h-screen">
-      <Component {...pageProps} />
-      <Toaster />
-    </div>
+    <ThemeProvider defaultTheme="dark" storageKey="waboku-theme">
+      <div className="min-h-screen">
+        <Component {...pageProps} />
+        <Toaster />
+      </div>
+    </ThemeProvider>
   )
 }
