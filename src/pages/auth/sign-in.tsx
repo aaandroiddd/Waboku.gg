@@ -132,12 +132,20 @@ const SignInComponent = () => {
                 "Sign In"
               )}
             </Button>
-            <p className="text-sm text-center">
-              Don&apos;t have an account?{" "}
-              <Link href="/auth/sign-up" className="text-primary hover:underline">
-                Sign Up
-              </Link>
-            </p>
+            <div className="text-sm text-center space-y-2">
+              <p>
+                Need to verify your email?{" "}
+                <Link href="/auth/verify-resend" className="text-primary hover:underline">
+                  Resend verification
+                </Link>
+              </p>
+              <p>
+                Don&apos;t have an account?{" "}
+                <Link href="/auth/sign-up" className="text-primary hover:underline">
+                  Sign Up
+                </Link>
+              </p>
+            </div>
           </CardFooter>
         </form>
       </Card>
