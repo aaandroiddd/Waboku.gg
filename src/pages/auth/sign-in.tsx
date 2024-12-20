@@ -5,23 +5,15 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { Logo } from "@/components/Logo";
-import { useAuth } from "@/contexts/AuthContext";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { useEffect } from "react";
+import dynamic from 'next/dynamic'
 
-export default function SignIn() {
+const SignInComponent = () => {
   const router = useRouter();
-  const { signIn, user } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-
-  useEffect(() => {
-    if (user) {
-      router.push("/dashboard");
-    }
-  }, [user, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,6 +21,7 @@ export default function SignIn() {
     setIsLoading(true);
 
     try {
+      const { signIn } = await import('@/contexts/AuthContext').then(mod => ({ signIn: mod.useAuth().signIn }));
       await signIn(email, password);
       router.push("/dashboard");
     } catch (err: any) {
@@ -101,4 +94,8 @@ export default function SignIn() {
       </Card>
     </div>
   );
-}
+};
+
+export default dynamic(() => Promise.resolve(SignInComponent), {
+  ssr: false
+});
