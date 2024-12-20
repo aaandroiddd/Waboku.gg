@@ -1,12 +1,12 @@
 import { createContext, useContext, useEffect, useState } from 'react'
-import { User } from '@supabase/supabase-js'
+import { User, AuthError } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
 
 type AuthContextType = {
   user: User | null
   loading: boolean
-  signIn: (email: string, password: string) => Promise<void>
-  signUp: (email: string, password: string) => Promise<{ error: any }>
+  signIn: (email: string, password: string) => Promise<{ error: AuthError | null }>
+  signUp: (email: string, password: string) => Promise<{ error: Error | null, user: User | null }>
   signOut: () => Promise<void>
 }
 
@@ -34,6 +34,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signUp = async (email: string, password: string) => {
     try {
+      console.log('Starting sign up process for:', email);
+      
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -43,44 +45,65 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
       
       if (error) {
-        console.error('Sign up error:', error);
+        console.error('Supabase sign up error:', error);
+        
         if (error.message.includes('User already registered')) {
           return { 
-            error: new Error('This email is already registered. Please try signing in instead.')
+            error: new Error('This email is already registered. Please try signing in instead.'),
+            user: null
           };
         }
+        
         return { 
-          error: new Error(error.message || 'An error occurred during sign up. Please try again.')
+          error: new Error(error.message || 'An error occurred during sign up. Please try again.'),
+          user: null
         };
       }
 
       // Check if the user was actually created
       if (!data.user || data.user.identities?.length === 0) {
+        console.error('User creation failed - no user data returned');
         return { 
-          error: new Error('This email is already registered. Please try signing in instead.')
+          error: new Error('This email is already registered. Please try signing in instead.'),
+          user: null
         };
       }
 
-      return { error: null };
+      console.log('Sign up successful:', data.user);
+      return { error: null, user: data.user };
     } catch (error: any) {
       console.error('Unexpected error during sign up:', error);
       return { 
-        error: new Error('An unexpected error occurred. Please try again later.')
+        error: new Error('An unexpected error occurred. Please try again later.'),
+        user: null
       };
     }
   }
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    })
-    if (error) throw error
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      })
+      
+      if (error) throw error
+      
+      return { error: null }
+    } catch (error: any) {
+      console.error('Sign in error:', error);
+      return { error }
+    }
   }
 
   const signOut = async () => {
-    const { error } = await supabase.auth.signOut()
-    if (error) throw error
+    try {
+      const { error } = await supabase.auth.signOut()
+      if (error) throw error
+    } catch (error) {
+      console.error('Sign out error:', error);
+      throw error
+    }
   }
 
   return (
