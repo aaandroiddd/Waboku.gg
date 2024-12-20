@@ -166,9 +166,9 @@ export default function Home() {
                         role="combobox"
                         className="w-full md:w-[200px] h-12 justify-between"
                       >
-                        {selectedState
-                          ? usStates.find((state) => state.value === selectedState)?.label
-                          : "Select location"}
+                        {selectedState === "all" 
+                          ? "All Locations"
+                          : usStates.find((state) => state.value === selectedState)?.label || "Select location"}
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-[200px] p-0">
