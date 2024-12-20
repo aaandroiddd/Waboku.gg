@@ -6,6 +6,48 @@ import { useRouter } from 'next/router';
 import { useEffect, useState } from 'react';
 import { ThemeProvider } from '@/components/ThemeProvider';
 
+const styrene = localFont({
+  src: [
+    {
+      path: '../../public/fonts/styrene-regular.woff2',
+      weight: '400',
+      style: 'normal',
+    },
+    {
+      path: '../../public/fonts/styrene-medium.woff2',
+      weight: '500',
+      style: 'normal',
+    },
+    {
+      path: '../../public/fonts/styrene-bold.woff2',
+      weight: '700',
+      style: 'normal',
+    },
+  ],
+  variable: '--font-styrene',
+});
+
+const styreneA = localFont({
+  src: [
+    {
+      path: '../../public/fonts/styrene-a-regular.woff2',
+      weight: '400',
+      style: 'normal',
+    },
+    {
+      path: '../../public/fonts/styrene-a-medium.woff2',
+      weight: '500',
+      style: 'normal',
+    },
+    {
+      path: '../../public/fonts/styrene-a-bold.woff2',
+      weight: '700',
+      style: 'normal',
+    },
+  ],
+  variable: '--font-styrene-a',
+});
+
 export default function App({ Component, pageProps }: AppProps) {
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
