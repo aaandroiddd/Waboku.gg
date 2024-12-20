@@ -81,7 +81,7 @@ export default function Home() {
                   Sell Your Cards With Confidence
                 </h1>
                 <p className="text-lg md:text-xl text-muted-foreground mb-8">
-                  Join the growing card game community
+                  Find the best local card game deals
                 </p>
                 
                 {/* Search Section */}
