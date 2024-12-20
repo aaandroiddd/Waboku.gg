@@ -64,8 +64,8 @@ export default function Home() {
   return (
     <>
       <Head>
-        <title>Waboku.gg - Your Local TCG Marketplace</title>
-        <meta name="description" content="Find and trade TCG cards in your local area" />
+        <title>Waboku.gg - Sell Your Cards With Confidence</title>
+        <meta name="description" content="Join the growing card game community and sell your cards with confidence" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <link rel="icon" href="/favicon.ico" />
       </Head>
