@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { MessageCircle, AlertCircle } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { useToast } from "@/components/ui/use-toast";
 
 interface Listing {
   id: string;
