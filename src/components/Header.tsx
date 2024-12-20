@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import Logo from "./Logo";
 import { useRouter } from "next/router";
+import { ThemeToggle } from "./ThemeToggle";
 
 export default function Header() {
   const router = useRouter();
@@ -15,6 +16,7 @@ export default function Header() {
         </Link>
 
         <nav className="flex items-center gap-4">
+          <ThemeToggle />
           {!isAuthPage && (
             <>
               <Link href="/auth/sign-in">
