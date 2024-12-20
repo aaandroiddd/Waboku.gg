@@ -18,7 +18,7 @@ export default function Header() {
 
         <nav className="flex items-center gap-4">
           <ThemeToggle />
-          {!isAuthPage && !isHomePage && (
+          {!isAuthPage && (
             <>
               <Link href="/auth/sign-in">
                 <Button variant="ghost">Sign In</Button>
