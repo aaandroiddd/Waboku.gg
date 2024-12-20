@@ -46,7 +46,9 @@ const SignUpComponent = () => {
       const { error: signUpError } = await signUp(email, password);
       
       if (signUpError) {
+        console.error('Sign up error:', signUpError);
         setError(signUpError.message);
+        setIsLoading(false);
         return;
       }
 
@@ -56,7 +58,7 @@ const SignUpComponent = () => {
       }, 3000);
     } catch (err: any) {
       console.error('Sign up error:', err);
-      setError(err.message || "An unexpected error occurred. Please try again.");
+      setError("An unexpected error occurred. Please try again.");
     } finally {
       setIsLoading(false);
     }
