@@ -31,7 +31,9 @@ interface Message {
   unread: boolean;
 }
 
-'use client';
+export const config = {
+  unstable_runtimeJS: true
+};
 
 export default function Dashboard() {
   const { user } = useAuth();
