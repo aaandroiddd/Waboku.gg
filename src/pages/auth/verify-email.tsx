@@ -21,13 +21,21 @@ const VerifyEmailComponent = () => {
   }, [user, router]);
 
   const handleResendVerification = async () => {
-    if (!user) return;
+    if (!user?.email) return;
 
     try {
-      await user.sendEmailVerification({
-        url: window.location.origin + '/dashboard',
-        handleCodeInApp: false,
-      });
+      const { error } = await resendVerificationEmail(user.email);
+      
+      if (error) {
+        toast({
+          title: "Error sending verification email",
+          description: error.message || "Please try again later.",
+          variant: "destructive",
+          duration: 5000,
+        });
+        return;
+      }
+
       toast({
         title: "Verification email sent",
         description: "Please check your inbox and click the verification link.",
