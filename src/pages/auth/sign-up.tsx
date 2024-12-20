@@ -118,6 +118,21 @@ const SignUpComponent = () => {
                 <AlertDescription>{successMessage}</AlertDescription>
               </Alert>
             )}
+            <Alert>
+              <AlertDescription>
+                Password requirements:
+                <ul className="list-disc list-inside mt-2 text-sm">
+                  <li>Minimum 6 characters long</li>
+                  <li>For better security, we recommend including:
+                    <ul className="list-disc list-inside ml-4">
+                      <li>Numbers</li>
+                      <li>Special characters</li>
+                      <li>Both uppercase and lowercase letters</li>
+                    </ul>
+                  </li>
+                </ul>
+              </AlertDescription>
+            </Alert>
             <div className="space-y-2">
               <label htmlFor="email" className="text-sm font-medium">
                 Email
