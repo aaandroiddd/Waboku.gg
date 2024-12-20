@@ -17,7 +17,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
-import { Search, MapPin, Star } from "lucide-react";
+import { Search, MapPin, Star, Check } from "lucide-react";
 import Link from "next/link";
 
 // Mock data for featured listings
