@@ -108,7 +108,7 @@ export default function Home() {
                       ))}
                     </SelectContent>
                   </Select>
-                  <Button className="h-12 px-8" size="lg">
+                  <Button className="h-12 px-8 bg-sky-400 hover:bg-sky-500" size="lg">
                     Search
                   </Button>
                 </div>
