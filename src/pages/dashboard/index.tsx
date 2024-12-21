@@ -9,6 +9,7 @@ import { MessageCircle, AlertCircle } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useToast } from "@/components/ui/use-toast";
+import { useListings } from "@/hooks/useListings";
 
 interface Listing {
   id: string;
