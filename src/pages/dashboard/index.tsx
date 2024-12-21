@@ -31,11 +31,7 @@ interface Message {
   unread: boolean;
 }
 
-export async function getServerSideProps() {
-  return {
-    props: {}
-  };
-}
+
 
 export default function Dashboard() {
   const { user } = useAuth();
