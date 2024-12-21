@@ -37,6 +37,7 @@ interface Message {
 export default function Dashboard() {
   const { user } = useAuth();
   const router = useRouter();
+  const { listings, loading } = useListings();
 
   useEffect(() => {
     if (!user) {
