@@ -37,6 +37,12 @@ interface Message {
 
 
 
+export const getStaticProps = () => {
+  return {
+    props: {}
+  }
+}
+
 export default function Dashboard() {
   const { user } = useAuth();
   const router = useRouter();
