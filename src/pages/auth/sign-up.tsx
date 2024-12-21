@@ -19,104 +19,7 @@ const SignUpComponent = () => {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [successMessage, setSuccessMessage] = useState("");
-  const [showTooltip, setShowTooltip] = useState(false);
-  const [isCheckingEmail, setIsCheckingEmail] = useState(false);
-  const [emailStatus, setEmailStatus] = useState<{
-    isValid: boolean;
-    message: string;
-    type: 'success' | 'error' | 'warning' | 'none';
-  }>({ isValid: true, message: '', type: 'none' });
   const { user, signUp } = useAuth();
-
-  const checkEmailStatus = useCallback(async (email: string) => {
-    if (!email || !email.includes('@')) {
-      setEmailStatus({ isValid: false, message: '', type: 'none' });
-      return;
-    }
-
-    setIsCheckingEmail(true);
-    try {
-      const auth = getAuth();
-      const methods = await fetchSignInMethodsForEmail(auth, email);
-      
-      if (methods && methods.length > 0) {
-        setEmailStatus({
-          isValid: false,
-          message: 'This email is already registered. Please sign in instead.',
-          type: 'error'
-        });
-      } else {
-        if (email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
-          setEmailStatus({
-            isValid: true,
-            message: 'Email is available',
-            type: 'success'
-          });
-        } else {
-          setEmailStatus({
-            isValid: false,
-            message: 'Please enter a valid email address',
-            type: 'error'
-          });
-        }
-      }
-    } catch (error: any) {
-      console.error('Error checking email:', error);
-      // Handle specific Firebase auth errors
-      if (error.code === 'auth/invalid-email') {
-        setEmailStatus({
-          isValid: false,
-          message: 'Please enter a valid email address',
-          type: 'error'
-        });
-      } else if (error.code === 'auth/too-many-requests') {
-        setEmailStatus({
-          isValid: false,
-          message: 'Too many attempts. Please try again later.',
-          type: 'error'
-        });
-      } else {
-        // For network errors or other issues, we'll show a generic message
-        setEmailStatus({
-          isValid: false,
-          message: 'Unable to verify email availability. Please try again.',
-          type: 'error'
-        });
-      }
-    } finally {
-      setIsCheckingEmail(false);
-    }
-  }, []);
-
-  // Debounce email check
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (email) {
-        checkEmailStatus(email);
-      }
-    }, 500);
-
-    return () => clearTimeout(timer);
-  }, [email, checkEmailStatus]);
-
-  // Password requirements state
-  const [requirements, setRequirements] = useState({
-    minLength: false,
-    hasNumber: false,
-    hasSpecialChar: false,
-    hasMixedCase: false
-  });
-
-  // Update requirements as user types
-  useEffect(() => {
-    setRequirements({
-      minLength: password.length >= 6,
-      hasNumber: /\d/.test(password),
-      hasSpecialChar: /[!@#$%^&*(),.?":{}|<>]/.test(password),
-      hasMixedCase: /[a-z]/.test(password) && /[A-Z]/.test(password)
-    });
-  }, [password]);
 
   useEffect(() => {
     if (user) {
@@ -127,7 +30,6 @@ const SignUpComponent = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-    setSuccessMessage("");
     
     // Check if we have internet connection
     if (!navigator.onLine) {
@@ -135,7 +37,7 @@ const SignUpComponent = () => {
       return;
     }
     
-    // Client-side validation
+    // Basic validation
     if (!email || !password || !confirmPassword) {
       setError("All fields are required");
       return;
@@ -159,38 +61,20 @@ const SignUpComponent = () => {
     setIsLoading(true);
 
     try {
-      const { error: signUpError, user: newUser, isExisting } = await signUp(email, password);
+      const { error: signUpError, user: newUser } = await signUp(email, password);
       
       if (signUpError) {
-        console.error('Sign up error:', signUpError);
-        
-        // If the email is already in use, check if it's verified
-        if (signUpError.message.includes('already registered')) {
-          const { error: resendError } = await resendVerificationEmail(email);
-          if (!resendError) {
-            setError("This email is already registered but not verified. We've sent a new verification email.");
-          } else {
-            setError("This email is already registered. Please try signing in instead.");
-          }
-        } else {
-          setError(signUpError.message);
-        }
-        
-        setIsLoading(false);
+        setError(signUpError.message);
         return;
       }
 
       if (!newUser) {
         setError("Failed to create account. Please try again.");
-        setIsLoading(false);
         return;
       }
 
-      setSuccessMessage("Account created successfully! Please check your email for verification.");
-      // Redirect to verification page after a short delay
-      setTimeout(() => {
-        router.push("/auth/verify-email");
-      }, 2000);
+      // Redirect to dashboard immediately after successful signup
+      router.push("/dashboard");
     } catch (err: any) {
       console.error('Sign up error:', err);
       setError(err.message || "An unexpected error occurred. Please try again.");
