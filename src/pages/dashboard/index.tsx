@@ -22,6 +22,15 @@ interface Purchase {
 }
 
 const DashboardComponent = () => {
+  const { user, loading: authLoading } = useAuth();
+  const router = useRouter();
+  const [error, setError] = useState<string | null>(null);
+  const { listings, loading: listingsLoading, error: listingsError, deleteListing } = useListings();
+  
+  const activeListings = listings.filter(listing => listing.status === 'active');
+  const previousListings = listings.filter(listing => listing.status !== 'active');
+  
+  const loading = authLoading || listingsLoading;
   const { user, loading } = useAuth();
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
