@@ -107,19 +107,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signIn = async (email: string, password: string, retryCount = 0) => {
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      
-      // Check if email is verified
-      if (!userCredential.user.emailVerified) {
-        // Send a new verification email
-        await sendEmailVerification(userCredential.user, {
-          url: window.location.origin + '/dashboard',
-          handleCodeInApp: false,
-        });
-        // Sign out the user since email is not verified
-        await firebaseSignOut(auth);
-        return { error: new Error('Please verify your email address. A new verification email has been sent.') };
-      }
-      
       return { error: null };
     } catch (error: any) {
       console.error('Sign in error:', error);
