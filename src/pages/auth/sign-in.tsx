@@ -31,19 +31,7 @@ const SignInComponent = () => {
     setIsLoading(true);
 
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      
-      // Check if email is verified
-      if (!userCredential.user.emailVerified) {
-        await signInWithEmailAndPassword(auth, email, password);
-        setError("Please verify your email before signing in. Check your inbox or request a new verification email.");
-        router.push({
-          pathname: '/auth/verify-resend',
-          query: { email }
-        });
-        return;
-      }
-      
+      await signInWithEmailAndPassword(auth, email, password);
       // Don't need to manually redirect here as useEffect will handle it
       // when the auth state updates
     } catch (err: any) {
@@ -134,13 +122,7 @@ const SignInComponent = () => {
                 "Sign In"
               )}
             </Button>
-            <div className="text-sm text-center space-y-2">
-              <p>
-                Need to verify your email?{" "}
-                <Link href="/auth/verify-resend" className="text-primary hover:underline">
-                  Resend verification
-                </Link>
-              </p>
+            <div className="text-sm text-center">
               <p>
                 Don&apos;t have an account?{" "}
                 <Link href="/auth/sign-up" className="text-primary hover:underline">
