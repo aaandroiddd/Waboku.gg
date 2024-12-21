@@ -14,6 +14,10 @@ import { useListings } from "@/hooks/useListings";
 import dynamic from 'next/dynamic';
 
 const CreateListingPage = () => {
+
+export default dynamic(() => Promise.resolve(CreateListingPage), {
+  ssr: false
+});
   const { user, loading } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
