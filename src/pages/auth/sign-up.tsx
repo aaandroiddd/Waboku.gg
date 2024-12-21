@@ -129,6 +129,12 @@ const SignUpComponent = () => {
     setError("");
     setSuccessMessage("");
     
+    // Check if we have internet connection
+    if (!navigator.onLine) {
+      setError("No internet connection. Please check your network and try again.");
+      return;
+    }
+    
     // Client-side validation
     if (!email || !password || !confirmPassword) {
       setError("All fields are required");
