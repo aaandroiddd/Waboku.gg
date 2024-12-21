@@ -11,13 +11,9 @@ import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useListings } from "@/hooks/useListings";
 
-export const getStaticProps = () => {
-  return {
-    props: {}
-  }
-}
+import dynamic from 'next/dynamic';
 
-export default function CreateListing() {
+const CreateListingPage = () => {
   const { user, loading } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
