@@ -10,15 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Star, Edit2, Trash2, MessageCircle } from "lucide-react";
 import dynamic from 'next/dynamic';
 
-interface Listing {
-  id: string;
-  cardName: string;
-  game: string;
-  condition: string;
-  price: number;
-  inquiries: number;
-  createdAt: string;
-}
+import { Listing } from '@/types/database';
 
 interface Purchase {
   id: string;
