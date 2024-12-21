@@ -2,6 +2,7 @@ import { ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { Button } from "./ui/button";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -10,6 +11,7 @@ interface DashboardLayoutProps {
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const router = useRouter();
   const currentPath = router.pathname;
+  const { signOut } = useAuth();
 
   const navigation = [
     { name: "Active Listings", href: "/dashboard" },
@@ -18,9 +20,13 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     { name: "Profile", href: "/dashboard/profile" },
   ];
 
-  const handleSignOut = () => {
-    // TODO: Implement actual sign out
-    router.push("/auth/sign-in");
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      router.push("/auth/sign-in");
+    } catch (error) {
+      console.error("Error signing out:", error);
+    }
   };
 
   return (
