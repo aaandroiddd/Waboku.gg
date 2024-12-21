@@ -25,7 +25,11 @@ const DashboardComponent = () => {
   const { user, loading } = useAuth();
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
-  const [activeListings, setActiveListings] = useState<Listing[]>([
+  const { listings: allListings, loading: listingsLoading, error: listingsError, deleteListing } = useListings();
+  
+  const activeListings = allListings.filter(listing => listing.status === 'active');
+  const previousListings = allListings.filter(listing => listing.status !== 'active');
+  const [purchases, setPurchases] = useState<Purchase[]>([
     {
       id: '1',
       cardName: 'Blue-Eyes White Dragon',
