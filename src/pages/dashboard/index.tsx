@@ -43,12 +43,12 @@ export default function Dashboard() {
   const { listings, loading } = useListings();
 
   useEffect(() => {
-    if (!user) {
+    if (!loading && !user) {
       router.push("/auth/sign-in");
-    } else if (!user.emailVerified) {
+    } else if (!loading && user && !user.emailVerified) {
       router.push("/auth/verify-email");
     }
-  }, [user, router]);
+  }, [user, loading, router]);
 
   if (!user) {
     return null;
