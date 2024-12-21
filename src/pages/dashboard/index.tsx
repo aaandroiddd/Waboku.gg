@@ -107,6 +107,15 @@ export default function Dashboard() {
 
   const ListingCard = ({ listing }: { listing: Listing }) => (
     <Card className="hover:shadow-lg transition-shadow">
+      {listing.imageUrls && listing.imageUrls.length > 0 && (
+        <div className="relative aspect-[4/3] overflow-hidden">
+          <img
+            src={listing.imageUrls[0]}
+            alt={listing.title}
+            className="absolute inset-0 w-full h-full object-cover"
+          />
+        </div>
+      )}
       <CardHeader>
         <div className="flex justify-between items-start">
           <CardTitle className="text-xl">{listing.title}</CardTitle>
@@ -115,9 +124,17 @@ export default function Dashboard() {
       </CardHeader>
       <CardContent>
         <div className="space-y-2">
-          <p className="text-2xl font-bold text-primary">{listing.price}</p>
+          <p className="text-2xl font-bold text-primary">
+            ${typeof listing.price === 'number' ? listing.price.toFixed(2) : listing.price}
+          </p>
           <div className="flex items-center gap-2">
-            <span className={`w-3 h-3 rounded-full bg-${listing.condition === "Mint" ? "green" : "gray"}-500`} />
+            <span className={`w-3 h-3 rounded-full ${
+              listing.condition.toLowerCase() === "mint" 
+                ? "bg-green-500" 
+                : listing.condition.toLowerCase().includes("near") 
+                  ? "bg-emerald-500"
+                  : "bg-gray-500"
+            }`} />
             <span className="text-sm text-muted-foreground">{listing.condition}</span>
           </div>
           {listing.inquiries && (
