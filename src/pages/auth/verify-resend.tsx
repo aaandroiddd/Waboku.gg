@@ -48,6 +48,9 @@ const VerifyResendComponent = () => {
         handleCodeInApp: false,
       });
 
+      // Sign out the user after sending verification email
+      await auth.signOut();
+
       setSuccess("A new verification email has been sent. Please check your inbox and spam folder.");
     } catch (err: any) {
       let errorMessage = "Failed to process your request";
@@ -60,13 +63,16 @@ const VerifyResendComponent = () => {
           errorMessage = 'This account has been disabled. Please contact support.';
           break;
         case 'auth/user-not-found':
-          errorMessage = 'No account found with this email.';
+          errorMessage = 'No account found with this email address.';
           break;
         case 'auth/wrong-password':
           errorMessage = 'Invalid password.';
           break;
+        case 'auth/too-many-requests':
+          errorMessage = 'Too many attempts. Please try again later.';
+          break;
         default:
-          errorMessage = err.message || 'An unexpected error occurred';
+          errorMessage = 'An unexpected error occurred. Please try again.';
       }
       
       setError(errorMessage);
