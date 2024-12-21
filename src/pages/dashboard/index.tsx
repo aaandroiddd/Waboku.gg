@@ -11,6 +11,11 @@ const DashboardComponent = () => {
   useEffect(() => {
     if (!loading && !user) {
       router.replace('/auth/sign-in');
+    } else if (!loading && user && !user.emailVerified) {
+      router.replace({
+        pathname: '/auth/verify-resend',
+        query: { email: user.email }
+      });
     }
   }, [user, loading, router]);
 
