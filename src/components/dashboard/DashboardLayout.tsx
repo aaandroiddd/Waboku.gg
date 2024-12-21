@@ -1,3 +1,6 @@
+import { useEffect } from "react";
+import { useRouter } from "next/router";
+import { useAuth } from "@/contexts/AuthContext";
 import { DashboardSidebar } from "./DashboardSidebar";
 
 interface DashboardLayoutProps {
@@ -5,6 +8,19 @@ interface DashboardLayoutProps {
 }
 
 export function DashboardLayout({ children }: DashboardLayoutProps) {
+  const { user } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!user) {
+      router.push("/auth/sign-in");
+    }
+  }, [user, router]);
+
+  if (!user) {
+    return null;
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <DashboardSidebar />
