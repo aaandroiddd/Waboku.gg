@@ -41,11 +41,26 @@ const SignUpComponent = () => {
       const methods = await fetchSignInMethodsForEmail(auth, email);
       
       if (methods.length > 0) {
-        setEmailStatus({
-          isValid: false,
-          message: 'This email is already registered. Please sign in instead.',
-          type: 'error'
-        });
+        // Try to sign in with an invalid password to check if the account exists
+        try {
+          await signInWithEmailAndPassword(auth, email, 'dummy-password-for-check');
+        } catch (signInError: any) {
+          // If we get auth/wrong-password, it means the account exists
+          if (signInError.code === 'auth/wrong-password') {
+            setEmailStatus({
+              isValid: false,
+              message: 'This email is already registered. Please sign in instead.',
+              type: 'error'
+            });
+          } else if (signInError.code === 'auth/user-not-found') {
+            // This shouldn't happen since we found sign-in methods, but just in case
+            setEmailStatus({
+              isValid: true,
+              message: 'Email is available',
+              type: 'success'
+            });
+          }
+        }
       } else {
         setEmailStatus({
           isValid: true,
@@ -53,13 +68,21 @@ const SignUpComponent = () => {
           type: 'success'
         });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error checking email:', error);
-      setEmailStatus({
-        isValid: false,
-        message: 'Error checking email availability',
-        type: 'error'
-      });
+      if (error.code === 'auth/too-many-requests') {
+        setEmailStatus({
+          isValid: false,
+          message: 'Too many attempts. Please try again later.',
+          type: 'error'
+        });
+      } else {
+        setEmailStatus({
+          isValid: false,
+          message: 'Error checking email availability',
+          type: 'error'
+        });
+      }
     } finally {
       setIsCheckingEmail(false);
     }
