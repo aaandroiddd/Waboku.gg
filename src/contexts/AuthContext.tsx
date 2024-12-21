@@ -39,8 +39,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       console.log('Starting sign up process for:', email);
       
+      // Add timeout promise
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Request timeout')), 10000); // 10 second timeout
+      });
+      
       // First check if the email exists
-      const signInMethods = await fetchSignInMethodsForEmail(auth, email);
+      const signInMethodsPromise = fetchSignInMethodsForEmail(auth, email);
+      
+      // Race between the actual request and timeout
+      const signInMethods = await Promise.race([signInMethodsPromise, timeoutPromise])
+        .catch(async (error) => {
+          console.error('Error during email check:', error);
+          if (error.message === 'Request timeout' || error.code === 'auth/network-request-failed') {
+            if (retryCount < 3) {
+              console.log(`Retrying sign up attempt ${retryCount + 1}/3...`);
+              await new Promise(resolve => setTimeout(resolve, 2000));
+              return signUp(email, password, retryCount + 1);
+            }
+            throw new Error('Network connection error. Please check your internet connection and try again.');
+          }
+          throw error;
+        });
       if (signInMethods.length > 0) {
         // Email exists, try to sign in to check verification status
         try {
