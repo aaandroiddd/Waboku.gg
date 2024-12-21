@@ -36,14 +36,15 @@ const SignInComponent = () => {
       // Check if email is verified
       if (!userCredential.user.emailVerified) {
         // Redirect to verify-resend page with email pre-filled
-        router.push({
+        router.replace({
           pathname: '/auth/verify-resend',
           query: { email }
         });
         return;
       }
       
-      router.push("/dashboard");
+      // Don't need to manually redirect here as useEffect will handle it
+      // when the auth state updates
     } catch (err: any) {
       let errorMessage = "Failed to sign in";
       
