@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,9 +7,10 @@ import { useRouter } from "next/router";
 import { Logo } from "@/components/Logo";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Check, X } from "lucide-react";
+import { Check, X, AlertCircle, Loader2 } from "lucide-react";
 import dynamic from 'next/dynamic'
 import { useAuth } from "@/contexts/AuthContext";
+import { getAuth, fetchSignInMethodsForEmail } from "firebase/auth";
 
 const SignUpComponent = () => {
   const router = useRouter();
