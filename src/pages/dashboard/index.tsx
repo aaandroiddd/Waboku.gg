@@ -158,7 +158,12 @@ export default function Dashboard() {
         
         <div className="flex justify-between items-center">
           <h1 className="text-3xl font-bold">Dashboard</h1>
-          <Button disabled={!user.emailVerified}>+ New Listing</Button>
+          <Button 
+            disabled={!user.emailVerified} 
+            onClick={() => router.push("/dashboard/create-listing")}
+          >
+            + New Listing
+          </Button>
         </div>
 
         <Tabs defaultValue="active" className="space-y-4">
