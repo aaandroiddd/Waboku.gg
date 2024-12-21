@@ -208,21 +208,42 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Get current user if logged in
       const currentUser = auth.currentUser;
       
-      if (currentUser && currentUser.email === email) {
-        // If the user is already logged in and it's the same email
-        if (!currentUser.emailVerified) {
-          await sendEmailVerification(currentUser, {
+      if (currentUser) {
+        if (currentUser.email === email) {
+          // If the user is already logged in and it's the same email
+          if (!currentUser.emailVerified) {
+            await sendEmailVerification(currentUser, {
+              url: window.location.origin + '/dashboard',
+              handleCodeInApp: false,
+            });
+            return { error: null };
+          } else {
+            return { error: new Error('This email is already verified.') };
+          }
+        } else {
+          // If it's a different email, sign out current user first
+          await firebaseSignOut(auth);
+        }
+      }
+
+      // At this point either no user was logged in or we signed out the previous user
+      // We'll try to sign in with the provided email to send verification
+      try {
+        const userCredential = await signInWithEmailAndPassword(auth, email, '');
+        if (!userCredential.user.emailVerified) {
+          await sendEmailVerification(userCredential.user, {
             url: window.location.origin + '/dashboard',
             handleCodeInApp: false,
           });
+          await firebaseSignOut(auth);
           return { error: null };
         } else {
+          await firebaseSignOut(auth);
           return { error: new Error('This email is already verified.') };
         }
-      } else {
-        // If no user is logged in or it's a different email, we can't send verification
-        // without knowing the password
-        return { error: new Error('Please sign in first to resend the verification email.') };
+      } catch (signInError) {
+        // If we can't sign in, we need the user to provide their password
+        return { error: new Error('Please provide your password to resend the verification email.') };
       }
     } catch (error: any) {
       console.error('Resend verification error:', error);
