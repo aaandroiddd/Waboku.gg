@@ -175,10 +175,20 @@ export default function Dashboard() {
           </TabsList>
 
           <TabsContent value="active" className="space-y-4">
-            <EmptyState
-              title="No Active Listings"
-              description="You haven't created any listings yet. Click the 'New Listing' button to get started!"
-            />
+            {listings.length === 0 ? (
+              <EmptyState
+                title="No Active Listings"
+                description="You haven't created any listings yet. Click the 'New Listing' button to get started!"
+              />
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {listings
+                  .filter((listing) => listing.status === "active")
+                  .map((listing) => (
+                    <ListingCard key={listing.id} listing={listing} />
+                  ))}
+              </div>
+            )}
           </TabsContent>
 
           <TabsContent value="previous" className="space-y-6">
