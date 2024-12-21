@@ -12,15 +12,6 @@ import dynamic from 'next/dynamic';
 
 import { Listing } from '@/types/database';
 
-interface Purchase {
-  id: string;
-  cardName: string;
-  seller: string;
-  condition: string;
-  price: number;
-  purchaseDate: string;
-}
-
 const DashboardComponent = () => {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
