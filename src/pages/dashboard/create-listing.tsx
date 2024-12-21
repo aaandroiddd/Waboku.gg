@@ -31,8 +31,7 @@ export default function CreateListing() {
     setIsSubmitting(true);
 
     try {
-      // Here we'll implement the actual submission logic later
-      // For now, just show a success message
+      await createListing(formData);
       toast({
         title: "Listing created successfully!",
         description: "Your card listing has been published.",
