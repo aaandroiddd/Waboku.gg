@@ -1,6 +1,6 @@
 import dynamic from 'next/dynamic';
 
-const CreateListingPage = dynamic(() => import('./create-listing/main'), {
+const CreateListingPage = dynamic(() => import('./create-listing'), {
   ssr: false
 })
 
