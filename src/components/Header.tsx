@@ -5,16 +5,38 @@ import { Button } from "./ui/button";
 import { useRouter } from "next/router";
 import { useAuth } from "@/contexts/AuthContext";
 import { LogOut, LayoutDashboard } from "lucide-react";
+import { useEffect, useState } from "react";
 
 export default function Header() {
   const router = useRouter();
   const { user, signOut } = useAuth();
   const isAuthPage = router.pathname.startsWith("/auth/");
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const handleSignOut = async () => {
     await signOut();
     router.push("/");
   };
+
+  // Don't show auth-dependent UI until mounted to prevent hydration mismatch
+  if (!mounted) {
+    return (
+      <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="container mx-auto px-4 h-16 flex items-center justify-between">
+          <Link href="/" className="flex items-center">
+            <Logo />
+          </Link>
+          <nav className="flex items-center gap-4">
+            <ThemeToggle />
+          </nav>
+        </div>
+      </header>
+    );
+  }
 
   return (
     <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
