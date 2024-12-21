@@ -12,9 +12,10 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useListings } from "@/hooks/useListings";
 
 export default function CreateListing() {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
+  const { createListing } = useListings();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [formData, setFormData] = useState({
