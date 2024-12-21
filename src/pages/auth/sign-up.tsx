@@ -21,7 +21,60 @@ const SignUpComponent = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
   const [showTooltip, setShowTooltip] = useState(false);
+  const [isCheckingEmail, setIsCheckingEmail] = useState(false);
+  const [emailStatus, setEmailStatus] = useState<{
+    isValid: boolean;
+    message: string;
+    type: 'success' | 'error' | 'warning' | 'none';
+  }>({ isValid: true, message: '', type: 'none' });
   const { user, signUp } = useAuth();
+
+  const checkEmailStatus = useCallback(async (email: string) => {
+    if (!email || !email.includes('@')) {
+      setEmailStatus({ isValid: false, message: '', type: 'none' });
+      return;
+    }
+
+    setIsCheckingEmail(true);
+    try {
+      const auth = getAuth();
+      const methods = await fetchSignInMethodsForEmail(auth, email);
+      
+      if (methods.length > 0) {
+        setEmailStatus({
+          isValid: false,
+          message: 'This email is already registered. Please sign in instead.',
+          type: 'error'
+        });
+      } else {
+        setEmailStatus({
+          isValid: true,
+          message: 'Email is available',
+          type: 'success'
+        });
+      }
+    } catch (error) {
+      console.error('Error checking email:', error);
+      setEmailStatus({
+        isValid: false,
+        message: 'Error checking email availability',
+        type: 'error'
+      });
+    } finally {
+      setIsCheckingEmail(false);
+    }
+  }, []);
+
+  // Debounce email check
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (email) {
+        checkEmailStatus(email);
+      }
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [email, checkEmailStatus]);
 
   // Password requirements state
   const [requirements, setRequirements] = useState({
