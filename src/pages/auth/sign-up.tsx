@@ -41,27 +41,13 @@ const SignUpComponent = () => {
       const methods = await fetchSignInMethodsForEmail(auth, email);
       
       if (methods.length > 0) {
-        // Try to sign in with an invalid password to check if the account exists
-        try {
-          await signInWithEmailAndPassword(auth, email, 'dummy-password-for-check');
-        } catch (signInError: any) {
-          // If we get auth/wrong-password, it means the account exists
-          if (signInError.code === 'auth/wrong-password') {
-            setEmailStatus({
-              isValid: false,
-              message: 'This email is already registered. Please sign in instead.',
-              type: 'error'
-            });
-          } else if (signInError.code === 'auth/user-not-found') {
-            // This shouldn't happen since we found sign-in methods, but just in case
-            setEmailStatus({
-              isValid: true,
-              message: 'Email is available',
-              type: 'success'
-            });
-          }
-        }
+        setEmailStatus({
+          isValid: false,
+          message: 'This email is already registered. Please sign in instead.',
+          type: 'error'
+        });
       } else {
+        // Email is not registered
         setEmailStatus({
           isValid: true,
           message: 'Email is available',
@@ -70,7 +56,13 @@ const SignUpComponent = () => {
       }
     } catch (error: any) {
       console.error('Error checking email:', error);
-      if (error.code === 'auth/too-many-requests') {
+      if (error.code === 'auth/invalid-email') {
+        setEmailStatus({
+          isValid: false,
+          message: 'Please enter a valid email address',
+          type: 'error'
+        });
+      } else if (error.code === 'auth/too-many-requests') {
         setEmailStatus({
           isValid: false,
           message: 'Too many attempts. Please try again later.',
