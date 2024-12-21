@@ -26,16 +26,16 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Mobile Sidebar */}
-      <div className="lg:hidden fixed top-0 left-0 right-0 z-50 bg-background border-b p-4">
+    <div className="min-h-screen bg-background flex">
+      {/* Mobile Menu Button */}
+      <div className="lg:hidden fixed top-0 left-0 z-50 p-4">
         <Sheet open={isMobileOpen} onOpenChange={setIsMobileOpen}>
           <SheetTrigger asChild>
-            <Button variant="ghost" size="icon">
-              <Menu className="h-6 w-6" />
+            <Button variant="ghost" size="icon" className="bg-card">
+              <Menu className="h-5 w-5" />
             </Button>
           </SheetTrigger>
-          <SheetContent side="left" className="p-0 w-72">
+          <SheetContent side="left" className="p-0 w-16">
             <DashboardSidebar onNavigate={() => setIsMobileOpen(false)} />
           </SheetContent>
         </Sheet>
@@ -47,8 +47,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       </div>
 
       {/* Main Content */}
-      <div className="lg:pl-64">
-        <main className="container mx-auto py-6 px-4 mt-16 lg:mt-0">
+      <div className="flex-1 w-full">
+        <main className="container mx-auto py-6 px-4 mt-16 lg:mt-6">
           {children}
         </main>
       </div>
