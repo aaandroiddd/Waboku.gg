@@ -37,23 +37,26 @@ interface Message {
 }
 
 const DashboardPage = () => {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const router = useRouter();
-  const { listings, loading } = useListings();
+  const { listings, loading: listingsLoading } = useListings();
   const { toast } = useToast();
 
   useEffect(() => {
-    if (!loading && !user) {
-      router.push("/auth/sign-in");
-    } else if (!loading && user && !user.emailVerified) {
-      router.push("/auth/verify-email");
+    if (!authLoading && !user) {
+      router.replace("/auth/sign-in");
     }
-  }, [user, loading, router]);
+  }, [user, authLoading, router]);
 
-  if (!user) {
-    return null;
+  // Show loading state while checking authentication
+  if (authLoading || !user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
   }
-  
+
   const EmailVerificationBanner = () => {
     if (user.emailVerified) return null;
 
@@ -195,7 +198,11 @@ const DashboardPage = () => {
           </TabsList>
 
           <TabsContent value="active" className="space-y-4">
-            {listings.length === 0 ? (
+            {listingsLoading ? (
+              <div className="flex justify-center py-8">
+                <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+              </div>
+            ) : listings.length === 0 ? (
               <EmptyState
                 title="No Active Listings"
                 description="You haven't created any listings yet. Click the 'New Listing' button to get started!"
