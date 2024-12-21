@@ -204,16 +204,50 @@ const SignUpComponent = () => {
                 <label htmlFor="email" className="text-sm font-medium">
                   Email
                 </label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="Enter your email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  disabled={isLoading}
-                  autoComplete="email"
-                />
+                <div className="relative">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="relative">
+                        <Input
+                          id="email"
+                          type="email"
+                          placeholder="Enter your email"
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          required
+                          disabled={isLoading}
+                          autoComplete="email"
+                          className={emailStatus.type !== 'none' ? `pr-10 ${
+                            emailStatus.type === 'success' ? 'border-green-500' :
+                            emailStatus.type === 'error' ? 'border-red-500' :
+                            'border-yellow-500'
+                          }` : ''}
+                        />
+                        {isCheckingEmail ? (
+                          <Loader2 className="w-4 h-4 absolute right-3 top-3 animate-spin text-muted-foreground" />
+                        ) : emailStatus.type !== 'none' && (
+                          <div className="absolute right-3 top-3">
+                            {emailStatus.type === 'success' && <Check className="w-4 h-4 text-green-500" />}
+                            {emailStatus.type === 'error' && <X className="w-4 h-4 text-red-500" />}
+                            {emailStatus.type === 'warning' && <AlertCircle className="w-4 h-4 text-yellow-500" />}
+                          </div>
+                        )}
+                      </div>
+                    </TooltipTrigger>
+                    {emailStatus.message && (
+                      <TooltipContent 
+                        side="right"
+                        className={`p-2 ${
+                          emailStatus.type === 'success' ? 'bg-green-50 text-green-900' :
+                          emailStatus.type === 'error' ? 'bg-red-50 text-red-900' :
+                          'bg-yellow-50 text-yellow-900'
+                        }`}
+                      >
+                        {emailStatus.message}
+                      </TooltipContent>
+                    )}
+                  </Tooltip>
+                </div>
               </div>
               <div className="space-y-2">
                 <label htmlFor="password" className="text-sm font-medium">
