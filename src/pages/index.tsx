@@ -125,6 +125,7 @@ export default function Home() {
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <link rel="icon" href="/favicon.ico" />
       </Head>
+
       <div className="bg-background min-h-screen flex flex-col">
         <Header />
         <main className="flex-1">
@@ -136,20 +137,19 @@ export default function Home() {
               <div className="absolute inset-0 bg-gradient-to-b from-background via-background/95 to-background" />
             </div>
             <div className="absolute inset-0 bg-gradient-to-r from-blue-600/10 via-blue-400/10 to-blue-600/10" />
-            <div className="relative container mx-auto px-4 py-16 md:py-24">
+            
+            <div className="relative container mx-auto px-4 py-8 sm:py-12 md:py-16 lg:py-24">
               <div className="text-center max-w-3xl mx-auto">
-                <h1 className="text-4xl md:text-6xl font-bold mb-4">
+                <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-4 tracking-tight">
                   Your Local TCG Marketplace
                 </h1>
-                <p className="text-lg md:text-xl text-muted-foreground mb-8">
+                <p className="text-base sm:text-lg md:text-xl text-muted-foreground mb-8">
                   Buy, sell, and trade cards with collectors in your area
                 </p>
 
                 {/* Search Section */}
-
-                {/* Search Section */}
-                <div className="flex flex-col md:flex-row gap-4 max-w-2xl mx-auto">
-                  <div className="relative flex-1">
+                <div className="flex flex-col gap-4 max-w-2xl mx-auto">
+                  <div className="relative">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
                     <Input
                       type="text"
@@ -159,62 +159,65 @@ export default function Home() {
                       onChange={(e) => setSearchQuery(e.target.value)}
                     />
                   </div>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        role="combobox"
-                        className="w-full md:w-[200px] h-12 justify-between"
-                      >
-                        {selectedState === "all" 
-                          ? "All Locations"
-                          : usStates.find((state) => state.value === selectedState)?.label || "Select location"}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-[200px] p-0">
-                      <Command>
-                        <CommandInput placeholder="Search state..." className="h-9" />
-                        <CommandEmpty>No state found.</CommandEmpty>
-                        <CommandList>
-                          <CommandGroup>
-                            {usStates.map((state) => (
-                              <CommandItem
-                                key={state.value}
-                                value={state.value}
-                                onSelect={(currentValue) => {
-                                  setSelectedState(currentValue);
-                                }}
-                              >
-                                <Check
-                                  className={`mr-2 h-4 w-4 ${
-                                    selectedState === state.value ? "opacity-100" : "opacity-0"
-                                  }`}
-                                />
-                                {state.label}
-                              </CommandItem>
-                            ))}
-                          </CommandGroup>
-                        </CommandList>
-                      </Command>
-                    </PopoverContent>
-                  </Popover>
-                  <Button className="h-12 px-8" size="lg">
-                    Search
-                  </Button>
+                  
+                  <div className="flex flex-col sm:flex-row gap-4">
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          className="w-full sm:w-[200px] h-12 justify-between"
+                        >
+                          {selectedState === "all" 
+                            ? "All Locations"
+                            : usStates.find((state) => state.value === selectedState)?.label || "Select location"}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-[200px] p-0">
+                        <Command>
+                          <CommandInput placeholder="Search state..." className="h-9" />
+                          <CommandEmpty>No state found.</CommandEmpty>
+                          <CommandList>
+                            <CommandGroup>
+                              {usStates.map((state) => (
+                                <CommandItem
+                                  key={state.value}
+                                  value={state.value}
+                                  onSelect={(currentValue) => {
+                                    setSelectedState(currentValue);
+                                  }}
+                                >
+                                  <Check
+                                    className={`mr-2 h-4 w-4 ${
+                                      selectedState === state.value ? "opacity-100" : "opacity-0"
+                                    }`}
+                                  />
+                                  {state.label}
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                    <Button className="h-12 px-8 w-full sm:w-auto" size="lg">
+                      Search
+                    </Button>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
 
           {/* Featured Listings Section */}
-          <section className="container mx-auto px-4 py-12">
-            <div className="flex justify-between items-center mb-8">
+          <section className="container mx-auto px-4 py-8 sm:py-12">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
               <h2 className="text-2xl font-bold">Featured Listings</h2>
               <Link href="/auth/sign-in">
                 <Button variant="outline">View All</Button>
               </Link>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {featuredListings.map((listing) => (
                 <Card
                   key={listing.id}
@@ -222,21 +225,21 @@ export default function Home() {
                 >
                   <CardContent className="p-6">
                     <div className="flex justify-between items-start mb-4">
-                      <div>
-                        <h3 className="font-bold text-lg mb-2">
+                      <div className="space-y-2">
+                        <h3 className="font-bold text-lg line-clamp-2">
                           {listing.cardName}
                         </h3>
-                        <Badge variant="secondary" className="mb-2">
+                        <Badge variant="secondary">
                           {listing.game}
                         </Badge>
                         <div className="flex items-center gap-2 text-muted-foreground text-sm">
-                          <MapPin className="w-4 h-4" />
-                          <span>{listing.location}</span>
+                          <MapPin className="w-4 h-4 flex-shrink-0" />
+                          <span className="truncate">{listing.location}</span>
                         </div>
                       </div>
                       <Badge
                         variant="outline"
-                        className="bg-green-500/10 text-green-500 border-green-500/20"
+                        className="bg-green-500/10 text-green-500 border-green-500/20 whitespace-nowrap"
                       >
                         {listing.condition}
                       </Badge>
@@ -251,7 +254,7 @@ export default function Home() {
                           <span className="font-medium">{listing.rating}</span>
                         </div>
                       </div>
-                      <div className="text-2xl font-bold">${listing.price}</div>
+                      <div className="text-xl sm:text-2xl font-bold">${listing.price}</div>
                     </div>
                   </CardContent>
                 </Card>
@@ -260,11 +263,11 @@ export default function Home() {
           </section>
 
           {/* Membership Section */}
-          <section className="container mx-auto px-4 py-12">
+          <section className="container mx-auto px-4 py-8 sm:py-12">
             <h2 className="text-2xl font-bold text-center mb-8">
               Choose Your Plan
             </h2>
-            <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+            <div className="grid sm:grid-cols-2 gap-6 sm:gap-8 max-w-4xl mx-auto">
               <Card className="p-6">
                 <h3 className="text-xl font-bold mb-4">Free Account</h3>
                 <ul className="space-y-2 mb-6">
