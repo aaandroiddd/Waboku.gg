@@ -8,7 +8,9 @@ import { Logo } from "@/components/Logo";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useAuth } from "@/contexts/AuthContext";
 
-export default function VerifyResend() {
+import dynamic from 'next/dynamic';
+
+function VerifyResend() {
   const router = useRouter();
   const { email: initialEmail } = router.query;
   const [email, setEmail] = useState(initialEmail as string || "");
