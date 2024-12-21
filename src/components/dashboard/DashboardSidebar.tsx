@@ -2,6 +2,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/router";
 import Link from "next/link";
+import { Logo } from "@/components/Logo";
 import {
   LayoutDashboard,
   ListPlus,
@@ -24,7 +25,7 @@ export function DashboardSidebar() {
   return (
     <div className="h-screen w-64 bg-card border-r flex flex-col fixed left-0 top-0">
       <div className="p-6">
-        <h2 className="text-2xl font-bold text-primary">Waboku.gg</h2>
+        <Logo href="/" />
       </div>
       
       <nav className="flex-1 px-4 space-y-2">
