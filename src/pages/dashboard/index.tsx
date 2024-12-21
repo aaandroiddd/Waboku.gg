@@ -20,8 +20,14 @@ const DashboardComponent = () => {
   
   const loading = authLoading || listingsLoading;
   
-  const activeListings = listings.filter(listing => listing.status === 'active');
-  const previousListings = listings.filter(listing => listing.status !== 'active');
+  const sortedListings = [...listings].sort((a, b) => {
+    const dateA = a.createdAt instanceof Date ? a.createdAt : new Date(a.createdAt);
+    const dateB = b.createdAt instanceof Date ? b.createdAt : new Date(b.createdAt);
+    return dateB.getTime() - dateA.getTime();
+  });
+  
+  const activeListings = sortedListings.filter(listing => listing.status === 'active');
+  const previousListings = sortedListings.filter(listing => listing.status !== 'active');
 
   useEffect(() => {
     if (!loading && !user) {
