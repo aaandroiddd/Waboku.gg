@@ -43,9 +43,6 @@ const DashboardPage = () => {
   const { user } = useAuth();
   const router = useRouter();
   const { listings, loading } = useListings();
-  const { user } = useAuth();
-  const router = useRouter();
-  const { listings, loading } = useListings();
 
   useEffect(() => {
     if (!loading && !user) {
