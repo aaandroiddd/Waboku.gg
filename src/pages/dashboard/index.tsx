@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Star, Edit2, Trash2, MessageCircle } from "lucide-react";
 import dynamic from 'next/dynamic';
-
+import { useListings } from '@/hooks/useListings';
 import { Listing } from '@/types/database';
 
 const DashboardComponent = () => {
@@ -18,85 +18,27 @@ const DashboardComponent = () => {
   const [error, setError] = useState<string | null>(null);
   const { listings, loading: listingsLoading, error: listingsError, deleteListing } = useListings();
   
+  const loading = authLoading || listingsLoading;
+  
   const activeListings = listings.filter(listing => listing.status === 'active');
   const previousListings = listings.filter(listing => listing.status !== 'active');
-  
-  const loading = authLoading || listingsLoading;
-  const { user, loading } = useAuth();
-  const router = useRouter();
-  const [error, setError] = useState<string | null>(null);
-  const { listings: allListings, loading: listingsLoading, error: listingsError, deleteListing } = useListings();
-  
-  const activeListings = allListings.filter(listing => listing.status === 'active');
-  const previousListings = allListings.filter(listing => listing.status !== 'active');
-  const [purchases, setPurchases] = useState<Purchase[]>([
-    {
-      id: '1',
-      cardName: 'Blue-Eyes White Dragon',
-      game: 'Yu-Gi-Oh',
-      condition: 'Near Mint',
-      price: 29.99,
-      inquiries: 3,
-      createdAt: '2024-01-15'
-    },
-    {
-      id: '2',
-      cardName: 'Charizard',
-      game: 'Pokémon',
-      condition: 'Lightly Played',
-      price: 149.99,
-      inquiries: 5,
-      createdAt: '2024-01-14'
-    }
-  ]);
-
-  const [previousListings, setPreviousListings] = useState<Listing[]>([
-    {
-      id: '3',
-      cardName: 'Dark Magician',
-      game: 'Yu-Gi-Oh',
-      condition: 'Excellent',
-      price: 19.99,
-      inquiries: 2,
-      createdAt: '2023-12-20'
-    }
-  ]);
-
-  const [purchases, setPurchases] = useState<Purchase[]>([
-    {
-      id: '1',
-      cardName: 'Black Lotus',
-      seller: 'CardMaster123',
-      condition: 'Good',
-      price: 299.99,
-      purchaseDate: '2024-01-10'
-    }
-  ]);
 
   useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        if (!loading) {
-          if (!user) {
-            await router.replace('/auth/sign-in');
-          }
-        }
-      } catch (err) {
-        console.error('Authentication error:', err);
-        setError('Failed to authenticate. Please try again.');
-      }
-    };
-
-    checkAuth();
+    if (!loading && !user) {
+      router.replace('/auth/sign-in');
+    }
   }, [user, loading, router]);
 
   const getConditionColor = (condition: string) => {
     switch (condition.toLowerCase()) {
-      case 'near mint':
+      case 'mint':
+      case 'near-mint':
         return 'bg-green-100 text-green-800';
-      case 'lightly played':
+      case 'excellent':
+      case 'light-played':
         return 'bg-yellow-100 text-yellow-800';
       case 'good':
+      case 'played':
         return 'bg-orange-100 text-orange-800';
       default:
         return 'bg-gray-100 text-gray-800';
@@ -107,8 +49,12 @@ const DashboardComponent = () => {
     router.push('/dashboard/edit-listing/' + listingId);
   };
 
-  const handleDeleteListing = (listingId: string) => {
-    setActiveListings(activeListings.filter(listing => listing.id !== listingId));
+  const handleDeleteListing = async (listingId: string) => {
+    try {
+      await deleteListing(listingId);
+    } catch (err) {
+      console.error('Error deleting listing:', err);
+    }
   };
 
   const handleMessage = (listingId: string) => {
@@ -123,12 +69,12 @@ const DashboardComponent = () => {
     );
   }
 
-  if (error) {
+  if (error || listingsError) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <h2 className="text-2xl font-bold text-red-600 mb-4">Error</h2>
-          <p className="text-gray-600">{error}</p>
+          <p className="text-gray-600">{error || listingsError}</p>
           <Button
             className="mt-4"
             onClick={() => router.push('/auth/sign-in')}
@@ -160,17 +106,9 @@ const DashboardComponent = () => {
                   <h2 className="text-2xl font-bold">{user.displayName || 'User'}</h2>
                   <p className="text-muted-foreground">{user.email}</p>
                 </div>
-                <div className="flex items-center gap-2">
-                  <div className="flex items-center">
-                    <Star className="h-5 w-5 text-yellow-400 fill-current" />
-                    <span className="ml-1 font-semibold">4.8</span>
-                  </div>
-                  <span className="text-sm text-muted-foreground">(24 reviews)</span>
-                </div>
               </div>
               <div className="mt-4">
                 <Badge variant="secondary">Verified Seller</Badge>
-                <Badge variant="secondary" className="ml-2">Premium Member</Badge>
               </div>
             </div>
           </div>
@@ -181,7 +119,7 @@ const DashboardComponent = () => {
       <Tabs defaultValue="active" className="space-y-4">
         <TabsList>
           <TabsTrigger value="active">Active Listings</TabsTrigger>
-          <TabsTrigger value="previous">Previous Listings & Purchases</TabsTrigger>
+          <TabsTrigger value="previous">Previous Listings</TabsTrigger>
         </TabsList>
 
         <TabsContent value="active" className="space-y-4">
@@ -189,7 +127,7 @@ const DashboardComponent = () => {
             {activeListings.map((listing) => (
               <Card key={listing.id}>
                 <CardHeader>
-                  <CardTitle>{listing.cardName}</CardTitle>
+                  <CardTitle>{listing.title}</CardTitle>
                   <CardDescription>{listing.game}</CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -198,10 +136,9 @@ const DashboardComponent = () => {
                       <Badge className={getConditionColor(listing.condition)}>
                         {listing.condition}
                       </Badge>
-                      <span className="font-bold">${listing.price}</span>
+                      <span className="font-bold">${listing.price.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between items-center text-sm text-muted-foreground">
-                      <span>{listing.inquiries} inquiries</span>
                       <span>Listed on {new Date(listing.createdAt).toLocaleDateString()}</span>
                     </div>
                     <div className="flex gap-2 mt-4">
@@ -245,7 +182,7 @@ const DashboardComponent = () => {
               {previousListings.map((listing) => (
                 <Card key={listing.id}>
                   <CardHeader>
-                    <CardTitle>{listing.cardName}</CardTitle>
+                    <CardTitle>{listing.title}</CardTitle>
                     <CardDescription>{listing.game}</CardDescription>
                   </CardHeader>
                   <CardContent>
@@ -254,37 +191,10 @@ const DashboardComponent = () => {
                         <Badge className={getConditionColor(listing.condition)}>
                           {listing.condition}
                         </Badge>
-                        <span className="font-bold">${listing.price}</span>
+                        <span className="font-bold">${listing.price.toFixed(2)}</span>
                       </div>
                       <div className="text-sm text-muted-foreground">
-                        Sold on {new Date(listing.createdAt).toLocaleDateString()}
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </div>
-
-          <div>
-            <h3 className="text-lg font-semibold mb-4">Your Purchases</h3>
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {purchases.map((purchase) => (
-                <Card key={purchase.id}>
-                  <CardHeader>
-                    <CardTitle>{purchase.cardName}</CardTitle>
-                    <CardDescription>Purchased from {purchase.seller}</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2">
-                      <div className="flex justify-between items-center">
-                        <Badge className={getConditionColor(purchase.condition)}>
-                          {purchase.condition}
-                        </Badge>
-                        <span className="font-bold">${purchase.price}</span>
-                      </div>
-                      <div className="text-sm text-muted-foreground">
-                        Purchased on {new Date(purchase.purchaseDate).toLocaleDateString()}
+                        Listed on {new Date(listing.createdAt).toLocaleDateString()}
                       </div>
                     </div>
                   </CardContent>
