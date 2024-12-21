@@ -1,16 +1,10 @@
-import { useEffect } from "react";
-import { useRouter } from "next/router";
 import dynamic from 'next/dynamic';
-import DashboardLayout from "@/components/DashboardLayout";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
-import { MessageCircle, AlertCircle } from "lucide-react";
-import { useAuth } from "@/contexts/AuthContext";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { useToast } from "@/components/ui/use-toast";
-import { useListings } from "@/hooks/useListings";
+
+const DashboardPage = dynamic(() => import('./main'), {
+  ssr: false
+})
+
+export default DashboardPage;
 
 interface Listing {
   id: string;
