@@ -37,6 +37,8 @@ interface Message {
 
 
 
+import dynamic from 'next/dynamic';
+
 const DashboardPage = () => {
   const { user } = useAuth();
   const router = useRouter();
