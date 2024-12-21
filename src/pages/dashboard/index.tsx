@@ -32,6 +32,7 @@ interface Purchase {
 const DashboardComponent = () => {
   const { user, loading } = useAuth();
   const router = useRouter();
+  const [error, setError] = useState<string | null>(null);
   const [activeListings, setActiveListings] = useState<Listing[]>([
     {
       id: '1',
@@ -77,14 +78,20 @@ const DashboardComponent = () => {
   ]);
 
   useEffect(() => {
-    if (!loading && !user) {
-      router.replace('/auth/sign-in');
-    } else if (!loading && user && !user.emailVerified) {
-      router.replace({
-        pathname: '/auth/verify-resend',
-        query: { email: user.email }
-      });
-    }
+    const checkAuth = async () => {
+      try {
+        if (!loading) {
+          if (!user) {
+            await router.replace('/auth/sign-in');
+          }
+        }
+      } catch (err) {
+        console.error('Authentication error:', err);
+        setError('Failed to authenticate. Please try again.');
+      }
+    };
+
+    checkAuth();
   }, [user, loading, router]);
 
   const getConditionColor = (condition: string) => {
@@ -105,7 +112,6 @@ const DashboardComponent = () => {
   };
 
   const handleDeleteListing = (listingId: string) => {
-    // Implement delete functionality
     setActiveListings(activeListings.filter(listing => listing.id !== listingId));
   };
 
@@ -117,6 +123,23 @@ const DashboardComponent = () => {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-red-600 mb-4">Error</h2>
+          <p className="text-gray-600">{error}</p>
+          <Button
+            className="mt-4"
+            onClick={() => router.push('/auth/sign-in')}
+          >
+            Return to Sign In
+          </Button>
+        </div>
       </div>
     );
   }
