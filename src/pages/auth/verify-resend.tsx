@@ -101,3 +101,7 @@ function VerifyResend() {
     </div>
   );
 }
+
+export default dynamic(() => Promise.resolve(VerifyResend), {
+  ssr: false
+});
