@@ -11,7 +11,11 @@ import {
   LogOut,
 } from "lucide-react";
 
-export function DashboardSidebar() {
+interface DashboardSidebarProps {
+  onNavigate?: () => void;
+}
+
+export function DashboardSidebar({ onNavigate }: DashboardSidebarProps) {
   const { signOut } = useAuth();
   const router = useRouter();
 
@@ -20,12 +24,18 @@ export function DashboardSidebar() {
     router.push("/auth/sign-in");
   };
 
+  const handleNavigation = () => {
+    if (onNavigate) {
+      onNavigate();
+    }
+  };
+
   const isActive = (path: string) => router.pathname === path;
 
   return (
-    <div className="h-screen w-64 bg-card border-r flex flex-col fixed left-0 top-0">
+    <div className="h-full min-h-screen w-full bg-card border-r flex flex-col">
       <div className="p-6">
-        <Logo href="/" />
+        <Logo href="/" className="w-full" />
       </div>
       
       <nav className="flex-1 px-4 space-y-2">
@@ -33,6 +43,7 @@ export function DashboardSidebar() {
           <Button
             variant={isActive("/dashboard") ? "default" : "ghost"}
             className="w-full justify-start"
+            onClick={handleNavigation}
           >
             <LayoutDashboard className="mr-2 h-4 w-4" />
             Dashboard
@@ -43,6 +54,7 @@ export function DashboardSidebar() {
           <Button
             variant={isActive("/dashboard/create-listing") ? "default" : "ghost"}
             className="w-full justify-start"
+            onClick={handleNavigation}
           >
             <ListPlus className="mr-2 h-4 w-4" />
             Create Listing
@@ -53,6 +65,7 @@ export function DashboardSidebar() {
           <Button
             variant={isActive("/dashboard/messages") ? "default" : "ghost"}
             className="w-full justify-start"
+            onClick={handleNavigation}
           >
             <MessageSquare className="mr-2 h-4 w-4" />
             Messages
@@ -63,6 +76,7 @@ export function DashboardSidebar() {
           <Button
             variant={isActive("/dashboard/settings") ? "default" : "ghost"}
             className="w-full justify-start"
+            onClick={handleNavigation}
           >
             <Settings className="mr-2 h-4 w-4" />
             Settings
@@ -73,7 +87,7 @@ export function DashboardSidebar() {
       <div className="p-4 border-t">
         <Button
           variant="ghost"
-          className="w-full justify-start text-red-500 hover:text-red-600 hover:bg-red-50"
+          className="w-full justify-start text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950"
           onClick={handleSignOut}
         >
           <LogOut className="mr-2 h-4 w-4" />
