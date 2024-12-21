@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react'
-import { supabase } from '@/lib/supabase'
-import { Listing, NewListing } from '@/types/database'
-import { useAuth } from '@/contexts/AuthContext'
+import { useState, useEffect } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
+import { getFirestore, collection, addDoc, query, where, getDocs, orderBy, updateDoc, deleteDoc, doc } from 'firebase/firestore';
+import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { app } from '@/lib/firebase';
 
 export function useListings() {
   const [listings, setListings] = useState<Listing[]>([])
