@@ -40,10 +40,9 @@ interface Message {
 import dynamic from 'next/dynamic'
 
 const DashboardPage = () => {
-
-export default dynamic(() => Promise.resolve(DashboardPage), {
-  ssr: false
-});
+  const { user } = useAuth();
+  const router = useRouter();
+  const { listings, loading } = useListings();
   const { user } = useAuth();
   const router = useRouter();
   const { listings, loading } = useListings();
