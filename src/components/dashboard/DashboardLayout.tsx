@@ -36,14 +36,14 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             </Button>
           </SheetTrigger>
           <SheetContent side="left" className="p-0 w-16">
-            <DashboardSidebar onNavigate={() => setIsMobileOpen(false)} />
+            <DashboardSidebar onNavigate={() => setIsMobileOpen(false)} isMobile={true} />
           </SheetContent>
         </Sheet>
       </div>
 
       {/* Desktop Sidebar */}
       <div className="hidden lg:block">
-        <DashboardSidebar />
+        <DashboardSidebar isMobile={false} />
       </div>
 
       {/* Main Content */}
