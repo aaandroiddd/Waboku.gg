@@ -90,7 +90,7 @@ const SignUpComponent = () => {
         <CardHeader>
           <CardTitle>Create Account</CardTitle>
           <CardDescription>
-            Sign up to start trading cards in your local area
+            Create an account to start trading cards in your local area
           </CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit}>
