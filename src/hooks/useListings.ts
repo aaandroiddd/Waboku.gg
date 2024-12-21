@@ -5,103 +5,166 @@ import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { app } from '@/lib/firebase';
 
 export function useListings() {
-  const [listings, setListings] = useState<Listing[]>([])
-  const [loading, setLoading] = useState(true)
-  const { user } = useAuth()
+  const { user } = useAuth();
+  const [listings, setListings] = useState<Listing[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchListings()
-  }, [])
+  const db = getFirestore(app);
+  const storage = getStorage(app);
 
   const fetchListings = async () => {
-    try {
-      setLoading(true)
-      const { data, error } = await supabase
-        .from('listings')
-        .select('*')
-        .order('created_at', { ascending: false })
+    if (!user) return;
 
-      if (error) {
-        throw error
+    setLoading(true);
+    setError(null);
+
+    try {
+      const q = query(
+        collection(db, 'listings'),
+        where('userId', '==', user.uid),
+        orderBy('createdAt', 'desc')
+      );
+
+      const querySnapshot = await getDocs(q);
+      const fetchedListings = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Listing[];
+
+      setListings(fetchedListings);
+    } catch (err: any) {
+      setError(err.message);
+      console.error('Error fetching listings:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const createListing = async (data: CreateListingData) => {
+    if (!user) throw new Error('Must be logged in to create a listing');
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      // Upload images first
+      const imageUrls = await Promise.all(
+        data.images.map(async (image) => {
+          const storageRef = ref(storage, `listings/${user.uid}/${Date.now()}_${image.name}`);
+          const snapshot = await uploadBytes(storageRef, image);
+          return await getDownloadURL(snapshot.ref);
+        })
+      );
+
+      // Create the listing document
+      const listingData = {
+        title: data.title,
+        description: data.description,
+        price: parseFloat(data.price),
+        condition: data.condition,
+        game: data.game,
+        imageUrls,
+        userId: user.uid,
+        createdAt: new Date(),
+        status: 'active' as const
+      };
+
+      const docRef = await addDoc(collection(db, 'listings'), listingData);
+      const newListing = { id: docRef.id, ...listingData };
+      
+      setListings(prev => [newListing, ...prev]);
+      return newListing;
+    } catch (err: any) {
+      setError(err.message);
+      console.error('Error creating listing:', err);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const updateListing = async (id: string, updates: Partial<CreateListingData>) => {
+    if (!user) throw new Error('Must be logged in to update a listing');
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const listingRef = doc(db, 'listings', id);
+      
+      // Handle image uploads if there are new images
+      let imageUrls = undefined;
+      if (updates.images && updates.images.length > 0) {
+        imageUrls = await Promise.all(
+          updates.images.map(async (image) => {
+            const storageRef = ref(storage, `listings/${user.uid}/${Date.now()}_${image.name}`);
+            const snapshot = await uploadBytes(storageRef, image);
+            return await getDownloadURL(snapshot.ref);
+          })
+        );
       }
 
-      setListings(data || [])
-    } catch (error) {
-      console.error('Error fetching listings:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
+      const updateData = {
+        ...updates,
+        ...(imageUrls && { imageUrls }),
+        ...(updates.price && { price: parseFloat(updates.price) })
+      };
 
-  const createListing = async (newListing: NewListing) => {
-    try {
-      if (!user) throw new Error('Must be logged in to create a listing')
+      delete updateData.images; // Remove the images field as we don't store it in Firestore
 
-      const { data, error } = await supabase
-        .from('listings')
-        .insert([{ ...newListing, user_id: user.id }])
-        .select()
-        .single()
-
-      if (error) throw error
-
-      setListings(prev => [data, ...prev])
-      return data
-    } catch (error) {
-      console.error('Error creating listing:', error)
-      throw error
-    }
-  }
-
-  const updateListing = async (id: string, updates: Partial<NewListing>) => {
-    try {
-      if (!user) throw new Error('Must be logged in to update a listing')
-
-      const { data, error } = await supabase
-        .from('listings')
-        .update(updates)
-        .eq('id', id)
-        .eq('user_id', user.id) // Ensure user owns the listing
-        .select()
-        .single()
-
-      if (error) throw error
+      await updateDoc(listingRef, updateData);
 
       setListings(prev =>
-        prev.map(listing => (listing.id === id ? { ...listing, ...data } : listing))
-      )
-      return data
-    } catch (error) {
-      console.error('Error updating listing:', error)
-      throw error
+        prev.map(listing =>
+          listing.id === id
+            ? { ...listing, ...updateData }
+            : listing
+        )
+      );
+
+      return { id, ...updateData };
+    } catch (err: any) {
+      setError(err.message);
+      console.error('Error updating listing:', err);
+      throw err;
+    } finally {
+      setLoading(false);
     }
-  }
+  };
 
   const deleteListing = async (id: string) => {
+    if (!user) throw new Error('Must be logged in to delete a listing');
+
+    setLoading(true);
+    setError(null);
+
     try {
-      if (!user) throw new Error('Must be logged in to delete a listing')
-
-      const { error } = await supabase
-        .from('listings')
-        .delete()
-        .eq('id', id)
-        .eq('user_id', user.id) // Ensure user owns the listing
-
-      if (error) throw error
-
-      setListings(prev => prev.filter(listing => listing.id !== id))
-    } catch (error) {
-      console.error('Error deleting listing:', error)
-      throw error
+      const listingRef = doc(db, 'listings', id);
+      await deleteDoc(listingRef);
+      setListings(prev => prev.filter(listing => listing.id !== id));
+    } catch (err: any) {
+      setError(err.message);
+      console.error('Error deleting listing:', err);
+      throw err;
+    } finally {
+      setLoading(false);
     }
-  }
+  };
+
+  useEffect(() => {
+    if (user) {
+      fetchListings();
+    }
+  }, [user]);
 
   return {
     listings,
     loading,
+    error,
     createListing,
     updateListing,
     deleteListing,
     refreshListings: fetchListings,
-  }
+  };
 }
