@@ -48,8 +48,15 @@ export default function CreateListing() {
     }
   };
 
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push("/auth/sign-in");
+    } else if (!loading && user && !user.emailVerified) {
+      router.push("/auth/verify-email");
+    }
+  }, [user, loading, router]);
+
   if (!user) {
-    router.push("/auth/sign-in");
     return null;
   }
 
