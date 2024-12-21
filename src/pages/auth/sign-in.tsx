@@ -21,7 +21,7 @@ const SignInComponent = () => {
 
   useEffect(() => {
     if (user) {
-      router.push("/dashboard");
+      router.replace("/dashboard");
     }
   }, [user, router]);
 
