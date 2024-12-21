@@ -37,13 +37,9 @@ interface Message {
 
 
 
-export const getStaticProps = () => {
-  return {
-    props: {}
-  }
-}
+import dynamic from 'next/dynamic'
 
-export default function Dashboard() {
+const DashboardPage = () => {
   const { user } = useAuth();
   const router = useRouter();
   const { listings, loading } = useListings();
