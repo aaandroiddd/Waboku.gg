@@ -10,6 +10,7 @@ import {
   Settings,
   LogOut,
 } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface DashboardSidebarProps {
   onNavigate?: () => void;
@@ -32,68 +33,76 @@ export function DashboardSidebar({ onNavigate }: DashboardSidebarProps) {
 
   const isActive = (path: string) => router.pathname === path;
 
+  const navigationItems = [
+    {
+      href: "/dashboard",
+      icon: LayoutDashboard,
+      label: "Dashboard"
+    },
+    {
+      href: "/dashboard/create-listing",
+      icon: ListPlus,
+      label: "Create Listing"
+    },
+    {
+      href: "/dashboard/messages",
+      icon: MessageSquare,
+      label: "Messages"
+    },
+    {
+      href: "/dashboard/settings",
+      icon: Settings,
+      label: "Settings"
+    }
+  ];
+
   return (
-    <div className="h-full min-h-screen w-full bg-card border-r flex flex-col">
-      <div className="p-6">
-        <Logo href="/" className="w-full" />
+    <div className="h-full min-h-screen w-16 bg-card border-r flex flex-col items-center py-4">
+      <div className="w-full flex justify-center mb-8">
+        <Logo href="/" className="w-8 h-8" />
       </div>
       
-      <nav className="flex-1 px-4 space-y-2">
-        <Link href="/dashboard" passHref>
-          <Button
-            variant={isActive("/dashboard") ? "default" : "ghost"}
-            className="w-full justify-start"
-            onClick={handleNavigation}
-          >
-            <LayoutDashboard className="mr-2 h-4 w-4" />
-            Dashboard
-          </Button>
-        </Link>
-
-        <Link href="/dashboard/create-listing" passHref>
-          <Button
-            variant={isActive("/dashboard/create-listing") ? "default" : "ghost"}
-            className="w-full justify-start"
-            onClick={handleNavigation}
-          >
-            <ListPlus className="mr-2 h-4 w-4" />
-            Create Listing
-          </Button>
-        </Link>
-
-        <Link href="/dashboard/messages" passHref>
-          <Button
-            variant={isActive("/dashboard/messages") ? "default" : "ghost"}
-            className="w-full justify-start"
-            onClick={handleNavigation}
-          >
-            <MessageSquare className="mr-2 h-4 w-4" />
-            Messages
-          </Button>
-        </Link>
-
-        <Link href="/dashboard/settings" passHref>
-          <Button
-            variant={isActive("/dashboard/settings") ? "default" : "ghost"}
-            className="w-full justify-start"
-            onClick={handleNavigation}
-          >
-            <Settings className="mr-2 h-4 w-4" />
-            Settings
-          </Button>
-        </Link>
+      <nav className="flex-1 space-y-4">
+        <TooltipProvider>
+          {navigationItems.map((item) => (
+            <Tooltip key={item.href}>
+              <TooltipTrigger asChild>
+                <Link href={item.href} passHref>
+                  <Button
+                    variant={isActive(item.href) ? "default" : "ghost"}
+                    size="icon"
+                    className="w-10 h-10"
+                    onClick={handleNavigation}
+                  >
+                    <item.icon className="h-5 w-5" />
+                  </Button>
+                </Link>
+              </TooltipTrigger>
+              <TooltipContent side="right">
+                <p>{item.label}</p>
+              </TooltipContent>
+            </Tooltip>
+          ))}
+        </TooltipProvider>
       </nav>
 
-      <div className="p-4 border-t">
-        <Button
-          variant="ghost"
-          className="w-full justify-start text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950"
-          onClick={handleSignOut}
-        >
-          <LogOut className="mr-2 h-4 w-4" />
-          Sign Out
-        </Button>
-      </div>
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="w-10 h-10 text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950"
+              onClick={handleSignOut}
+            >
+              <LogOut className="h-5 w-5" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="right">
+            <p>Sign Out</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
     </div>
   );
 }
