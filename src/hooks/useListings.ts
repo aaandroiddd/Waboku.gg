@@ -20,22 +20,11 @@ export function useListings() {
     setError(null);
 
     try {
-      // First try with the composite query
-      let q;
-      try {
-        q = query(
-          collection(db, 'listings'),
-          where('userId', '==', user.uid),
-          orderBy('createdAt', 'desc')
-        );
-      } catch (indexError) {
-        // Fallback to simple query without ordering if index doesn't exist
-        console.warn('Composite index not found, falling back to basic query');
-        q = query(
-          collection(db, 'listings'),
-          where('userId', '==', user.uid)
-        );
-      }
+      // Create a simple query first
+      const q = query(
+        collection(db, 'listings'),
+        where('userId', '==', user.uid)
+      );
 
       const querySnapshot = await getDocs(q);
       const fetchedListings = querySnapshot.docs.map(doc => ({
