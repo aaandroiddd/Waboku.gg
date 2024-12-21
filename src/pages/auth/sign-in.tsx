@@ -35,8 +35,9 @@ const SignInComponent = () => {
       
       // Check if email is verified
       if (!userCredential.user.emailVerified) {
-        // Redirect to verify-resend page with email pre-filled
-        router.replace({
+        await signInWithEmailAndPassword(auth, email, password);
+        setError("Please verify your email before signing in. Check your inbox or request a new verification email.");
+        router.push({
           pathname: '/auth/verify-resend',
           query: { email }
         });
