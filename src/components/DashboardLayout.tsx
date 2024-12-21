@@ -15,6 +15,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
   const navigation = [
     { name: "Active Listings", href: "/dashboard" },
+    { name: "Create Listing", href: "/dashboard/create-listing" },
     { name: "Favorites", href: "/dashboard/favorites" },
     { name: "Messages", href: "/dashboard/messages" },
     { name: "Profile", href: "/dashboard/profile" },
