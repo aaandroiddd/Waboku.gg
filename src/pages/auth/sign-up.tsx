@@ -40,22 +40,30 @@ const SignUpComponent = () => {
       const auth = getAuth();
       const methods = await fetchSignInMethodsForEmail(auth, email);
       
-      if (methods.length > 0) {
+      if (methods && methods.length > 0) {
         setEmailStatus({
           isValid: false,
           message: 'This email is already registered. Please sign in instead.',
           type: 'error'
         });
       } else {
-        // Email is not registered
-        setEmailStatus({
-          isValid: true,
-          message: 'Email is available',
-          type: 'success'
-        });
+        if (email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
+          setEmailStatus({
+            isValid: true,
+            message: 'Email is available',
+            type: 'success'
+          });
+        } else {
+          setEmailStatus({
+            isValid: false,
+            message: 'Please enter a valid email address',
+            type: 'error'
+          });
+        }
       }
     } catch (error: any) {
       console.error('Error checking email:', error);
+      // Handle specific Firebase auth errors
       if (error.code === 'auth/invalid-email') {
         setEmailStatus({
           isValid: false,
@@ -69,9 +77,10 @@ const SignUpComponent = () => {
           type: 'error'
         });
       } else {
+        // For network errors or other issues, we'll show a generic message
         setEmailStatus({
           isValid: false,
-          message: 'Error checking email availability',
+          message: 'Unable to verify email availability. Please try again.',
           type: 'error'
         });
       }
