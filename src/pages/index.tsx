@@ -141,7 +141,7 @@ export default function Home() {
             
             <div className="relative container mx-auto px-4 py-8 sm:py-12 md:py-16 lg:py-24">
               <div className="text-center max-w-3xl mx-auto">
-                <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-4 tracking-tight">
+                <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-4 tracking-tight glow-text">
                   Your Local TCG Marketplace
                 </h1>
                 <p className="text-base sm:text-lg md:text-xl text-muted-foreground mb-8">
