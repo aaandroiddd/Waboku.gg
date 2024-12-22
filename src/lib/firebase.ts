@@ -1,5 +1,6 @@
 import { initializeApp, getApps } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
+import { getFirestore, collection, doc, setDoc, getDoc, deleteDoc } from 'firebase/firestore';
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -24,5 +25,39 @@ try {
 }
 
 const auth = getAuth(app);
+const db = getFirestore(app);
 
-export { auth, app };
+// Username management functions
+export const checkUsernameAvailability = async (username: string): Promise<boolean> => {
+  try {
+    const usernameDoc = await getDoc(doc(db, 'usernames', username.toLowerCase()));
+    return !usernameDoc.exists();
+  } catch (error) {
+    console.error('Error checking username availability:', error);
+    throw error;
+  }
+};
+
+export const reserveUsername = async (username: string, userId: string): Promise<void> => {
+  try {
+    await setDoc(doc(db, 'usernames', username.toLowerCase()), {
+      userId,
+      username,
+      createdAt: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Error reserving username:', error);
+    throw error;
+  }
+};
+
+export const releaseUsername = async (username: string): Promise<void> => {
+  try {
+    await deleteDoc(doc(db, 'usernames', username.toLowerCase()));
+  } catch (error) {
+    console.error('Error releasing username:', error);
+    throw error;
+  }
+};
+
+export { auth, app, db };
