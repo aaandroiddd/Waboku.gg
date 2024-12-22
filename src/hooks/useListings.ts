@@ -153,14 +153,35 @@ export function useListings() {
   };
 
   useEffect(() => {
-    if (user) {
-      // Add a small delay to ensure Firebase auth is fully initialized
-      const timer = setTimeout(() => {
-        fetchListings();
-      }, 1000);
-      return () => clearTimeout(timer);
-    }
-  }, [user]);
+    let mounted = true;
+    
+    const loadListings = async () => {
+      if (!user?.uid) return;
+      
+      // Wait for auth to be fully initialized
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      if (!mounted) return;
+      
+      try {
+        await fetchListings();
+      } catch (err: any) {
+        if (err.code === 'permission-denied' || err.code === 'unauthenticated') {
+          // If we get a permission error, wait and try one more time
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          if (mounted) {
+            await fetchListings();
+          }
+        }
+      }
+    };
+
+    loadListings();
+    
+    return () => {
+      mounted = false;
+    };
+  }, [user?.uid]);
 
   return {
     listings,
