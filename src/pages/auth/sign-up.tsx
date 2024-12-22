@@ -6,13 +6,13 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import { Logo } from "@/components/Logo";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Check, X } from "lucide-react";
 import dynamic from 'next/dynamic'
 import { useAuth } from "@/contexts/AuthContext";
 
 const SignUpComponent = () => {
   const router = useRouter();
   const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
@@ -36,13 +36,29 @@ const SignUpComponent = () => {
     }
     
     // Basic validation
-    if (!email || !password || !confirmPassword) {
+    if (!email || !password || !confirmPassword || !username) {
       setError("All fields are required");
       return;
     }
 
     if (!email.includes('@')) {
       setError("Please enter a valid email address");
+      return;
+    }
+
+    if (username.length < 3) {
+      setError("Username must be at least 3 characters long");
+      return;
+    }
+
+    if (username.length > 20) {
+      setError("Username must be less than 20 characters long");
+      return;
+    }
+
+    // Username can only contain letters, numbers, and underscores
+    if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+      setError("Username can only contain letters, numbers, and underscores");
       return;
     }
 
@@ -59,7 +75,7 @@ const SignUpComponent = () => {
     setIsLoading(true);
 
     try {
-      const { error: signUpError, user: newUser } = await signUp(email, password);
+      const { error: signUpError, user: newUser } = await signUp(email, password, username);
       
       if (signUpError) {
         setError(signUpError.message);
@@ -100,6 +116,24 @@ const SignUpComponent = () => {
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             )}
+            <div className="space-y-2">
+              <label htmlFor="username" className="text-sm font-medium">
+                Username
+              </label>
+              <Input
+                id="username"
+                type="text"
+                placeholder="Choose your username"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                required
+                disabled={isLoading}
+                autoComplete="username"
+              />
+              <p className="text-xs text-muted-foreground">
+                This will be your public display name
+              </p>
+            </div>
             <div className="space-y-2">
               <label htmlFor="email" className="text-sm font-medium">
                 Email
