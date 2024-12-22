@@ -30,6 +30,26 @@ const CreateListingPage = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Basic validation
+    if (!formData.title || !formData.price || !formData.condition || !formData.game) {
+      toast({
+        title: "Validation Error",
+        description: "Please fill in all required fields",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (formData.images.length === 0) {
+      toast({
+        title: "Validation Error",
+        description: "Please upload at least one image",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
@@ -41,16 +61,15 @@ const CreateListingPage = () => {
         variant: "default",
       });
 
-      // Small delay to ensure the toast is visible
-      setTimeout(() => {
-        router.push("/dashboard?tab=active&new=" + newListing.id);
-      }, 500);
+      router.push("/dashboard?tab=active&new=" + newListing.id);
     } catch (error: any) {
+      console.error('Error creating listing:', error);
       toast({
         title: "Error creating listing",
         description: error.message || "Something went wrong. Please try again.",
         variant: "destructive",
       });
+    } finally {
       setIsSubmitting(false);
     }
   };
