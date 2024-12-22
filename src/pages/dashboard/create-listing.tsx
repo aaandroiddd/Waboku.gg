@@ -103,17 +103,34 @@ const CreateListingPage = () => {
       return;
     }
 
+    if (!user) {
+      toast({
+        title: "Authentication Error",
+        description: "You must be logged in to create a listing",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsSubmitting(true);
     setUploadProgress(0);
 
     try {
-      const newListing = await createListing({
+      // Prepare the data with proper type conversion
+      const listingData = {
         ...formData,
+        price: formData.price.trim(), // Ensure no whitespace
         onUploadProgress: (progress: number) => {
-          setUploadProgress(progress);
+          setUploadProgress(Math.round(progress));
         }
-      });
+      };
+
+      const newListing = await createListing(listingData);
       
+      if (!newListing) {
+        throw new Error("Failed to create listing");
+      }
+
       toast({
         title: "Success!",
         description: "Your card listing has been published successfully.",
@@ -128,6 +145,10 @@ const CreateListingPage = () => {
         description: error.message || "Something went wrong. Please try again.",
         variant: "destructive",
       });
+      setErrors(prev => ({
+        ...prev,
+        submit: error.message || "Failed to create listing"
+      }));
     } finally {
       setIsSubmitting(false);
       setUploadProgress(0);
