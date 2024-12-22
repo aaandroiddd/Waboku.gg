@@ -1,16 +1,21 @@
 export interface Listing {
-  id: string
-  created_at: string
-  user_id: string
-  title: string
-  description?: string
-  price: number
-  card_condition: string
-  game_type: string
-  location: string
-  state: string
-  images?: string[]
-  status: 'active' | 'sold' | 'pending'
+  id: string;
+  title: string;
+  description: string;
+  price: number;
+  condition: string;
+  game: string;
+  imageUrls: string[];
+  userId: string;
+  createdAt: Date;
+  status: 'active' | 'sold' | 'pending';
 }
 
-export type NewListing = Omit<Listing, 'id' | 'created_at' | 'user_id' | 'status'>
+export interface CreateListingData {
+  title: string;
+  description: string;
+  price: string;
+  condition: string;
+  game: string;
+  images: File[];
+}
