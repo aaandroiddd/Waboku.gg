@@ -33,22 +33,31 @@ export function useListings() {
     setError(null);
 
     try {
+      // Using composite index for better performance
       const q = query(
         collection(db, 'listings'),
         where('userId', '==', user.uid),
-        orderBy('createdAt', 'desc')
+        orderBy('createdAt', 'desc'),
+        orderBy('__name__', 'desc')
       );
 
       const querySnapshot = await getDocs(q);
-      const fetchedListings = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as Listing[];
+      const fetchedListings = querySnapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          ...data,
+          createdAt: data.createdAt?.toDate() || new Date() // Ensure we always have a valid date
+        };
+      }) as Listing[];
 
       setListings(fetchedListings);
     } catch (err: any) {
-      setError(err.message);
       console.error('Error fetching listings:', err);
+      // More user-friendly error message
+      setError(err.code === 'permission-denied' 
+        ? 'Please sign in again to view your listings.' 
+        : 'Unable to load listings. Please try again.');
     } finally {
       setLoading(false);
     }
