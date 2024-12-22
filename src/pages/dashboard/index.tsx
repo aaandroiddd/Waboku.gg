@@ -13,6 +13,7 @@ import { useListings } from '@/hooks/useListings';
 import { Listing } from '@/types/database';
 
 const DashboardComponent = () => {
+  const { tab = 'active', new: newListingId } = useRouter().query;
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
