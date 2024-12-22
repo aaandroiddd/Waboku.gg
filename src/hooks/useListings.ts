@@ -13,7 +13,7 @@ import {
   doc,
   serverTimestamp
 } from 'firebase/firestore';
-import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { getStorage, ref, uploadBytes, getDownloadURL, uploadBytesResumable } from 'firebase/storage';
 import { app } from '@/lib/firebase';
 import { Listing, CreateListingData } from '@/types/database';
 
@@ -33,12 +33,10 @@ export function useListings() {
     setError(null);
 
     try {
-      // Using composite index for better performance
       const q = query(
         collection(db, 'listings'),
         where('userId', '==', user.uid),
-        orderBy('createdAt', 'desc'),
-        orderBy('__name__', 'desc')
+        orderBy('createdAt', 'desc')
       );
 
       const querySnapshot = await getDocs(q);
@@ -47,14 +45,13 @@ export function useListings() {
         return {
           id: doc.id,
           ...data,
-          createdAt: data.createdAt?.toDate() || new Date() // Ensure we always have a valid date
+          createdAt: data.createdAt?.toDate() || new Date()
         };
       }) as Listing[];
 
       setListings(fetchedListings);
     } catch (err: any) {
       console.error('Error fetching listings:', err);
-      // More user-friendly error message
       setError(err.code === 'permission-denied' 
         ? 'Please sign in again to view your listings.' 
         : 'Unable to load listings. Please try again.');
@@ -63,19 +60,45 @@ export function useListings() {
     }
   }, [user, db]);
 
-  const uploadImage = async (file: File, userId: string): Promise<string> => {
+  const uploadImage = async (
+    file: File, 
+    userId: string,
+    onProgress?: (progress: number) => void
+  ): Promise<string> => {
     try {
       const fileName = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
       const storageRef = ref(storage, `listings/${userId}/${fileName}`);
-      const snapshot = await uploadBytes(storageRef, file);
-      return await getDownloadURL(snapshot.ref);
+      
+      if (onProgress) {
+        const uploadTask = uploadBytesResumable(storageRef, file);
+        
+        return new Promise((resolve, reject) => {
+          uploadTask.on(
+            'state_changed',
+            (snapshot) => {
+              const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+              onProgress(progress);
+            },
+            (error) => {
+              reject(new Error(`Failed to upload image: ${error.message}`));
+            },
+            async () => {
+              const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+              resolve(downloadURL);
+            }
+          );
+        });
+      } else {
+        const snapshot = await uploadBytes(storageRef, file);
+        return await getDownloadURL(snapshot.ref);
+      }
     } catch (error: any) {
       console.error('Error uploading image:', error);
       throw new Error(`Failed to upload image: ${error.message}`);
     }
   };
 
-  const createListing = async (data: CreateListingData) => {
+  const createListing = async (data: CreateListingData & { onUploadProgress?: (progress: number) => void }) => {
     if (!user) throw new Error('Must be logged in to create a listing');
 
     try {
@@ -91,9 +114,18 @@ export function useListings() {
       // Upload images first
       let imageUrls: string[] = [];
       try {
-        imageUrls = await Promise.all(
-          data.images.map(image => uploadImage(image, user.uid))
-        );
+        const totalImages = data.images.length;
+        for (let i = 0; i < data.images.length; i++) {
+          const image = data.images[i];
+          const url = await uploadImage(image, user.uid, (progress) => {
+            if (data.onUploadProgress) {
+              // Calculate overall progress considering all images
+              const overallProgress = ((i * 100) + progress) / totalImages;
+              data.onUploadProgress(overallProgress);
+            }
+          });
+          imageUrls.push(url);
+        }
       } catch (uploadError) {
         throw new Error('Failed to upload images. Please try again.');
       }
