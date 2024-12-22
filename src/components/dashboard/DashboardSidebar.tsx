@@ -113,7 +113,7 @@ export function DashboardSidebar({ onNavigate, isMobile = false }: DashboardSide
       
       <nav className={cn(
         "flex-1",
-        isMobile ? "space-y-4" : "space-y-2"
+        isMobile ? "space-y-4 mt-[200px]" : "space-y-2"
       )}>
         {navigationItems.map((item) => (
           <NavButton
