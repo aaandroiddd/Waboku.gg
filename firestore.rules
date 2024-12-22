@@ -24,23 +24,18 @@ service cloud.firestore {
     match /users/{userId} {
       allow read: if isAuthenticated();
       allow write: if isOwner(userId);
-      
-      // Nested collections under user
-      match /listings/{listingId} {
-        allow read: if true; // Anyone can read listings
-        allow write: if isOwner(userId);
-      }
     }
 
-    // Public listings collection
+    // Listings collection rules
     match /listings/{listingId} {
       allow read: if true;
-      allow create: if isAuthenticated();
+      allow create: if isAuthenticated() && 
+                   request.resource.data.userId == request.auth.uid;
       allow update, delete: if isAuthenticated() && 
                           resource.data.userId == request.auth.uid;
     }
 
-    // Messages collection
+    // Messages collection rules
     match /messages/{messageId} {
       allow read: if isAuthenticated() && 
                  (resource.data.senderId == request.auth.uid || 
