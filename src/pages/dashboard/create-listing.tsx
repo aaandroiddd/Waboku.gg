@@ -33,19 +33,24 @@ const CreateListingPage = () => {
     setIsSubmitting(true);
 
     try {
-      await createListing(formData);
+      const newListing = await createListing(formData);
+      
       toast({
-        title: "Listing created successfully!",
-        description: "Your card listing has been published.",
+        title: "Success!",
+        description: "Your card listing has been published successfully.",
+        variant: "default",
       });
-      router.push("/dashboard");
+
+      // Small delay to ensure the toast is visible
+      setTimeout(() => {
+        router.push("/dashboard?tab=active&new=" + newListing.id);
+      }, 500);
     } catch (error: any) {
       toast({
         title: "Error creating listing",
         description: error.message || "Something went wrong. Please try again.",
         variant: "destructive",
       });
-    } finally {
       setIsSubmitting(false);
     }
   };
