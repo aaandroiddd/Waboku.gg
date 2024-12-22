@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { getFirestore, collection, addDoc, query, where, getDocs, orderBy, updateDoc, deleteDoc, doc } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { app } from '@/lib/firebase';
+import { Listing, CreateListingData } from '@/types/database';
 
 export function useListings() {
   const { user } = useAuth();
