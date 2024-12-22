@@ -156,7 +156,7 @@ export default function Home() {
                   Your Local TCG Marketplace
                 </h1>
                 <p className="text-base sm:text-lg md:text-xl text-muted-foreground mb-8">
-                  Buy, sell, and trade cards with collectors in your area
+                  {randomSubtitle}
                 </p>
 
                 {/* Search Section */}
