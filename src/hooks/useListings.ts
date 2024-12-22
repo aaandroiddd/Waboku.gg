@@ -78,9 +78,6 @@ export function useListings() {
   const createListing = async (data: CreateListingData) => {
     if (!user) throw new Error('Must be logged in to create a listing');
 
-    setLoading(true);
-    setError(null);
-
     try {
       // Validate the data
       if (!data.title || !data.price || !data.condition || !data.game) {
@@ -91,15 +88,20 @@ export function useListings() {
         throw new Error('Please upload at least one image');
       }
 
-      // Upload images
-      const imageUrls = await Promise.all(
-        data.images.map(image => uploadImage(image, user.uid))
-      );
+      // Upload images first
+      let imageUrls: string[] = [];
+      try {
+        imageUrls = await Promise.all(
+          data.images.map(image => uploadImage(image, user.uid))
+        );
+      } catch (uploadError) {
+        throw new Error('Failed to upload images. Please try again.');
+      }
 
       // Create the listing document
       const listingData = {
-        title: data.title,
-        description: data.description,
+        title: data.title.trim(),
+        description: data.description.trim(),
         price: parseFloat(data.price),
         condition: data.condition,
         game: data.game,
@@ -109,21 +111,24 @@ export function useListings() {
         status: 'active' as const
       };
 
+      // Add to Firestore
       const docRef = await addDoc(collection(db, 'listings'), listingData);
+      
+      // Create the new listing object
       const newListing = { 
         id: docRef.id, 
         ...listingData,
-        createdAt: new Date() // Convert serverTimestamp to Date for frontend
+        createdAt: new Date()
       };
       
+      // Update local state
       setListings(prev => [newListing, ...prev]);
       return newListing;
     } catch (err: any) {
-      const errorMessage = err.message || 'Error creating listing';
+      console.error('Error in createListing:', err);
+      const errorMessage = err.message || 'Failed to create listing. Please try again.';
       setError(errorMessage);
       throw new Error(errorMessage);
-    } finally {
-      setLoading(false);
     }
   };
 
