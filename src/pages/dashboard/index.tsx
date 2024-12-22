@@ -19,6 +19,17 @@ const DashboardComponent = () => {
   const { listings, loading: listingsLoading, error: listingsError, deleteListing } = useListings();
   
   const loading = authLoading || listingsLoading;
+
+  // Add a retry mechanism for initial data loading
+  useEffect(() => {
+    if (listingsError?.includes('permission-denied') || listingsError?.includes('insufficient permissions')) {
+      // Wait for 2 seconds and reload the page
+      const timer = setTimeout(() => {
+        window.location.reload();
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [listingsError]);
   
   const sortedListings = [...listings].sort((a, b) => {
     const dateA = a.createdAt instanceof Date ? a.createdAt : new Date(a.createdAt);
