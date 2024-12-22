@@ -5,6 +5,7 @@ import {
   signInWithEmailAndPassword,
   signOut as firebaseSignOut,
   onAuthStateChanged,
+  updateProfile,
 } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 
@@ -12,8 +13,9 @@ type AuthContextType = {
   user: User | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
-  signUp: (email: string, password: string) => Promise<{ error: Error | null, user: User | null }>;
+  signUp: (email: string, password: string, username: string) => Promise<{ error: Error | null, user: User | null }>;
   signOut: () => Promise<void>;
+  updateUsername: (username: string) => Promise<{ error: Error | null }>;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -31,7 +33,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => unsubscribe();
   }, []);
 
-  const signUp = async (email: string, password: string, retryCount = 0) => {
+  const signUp = async (email: string, password: string, username: string, retryCount = 0) => {
     try {
       console.log('Starting sign up process for:', email);
       
@@ -51,12 +53,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             if (retryCount < 3) {
               console.log(`Retrying sign up attempt ${retryCount + 1}/3...`);
               await new Promise(resolve => setTimeout(resolve, 2000));
-              return signUp(email, password, retryCount + 1);
+              return signUp(email, password, username, retryCount + 1);
             }
             throw new Error('Network connection error. Please check your internet connection and try again.');
           }
           throw error;
         });
+
+      // Set the username
+      await updateProfile(userCredential.user, {
+        displayName: username
+      });
 
       console.log('Sign up successful:', userCredential.user);
       return { error: null, user: userCredential.user };
@@ -68,7 +75,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.log(`Retrying sign up attempt ${retryCount + 1}/2...`);
         // Wait for 2 seconds before retrying
         await new Promise(resolve => setTimeout(resolve, 2000));
-        return signUp(email, password, retryCount + 1);
+        return signUp(email, password, username, retryCount + 1);
       }
       
       // Map Firebase error codes to user-friendly messages
@@ -97,6 +104,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         error: new Error(errorMessage),
         user: null
       };
+    }
+  };
+
+  const updateUsername = async (username: string) => {
+    try {
+      if (!user) {
+        throw new Error('No user logged in');
+      }
+
+      await updateProfile(user, {
+        displayName: username
+      });
+
+      // Force refresh the user object
+      setUser({ ...user });
+
+      return { error: null };
+    } catch (error: any) {
+      console.error('Update username error:', error);
+      return { error: new Error('Failed to update username. Please try again.') };
     }
   };
 
@@ -149,7 +176,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, signIn, signUp, signOut }}>
+    <AuthContext.Provider value={{ user, loading, signIn, signUp, signOut, updateUsername }}>
       {children}
     </AuthContext.Provider>
   )
