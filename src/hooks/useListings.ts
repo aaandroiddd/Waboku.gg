@@ -154,7 +154,11 @@ export function useListings() {
 
   useEffect(() => {
     if (user) {
-      fetchListings();
+      // Add a small delay to ensure Firebase auth is fully initialized
+      const timer = setTimeout(() => {
+        fetchListings();
+      }, 1000);
+      return () => clearTimeout(timer);
     }
   }, [user]);
 
