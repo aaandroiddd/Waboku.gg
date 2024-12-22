@@ -8,9 +8,17 @@ interface LogoProps {
 
 export const Logo: React.FC<LogoProps> = ({ className, href = '/' }) => {
   const LogoContent = (
-    <div className={`text-2xl font-bold cursor-pointer ${className || ''}`}>
-      <span className="lowercase">waboku</span>
-      <span className="text-sky-400">.gg</span>
+    <div className={`font-bold cursor-pointer ${className || ''}`}>
+      {/* Mobile Icon Version */}
+      <div className="block md:hidden text-2xl">
+        <span className="lowercase text-sky-400">w</span>
+      </div>
+      
+      {/* Desktop Full Logo Version */}
+      <div className="hidden md:block text-2xl">
+        <span className="lowercase">waboku</span>
+        <span className="text-sky-400">.gg</span>
+      </div>
     </div>
   );
 
