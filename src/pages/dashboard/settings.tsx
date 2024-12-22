@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic'
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useAuth } from "@/contexts/AuthContext";
+import { useRouter } from 'next/router';
 
 const DashboardLayout = dynamic(
   () => import('@/components/dashboard/DashboardLayout').then(mod => mod.DashboardLayout),
@@ -19,12 +20,19 @@ const DashboardLayout = dynamic(
   }
 );
 
-export default function SettingsPage() {
+const SettingsPageContent = () => {
   const { user, updateUsername } = useAuth();
   const [newUsername, setNewUsername] = useState(user?.displayName || "");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!user) {
+      router.push('/auth/sign-in');
+    }
+  }, [user, router]);
 
   const handleUsernameUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -77,6 +85,10 @@ export default function SettingsPage() {
       setIsLoading(false);
     }
   };
+
+  if (!user) {
+    return <Skeleton className="w-full h-[400px]" />;
+  }
 
   return (
     <DashboardLayout>
@@ -135,4 +147,8 @@ export default function SettingsPage() {
       </div>
     </DashboardLayout>
   );
-}
+};
+
+export default dynamic(() => Promise.resolve(SettingsPageContent), {
+  ssr: false
+});
