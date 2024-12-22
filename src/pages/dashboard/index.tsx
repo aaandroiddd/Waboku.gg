@@ -23,13 +23,15 @@ const DashboardComponent = () => {
   // Add a retry mechanism for initial data loading
   useEffect(() => {
     if (listingsError?.includes('permission-denied') || listingsError?.includes('insufficient permissions')) {
-      // Wait for 2 seconds and reload the page
+      // Wait for 2 seconds and try to refresh listings
       const timer = setTimeout(() => {
-        window.location.reload();
+        if (user) {  // Only refresh if we have a user
+          refreshListings();
+        }
       }, 2000);
       return () => clearTimeout(timer);
     }
-  }, [listingsError]);
+  }, [listingsError, user]);
   
   const sortedListings = [...listings].sort((a, b) => {
     const dateA = a.createdAt instanceof Date ? a.createdAt : new Date(a.createdAt);
