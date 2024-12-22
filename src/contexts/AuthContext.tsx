@@ -74,6 +74,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           throw error;
         });
 
+      if (!userCredential || !userCredential.user) {
+        throw new Error('Failed to create account. Please try again.');
+      }
+
       // Reserve the username with retry mechanism
       try {
         await reserveUsername(username, userCredential.user.uid);
