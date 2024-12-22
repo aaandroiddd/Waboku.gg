@@ -1,5 +1,5 @@
 import { initializeApp, getApps } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
+import { getAuth, setPersistence, browserLocalPersistence } from 'firebase/auth';
 import { getFirestore, collection, doc, setDoc, getDoc, deleteDoc } from 'firebase/firestore';
 
 const firebaseConfig = {
@@ -23,8 +23,6 @@ try {
   console.error('Error initializing Firebase:', error);
   throw error;
 }
-
-import { getAuth, setPersistence, browserLocalPersistence } from 'firebase/auth';
 
 const auth = getAuth(app);
 // Properly set persistence to LOCAL
