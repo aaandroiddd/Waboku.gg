@@ -7,7 +7,7 @@ import {
   onAuthStateChanged,
   updateProfile,
 } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
+import { auth, checkUsernameAvailability, reserveUsername, releaseUsername } from '@/lib/firebase';
 
 type AuthContextType = {
   user: User | null;
@@ -37,6 +37,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       console.log('Starting sign up process for:', email);
       
+      // Check username availability first
+      const isAvailable = await checkUsernameAvailability(username);
+      if (!isAvailable) {
+        throw new Error('This username is already taken. Please choose another one.');
+      }
+
       // Add timeout promise
       const timeoutPromise = new Promise((_, reject) => {
         setTimeout(() => reject(new Error('Request timeout')), 10000); // 10 second timeout
@@ -59,6 +65,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
           throw error;
         });
+
+      // Reserve the username
+      await reserveUsername(username, userCredential.user.uid);
 
       // Set the username
       await updateProfile(userCredential.user, {
@@ -113,6 +122,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw new Error('No user logged in');
       }
 
+      // Check username availability
+      const isAvailable = await checkUsernameAvailability(username);
+      if (!isAvailable) {
+        throw new Error('This username is already taken. Please choose another one.');
+      }
+
+      // Release old username if exists
+      if (user.displayName) {
+        await releaseUsername(user.displayName);
+      }
+
+      // Reserve new username
+      await reserveUsername(username, user.uid);
+
+      // Update profile
       await updateProfile(user, {
         displayName: username
       });
@@ -123,7 +147,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return { error: null };
     } catch (error: any) {
       console.error('Update username error:', error);
-      return { error: new Error('Failed to update username. Please try again.') };
+      return { error: new Error(error.message || 'Failed to update username. Please try again.') };
     }
   };
 
