@@ -110,9 +110,20 @@ const usStates = [
   { value: "wy", label: "Wyoming" }
 ];
 
+const subtitles = [
+  "Join the growing card game community.",
+  "Buy, sell, and trade cards with collectors in your area.",
+  "Trust us, you don't have enough lands.",
+  "You need that next alt-art, don't listen to your wife.",
+  "Home of the secret rares."
+];
+
 export default function Home() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedState, setSelectedState] = useState("all");
+  const [randomSubtitle] = useState(() => 
+    subtitles[Math.floor(Math.random() * subtitles.length)]
+  );
 
   return (
     <>
