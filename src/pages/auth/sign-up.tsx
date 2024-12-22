@@ -6,10 +6,11 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import { Logo } from "@/components/Logo";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import dynamic from 'next/dynamic'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useAuth } from "@/contexts/AuthContext";
+import { AuthProvider } from "@/contexts/AuthContext";
 
-const SignUpComponent = () => {
+const SignUpForm = () => {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [username, setUsername] = useState("");
@@ -153,16 +154,30 @@ const SignUpComponent = () => {
               <label htmlFor="password" className="text-sm font-medium">
                 Password
               </label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="Create a password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                disabled={isLoading}
-                autoComplete="new-password"
-              />
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Input
+                      id="password"
+                      type="password"
+                      placeholder="Create a password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                      disabled={isLoading}
+                      autoComplete="new-password"
+                    />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Password must:</p>
+                    <ul className="list-disc list-inside text-sm">
+                      <li>Be at least 6 characters long</li>
+                      <li>Include a mix of letters and numbers</li>
+                      <li>Not contain common words</li>
+                    </ul>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </div>
             <div className="space-y-2">
               <label htmlFor="confirmPassword" className="text-sm font-medium">
@@ -204,6 +219,12 @@ const SignUpComponent = () => {
   );
 };
 
-export default dynamic(() => Promise.resolve(SignUpComponent), {
-  ssr: false
-});
+const SignUpPage = () => {
+  return (
+    <AuthProvider>
+      <SignUpForm />
+    </AuthProvider>
+  );
+};
+
+export default SignUpPage;
