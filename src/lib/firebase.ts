@@ -32,8 +32,12 @@ export const checkUsernameAvailability = async (username: string): Promise<boole
   try {
     const usernameDoc = await getDoc(doc(db, 'usernames', username.toLowerCase()));
     return !usernameDoc.exists();
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error checking username availability:', error);
+    // Rethrow with more specific error information
+    if (error.code === 'permission-denied') {
+      error.message = 'Unable to check username availability due to permission settings.';
+    }
     throw error;
   }
 };
