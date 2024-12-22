@@ -24,9 +24,13 @@ try {
   throw error;
 }
 
+import { getAuth, setPersistence, browserLocalPersistence } from 'firebase/auth';
+
 const auth = getAuth(app);
-// Set persistence to LOCAL to maintain the session
-auth.setPersistence('LOCAL');
+// Properly set persistence to LOCAL
+setPersistence(auth, browserLocalPersistence).catch((error) => {
+  console.error("Error setting auth persistence:", error);
+});
 const db = getFirestore(app);
 
 // Username management functions
