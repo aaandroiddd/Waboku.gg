@@ -25,6 +25,8 @@ try {
 }
 
 const auth = getAuth(app);
+// Set persistence to LOCAL to maintain the session
+auth.setPersistence('LOCAL');
 const db = getFirestore(app);
 
 // Username management functions
