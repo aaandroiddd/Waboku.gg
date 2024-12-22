@@ -106,14 +106,14 @@ export function DashboardSidebar({ onNavigate, isMobile = false }: DashboardSide
     )}>
       <div className={cn(
         "w-full",
-        isMobile ? "flex justify-center mb-8" : "px-4 py-2 mb-6"
+        isMobile ? "flex justify-center absolute top-[180px]" : "px-4 py-2 mb-6"
       )}>
         <Logo href="/" className={isMobile ? "w-8 h-8" : "w-full"} />
       </div>
       
       <nav className={cn(
         "flex-1",
-        isMobile ? "space-y-4 mt-[200px]" : "space-y-2"
+        isMobile ? "space-y-4 mt-[220px]" : "space-y-2"
       )}>
         {navigationItems.map((item) => (
           <NavButton
