@@ -16,7 +16,7 @@ const DashboardComponent = () => {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
-  const { listings, loading: listingsLoading, error: listingsError, deleteListing } = useListings();
+  const { listings, loading: listingsLoading, error: listingsError, deleteListing, refreshListings } = useListings();
   
   const loading = authLoading || listingsLoading;
 
