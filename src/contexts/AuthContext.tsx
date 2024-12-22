@@ -25,12 +25,45 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        // Force token refresh if it's close to expiration
+        try {
+          const token = await user.getIdToken();
+          const decodedToken = JSON.parse(atob(token.split('.')[1]));
+          const expirationTime = decodedToken.exp * 1000;
+          
+          // If token is about to expire in the next 5 minutes, refresh it
+          if (Date.now() + 5 * 60 * 1000 > expirationTime) {
+            await user.getIdToken(true);
+          }
+        } catch (error) {
+          console.error('Token refresh error:', error);
+          // If token refresh fails, force re-authentication
+          await signOut();
+        }
+      }
       setUser(user);
       setLoading(false);
     });
 
-    return () => unsubscribe();
+    // Set up periodic token refresh (every 30 minutes)
+    const refreshInterval = setInterval(async () => {
+      const currentUser = auth.currentUser;
+      if (currentUser) {
+        try {
+          await currentUser.getIdToken(true);
+        } catch (error) {
+          console.error('Periodic token refresh error:', error);
+          await signOut();
+        }
+      }
+    }, 30 * 60 * 1000);
+
+    return () => {
+      unsubscribe();
+      clearInterval(refreshInterval);
+    };
   }, []);
 
   const signUp = async (email: string, password: string, username: string, retryCount = 0) => {
