@@ -38,14 +38,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.log('Starting sign up process for:', email);
       
       // Check username availability first
-      const isAvailable = await checkUsernameAvailability(username);
-      if (!isAvailable) {
-        throw new Error('This username is already taken. Please choose another one.');
+      try {
+        const isAvailable = await checkUsernameAvailability(username);
+        if (!isAvailable) {
+          throw new Error('This username is already taken. Please choose another one.');
+        }
+      } catch (error: any) {
+        console.error('Username check error:', error);
+        if (error.code === 'permission-denied') {
+          throw new Error('Unable to check username availability. Please try again later.');
+        }
+        throw error;
       }
 
       // Add timeout promise
       const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Request timeout')), 10000); // 10 second timeout
+        setTimeout(() => reject(new Error('Request timeout')), 15000); // 15 second timeout
       });
       
       // Create new account directly
@@ -66,13 +74,41 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           throw error;
         });
 
-      // Reserve the username
-      await reserveUsername(username, userCredential.user.uid);
+      // Reserve the username with retry mechanism
+      try {
+        await reserveUsername(username, userCredential.user.uid);
+      } catch (error: any) {
+        console.error('Username reservation error:', error);
+        
+        // If username reservation fails, delete the created account to maintain consistency
+        try {
+          await userCredential.user.delete();
+        } catch (deleteError) {
+          console.error('Error deleting user after username reservation failure:', deleteError);
+        }
+
+        if (error.code === 'permission-denied') {
+          throw new Error('Unable to reserve username. Please try again later.');
+        }
+        throw error;
+      }
 
       // Set the username
-      await updateProfile(userCredential.user, {
-        displayName: username
-      });
+      try {
+        await updateProfile(userCredential.user, {
+          displayName: username
+        });
+      } catch (error: any) {
+        console.error('Profile update error:', error);
+        // If profile update fails, attempt to clean up
+        try {
+          await releaseUsername(username);
+          await userCredential.user.delete();
+        } catch (cleanupError) {
+          console.error('Cleanup error after profile update failure:', cleanupError);
+        }
+        throw new Error('Failed to set username. Please try again.');
+      }
 
       console.log('Sign up successful:', userCredential.user);
       return { error: null, user: userCredential.user };
