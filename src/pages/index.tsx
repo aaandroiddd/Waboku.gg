@@ -133,10 +133,11 @@ export default function Home() {
           <div className="relative">
             {/* Background Cards */}
             <div className="absolute inset-0 overflow-hidden">
-              <div className="absolute inset-0 bg-[url('/images/cards-pattern.svg')] opacity-5 bg-repeat transform rotate-12 scale-150" />
-              <div className="absolute inset-0 bg-gradient-to-b from-background via-background/95 to-background" />
+              <div className="absolute inset-0 bg-[url('/images/cards-pattern.svg')] bg-cover bg-center opacity-30" />
+              <div className="absolute inset-0 bg-gradient-to-b from-background/95 via-background/90 to-background" />
+              <div className="absolute inset-0 bg-gradient-to-t from-background via-background/80 to-transparent" />
             </div>
-            <div className="absolute inset-0 bg-gradient-to-r from-blue-600/10 via-blue-400/10 to-blue-600/10" />
+            <div className="absolute inset-0 bg-gradient-to-r from-blue-600/5 via-purple-500/5 to-blue-600/5" />
             
             <div className="relative container mx-auto px-4 py-8 sm:py-12 md:py-16 lg:py-24">
               <div className="text-center max-w-3xl mx-auto">
