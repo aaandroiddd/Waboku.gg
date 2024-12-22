@@ -200,8 +200,8 @@ export default function Home() {
                         </Command>
                       </PopoverContent>
                     </Popover>
-                    <Button className="h-12 px-8 w-full sm:w-auto" size="lg">
-                      Search
+                    <Button className="h-12 w-12 sm:w-12" size="icon">
+                      <Search className="h-5 w-5" />
                     </Button>
                   </div>
                 </div>
