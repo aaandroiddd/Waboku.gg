@@ -197,16 +197,13 @@ export default function ListingPage() {
             <Carousel className="w-full h-full">
               <CarouselContent className="h-full">
                 {listing.imageUrls.map((url, index) => (
-                  <CarouselItem key={index} className="h-full">
-                    <div className="relative w-full h-full">
-                      <Image
+                  <CarouselItem key={index} className="h-full flex items-center justify-center p-4">
+                    <div className="relative max-w-full max-h-full" style={{ width: '100%', height: '100%' }}>
+                      <img
                         src={url}
                         alt={`${listing.title} - Image ${index + 1}`}
-                        fill
-                        className="object-contain"
-                        sizes="95vw"
-                        priority
-                        quality={100}
+                        className="max-w-full max-h-[85vh] object-contain mx-auto"
+                        loading="eager"
                       />
                     </div>
                   </CarouselItem>
