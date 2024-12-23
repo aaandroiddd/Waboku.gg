@@ -9,6 +9,9 @@ export interface Listing {
   userId: string;
   createdAt: Date;
   status: 'active' | 'sold' | 'pending';
+  isGraded: boolean;
+  gradeLevel?: number;
+  gradingCompany?: string;
 }
 
 export interface CreateListingData {
@@ -18,4 +21,7 @@ export interface CreateListingData {
   condition: string;
   game: string;
   images: File[];
+  isGraded: boolean;
+  gradeLevel?: number;
+  gradingCompany?: string;
 }
