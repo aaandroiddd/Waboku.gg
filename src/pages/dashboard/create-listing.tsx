@@ -116,11 +116,19 @@ const CreateListingPage = () => {
     setUploadProgress(0);
 
     try {
+      console.log('Submitting form with data:', {
+        ...formData,
+        imageCount: formData.images.length,
+        imageTypes: formData.images.map(img => img.type),
+        imageSizes: formData.images.map(img => img.size),
+      });
+
       // Prepare the data with proper type conversion
       const listingData = {
         ...formData,
         price: formData.price.trim(), // Ensure no whitespace
         onUploadProgress: (progress: number) => {
+          console.log('Upload progress:', progress);
           setUploadProgress(Math.round(progress));
         }
       };
