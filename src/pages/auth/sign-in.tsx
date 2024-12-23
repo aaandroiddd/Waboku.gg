@@ -71,6 +71,12 @@ function SignInComponent() {
 
     try {
       console.log('Attempting to sign in...');
+      
+      // Check network connectivity first
+      if (!navigator.onLine) {
+        throw new Error('No internet connection. Please check your network and try again.');
+      }
+
       const { error: signInError } = await signIn(email, password);
       
       if (signInError) {
@@ -98,6 +104,10 @@ function SignInComponent() {
         errorMessage = 'Invalid email or password.';
       } else if (err.code === 'auth/too-many-requests') {
         errorMessage = 'Too many failed attempts. Please try again later.';
+      } else if (err.code === 'auth/network-request-failed') {
+        errorMessage = 'Network error. Please check your internet connection and try again.';
+      } else if (err.message && err.message.includes('fetch')) {
+        errorMessage = 'Unable to connect to authentication service. Please check your internet connection and try again.';
       } else if (err.message) {
         errorMessage = err.message;
       }
