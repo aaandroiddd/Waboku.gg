@@ -101,7 +101,7 @@ const SignUpForm = () => {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-background">
       <Link href="/" className="mb-8">
-        <Logo className="w-32 h-auto" />
+        <Logo className="h-auto text-3xl" />
       </Link>
       <Card className="w-[400px]">
         <CardHeader>
