@@ -1,43 +1,14 @@
-rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Helper function to check if user is authenticated
-    function isAuthenticated() {
-      return request.auth != null;
-    }
-
-    // Helper function to check if user owns the document
-    function isOwner(userId) {
-      return isAuthenticated() && request.auth.uid == userId;
-    }
-
-    // Default rule - require authentication
-    match /{document=**} {
-      allow read, write: if isAuthenticated();
-    }
-
-    // Usernames collection rules - allow public read for availability checking
+    // Allow read access to usernames collection for everyone (needed for username availability check)
     match /usernames/{username} {
-      allow get: if true;  // Allow public read access for username checking
-      allow create: if isAuthenticated() && 
-                   !exists(/databases/$(database)/documents/usernames/$(username));
-      allow delete: if isAuthenticated() && 
-                   get(/databases/$(database)/documents/usernames/$(username)).data.userId == request.auth.uid;
+      allow read: if true;
+      allow write: if request.auth != null;
     }
-
-    // Users collection rules
-    match /users/{userId} {
-      allow read: if isAuthenticated();
-      allow write: if isOwner(userId);
-    }
-
-    // Listings collection rules
-    match /listings/{listingId} {
-      allow read: if true;  // Public read access for listings
-      allow create: if isAuthenticated() && 
-                   request.resource.data.userId == request.auth.uid;
-      allow update, delete: if isAuthenticated() && 
-                          resource.data.userId == request.auth.uid;
+    
+    // All other collections require authentication
+    match /{document=**} {
+      allow read, write: if request.auth != null && request.time < timestamp.date(2025, 1, 1);
     }
   }
 }
