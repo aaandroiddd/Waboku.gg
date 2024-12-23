@@ -1,5 +1,5 @@
 import { initializeApp, getApps, FirebaseApp } from 'firebase/app';
-import { getAuth, setPersistence, browserLocalPersistence, Auth } from 'firebase/auth';
+import { getAuth, setPersistence, browserLocalPersistence, Auth, connectAuthEmulator } from 'firebase/auth';
 import { getFirestore, collection, doc, setDoc, getDoc, deleteDoc, getDocs, query, where, Firestore } from 'firebase/firestore';
 
 const firebaseConfig = {
@@ -28,51 +28,73 @@ const validateFirebaseConfig = () => {
 
   const missingKeys = requiredKeys.filter(key => !firebaseConfig[key]);
   if (missingKeys.length > 0) {
+    console.error('Missing Firebase configuration:', {
+      missingKeys,
+      config: {
+        ...firebaseConfig,
+        apiKey: firebaseConfig.apiKey ? '[REDACTED]' : undefined
+      }
+    });
     throw new Error(`Missing required Firebase configuration keys: ${missingKeys.join(', ')}`);
+  }
+
+  // Validate API key format
+  if (!/^AIza[0-9A-Za-z-_]{35}$/.test(firebaseConfig.apiKey || '')) {
+    console.error('Invalid Firebase API key format');
+    throw new Error('Invalid Firebase API key format');
   }
 };
 
-try {
-  console.log('Initializing Firebase...');
-  validateFirebaseConfig();
+const initializeFirebase = () => {
+  try {
+    console.log('Initializing Firebase...');
+    validateFirebaseConfig();
 
-  if (!getApps().length) {
-    console.log('No existing Firebase app, initializing new one');
-    app = initializeApp(firebaseConfig);
-  } else {
-    console.log('Using existing Firebase app');
-    app = getApps()[0];
-  }
-  
-  auth = getAuth(app);
-  db = getFirestore(app);
-
-  console.log('Setting auth persistence...');
-  setPersistence(auth, browserLocalPersistence)
-    .then(() => {
-      console.log('Auth persistence set successfully');
-    })
-    .catch((error) => {
-      console.error("Error setting auth persistence:", {
-        code: error.code,
-        message: error.message,
-        stack: error.stack
-      });
-    });
-
-  console.log('Firebase initialization complete');
-} catch (error: any) {
-  console.error('Error initializing Firebase:', {
-    code: error.code,
-    message: error.message,
-    stack: error.stack,
-    config: {
-      ...firebaseConfig,
-      apiKey: firebaseConfig.apiKey ? '[REDACTED]' : undefined
+    if (!getApps().length) {
+      console.log('No existing Firebase app, initializing new one');
+      app = initializeApp(firebaseConfig);
+    } else {
+      console.log('Using existing Firebase app');
+      app = getApps()[0];
     }
-  });
-  throw new Error('Failed to initialize Firebase. Please check your configuration.');
-}
+    
+    auth = getAuth(app);
+    db = getFirestore(app);
+
+    // Set auth persistence
+    setPersistence(auth, browserLocalPersistence)
+      .then(() => {
+        console.log('Auth persistence set successfully');
+      })
+      .catch((error) => {
+        console.error("Error setting auth persistence:", {
+          code: error.code,
+          message: error.message,
+          stack: error.stack
+        });
+      });
+
+    console.log('Firebase initialization complete');
+    return { app, auth, db };
+  } catch (error: any) {
+    console.error('Error initializing Firebase:', {
+      code: error.code,
+      message: error.message,
+      stack: error.stack,
+      config: {
+        ...firebaseConfig,
+        apiKey: firebaseConfig.apiKey ? '[REDACTED]' : undefined
+      }
+    });
+    throw new Error('Failed to initialize Firebase: ' + error.message);
+  }
+};
+
+// Initialize Firebase
+const { app: initializedApp, auth: initializedAuth, db: initializedDb } = initializeFirebase();
+app = initializedApp;
+auth = initializedAuth;
+db = initializedDb;
 
 // Username management functions
 export const checkUsernameAvailability = async (username: string): Promise<boolean> => {
