@@ -17,6 +17,9 @@ import { getStorage, ref, uploadBytes, getDownloadURL, uploadBytesResumable } fr
 import { app } from '@/lib/firebase';
 import { Listing, CreateListingData } from '@/types/database';
 
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+const ALLOWED_FILE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+
 export function useListings() {
   const { user } = useAuth();
   const [listings, setListings] = useState<Listing[]>([]);
