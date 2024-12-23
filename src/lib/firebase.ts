@@ -26,23 +26,40 @@ const validateFirebaseConfig = () => {
     'appId'
   ];
 
-  const missingKeys = requiredKeys.filter(key => !firebaseConfig[key]);
+  console.log('Validating Firebase configuration...');
+
+  // Check for undefined or empty string values
+  const missingKeys = requiredKeys.filter(key => !firebaseConfig[key] || firebaseConfig[key].trim() === '');
+  
   if (missingKeys.length > 0) {
-    console.error('Missing Firebase configuration:', {
+    const error = new Error(`Missing or empty Firebase configuration keys: ${missingKeys.join(', ')}`);
+    console.error('Firebase configuration error:', {
+      error: error.message,
       missingKeys,
       config: {
-        ...firebaseConfig,
-        apiKey: firebaseConfig.apiKey ? '[REDACTED]' : undefined
+        authDomain: firebaseConfig.authDomain || 'missing',
+        projectId: firebaseConfig.projectId || 'missing',
+        storageBucket: firebaseConfig.storageBucket || 'missing',
+        messagingSenderId: firebaseConfig.messagingSenderId || 'missing',
+        appId: firebaseConfig.appId || 'missing',
+        apiKey: firebaseConfig.apiKey ? '[PRESENT]' : 'missing'
       }
     });
-    throw new Error(`Missing required Firebase configuration keys: ${missingKeys.join(', ')}`);
+    throw error;
   }
 
   // Validate API key format
-  if (!/^AIza[0-9A-Za-z-_]{35}$/.test(firebaseConfig.apiKey || '')) {
-    console.error('Invalid Firebase API key format');
-    throw new Error('Invalid Firebase API key format');
+  if (!/^AIza[0-9A-Za-z-_]{35}$/.test(firebaseConfig.apiKey)) {
+    const error = new Error('Invalid Firebase API key format');
+    console.error('Firebase API key validation error:', {
+      error: error.message,
+      keyLength: firebaseConfig.apiKey ? firebaseConfig.apiKey.length : 0,
+      startsWithAIza: firebaseConfig.apiKey ? firebaseConfig.apiKey.startsWith('AIza') : false
+    });
+    throw error;
   }
+
+  console.log('Firebase configuration validation successful');
 };
 
 const initializeFirebase = () => {
