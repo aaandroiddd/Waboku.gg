@@ -263,10 +263,10 @@ export default function Home() {
 
           {/* Featured Listings Section */}
           <section className="container mx-auto px-4 py-8 sm:py-12">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
-              <h2 className="text-2xl font-bold">Latest Listings</h2>
+            <div className="text-center mb-8">
+              <h2 className="text-3xl font-bold mb-4">Latest Listings</h2>
               <Link href="/listings">
-                <Button variant="outline">View All</Button>
+                <Button variant="outline">View All Listings</Button>
               </Link>
             </div>
             <ListingGrid listings={listings} loading={loading} />
