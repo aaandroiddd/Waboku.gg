@@ -1,5 +1,6 @@
 import React from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/router';
 
 interface LogoProps {
   className?: string;
@@ -8,13 +9,22 @@ interface LogoProps {
 }
 
 export const Logo: React.FC<LogoProps> = ({ className, href = '/', alwaysShowFull = false }) => {
+  const router = useRouter();
+  const isDashboard = router.pathname.startsWith('/dashboard');
+
   const LogoContent = (
     <div className={`font-bold cursor-pointer ${className || ''}`}>
       {/* Mobile Logo Version - only shown when alwaysShowFull is false */}
       {!alwaysShowFull && (
         <div className="block md:hidden text-2xl">
-          <span className="lowercase text-sky-400">w</span>
-          <span className="lowercase">.gg</span>
+          {isDashboard ? (
+            <span className="lowercase text-sky-400">w</span>
+          ) : (
+            <>
+              <span className="lowercase text-sky-400">w</span>
+              <span className="lowercase">.gg</span>
+            </>
+          )}
         </div>
       )}
       
