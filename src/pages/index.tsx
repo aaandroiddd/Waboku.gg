@@ -1,4 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { getFirestore, collection, query, orderBy, getDocs, limit } from 'firebase/firestore';
+import { app } from '@/lib/firebase';
+import { Listing } from '@/types/database';
+import { ListingGrid } from '@/components/ListingGrid';
 import Head from "next/head";
 import Header from "@/components/Header";
 import { Button } from "@/components/ui/button";
