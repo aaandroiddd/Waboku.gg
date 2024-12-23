@@ -39,13 +39,26 @@ export function ListingGrid({ listings, loading = false }: ListingGridProps) {
           <Card className="hover:shadow-lg transition-shadow">
             <CardHeader className="p-4">
               <div className="relative aspect-[4/3] w-full mb-4">
-                <Image
-                  src={listing.imageUrls[0]}
-                  alt={listing.title}
-                  fill
-                  className="object-cover rounded-md"
-                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                />
+                {listing.imageUrls && listing.imageUrls[0] ? (
+                  <div className="relative w-full h-full">
+                    <Image
+                      src={listing.imageUrls[0]}
+                      alt={listing.title}
+                      fill
+                      className="object-cover rounded-md"
+                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                      priority={true}
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.src = '/images/rect.png'; // Fallback image
+                      }}
+                    />
+                  </div>
+                ) : (
+                  <div className="w-full h-full bg-muted flex items-center justify-center rounded-md">
+                    <span className="text-muted-foreground">No image available</span>
+                  </div>
+                )}
               </div>
               <CardTitle className="text-xl">{listing.title}</CardTitle>
             </CardHeader>
