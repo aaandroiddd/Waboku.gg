@@ -320,6 +320,6 @@ export function useListings() {
     createListing,
     updateListing,
     deleteListing,
-    refreshListings: fetchListings,
+    refreshListings: fetchAllListings,
   };
 }
