@@ -49,8 +49,8 @@ export function ListingGrid({ listings, loading = false }: ListingGridProps) {
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       {listings.map((listing) => (
         <Link href={`/listings/${listing.id}`} key={listing.id} className="block transform transition-all duration-300">
-          <Card className="group relative overflow-hidden transition-all duration-300 hover:shadow-xl hover:shadow-primary/25 hover:border-primary/50">
-            <div className="absolute inset-0 bg-gradient-to-t from-primary/5 via-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+          <Card className="group relative overflow-hidden transition-all duration-300 hover:shadow-lg hover:shadow-primary/15 hover:border-primary/25">
+            <div className="absolute inset-0 bg-gradient-to-t from-primary/3 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
             <CardHeader className="p-4">
               <div className="relative aspect-[4/3] w-full mb-4 overflow-hidden rounded-md">
                 {listing.imageUrls && listing.imageUrls[0] ? (
