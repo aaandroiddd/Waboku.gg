@@ -33,34 +33,54 @@ const db = getFirestore(app);
 
 // Username management functions
 export const checkUsernameAvailability = async (username: string): Promise<boolean> => {
+  if (!username) {
+    throw new Error('Username cannot be empty');
+  }
+
   try {
     console.log('Checking username availability for:', username);
-    const usernameRef = doc(db, 'usernames', username.toLowerCase());
-    const usernameDoc = await getDoc(usernameRef);
-    console.log('Username check result:', !usernameDoc.exists());
-    return !usernameDoc.exists();
+    const normalizedUsername = username.toLowerCase().trim();
+    const usernameRef = doc(db, 'usernames', normalizedUsername);
+    
+    // Add retry mechanism for network issues
+    let attempts = 0;
+    const maxAttempts = 3;
+    
+    while (attempts < maxAttempts) {
+      try {
+        const usernameDoc = await getDoc(usernameRef);
+        const isAvailable = !usernameDoc.exists();
+        console.log('Username check result:', isAvailable);
+        return isAvailable;
+      } catch (error: any) {
+        attempts++;
+        if (attempts === maxAttempts) throw error;
+        // Wait for 1 second before retrying
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+    }
+    
+    throw new Error('Failed to check username after multiple attempts');
   } catch (error: any) {
     console.error('Error checking username availability:', {
       error,
       code: error.code,
-      message: error.message,
-      name: error.name,
-      stack: error.stack
+      message: error.message
     });
     
-    // Handle specific error cases
+    // Improved error handling
     if (error.code === 'permission-denied') {
-      throw new Error('Unable to check username availability due to permission settings.');
+      console.error('Permission denied error details:', error);
+      throw new Error('System is temporarily unavailable. Please try again in a few moments.');
     }
     if (error.code === 'unavailable' || error.code === 'resource-exhausted') {
-      throw new Error('Service temporarily unavailable. Please try again in a few moments.');
+      throw new Error('Service is temporarily unavailable. Please try again in a few moments.');
     }
     if (error.code === 'not-found') {
       return true; // Username is available if the document doesn't exist
     }
     
-    // For any other error, throw a generic message
-    throw new Error('Unable to check username availability. Please try again later.');
+    throw new Error('Unable to verify username availability. Please try again.');
   }
 };
 
