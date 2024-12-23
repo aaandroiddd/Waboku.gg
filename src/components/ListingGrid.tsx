@@ -1,8 +1,9 @@
 import { Listing } from '@/types/database';
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import Image from 'next/image';
 import Link from 'next/link';
+import { MapPin } from 'lucide-react';
 
 interface ListingGridProps {
   listings: Listing[];
@@ -25,10 +26,10 @@ const getConditionColor = (condition: string) => {
 export function ListingGrid({ listings, loading = false }: ListingGridProps) {
   if (loading) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {[1, 2, 3, 4, 5, 6].map((i) => (
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
           <div key={i} className="animate-pulse">
-            <div className="h-48 bg-gray-200 rounded mb-4"></div>
+            <div className="aspect-square bg-gray-200 rounded-lg mb-2"></div>
             <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
             <div className="h-4 bg-gray-200 rounded w-1/2"></div>
           </div>
@@ -46,58 +47,55 @@ export function ListingGrid({ listings, loading = false }: ListingGridProps) {
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
       {listings.map((listing) => (
-        <Link href={`/listings/${listing.id}`} key={listing.id} className="block transform transition-all duration-300">
-          <Card className="group relative overflow-hidden transition-all duration-300 hover:shadow-lg hover:shadow-primary/15 hover:border-primary/25">
-            <div className="absolute inset-0 bg-gradient-to-t from-primary/3 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-            <CardHeader className="p-4">
-              <div className="relative aspect-[4/3] w-full mb-4 overflow-hidden rounded-md">
-                {listing.imageUrls && listing.imageUrls[0] ? (
-                  <div className="relative w-full h-full transform transition-transform duration-300 group-hover:scale-105">
-                    <Image
-                      src={listing.imageUrls[0]}
-                      alt={listing.title}
-                      fill
-                      className="object-cover rounded-md"
-                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                      priority={true}
-                      onError={(e) => {
-                        const target = e.target as HTMLImageElement;
-                        target.src = '/images/rect.png';
-                      }}
-                    />
-                  </div>
-                ) : (
-                  <div className="w-full h-full bg-muted flex items-center justify-center rounded-md">
-                    <span className="text-muted-foreground">No image available</span>
-                  </div>
-                )}
+        <Link href={`/listings/${listing.id}`} key={listing.id} className="block">
+          <Card className="group overflow-hidden border-none shadow-none hover:shadow-lg transition-all duration-300">
+            <div className="relative aspect-square w-full mb-3">
+              {listing.imageUrls && listing.imageUrls[0] ? (
+                <Image
+                  src={listing.imageUrls[0]}
+                  alt={listing.title}
+                  fill
+                  className="object-cover rounded-lg group-hover:scale-105 transition-transform duration-300"
+                  sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                  priority={true}
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    target.src = '/images/rect.png';
+                  }}
+                />
+              ) : (
+                <div className="w-full h-full bg-muted flex items-center justify-center rounded-lg">
+                  <span className="text-muted-foreground">No image</span>
+                </div>
+              )}
+            </div>
+            
+            <div className="space-y-2">
+              <div className="flex items-start justify-between gap-2">
+                <h3 className="font-medium line-clamp-1 flex-1">{listing.title}</h3>
+                <span className="font-semibold whitespace-nowrap">
+                  ${typeof listing.price === 'number' ? listing.price.toFixed(2) : listing.price}
+                </span>
               </div>
-              <CardTitle className="text-xl group-hover:text-primary transition-colors duration-300">
-                {listing.title}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-4 pt-0">
-              <div className="flex flex-wrap gap-2 mb-2">
-                <Badge variant="secondary">{listing.game}</Badge>
-                <Badge className={getConditionColor(listing.condition)}>{listing.condition}</Badge>
-                {listing.isGraded && (
-                  <Badge variant="outline" className="bg-blue-500/10 text-blue-500">
-                    {listing.gradingCompany} {listing.gradeLevel}
-                  </Badge>
-                )}
+
+              <div className="flex flex-wrap gap-1.5">
+                <Badge variant="secondary" className="text-xs rounded-md">
+                  {listing.game}
+                </Badge>
+                <Badge className={`text-xs rounded-md ${getConditionColor(listing.condition)}`}>
+                  {listing.condition}
+                </Badge>
               </div>
-              <p className="text-muted-foreground line-clamp-2">{listing.description}</p>
-            </CardContent>
-            <CardFooter className="p-4 pt-0 flex justify-between items-center">
-              <span className="text-2xl font-bold group-hover:text-primary transition-colors duration-300">
-                ${typeof listing.price === 'number' ? listing.price.toFixed(2) : listing.price}
-              </span>
-              <span className="text-sm text-muted-foreground">
-                {listing.createdAt.toLocaleDateString()}
-              </span>
-            </CardFooter>
+
+              {listing.location && (
+                <div className="flex items-center text-sm text-muted-foreground">
+                  <MapPin className="h-3.5 w-3.5 mr-1" />
+                  <span className="truncate">{listing.location}</span>
+                </div>
+              )}
+            </div>
           </Card>
         </Link>
       ))}
