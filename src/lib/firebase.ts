@@ -29,7 +29,10 @@ const validateFirebaseConfig = () => {
   console.log('Validating Firebase configuration...');
 
   // Check for undefined or empty string values
-  const missingKeys = requiredKeys.filter(key => !firebaseConfig[key] || firebaseConfig[key].trim() === '');
+  const missingKeys = requiredKeys.filter(key => {
+    const value = firebaseConfig[key];
+    return value === undefined || value === null || value.trim() === '';
+  });
   
   if (missingKeys.length > 0) {
     const error = new Error(`Missing or empty Firebase configuration keys: ${missingKeys.join(', ')}`);
@@ -48,12 +51,12 @@ const validateFirebaseConfig = () => {
     throw error;
   }
 
-  // Validate API key format
-  if (!/^AIza[0-9A-Za-z-_]{35}$/.test(firebaseConfig.apiKey)) {
+  // Validate API key format (less strict validation)
+  if (!firebaseConfig.apiKey.startsWith('AIza')) {
     const error = new Error('Invalid Firebase API key format');
     console.error('Firebase API key validation error:', {
       error: error.message,
-      keyLength: firebaseConfig.apiKey ? firebaseConfig.apiKey.length : 0,
+      keyPresent: !!firebaseConfig.apiKey,
       startsWithAIza: firebaseConfig.apiKey ? firebaseConfig.apiKey.startsWith('AIza') : false
     });
     throw error;
