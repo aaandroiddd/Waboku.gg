@@ -47,18 +47,18 @@ export function ListingGrid({ listings, loading = false }: ListingGridProps) {
   }
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-2 px-2">
       {listings.map((listing) => (
         <Link href={`/listings/${listing.id}`} key={listing.id} className="block">
-          <Card className="group overflow-hidden border border-border/40 hover:border-border shadow-sm hover:shadow-md transition-all duration-300 p-3">
-            <div className="relative aspect-square w-full mb-3">
+          <Card className="group overflow-hidden border border-white/20 hover:border-white/40 dark:border-blue-300/20 dark:hover:border-blue-300/40 shadow-sm hover:shadow-md transition-all duration-300 p-2">
+            <div className="relative aspect-square w-full mb-2">
               {listing.imageUrls && listing.imageUrls[0] ? (
                 <Image
                   src={listing.imageUrls[0]}
                   alt={listing.title}
                   fill
                   className="object-cover rounded-lg group-hover:scale-105 transition-transform duration-300"
-                  sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                  sizes="(max-width: 640px) 50vw, (max-width: 1024px) 25vw, 20vw"
                   priority={true}
                   onError={(e) => {
                     const target = e.target as HTMLImageElement;
@@ -72,10 +72,10 @@ export function ListingGrid({ listings, loading = false }: ListingGridProps) {
               )}
             </div>
             
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <div className="flex items-start justify-between gap-2">
-                <h3 className="text-lg font-bold line-clamp-1 flex-1">{listing.title}</h3>
-                <span className="font-semibold whitespace-nowrap">
+                <h3 className="text-sm font-semibold line-clamp-2 flex-1">{listing.title}</h3>
+                <span className="font-semibold whitespace-nowrap text-sm">
                   ${typeof listing.price === 'number' ? listing.price.toFixed(2) : listing.price}
                 </span>
               </div>
