@@ -5,8 +5,23 @@ import { app } from '@/lib/firebase';
 import { Listing } from '@/types/database';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
 import Image from 'next/image';
+import { ArrowLeft } from 'lucide-react';
+
+const getConditionColor = (condition: string) => {
+  const colors: Record<string, string> = {
+    'poor': 'bg-red-500/10 text-red-500 hover:bg-red-500/20',
+    'played': 'bg-orange-500/10 text-orange-500 hover:bg-orange-500/20',
+    'light-played': 'bg-yellow-500/10 text-yellow-500 hover:bg-yellow-500/20',
+    'good': 'bg-blue-500/10 text-blue-500 hover:bg-blue-500/20',
+    'excellent': 'bg-indigo-500/10 text-indigo-500 hover:bg-indigo-500/20',
+    'near-mint': 'bg-purple-500/10 text-purple-500 hover:bg-purple-500/20',
+    'mint': 'bg-green-500/10 text-green-500 hover:bg-green-500/20'
+  };
+  return colors[condition.toLowerCase()] || 'bg-gray-500/10 text-gray-500 hover:bg-gray-500/20';
+};
 
 export default function ListingPage() {
   const router = useRouter();
@@ -72,6 +87,15 @@ export default function ListingPage() {
 
   return (
     <div className="container mx-auto p-4">
+      <Button 
+        variant="ghost" 
+        className="mb-4" 
+        onClick={() => router.back()}
+      >
+        <ArrowLeft className="mr-2 h-4 w-4" />
+        Back
+      </Button>
+
       <Card className="max-w-4xl mx-auto">
         <CardHeader>
           <div className="flex justify-between items-start">
@@ -79,7 +103,12 @@ export default function ListingPage() {
               <CardTitle className="text-2xl font-bold">{listing.title}</CardTitle>
               <div className="flex gap-2 mt-2">
                 <Badge variant="secondary">{listing.game}</Badge>
-                <Badge variant="outline">{listing.condition}</Badge>
+                <Badge className={getConditionColor(listing.condition)}>{listing.condition}</Badge>
+                {listing.isGraded && (
+                  <Badge variant="outline" className="bg-blue-500/10 text-blue-500">
+                    {listing.gradingCompany} {listing.gradeLevel}
+                  </Badge>
+                )}
               </div>
             </div>
             <div className="text-2xl font-bold">
