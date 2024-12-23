@@ -5,7 +5,10 @@ const nextConfig = {
     ignoreBuildErrors: true,
   },
   images: {
-    domains: ["assets.co.dev"],
+    domains: [
+      "assets.co.dev",
+      "firebasestorage.googleapis.com"
+    ],
   },
   webpack: (config, context) => {
     config.optimization.minimize = false;
