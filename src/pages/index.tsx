@@ -224,54 +224,12 @@ export default function Home() {
           {/* Featured Listings Section */}
           <section className="container mx-auto px-4 py-8 sm:py-12">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
-              <h2 className="text-2xl font-bold">Featured Listings</h2>
-              <Link href="/auth/sign-in">
+              <h2 className="text-2xl font-bold">Latest Listings</h2>
+              <Link href="/listings">
                 <Button variant="outline">View All</Button>
               </Link>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {featuredListings.map((listing) => (
-                <Card
-                  key={listing.id}
-                  className="overflow-hidden hover:shadow-lg transition-shadow"
-                >
-                  <CardContent className="p-6">
-                    <div className="flex justify-between items-start mb-4">
-                      <div className="space-y-2">
-                        <h3 className="font-bold text-lg line-clamp-2">
-                          {listing.cardName}
-                        </h3>
-                        <Badge variant="secondary">
-                          {listing.game}
-                        </Badge>
-                        <div className="flex items-center gap-2 text-muted-foreground text-sm">
-                          <MapPin className="w-4 h-4 flex-shrink-0" />
-                          <span className="truncate">{listing.location}</span>
-                        </div>
-                      </div>
-                      <Badge
-                        variant="outline"
-                        className="bg-green-500/10 text-green-500 border-green-500/20 whitespace-nowrap"
-                      >
-                        {listing.condition}
-                      </Badge>
-                    </div>
-                    <div className="flex justify-between items-end">
-                      <div>
-                        <div className="text-sm text-muted-foreground mb-1">
-                          Seller: {listing.seller}
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
-                          <span className="font-medium">{listing.rating}</span>
-                        </div>
-                      </div>
-                      <div className="text-xl sm:text-2xl font-bold">${listing.price}</div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+            <ListingGrid listings={listings} loading={loading} />
           </section>
 
           {/* Membership Section */}
