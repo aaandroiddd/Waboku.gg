@@ -124,12 +124,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signIn = async (email: string, password: string) => {
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      console.log('AuthContext: Starting sign in process');
+      
+      if (!auth) {
+        console.error('AuthContext: Auth instance is not initialized');
+        throw new Error('Authentication service is not available');
+      }
+
+      const result = await signInWithEmailAndPassword(auth, email, password);
+      console.log('AuthContext: Sign in successful', { uid: result.user.uid });
       return { error: null };
     } catch (error: any) {
-      console.error('Sign in error:', error);
+      console.error('AuthContext: Sign in error:', {
+        code: error.code,
+        message: error.message,
+        stack: error.stack
+      });
       
       let errorMessage = 'An unexpected error occurred';
+      const errorWithCode = new Error(errorMessage);
+      errorWithCode.name = error.code || 'auth/unknown';
+      
       switch (error.code) {
         case 'auth/invalid-email':
           errorMessage = 'Invalid email address.';
@@ -141,11 +156,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         case 'auth/wrong-password':
           errorMessage = 'Invalid email or password.';
           break;
+        case 'auth/network-request-failed':
+          errorMessage = 'Network error. Please check your internet connection.';
+          break;
+        case 'auth/too-many-requests':
+          errorMessage = 'Too many failed attempts. Please try again later.';
+          break;
+        case 'auth/internal-error':
+          errorMessage = 'Authentication service error. Please try again later.';
+          break;
         default:
           errorMessage = 'Failed to sign in. Please try again.';
       }
       
-      return { error: new Error(errorMessage) };
+      errorWithCode.message = errorMessage;
+      return { error: errorWithCode };
     }
   };
 
