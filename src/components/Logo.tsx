@@ -10,10 +10,11 @@ interface LogoProps {
 export const Logo: React.FC<LogoProps> = ({ className, href = '/', alwaysShowFull = false }) => {
   const LogoContent = (
     <div className={`font-bold cursor-pointer ${className || ''}`}>
-      {/* Mobile Icon Version - only shown when alwaysShowFull is false */}
+      {/* Mobile Logo Version - only shown when alwaysShowFull is false */}
       {!alwaysShowFull && (
         <div className="block md:hidden text-2xl">
           <span className="lowercase text-sky-400">w</span>
+          <span className="lowercase">.gg</span>
         </div>
       )}
       
