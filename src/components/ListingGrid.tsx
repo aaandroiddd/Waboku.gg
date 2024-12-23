@@ -9,6 +9,19 @@ interface ListingGridProps {
   loading?: boolean;
 }
 
+const getConditionColor = (condition: string) => {
+  const colors: Record<string, string> = {
+    'poor': 'bg-red-500/10 text-red-500 hover:bg-red-500/20',
+    'played': 'bg-orange-500/10 text-orange-500 hover:bg-orange-500/20',
+    'light-played': 'bg-yellow-500/10 text-yellow-500 hover:bg-yellow-500/20',
+    'good': 'bg-blue-500/10 text-blue-500 hover:bg-blue-500/20',
+    'excellent': 'bg-indigo-500/10 text-indigo-500 hover:bg-indigo-500/20',
+    'near-mint': 'bg-purple-500/10 text-purple-500 hover:bg-purple-500/20',
+    'mint': 'bg-green-500/10 text-green-500 hover:bg-green-500/20'
+  };
+  return colors[condition.toLowerCase()] || 'bg-gray-500/10 text-gray-500 hover:bg-gray-500/20';
+};
+
 export function ListingGrid({ listings, loading = false }: ListingGridProps) {
   if (loading) {
     return (
@@ -63,9 +76,14 @@ export function ListingGrid({ listings, loading = false }: ListingGridProps) {
               <CardTitle className="text-xl">{listing.title}</CardTitle>
             </CardHeader>
             <CardContent className="p-4 pt-0">
-              <div className="flex gap-2 mb-2">
+              <div className="flex flex-wrap gap-2 mb-2">
                 <Badge variant="secondary">{listing.game}</Badge>
-                <Badge variant="outline">{listing.condition}</Badge>
+                <Badge className={getConditionColor(listing.condition)}>{listing.condition}</Badge>
+                {listing.isGraded && (
+                  <Badge variant="outline" className="bg-blue-500/10 text-blue-500">
+                    {listing.gradingCompany} {listing.gradeLevel}
+                  </Badge>
+                )}
               </div>
               <p className="text-muted-foreground line-clamp-2">{listing.description}</p>
             </CardContent>
