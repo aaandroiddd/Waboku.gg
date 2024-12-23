@@ -8,8 +8,9 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
 import { Separator } from '@/components/ui/separator';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 import Image from 'next/image';
-import { ArrowLeft, Calendar } from 'lucide-react';
+import { ArrowLeft, Calendar, ZoomIn } from 'lucide-react';
 
 const getConditionColor = (condition: string) => {
   const colors: Record<string, string> = {
@@ -30,6 +31,8 @@ export default function ListingPage() {
   const [listing, setListing] = useState<Listing | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isZoomDialogOpen, setIsZoomDialogOpen] = useState(false);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
   useEffect(() => {
     async function fetchListing() {
@@ -60,6 +63,21 @@ export default function ListingPage() {
 
     fetchListing();
   }, [id]);
+
+  const handleImageClick = (index: number) => {
+    setCurrentImageIndex(index);
+    setIsZoomDialogOpen(true);
+  };
+
+  const handleNextImage = () => {
+    if (!listing) return;
+    setCurrentImageIndex((prev) => (prev + 1) % listing.imageUrls.length);
+  };
+
+  const handlePreviousImage = () => {
+    if (!listing) return;
+    setCurrentImageIndex((prev) => (prev - 1 + listing.imageUrls.length) % listing.imageUrls.length);
+  };
 
   if (loading) {
     return (
@@ -138,7 +156,7 @@ export default function ListingPage() {
                 <CarouselContent>
                   {listing.imageUrls.map((url, index) => (
                     <CarouselItem key={index}>
-                      <div className="relative aspect-[4/3] w-full">
+                      <div className="relative aspect-[4/3] w-full group cursor-pointer" onClick={() => handleImageClick(index)}>
                         <Image
                           src={url}
                           alt={`${listing.title} - Image ${index + 1}`}
@@ -151,6 +169,9 @@ export default function ListingPage() {
                             target.src = '/images/rect.png';
                           }}
                         />
+                        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/20 rounded-lg">
+                          <ZoomIn className="w-8 h-8 text-white" />
+                        </div>
                       </div>
                     </CarouselItem>
                   ))}
@@ -168,6 +189,35 @@ export default function ListingPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Zoom Dialog */}
+      <Dialog open={isZoomDialogOpen} onOpenChange={setIsZoomDialogOpen}>
+        <DialogContent className="max-w-[95vw] max-h-[95vh] w-full h-full p-0">
+          <div className="relative w-full h-[90vh]">
+            <Carousel className="w-full h-full">
+              <CarouselContent className="h-full">
+                {listing.imageUrls.map((url, index) => (
+                  <CarouselItem key={index} className="h-full">
+                    <div className="relative w-full h-full">
+                      <Image
+                        src={url}
+                        alt={`${listing.title} - Image ${index + 1}`}
+                        fill
+                        className="object-contain"
+                        sizes="95vw"
+                        priority
+                        quality={100}
+                      />
+                    </div>
+                  </CarouselItem>
+                ))}
+              </CarouselContent>
+              <CarouselPrevious className="left-4" />
+              <CarouselNext className="right-4" />
+            </Carousel>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
