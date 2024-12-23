@@ -30,6 +30,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const unsubscribe = onAuthStateChanged(auth, async (user) => {
         if (user) {
           try {
+            if (!navigator.onLine) {
+              console.warn('No internet connection detected');
+              return;
+            }
             const token = await user.getIdToken();
             const decodedToken = JSON.parse(atob(token.split('.')[1]));
             const expirationTime = decodedToken.exp * 1000;
@@ -37,9 +41,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             if (Date.now() + 5 * 60 * 1000 > expirationTime) {
               await user.getIdToken(true);
             }
-          } catch (error) {
-            console.error('Token refresh error:', error);
-            await signOut();
+          } catch (error: any) {
+            console.error('Token refresh error:', {
+              code: error.code,
+              message: error.message,
+              isOnline: navigator.onLine
+            });
+            if (error.message === 'Failed to fetch' || !navigator.onLine) {
+              // Wait and retry once
+              await new Promise(resolve => setTimeout(resolve, 2000));
+              try {
+                await user.getIdToken(true);
+              } catch (retryError) {
+                console.error('Retry failed:', retryError);
+                await signOut();
+              }
+            } else {
+              await signOut();
+            }
           }
         }
         setUser(user);
