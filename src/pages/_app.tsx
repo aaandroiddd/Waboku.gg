@@ -6,11 +6,24 @@ import { useEffect, useState } from 'react';
 import { ThemeProvider } from '@/components/ThemeProvider';
 import { Inter } from 'next/font/google';
 import { AuthProvider } from '@/contexts/AuthContext';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const inter = Inter({
   subsets: ['latin'],
   variable: '--font-sans',
 });
+
+function LoadingState() {
+  return (
+    <div className="w-full h-screen flex items-center justify-center p-8">
+      <div className="w-full max-w-md space-y-4">
+        <Skeleton className="h-8 w-full" />
+        <Skeleton className="h-32 w-full" />
+        <Skeleton className="h-8 w-3/4" />
+      </div>
+    </div>
+  );
+}
 
 export default function App({ Component, pageProps }: AppProps) {
   const router = useRouter();
@@ -118,21 +131,24 @@ export default function App({ Component, pageProps }: AppProps) {
   if (!mounted) {
     return (
       <div className={`${inter.variable} font-sans antialiased`}>
-        <div style={{ visibility: 'hidden' }}>
-          <Component {...pageProps} />
-        </div>
+        <LoadingState />
       </div>
     );
   }
 
   return (
-    <ThemeProvider>
-      <AuthProvider>
-        <div className={`${inter.variable} font-sans antialiased`}>
+    <div className={`${inter.variable} font-sans antialiased`}>
+      <ThemeProvider
+        attribute="class"
+        defaultTheme="system"
+        enableSystem
+        disableTransitionOnChange
+      >
+        <AuthProvider>
           <Component {...pageProps} />
           <Toaster />
-        </div>
-      </AuthProvider>
-    </ThemeProvider>
+        </AuthProvider>
+      </ThemeProvider>
+    </div>
   )
 }
