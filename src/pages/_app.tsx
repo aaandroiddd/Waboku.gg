@@ -7,6 +7,7 @@ import { ThemeProvider } from '@/components/ThemeProvider';
 import { Inter } from 'next/font/google';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Footer } from '@/components/Footer';
 
 const inter = Inter({
   subsets: ['latin'],
