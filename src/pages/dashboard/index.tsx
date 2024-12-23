@@ -13,6 +13,15 @@ import { useListings } from '@/hooks/useListings';
 import { Listing } from '@/types/database';
 
 const DashboardComponent = () => {
+  const handleShare = (listingId: string) => {
+    const url = `${window.location.origin}/listings/${listingId}`;
+    navigator.clipboard.writeText(url);
+    // You might want to add a toast notification here
+  };
+
+  const handleViewListing = (listingId: string) => {
+    router.push(`/listings/${listingId}`);
+  };
   const { tab = 'active', new: newListingId } = useRouter().query;
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
