@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Star, Edit2, Trash2, MessageCircle } from "lucide-react";
+import { Star, Edit2, Trash2, MessageCircle, Share2, ExternalLink } from "lucide-react";
 import { useListings } from '@/hooks/useListings';
 import { Listing } from '@/types/database';
 
