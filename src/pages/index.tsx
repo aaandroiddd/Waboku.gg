@@ -125,6 +125,7 @@ const subtitles = [
 export default function Home() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedState, setSelectedState] = useState("all");
+  const [stateOpen, setStateOpen] = useState(false);
   const [randomSubtitle] = useState(() => 
     subtitles[Math.floor(Math.random() * subtitles.length)]
   );
