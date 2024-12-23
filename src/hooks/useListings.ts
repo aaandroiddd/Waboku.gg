@@ -104,7 +104,12 @@ export function useListings() {
   const createListing = async (data: CreateListingData & { onUploadProgress?: (progress: number) => void }) => {
     if (!user) throw new Error('Must be logged in to create a listing');
 
-    console.log('Starting listing creation process...');
+    console.log('Starting listing creation process...', {
+      userId: user.uid,
+      hasImages: data.images.length > 0,
+      imageTypes: data.images.map(img => img.type),
+      imageSizes: data.images.map(img => img.size),
+    });
     try {
       // Validate the data
       if (!data.title || !data.price || !data.condition || !data.game) {
