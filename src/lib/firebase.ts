@@ -1,6 +1,6 @@
 import { initializeApp, getApps } from 'firebase/app';
 import { getAuth, setPersistence, browserLocalPersistence } from 'firebase/auth';
-import { getFirestore, collection, doc, setDoc, getDoc, deleteDoc } from 'firebase/firestore';
+import { getFirestore, collection, doc, setDoc, getDoc, deleteDoc, getDocs, query, where } from 'firebase/firestore';
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -33,25 +33,31 @@ const db = getFirestore(app);
 
 // Username management functions
 export const checkUsernameAvailability = async (username: string): Promise<boolean> => {
+  console.log('Starting username availability check for:', username);
+  
   if (!username) {
+    console.log('Username check failed: Empty username');
     throw new Error('Username cannot be empty');
   }
 
   // Validate username format
   const usernameRegex = /^[a-zA-Z0-9_-]{3,20}$/;
   if (!usernameRegex.test(username)) {
+    console.log('Username check failed: Invalid format');
     throw new Error('Username must be 3-20 characters long and can only contain letters, numbers, underscores, and hyphens');
   }
 
   try {
     const normalizedUsername = username.toLowerCase().trim();
-    const usernameRef = doc(db, 'usernames', normalizedUsername);
+    const usernamesRef = collection(db, 'usernames');
+    const q = query(usernamesRef, where('username', '==', normalizedUsername));
     
-    // Simple check without retries for better user experience
-    const usernameDoc = await getDoc(usernameRef);
-    const isAvailable = !usernameDoc.exists();
+    console.log('Checking username in Firestore:', normalizedUsername);
     
-    console.log('Username availability check:', {
+    const querySnapshot = await getDocs(q);
+    const isAvailable = querySnapshot.empty;
+    
+    console.log('Username availability result:', {
       username: normalizedUsername,
       isAvailable,
       timestamp: new Date().toISOString()
@@ -69,26 +75,29 @@ export const checkUsernameAvailability = async (username: string): Promise<boole
       timestamp: new Date().toISOString()
     });
 
-    // Specific error handling
-    switch (error.code) {
-      case 'permission-denied':
-        throw new Error('Unable to check username. Please try again.');
-      case 'unavailable':
-      case 'resource-exhausted':
-        throw new Error('Service is busy. Please try again in a moment.');
-      case 'not-found':
-        return true;
-      default:
-        throw new Error('Unable to check username. Please try again later.');
+    // More specific error handling
+    if (error.code === 'permission-denied') {
+      console.log('Permission denied error during username check');
+      throw new Error('Permission denied while checking username availability');
     }
+
+    if (error.code === 'unavailable' || error.code === 'resource-exhausted') {
+      console.log('Service unavailable error during username check');
+      throw new Error('Service is temporarily unavailable. Please try again in a moment.');
+    }
+
+    console.log('Generic error during username check:', error.message);
+    throw new Error('Unable to check username availability. Please try again.');
   }
 };
 
 export const reserveUsername = async (username: string, userId: string): Promise<void> => {
   try {
-    await setDoc(doc(db, 'usernames', username.toLowerCase()), {
+    const normalizedUsername = username.toLowerCase().trim();
+    await setDoc(doc(db, 'usernames', normalizedUsername), {
       userId,
-      username,
+      username: normalizedUsername,
+      originalUsername: username,
       createdAt: new Date().toISOString()
     });
   } catch (error) {
@@ -99,7 +108,8 @@ export const reserveUsername = async (username: string, userId: string): Promise
 
 export const releaseUsername = async (username: string): Promise<void> => {
   try {
-    await deleteDoc(doc(db, 'usernames', username.toLowerCase()));
+    const normalizedUsername = username.toLowerCase().trim();
+    await deleteDoc(doc(db, 'usernames', normalizedUsername));
   } catch (error) {
     console.error('Error releasing username:', error);
     throw error;
