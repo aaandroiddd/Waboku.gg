@@ -37,50 +37,50 @@ export const checkUsernameAvailability = async (username: string): Promise<boole
     throw new Error('Username cannot be empty');
   }
 
+  // Validate username format
+  const usernameRegex = /^[a-zA-Z0-9_-]{3,20}$/;
+  if (!usernameRegex.test(username)) {
+    throw new Error('Username must be 3-20 characters long and can only contain letters, numbers, underscores, and hyphens');
+  }
+
   try {
-    console.log('Checking username availability for:', username);
     const normalizedUsername = username.toLowerCase().trim();
     const usernameRef = doc(db, 'usernames', normalizedUsername);
     
-    // Add retry mechanism for network issues
-    let attempts = 0;
-    const maxAttempts = 3;
+    // Simple check without retries for better user experience
+    const usernameDoc = await getDoc(usernameRef);
+    const isAvailable = !usernameDoc.exists();
     
-    while (attempts < maxAttempts) {
-      try {
-        const usernameDoc = await getDoc(usernameRef);
-        const isAvailable = !usernameDoc.exists();
-        console.log('Username check result:', isAvailable);
-        return isAvailable;
-      } catch (error: any) {
-        attempts++;
-        if (attempts === maxAttempts) throw error;
-        // Wait for 1 second before retrying
-        await new Promise(resolve => setTimeout(resolve, 1000));
-      }
-    }
-    
-    throw new Error('Failed to check username after multiple attempts');
-  } catch (error: any) {
-    console.error('Error checking username availability:', {
-      error,
-      code: error.code,
-      message: error.message
+    console.log('Username availability check:', {
+      username: normalizedUsername,
+      isAvailable,
+      timestamp: new Date().toISOString()
     });
-    
-    // Improved error handling
-    if (error.code === 'permission-denied') {
-      console.error('Permission denied error details:', error);
-      throw new Error('System is temporarily unavailable. Please try again in a few moments.');
+
+    return isAvailable;
+  } catch (error: any) {
+    console.error('Username check error:', {
+      username,
+      error: {
+        code: error.code,
+        message: error.message,
+        stack: error.stack
+      },
+      timestamp: new Date().toISOString()
+    });
+
+    // Specific error handling
+    switch (error.code) {
+      case 'permission-denied':
+        throw new Error('Unable to check username. Please try again.');
+      case 'unavailable':
+      case 'resource-exhausted':
+        throw new Error('Service is busy. Please try again in a moment.');
+      case 'not-found':
+        return true;
+      default:
+        throw new Error('Unable to check username. Please try again later.');
     }
-    if (error.code === 'unavailable' || error.code === 'resource-exhausted') {
-      throw new Error('Service is temporarily unavailable. Please try again in a few moments.');
-    }
-    if (error.code === 'not-found') {
-      return true; // Username is available if the document doesn't exist
-    }
-    
-    throw new Error('Unable to verify username availability. Please try again.');
   }
 };
 
