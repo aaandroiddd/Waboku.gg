@@ -29,65 +29,56 @@ const SignUpForm = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-    
-    // Check if we have internet connection
-    if (!navigator.onLine) {
-      setError("No internet connection. Please check your network and try again.");
-      return;
-    }
-    
-    // Basic validation
-    if (!email || !password || !confirmPassword || !username) {
-      setError("All fields are required");
-      return;
-    }
-
-    if (!email.includes('@')) {
-      setError("Please enter a valid email address");
-      return;
-    }
-
-    if (username.length < 3) {
-      setError("Username must be at least 3 characters long");
-      return;
-    }
-
-    if (username.length > 20) {
-      setError("Username must be less than 20 characters long");
-      return;
-    }
-
-    // Username can only contain letters, numbers, and underscores
-    if (!/^[a-zA-Z0-9_]+$/.test(username)) {
-      setError("Username can only contain letters, numbers, and underscores");
-      return;
-    }
-
-    if (password !== confirmPassword) {
-      setError("Passwords don't match!");
-      return;
-    }
-
-    if (password.length < 6) {
-      setError("Password must be at least 6 characters long");
-      return;
-    }
-
     setIsLoading(true);
-
+    
     try {
+      // Check if we have internet connection
+      if (!navigator.onLine) {
+        throw new Error("No internet connection. Please check your network and try again.");
+      }
+      
+      // Basic validation
+      if (!email || !password || !confirmPassword || !username) {
+        throw new Error("All fields are required");
+      }
+
+      if (!email.includes('@')) {
+        throw new Error("Please enter a valid email address");
+      }
+
+      if (username.length < 3) {
+        throw new Error("Username must be at least 3 characters long");
+      }
+
+      if (username.length > 20) {
+        throw new Error("Username must be less than 20 characters long");
+      }
+
+      // Username can only contain letters, numbers, underscores, and hyphens
+      if (!/^[a-zA-Z0-9_-]+$/.test(username)) {
+        throw new Error("Username can only contain letters, numbers, underscores, and hyphens");
+      }
+
+      if (password !== confirmPassword) {
+        throw new Error("Passwords don't match!");
+      }
+
+      if (password.length < 6) {
+        throw new Error("Password must be at least 6 characters long");
+      }
+
+      console.log('Starting sign up process...');
       const { error: signUpError, user: newUser } = await signUp(email, password, username);
       
       if (signUpError) {
-        setError(signUpError.message);
-        return;
+        throw signUpError;
       }
 
       if (!newUser) {
-        setError("Failed to create account. Please try again.");
-        return;
+        throw new Error("Failed to create account. Please try again.");
       }
 
+      console.log('Sign up successful, redirecting...');
       // Redirect to dashboard immediately after successful signup
       router.push("/dashboard");
     } catch (err: any) {
