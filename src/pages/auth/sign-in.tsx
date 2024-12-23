@@ -6,10 +6,40 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import { Logo } from "@/components/Logo";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import dynamic from 'next/dynamic'
 import { useAuth } from "@/contexts/AuthContext";
+import { Skeleton } from "@/components/ui/skeleton";
 
-const SignInComponent = () => {
+function LoadingState() {
+  return (
+    <div className="min-h-screen flex flex-col items-center justify-center bg-background">
+      <div className="w-[400px] space-y-4">
+        <Skeleton className="h-12 w-32 mx-auto" />
+        <Card>
+          <CardHeader>
+            <Skeleton className="h-8 w-32" />
+            <Skeleton className="h-4 w-64" />
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Skeleton className="h-4 w-16" />
+              <Skeleton className="h-10 w-full" />
+            </div>
+            <div className="space-y-2">
+              <Skeleton className="h-4 w-16" />
+              <Skeleton className="h-10 w-full" />
+            </div>
+          </CardContent>
+          <CardFooter className="flex flex-col space-y-4">
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-4 w-48 mx-auto" />
+          </CardFooter>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+function SignInComponent() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -38,21 +68,16 @@ const SignInComponent = () => {
       if (signInError) {
         throw signInError;
       }
-      // Don't need to manually redirect here as useEffect will handle it
-      // when the auth state updates
     } catch (err: any) {
-      setError(err.message);
+      console.error('Sign in error:', err);
+      setError(err.message || 'An error occurred during sign in. Please try again.');
     } finally {
       setIsLoading(false);
     }
   };
 
   if (!mounted) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-background">
-        <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
-      </div>
-    );
+    return <LoadingState />;
   }
 
   return (
@@ -129,8 +154,19 @@ const SignInComponent = () => {
       </Card>
     </div>
   );
-};
+}
 
-export default dynamic(() => Promise.resolve(SignInComponent), {
-  ssr: false
-});
+// Export the component with client-side only rendering
+export default function SignInPage() {
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  if (!isClient) {
+    return <LoadingState />;
+  }
+
+  return <SignInComponent />;
+}
