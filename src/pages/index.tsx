@@ -211,7 +211,7 @@ export default function Home() {
                   </div>
                   
                   <div className="flex flex-col sm:flex-row gap-4">
-                    <Popover>
+                    <Popover open={stateOpen} onOpenChange={setStateOpen}>
                       <PopoverTrigger asChild>
                         <Button
                           variant="outline"
@@ -235,6 +235,7 @@ export default function Home() {
                                   value={state.value}
                                   onSelect={(currentValue) => {
                                     setSelectedState(currentValue);
+                                    setStateOpen(false);
                                   }}
                                 >
                                   <Check
