@@ -8,8 +8,6 @@ import { Logo } from "@/components/Logo";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import dynamic from 'next/dynamic'
 import { useAuth } from "@/contexts/AuthContext";
-import { signInWithEmailAndPassword } from "firebase/auth";
-import { auth } from "@/lib/firebase";
 
 const SignInComponent = () => {
   const router = useRouter();
@@ -17,7 +15,7 @@ const SignInComponent = () => {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const { user } = useAuth();
+  const { user, signIn } = useAuth();
 
   useEffect(() => {
     if (user) {
@@ -31,31 +29,14 @@ const SignInComponent = () => {
     setIsLoading(true);
 
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      const { error: signInError } = await signIn(email, password);
+      if (signInError) {
+        throw signInError;
+      }
       // Don't need to manually redirect here as useEffect will handle it
       // when the auth state updates
     } catch (err: any) {
-      let errorMessage = "Failed to sign in";
-      
-      switch (err.code) {
-        case 'auth/invalid-email':
-          errorMessage = 'Invalid email address.';
-          break;
-        case 'auth/user-disabled':
-          errorMessage = 'This account has been disabled. Please contact support.';
-          break;
-        case 'auth/user-not-found':
-        case 'auth/wrong-password':
-          errorMessage = 'Invalid email or password.';
-          break;
-        case 'auth/network-request-failed':
-          errorMessage = 'Network connection error. Please check your internet connection and try again.';
-          break;
-        default:
-          errorMessage = err.message || 'Failed to sign in. Please try again.';
-      }
-      
-      setError(errorMessage);
+      setError(err.message);
     } finally {
       setIsLoading(false);
     }
