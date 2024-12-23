@@ -146,7 +146,10 @@ export default function App({ Component, pageProps }: AppProps) {
         disableTransitionOnChange
       >
         <AuthProvider>
-          <Component {...pageProps} />
+          <div className="min-h-screen flex flex-col">
+            <Component {...pageProps} />
+            <Footer />
+          </div>
           <Toaster />
         </AuthProvider>
       </ThemeProvider>
