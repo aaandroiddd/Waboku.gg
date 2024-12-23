@@ -11,10 +11,14 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == userId;
     }
 
-    // Usernames collection rules
+    // Default rule - require authentication
+    match /{document=**} {
+      allow read, write: if isAuthenticated();
+    }
+
+    // Usernames collection rules - allow public read for availability checking
     match /usernames/{username} {
-      allow get: if true;  // Allow get operations without authentication for availability checking
-      allow list: if false;  // Restrict listing all usernames
+      allow get: if true;  // Allow public read access for username checking
       allow create: if isAuthenticated() && 
                    !exists(/databases/$(database)/documents/usernames/$(username));
       allow delete: if isAuthenticated() && 
@@ -29,21 +33,11 @@ service cloud.firestore {
 
     // Listings collection rules
     match /listings/{listingId} {
-      allow read: if true;
+      allow read: if true;  // Public read access for listings
       allow create: if isAuthenticated() && 
                    request.resource.data.userId == request.auth.uid;
       allow update, delete: if isAuthenticated() && 
                           resource.data.userId == request.auth.uid;
-    }
-
-    // Messages collection rules
-    match /messages/{messageId} {
-      allow read: if isAuthenticated() && 
-                 (resource.data.senderId == request.auth.uid || 
-                  resource.data.receiverId == request.auth.uid);
-      allow create: if isAuthenticated();
-      allow update, delete: if isAuthenticated() && 
-                          resource.data.senderId == request.auth.uid;
     }
   }
 }
