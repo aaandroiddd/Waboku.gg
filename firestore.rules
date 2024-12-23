@@ -13,7 +13,7 @@ service cloud.firestore {
 
     // Usernames collection rules
     match /usernames/{username} {
-      allow read: if true;
+      allow get, list: if true;  // Allow both get and list operations without authentication
       allow create: if isAuthenticated() && 
                    !exists(/databases/$(database)/documents/usernames/$(username));
       allow delete: if isAuthenticated() && 
