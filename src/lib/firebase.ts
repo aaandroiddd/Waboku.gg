@@ -70,16 +70,7 @@ const initializeFirebase = () => {
     console.log('Initializing Firebase...');
     validateFirebaseConfig();
 
-    // Check if we're in a browser environment
-    if (typeof window === 'undefined') {
-      throw new Error('Firebase initialization attempted in non-browser environment');
-    }
-
-    // Check network connectivity
-    if (!navigator.onLine) {
-      throw new Error('No internet connection available');
-    }
-
+    // Initialize Firebase app if it hasn't been initialized yet
     if (!getApps().length) {
       console.log('No existing Firebase app, initializing new one');
       app = initializeApp(firebaseConfig);
@@ -91,46 +82,20 @@ const initializeFirebase = () => {
     auth = getAuth(app);
     db = getFirestore(app);
 
-    // Enhanced error handling for auth initialization
-    const initAuth = async () => {
-      try {
-        await setPersistence(auth, browserLocalPersistence);
-        console.log('Auth persistence set successfully');
-        
-        // Verify auth is working by getting current user
-        await auth.currentUser?.reload();
-      } catch (error: any) {
-        console.error("Auth initialization error:", {
-          code: error.code,
-          message: error.message,
-          stack: error.stack
+    // Only set persistence in browser environment
+    if (typeof window !== 'undefined') {
+      setPersistence(auth, browserLocalPersistence)
+        .then(() => {
+          console.log('Auth persistence set successfully');
+        })
+        .catch((error) => {
+          console.error("Error setting auth persistence:", {
+            code: error.code,
+            message: error.message,
+            stack: error.stack
+          });
         });
-        
-        // If it's a network error, we'll try to reinitialize
-        if (error.code === 'auth/network-request-failed') {
-          throw new Error('Network error during auth initialization');
-        }
-      }
-    };
-
-    // Initialize auth with retry logic
-    const retryAuth = async (retries = 3) => {
-      for (let i = 0; i < retries; i++) {
-        try {
-          await initAuth();
-          break;
-        } catch (error) {
-          if (i === retries - 1) throw error;
-          console.log(`Auth initialization attempt ${i + 1} failed, retrying...`);
-          await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1)));
-        }
-      }
-    };
-
-    // Execute auth initialization
-    retryAuth().catch(error => {
-      console.error('All auth initialization attempts failed:', error);
-    });
+    }
 
     console.log('Firebase initialization complete');
     return { app, auth, db };
