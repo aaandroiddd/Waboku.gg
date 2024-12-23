@@ -14,10 +14,16 @@ import { useListings } from '@/hooks/useListings';
 import { Listing } from '@/types/database';
 
 const DashboardComponent = () => {
+  const { toast } = useToast();
+  
   const handleShare = (listingId: string) => {
     const url = `${window.location.origin}/listings/${listingId}`;
     navigator.clipboard.writeText(url);
-    // You might want to add a toast notification here
+    toast({
+      title: "Link copied!",
+      description: "The listing URL has been copied to your clipboard.",
+      duration: 3000,
+    });
   };
 
   const handleViewListing = (listingId: string) => {
