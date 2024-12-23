@@ -53,8 +53,10 @@ export default function ListingsPage() {
       <div className="min-h-screen bg-background">
         <Header />
         <main className="container mx-auto px-4 py-8">
-          <h1 className="text-3xl font-bold mb-8 text-center">All Listings</h1>
-          <ListingGrid listings={listings} loading={loading} />
+          <div className="max-w-[1400px] mx-auto">
+            <h1 className="text-2xl font-semibold mb-8">All Listings</h1>
+            <ListingGrid listings={listings} loading={loading} />
+          </div>
         </main>
       </div>
     </>
