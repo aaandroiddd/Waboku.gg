@@ -12,13 +12,13 @@ import { ArrowLeft } from 'lucide-react';
 
 const getConditionColor = (condition: string) => {
   const colors: Record<string, string> = {
-    'poor': 'bg-red-500/10 text-red-500 hover:bg-red-500/20',
-    'played': 'bg-orange-500/10 text-orange-500 hover:bg-orange-500/20',
-    'light-played': 'bg-yellow-500/10 text-yellow-500 hover:bg-yellow-500/20',
-    'good': 'bg-blue-500/10 text-blue-500 hover:bg-blue-500/20',
-    'excellent': 'bg-indigo-500/10 text-indigo-500 hover:bg-indigo-500/20',
-    'near-mint': 'bg-purple-500/10 text-purple-500 hover:bg-purple-500/20',
-    'mint': 'bg-green-500/10 text-green-500 hover:bg-green-500/20'
+    'poor': 'bg-[#e51f1f]/10 text-[#e51f1f] hover:bg-[#e51f1f]/20',
+    'played': 'bg-[#e85f2a]/10 text-[#e85f2a] hover:bg-[#e85f2a]/20',
+    'light-played': 'bg-[#f2a134]/10 text-[#f2a134] hover:bg-[#f2a134]/20',
+    'good': 'bg-[#f2a134]/10 text-[#f2a134] hover:bg-[#f2a134]/20',
+    'excellent': 'bg-[#f7e379]/10 text-[#f7e379] hover:bg-[#f7e379]/20',
+    'near-mint': 'bg-[#bbdb44]/10 text-[#bbdb44] hover:bg-[#bbdb44]/20',
+    'mint': 'bg-[#44ce1b]/10 text-[#44ce1b] hover:bg-[#44ce1b]/20'
   };
   return colors[condition.toLowerCase()] || 'bg-gray-500/10 text-gray-500 hover:bg-gray-500/20';
 };
