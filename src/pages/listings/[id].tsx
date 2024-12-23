@@ -3,12 +3,13 @@ import { useRouter } from 'next/router';
 import { getFirestore, doc, getDoc } from 'firebase/firestore';
 import { app } from '@/lib/firebase';
 import { Listing } from '@/types/database';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
+import { Separator } from '@/components/ui/separator';
 import Image from 'next/image';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Calendar } from 'lucide-react';
 
 const getConditionColor = (condition: string) => {
   const colors: Record<string, string> = {
@@ -96,59 +97,74 @@ export default function ListingPage() {
         Back
       </Button>
 
-      <Card className="max-w-4xl mx-auto">
-        <CardHeader>
-          <div className="flex justify-between items-start">
-            <div>
-              <CardTitle className="text-2xl font-bold">{listing.title}</CardTitle>
-              <div className="flex gap-2 mt-2">
-                <Badge variant="secondary">{listing.game}</Badge>
-                <Badge className={getConditionColor(listing.condition)}>{listing.condition}</Badge>
-                {listing.isGraded && (
-                  <Badge variant="outline" className="bg-blue-500/10 text-blue-500">
-                    {listing.gradingCompany} {listing.gradeLevel}
+      <Card className="max-w-6xl mx-auto">
+        <CardContent className="p-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            {/* Left Column - Details */}
+            <div className="space-y-6">
+              <div>
+                <h1 className="text-3xl font-bold mb-4">{listing.title}</h1>
+                <div className="flex flex-wrap gap-2">
+                  <Badge variant="secondary" className="text-sm">{listing.game}</Badge>
+                  <Badge className={`text-sm ${getConditionColor(listing.condition)}`}>
+                    {listing.condition}
                   </Badge>
-                )}
+                  {listing.isGraded && (
+                    <Badge variant="outline" className="bg-blue-500/10 text-blue-500 text-sm">
+                      {listing.gradingCompany} {listing.gradeLevel}
+                    </Badge>
+                  )}
+                </div>
+              </div>
+
+              <Separator />
+
+              <div>
+                <h2 className="text-lg font-semibold mb-2">Description</h2>
+                <p className="text-muted-foreground whitespace-pre-wrap">{listing.description}</p>
+              </div>
+
+              <Separator />
+
+              <div className="flex items-center text-sm text-muted-foreground">
+                <Calendar className="h-4 w-4 mr-2" />
+                Listed on {listing.createdAt.toLocaleDateString()}
               </div>
             </div>
-            <div className="text-2xl font-bold">
-              ${typeof listing.price === 'number' ? listing.price.toFixed(2) : listing.price}
+
+            {/* Right Column - Images and Price */}
+            <div className="space-y-6">
+              <Carousel className="w-full">
+                <CarouselContent>
+                  {listing.imageUrls.map((url, index) => (
+                    <CarouselItem key={index}>
+                      <div className="relative aspect-[4/3] w-full">
+                        <Image
+                          src={url}
+                          alt={`${listing.title} - Image ${index + 1}`}
+                          fill
+                          className="object-contain rounded-lg"
+                          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                          priority={index === 0}
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            target.src = '/images/rect.png';
+                          }}
+                        />
+                      </div>
+                    </CarouselItem>
+                  ))}
+                </CarouselContent>
+                <CarouselPrevious />
+                <CarouselNext />
+              </Carousel>
+
+              <div className="text-center">
+                <div className="text-4xl font-bold">
+                  ${typeof listing.price === 'number' ? listing.price.toFixed(2) : listing.price}
+                </div>
+              </div>
             </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <Carousel className="w-full max-w-xl mx-auto mb-6">
-            <CarouselContent>
-              {listing.imageUrls.map((url, index) => (
-                <CarouselItem key={index}>
-                  <div className="relative aspect-[4/3] w-full">
-                    <Image
-                      src={url}
-                      alt={`${listing.title} - Image ${index + 1}`}
-                      fill
-                      className="object-contain"
-                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                      priority={index === 0}
-                      onError={(e) => {
-                        const target = e.target as HTMLImageElement;
-                        target.src = '/images/rect.png'; // Fallback image
-                      }}
-                    />
-                  </div>
-                </CarouselItem>
-              ))}
-            </CarouselContent>
-            <CarouselPrevious />
-            <CarouselNext />
-          </Carousel>
-
-          <div className="mt-6">
-            <h3 className="text-lg font-semibold mb-2">Description</h3>
-            <p className="text-muted-foreground whitespace-pre-wrap">{listing.description}</p>
-          </div>
-
-          <div className="mt-6 text-sm text-muted-foreground">
-            Listed on {listing.createdAt.toLocaleDateString()}
           </div>
         </CardContent>
       </Card>
