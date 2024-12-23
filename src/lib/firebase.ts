@@ -1,6 +1,6 @@
-import { initializeApp, getApps } from 'firebase/app';
-import { getAuth, setPersistence, browserLocalPersistence } from 'firebase/auth';
-import { getFirestore, collection, doc, setDoc, getDoc, deleteDoc, getDocs, query, where } from 'firebase/firestore';
+import { initializeApp, getApps, FirebaseApp } from 'firebase/app';
+import { getAuth, setPersistence, browserLocalPersistence, Auth } from 'firebase/auth';
+import { getFirestore, collection, doc, setDoc, getDoc, deleteDoc, getDocs, query, where, Firestore } from 'firebase/firestore';
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -11,28 +11,34 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID
 };
 
-// Initialize Firebase
-let app;
+let app: FirebaseApp;
+let auth: Auth;
+let db: Firestore;
+
 try {
   if (!getApps().length) {
     app = initializeApp(firebaseConfig);
   } else {
     app = getApps()[0];
   }
+  
+  auth = getAuth(app);
+  db = getFirestore(app);
+
+  // Set persistence
+  setPersistence(auth, browserLocalPersistence).catch((error) => {
+    console.error("Error setting auth persistence:", error);
+  });
+
 } catch (error) {
   console.error('Error initializing Firebase:', error);
-  throw error;
+  throw new Error('Failed to initialize Firebase. Please check your configuration.');
 }
-
-const auth = getAuth(app);
-// Properly set persistence to LOCAL
-setPersistence(auth, browserLocalPersistence).catch((error) => {
-  console.error("Error setting auth persistence:", error);
-});
-const db = getFirestore(app);
 
 // Username management functions
 export const checkUsernameAvailability = async (username: string): Promise<boolean> => {
+  if (!db) throw new Error('Database not initialized');
+  
   console.log('Starting username availability check for:', username);
   
   if (!username) {
@@ -75,23 +81,21 @@ export const checkUsernameAvailability = async (username: string): Promise<boole
       timestamp: new Date().toISOString()
     });
 
-    // More specific error handling
     if (error.code === 'permission-denied') {
-      console.log('Permission denied error during username check');
       throw new Error('Permission denied while checking username availability');
     }
 
     if (error.code === 'unavailable' || error.code === 'resource-exhausted') {
-      console.log('Service unavailable error during username check');
       throw new Error('Service is temporarily unavailable. Please try again in a moment.');
     }
 
-    console.log('Generic error during username check:', error.message);
     throw new Error('Unable to check username availability. Please try again.');
   }
 };
 
 export const reserveUsername = async (username: string, userId: string): Promise<void> => {
+  if (!db) throw new Error('Database not initialized');
+  
   try {
     const normalizedUsername = username.toLowerCase().trim();
     await setDoc(doc(db, 'usernames', normalizedUsername), {
@@ -107,6 +111,8 @@ export const reserveUsername = async (username: string, userId: string): Promise
 };
 
 export const releaseUsername = async (username: string): Promise<void> => {
+  if (!db) throw new Error('Database not initialized');
+  
   try {
     const normalizedUsername = username.toLowerCase().trim();
     await deleteDoc(doc(db, 'usernames', normalizedUsername));
