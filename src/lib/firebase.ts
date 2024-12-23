@@ -34,15 +34,33 @@ const db = getFirestore(app);
 // Username management functions
 export const checkUsernameAvailability = async (username: string): Promise<boolean> => {
   try {
-    const usernameDoc = await getDoc(doc(db, 'usernames', username.toLowerCase()));
+    console.log('Checking username availability for:', username);
+    const usernameRef = doc(db, 'usernames', username.toLowerCase());
+    const usernameDoc = await getDoc(usernameRef);
+    console.log('Username check result:', !usernameDoc.exists());
     return !usernameDoc.exists();
   } catch (error: any) {
-    console.error('Error checking username availability:', error);
-    // Rethrow with more specific error information
+    console.error('Error checking username availability:', {
+      error,
+      code: error.code,
+      message: error.message,
+      name: error.name,
+      stack: error.stack
+    });
+    
+    // Handle specific error cases
     if (error.code === 'permission-denied') {
-      error.message = 'Unable to check username availability due to permission settings.';
+      throw new Error('Unable to check username availability due to permission settings.');
     }
-    throw error;
+    if (error.code === 'unavailable' || error.code === 'resource-exhausted') {
+      throw new Error('Service temporarily unavailable. Please try again in a few moments.');
+    }
+    if (error.code === 'not-found') {
+      return true; // Username is available if the document doesn't exist
+    }
+    
+    // For any other error, throw a generic message
+    throw new Error('Unable to check username availability. Please try again later.');
   }
 };
 
