@@ -48,12 +48,13 @@ export function ListingGrid({ listings, loading = false }: ListingGridProps) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       {listings.map((listing) => (
-        <Link href={`/listings/${listing.id}`} key={listing.id}>
-          <Card className="hover:shadow-lg transition-shadow">
+        <Link href={`/listings/${listing.id}`} key={listing.id} className="block transform transition-all duration-300">
+          <Card className="group relative overflow-hidden transition-all duration-300 hover:shadow-xl hover:shadow-primary/25 hover:border-primary/50">
+            <div className="absolute inset-0 bg-gradient-to-t from-primary/5 via-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
             <CardHeader className="p-4">
-              <div className="relative aspect-[4/3] w-full mb-4">
+              <div className="relative aspect-[4/3] w-full mb-4 overflow-hidden rounded-md">
                 {listing.imageUrls && listing.imageUrls[0] ? (
-                  <div className="relative w-full h-full">
+                  <div className="relative w-full h-full transform transition-transform duration-300 group-hover:scale-105">
                     <Image
                       src={listing.imageUrls[0]}
                       alt={listing.title}
@@ -63,7 +64,7 @@ export function ListingGrid({ listings, loading = false }: ListingGridProps) {
                       priority={true}
                       onError={(e) => {
                         const target = e.target as HTMLImageElement;
-                        target.src = '/images/rect.png'; // Fallback image
+                        target.src = '/images/rect.png';
                       }}
                     />
                   </div>
@@ -73,7 +74,9 @@ export function ListingGrid({ listings, loading = false }: ListingGridProps) {
                   </div>
                 )}
               </div>
-              <CardTitle className="text-xl">{listing.title}</CardTitle>
+              <CardTitle className="text-xl group-hover:text-primary transition-colors duration-300">
+                {listing.title}
+              </CardTitle>
             </CardHeader>
             <CardContent className="p-4 pt-0">
               <div className="flex flex-wrap gap-2 mb-2">
@@ -88,7 +91,7 @@ export function ListingGrid({ listings, loading = false }: ListingGridProps) {
               <p className="text-muted-foreground line-clamp-2">{listing.description}</p>
             </CardContent>
             <CardFooter className="p-4 pt-0 flex justify-between items-center">
-              <span className="text-2xl font-bold">
+              <span className="text-2xl font-bold group-hover:text-primary transition-colors duration-300">
                 ${typeof listing.price === 'number' ? listing.price.toFixed(2) : listing.price}
               </span>
               <span className="text-sm text-muted-foreground">
