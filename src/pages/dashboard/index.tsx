@@ -154,10 +154,29 @@ const DashboardComponent = () => {
         <TabsContent value="active" className="space-y-4">
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {activeListings.map((listing) => (
-              <Card key={listing.id}>
+              <Card key={listing.id} className="relative group cursor-pointer hover:shadow-lg transition-shadow">
+                <div 
+                  className="absolute inset-0"
+                  onClick={() => handleViewListing(listing.id)}
+                ></div>
                 <CardHeader>
-                  <CardTitle>{listing.title}</CardTitle>
-                  <CardDescription>{listing.game}</CardDescription>
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <CardTitle>{listing.title}</CardTitle>
+                      <CardDescription>{listing.game}</CardDescription>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="relative z-10"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleShare(listing.id);
+                      }}
+                    >
+                      <Share2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-2">
@@ -170,11 +189,14 @@ const DashboardComponent = () => {
                     <div className="flex justify-between items-center text-sm text-muted-foreground">
                       <span>Listed on {new Date(listing.createdAt).toLocaleDateString()}</span>
                     </div>
-                    <div className="flex gap-2 mt-4">
+                    <div className="flex flex-wrap gap-2 mt-4 relative z-10">
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => handleEditListing(listing.id)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleEditListing(listing.id);
+                        }}
                       >
                         <Edit2 className="h-4 w-4 mr-1" />
                         Edit
@@ -183,7 +205,10 @@ const DashboardComponent = () => {
                         variant="outline"
                         size="sm"
                         className="text-red-500 hover:text-red-600"
-                        onClick={() => handleDeleteListing(listing.id)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteListing(listing.id);
+                        }}
                       >
                         <Trash2 className="h-4 w-4 mr-1" />
                         Delete
@@ -191,10 +216,24 @@ const DashboardComponent = () => {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => handleMessage(listing.id)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleMessage(listing.id);
+                        }}
                       >
                         <MessageCircle className="h-4 w-4 mr-1" />
                         Messages
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleViewListing(listing.id);
+                        }}
+                      >
+                        <ExternalLink className="h-4 w-4 mr-1" />
+                        View
                       </Button>
                     </div>
                   </div>
