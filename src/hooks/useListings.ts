@@ -107,6 +107,16 @@ export function useListings() {
         fileSize: file.size,
         userId
       });
+
+      // Additional validation
+      if (!file || !file.type || !ALLOWED_FILE_TYPES.includes(file.type)) {
+        throw new Error(`Invalid file type: ${file.type}. Allowed types: ${ALLOWED_FILE_TYPES.join(', ')}`);
+      }
+
+      if (file.size > MAX_FILE_SIZE) {
+        throw new Error(`File too large: ${(file.size / 1024 / 1024).toFixed(2)}MB. Max size: ${MAX_FILE_SIZE / 1024 / 1024}MB`);
+      }
+
       const fileName = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
       const storageRef = ref(storage, `listings/${userId}/${fileName}`);
       
