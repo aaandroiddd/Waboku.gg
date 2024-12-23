@@ -263,29 +263,101 @@ const CreateListingPage = () => {
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="condition">Condition *</Label>
-                <Select
-                  value={formData.condition}
-                  onValueChange={(value) =>
-                    setFormData({ ...formData, condition: value })
-                  }
-                >
-                  <SelectTrigger className={errors.condition ? "border-red-500" : ""}>
-                    <SelectValue placeholder="Select condition" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="mint">Mint</SelectItem>
-                    <SelectItem value="near-mint">Near Mint</SelectItem>
-                    <SelectItem value="excellent">Excellent</SelectItem>
-                    <SelectItem value="good">Good</SelectItem>
-                    <SelectItem value="light-played">Light Played</SelectItem>
-                    <SelectItem value="played">Played</SelectItem>
-                    <SelectItem value="poor">Poor</SelectItem>
-                  </SelectContent>
-                </Select>
-                {errors.condition && (
-                  <p className="text-sm text-red-500">{errors.condition}</p>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="condition">Condition *</Label>
+                  <Select
+                    value={formData.condition}
+                    onValueChange={(value) =>
+                      setFormData({ ...formData, condition: value })
+                    }
+                  >
+                    <SelectTrigger className={errors.condition ? "border-red-500" : ""}>
+                      <SelectValue placeholder="Select condition" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="mint">Mint</SelectItem>
+                      <SelectItem value="near-mint">Near Mint</SelectItem>
+                      <SelectItem value="excellent">Excellent</SelectItem>
+                      <SelectItem value="good">Good</SelectItem>
+                      <SelectItem value="light-played">Light Played</SelectItem>
+                      <SelectItem value="played">Played</SelectItem>
+                      <SelectItem value="poor">Poor</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {errors.condition && (
+                    <p className="text-sm text-red-500">{errors.condition}</p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex items-center space-x-2">
+                    <Label htmlFor="isGraded">Graded Card?</Label>
+                    <Select
+                      value={formData.isGraded ? "yes" : "no"}
+                      onValueChange={(value) =>
+                        setFormData({
+                          ...formData,
+                          isGraded: value === "yes",
+                          gradeLevel: value === "no" ? "" : formData.gradeLevel,
+                          gradingCompany: value === "no" ? "" : formData.gradingCompany,
+                        })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select option" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="yes">Yes</SelectItem>
+                        <SelectItem value="no">No</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {formData.isGraded && (
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="gradingCompany">Grading Company</Label>
+                      <Select
+                        value={formData.gradingCompany}
+                        onValueChange={(value) =>
+                          setFormData({ ...formData, gradingCompany: value })
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select grading company" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="PSA">PSA</SelectItem>
+                          <SelectItem value="BGS">BGS</SelectItem>
+                          <SelectItem value="CGC">CGC</SelectItem>
+                          <SelectItem value="other">Other</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="gradeLevel">Grade Level (1-10)</Label>
+                      <Select
+                        value={formData.gradeLevel}
+                        onValueChange={(value) =>
+                          setFormData({ ...formData, gradeLevel: value })
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select grade level" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {[...Array(10)].map((_, i) => (
+                            <SelectItem key={i + 1} value={(i + 1).toString()}>
+                              {i + 1}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
                 )}
               </div>
 
