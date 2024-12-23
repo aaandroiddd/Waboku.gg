@@ -263,13 +263,15 @@ export default function Home() {
 
           {/* Featured Listings Section */}
           <section className="container mx-auto px-4 py-8 sm:py-12">
-            <div className="text-center mb-8">
-              <h2 className="text-3xl font-bold mb-4">Latest Listings</h2>
+            <div className="flex items-center justify-between mb-8">
+              <h2 className="text-2xl font-semibold">Latest Listings</h2>
               <Link href="/listings">
-                <Button variant="outline">View All Listings</Button>
+                <Button variant="outline" size="sm">View All</Button>
               </Link>
             </div>
-            <ListingGrid listings={listings} loading={loading} />
+            <div className="max-w-[1400px] mx-auto">
+              <ListingGrid listings={listings} loading={loading} />
+            </div>
           </section>
 
           {/* Membership Section */}
