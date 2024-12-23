@@ -99,6 +99,11 @@ export default function ListingPage() {
                       fill
                       className="object-contain"
                       sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                      priority={index === 0}
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.src = '/images/rect.png'; // Fallback image
+                      }}
                     />
                   </div>
                 </CarouselItem>
