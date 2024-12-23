@@ -29,7 +29,36 @@ export function useListings() {
   const db = getFirestore(app);
   const storage = getStorage(app);
 
-  const fetchListings = useCallback(async () => {
+  const fetchAllListings = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const q = query(
+        collection(db, 'listings'),
+        orderBy('createdAt', 'desc')
+      );
+
+      const querySnapshot = await getDocs(q);
+      const fetchedListings = querySnapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          ...data,
+          createdAt: data.createdAt?.toDate() || new Date()
+        };
+      }) as Listing[];
+
+      setListings(fetchedListings);
+    } catch (err: any) {
+      console.error('Error fetching listings:', err);
+      setError('Unable to load listings. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  }, [db]);
+
+  const fetchUserListings = useCallback(async () => {
     if (!user) return;
 
     setLoading(true);
