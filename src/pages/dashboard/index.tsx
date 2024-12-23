@@ -8,11 +8,10 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Star, Edit2, Trash2, MessageCircle } from "lucide-react";
-import dynamic from 'next/dynamic';
 import { useListings } from '@/hooks/useListings';
 import { Listing } from '@/types/database';
 
-const DashboardComponent = () => {
+const DashboardPage = () => {
   const { tab = 'active', new: newListingId } = useRouter().query;
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
@@ -228,6 +227,4 @@ const DashboardComponent = () => {
   );
 };
 
-export default dynamic(() => Promise.resolve(DashboardComponent), {
-  ssr: false
-});
+export default DashboardPage;
