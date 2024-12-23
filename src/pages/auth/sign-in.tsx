@@ -70,20 +70,31 @@ function SignInComponent() {
     }
 
     try {
-      console.log('Attempting to sign in...');
-      
-      // Check network connectivity first
+      console.log('Checking network connectivity...');
       if (!navigator.onLine) {
         throw new Error('No internet connection. Please check your network and try again.');
       }
 
+      console.log('Validating input...');
+      // Basic email validation
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        throw new Error('Please enter a valid email address.');
+      }
+
+      // Basic password validation
+      if (password.length < 6) {
+        throw new Error('Password must be at least 6 characters long.');
+      }
+
+      console.log('Attempting to sign in...');
       const { error: signInError } = await signIn(email, password);
       
       if (signInError) {
         console.error('Sign in error details:', {
           code: signInError.name,
           message: signInError.message,
-          stack: signInError.stack
+          timestamp: new Date().toISOString()
         });
         throw signInError;
       }
@@ -91,23 +102,24 @@ function SignInComponent() {
       console.log('Sign in successful');
     } catch (err: any) {
       console.error('Sign in error:', {
-        error: err,
-        email: email.length > 0 ? 'provided' : 'empty',
+        errorCode: err.code || 'unknown',
+        errorName: err.name,
+        errorMessage: err.message,
         timestamp: new Date().toISOString()
       });
       
       let errorMessage = 'Failed to sign in. Please try again.';
       
-      if (err.code === 'auth/invalid-email') {
+      if (err.code === 'auth/invalid-email' || err.message.includes('valid email')) {
         errorMessage = 'Please enter a valid email address.';
       } else if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password') {
         errorMessage = 'Invalid email or password.';
       } else if (err.code === 'auth/too-many-requests') {
         errorMessage = 'Too many failed attempts. Please try again later.';
-      } else if (err.code === 'auth/network-request-failed') {
+      } else if (err.code === 'auth/network-request-failed' || !navigator.onLine || err.message.includes('network')) {
         errorMessage = 'Network error. Please check your internet connection and try again.';
-      } else if (err.message && err.message.includes('fetch')) {
-        errorMessage = 'Unable to connect to authentication service. Please check your internet connection and try again.';
+      } else if (err.message.includes('Firebase') || err.message.includes('configuration')) {
+        errorMessage = 'Authentication service configuration error. Please try again later.';
       } else if (err.message) {
         errorMessage = err.message;
       }
