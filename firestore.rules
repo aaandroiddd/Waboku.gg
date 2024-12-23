@@ -2,7 +2,10 @@ service cloud.firestore {
   match /databases/{database}/documents {
     // Allow read access to usernames collection for everyone (needed for username availability check)
     match /usernames/{username} {
-      allow get, list, query: if true;  // Added query permission
+      allow get: if true;
+      allow list: if true;
+      // Allow querying usernames collection without authentication
+      allow list, get: if true;
       allow create: if request.auth != null 
         && request.resource.data.userId == request.auth.uid
         && request.resource.data.username is string
