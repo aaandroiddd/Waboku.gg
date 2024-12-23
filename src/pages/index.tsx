@@ -232,11 +232,12 @@ export default function Home() {
                               {usStates.map((state) => (
                                 <CommandItem
                                   key={state.value}
-                                  value={state.value}
-                                  onSelect={(currentValue) => {
-                                    setSelectedState(currentValue);
+                                  value={state.label}
+                                  onSelect={() => {
+                                    setSelectedState(state.value);
                                     setStateOpen(false);
                                   }}
+                                  className="cursor-pointer"
                                 >
                                   <Check
                                     className={`mr-2 h-4 w-4 ${
