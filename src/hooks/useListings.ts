@@ -307,11 +307,11 @@ export function useListings() {
 
   useEffect(() => {
     if (user?.uid) {
-      fetchAllListings();
+      fetchUserListings();
     } else {
       setListings([]);
     }
-  }, [user?.uid, fetchAllListings]);
+  }, [user?.uid, fetchUserListings]);
 
   return {
     listings,
