@@ -1,3 +1,4 @@
+import dynamic from 'next/dynamic';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { useAuth } from '@/contexts/AuthContext';
@@ -11,7 +12,7 @@ import { Star, Edit2, Trash2, MessageCircle } from "lucide-react";
 import { useListings } from '@/hooks/useListings';
 import { Listing } from '@/types/database';
 
-const DashboardPage = () => {
+const DashboardComponent = () => {
   const { tab = 'active', new: newListingId } = useRouter().query;
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
@@ -227,4 +228,7 @@ const DashboardPage = () => {
   );
 };
 
-export default DashboardPage;
+// Use dynamic import with ssr disabled
+export default dynamic(() => Promise.resolve(DashboardComponent), {
+  ssr: false
+});
