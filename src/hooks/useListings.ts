@@ -68,7 +68,16 @@ export function useListings() {
     userId: string,
     onProgress?: (progress: number) => void
   ): Promise<string> => {
+    // Add delay to ensure Firebase is fully initialized
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
     try {
+      console.log('Starting image upload:', {
+        fileName: file.name,
+        fileType: file.type,
+        fileSize: file.size,
+        userId
+      });
       const fileName = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
       const storageRef = ref(storage, `listings/${userId}/${fileName}`);
       
