@@ -128,6 +128,39 @@ export default function Home() {
   const [randomSubtitle] = useState(() => 
     subtitles[Math.floor(Math.random() * subtitles.length)]
   );
+  const [listings, setListings] = useState<Listing[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchListings() {
+      const db = getFirestore(app);
+      const q = query(
+        collection(db, 'listings'),
+        orderBy('createdAt', 'desc'),
+        limit(6)
+      );
+
+      try {
+        const querySnapshot = await getDocs(q);
+        const fetchedListings = querySnapshot.docs.map(doc => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            ...data,
+            createdAt: data.createdAt?.toDate() || new Date()
+          };
+        }) as Listing[];
+
+        setListings(fetchedListings);
+      } catch (error) {
+        console.error('Error fetching listings:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchListings();
+  }, []);
 
   return (
     <>
