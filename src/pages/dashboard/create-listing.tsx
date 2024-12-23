@@ -32,6 +32,9 @@ const CreateListingPage = () => {
     condition: "",
     game: "",
     images: [] as File[],
+    isGraded: false,
+    gradeLevel: "",
+    gradingCompany: "",
   });
 
   const [errors, setErrors] = useState<{
