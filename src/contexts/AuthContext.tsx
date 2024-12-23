@@ -165,8 +165,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         case 'auth/internal-error':
           errorMessage = 'Authentication service error. Please try again later.';
           break;
+        case 'auth/configuration-not-found':
+        case 'auth/invalid-api-key':
+          errorMessage = 'Authentication service configuration error. Please contact support.';
+          break;
         default:
-          errorMessage = 'Failed to sign in. Please try again.';
+          if (error.message?.includes('fetch')) {
+            errorMessage = 'Network error. Please check your internet connection and try again.';
+          } else {
+            errorMessage = 'Failed to sign in. Please try again.';
+          }
       }
       
       errorWithCode.message = errorMessage;
