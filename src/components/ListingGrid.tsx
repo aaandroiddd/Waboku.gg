@@ -26,7 +26,7 @@ const getConditionColor = (condition: string) => {
 export function ListingGrid({ listings, loading = false }: ListingGridProps) {
   if (loading) {
     return (
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 px-2">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-6 px-4">
         {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
           <div key={i} className="animate-pulse">
             <div className="aspect-square bg-gray-200 rounded-lg mb-2"></div>
@@ -47,18 +47,18 @@ export function ListingGrid({ listings, loading = false }: ListingGridProps) {
   }
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5 gap-4 px-4">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-6 px-4">
       {listings.map((listing) => (
         <Link href={`/listings/${listing.id}`} key={listing.id} className="block">
-          <Card className="group overflow-hidden border border-white/20 hover:border-white/40 dark:border-blue-300/20 dark:hover:border-blue-300/40 shadow-sm hover:shadow-md transition-all duration-300 p-3">
-            <div className="relative aspect-square w-full mb-3">
+          <Card className="group overflow-hidden border border-white/20 hover:border-white/40 dark:border-blue-300/20 dark:hover:border-blue-300/40 shadow-sm hover:shadow-md transition-all duration-300 p-4">
+            <div className="relative aspect-square w-full mb-4">
               {listing.imageUrls && listing.imageUrls[0] ? (
                 <Image
                   src={listing.imageUrls[0]}
                   alt={listing.title}
                   fill
                   className="object-cover rounded-lg group-hover:scale-105 transition-transform duration-300"
-                  sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                   priority={true}
                   onError={(e) => {
                     const target = e.target as HTMLImageElement;
@@ -72,17 +72,17 @@ export function ListingGrid({ listings, loading = false }: ListingGridProps) {
               )}
             </div>
             
-            <div className="space-y-2">
-              <div className="flex items-start justify-between gap-2">
-                <h3 className="text-sm font-semibold truncate flex-1" title={listing.title}>
+            <div className="space-y-3">
+              <div className="flex items-start justify-between gap-3">
+                <h3 className="text-base font-semibold truncate flex-1 min-w-[200px]" title={listing.title}>
                   {listing.title}
                 </h3>
-                <span className="font-semibold whitespace-nowrap text-sm">
+                <span className="font-semibold whitespace-nowrap text-base">
                   ${typeof listing.price === 'number' ? listing.price.toFixed(2) : listing.price}
                 </span>
               </div>
 
-              <div className="flex flex-wrap gap-1.5">
+              <div className="flex flex-wrap gap-2">
                 <Badge variant="secondary" className="text-xs rounded-md">
                   {listing.game}
                 </Badge>
@@ -92,8 +92,8 @@ export function ListingGrid({ listings, loading = false }: ListingGridProps) {
               </div>
 
               {listing.location && (
-                <div className="flex items-center text-xs text-muted-foreground">
-                  <MapPin className="h-3.5 w-3.5 mr-1 flex-shrink-0" />
+                <div className="flex items-center justify-end text-sm text-muted-foreground">
+                  <MapPin className="h-4 w-4 mr-1 flex-shrink-0" />
                   <span className="truncate">{listing.location}</span>
                 </div>
               )}
