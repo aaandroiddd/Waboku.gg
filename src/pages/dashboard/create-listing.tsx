@@ -268,6 +268,16 @@ const CreateListingPage = () => {
                   </Select>
                 </div>
 
+                <LocationInput
+                  onLocationSelect={(city, state) => {
+                    setFormData(prev => ({ ...prev, city, state }));
+                    setErrors(prev => ({ ...prev, location: undefined }));
+                  }}
+                  initialCity={formData.city}
+                  initialState={formData.state}
+                  error={errors.location}
+                />
+
                 <div className="space-y-2">
                   <div className="flex items-center space-x-2">
                     <Label htmlFor="images">Card Images *</Label>
