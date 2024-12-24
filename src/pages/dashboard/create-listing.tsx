@@ -5,7 +5,7 @@ import Script from 'next/script';
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { LocationSearch } from "@/components/LocationSearch";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -15,11 +15,14 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useAuth } from "@/contexts/AuthContext";
 import { useListings } from "@/hooks/useListings";
 import { Progress } from "@/components/ui/progress";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { HelpCircle } from "lucide-react";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const ALLOWED_FILE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
 const CreateListingPage = () => {
+  const [currentStep, setCurrentStep] = useState(1);
   const [useLocationSearch, setUseLocationSearch] = useState(false);
   const { user, loading } = useAuth();
   const router = useRouter();
@@ -32,12 +35,8 @@ const CreateListingPage = () => {
     title: "",
     description: "",
     price: "",
-    condition: "",
     game: "",
     images: [] as File[],
-    isGraded: false,
-    gradeLevel: "",
-    gradingCompany: "",
     city: "",
     state: "",
   });
@@ -45,46 +44,48 @@ const CreateListingPage = () => {
   const [errors, setErrors] = useState<{
     title?: string;
     price?: string;
-    condition?: string;
     game?: string;
     images?: string;
     city?: string;
     state?: string;
   }>({});
 
-  const validateForm = () => {
+  const validateStep = (step: number) => {
     const newErrors: typeof errors = {};
 
-    if (!formData.title.trim()) {
-      newErrors.title = "Card name is required";
-    } else if (formData.title.length < 3) {
-      newErrors.title = "Card name must be at least 3 characters";
-    }
+    switch (step) {
+      case 1:
+        if (!formData.title.trim()) {
+          newErrors.title = "Listing title is required";
+        } else if (formData.title.length < 3) {
+          newErrors.title = "Title must be at least 3 characters";
+        }
 
-    if (!formData.price) {
-      newErrors.price = "Price is required";
-    } else if (isNaN(parseFloat(formData.price)) || parseFloat(formData.price) <= 0) {
-      newErrors.price = "Please enter a valid price";
-    }
+        if (!formData.price) {
+          newErrors.price = "Price is required";
+        } else if (isNaN(parseFloat(formData.price)) || parseFloat(formData.price) <= 0) {
+          newErrors.price = "Please enter a valid price";
+        }
 
-    if (!formData.condition) {
-      newErrors.condition = "Condition is required";
-    }
+        if (!formData.game) {
+          newErrors.game = "Game type is required";
+        }
+        break;
 
-    if (!formData.game) {
-      newErrors.game = "Game type is required";
-    }
+      case 2:
+        if (!formData.city.trim()) {
+          newErrors.city = "City is required";
+        }
+        if (!formData.state) {
+          newErrors.state = "State is required";
+        }
+        break;
 
-    if (formData.images.length === 0) {
-      newErrors.images = "At least one image is required";
-    }
-
-    if (!formData.city.trim()) {
-      newErrors.city = "City is required";
-    }
-
-    if (!formData.state) {
-      newErrors.state = "State is required";
+      case 3:
+        if (formData.images.length === 0) {
+          newErrors.images = "At least one image is required";
+        }
+        break;
     }
 
     setErrors(newErrors);
@@ -109,10 +110,20 @@ const CreateListingPage = () => {
     setErrors(prev => ({ ...prev, images: undefined }));
   };
 
+  const handleNext = () => {
+    if (validateStep(currentStep)) {
+      setCurrentStep(prev => prev + 1);
+    }
+  };
+
+  const handleBack = () => {
+    setCurrentStep(prev => prev - 1);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!validateForm()) {
+    if (!validateStep(3)) {
       toast({
         title: "Validation Error",
         description: "Please check the form for errors",
@@ -134,19 +145,10 @@ const CreateListingPage = () => {
     setUploadProgress(0);
 
     try {
-      console.log('Submitting form with data:', {
-        ...formData,
-        imageCount: formData.images.length,
-        imageTypes: formData.images.map(img => img.type),
-        imageSizes: formData.images.map(img => img.size),
-      });
-
-      // Prepare the data with proper type conversion
       const listingData = {
         ...formData,
-        price: formData.price.trim(), // Ensure no whitespace
+        price: formData.price.trim(),
         onUploadProgress: (progress: number) => {
-          console.log('Upload progress:', progress);
           setUploadProgress(Math.round(progress));
         }
       };
@@ -159,10 +161,9 @@ const CreateListingPage = () => {
 
       toast({
         title: "Success!",
-        description: "Your card listing has been published successfully.",
+        description: "Your listing has been published successfully.",
       });
 
-      // Redirect to dashboard with success parameter
       router.push("/dashboard?status=listing-created");
     } catch (error: any) {
       console.error('Error creating listing:', error);
@@ -171,10 +172,6 @@ const CreateListingPage = () => {
         description: error.message || "Something went wrong. Please try again.",
         variant: "destructive",
       });
-      setErrors(prev => ({
-        ...prev,
-        submit: error.message || "Failed to create listing"
-      }));
     } finally {
       setIsSubmitting(false);
       setUploadProgress(0);
@@ -191,363 +188,351 @@ const CreateListingPage = () => {
     return null;
   }
 
-  return (
-    <DashboardLayout>
-      <div className="space-y-6">
-        <div className="flex justify-between items-center">
-          <h1 className="text-3xl font-bold">Create New Listing</h1>
-        </div>
+  const renderStepContent = () => {
+    switch (currentStep) {
+      case 1:
+        return (
+          <div className="space-y-6">
+            <div className="space-y-2">
+              <div className="flex items-center space-x-2">
+                <Label htmlFor="title">Listing Title *</Label>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <HelpCircle className="h-4 w-4 text-muted-foreground" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p className="max-w-xs">Include the card's name, condition, edition, and any other important details</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+              <Input
+                id="title"
+                required
+                value={formData.title}
+                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                placeholder="e.g., Mint Condition Blue-Eyes White Dragon - 1st Edition"
+                className={errors.title ? "border-red-500" : ""}
+              />
+              {errors.title && <p className="text-sm text-red-500">{errors.title}</p>}
+            </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Card Details</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="space-y-2">
+              <Label htmlFor="description">Description</Label>
+              <Textarea
+                id="description"
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                placeholder="Provide detailed information about your card"
+                className="min-h-[120px]"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="title">Card Name *</Label>
+                <Label htmlFor="price">Price *</Label>
                 <Input
-                  id="title"
+                  id="price"
                   required
-                  value={formData.title}
-                  onChange={(e) =>
-                    setFormData({ ...formData, title: e.target.value })
-                  }
-                  placeholder="e.g., Blue-Eyes White Dragon"
-                  className={errors.title ? "border-red-500" : ""}
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={formData.price}
+                  onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                  placeholder="0.00"
+                  className={errors.price ? "border-red-500" : ""}
                 />
-                {errors.title && (
-                  <p className="text-sm text-red-500">{errors.title}</p>
-                )}
+                {errors.price && <p className="text-sm text-red-500">{errors.price}</p>}
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="description">Description</Label>
-                <Textarea
-                  id="description"
-                  value={formData.description}
-                  onChange={(e) =>
-                    setFormData({ ...formData, description: e.target.value })
+                <Label htmlFor="game">Game *</Label>
+                <Select
+                  value={formData.game}
+                  onValueChange={(value) => setFormData({ ...formData, game: value })}
+                >
+                  <SelectTrigger className={errors.game ? "border-red-500" : ""}>
+                    <SelectValue placeholder="Select game" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="yugioh">Yu-Gi-Oh!</SelectItem>
+                    <SelectItem value="pokemon">Pokémon</SelectItem>
+                    <SelectItem value="mtg">Magic: The Gathering</SelectItem>
+                    <SelectItem value="other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+                {errors.game && <p className="text-sm text-red-500">{errors.game}</p>}
+              </div>
+            </div>
+          </div>
+        );
+
+      case 2:
+        return (
+          <div className="space-y-6">
+            <div className="space-y-4">
+              <div className="flex items-center space-x-2">
+                <Label>Location Input Method</Label>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <HelpCircle className="h-4 w-4 text-muted-foreground" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p className="max-w-xs">This location will be used as the meeting point for the transaction</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+
+              <Select
+                value={useLocationSearch ? "search" : "manual"}
+                onValueChange={(value) => {
+                  setUseLocationSearch(value === "search");
+                  if (value === "manual") {
+                    setFormData(prev => ({ ...prev, city: "", state: "" }));
                   }
-                  placeholder="Describe the card's condition, edition, and any other relevant details"
-                />
-              </div>
+                }}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select input method" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="manual">Manual Entry</SelectItem>
+                  <SelectItem value="search">Location Search</SelectItem>
+                </SelectContent>
+              </Select>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="price">Price *</Label>
-                  <Input
-                    id="price"
-                    required
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={formData.price}
-                    onChange={(e) =>
-                      setFormData({ ...formData, price: e.target.value })
-                    }
-                    placeholder="0.00"
-                    className={errors.price ? "border-red-500" : ""}
+              {useLocationSearch ? (
+                <>
+                  <Script
+                    strategy="lazyOnload"
+                    src={`https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&libraries=places`}
                   />
-                  {errors.price && (
-                    <p className="text-sm text-red-500">{errors.price}</p>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="game">Game *</Label>
-                  <Select
-                    value={formData.game}
-                    onValueChange={(value) =>
-                      setFormData({ ...formData, game: value })
-                    }
-                  >
-                    <SelectTrigger className={errors.game ? "border-red-500" : ""}>
-                      <SelectValue placeholder="Select game" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="yugioh">Yu-Gi-Oh!</SelectItem>
-                      <SelectItem value="pokemon">Pokémon</SelectItem>
-                      <SelectItem value="mtg">Magic: The Gathering</SelectItem>
-                      <SelectItem value="other">Other</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  {errors.game && (
-                    <p className="text-sm text-red-500">{errors.game}</p>
-                  )}
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <div className="flex items-center space-x-2">
-                  <Label>Location Input Method</Label>
-                  <Select
-                    value={useLocationSearch ? "search" : "manual"}
-                    onValueChange={(value) => {
-                      setUseLocationSearch(value === "search");
-                      if (value === "manual") {
-                        setFormData(prev => ({ ...prev, city: "", state: "" }));
-                      }
+                  <LocationSearch
+                    onLocationSelect={({ city, state }) => {
+                      setFormData(prev => ({
+                        ...prev,
+                        city,
+                        state
+                      }));
                     }}
-                  >
-                    <SelectTrigger className="w-[200px]">
-                      <SelectValue placeholder="Select input method" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="manual">Manual Entry</SelectItem>
-                      <SelectItem value="search">Location Search</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {useLocationSearch ? (
-                  <>
-                    <Script
-                      strategy="lazyOnload"
-                      src={`https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&libraries=places`}
-                    />
-                    <LocationSearch
-                      onLocationSelect={({ city, state }) => {
-                        setFormData(prev => ({
-                          ...prev,
-                          city,
-                          state
-                        }));
-                      }}
-                    />
-                    <div className="text-sm text-muted-foreground">
-                      Selected location: {formData.city && formData.state ? `${formData.city}, ${formData.state}` : 'None'}
-                    </div>
-                  </>
-                ) : (
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="city">City *</Label>
-                      <Input
-                        id="city"
-                        required
-                        value={formData.city}
-                        onChange={(e) =>
-                          setFormData({ ...formData, city: e.target.value })
-                        }
-                        placeholder="Enter city"
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="state">State *</Label>
-                      <Select
-                        value={formData.state}
-                        onValueChange={(value) =>
-                          setFormData({ ...formData, state: value })
-                        }
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select state" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="AL">Alabama</SelectItem>
-                          <SelectItem value="AK">Alaska</SelectItem>
-                          <SelectItem value="AZ">Arizona</SelectItem>
-                          <SelectItem value="AR">Arkansas</SelectItem>
-                          <SelectItem value="CA">California</SelectItem>
-                          <SelectItem value="CO">Colorado</SelectItem>
-                          <SelectItem value="CT">Connecticut</SelectItem>
-                          <SelectItem value="DE">Delaware</SelectItem>
-                          <SelectItem value="FL">Florida</SelectItem>
-                          <SelectItem value="GA">Georgia</SelectItem>
-                          <SelectItem value="HI">Hawaii</SelectItem>
-                          <SelectItem value="ID">Idaho</SelectItem>
-                          <SelectItem value="IL">Illinois</SelectItem>
-                          <SelectItem value="IN">Indiana</SelectItem>
-                          <SelectItem value="IA">Iowa</SelectItem>
-                          <SelectItem value="KS">Kansas</SelectItem>
-                          <SelectItem value="KY">Kentucky</SelectItem>
-                          <SelectItem value="LA">Louisiana</SelectItem>
-                          <SelectItem value="ME">Maine</SelectItem>
-                          <SelectItem value="MD">Maryland</SelectItem>
-                          <SelectItem value="MA">Massachusetts</SelectItem>
-                          <SelectItem value="MI">Michigan</SelectItem>
-                          <SelectItem value="MN">Minnesota</SelectItem>
-                          <SelectItem value="MS">Mississippi</SelectItem>
-                          <SelectItem value="MO">Missouri</SelectItem>
-                          <SelectItem value="MT">Montana</SelectItem>
-                          <SelectItem value="NE">Nebraska</SelectItem>
-                          <SelectItem value="NV">Nevada</SelectItem>
-                          <SelectItem value="NH">New Hampshire</SelectItem>
-                          <SelectItem value="NJ">New Jersey</SelectItem>
-                          <SelectItem value="NM">New Mexico</SelectItem>
-                          <SelectItem value="NY">New York</SelectItem>
-                          <SelectItem value="NC">North Carolina</SelectItem>
-                          <SelectItem value="ND">North Dakota</SelectItem>
-                          <SelectItem value="OH">Ohio</SelectItem>
-                          <SelectItem value="OK">Oklahoma</SelectItem>
-                          <SelectItem value="OR">Oregon</SelectItem>
-                          <SelectItem value="PA">Pennsylvania</SelectItem>
-                          <SelectItem value="RI">Rhode Island</SelectItem>
-                          <SelectItem value="SC">South Carolina</SelectItem>
-                          <SelectItem value="SD">South Dakota</SelectItem>
-                          <SelectItem value="TN">Tennessee</SelectItem>
-                          <SelectItem value="TX">Texas</SelectItem>
-                          <SelectItem value="UT">Utah</SelectItem>
-                          <SelectItem value="VT">Vermont</SelectItem>
-                          <SelectItem value="VA">Virginia</SelectItem>
-                          <SelectItem value="WA">Washington</SelectItem>
-                          <SelectItem value="WV">West Virginia</SelectItem>
-                          <SelectItem value="WI">Wisconsin</SelectItem>
-                          <SelectItem value="WY">Wyoming</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
+                  />
+                  <div className="text-sm text-muted-foreground">
+                    Selected location: {formData.city && formData.state ? `${formData.city}, ${formData.state}` : 'None'}
                   </div>
-                )}
-              </div>
+                </>
+              ) : (
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="city">City *</Label>
+                    <Input
+                      id="city"
+                      required
+                      value={formData.city}
+                      onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                      placeholder="Enter city"
+                      className={errors.city ? "border-red-500" : ""}
+                    />
+                    {errors.city && <p className="text-sm text-red-500">{errors.city}</p>}
+                  </div>
 
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="condition">Condition *</Label>
-                  <Select
-                    value={formData.condition}
-                    onValueChange={(value) =>
-                      setFormData({ ...formData, condition: value })
-                    }
-                  >
-                    <SelectTrigger className={errors.condition ? "border-red-500" : ""}>
-                      <SelectValue placeholder="Select condition" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="mint">Mint</SelectItem>
-                      <SelectItem value="near-mint">Near Mint</SelectItem>
-                      <SelectItem value="excellent">Excellent</SelectItem>
-                      <SelectItem value="good">Good</SelectItem>
-                      <SelectItem value="light-played">Light Played</SelectItem>
-                      <SelectItem value="played">Played</SelectItem>
-                      <SelectItem value="poor">Poor</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  {errors.condition && (
-                    <p className="text-sm text-red-500">{errors.condition}</p>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <div className="flex items-center space-x-2">
-                    <Label htmlFor="isGraded">Graded Card?</Label>
+                  <div className="space-y-2">
+                    <Label htmlFor="state">State *</Label>
                     <Select
-                      value={formData.isGraded ? "yes" : "no"}
-                      onValueChange={(value) =>
-                        setFormData({
-                          ...formData,
-                          isGraded: value === "yes",
-                          gradeLevel: value === "no" ? "" : formData.gradeLevel,
-                          gradingCompany: value === "no" ? "" : formData.gradingCompany,
-                        })
-                      }
+                      value={formData.state}
+                      onValueChange={(value) => setFormData({ ...formData, state: value })}
                     >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select option" />
+                      <SelectTrigger className={errors.state ? "border-red-500" : ""}>
+                        <SelectValue placeholder="Select state" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="yes">Yes</SelectItem>
-                        <SelectItem value="no">No</SelectItem>
+                        {/* US States */}
+                        <SelectItem value="AL">Alabama</SelectItem>
+                        <SelectItem value="AK">Alaska</SelectItem>
+                        <SelectItem value="AZ">Arizona</SelectItem>
+                        <SelectItem value="AR">Arkansas</SelectItem>
+                        <SelectItem value="CA">California</SelectItem>
+                        <SelectItem value="CO">Colorado</SelectItem>
+                        <SelectItem value="CT">Connecticut</SelectItem>
+                        <SelectItem value="DE">Delaware</SelectItem>
+                        <SelectItem value="FL">Florida</SelectItem>
+                        <SelectItem value="GA">Georgia</SelectItem>
+                        <SelectItem value="HI">Hawaii</SelectItem>
+                        <SelectItem value="ID">Idaho</SelectItem>
+                        <SelectItem value="IL">Illinois</SelectItem>
+                        <SelectItem value="IN">Indiana</SelectItem>
+                        <SelectItem value="IA">Iowa</SelectItem>
+                        <SelectItem value="KS">Kansas</SelectItem>
+                        <SelectItem value="KY">Kentucky</SelectItem>
+                        <SelectItem value="LA">Louisiana</SelectItem>
+                        <SelectItem value="ME">Maine</SelectItem>
+                        <SelectItem value="MD">Maryland</SelectItem>
+                        <SelectItem value="MA">Massachusetts</SelectItem>
+                        <SelectItem value="MI">Michigan</SelectItem>
+                        <SelectItem value="MN">Minnesota</SelectItem>
+                        <SelectItem value="MS">Mississippi</SelectItem>
+                        <SelectItem value="MO">Missouri</SelectItem>
+                        <SelectItem value="MT">Montana</SelectItem>
+                        <SelectItem value="NE">Nebraska</SelectItem>
+                        <SelectItem value="NV">Nevada</SelectItem>
+                        <SelectItem value="NH">New Hampshire</SelectItem>
+                        <SelectItem value="NJ">New Jersey</SelectItem>
+                        <SelectItem value="NM">New Mexico</SelectItem>
+                        <SelectItem value="NY">New York</SelectItem>
+                        <SelectItem value="NC">North Carolina</SelectItem>
+                        <SelectItem value="ND">North Dakota</SelectItem>
+                        <SelectItem value="OH">Ohio</SelectItem>
+                        <SelectItem value="OK">Oklahoma</SelectItem>
+                        <SelectItem value="OR">Oregon</SelectItem>
+                        <SelectItem value="PA">Pennsylvania</SelectItem>
+                        <SelectItem value="RI">Rhode Island</SelectItem>
+                        <SelectItem value="SC">South Carolina</SelectItem>
+                        <SelectItem value="SD">South Dakota</SelectItem>
+                        <SelectItem value="TN">Tennessee</SelectItem>
+                        <SelectItem value="TX">Texas</SelectItem>
+                        <SelectItem value="UT">Utah</SelectItem>
+                        <SelectItem value="VT">Vermont</SelectItem>
+                        <SelectItem value="VA">Virginia</SelectItem>
+                        <SelectItem value="WA">Washington</SelectItem>
+                        <SelectItem value="WV">West Virginia</SelectItem>
+                        <SelectItem value="WI">Wisconsin</SelectItem>
+                        <SelectItem value="WY">Wyoming</SelectItem>
                       </SelectContent>
                     </Select>
+                    {errors.state && <p className="text-sm text-red-500">{errors.state}</p>}
                   </div>
                 </div>
+              )}
+            </div>
+          </div>
+        );
 
-                {formData.isGraded && (
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="gradingCompany">Grading Company</Label>
-                      <Select
-                        value={formData.gradingCompany}
-                        onValueChange={(value) =>
-                          setFormData({ ...formData, gradingCompany: value })
-                        }
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select grading company" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="PSA">PSA</SelectItem>
-                          <SelectItem value="BGS">BGS</SelectItem>
-                          <SelectItem value="CGC">CGC</SelectItem>
-                          <SelectItem value="other">Other</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="gradeLevel">Grade Level (1-10)</Label>
-                      <Select
-                        value={formData.gradeLevel}
-                        onValueChange={(value) =>
-                          setFormData({ ...formData, gradeLevel: value })
-                        }
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select grade level" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {[...Array(10)].map((_, i) => (
-                            <SelectItem key={i + 1} value={(i + 1).toString()}>
-                              {i + 1}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              <div className="space-y-2">
+      case 3:
+        return (
+          <div className="space-y-6">
+            <div className="space-y-2">
+              <div className="flex items-center space-x-2">
                 <Label htmlFor="images">Card Images *</Label>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <HelpCircle className="h-4 w-4 text-muted-foreground" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p className="max-w-xs">Upload clear photos of your card. Include timestamps if needed for verification.</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+              <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-8 text-center hover:border-gray-400 dark:hover:border-gray-500 transition-colors">
                 <Input
                   id="images"
                   type="file"
                   accept="image/jpeg,image/png,image/webp"
                   multiple
                   onChange={handleImageChange}
-                  className={errors.images ? "border-red-500" : ""}
+                  className={`${errors.images ? "border-red-500" : ""} hidden`}
                 />
-                <p className="text-sm text-muted-foreground">
-                  Upload clear images of the front and back of the card (JPG, PNG or WebP, max 5MB each)
-                </p>
-                {errors.images && (
-                  <p className="text-sm text-red-500">{errors.images}</p>
-                )}
-                {formData.images.length > 0 && (
-                  <p className="text-sm text-green-600">
-                    {formData.images.length} image(s) selected
-                  </p>
-                )}
+                <label htmlFor="images" className="cursor-pointer">
+                  <div className="space-y-2">
+                    <div className="mx-auto w-12 h-12 rounded-full bg-muted flex items-center justify-center">
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+                      </svg>
+                    </div>
+                    <div className="text-sm font-medium">
+                      Click to upload or drag and drop
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      JPG, PNG or WebP (max. 5MB per image)
+                    </p>
+                  </div>
+                </label>
               </div>
-
-              {isSubmitting && uploadProgress > 0 && (
-                <div className="space-y-2">
-                  <Progress value={uploadProgress} className="w-full" />
-                  <p className="text-sm text-center">Uploading images... {Math.round(uploadProgress)}%</p>
-                </div>
+              {errors.images && <p className="text-sm text-red-500">{errors.images}</p>}
+              {formData.images.length > 0 && (
+                <p className="text-sm text-green-600">
+                  {formData.images.length} image(s) selected
+                </p>
               )}
+            </div>
 
-              <Alert>
-                <AlertDescription>
-                  Fields marked with * are required. Make sure to provide clear images and accurate details for your listing.
-                </AlertDescription>
-              </Alert>
+            {isSubmitting && uploadProgress > 0 && (
+              <div className="space-y-2">
+                <Progress value={uploadProgress} className="w-full" />
+                <p className="text-sm text-center">Uploading images... {Math.round(uploadProgress)}%</p>
+              </div>
+            )}
+          </div>
+        );
+    }
+  };
 
-              <div className="flex justify-end space-x-4">
+  return (
+    <DashboardLayout>
+      <div className="max-w-3xl mx-auto space-y-6">
+        <div className="flex justify-between items-center">
+          <h1 className="text-3xl font-bold">Create New Listing</h1>
+        </div>
+
+        <div className="relative">
+          <div className="absolute top-0 left-0 w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-full">
+            <div
+              className="h-full bg-primary rounded-full transition-all duration-300"
+              style={{ width: `${(currentStep / 3) * 100}%` }}
+            />
+          </div>
+          
+          <div className="flex justify-between mt-4 mb-8">
+            {[1, 2, 3].map((step) => (
+              <div
+                key={step}
+                className={`flex flex-col items-center ${
+                  step <= currentStep ? 'text-primary' : 'text-muted-foreground'
+                }`}
+              >
+                <div
+                  className={`w-8 h-8 rounded-full flex items-center justify-center mb-2 ${
+                    step <= currentStep
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-muted'
+                  }`}
+                >
+                  {step}
+                </div>
+                <span className="text-sm">
+                  {step === 1 ? 'Details' : step === 2 ? 'Location' : 'Images'}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <Card className="transition-all duration-300 hover:shadow-lg">
+          <CardContent className="pt-6">
+            <form onSubmit={handleSubmit} className="space-y-6">
+              {renderStepContent()}
+
+              <div className="flex justify-between pt-6">
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => router.back()}
+                  onClick={currentStep === 1 ? () => router.back() : handleBack}
                   disabled={isSubmitting}
                 >
-                  Cancel
+                  {currentStep === 1 ? 'Cancel' : 'Back'}
                 </Button>
-                <Button type="submit" disabled={isSubmitting}>
-                  {isSubmitting ? "Creating..." : "Create Listing"}
+                
+                <Button
+                  type={currentStep === 3 ? 'submit' : 'button'}
+                  onClick={currentStep === 3 ? undefined : handleNext}
+                  disabled={isSubmitting}
+                >
+                  {currentStep === 3
+                    ? (isSubmitting ? 'Creating...' : 'Create Listing')
+                    : 'Next'}
                 </Button>
               </div>
             </form>
