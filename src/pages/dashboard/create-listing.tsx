@@ -14,6 +14,7 @@ import { useListings } from "@/hooks/useListings";
 import { Progress } from "@/components/ui/progress";
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { HelpCircle } from "lucide-react";
+import { LocationInput } from "@/components/LocationInput";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const ALLOWED_FILE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
