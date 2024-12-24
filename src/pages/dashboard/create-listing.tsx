@@ -15,7 +15,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useAuth } from "@/contexts/AuthContext";
 import { useListings } from "@/hooks/useListings";
 import { Progress } from "@/components/ui/progress";
-import { Tooltip, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { HelpCircle } from "lucide-react";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
