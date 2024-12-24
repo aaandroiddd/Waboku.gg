@@ -23,7 +23,9 @@ const getConditionColor = (condition: string) => {
   return colors[condition.toLowerCase()] || 'bg-gray-500/10 text-gray-500 hover:bg-gray-500/20';
 };
 
-export function ListingGrid({ listings, loading = false }: ListingGridProps) {
+export function ListingGrid({ listings: allListings, loading = false }: ListingGridProps) {
+  // Take only the first 6 listings
+  const listings = allListings.slice(0, 6);
   if (loading) {
     return (
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-6 px-4">
