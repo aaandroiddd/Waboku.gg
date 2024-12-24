@@ -242,6 +242,27 @@ const CreateListingPage = () => {
                 </div>
 
                 <div className="space-y-2">
+                  <Label htmlFor="condition">Condition *</Label>
+                  <Select
+                    value={formData.condition}
+                    onValueChange={(value) => setFormData({ ...formData, condition: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select condition" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="mint">Mint</SelectItem>
+                      <SelectItem value="near_mint">Near Mint</SelectItem>
+                      <SelectItem value="excellent">Excellent</SelectItem>
+                      <SelectItem value="good">Good</SelectItem>
+                      <SelectItem value="light_played">Light Played</SelectItem>
+                      <SelectItem value="played">Played</SelectItem>
+                      <SelectItem value="poor">Poor</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
                   <div className="flex items-center space-x-2">
                     <Label htmlFor="images">Card Images *</Label>
                     <TooltipProvider>
