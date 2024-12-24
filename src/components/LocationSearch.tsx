@@ -3,6 +3,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Loader2 } from "lucide-react";
 
 interface LocationSearchProps {
   onLocationSelect: (location: { address: string; city: string; state: string }) => void;
@@ -31,16 +32,17 @@ export const LocationSearch = ({ onLocationSelect }: LocationSearchProps) => {
     }
   }, []);
 
-  const handleSearch = async () => {
-    if (!searchInput || !autocompleteService.current) return;
+  const handleSearch = async (input: string) => {
+    if (!input || !autocompleteService.current) return;
+    setIsLoading(true);
 
     try {
       const response = await new Promise((resolve, reject) => {
         autocompleteService.current.getPlacePredictions(
           {
-            input: searchInput,
+            input,
             componentRestrictions: { country: 'us' },
-            types: ['establishment', 'geocode']
+            types: ['(cities)'], // Focus on cities for better results
           },
           (predictions: any[], status: string) => {
             if (status === window.google.maps.places.PlacesServiceStatus.OK) {
@@ -56,11 +58,15 @@ export const LocationSearch = ({ onLocationSelect }: LocationSearchProps) => {
     } catch (error) {
       console.error('Error fetching predictions:', error);
       setPredictions([]);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const handlePredictionSelect = (placeId: string) => {
+  const handlePredictionSelect = (placeId: string, description: string) => {
     setIsLoading(true);
+    setSearchInput(description); // Update input field immediately with selection
+
     placesService.current.getDetails(
       {
         placeId: placeId,
@@ -87,7 +93,6 @@ export const LocationSearch = ({ onLocationSelect }: LocationSearchProps) => {
             state
           });
           
-          setSearchInput('');
           setPredictions([]);
         }
       }
@@ -96,12 +101,12 @@ export const LocationSearch = ({ onLocationSelect }: LocationSearchProps) => {
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      if (searchInput) {
-        handleSearch();
+      if (searchInput.length >= 2) {
+        handleSearch(searchInput);
       } else {
         setPredictions([]);
       }
-    }, 300);
+    }, 300); // Debounce time reduced for better responsiveness
 
     return () => clearTimeout(timer);
   }, [searchInput]);
@@ -109,24 +114,32 @@ export const LocationSearch = ({ onLocationSelect }: LocationSearchProps) => {
   return (
     <div className="relative space-y-2">
       <Label htmlFor="location-search">Search Location</Label>
-      <Input
-        id="location-search"
-        type="text"
-        value={searchInput}
-        onChange={(e) => setSearchInput(e.target.value)}
-        placeholder="Search for a location..."
-        disabled={isLoading}
-      />
+      <div className="relative">
+        <Input
+          id="location-search"
+          type="text"
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.target.value)}
+          placeholder="Enter city name..."
+          className="pr-10"
+          autoComplete="off"
+        />
+        {isLoading && (
+          <div className="absolute right-3 top-1/2 -translate-y-1/2">
+            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+          </div>
+        )}
+      </div>
       
       {predictions.length > 0 && (
-        <Card className="absolute z-50 w-full mt-1 max-h-60 overflow-auto">
+        <Card className="absolute z-50 w-full mt-1 max-h-60 overflow-auto shadow-lg">
           <div className="p-2 space-y-1">
             {predictions.map((prediction) => (
               <Button
                 key={prediction.place_id}
                 variant="ghost"
-                className="w-full justify-start text-left"
-                onClick={() => handlePredictionSelect(prediction.place_id)}
+                className="w-full justify-start text-left hover:bg-muted"
+                onClick={() => handlePredictionSelect(prediction.place_id, prediction.description)}
               >
                 {prediction.description}
               </Button>
