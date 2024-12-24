@@ -41,6 +41,8 @@ export default function ListingPage() {
   useEffect(() => {
     async function fetchListing() {
       if (!id) return;
+      setLoading(true);
+      setError(null);
 
       try {
         const db = getFirestore(app);
@@ -48,15 +50,41 @@ export default function ListingPage() {
 
         if (!listingDoc.exists()) {
           setError('Listing not found');
+          setLoading(false);
           return;
         }
 
-        const data = listingDoc.data() as Omit<Listing, 'id'>;
-        setListing({
+        const data = listingDoc.data();
+        
+        // Validate required fields
+        if (!data.title || !data.description || !data.price || !data.condition || !data.game) {
+          setError('Invalid listing data');
+          setLoading(false);
+          return;
+        }
+
+        // Construct the listing object with proper type handling
+        const listingData: Listing = {
           id: listingDoc.id,
-          ...data,
+          title: data.title,
+          description: data.description,
+          price: Number(data.price),
+          condition: data.condition,
+          game: data.game,
+          imageUrls: Array.isArray(data.imageUrls) ? data.imageUrls : [],
+          userId: data.userId || '',
+          username: data.username || 'Unknown User',
           createdAt: data.createdAt?.toDate() || new Date(),
-        });
+          status: data.status || 'active',
+          isGraded: Boolean(data.isGraded),
+          gradeLevel: data.gradeLevel ? Number(data.gradeLevel) : undefined,
+          gradingCompany: data.gradingCompany,
+          city: data.city || 'Unknown',
+          state: data.state || 'Unknown',
+          favoriteCount: data.favoriteCount || 0
+        };
+
+        setListing(listingData);
 
         // Check if the listing is favorited by the current user
         if (user) {
@@ -71,7 +99,7 @@ export default function ListingPage() {
         }
       } catch (err) {
         console.error('Error fetching listing:', err);
-        setError('Failed to load listing');
+        setError('Failed to load listing. Please try again later.');
       } finally {
         setLoading(false);
       }
