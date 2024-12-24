@@ -3,7 +3,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Loader2 } from "lucide-react";
+import { Loader2, CheckCircle2 } from "lucide-react";
 import { Alert } from "@/components/ui/alert";
 
 interface LocationSearchProps {
@@ -27,6 +27,7 @@ export const LocationSearch = ({ onLocationSelect, initialValues }: LocationSear
   const [stateInput, setStateInput] = useState(initialValues?.state || '');
   const [predictions, setPredictions] = useState<any[]>([]);
   const [error, setError] = useState('');
+  const [isConfirmed, setIsConfirmed] = useState(false);
   const autocompleteService = useRef<any>(null);
   const placesService = useRef<any>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -52,6 +53,7 @@ export const LocationSearch = ({ onLocationSelect, initialValues }: LocationSear
     if (!input || !autocompleteService.current || !isGoogleLoaded) return;
     setIsLoading(true);
     setError('');
+    setIsConfirmed(false);
 
     try {
       const response = await new Promise((resolve, reject) => {
@@ -59,7 +61,7 @@ export const LocationSearch = ({ onLocationSelect, initialValues }: LocationSear
           {
             input,
             componentRestrictions: { country: 'us' },
-            types: ['address'], // Only search for addresses
+            types: ['address'],
           },
           (predictions: any[], status: string) => {
             if (status === window.google.maps.places.PlacesServiceStatus.OK && predictions) {
@@ -86,6 +88,7 @@ export const LocationSearch = ({ onLocationSelect, initialValues }: LocationSear
     
     setIsLoading(true);
     setAddressInput(description);
+    setPredictions([]); // Immediately clear predictions
 
     placesService.current.getDetails(
       {
@@ -124,8 +127,8 @@ export const LocationSearch = ({ onLocationSelect, initialValues }: LocationSear
               city,
               state
             });
-            setPredictions([]);
             setError('');
+            setIsConfirmed(true);
           }
         }
       }
@@ -150,6 +153,7 @@ export const LocationSearch = ({ onLocationSelect, initialValues }: LocationSear
       return;
     }
     setError('');
+    setIsConfirmed(true);
     onLocationSelect({
       address: addressInput || undefined,
       city: cityInput,
@@ -157,6 +161,7 @@ export const LocationSearch = ({ onLocationSelect, initialValues }: LocationSear
     });
   };
 
+  // Handle manual input confirmation
   useEffect(() => {
     if (cityInput && stateInput) {
       handleManualSubmit();
@@ -169,24 +174,40 @@ export const LocationSearch = ({ onLocationSelect, initialValues }: LocationSear
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label htmlFor="city" className="required">City</Label>
-            <Input
-              id="city"
-              value={cityInput}
-              onChange={(e) => setCityInput(e.target.value)}
-              placeholder="Enter city"
-              required
-            />
+            <div className="relative">
+              <Input
+                id="city"
+                value={cityInput}
+                onChange={(e) => {
+                  setCityInput(e.target.value);
+                  setIsConfirmed(false);
+                }}
+                placeholder="Enter city"
+                required
+              />
+              {isConfirmed && cityInput && (
+                <CheckCircle2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-green-500" />
+              )}
+            </div>
           </div>
           <div className="space-y-2">
             <Label htmlFor="state" className="required">State</Label>
-            <Input
-              id="state"
-              value={stateInput}
-              onChange={(e) => setStateInput(e.target.value.toUpperCase())}
-              placeholder="Enter state (e.g., CA)"
-              maxLength={2}
-              required
-            />
+            <div className="relative">
+              <Input
+                id="state"
+                value={stateInput}
+                onChange={(e) => {
+                  setStateInput(e.target.value.toUpperCase());
+                  setIsConfirmed(false);
+                }}
+                placeholder="Enter state (e.g., CA)"
+                maxLength={2}
+                required
+              />
+              {isConfirmed && stateInput && (
+                <CheckCircle2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-green-500" />
+              )}
+            </div>
           </div>
         </div>
 
@@ -197,16 +218,23 @@ export const LocationSearch = ({ onLocationSelect, initialValues }: LocationSear
               id="location-search"
               type="text"
               value={addressInput}
-              onChange={(e) => setAddressInput(e.target.value)}
+              onChange={(e) => {
+                setAddressInput(e.target.value);
+                setIsConfirmed(false);
+              }}
               placeholder="Search for a specific address..."
               className="pr-10"
               autoComplete="off"
               disabled={!isGoogleLoaded}
             />
-            {isLoading && (
+            {isLoading ? (
               <div className="absolute right-3 top-1/2 -translate-y-1/2">
                 <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
               </div>
+            ) : (
+              isConfirmed && addressInput && (
+                <CheckCircle2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-green-500" />
+              )
             )}
           </div>
           
