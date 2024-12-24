@@ -213,6 +213,9 @@ export function useListings() {
         game: data.game,
         imageUrls,
         userId: user.uid,
+        username: user.displayName || 'Anonymous',
+        city: data.city || 'Unknown',
+        state: data.state || 'Unknown',
         createdAt: serverTimestamp(),
         status: 'active' as const
       };
