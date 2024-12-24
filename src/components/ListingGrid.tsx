@@ -3,7 +3,7 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import Image from 'next/image';
 import Link from 'next/link';
-import { MapPin } from 'lucide-react';
+import { MapPin, User } from 'lucide-react';
 
 interface ListingGridProps {
   listings: Listing[];
@@ -93,12 +93,16 @@ export function ListingGrid({ listings: allListings, loading = false }: ListingG
                 </Badge>
               </div>
 
-              {listing.location && (
-                <div className="flex items-center justify-end text-sm text-muted-foreground">
-                  <MapPin className="h-4 w-4 mr-1 flex-shrink-0" />
-                  <span className="truncate">{listing.location}</span>
+              <div className="flex items-center justify-between text-sm text-muted-foreground">
+                <div className="flex items-center gap-1">
+                  <User className="h-4 w-4" />
+                  <span className="truncate">{listing.username}</span>
                 </div>
-              )}
+                <div className="flex items-center gap-1">
+                  <MapPin className="h-4 w-4" />
+                  <span className="truncate">{listing.city}, {listing.state}</span>
+                </div>
+              </div>
             </div>
           </Card>
         </Link>
