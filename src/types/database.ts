@@ -7,6 +7,7 @@ export interface Listing {
   game: string;
   imageUrls: string[];
   userId: string;
+  username: string;
   createdAt: Date;
   status: 'active' | 'sold' | 'pending';
   isGraded: boolean;
@@ -14,6 +15,7 @@ export interface Listing {
   gradingCompany?: string;
   city: string;
   state: string;
+  favoriteCount?: number;
 }
 
 export interface CreateListingData {
@@ -28,4 +30,10 @@ export interface CreateListingData {
   gradingCompany?: string;
   city: string;
   state: string;
+}
+
+export interface UserFavorite {
+  userId: string;
+  listingId: string;
+  createdAt: Date;
 }
