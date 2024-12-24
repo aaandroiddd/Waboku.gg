@@ -51,6 +51,7 @@ export const LocationSearch = ({ onLocationSelect, initialValues }: LocationSear
   const handleSearch = async (input: string) => {
     if (!input || !autocompleteService.current || !isGoogleLoaded) return;
     setIsLoading(true);
+    setError('');
 
     try {
       const response = await new Promise((resolve, reject) => {
@@ -58,13 +59,13 @@ export const LocationSearch = ({ onLocationSelect, initialValues }: LocationSear
           {
             input,
             componentRestrictions: { country: 'us' },
-            types: ['address', 'establishment', 'geocode'],
+            types: ['address'], // Only search for addresses
           },
           (predictions: any[], status: string) => {
             if (status === window.google.maps.places.PlacesServiceStatus.OK && predictions) {
               resolve(predictions);
             } else {
-              reject(status);
+              reject(new Error(status));
             }
           }
         );
@@ -73,6 +74,7 @@ export const LocationSearch = ({ onLocationSelect, initialValues }: LocationSear
       setPredictions(response as any[]);
     } catch (error) {
       console.error('Error fetching predictions:', error);
+      setError('Unable to fetch address suggestions. Please try again.');
       setPredictions([]);
     } finally {
       setIsLoading(false);
