@@ -12,6 +12,8 @@ export interface Listing {
   isGraded: boolean;
   gradeLevel?: number;
   gradingCompany?: string;
+  city: string;
+  state: string;
 }
 
 export interface CreateListingData {
@@ -24,4 +26,6 @@ export interface CreateListingData {
   isGraded: boolean;
   gradeLevel?: number;
   gradingCompany?: string;
+  city: string;
+  state: string;
 }
