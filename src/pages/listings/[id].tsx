@@ -13,6 +13,7 @@ import Image from 'next/image';
 import { ArrowLeft, Calendar, Heart, MapPin, MessageCircle, User, ZoomIn } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
 
 const getConditionColor = (condition: string) => {
   const colors: Record<string, string> = {
@@ -56,14 +57,12 @@ export default function ListingPage() {
 
         const data = listingDoc.data();
         
-        // Validate required fields
         if (!data.title || !data.description || !data.price || !data.condition || !data.game) {
           setError('Invalid listing data');
           setLoading(false);
           return;
         }
 
-        // Construct the listing object with proper type handling
         const listingData: Listing = {
           id: listingDoc.id,
           title: data.title,
@@ -86,7 +85,6 @@ export default function ListingPage() {
 
         setListing(listingData);
 
-        // Check if the listing is favorited by the current user
         if (user) {
           const favoritesRef = collection(db, 'favorites');
           const q = query(
@@ -126,7 +124,6 @@ export default function ListingPage() {
 
     try {
       if (isFavorited) {
-        // Remove from favorites
         const q = query(
           favoritesRef,
           where('userId', '==', user.uid),
@@ -139,7 +136,6 @@ export default function ListingPage() {
         setIsFavorited(false);
         toast.success('Removed from favorites');
       } else {
-        // Add to favorites
         await addDoc(favoritesRef, {
           userId: user.uid,
           listingId: listing.id,
@@ -165,7 +161,6 @@ export default function ListingPage() {
       return;
     }
 
-    // Navigate to messages page with the listing context
     router.push(`/dashboard/messages?listingId=${listing?.id}`);
   };
 
@@ -206,84 +201,15 @@ export default function ListingPage() {
       </Button>
 
       <Card className="max-w-6xl mx-auto">
-        <CardContent className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            {/* Left Column - Details */}
-            <div className="space-y-6">
-              <div>
-                <h1 className="text-3xl font-bold mb-4">{listing.title}</h1>
-                <div className="flex flex-wrap gap-2">
-                  <Badge variant="secondary" className="text-sm">{listing.game}</Badge>
-                  <Badge className={`text-sm ${getConditionColor(listing.condition)}`}>
-                    {listing.condition}
-                  </Badge>
-                  {listing.isGraded && (
-                    <Badge variant="outline" className="bg-blue-500/10 text-blue-500 text-sm">
-                      {listing.gradingCompany} {listing.gradeLevel}
-                    </Badge>
-                  )}
-                </div>
-              </div>
-
-              <Separator />
-
-              {/* Seller Info */}
-              <div className="flex items-center space-x-4">
-                <Button
-                  variant="ghost"
-                  className="flex items-center space-x-2"
-                  onClick={() => router.push(`/profile/${listing.userId}`)}
-                >
-                  <User className="h-4 w-4" />
-                  <span>{listing.username}</span>
-                </Button>
-                <div className="flex items-center text-muted-foreground">
-                  <MapPin className="h-4 w-4 mr-1" />
-                  <span>{listing.city}, {listing.state}</span>
-                </div>
-              </div>
-
-              <div>
-                <h2 className="text-lg font-semibold mb-2">Description</h2>
-                <p className="text-muted-foreground whitespace-pre-wrap">{listing.description}</p>
-              </div>
-
-              <Separator />
-
-              <div className="flex items-center justify-between">
-                <div className="flex items-center text-sm text-muted-foreground">
-                  <Calendar className="h-4 w-4 mr-2" />
-                  Listed on {listing.createdAt.toLocaleDateString()}
-                </div>
-                <div className="flex space-x-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleFavoriteToggle}
-                    className={isFavorited ? "text-red-500" : ""}
-                  >
-                    <Heart className={`h-4 w-4 mr-2 ${isFavorited ? "fill-current" : ""}`} />
-                    {isFavorited ? "Saved" : "Save"}
-                  </Button>
-                  <Button
-                    variant="default"
-                    size="sm"
-                    onClick={handleMessage}
-                  >
-                    <MessageCircle className="h-4 w-4 mr-2" />
-                    Message
-                  </Button>
-                </div>
-              </div>
-            </div>
-
-            {/* Right Column - Images and Price */}
-            <div className="space-y-6">
-              <Carousel className="w-full">
+        <CardContent className="p-4 md:p-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8">
+            {/* Images and Price - Moved to top for mobile */}
+            <div className="space-y-4 md:space-y-6 order-1 md:order-2">
+              <Carousel className="w-full touch-pan-y">
                 <CarouselContent>
                   {listing.imageUrls.map((url, index) => (
                     <CarouselItem key={index}>
-                      <div className="relative aspect-[4/3] w-full group cursor-pointer" onClick={() => handleImageClick(index)}>
+                      <div className="relative aspect-square md:aspect-[4/3] w-full group cursor-pointer" onClick={() => handleImageClick(index)}>
                         <Image
                           src={url}
                           alt={`${listing.title} - Image ${index + 1}`}
@@ -303,13 +229,83 @@ export default function ListingPage() {
                     </CarouselItem>
                   ))}
                 </CarouselContent>
-                <CarouselPrevious />
-                <CarouselNext />
+                <CarouselPrevious className="hidden md:flex" />
+                <CarouselNext className="hidden md:flex" />
               </Carousel>
 
               <div className="text-center">
-                <div className="text-4xl font-bold">
+                <div className="text-3xl md:text-4xl font-bold">
                   ${typeof listing.price === 'number' ? listing.price.toFixed(2) : listing.price}
+                </div>
+              </div>
+            </div>
+
+            {/* Details */}
+            <div className="space-y-4 md:space-y-6 order-2 md:order-1">
+              <div>
+                <h1 className="text-2xl md:text-3xl font-bold mb-3">{listing.title}</h1>
+                <div className="flex flex-wrap gap-2">
+                  <Badge variant="secondary" className="text-sm">{listing.game}</Badge>
+                  <Badge className={`text-sm ${getConditionColor(listing.condition)}`}>
+                    {listing.condition}
+                  </Badge>
+                  {listing.isGraded && (
+                    <Badge variant="outline" className="bg-blue-500/10 text-blue-500 text-sm">
+                      {listing.gradingCompany} {listing.gradeLevel}
+                    </Badge>
+                  )}
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* Seller Info */}
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+                <Button
+                  variant="ghost"
+                  className="flex items-center justify-start space-x-2 h-8"
+                  onClick={() => router.push(`/profile/${listing.userId}`)}
+                >
+                  <User className="h-4 w-4" />
+                  <span>{listing.username}</span>
+                </Button>
+                <div className="flex items-center text-muted-foreground text-sm">
+                  <MapPin className="h-4 w-4 mr-1" />
+                  <span>{listing.city}, {listing.state}</span>
+                </div>
+              </div>
+
+              <div>
+                <h2 className="text-lg font-semibold mb-2">Description</h2>
+                <p className="text-muted-foreground whitespace-pre-wrap text-sm md:text-base">{listing.description}</p>
+              </div>
+
+              <Separator />
+
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div className="flex items-center text-sm text-muted-foreground">
+                  <Calendar className="h-4 w-4 mr-2" />
+                  Listed on {listing.createdAt.toLocaleDateString()}
+                </div>
+                <div className="flex w-full sm:w-auto space-x-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleFavoriteToggle}
+                    className={`flex-1 sm:flex-none ${isFavorited ? "text-red-500" : ""}`}
+                  >
+                    <Heart className={`h-4 w-4 mr-2 ${isFavorited ? "fill-current" : ""}`} />
+                    {isFavorited ? "Saved" : "Save"}
+                  </Button>
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={handleMessage}
+                    className="flex-1 sm:flex-none"
+                  >
+                    <MessageCircle className="h-4 w-4 mr-2" />
+                    Message
+                  </Button>
                 </div>
               </div>
             </div>
@@ -317,22 +313,31 @@ export default function ListingPage() {
         </CardContent>
       </Card>
 
-      {/* Zoom Dialog */}
+      {/* Enhanced Zoom Dialog */}
       <Dialog open={isZoomDialogOpen} onOpenChange={setIsZoomDialogOpen}>
         <DialogContent className="max-w-[95vw] max-h-[95vh] w-full h-full p-0">
           <div className="relative w-full h-[90vh]">
             <Carousel className="w-full h-full">
               <CarouselContent className="h-full">
                 {listing.imageUrls.map((url, index) => (
-                  <CarouselItem key={index} className="h-full flex items-center justify-center p-4">
-                    <div className="relative max-w-full max-h-full" style={{ width: '100%', height: '100%' }}>
-                      <img
-                        src={url}
-                        alt={`${listing.title} - Image ${index + 1}`}
-                        className="max-w-full max-h-[85vh] object-contain mx-auto"
-                        loading="eager"
-                      />
-                    </div>
+                  <CarouselItem key={index} className="h-full">
+                    <TransformWrapper
+                      initialScale={1}
+                      minScale={0.5}
+                      maxScale={4}
+                      centerOnInit={true}
+                    >
+                      <TransformComponent wrapperClass="w-full h-full" contentClass="w-full h-full">
+                        <div className="relative w-full h-full flex items-center justify-center p-4">
+                          <img
+                            src={url}
+                            alt={`${listing.title} - Image ${index + 1}`}
+                            className="max-w-full max-h-[85vh] object-contain"
+                            loading="eager"
+                          />
+                        </div>
+                      </TransformComponent>
+                    </TransformWrapper>
                   </CarouselItem>
                 ))}
               </CarouselContent>
