@@ -7,6 +7,7 @@ import { Loader2 } from "lucide-react";
 
 interface LocationSearchProps {
   onLocationSelect: (location: { address: string; city: string; state: string }) => void;
+  value?: string;
 }
 
 declare global {
