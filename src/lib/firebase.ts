@@ -15,6 +15,7 @@ const firebaseConfig = {
 let app: FirebaseApp;
 let auth: Auth;
 let db: Firestore;
+let storage: FirebaseStorage;
 
 // Validate Firebase configuration
 const validateFirebaseConfig = () => {
