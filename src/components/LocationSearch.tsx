@@ -21,19 +21,27 @@ export const LocationSearch = ({ onLocationSelect }: LocationSearchProps) => {
   const autocompleteService = useRef<any>(null);
   const placesService = useRef<any>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isGoogleLoaded, setIsGoogleLoaded] = useState(false);
 
   useEffect(() => {
-    // Initialize Google Places Autocomplete service
-    if (window.google && !autocompleteService.current) {
-      autocompleteService.current = new window.google.maps.places.AutocompleteService();
-      placesService.current = new window.google.maps.places.PlacesService(
-        document.createElement('div')
-      );
-    }
+    const checkGoogleMapsLoaded = () => {
+      if (window.google && window.google.maps && window.google.maps.places) {
+        autocompleteService.current = new window.google.maps.places.AutocompleteService();
+        placesService.current = new window.google.maps.places.PlacesService(
+          document.createElement('div')
+        );
+        setIsGoogleLoaded(true);
+      } else {
+        // Check again in 100ms
+        setTimeout(checkGoogleMapsLoaded, 100);
+      }
+    };
+
+    checkGoogleMapsLoaded();
   }, []);
 
   const handleSearch = async (input: string) => {
-    if (!input || !autocompleteService.current) return;
+    if (!input || !autocompleteService.current || !isGoogleLoaded) return;
     setIsLoading(true);
 
     try {
@@ -45,7 +53,7 @@ export const LocationSearch = ({ onLocationSelect }: LocationSearchProps) => {
             types: ['(cities)'], // Focus on cities for better results
           },
           (predictions: any[], status: string) => {
-            if (status === window.google.maps.places.PlacesServiceStatus.OK) {
+            if (status === window.google.maps.places.PlacesServiceStatus.OK && predictions) {
               resolve(predictions);
             } else {
               reject(status);
@@ -64,6 +72,8 @@ export const LocationSearch = ({ onLocationSelect }: LocationSearchProps) => {
   };
 
   const handlePredictionSelect = (placeId: string, description: string) => {
+    if (!isGoogleLoaded) return;
+    
     setIsLoading(true);
     setSearchInput(description); // Update input field immediately with selection
 
@@ -74,7 +84,7 @@ export const LocationSearch = ({ onLocationSelect }: LocationSearchProps) => {
       },
       (place: any, status: string) => {
         setIsLoading(false);
-        if (status === window.google.maps.places.PlacesServiceStatus.OK) {
+        if (status === window.google.maps.places.PlacesServiceStatus.OK && place) {
           let city = '';
           let state = '';
           
@@ -101,7 +111,7 @@ export const LocationSearch = ({ onLocationSelect }: LocationSearchProps) => {
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      if (searchInput.length >= 2) {
+      if (searchInput.length >= 2 && isGoogleLoaded) {
         handleSearch(searchInput);
       } else {
         setPredictions([]);
@@ -109,7 +119,7 @@ export const LocationSearch = ({ onLocationSelect }: LocationSearchProps) => {
     }, 300); // Debounce time reduced for better responsiveness
 
     return () => clearTimeout(timer);
-  }, [searchInput]);
+  }, [searchInput, isGoogleLoaded]);
 
   return (
     <div className="relative space-y-2">
@@ -123,6 +133,7 @@ export const LocationSearch = ({ onLocationSelect }: LocationSearchProps) => {
           placeholder="Enter city name..."
           className="pr-10"
           autoComplete="off"
+          disabled={!isGoogleLoaded}
         />
         {isLoading && (
           <div className="absolute right-3 top-1/2 -translate-y-1/2">
