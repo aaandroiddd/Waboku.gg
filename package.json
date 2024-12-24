@@ -70,7 +70,8 @@
     "tailwindcss-animate": "^1.0.7",
     "vaul": "^1.0.0",
     "yup": "^1.4.0",
-    "zod": "^3.23.8"
+    "zod": "^3.23.8",
+    "react-zoom-pan-pinch": "^3.4.3"
   },
   "devDependencies": {
     "@types/lodash.throttle": "^4.1.9",
