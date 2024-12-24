@@ -73,11 +73,11 @@ export function ListingGrid({ listings, loading = false }: ListingGridProps) {
             </div>
             
             <div className="space-y-3">
-              <div className="flex items-start justify-between gap-3">
-                <h3 className="text-base font-semibold truncate flex-1 min-w-[200px]" title={listing.title}>
+              <div className="flex items-start justify-between gap-2">
+                <h3 className="text-base font-semibold truncate flex-1" title={listing.title}>
                   {listing.title}
                 </h3>
-                <span className="font-semibold whitespace-nowrap text-base">
+                <span className="font-semibold text-base shrink-0">
                   ${typeof listing.price === 'number' ? listing.price.toFixed(2) : listing.price}
                 </span>
               </div>
