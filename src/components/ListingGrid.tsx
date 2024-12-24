@@ -50,7 +50,7 @@ export function ListingGrid({ listings, loading = false }: ListingGridProps) {
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-6 px-4">
       {listings.map((listing) => (
         <Link href={`/listings/${listing.id}`} key={listing.id} className="block">
-          <Card className="group overflow-hidden border border-white/20 hover:border-white/40 dark:border-blue-300/20 dark:hover:border-blue-300/40 shadow-sm hover:shadow-md transition-all duration-300 p-4">
+          <Card className="group overflow-hidden border border-white/20 hover:border-white/40 dark:border-blue-300/20 dark:hover:border-blue-300/40 shadow-lg hover:shadow-xl transition-all duration-300 p-4">
             <div className="relative aspect-square w-full mb-4">
               {listing.imageUrls && listing.imageUrls[0] ? (
                 <Image
