@@ -99,8 +99,11 @@ const initializeFirebase = () => {
         });
     }
 
+    // Initialize Storage
+    storage = getStorage(app);
+    
     console.log('Firebase initialization complete');
-    return { app, auth, db };
+    return { app, auth, db, storage };
   } catch (error: any) {
     console.error('Error initializing Firebase:', {
       code: error.code,
