@@ -32,6 +32,19 @@ export default function App({ Component, pageProps }: AppProps) {
 
   // **DO NOT REMOVE OR MODIFY**
   useEffect(() => {
+    // Load Google Maps API
+    const loadGoogleMapsScript = () => {
+      const script = document.createElement('script');
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&libraries=places`;
+      script.async = true;
+      script.defer = true;
+      document.head.appendChild(script);
+    };
+
+    if (!window.google) {
+      loadGoogleMapsScript();
+    }
+
     // Global error handler
     window.onerror = (message, source, lineno, colno, error) => {
       window.parent.postMessage({
