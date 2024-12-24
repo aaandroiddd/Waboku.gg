@@ -312,6 +312,15 @@ const CreateListingPage = () => {
                   />
                   <LocationSearch
                     onLocationSelect={({ city, state }) => {
+                      if (!city || !state) {
+                        setErrors(prev => ({
+                          ...prev,
+                          city: "Please select a valid location with both city and state",
+                          state: "Please select a valid location with both city and state"
+                        }));
+                        return;
+                      }
+                      
                       // Clear any existing location errors
                       setErrors(prev => ({
                         ...prev,
@@ -322,8 +331,8 @@ const CreateListingPage = () => {
                       // Update form data with selected location
                       setFormData(prev => ({
                         ...prev,
-                        city: city || '',
-                        state: state || ''
+                        city,
+                        state
                       }));
                     }}
                   />
