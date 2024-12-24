@@ -326,10 +326,18 @@ export default function ListingPage() {
                       minScale={0.5}
                       maxScale={4}
                       centerOnInit={true}
+                      alignmentAnimation={{ sizeX: 0, sizeY: 0 }}
+                      limitToBounds={true}
                     >
-                      {({ zoomIn, zoomOut, resetTransform, scale }) => (
+                      {({ zoomIn, zoomOut, resetTransform, instance }) => (
                         <>
-                          <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-10 bg-background/80 rounded-lg p-2 backdrop-blur-sm">
+                          <div 
+                            className="absolute bottom-4 left-1/2 transform -translate-x-1/2 z-10 bg-background/80 rounded-lg p-2 backdrop-blur-sm opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+                            style={{ 
+                              opacity: instance.transformState.scale === 1 ? 0 : 1,
+                              visibility: instance.transformState.scale === 1 ? 'hidden' : 'visible' 
+                            }}
+                          >
                             <div className="flex items-center gap-2">
                               <Button
                                 variant="outline"
@@ -340,7 +348,7 @@ export default function ListingPage() {
                                 <Minus className="h-4 w-4" />
                               </Button>
                               <div className="min-w-[60px] text-center text-sm">
-                                {Math.round(scale * 100)}%
+                                {Math.round((instance.transformState.scale || 1) * 100)}%
                               </div>
                               <Button
                                 variant="outline"
@@ -360,16 +368,17 @@ export default function ListingPage() {
                               </Button>
                             </div>
                           </div>
-                          <TransformComponent wrapperClass="w-full h-full" contentClass="w-full h-full">
-                            <div className="relative w-full h-full flex items-center justify-center p-4">
+                          <TransformComponent 
+                            wrapperClass="w-full h-full" 
+                            contentClass="w-full h-full"
+                          >
+                            <div className="relative w-full h-full flex items-center justify-center p-4 group">
                               <img
                                 src={url}
                                 alt={`${listing.title} - Image ${index + 1}`}
                                 className="max-w-full max-h-[85vh] object-contain"
                                 loading="eager"
                               />
-                            </div>
-                          </TransformComponent>
                         </>
                       )}
                     </TransformWrapper>
