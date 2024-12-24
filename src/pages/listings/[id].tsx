@@ -10,7 +10,7 @@ import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious
 import { Separator } from '@/components/ui/separator';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import Image from 'next/image';
-import { ArrowLeft, Calendar, Heart, MapPin, MessageCircle, User, ZoomIn } from 'lucide-react';
+import { ArrowLeft, Calendar, Heart, MapPin, MessageCircle, User, ZoomIn, ZoomOut, Minus, Plus, RotateCw } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
