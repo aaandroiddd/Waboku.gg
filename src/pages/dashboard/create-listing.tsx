@@ -49,6 +49,10 @@ const CreateListingPage = () => {
   const validateForm = () => {
     const newErrors: typeof errors = {};
 
+    if (!formData.city || !formData.state) {
+      newErrors.location = "Location is required";
+    }
+
     if (!formData.title.trim()) {
       newErrors.title = "Listing title is required";
     } else if (formData.title.length < 3) {
