@@ -101,7 +101,7 @@ export const LocationSearch = ({ onLocationSelect }: LocationSearchProps) => {
             }
           });
 
-          // If city is still empty, try to extract it from formatted address
+          // Additional fallback for city from formatted address
           if (!city && place.formatted_address) {
             const addressParts = place.formatted_address.split(',');
             if (addressParts.length >= 2) {
@@ -109,13 +109,19 @@ export const LocationSearch = ({ onLocationSelect }: LocationSearchProps) => {
             }
           }
 
-          onLocationSelect({
-            address: place.formatted_address,
-            city,
-            state
-          });
-          
-          setPredictions([]);
+          // Only call onLocationSelect if we have both city and state
+          if (city && state) {
+            onLocationSelect({
+              address: place.formatted_address,
+              city,
+              state
+            });
+            setPredictions([]);
+          } else {
+            // If we don't have both city and state, clear the input and show an error
+            setSearchInput('');
+            console.warn('Location selection failed: Could not determine both city and state');
+          }
         }
       }
     );
