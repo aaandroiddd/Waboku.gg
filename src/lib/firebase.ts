@@ -211,4 +211,4 @@ export const releaseUsername = async (username: string): Promise<void> => {
   }
 };
 
-export { auth, app, db };
+export { auth, app, db, storage };
