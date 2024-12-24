@@ -45,6 +45,8 @@ const CreateListingPage = () => {
     condition?: string;
     game?: string;
     images?: string;
+    city?: string;
+    state?: string;
   }>({});
 
   const validateForm = () => {
