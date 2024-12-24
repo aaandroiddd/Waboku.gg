@@ -31,6 +31,7 @@ const CreateListingPage = () => {
     description: "",
     price: "",
     game: "",
+    condition: "",
     images: [] as File[],
     city: "",
     state: "",
