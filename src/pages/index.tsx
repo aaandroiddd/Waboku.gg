@@ -141,7 +141,7 @@ export default function Home() {
       const q = query(
         collection(db, 'listings'),
         orderBy('createdAt', 'desc'),
-        limit(12)
+        limit(20) // Fetch more initially to allow for location-based sorting
       );
 
       try {
