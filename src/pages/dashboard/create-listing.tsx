@@ -20,6 +20,7 @@ const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const ALLOWED_FILE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
 const CreateListingPage = () => {
+  const [useLocationSearch, setUseLocationSearch] = useState(false);
   const { user, loading } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
