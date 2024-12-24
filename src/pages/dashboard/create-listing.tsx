@@ -312,13 +312,28 @@ const CreateListingPage = () => {
                   />
                   <LocationSearch
                     onLocationSelect={({ city, state }) => {
+                      // Clear any existing location errors
+                      setErrors(prev => ({
+                        ...prev,
+                        city: undefined,
+                        state: undefined
+                      }));
+                      
+                      // Update form data with selected location
                       setFormData(prev => ({
                         ...prev,
-                        city,
-                        state
+                        city: city || '',
+                        state: state || ''
                       }));
                     }}
                   />
+                  {(errors.city || errors.state) && (
+                    <Alert variant="destructive" className="mt-2">
+                      <AlertDescription>
+                        Please select a valid location from the suggestions
+                      </AlertDescription>
+                    </Alert>
+                  )}
                   <div className="text-sm text-muted-foreground">
                     Selected location: {formData.city && formData.state ? `${formData.city}, ${formData.state}` : 'None'}
                   </div>
