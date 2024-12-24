@@ -76,6 +76,14 @@ const CreateListingPage = () => {
       newErrors.images = "At least one image is required";
     }
 
+    if (!formData.city.trim()) {
+      newErrors.city = "City is required";
+    }
+
+    if (!formData.state) {
+      newErrors.state = "State is required";
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
