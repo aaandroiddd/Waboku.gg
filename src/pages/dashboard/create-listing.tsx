@@ -1,9 +1,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import dynamic from 'next/dynamic';
-import Script from 'next/script';
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
-import { LocationSearch } from "@/components/LocationSearch";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
