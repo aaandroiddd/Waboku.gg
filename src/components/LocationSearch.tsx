@@ -50,7 +50,7 @@ export const LocationSearch = ({ onLocationSelect }: LocationSearchProps) => {
           {
             input,
             componentRestrictions: { country: 'us' },
-            types: ['address', 'establishment', 'geocode'], // Allow addresses, establishments, and other locations
+            types: ['establishment', 'geocode'], // Allow establishments and general locations
           },
           (predictions: any[], status: string) => {
             if (status === window.google.maps.places.PlacesServiceStatus.OK && predictions) {
