@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
-import { getFirestore, doc, getDoc } from 'firebase/firestore';
+import { getFirestore, doc, getDoc, collection, addDoc, query, where, getDocs, deleteDoc } from 'firebase/firestore';
 import { app } from '@/lib/firebase';
 import { Listing } from '@/types/database';
 import { Card, CardContent } from '@/components/ui/card';
@@ -10,7 +10,9 @@ import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious
 import { Separator } from '@/components/ui/separator';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import Image from 'next/image';
-import { ArrowLeft, Calendar, ZoomIn } from 'lucide-react';
+import { ArrowLeft, Calendar, Heart, MapPin, MessageCircle, User, ZoomIn } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { toast } from 'sonner';
 
 const getConditionColor = (condition: string) => {
   const colors: Record<string, string> = {
@@ -33,6 +35,8 @@ export default function ListingPage() {
   const [error, setError] = useState<string | null>(null);
   const [isZoomDialogOpen, setIsZoomDialogOpen] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [isFavorited, setIsFavorited] = useState(false);
+  const { user } = useAuth();
 
   useEffect(() => {
     async function fetchListing() {
@@ -53,6 +57,18 @@ export default function ListingPage() {
           ...data,
           createdAt: data.createdAt?.toDate() || new Date(),
         });
+
+        // Check if the listing is favorited by the current user
+        if (user) {
+          const favoritesRef = collection(db, 'favorites');
+          const q = query(
+            favoritesRef,
+            where('userId', '==', user.uid),
+            where('listingId', '==', id)
+          );
+          const querySnapshot = await getDocs(q);
+          setIsFavorited(!querySnapshot.empty);
+        }
       } catch (err) {
         console.error('Error fetching listing:', err);
         setError('Failed to load listing');
@@ -62,21 +78,67 @@ export default function ListingPage() {
     }
 
     fetchListing();
-  }, [id]);
+  }, [id, user]);
 
   const handleImageClick = (index: number) => {
     setCurrentImageIndex(index);
     setIsZoomDialogOpen(true);
   };
 
-  const handleNextImage = () => {
+  const handleFavoriteToggle = async () => {
+    if (!user) {
+      toast.error('Please sign in to save favorites');
+      return;
+    }
+
     if (!listing) return;
-    setCurrentImageIndex((prev) => (prev + 1) % listing.imageUrls.length);
+
+    const db = getFirestore(app);
+    const favoritesRef = collection(db, 'favorites');
+
+    try {
+      if (isFavorited) {
+        // Remove from favorites
+        const q = query(
+          favoritesRef,
+          where('userId', '==', user.uid),
+          where('listingId', '==', listing.id)
+        );
+        const querySnapshot = await getDocs(q);
+        querySnapshot.forEach((doc) => {
+          deleteDoc(doc.ref);
+        });
+        setIsFavorited(false);
+        toast.success('Removed from favorites');
+      } else {
+        // Add to favorites
+        await addDoc(favoritesRef, {
+          userId: user.uid,
+          listingId: listing.id,
+          createdAt: new Date()
+        });
+        setIsFavorited(true);
+        toast.success('Added to favorites');
+      }
+    } catch (error) {
+      console.error('Error toggling favorite:', error);
+      toast.error('Failed to update favorites');
+    }
   };
 
-  const handlePreviousImage = () => {
-    if (!listing) return;
-    setCurrentImageIndex((prev) => (prev - 1 + listing.imageUrls.length) % listing.imageUrls.length);
+  const handleMessage = () => {
+    if (!user) {
+      toast.error('Please sign in to send messages');
+      return;
+    }
+
+    if (user.uid === listing?.userId) {
+      toast.error('You cannot message yourself');
+      return;
+    }
+
+    // Navigate to messages page with the listing context
+    router.push(`/dashboard/messages?listingId=${listing?.id}`);
   };
 
   if (loading) {
@@ -137,6 +199,22 @@ export default function ListingPage() {
 
               <Separator />
 
+              {/* Seller Info */}
+              <div className="flex items-center space-x-4">
+                <Button
+                  variant="ghost"
+                  className="flex items-center space-x-2"
+                  onClick={() => router.push(`/profile/${listing.userId}`)}
+                >
+                  <User className="h-4 w-4" />
+                  <span>{listing.username}</span>
+                </Button>
+                <div className="flex items-center text-muted-foreground">
+                  <MapPin className="h-4 w-4 mr-1" />
+                  <span>{listing.city}, {listing.state}</span>
+                </div>
+              </div>
+
               <div>
                 <h2 className="text-lg font-semibold mb-2">Description</h2>
                 <p className="text-muted-foreground whitespace-pre-wrap">{listing.description}</p>
@@ -144,9 +222,30 @@ export default function ListingPage() {
 
               <Separator />
 
-              <div className="flex items-center text-sm text-muted-foreground">
-                <Calendar className="h-4 w-4 mr-2" />
-                Listed on {listing.createdAt.toLocaleDateString()}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center text-sm text-muted-foreground">
+                  <Calendar className="h-4 w-4 mr-2" />
+                  Listed on {listing.createdAt.toLocaleDateString()}
+                </div>
+                <div className="flex space-x-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleFavoriteToggle}
+                    className={isFavorited ? "text-red-500" : ""}
+                  >
+                    <Heart className={`h-4 w-4 mr-2 ${isFavorited ? "fill-current" : ""}`} />
+                    {isFavorited ? "Saved" : "Save"}
+                  </Button>
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={handleMessage}
+                  >
+                    <MessageCircle className="h-4 w-4 mr-2" />
+                    Message
+                  </Button>
+                </div>
               </div>
             </div>
 
