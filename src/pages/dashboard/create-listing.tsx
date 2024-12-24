@@ -15,7 +15,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useAuth } from "@/contexts/AuthContext";
 import { useListings } from "@/hooks/useListings";
 import { Progress } from "@/components/ui/progress";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Tooltip, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { HelpCircle } from "lucide-react";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
@@ -23,7 +23,6 @@ const ALLOWED_FILE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
 const CreateListingPage = () => {
   const [currentStep, setCurrentStep] = useState(1);
-  const [useLocationSearch, setUseLocationSearch] = useState(false);
   const { user, loading } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
@@ -46,46 +45,29 @@ const CreateListingPage = () => {
     price?: string;
     game?: string;
     images?: string;
-    city?: string;
-    state?: string;
   }>({});
 
   const validateStep = (step: number) => {
     const newErrors: typeof errors = {};
 
-    switch (step) {
-      case 1:
-        if (!formData.title.trim()) {
-          newErrors.title = "Listing title is required";
-        } else if (formData.title.length < 3) {
-          newErrors.title = "Title must be at least 3 characters";
-        }
+    if (!formData.title.trim()) {
+      newErrors.title = "Listing title is required";
+    } else if (formData.title.length < 3) {
+      newErrors.title = "Title must be at least 3 characters";
+    }
 
-        if (!formData.price) {
-          newErrors.price = "Price is required";
-        } else if (isNaN(parseFloat(formData.price)) || parseFloat(formData.price) <= 0) {
-          newErrors.price = "Please enter a valid price";
-        }
+    if (!formData.price) {
+      newErrors.price = "Price is required";
+    } else if (isNaN(parseFloat(formData.price)) || parseFloat(formData.price) <= 0) {
+      newErrors.price = "Please enter a valid price";
+    }
 
-        if (!formData.game) {
-          newErrors.game = "Game type is required";
-        }
-        break;
+    if (!formData.game) {
+      newErrors.game = "Game type is required";
+    }
 
-      case 2:
-        if (!formData.city.trim()) {
-          newErrors.city = "City is required";
-        }
-        if (!formData.state) {
-          newErrors.state = "State is required";
-        }
-        break;
-
-      case 3:
-        if (formData.images.length === 0) {
-          newErrors.images = "At least one image is required";
-        }
-        break;
+    if (step === 2 && formData.images.length === 0) {
+      newErrors.images = "At least one image is required";
     }
 
     setErrors(newErrors);
@@ -123,7 +105,7 @@ const CreateListingPage = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!validateStep(3)) {
+    if (!validateStep(2)) {
       toast({
         title: "Validation Error",
         description: "Please check the form for errors",
@@ -265,175 +247,45 @@ const CreateListingPage = () => {
                 {errors.game && <p className="text-sm text-red-500">{errors.game}</p>}
               </div>
             </div>
-          </div>
-        );
 
-      case 2:
-        return (
-          <div className="space-y-6">
             <div className="space-y-4">
               <div className="flex items-center space-x-2">
-                <Label>Location Input Method</Label>
+                <Label>Location (Optional)</Label>
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger>
                       <HelpCircle className="h-4 w-4 text-muted-foreground" />
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p className="max-w-xs">This location will be used as the meeting point for the transaction</p>
+                      <p className="max-w-xs">Add your location to help local buyers find your listing</p>
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
               </div>
 
-              <Select
-                value={useLocationSearch ? "search" : "manual"}
-                onValueChange={(value) => {
-                  setUseLocationSearch(value === "search");
-                  if (value === "manual") {
-                    setFormData(prev => ({ ...prev, city: "", state: "" }));
-                  }
+              <Script
+                strategy="lazyOnload"
+                src={`https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&libraries=places`}
+              />
+              <LocationSearch
+                onLocationSelect={({ city, state }) => {
+                  setFormData(prev => ({
+                    ...prev,
+                    city,
+                    state
+                  }));
                 }}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select input method" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="manual">Manual Entry</SelectItem>
-                  <SelectItem value="search">Location Search</SelectItem>
-                </SelectContent>
-              </Select>
-
-              {useLocationSearch ? (
-                <>
-                  <Script
-                    strategy="lazyOnload"
-                    src={`https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&libraries=places`}
-                  />
-                  <LocationSearch
-                    onLocationSelect={({ city, state }) => {
-                      if (!city || !state) {
-                        setErrors(prev => ({
-                          ...prev,
-                          city: "Please select a valid location with both city and state",
-                          state: "Please select a valid location with both city and state"
-                        }));
-                        return;
-                      }
-                      
-                      // Clear any existing location errors
-                      setErrors(prev => ({
-                        ...prev,
-                        city: undefined,
-                        state: undefined
-                      }));
-                      
-                      // Update form data with selected location
-                      setFormData(prev => ({
-                        ...prev,
-                        city,
-                        state
-                      }));
-                    }}
-                  />
-                  {(errors.city || errors.state) && (
-                    <Alert variant="destructive" className="mt-2">
-                      <AlertDescription>
-                        Please select a valid location from the suggestions
-                      </AlertDescription>
-                    </Alert>
-                  )}
-                  <div className="text-sm text-muted-foreground">
-                    Selected location: {formData.city && formData.state ? `${formData.city}, ${formData.state}` : 'None'}
-                  </div>
-                </>
-              ) : (
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="city">City *</Label>
-                    <Input
-                      id="city"
-                      required
-                      value={formData.city}
-                      onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                      placeholder="Enter city"
-                      className={errors.city ? "border-red-500" : ""}
-                    />
-                    {errors.city && <p className="text-sm text-red-500">{errors.city}</p>}
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="state">State *</Label>
-                    <Select
-                      value={formData.state}
-                      onValueChange={(value) => setFormData({ ...formData, state: value })}
-                    >
-                      <SelectTrigger className={errors.state ? "border-red-500" : ""}>
-                        <SelectValue placeholder="Select state" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {/* US States */}
-                        <SelectItem value="AL">Alabama</SelectItem>
-                        <SelectItem value="AK">Alaska</SelectItem>
-                        <SelectItem value="AZ">Arizona</SelectItem>
-                        <SelectItem value="AR">Arkansas</SelectItem>
-                        <SelectItem value="CA">California</SelectItem>
-                        <SelectItem value="CO">Colorado</SelectItem>
-                        <SelectItem value="CT">Connecticut</SelectItem>
-                        <SelectItem value="DE">Delaware</SelectItem>
-                        <SelectItem value="FL">Florida</SelectItem>
-                        <SelectItem value="GA">Georgia</SelectItem>
-                        <SelectItem value="HI">Hawaii</SelectItem>
-                        <SelectItem value="ID">Idaho</SelectItem>
-                        <SelectItem value="IL">Illinois</SelectItem>
-                        <SelectItem value="IN">Indiana</SelectItem>
-                        <SelectItem value="IA">Iowa</SelectItem>
-                        <SelectItem value="KS">Kansas</SelectItem>
-                        <SelectItem value="KY">Kentucky</SelectItem>
-                        <SelectItem value="LA">Louisiana</SelectItem>
-                        <SelectItem value="ME">Maine</SelectItem>
-                        <SelectItem value="MD">Maryland</SelectItem>
-                        <SelectItem value="MA">Massachusetts</SelectItem>
-                        <SelectItem value="MI">Michigan</SelectItem>
-                        <SelectItem value="MN">Minnesota</SelectItem>
-                        <SelectItem value="MS">Mississippi</SelectItem>
-                        <SelectItem value="MO">Missouri</SelectItem>
-                        <SelectItem value="MT">Montana</SelectItem>
-                        <SelectItem value="NE">Nebraska</SelectItem>
-                        <SelectItem value="NV">Nevada</SelectItem>
-                        <SelectItem value="NH">New Hampshire</SelectItem>
-                        <SelectItem value="NJ">New Jersey</SelectItem>
-                        <SelectItem value="NM">New Mexico</SelectItem>
-                        <SelectItem value="NY">New York</SelectItem>
-                        <SelectItem value="NC">North Carolina</SelectItem>
-                        <SelectItem value="ND">North Dakota</SelectItem>
-                        <SelectItem value="OH">Ohio</SelectItem>
-                        <SelectItem value="OK">Oklahoma</SelectItem>
-                        <SelectItem value="OR">Oregon</SelectItem>
-                        <SelectItem value="PA">Pennsylvania</SelectItem>
-                        <SelectItem value="RI">Rhode Island</SelectItem>
-                        <SelectItem value="SC">South Carolina</SelectItem>
-                        <SelectItem value="SD">South Dakota</SelectItem>
-                        <SelectItem value="TN">Tennessee</SelectItem>
-                        <SelectItem value="TX">Texas</SelectItem>
-                        <SelectItem value="UT">Utah</SelectItem>
-                        <SelectItem value="VT">Vermont</SelectItem>
-                        <SelectItem value="VA">Virginia</SelectItem>
-                        <SelectItem value="WA">Washington</SelectItem>
-                        <SelectItem value="WV">West Virginia</SelectItem>
-                        <SelectItem value="WI">Wisconsin</SelectItem>
-                        <SelectItem value="WY">Wyoming</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    {errors.state && <p className="text-sm text-red-500">{errors.state}</p>}
-                  </div>
+              />
+              {formData.city && formData.state && (
+                <div className="text-sm text-muted-foreground">
+                  Selected location: {formData.city}, {formData.state}
                 </div>
               )}
             </div>
           </div>
         );
 
-      case 3:
+      case 2:
         return (
           <div className="space-y-6">
             <div className="space-y-2">
@@ -505,12 +357,12 @@ const CreateListingPage = () => {
           <div className="absolute top-0 left-0 w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-full">
             <div
               className="h-full bg-primary rounded-full transition-all duration-300"
-              style={{ width: `${(currentStep / 3) * 100}%` }}
+              style={{ width: `${(currentStep / 2) * 100}%` }}
             />
           </div>
           
           <div className="flex justify-between mt-4 mb-8">
-            {[1, 2, 3].map((step) => (
+            {[1, 2].map((step) => (
               <div
                 key={step}
                 className={`flex flex-col items-center ${
@@ -527,7 +379,7 @@ const CreateListingPage = () => {
                   {step}
                 </div>
                 <span className="text-sm">
-                  {step === 1 ? 'Details' : step === 2 ? 'Location' : 'Images'}
+                  {step === 1 ? 'Details' : 'Images'}
                 </span>
               </div>
             ))}
@@ -550,11 +402,11 @@ const CreateListingPage = () => {
                 </Button>
                 
                 <Button
-                  type={currentStep === 3 ? 'submit' : 'button'}
-                  onClick={currentStep === 3 ? undefined : handleNext}
+                  type={currentStep === 2 ? 'submit' : 'button'}
+                  onClick={currentStep === 2 ? undefined : handleNext}
                   disabled={isSubmitting}
                 >
-                  {currentStep === 3
+                  {currentStep === 2
                     ? (isSubmitting ? 'Creating...' : 'Create Listing')
                     : 'Next'}
                 </Button>
