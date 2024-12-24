@@ -264,7 +264,7 @@ export default function Home() {
           {/* Featured Listings Section */}
           <section className="container mx-auto px-4 py-8 sm:py-12">
             <div className="flex items-center justify-between mb-8">
-              <h2 className="text-2xl font-semibold">Latest Listings</h2>
+              <h2 className="text-2xl font-semibold">Latest Listings Near You</h2>
               <Link href="/listings">
                 <Button variant="outline" size="sm">View All</Button>
               </Link>
