@@ -35,6 +35,8 @@ const CreateListingPage = () => {
     isGraded: false,
     gradeLevel: "",
     gradingCompany: "",
+    city: "",
+    state: "",
   });
 
   const [errors, setErrors] = useState<{
