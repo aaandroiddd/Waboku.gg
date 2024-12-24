@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useGeolocation, calculateDistance } from "@/hooks/useGeolocation";
 import { getFirestore, collection, query, orderBy, getDocs, limit } from 'firebase/firestore';
 import { app } from '@/lib/firebase';
 import { Listing } from '@/types/database';
