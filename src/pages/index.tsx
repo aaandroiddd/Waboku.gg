@@ -132,18 +132,20 @@ export default function Home() {
   const [listings, setListings] = useState<Listing[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const { latitude, longitude, loading: geoLoading } = useGeolocation();
+
   useEffect(() => {
     async function fetchListings() {
       const db = getFirestore(app);
       const q = query(
         collection(db, 'listings'),
         orderBy('createdAt', 'desc'),
-        limit(6)
+        limit(12)
       );
 
       try {
         const querySnapshot = await getDocs(q);
-        const fetchedListings = querySnapshot.docs.map(doc => {
+        let fetchedListings = querySnapshot.docs.map(doc => {
           const data = doc.data();
           return {
             id: doc.id,
@@ -151,6 +153,20 @@ export default function Home() {
             createdAt: data.createdAt?.toDate() || new Date()
           };
         }) as Listing[];
+
+        // If we have user's location, sort listings by distance
+        if (latitude && longitude) {
+          fetchedListings = fetchedListings
+            .map(listing => {
+              const listingLat = listing.coordinates?.latitude;
+              const listingLng = listing.coordinates?.longitude;
+              const distance = listingLat && listingLng
+                ? calculateDistance(latitude, longitude, listingLat, listingLng)
+                : Infinity;
+              return { ...listing, distance };
+            })
+            .sort((a, b) => (a.distance || Infinity) - (b.distance || Infinity));
+        }
 
         setListings(fetchedListings);
       } catch (error) {
