@@ -246,40 +246,7 @@ const CreateListingPage = () => {
               </div>
             </div>
 
-            <div className="space-y-4">
-              <div className="flex items-center space-x-2">
-                <Label>Location (Optional)</Label>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger>
-                      <HelpCircle className="h-4 w-4 text-muted-foreground" />
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p className="max-w-xs">Add your location to help local buyers find your listing</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              </div>
 
-              <Script
-                strategy="lazyOnload"
-                src={`https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&libraries=places`}
-              />
-              <LocationSearch
-                onLocationSelect={({ city, state }) => {
-                  setFormData(prev => ({
-                    ...prev,
-                    city,
-                    state
-                  }));
-                }}
-              />
-              {formData.city && formData.state && (
-                <div className="text-sm text-muted-foreground">
-                  Selected location: {formData.city}, {formData.state}
-                </div>
-              )}
-            </div>
           </div>
         );
 
