@@ -4,10 +4,15 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
+import { Alert } from "@/components/ui/alert";
 
 interface LocationSearchProps {
-  onLocationSelect: (location: { address: string; city: string; state: string }) => void;
-  value?: string;
+  onLocationSelect: (location: { address?: string; city: string; state: string }) => void;
+  initialValues?: {
+    address?: string;
+    city?: string;
+    state?: string;
+  };
 }
 
 declare global {
@@ -16,9 +21,12 @@ declare global {
   }
 }
 
-export const LocationSearch = ({ onLocationSelect }: LocationSearchProps) => {
-  const [searchInput, setSearchInput] = useState('');
+export const LocationSearch = ({ onLocationSelect, initialValues }: LocationSearchProps) => {
+  const [addressInput, setAddressInput] = useState(initialValues?.address || '');
+  const [cityInput, setCityInput] = useState(initialValues?.city || '');
+  const [stateInput, setStateInput] = useState(initialValues?.state || '');
   const [predictions, setPredictions] = useState<any[]>([]);
+  const [error, setError] = useState('');
   const autocompleteService = useRef<any>(null);
   const placesService = useRef<any>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -33,7 +41,6 @@ export const LocationSearch = ({ onLocationSelect }: LocationSearchProps) => {
         );
         setIsGoogleLoaded(true);
       } else {
-        // Check again in 100ms
         setTimeout(checkGoogleMapsLoaded, 100);
       }
     };
@@ -51,7 +58,7 @@ export const LocationSearch = ({ onLocationSelect }: LocationSearchProps) => {
           {
             input,
             componentRestrictions: { country: 'us' },
-            types: ['establishment', 'geocode'], // Allow establishments and general locations
+            types: ['address', 'establishment', 'geocode'],
           },
           (predictions: any[], status: string) => {
             if (status === window.google.maps.places.PlacesServiceStatus.OK && predictions) {
@@ -76,7 +83,7 @@ export const LocationSearch = ({ onLocationSelect }: LocationSearchProps) => {
     if (!isGoogleLoaded) return;
     
     setIsLoading(true);
-    setSearchInput(description); // Update input field immediately with selection
+    setAddressInput(description);
 
     placesService.current.getDetails(
       {
@@ -93,7 +100,6 @@ export const LocationSearch = ({ onLocationSelect }: LocationSearchProps) => {
             if (component.types.includes('locality')) {
               city = component.long_name;
             } else if (component.types.includes('sublocality')) {
-              // Fallback to sublocality if locality is not available
               city = component.long_name;
             }
             if (component.types.includes('administrative_area_level_1')) {
@@ -101,7 +107,6 @@ export const LocationSearch = ({ onLocationSelect }: LocationSearchProps) => {
             }
           });
 
-          // Additional fallback for city from formatted address
           if (!city && place.formatted_address) {
             const addressParts = place.formatted_address.split(',');
             if (addressParts.length >= 2) {
@@ -109,18 +114,16 @@ export const LocationSearch = ({ onLocationSelect }: LocationSearchProps) => {
             }
           }
 
-          // Only call onLocationSelect if we have both city and state
           if (city && state) {
+            setCityInput(city);
+            setStateInput(state);
             onLocationSelect({
               address: place.formatted_address,
               city,
               state
             });
             setPredictions([]);
-          } else {
-            // If we don't have both city and state, clear the input and show an error
-            setSearchInput('');
-            console.warn('Location selection failed: Could not determine both city and state');
+            setError('');
           }
         }
       }
@@ -129,52 +132,105 @@ export const LocationSearch = ({ onLocationSelect }: LocationSearchProps) => {
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      if (searchInput.length >= 2 && isGoogleLoaded) {
-        handleSearch(searchInput);
+      if (addressInput.length >= 2 && isGoogleLoaded) {
+        handleSearch(addressInput);
       } else {
         setPredictions([]);
       }
-    }, 300); // Debounce time reduced for better responsiveness
+    }, 300);
 
     return () => clearTimeout(timer);
-  }, [searchInput, isGoogleLoaded]);
+  }, [addressInput, isGoogleLoaded]);
+
+  const handleManualSubmit = () => {
+    if (!cityInput || !stateInput) {
+      setError('Both city and state are required');
+      return;
+    }
+    setError('');
+    onLocationSelect({
+      address: addressInput || undefined,
+      city: cityInput,
+      state: stateInput
+    });
+  };
+
+  useEffect(() => {
+    if (cityInput && stateInput) {
+      handleManualSubmit();
+    }
+  }, [cityInput, stateInput]);
 
   return (
-    <div className="relative space-y-2">
-      <Label htmlFor="location-search">Search Location</Label>
-      <div className="relative">
-        <Input
-          id="location-search"
-          type="text"
-          value={searchInput}
-          onChange={(e) => setSearchInput(e.target.value)}
-          placeholder="Enter address, place, or city..."
-          className="pr-10"
-          autoComplete="off"
-          disabled={!isGoogleLoaded}
-        />
-        {isLoading && (
-          <div className="absolute right-3 top-1/2 -translate-y-1/2">
-            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+    <div className="space-y-4">
+      <div className="space-y-4">
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="city" className="required">City</Label>
+            <Input
+              id="city"
+              value={cityInput}
+              onChange={(e) => setCityInput(e.target.value)}
+              placeholder="Enter city"
+              required
+            />
           </div>
-        )}
+          <div className="space-y-2">
+            <Label htmlFor="state" className="required">State</Label>
+            <Input
+              id="state"
+              value={stateInput}
+              onChange={(e) => setStateInput(e.target.value.toUpperCase())}
+              placeholder="Enter state (e.g., CA)"
+              maxLength={2}
+              required
+            />
+          </div>
+        </div>
+
+        <div className="relative space-y-2">
+          <Label htmlFor="location-search">Search Address (Optional)</Label>
+          <div className="relative">
+            <Input
+              id="location-search"
+              type="text"
+              value={addressInput}
+              onChange={(e) => setAddressInput(e.target.value)}
+              placeholder="Search for a specific address..."
+              className="pr-10"
+              autoComplete="off"
+              disabled={!isGoogleLoaded}
+            />
+            {isLoading && (
+              <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+              </div>
+            )}
+          </div>
+          
+          {predictions.length > 0 && (
+            <Card className="absolute z-50 w-full mt-1 max-h-60 overflow-auto shadow-lg">
+              <div className="p-2 space-y-1">
+                {predictions.map((prediction) => (
+                  <Button
+                    key={prediction.place_id}
+                    variant="ghost"
+                    className="w-full justify-start text-left hover:bg-muted"
+                    onClick={() => handlePredictionSelect(prediction.place_id, prediction.description)}
+                  >
+                    {prediction.description}
+                  </Button>
+                ))}
+              </div>
+            </Card>
+          )}
+        </div>
       </div>
-      
-      {predictions.length > 0 && (
-        <Card className="absolute z-50 w-full mt-1 max-h-60 overflow-auto shadow-lg">
-          <div className="p-2 space-y-1">
-            {predictions.map((prediction) => (
-              <Button
-                key={prediction.place_id}
-                variant="ghost"
-                className="w-full justify-start text-left hover:bg-muted"
-                onClick={() => handlePredictionSelect(prediction.place_id, prediction.description)}
-              >
-                {prediction.description}
-              </Button>
-            ))}
-          </div>
-        </Card>
+
+      {error && (
+        <Alert variant="destructive">
+          {error}
+        </Alert>
       )}
     </div>
   );
