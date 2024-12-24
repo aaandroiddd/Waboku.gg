@@ -50,7 +50,7 @@ export const LocationSearch = ({ onLocationSelect }: LocationSearchProps) => {
           {
             input,
             componentRestrictions: { country: 'us' },
-            types: ['(cities)'], // Focus on cities for better results
+            types: ['address', 'establishment', 'geocode'], // Allow addresses, establishments, and other locations
           },
           (predictions: any[], status: string) => {
             if (status === window.google.maps.places.PlacesServiceStatus.OK && predictions) {
@@ -91,11 +91,22 @@ export const LocationSearch = ({ onLocationSelect }: LocationSearchProps) => {
           place.address_components.forEach((component: any) => {
             if (component.types.includes('locality')) {
               city = component.long_name;
+            } else if (component.types.includes('sublocality')) {
+              // Fallback to sublocality if locality is not available
+              city = component.long_name;
             }
             if (component.types.includes('administrative_area_level_1')) {
               state = component.short_name;
             }
           });
+
+          // If city is still empty, try to extract it from formatted address
+          if (!city && place.formatted_address) {
+            const addressParts = place.formatted_address.split(',');
+            if (addressParts.length >= 2) {
+              city = addressParts[addressParts.length - 3]?.trim() || '';
+            }
+          }
 
           onLocationSelect({
             address: place.formatted_address,
@@ -130,7 +141,7 @@ export const LocationSearch = ({ onLocationSelect }: LocationSearchProps) => {
           type="text"
           value={searchInput}
           onChange={(e) => setSearchInput(e.target.value)}
-          placeholder="Enter city name..."
+          placeholder="Enter address, place, or city..."
           className="pr-10"
           autoComplete="off"
           disabled={!isGoogleLoaded}
