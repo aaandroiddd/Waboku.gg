@@ -41,6 +41,7 @@ export default function ListingPage() {
 
   useEffect(() => {
     let isMounted = true;
+    let retryTimeout: NodeJS.Timeout;
 
     async function fetchListing() {
       if (!id || typeof id !== 'string') {
@@ -55,7 +56,13 @@ export default function ListingPage() {
 
       try {
         console.log('Fetching listing with ID:', id);
-        const db = getFirestore(app);
+        
+        // Wait for Firebase to be fully initialized
+        if (!app || !db) {
+          console.log('Waiting for Firebase initialization...');
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          throw new Error('Firebase not initialized');
+        }
         
         // Add retry mechanism for Firestore query
         let attempts = 0;
@@ -70,11 +77,11 @@ export default function ListingPage() {
             attempts++;
             console.error(`Attempt ${attempts} failed:`, retryError);
             if (attempts === maxAttempts) throw retryError;
-            await new Promise(resolve => setTimeout(resolve, 1000 * attempts)); // Exponential backoff
+            await new Promise(resolve => setTimeout(resolve, Math.min(1000 * Math.pow(2, attempts), 10000))); // Exponential backoff with max 10s
           }
         }
 
-        if (!listingDoc.exists()) {
+        if (!listingDoc?.exists()) {
           if (isMounted) {
             setError('Listing not found');
             setLoading(false);
