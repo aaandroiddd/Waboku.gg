@@ -18,7 +18,7 @@ import { LocationInput } from "@/components/LocationInput";
 import { validateTextContent } from "@/util/string";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
-const MAX_TITLE_LENGTH = 40;
+const MAX_TITLE_LENGTH = 100;
 const MAX_DESCRIPTION_LENGTH = 500;
 const ALLOWED_FILE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
