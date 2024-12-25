@@ -219,22 +219,24 @@ export default function ListingPage() {
               <Carousel className="w-full touch-pan-y">
                 <CarouselContent>
                   {listing.imageUrls.map((url, index) => (
-                    <CarouselItem key={index}>
-                      <div className="relative aspect-square md:aspect-[4/3] w-full group cursor-pointer" onClick={() => handleImageClick(index)}>
-                        <Image
-                          src={url}
-                          alt={`${listing.title} - Image ${index + 1}`}
-                          fill
-                          className="object-contain rounded-lg"
-                          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                          priority={index === 0}
-                          onError={(e) => {
-                            const target = e.target as HTMLImageElement;
-                            target.src = '/images/rect.png';
-                          }}
-                        />
-                        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/20 rounded-lg">
-                          <ZoomIn className="w-8 h-8 text-white" />
+                    <CarouselItem key={index} className="flex items-center justify-center">
+                      <div className="relative aspect-square md:aspect-[4/3] w-full max-w-[90vw] md:max-w-full group cursor-pointer flex items-center justify-center" onClick={() => handleImageClick(index)}>
+                        <div className="relative w-full h-full flex items-center justify-center">
+                          <Image
+                            src={url}
+                            alt={`${listing.title} - Image ${index + 1}`}
+                            fill
+                            className="object-contain rounded-lg"
+                            sizes="(max-width: 768px) 90vw, (max-width: 1200px) 50vw, 33vw"
+                            priority={index === 0}
+                            onError={(e) => {
+                              const target = e.target as HTMLImageElement;
+                              target.src = '/images/rect.png';
+                            }}
+                          />
+                          <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/20 rounded-lg">
+                            <ZoomIn className="w-8 h-8 text-white" />
+                          </div>
                         </div>
                       </div>
                     </CarouselItem>
