@@ -57,6 +57,9 @@ export default function ListingPage() {
       try {
         console.log('Fetching listing with ID:', id);
         
+        // Wait for Firebase to be initialized
+        const { db } = await import('@/lib/firebase');
+        
         // Add retry mechanism for Firestore query
         let attempts = 0;
         const maxAttempts = 3;
@@ -83,7 +86,13 @@ export default function ListingPage() {
               authState: user ? 'logged-in' : 'logged-out'
             });
             
-            if (attempts === maxAttempts) throw retryError;
+            if (attempts === maxAttempts) {
+              // If we've exhausted all attempts, check if it's a permissions error
+              if (retryError.code === 'permission-denied') {
+                throw new Error('You do not have permission to view this listing.');
+              }
+              throw retryError;
+            }
             
             // Exponential backoff with max 10s
             const delay = Math.min(1000 * Math.pow(2, attempts), 10000);
