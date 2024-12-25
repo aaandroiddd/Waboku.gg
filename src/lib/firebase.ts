@@ -80,17 +80,32 @@ const initializeFirebase = () => {
       console.log('Using existing Firebase app');
       app = getApps()[0];
     }
-    
+
+    // Initialize services
     auth = getAuth(app);
     db = getFirestore(app);
+    storage = getStorage(app);
 
-    // Enable offline persistence for Firestore
+    // Configure Firestore settings first
     if (typeof window !== 'undefined') {
-      // Set auth persistence
+      const settings = {
+        cacheSizeBytes: 50000000, // 50 MB cache size
+        experimentalForceLongPolling: true,
+        useFetchStreams: false,
+        experimentalAutoDetectLongPolling: true
+      };
+      
+      try {
+        db.settings(settings);
+        console.log('Firestore settings configured successfully');
+      } catch (e) {
+        console.warn('Firestore settings initialization error:', e);
+      }
+
+      // Set auth persistence after Firestore settings
       setPersistence(auth, browserLocalPersistence)
         .then(() => {
           console.log('Auth persistence set successfully');
-          // Force token refresh
           if (auth.currentUser) {
             return auth.currentUser.getIdToken(true);
           }
@@ -105,24 +120,7 @@ const initializeFirebase = () => {
             stack: error.stack
           });
         });
-
-      // Enable Firestore offline persistence with more resilient settings
-      const settings = {
-        cacheSizeBytes: 50000000, // 50 MB cache size
-        experimentalForceLongPolling: true,
-        useFetchStreams: false,
-        experimentalAutoDetectLongPolling: true
-      };
-      
-      try {
-        db.settings(settings);
-      } catch (e) {
-        console.warn('Firestore settings initialization error:', e);
-      }
     }
-
-    // Initialize Storage
-    storage = getStorage(app);
     
     console.log('Firebase initialization complete');
     return { app, auth, db, storage };
