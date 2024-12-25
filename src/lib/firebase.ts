@@ -90,6 +90,13 @@ const initializeFirebase = () => {
       setPersistence(auth, browserLocalPersistence)
         .then(() => {
           console.log('Auth persistence set successfully');
+          // Force token refresh
+          if (auth.currentUser) {
+            return auth.currentUser.getIdToken(true);
+          }
+        })
+        .then(() => {
+          console.log('Token refreshed successfully');
         })
         .catch((error) => {
           console.error("Error setting auth persistence:", {
