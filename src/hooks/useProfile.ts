@@ -6,7 +6,9 @@ export interface UserProfile {
   id: string;
   username: string;
   joinDate: string;
-  location?: string;
+  address?: string;
+  city?: string;
+  state?: string;
   totalSales?: number;
   rating?: number;
   bio?: string;
