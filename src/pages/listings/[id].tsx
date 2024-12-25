@@ -330,8 +330,11 @@ export default function ListingPage() {
                       limitToBounds={true}
                       centerZoomedOut={true}
                       doubleClick={{ mode: "reset" }}
+                      initialPositionX={0}
+                      initialPositionY={0}
+                      panning={{ disabled: false }}
                     >
-                      {({ zoomIn, zoomOut, resetTransform, instance }) => (
+                      {({ zoomIn, zoomOut, resetTransform }) => (
                         <div className="relative w-full h-full">
                           <TransformComponent 
                             wrapperClass="w-full h-full !flex !items-center !justify-center" 
@@ -356,9 +359,6 @@ export default function ListingPage() {
                               >
                                 <Minus className="h-4 w-4" />
                               </Button>
-                              <div className="min-w-[60px] text-center text-sm font-medium">
-                                {Math.round((instance.transformState.scale || 1) * 100)}%
-                              </div>
                               <Button
                                 variant="outline"
                                 size="icon"
