@@ -197,11 +197,60 @@ const SettingsPageContent = () => {
                 <Textarea
                   id="bio"
                   value={formData.bio}
-                  onChange={(e) => setFormData(prev => ({ ...prev, bio: e.target.value }))}
-                  placeholder="Tell us about yourself"
+                  onChange={(e) => {
+                    const text = e.target.value;
+                    if (text.length <= 1000) {
+                      setFormData(prev => ({ ...prev, bio: text }));
+                    }
+                  }}
+                  placeholder="Tell us about yourself (max 1000 characters)"
                   className="min-h-[100px]"
+                  maxLength={1000}
                 />
+                <p className="text-xs text-muted-foreground">
+                  {formData.bio.length}/1000 characters
+                </p>
               </div>
+
+              {/* Social Media Links */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-medium">Social Media Links</h3>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="youtube">YouTube Channel</Label>
+                  <Input
+                    id="youtube"
+                    value={formData.youtube}
+                    onChange={(e) => setFormData(prev => ({ ...prev, youtube: e.target.value }))}
+                    placeholder="https://youtube.com/@yourchannel"
+                    type="url"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="twitter">X (Twitter) Profile</Label>
+                  <Input
+                    id="twitter"
+                    value={formData.twitter}
+                    onChange={(e) => setFormData(prev => ({ ...prev, twitter: e.target.value }))}
+                    placeholder="https://x.com/yourusername"
+                    type="url"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="facebook">Facebook Profile</Label>
+                  <Input
+                    id="facebook"
+                    value={formData.facebook}
+                    onChange={(e) => setFormData(prev => ({ ...prev, facebook: e.target.value }))}
+                    placeholder="https://facebook.com/yourusername"
+                    type="url"
+                  />
+                </div>
+              </div>
+
+              <Separator />
 
               {/* Location Section */}
               <div className="space-y-2">
