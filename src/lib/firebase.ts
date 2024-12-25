@@ -273,7 +273,8 @@ export const releaseUsername = async (username: string): Promise<void> => {
   });
 };
 
-// Initialize Firebase asynchronously
-initializeFirebaseAsync().catch(console.error);
+// Initialize Firebase asynchronously and export a promise that resolves when initialization is complete
+const initializationPromise = initializeFirebaseAsync().catch(console.error);
 
-export { auth, app, db, storage };
+// Export the initialization promise along with the services
+export { auth, app, db, storage, initializationPromise };
