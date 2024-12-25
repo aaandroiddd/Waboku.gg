@@ -1,5 +1,4 @@
 import { useRouter } from 'next/router';
-import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -7,69 +6,14 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import ListingGrid from '@/components/ListingGrid';
 import { useAuth } from '@/contexts/AuthContext';
-
-interface UserProfile {
-  id: string;
-  username: string;
-  joinDate: string;
-  location: string;
-  totalSales: number;
-  rating: number;
-  bio: string;
-  avatarUrl: string;
-}
+import { useProfile } from '@/hooks/useProfile';
+import { format } from 'date-fns';
 
 export default function ProfilePage() {
   const router = useRouter();
   const { id } = router.query;
-  const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { profile, isLoading, error } = useProfile(id as string);
   const { user } = useAuth();
-
-  useEffect(() => {
-    let isMounted = true;
-
-    const fetchProfile = async () => {
-      if (!id) return;
-      
-      try {
-        setIsLoading(true);
-        setError(null);
-
-        // Mock data for demonstration
-        const profileData = {
-          id: id as string,
-          username: "CardMaster2024",
-          joinDate: "December 2023",
-          location: "New York, NY",
-          totalSales: 156,
-          rating: 4.8,
-          bio: "Passionate TCG collector and trader. Specializing in rare Pokemon and Yu-Gi-Oh cards.",
-          avatarUrl: "/images/rect.png" // Using local fallback image
-        };
-
-        if (isMounted) {
-          setProfile(profileData);
-        }
-      } catch (error) {
-        console.error('Error fetching profile:', error);
-        if (isMounted) {
-          setError('Failed to load profile. Please try again later.');
-        }
-      } finally {
-        if (isMounted) {
-          setIsLoading(false);
-        }
-      }
-    };
-
-    fetchProfile();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [id]);
 
   if (!id) {
     return null;
@@ -115,6 +59,8 @@ export default function ProfilePage() {
     );
   }
 
+  const joinDate = format(new Date(profile.joinDate), 'MMMM yyyy');
+
   return (
     <div className="container mx-auto p-6">
       <Card className="mb-6">
@@ -123,7 +69,7 @@ export default function ProfilePage() {
             <div className="w-full md:w-1/4">
               <div className="relative w-full aspect-square rounded-lg overflow-hidden">
                 <Image
-                  src={profile.avatarUrl}
+                  src={profile.avatarUrl || '/images/rect.png'}
                   alt={profile.username}
                   fill
                   sizes="(max-width: 768px) 100vw, 25vw"
@@ -136,24 +82,26 @@ export default function ProfilePage() {
               <div className="flex justify-between items-start">
                 <div>
                   <h1 className="text-3xl font-bold mb-2">{profile.username}</h1>
-                  <p className="text-muted-foreground">Member since {profile.joinDate}</p>
+                  <p className="text-muted-foreground">Member since {joinDate}</p>
                 </div>
                 {user && user.uid !== id && (
-                  <Button variant="secondary">Message</Button>
+                  <Button variant="secondary" onClick={() => router.push(`/messages?userId=${id}`)}>
+                    Message
+                  </Button>
                 )}
               </div>
               
               <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="text-center p-4 bg-secondary rounded-lg">
-                  <div className="text-2xl font-bold">{profile.totalSales}</div>
+                  <div className="text-2xl font-bold">{profile.totalSales || 0}</div>
                   <div className="text-sm text-muted-foreground">Total Sales</div>
                 </div>
                 <div className="text-center p-4 bg-secondary rounded-lg">
-                  <div className="text-2xl font-bold">{profile.rating}</div>
+                  <div className="text-2xl font-bold">{profile.rating || 'N/A'}</div>
                   <div className="text-sm text-muted-foreground">Rating</div>
                 </div>
                 <div className="text-center p-4 bg-secondary rounded-lg">
-                  <div className="text-sm font-medium">{profile.location}</div>
+                  <div className="text-sm font-medium">{profile.location || 'Not specified'}</div>
                   <div className="text-sm text-muted-foreground">Location</div>
                 </div>
               </div>
@@ -162,7 +110,9 @@ export default function ProfilePage() {
 
               <div>
                 <h2 className="font-semibold mb-2">About</h2>
-                <p className="text-muted-foreground">{profile.bio}</p>
+                <p className="text-muted-foreground">
+                  {profile.bio || 'This user hasn\'t added a bio yet.'}
+                </p>
               </div>
             </div>
           </div>
