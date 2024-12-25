@@ -13,7 +13,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { updateProfile as firebaseUpdateProfile } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
 const DashboardLayout = dynamic(
   () => import('@/components/dashboard/DashboardLayout').then(mod => mod.DashboardLayout),
@@ -28,7 +29,7 @@ const DashboardLayout = dynamic(
 );
 
 const SettingsPageContent = () => {
-  const { user, updateUsername } = useAuth();
+  const { user, updateProfile } = useAuth();
   const [formData, setFormData] = useState({
     username: user?.displayName || "",
     bio: "",
@@ -47,10 +48,37 @@ const SettingsPageContent = () => {
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
 
+  // Load user data when component mounts
   useEffect(() => {
-    if (!user) {
-      router.push('/auth/sign-in');
-    }
+    const loadUserData = async () => {
+      if (!user) {
+        router.push('/auth/sign-in');
+        return;
+      }
+
+      try {
+        const userDoc = await getDoc(doc(db, 'users', user.uid));
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+          setFormData(prev => ({
+            ...prev,
+            username: user.displayName || "",
+            bio: userData.bio || "",
+            address: userData.address || "",
+            city: userData.city || "",
+            state: userData.state || "",
+            contact: userData.contact || "",
+            youtube: userData.youtube || "",
+            twitter: userData.twitter || "",
+            facebook: userData.facebook || "",
+          }));
+        }
+      } catch (err) {
+        console.error('Error loading user data:', err);
+      }
+    };
+
+    loadUserData();
   }, [user, router]);
 
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -106,21 +134,30 @@ const SettingsPageContent = () => {
         photoURL = await uploadAvatar(avatarFile);
       }
 
-      // Update profile
-      if (formData.username !== user?.displayName) {
-        const { error: usernameError } = await updateUsername(formData.username);
-        if (usernameError) throw usernameError;
-      }
+      // Update profile with all user data
+      const { error: updateError } = await updateProfile({
+        displayName: formData.username,
+        photoURL,
+        bio: formData.bio,
+        location: JSON.stringify({
+          address: formData.address,
+          city: formData.city,
+          state: formData.state
+        }),
+        contact: formData.contact,
+        social: {
+          youtube: formData.youtube,
+          twitter: formData.twitter,
+          facebook: formData.facebook
+        }
+      });
 
-      // Update Firebase profile
-      if (user) {
-        await firebaseUpdateProfile(user, {
-          photoURL,
-          displayName: formData.username
-        });
-      }
+      if (updateError) throw updateError;
 
       setSuccess("Profile updated successfully!");
+      
+      // Reset avatar file after successful upload
+      setAvatarFile(null);
     } catch (err: any) {
       console.error('Profile update error:', err);
       setError(err.message || "An unexpected error occurred. Please try again.");
