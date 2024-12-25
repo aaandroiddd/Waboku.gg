@@ -48,20 +48,42 @@ export default function ListingPage() {
       try {
         const db = getFirestore(app);
         
-        // Add retry logic for fetching the listing
+        // Add retry logic for fetching the listing with improved error handling
         let retryCount = 0;
         const maxRetries = 3;
         let listingDoc;
 
         while (retryCount < maxRetries) {
           try {
+            if (!navigator.onLine) {
+              throw new Error('No internet connection');
+            }
+
             listingDoc = await getDoc(doc(db, 'listings', id as string));
             break;
-          } catch (err) {
-            console.error(`Attempt ${retryCount + 1} failed:`, err);
+          } catch (err: any) {
+            console.error(`Attempt ${retryCount + 1} failed:`, {
+              error: err,
+              code: err.code,
+              message: err.message,
+              isOnline: navigator.onLine
+            });
+            
             retryCount++;
-            if (retryCount === maxRetries) throw err;
-            await new Promise(resolve => setTimeout(resolve, 1000 * retryCount)); // Exponential backoff
+            
+            if (err.code === 'permission-denied') {
+              throw new Error('You do not have permission to view this listing');
+            }
+            
+            if (err.code === 'unavailable' || !navigator.onLine) {
+              if (retryCount === maxRetries) {
+                throw new Error('Unable to load listing. Please check your internet connection and try again.');
+              }
+            } else if (retryCount === maxRetries) {
+              throw err;
+            }
+            
+            await new Promise(resolve => setTimeout(resolve, Math.min(1000 * Math.pow(2, retryCount), 10000))); // Exponential backoff with max 10s
           }
         }
 
