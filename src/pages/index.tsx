@@ -294,7 +294,7 @@ export default function Home() {
                 loading={loading} 
                 displayCount={displayCount}
                 hasMore={listings.length > displayCount}
-                onLoadMore={() => setDisplayCount(prev => prev + 6)}
+                onLoadMore={() => setDisplayCount(prev => prev + 8)}
               />
             </div>
           </section>
