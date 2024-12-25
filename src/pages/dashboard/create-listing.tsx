@@ -40,6 +40,7 @@ const CreateListingPage = () => {
 
   const [errors, setErrors] = useState<{
     title?: string;
+    description?: string;
     price?: string;
     game?: string;
     images?: string;
