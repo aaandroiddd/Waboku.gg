@@ -57,19 +57,14 @@ export default function ListingPage() {
 
         const data = listingDoc.data();
         
-        if (!data.title || !data.description || !data.price || !data.condition || !data.game) {
-          setError('Invalid listing data');
-          setLoading(false);
-          return;
-        }
-
+        // Ensure all required fields are present
         const listingData: Listing = {
           id: listingDoc.id,
-          title: data.title,
-          description: data.description,
-          price: Number(data.price),
-          condition: data.condition,
-          game: data.game,
+          title: data.title || 'Untitled Listing',
+          description: data.description || '',
+          price: typeof data.price === 'number' ? data.price : Number(data.price) || 0,
+          condition: data.condition || 'unknown',
+          game: data.game || 'other',
           imageUrls: Array.isArray(data.imageUrls) ? data.imageUrls : [],
           userId: data.userId || '',
           username: data.username || 'Unknown User',
@@ -80,7 +75,7 @@ export default function ListingPage() {
           gradingCompany: data.gradingCompany,
           city: data.city || 'Unknown',
           state: data.state || 'Unknown',
-          favoriteCount: data.favoriteCount || 0
+          favoriteCount: typeof data.favoriteCount === 'number' ? data.favoriteCount : 0
         };
 
         setListing(listingData);
