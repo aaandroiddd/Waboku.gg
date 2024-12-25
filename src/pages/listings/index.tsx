@@ -5,33 +5,43 @@ import { Listing } from '@/types/database';
 import { ListingGrid } from '@/components/ListingGrid';
 import Head from 'next/head';
 import Header from '@/components/Header';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 export default function ListingsPage() {
   const [listings, setListings] = useState<Listing[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchListings() {
-      const db = getFirestore(app);
-      const q = query(
-        collection(db, 'listings'),
-        orderBy('createdAt', 'desc')
-      );
-
+      setLoading(true);
+      setError(null);
+      
       try {
+        const db = getFirestore(app);
+        const q = query(
+          collection(db, 'listings'),
+          orderBy('createdAt', 'desc')
+        );
+
         const querySnapshot = await getDocs(q);
         const fetchedListings = querySnapshot.docs.map(doc => {
           const data = doc.data();
           return {
             id: doc.id,
             ...data,
-            createdAt: data.createdAt?.toDate() || new Date()
-          };
-        }) as Listing[];
+            createdAt: data.createdAt?.toDate() || new Date(),
+            price: Number(data.price) || 0,
+            favoriteCount: data.favoriteCount || 0,
+            status: data.status || 'active',
+            imageUrls: Array.isArray(data.imageUrls) ? data.imageUrls : []
+          } as Listing;
+        });
 
         setListings(fetchedListings);
       } catch (error) {
         console.error('Error fetching listings:', error);
+        setError('Failed to load listings. Please try again later.');
       } finally {
         setLoading(false);
       }
@@ -55,7 +65,13 @@ export default function ListingsPage() {
         <main className="container mx-auto px-4 py-8">
           <div className="max-w-[1400px] mx-auto">
             <h1 className="text-2xl font-semibold mb-8">All Listings</h1>
-            <ListingGrid listings={listings} loading={loading} />
+            {error ? (
+              <Alert variant="destructive" className="mb-8">
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            ) : (
+              <ListingGrid listings={listings} loading={loading} />
+            )}
           </div>
         </main>
       </div>
