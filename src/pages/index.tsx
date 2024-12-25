@@ -132,6 +132,8 @@ export default function Home() {
   );
   const [listings, setListings] = useState<Listing[]>([]);
   const [loading, setLoading] = useState(true);
+  const [displayCount, setDisplayCount] = useState(6);
+  const [hasMore, setHasMore] = useState(false);
 
   const { latitude, longitude, loading: geoLoading } = useGeolocation();
 
