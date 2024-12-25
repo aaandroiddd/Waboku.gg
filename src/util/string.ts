@@ -28,3 +28,45 @@ export function truncateString(str: string, maxLength: number): string {
 export function removeWhitespace(str: string): string {
   return str.replace(/\s/g, '');
 }
+
+/**
+* Checks if a string contains any explicit or inappropriate words.
+* @param text The input string to check.
+* @returns True if the text contains explicit content, false otherwise.
+*/
+export function containsExplicitContent(text: string): boolean {
+  // List of explicit words to filter (can be expanded)
+  const explicitWords = [
+    'fuck', 'shit', 'ass', 'bitch', 'dick', 'porn', 'nsfw',
+    // Add more words as needed
+  ];
+
+  const normalizedText = text.toLowerCase();
+  return explicitWords.some(word => 
+    normalizedText.includes(word.toLowerCase()) ||
+    // Check for common letter substitutions
+    normalizedText.replace(/[^a-zA-Z0-9]/g, '').includes(word.toLowerCase())
+  );
+}
+
+/**
+* Validates text length and content appropriateness.
+* @param text The input string to validate.
+* @param maxLength The maximum allowed length.
+* @returns An object containing validation result and error message if any.
+*/
+export function validateTextContent(text: string, maxLength: number): { isValid: boolean; error?: string } {
+  if (!text || text.trim().length === 0) {
+    return { isValid: false, error: 'Text cannot be empty' };
+  }
+
+  if (text.length > maxLength) {
+    return { isValid: false, error: `Text must be ${maxLength} characters or less` };
+  }
+
+  if (containsExplicitContent(text)) {
+    return { isValid: false, error: 'Text contains inappropriate content' };
+  }
+
+  return { isValid: true };
+}
