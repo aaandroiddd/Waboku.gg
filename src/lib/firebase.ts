@@ -81,10 +81,26 @@ const initializeFirebase = () => {
       app = getApps()[0];
     }
 
-    // Initialize services
+    // Initialize services with persistence enabled
     auth = getAuth(app);
     db = getFirestore(app);
     storage = getStorage(app);
+
+    // Enable offline persistence for Firestore
+    if (typeof window !== 'undefined') {
+      try {
+        db.enablePersistence({ synchronizeTabs: true })
+          .catch((err) => {
+            if (err.code === 'failed-precondition') {
+              console.warn('Multiple tabs open, persistence can only be enabled in one tab at a time.');
+            } else if (err.code === 'unimplemented') {
+              console.warn('The current browser does not support persistence.');
+            }
+          });
+      } catch (err) {
+        console.warn('Failed to enable persistence:', err);
+      }
+    }
 
     // Configure Firestore settings first
     if (typeof window !== 'undefined') {
