@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { getFirestore, doc, getDoc, collection, addDoc, query, where, getDocs, deleteDoc } from 'firebase/firestore';
-import { app } from '@/lib/firebase';
+import { app, db } from '@/lib/firebase';
 import { Listing } from '@/types/database';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
