@@ -33,6 +33,9 @@ const SettingsPageContent = () => {
     bio: "",
     location: "",
     contact: "",
+    youtube: "",
+    twitter: "",
+    facebook: "",
   });
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState(user?.photoURL || "");
