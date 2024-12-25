@@ -173,6 +173,17 @@ const CreateListingPage = () => {
     }
   }, [user, loading, router]);
 
+  // Initialize location from profile
+  useEffect(() => {
+    if (profile && profile.city && profile.state) {
+      setFormData(prev => ({
+        ...prev,
+        city: profile.city || '',
+        state: profile.state || ''
+      }));
+    }
+  }, [profile]);
+
   if (loading || !user) {
     return null;
   }
