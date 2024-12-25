@@ -309,12 +309,17 @@ export function useListings() {
   };
 
   useEffect(() => {
-    if (user?.uid) {
-      fetchUserListings();
-    } else {
-      setListings([]);
-    }
-  }, [user?.uid, fetchUserListings]);
+    // Add a small delay to ensure Firebase is fully initialized
+    const timer = setTimeout(() => {
+      if (user?.uid) {
+        fetchUserListings();
+      } else {
+        fetchAllListings();
+      }
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, [user?.uid, fetchUserListings, fetchAllListings]);
 
   return {
     listings,
