@@ -99,23 +99,18 @@ const initializeFirebase = () => {
           });
         });
 
-      // Enable Firestore offline persistence
+      // Enable Firestore offline persistence with more resilient settings
       const settings = {
         cacheSizeBytes: 50000000, // 50 MB cache size
         experimentalForceLongPolling: true,
-        useFetchStreams: false
+        useFetchStreams: false,
+        experimentalAutoDetectLongPolling: true
       };
       
       try {
-        db.enablePersistence(settings).catch((err) => {
-          if (err.code === 'failed-precondition') {
-            console.warn('Multiple tabs open, persistence can only be enabled in one tab at a time.');
-          } else if (err.code === 'unimplemented') {
-            console.warn('The current browser does not support persistence.');
-          }
-        });
+        db.settings(settings);
       } catch (e) {
-        console.warn('Firestore persistence initialization error:', e);
+        console.warn('Firestore settings initialization error:', e);
       }
     }
 
