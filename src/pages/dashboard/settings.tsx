@@ -71,7 +71,7 @@ const SettingsPageContent = () => {
   const uploadAvatar = async (file: File): Promise<string> => {
     const storage = getStorage();
     const fileExtension = file.name.split('.').pop();
-    const fileName = `avatars/${user!.uid}_${Date.now()}.${fileExtension}`;
+    const fileName = `avatars/${user!.uid}/${Date.now()}.${fileExtension}`;
     const storageRef = ref(storage, fileName);
     
     await uploadBytes(storageRef, file);
