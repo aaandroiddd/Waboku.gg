@@ -28,6 +28,7 @@ const CreateListingPage = () => {
   const router = useRouter();
   const { toast } = useToast();
   const { createListing } = useListings();
+  const { profile } = useProfile(user?.uid);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
 
