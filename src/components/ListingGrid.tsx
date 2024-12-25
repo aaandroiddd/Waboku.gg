@@ -40,35 +40,49 @@ export function ListingGrid({
   const [listings, setListings] = useState<Listing[]>([]);
 
   useEffect(() => {
-    if (userId) {
-      // Mock data for user listings
-      setListings([
-        {
-          id: '1',
-          title: 'Blue-Eyes White Dragon',
-          price: 299.99,
-          game: 'Yu-Gi-Oh!',
-          condition: 'near-mint',
-          imageUrls: ['https://assets.co.dev/171838d1-5208-4d56-8fa3-d46502238350/image-82bb4ad.png'],
-          username: 'CardMaster2024',
-          city: 'New York',
-          state: 'NY'
-        },
-        {
-          id: '2',
-          title: 'Dark Magician',
-          price: 199.99,
-          game: 'Yu-Gi-Oh!',
-          condition: 'excellent',
-          imageUrls: ['https://assets.co.dev/171838d1-5208-4d56-8fa3-d46502238350/image-82bb4ad.png'],
-          username: 'CardMaster2024',
-          city: 'New York',
-          state: 'NY'
+    let isMounted = true;
+
+    const loadListings = async () => {
+      if (userId) {
+        // Mock data for user listings
+        const mockListings = [
+          {
+            id: '1',
+            title: 'Blue-Eyes White Dragon',
+            price: 299.99,
+            game: 'Yu-Gi-Oh!',
+            condition: 'near-mint',
+            imageUrls: ['https://assets.co.dev/171838d1-5208-4d56-8fa3-d46502238350/image-82bb4ad.png'],
+            username: 'CardMaster2024',
+            city: 'New York',
+            state: 'NY'
+          },
+          {
+            id: '2',
+            title: 'Dark Magician',
+            price: 199.99,
+            game: 'Yu-Gi-Oh!',
+            condition: 'excellent',
+            imageUrls: ['https://assets.co.dev/171838d1-5208-4d56-8fa3-d46502238350/image-82bb4ad.png'],
+            username: 'CardMaster2024',
+            city: 'New York',
+            state: 'NY'
+          }
+        ];
+        
+        if (isMounted) {
+          setListings(mockListings);
         }
-      ]);
-    } else {
-      setListings(propListings || []);
-    }
+      } else if (isMounted) {
+        setListings(propListings || []);
+      }
+    };
+
+    loadListings();
+
+    return () => {
+      isMounted = false;
+    };
   }, [userId, propListings]);
 
   if (loading) {
