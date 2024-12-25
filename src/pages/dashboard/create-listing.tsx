@@ -57,10 +57,18 @@ const CreateListingPage = () => {
       newErrors.location = "Location is required";
     }
 
-    if (!formData.title.trim()) {
-      newErrors.title = "Listing title is required";
-    } else if (formData.title.length < 3) {
-      newErrors.title = "Title must be at least 3 characters";
+    // Validate title
+    const titleValidation = validateTextContent(formData.title, MAX_TITLE_LENGTH);
+    if (!titleValidation.isValid) {
+      newErrors.title = titleValidation.error;
+    }
+
+    // Validate description if provided
+    if (formData.description.trim()) {
+      const descriptionValidation = validateTextContent(formData.description, MAX_DESCRIPTION_LENGTH);
+      if (!descriptionValidation.isValid) {
+        newErrors.description = descriptionValidation.error;
+      }
     }
 
     if (!formData.price) {
