@@ -225,10 +225,20 @@ const CreateListingPage = () => {
                   <Textarea
                     id="description"
                     value={formData.description}
+                    maxLength={MAX_DESCRIPTION_LENGTH}
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                     placeholder="Provide detailed information about your card"
-                    className="min-h-[120px]"
+                    className={`min-h-[120px] ${errors.description ? "border-red-500" : ""}`}
                   />
+                  <div className="flex justify-between text-sm">
+                    {errors.description ? (
+                      <p className="text-red-500">{errors.description}</p>
+                    ) : (
+                      <p className="text-muted-foreground">
+                        {formData.description.length}/{MAX_DESCRIPTION_LENGTH} characters
+                      </p>
+                    )}
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
