@@ -289,73 +289,13 @@ export default function Home() {
               </Link>
             </div>
             <div className="max-w-[1400px] mx-auto">
-              <ListingGrid listings={listings} loading={loading} />
-            </div>
-          </section>
-
-          {/* Membership Section */}
-          <section className="container mx-auto px-4 py-8 sm:py-12">
-            <h2 className="text-2xl font-bold text-center mb-8">
-              Choose Your Plan
-            </h2>
-            <div className="grid sm:grid-cols-2 gap-6 sm:gap-8 max-w-4xl mx-auto">
-              <Card className="p-6">
-                <h3 className="text-xl font-bold mb-4">Free Account</h3>
-                <ul className="space-y-2 mb-6">
-                  <li className="flex items-center gap-2">
-                    <span className="text-green-500">✓</span>
-                    Up to 2 active listings
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <span className="text-green-500">✓</span>
-                    Basic search features
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <span className="text-green-500">✓</span>
-                    Message other users
-                  </li>
-                </ul>
-                <Link href="/auth/sign-up">
-                  <Button className="w-full" variant="outline">
-                    Get Started
-                  </Button>
-                </Link>
-              </Card>
-              <Card className="p-6 relative overflow-hidden border-sky-400">
-                <div className="absolute top-0 right-0 bg-sky-400 text-white px-4 py-1 rounded-bl">
-                  Popular
-                </div>
-                <h3 className="text-xl font-bold mb-4">Premium Account</h3>
-                <div className="text-2xl font-bold mb-4">
-                  $5
-                  <span className="text-base font-normal text-muted-foreground">
-                    /month
-                  </span>
-                </div>
-                <ul className="space-y-2 mb-6">
-                  <li className="flex items-center gap-2">
-                    <span className="text-green-500">✓</span>
-                    Unlimited active listings
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <span className="text-green-500">✓</span>
-                    Priority support
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <span className="text-green-500">✓</span>
-                    Advanced search filters
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <span className="text-green-500">✓</span>
-                    Featured listings
-                  </li>
-                </ul>
-                <Link href="/auth/sign-up">
-                  <Button className="w-full bg-sky-400 hover:bg-sky-500">
-                    Start Premium
-                  </Button>
-                </Link>
-              </Card>
+              <ListingGrid 
+                listings={listings} 
+                loading={loading} 
+                displayCount={displayCount}
+                hasMore={listings.length > displayCount}
+                onLoadMore={() => setDisplayCount(prev => prev + 6)}
+              />
             </div>
           </section>
         </main>
