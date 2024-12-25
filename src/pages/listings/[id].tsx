@@ -49,6 +49,11 @@ export default function ListingPage() {
       if (isMounted) setError(null);
 
       try {
+        // Get a fresh ID token before making the request
+        if (user) {
+          await user.getIdToken(true);
+        }
+        
         const db = getFirestore(app);
         const listingDoc = await getDoc(doc(db, 'listings', id));
 
