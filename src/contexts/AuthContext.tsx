@@ -313,6 +313,42 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     );
   }
 
+  const updateProfile = async (data: {
+    displayName?: string;
+    photoURL?: string;
+    bio?: string;
+    location?: string;
+    contact?: string;
+  }) => {
+    try {
+      if (!user) {
+        throw new Error('No user logged in');
+      }
+
+      // Update Firebase user profile
+      await retryOperation(() =>
+        updateProfile(user, {
+          ...(data.displayName && { displayName: data.displayName }),
+          ...(data.photoURL && { photoURL: data.photoURL })
+        })
+      );
+
+      // Update custom claims or additional user data in Firestore
+      const userDocRef = doc(db, 'users', user.uid);
+      await setDoc(userDocRef, {
+        bio: data.bio || '',
+        location: data.location || '',
+        contact: data.contact || '',
+        updatedAt: serverTimestamp()
+      }, { merge: true });
+
+      return { error: null };
+    } catch (error: any) {
+      console.error('Update profile error:', error);
+      return { error: new Error(error.message || 'Failed to update profile. Please try again.') };
+    }
+  };
+
   return (
     <AuthContext.Provider value={{ 
       user, 
@@ -321,6 +357,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       signUp, 
       signOut, 
       updateUsername,
+      updateProfile,
       refreshToken 
     }}>
       {children}
