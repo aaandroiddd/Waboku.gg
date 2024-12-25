@@ -106,13 +106,13 @@ const SettingsPageContent = () => {
         if (usernameError) throw usernameError;
       }
 
-      // Update other profile information
-      await updateProfile({
-        photoURL,
-        bio: formData.bio,
-        location: formData.location,
-        contact: formData.contact
-      });
+      // Update Firebase profile
+      if (user) {
+        await firebaseUpdateProfile(user, {
+          photoURL,
+          displayName: formData.username
+        });
+      }
 
       setSuccess("Profile updated successfully!");
     } catch (err: any) {
