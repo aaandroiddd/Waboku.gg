@@ -59,7 +59,7 @@ service cloud.firestore {
 
     // Listings collection rules with rate limiting and validation
     match /listings/{listingId} {
-      allow read: if true;
+      allow read: if true;  // Public listings are readable by everyone
       allow create: if isAuthenticated() 
         && isValidListing(request.resource.data)
         && request.resource.data.userId == request.auth.uid;
@@ -71,7 +71,7 @@ service cloud.firestore {
     
     // User profiles with enhanced validation
     match /users/{userId} {
-      allow read: if true;
+      allow read: if true;  // Public profiles are readable by everyone
       allow create: if isOwner(userId) && isValidProfile(request.resource.data);
       allow update: if isOwner(userId) 
         && isValidProfile(request.resource.data)
@@ -97,7 +97,7 @@ service cloud.firestore {
 
     // Favorites collection rules with rate limiting
     match /favorites/{favoriteId} {
-      allow read: if true;
+      allow read: if isAuthenticated();  // Only authenticated users can see favorites
       allow create: if isAuthenticated() 
         && request.resource.data.userId == request.auth.uid
         && isNotRateLimited();
