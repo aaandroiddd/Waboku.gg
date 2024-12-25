@@ -83,6 +83,10 @@ const initializeFirebase = () => {
 
     // Initialize services with persistence enabled
     auth = getAuth(app);
+    if (!auth) {
+      throw new Error('Auth initialization failed');
+    }
+    
     db = getFirestore(app);
     storage = getStorage(app);
 
