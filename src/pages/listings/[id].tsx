@@ -57,15 +57,6 @@ export default function ListingPage() {
       try {
         console.log('Fetching listing with ID:', id);
         
-        // Wait for Firebase to be fully initialized and auth state to be determined
-        if (!app || !db) {
-          console.log('Waiting for Firebase initialization...');
-          await new Promise(resolve => setTimeout(resolve, 2000));
-          if (!app || !db) {
-            throw new Error('Firebase initialization timeout');
-          }
-        }
-        
         // Add retry mechanism for Firestore query
         let attempts = 0;
         const maxAttempts = 3;
@@ -73,7 +64,9 @@ export default function ListingPage() {
         
         while (attempts < maxAttempts) {
           try {
-            listingDoc = await getDoc(doc(db, 'listings', id));
+            // Get a fresh reference to the document
+            const listingRef = doc(db, 'listings', id);
+            listingDoc = await getDoc(listingRef);
             
             // Verify that the document was actually retrieved
             if (!listingDoc.exists()) {
@@ -87,7 +80,7 @@ export default function ListingPage() {
               error: retryError,
               code: retryError.code,
               message: retryError.message,
-              authState: auth.currentUser ? 'logged-in' : 'logged-out'
+              authState: user ? 'logged-in' : 'logged-out'
             });
             
             if (attempts === maxAttempts) throw retryError;
