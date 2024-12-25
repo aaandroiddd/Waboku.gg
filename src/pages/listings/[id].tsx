@@ -43,19 +43,36 @@ export default function ListingPage() {
     let isMounted = true;
 
     async function fetchListing() {
-      if (!id || typeof id !== 'string') return;
+      if (!id || typeof id !== 'string') {
+        console.log('Invalid listing ID:', id);
+        return;
+      }
       
-      if (isMounted) setLoading(true);
-      if (isMounted) setError(null);
+      if (isMounted) {
+        setLoading(true);
+        setError(null);
+      }
 
       try {
-        // Get a fresh ID token before making the request
-        if (user) {
-          await user.getIdToken(true);
-        }
-        
+        console.log('Fetching listing with ID:', id);
         const db = getFirestore(app);
-        const listingDoc = await getDoc(doc(db, 'listings', id));
+        
+        // Add retry mechanism for Firestore query
+        let attempts = 0;
+        const maxAttempts = 3;
+        let listingDoc;
+        
+        while (attempts < maxAttempts) {
+          try {
+            listingDoc = await getDoc(doc(db, 'listings', id));
+            break;
+          } catch (retryError) {
+            attempts++;
+            console.error(`Attempt ${attempts} failed:`, retryError);
+            if (attempts === maxAttempts) throw retryError;
+            await new Promise(resolve => setTimeout(resolve, 1000 * attempts)); // Exponential backoff
+          }
+        }
 
         if (!listingDoc.exists()) {
           if (isMounted) {
