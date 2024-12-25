@@ -31,7 +31,9 @@ const SettingsPageContent = () => {
   const [formData, setFormData] = useState({
     username: user?.displayName || "",
     bio: "",
-    location: "",
+    address: "",
+    city: "",
+    state: "",
     contact: "",
     youtube: "",
     twitter: "",
