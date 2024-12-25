@@ -6,6 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import ListingGrid from '@/components/ListingGrid';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface UserProfile {
   id: string;
@@ -23,6 +24,8 @@ export default function ProfilePage() {
   const { id } = router.query;
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const { user } = useAuth();
 
   useEffect(() => {
     let isMounted = true;
@@ -31,6 +34,9 @@ export default function ProfilePage() {
       if (!id) return;
       
       try {
+        setIsLoading(true);
+        setError(null);
+
         // Mock data for demonstration
         const profileData = {
           id: id as string,
@@ -40,7 +46,7 @@ export default function ProfilePage() {
           totalSales: 156,
           rating: 4.8,
           bio: "Passionate TCG collector and trader. Specializing in rare Pokemon and Yu-Gi-Oh cards.",
-          avatarUrl: "https://assets.co.dev/171838d1-5208-4d56-8fa3-d46502238350/image-82bb4ad.png"
+          avatarUrl: "/images/rect.png" // Using local fallback image
         };
 
         if (isMounted) {
@@ -48,6 +54,9 @@ export default function ProfilePage() {
         }
       } catch (error) {
         console.error('Error fetching profile:', error);
+        if (isMounted) {
+          setError('Failed to load profile. Please try again later.');
+        }
       } finally {
         if (isMounted) {
           setIsLoading(false);
@@ -63,7 +72,7 @@ export default function ProfilePage() {
   }, [id]);
 
   if (!id) {
-    return null; // Return null on initial render when id is not available
+    return null;
   }
 
   if (isLoading) {
@@ -74,6 +83,19 @@ export default function ProfilePage() {
           <div className="h-8 bg-secondary rounded w-1/4 mb-4"></div>
           <div className="h-4 bg-secondary rounded w-3/4"></div>
         </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="container mx-auto p-6">
+        <Card>
+          <CardContent className="p-6">
+            <h1 className="text-2xl font-bold text-center text-destructive">Error</h1>
+            <p className="text-center text-muted-foreground mt-2">{error}</p>
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -116,7 +138,9 @@ export default function ProfilePage() {
                   <h1 className="text-3xl font-bold mb-2">{profile.username}</h1>
                   <p className="text-muted-foreground">Member since {profile.joinDate}</p>
                 </div>
-                <Button variant="secondary">Message</Button>
+                {user && user.uid !== id && (
+                  <Button variant="secondary">Message</Button>
+                )}
               </div>
               
               <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
