@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { 
   User,
   createUserWithEmailAndPassword,
@@ -6,6 +6,8 @@ import {
   signOut as firebaseSignOut,
   onAuthStateChanged,
   updateProfile,
+  getIdToken,
+  onIdTokenChanged
 } from 'firebase/auth';
 import { auth, checkUsernameAvailability, reserveUsername, releaseUsername } from '@/lib/firebase';
 
@@ -16,46 +18,89 @@ type AuthContextType = {
   signUp: (email: string, password: string, username: string) => Promise<{ error: Error | null, user: User | null }>;
   signOut: () => Promise<void>;
   updateUsername: (username: string) => Promise<{ error: Error | null }>;
+  refreshToken: () => Promise<string | null>;
 };
 
 const AuthContext = createContext<AuthContextType | null>(null);
+
+const TOKEN_REFRESH_INTERVAL = 10 * 60 * 1000; // 10 minutes
+const MAX_RETRY_ATTEMPTS = 3;
+const RETRY_DELAY = 1000;
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [initialized, setInitialized] = useState(false);
 
-  useEffect(() => {
+  // Retry mechanism with exponential backoff
+  const retryOperation = async <T,>(
+    operation: () => Promise<T>,
+    attempts = MAX_RETRY_ATTEMPTS
+  ): Promise<T> => {
+    for (let i = 0; i < attempts; i++) {
+      try {
+        return await operation();
+      } catch (error: any) {
+        if (i === attempts - 1) throw error;
+        
+        const delay = RETRY_DELAY * Math.pow(2, i);
+        console.warn(`Operation failed, retrying in ${delay}ms...`, {
+          attempt: i + 1,
+          error: error.message
+        });
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+    throw new Error('Retry operation failed');
+  };
+
+  // Token refresh mechanism
+  const refreshToken = useCallback(async (): Promise<string | null> => {
+    if (!user) return null;
+
     try {
-      const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      return await retryOperation(async () => {
+        const token = await user.getIdToken(true);
+        return token;
+      });
+    } catch (error) {
+      console.error('Token refresh failed:', error);
+      return null;
+    }
+  }, [user]);
+
+  // Enhanced auth state management
+  useEffect(() => {
+    let tokenRefreshInterval: NodeJS.Timeout;
+
+    try {
+      const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
         if (user) {
           try {
             if (!navigator.onLine) {
               console.warn('No internet connection detected');
               return;
             }
-            const token = await user.getIdToken();
-            const decodedToken = JSON.parse(atob(token.split('.')[1]));
-            const expirationTime = decodedToken.exp * 1000;
-            
-            if (Date.now() + 5 * 60 * 1000 > expirationTime) {
-              await user.getIdToken(true);
-            }
+
+            await retryOperation(async () => {
+              const token = await user.getIdToken();
+              const decodedToken = JSON.parse(atob(token.split('.')[1]));
+              const expirationTime = decodedToken.exp * 1000;
+              
+              if (Date.now() + 5 * 60 * 1000 > expirationTime) {
+                await user.getIdToken(true);
+              }
+            });
           } catch (error: any) {
-            console.error('Token refresh error:', {
+            console.error('Token validation error:', {
               code: error.code,
               message: error.message,
               isOnline: navigator.onLine
             });
-            if (error.message === 'Failed to fetch' || !navigator.onLine) {
-              // Wait and retry once
-              await new Promise(resolve => setTimeout(resolve, 2000));
-              try {
-                await user.getIdToken(true);
-              } catch (retryError) {
-                console.error('Retry failed:', retryError);
-                await signOut();
-              }
+
+            if (error.code === 'auth/network-request-failed' || !navigator.onLine) {
+              // Handle offline scenario
+              console.log('Operating in offline mode');
             } else {
               await signOut();
             }
@@ -66,49 +111,63 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setInitialized(true);
       });
 
-      const refreshInterval = setInterval(async () => {
-        const currentUser = auth.currentUser;
-        if (currentUser) {
+      // Token refresh listener
+      const unsubscribeToken = onIdTokenChanged(auth, async (user) => {
+        if (user) {
           try {
-            await currentUser.getIdToken(true);
+            await user.getIdToken(true);
           } catch (error) {
-            console.error('Periodic token refresh error:', error);
-            await signOut();
+            console.error('Token refresh error:', error);
           }
         }
-      }, 30 * 60 * 1000);
+      });
+
+      // Set up periodic token refresh
+      if (user) {
+        tokenRefreshInterval = setInterval(refreshToken, TOKEN_REFRESH_INTERVAL);
+      }
 
       return () => {
-        unsubscribe();
-        clearInterval(refreshInterval);
+        unsubscribeAuth();
+        unsubscribeToken();
+        if (tokenRefreshInterval) clearInterval(tokenRefreshInterval);
       };
     } catch (error) {
       console.error('Auth initialization error:', error);
       setLoading(false);
       setInitialized(true);
     }
-  }, []);
+  }, [user, refreshToken]);
 
   const signUp = async (email: string, password: string, username: string) => {
     try {
-      const isAvailable = await checkUsernameAvailability(username);
+      const isAvailable = await retryOperation(() => 
+        checkUsernameAvailability(username)
+      );
+
       if (!isAvailable) {
         throw new Error('This username is already taken. Please choose another one.');
       }
 
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const userCredential = await retryOperation(() =>
+        createUserWithEmailAndPassword(auth, email, password)
+      );
       
       try {
-        await reserveUsername(username, userCredential.user.uid);
+        await retryOperation(() =>
+          reserveUsername(username, userCredential.user.uid)
+        );
       } catch (error) {
         await userCredential.user.delete();
         throw error;
       }
 
       try {
-        await updateProfile(userCredential.user, {
-          displayName: username
-        });
+        await retryOperation(() =>
+          updateProfile(userCredential.user, {
+            displayName: username
+          })
+        );
       } catch (error) {
         await releaseUsername(username);
         await userCredential.user.delete();
@@ -117,23 +176,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       return { error: null, user: userCredential.user };
     } catch (error: any) {
-      console.error('Sign up error:', error);
-      let errorMessage = 'An unexpected error occurred';
-      
-      switch (error.code) {
-        case 'auth/email-already-in-use':
-          errorMessage = 'This email is already registered. Please try signing in instead.';
-          break;
-        case 'auth/invalid-email':
-          errorMessage = 'Please enter a valid email address.';
-          break;
-        case 'auth/weak-password':
-          errorMessage = 'Please choose a stronger password. It should be at least 6 characters long.';
-          break;
-        default:
-          errorMessage = error.message || 'Failed to create account. Please try again.';
-      }
-      
+      console.error('Sign up error:', {
+        code: error.code,
+        message: error.message,
+        stack: error.stack
+      });
+
+      const errorMessage = getAuthErrorMessage(error);
       return { 
         error: new Error(errorMessage),
         user: null
@@ -143,67 +192,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signIn = async (email: string, password: string) => {
     try {
-      console.log('AuthContext: Starting sign in process');
+      console.log('Starting sign in process');
       
       if (!auth) {
-        console.error('AuthContext: Auth instance is not initialized');
+        console.error('Auth instance is not initialized');
         throw new Error('Authentication service is not available');
       }
 
-      const result = await signInWithEmailAndPassword(auth, email, password);
-      console.log('AuthContext: Sign in successful', { uid: result.user.uid });
+      await retryOperation(() =>
+        signInWithEmailAndPassword(auth, email, password)
+      );
+
       return { error: null };
     } catch (error: any) {
-      console.error('AuthContext: Sign in error:', {
+      console.error('Sign in error:', {
         code: error.code,
         message: error.message,
         stack: error.stack
       });
       
-      let errorMessage = 'An unexpected error occurred';
+      const errorMessage = getAuthErrorMessage(error);
       const errorWithCode = new Error(errorMessage);
       errorWithCode.name = error.code || 'auth/unknown';
       
-      switch (error.code) {
-        case 'auth/invalid-email':
-          errorMessage = 'Invalid email address.';
-          break;
-        case 'auth/user-disabled':
-          errorMessage = 'This account has been disabled. Please contact support.';
-          break;
-        case 'auth/user-not-found':
-        case 'auth/wrong-password':
-          errorMessage = 'Invalid email or password.';
-          break;
-        case 'auth/network-request-failed':
-          errorMessage = 'Network error. Please check your internet connection.';
-          break;
-        case 'auth/too-many-requests':
-          errorMessage = 'Too many failed attempts. Please try again later.';
-          break;
-        case 'auth/internal-error':
-          errorMessage = 'Authentication service error. Please try again later.';
-          break;
-        case 'auth/configuration-not-found':
-        case 'auth/invalid-api-key':
-          errorMessage = 'Authentication service configuration error. Please contact support.';
-          break;
-        default:
-          if (error.message?.includes('fetch')) {
-            errorMessage = 'Network error. Please check your internet connection and try again.';
-          } else {
-            errorMessage = 'Failed to sign in. Please try again.';
-          }
-      }
-      
-      errorWithCode.message = errorMessage;
       return { error: errorWithCode };
     }
   };
 
   const signOut = async () => {
     try {
-      await firebaseSignOut(auth);
+      await retryOperation(() => firebaseSignOut(auth));
     } catch (error) {
       console.error('Sign out error:', error);
       throw error;
@@ -216,20 +234,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw new Error('No user logged in');
       }
 
-      const isAvailable = await checkUsernameAvailability(username);
+      const isAvailable = await retryOperation(() =>
+        checkUsernameAvailability(username)
+      );
+
       if (!isAvailable) {
         throw new Error('This username is already taken. Please choose another one.');
       }
 
       if (user.displayName) {
-        await releaseUsername(user.displayName);
+        await retryOperation(() =>
+          releaseUsername(user.displayName)
+        );
       }
 
-      await reserveUsername(username, user.uid);
+      await retryOperation(() =>
+        reserveUsername(username, user.uid)
+      );
 
-      await updateProfile(user, {
-        displayName: username
-      });
+      await retryOperation(() =>
+        updateProfile(user, {
+          displayName: username
+        })
+      );
 
       setUser({ ...user });
 
@@ -237,6 +264,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (error: any) {
       console.error('Update username error:', error);
       return { error: new Error(error.message || 'Failed to update username. Please try again.') };
+    }
+  };
+
+  // Helper function to get user-friendly error messages
+  const getAuthErrorMessage = (error: any): string => {
+    switch (error.code) {
+      case 'auth/email-already-in-use':
+        return 'This email is already registered. Please try signing in instead.';
+      case 'auth/invalid-email':
+        return 'Please enter a valid email address.';
+      case 'auth/weak-password':
+        return 'Please choose a stronger password. It should be at least 6 characters long.';
+      case 'auth/user-disabled':
+        return 'This account has been disabled. Please contact support.';
+      case 'auth/user-not-found':
+      case 'auth/wrong-password':
+        return 'Invalid email or password.';
+      case 'auth/network-request-failed':
+        return 'Network error. Please check your internet connection.';
+      case 'auth/too-many-requests':
+        return 'Too many failed attempts. Please try again later.';
+      case 'auth/internal-error':
+        return 'Authentication service error. Please try again later.';
+      case 'auth/configuration-not-found':
+      case 'auth/invalid-api-key':
+        return 'Authentication service configuration error. Please contact support.';
+      default:
+        if (error.message?.includes('fetch')) {
+          return 'Network error. Please check your internet connection and try again.';
+        }
+        return 'Failed to authenticate. Please try again.';
     }
   };
 
@@ -249,7 +307,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading, signIn, signUp, signOut, updateUsername }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      loading, 
+      signIn, 
+      signUp, 
+      signOut, 
+      updateUsername,
+      refreshToken 
+    }}>
       {children}
     </AuthContext.Provider>
   );
