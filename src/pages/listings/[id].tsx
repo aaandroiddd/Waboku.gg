@@ -337,15 +337,17 @@ export default function ListingPage() {
                       {({ zoomIn, zoomOut, resetTransform }) => (
                         <div className="relative w-full h-full">
                           <TransformComponent 
-                            wrapperClass="w-full h-full !flex !items-center !justify-center" 
-                            contentClass="w-full h-full flex items-center justify-center"
+                            wrapperClass="!w-full !h-full !flex !items-center !justify-center" 
+                            contentClass="!w-full !h-full !flex !items-center !justify-center"
                           >
-                            <img
-                              src={url}
-                              alt={`${listing.title} - Image ${index + 1}`}
-                              className="max-w-full max-h-[85vh] object-contain"
-                              loading="eager"
-                            />
+                            <div className="relative w-full h-full flex items-center justify-center">
+                              <img
+                                src={url}
+                                alt={`${listing.title} - Image ${index + 1}`}
+                                className="max-w-full max-h-[85vh] w-auto h-auto object-contain"
+                                loading="eager"
+                              />
+                            </div>
                           </TransformComponent>
                           <div 
                             className="absolute bottom-4 left-1/2 transform -translate-x-1/2 z-10 bg-background/90 rounded-lg p-2 backdrop-blur-sm shadow-lg"
