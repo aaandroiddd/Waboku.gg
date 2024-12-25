@@ -160,10 +160,14 @@ export function ListingGrid({
                 </div>
 
                 <div className="flex items-center justify-between text-sm text-muted-foreground">
-                  <div className="flex items-center gap-1">
+                  <Link 
+                    href={`/profile/${listing.userId}`}
+                    className="flex items-center gap-1 hover:text-foreground transition-colors"
+                    onClick={(e) => e.stopPropagation()}
+                  >
                     <User className="h-4 w-4" />
                     <span className="truncate">{listing.username || 'Unknown seller'}</span>
-                  </div>
+                  </Link>
                   {listing.city && listing.state && (
                     <div className="flex items-center gap-1">
                       <MapPin className="h-4 w-4" />
