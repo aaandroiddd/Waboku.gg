@@ -47,9 +47,25 @@ export default function ListingPage() {
 
       try {
         const db = getFirestore(app);
-        const listingDoc = await getDoc(doc(db, 'listings', id as string));
+        
+        // Add retry logic for fetching the listing
+        let retryCount = 0;
+        const maxRetries = 3;
+        let listingDoc;
 
-        if (!listingDoc.exists()) {
+        while (retryCount < maxRetries) {
+          try {
+            listingDoc = await getDoc(doc(db, 'listings', id as string));
+            break;
+          } catch (err) {
+            console.error(`Attempt ${retryCount + 1} failed:`, err);
+            retryCount++;
+            if (retryCount === maxRetries) throw err;
+            await new Promise(resolve => setTimeout(resolve, 1000 * retryCount)); // Exponential backoff
+          }
+        }
+
+        if (!listingDoc || !listingDoc.exists()) {
           setError('Listing not found');
           setLoading(false);
           return;
