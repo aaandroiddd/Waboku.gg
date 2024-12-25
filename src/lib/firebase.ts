@@ -81,7 +81,7 @@ const initializeFirebase = () => {
       app = getApps()[0];
     }
 
-    // Initialize services with persistence enabled
+    // Initialize services
     auth = getAuth(app);
     if (!auth) {
       throw new Error('Auth initialization failed');
@@ -90,29 +90,11 @@ const initializeFirebase = () => {
     db = getFirestore(app);
     storage = getStorage(app);
 
-    // Enable offline persistence for Firestore
-    if (typeof window !== 'undefined') {
-      try {
-        db.enablePersistence({ synchronizeTabs: true })
-          .catch((err) => {
-            if (err.code === 'failed-precondition') {
-              console.warn('Multiple tabs open, persistence can only be enabled in one tab at a time.');
-            } else if (err.code === 'unimplemented') {
-              console.warn('The current browser does not support persistence.');
-            }
-          });
-      } catch (err) {
-        console.warn('Failed to enable persistence:', err);
-      }
-    }
-
-    // Configure Firestore settings first
+    // Configure Firestore settings
     if (typeof window !== 'undefined') {
       const settings = {
-        cacheSizeBytes: 50000000, // 50 MB cache size
         experimentalForceLongPolling: true,
-        useFetchStreams: false,
-        experimentalAutoDetectLongPolling: true
+        useFetchStreams: false
       };
       
       try {
@@ -122,23 +104,13 @@ const initializeFirebase = () => {
         console.warn('Firestore settings initialization error:', e);
       }
 
-      // Set auth persistence after Firestore settings
+      // Set auth persistence
       setPersistence(auth, browserLocalPersistence)
         .then(() => {
           console.log('Auth persistence set successfully');
-          if (auth.currentUser) {
-            return auth.currentUser.getIdToken(true);
-          }
-        })
-        .then(() => {
-          console.log('Token refreshed successfully');
         })
         .catch((error) => {
-          console.error("Error setting auth persistence:", {
-            code: error.code,
-            message: error.message,
-            stack: error.stack
-          });
+          console.error("Error setting auth persistence:", error);
         });
     }
     
