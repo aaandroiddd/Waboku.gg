@@ -84,8 +84,9 @@ const initializeFirebase = () => {
     auth = getAuth(app);
     db = getFirestore(app);
 
-    // Only set persistence in browser environment
+    // Enable offline persistence for Firestore
     if (typeof window !== 'undefined') {
+      // Set auth persistence
       setPersistence(auth, browserLocalPersistence)
         .then(() => {
           console.log('Auth persistence set successfully');
@@ -97,6 +98,25 @@ const initializeFirebase = () => {
             stack: error.stack
           });
         });
+
+      // Enable Firestore offline persistence
+      const settings = {
+        cacheSizeBytes: 50000000, // 50 MB cache size
+        experimentalForceLongPolling: true,
+        useFetchStreams: false
+      };
+      
+      try {
+        db.enablePersistence(settings).catch((err) => {
+          if (err.code === 'failed-precondition') {
+            console.warn('Multiple tabs open, persistence can only be enabled in one tab at a time.');
+          } else if (err.code === 'unimplemented') {
+            console.warn('The current browser does not support persistence.');
+          }
+        });
+      } catch (e) {
+        console.warn('Firestore persistence initialization error:', e);
+      }
     }
 
     // Initialize Storage
