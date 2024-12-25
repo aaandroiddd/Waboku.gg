@@ -1,6 +1,20 @@
 import { initializeApp, getApps, FirebaseApp } from 'firebase/app';
 import { getAuth, setPersistence, browserLocalPersistence, Auth, connectAuthEmulator } from 'firebase/auth';
-import { getFirestore, collection, doc, setDoc, getDoc, deleteDoc, getDocs, query, where, Firestore } from 'firebase/firestore';
+import { 
+  getFirestore, 
+  collection, 
+  doc, 
+  setDoc, 
+  getDoc, 
+  deleteDoc, 
+  getDocs, 
+  query, 
+  where, 
+  Firestore,
+  enableIndexedDbPersistence,
+  enableMultiTabIndexedDbPersistence,
+  CACHE_SIZE_UNLIMITED
+} from 'firebase/firestore';
 import { getStorage, FirebaseStorage } from 'firebase/storage';
 
 const firebaseConfig = {
@@ -17,7 +31,7 @@ let auth: Auth;
 let db: Firestore;
 let storage: FirebaseStorage;
 
-// Validate Firebase configuration
+// Enhanced validation with detailed error messages
 const validateFirebaseConfig = () => {
   const requiredKeys = [
     'apiKey',
@@ -30,44 +44,70 @@ const validateFirebaseConfig = () => {
 
   console.log('Validating Firebase configuration...');
 
-  // Check for undefined or empty string values
-  const missingKeys = requiredKeys.filter(key => {
+  // Check for undefined or empty string values with detailed feedback
+  const configErrors = requiredKeys.reduce((errors, key) => {
     const value = firebaseConfig[key];
-    return value === undefined || value === null || value.trim() === '';
-  });
+    if (value === undefined || value === null || value.trim() === '') {
+      errors.push({
+        key,
+        error: `Missing or empty value for ${key}`,
+        value: value === undefined ? 'undefined' : value === null ? 'null' : 'empty string'
+      });
+    }
+    return errors;
+  }, [] as Array<{ key: string; error: string; value: string }>);
   
-  if (missingKeys.length > 0) {
-    const error = new Error(`Missing or empty Firebase configuration keys: ${missingKeys.join(', ')}`);
-    console.error('Firebase configuration error:', {
-      error: error.message,
-      missingKeys,
-      config: {
-        authDomain: firebaseConfig.authDomain || 'missing',
-        projectId: firebaseConfig.projectId || 'missing',
-        storageBucket: firebaseConfig.storageBucket || 'missing',
-        messagingSenderId: firebaseConfig.messagingSenderId || 'missing',
-        appId: firebaseConfig.appId || 'missing',
-        apiKey: firebaseConfig.apiKey ? '[PRESENT]' : 'missing'
-      }
+  if (configErrors.length > 0) {
+    const errorMessage = configErrors
+      .map(error => `${error.key}: ${error.error}`)
+      .join('\n');
+    console.error('Firebase configuration validation failed:', {
+      errors: configErrors,
+      timestamp: new Date().toISOString()
     });
-    throw error;
+    throw new Error(`Firebase configuration errors:\n${errorMessage}`);
   }
 
-  // Validate API key format (less strict validation)
+  // Enhanced API key validation
   if (!firebaseConfig.apiKey.startsWith('AIza')) {
-    const error = new Error('Invalid Firebase API key format');
-    console.error('Firebase API key validation error:', {
-      error: error.message,
+    console.error('Firebase API key validation failed:', {
+      error: 'Invalid API key format',
       keyPresent: !!firebaseConfig.apiKey,
-      startsWithAIza: firebaseConfig.apiKey ? firebaseConfig.apiKey.startsWith('AIza') : false
+      timestamp: new Date().toISOString()
     });
-    throw error;
+    throw new Error('Invalid Firebase API key format. API key should start with "AIza"');
   }
 
   console.log('Firebase configuration validation successful');
 };
 
-const initializeFirebase = () => {
+// Exponential backoff retry mechanism
+const retry = async (
+  operation: () => Promise<any>,
+  maxAttempts = 3,
+  baseDelay = 1000
+): Promise<any> => {
+  let lastError;
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    try {
+      return await operation();
+    } catch (error: any) {
+      lastError = error;
+      if (attempt === maxAttempts - 1) break;
+      
+      const delay = baseDelay * Math.pow(2, attempt);
+      console.warn(`Operation failed, retrying in ${delay}ms...`, {
+        attempt: attempt + 1,
+        maxAttempts,
+        error: error.message
+      });
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+  throw lastError;
+};
+
+const initializeFirebase = async () => {
   try {
     console.log('Initializing Firebase...');
     validateFirebaseConfig();
@@ -81,62 +121,76 @@ const initializeFirebase = () => {
       app = getApps()[0];
     }
 
-    // Initialize services
-    auth = getAuth(app);
-    if (!auth) {
-      throw new Error('Auth initialization failed');
-    }
-    
-    db = getFirestore(app);
-    storage = getStorage(app);
+    // Initialize services with retry mechanism
+    auth = await retry(() => getAuth(app));
+    db = await retry(() => getFirestore(app));
+    storage = await retry(() => getStorage(app));
 
-    // Configure Firestore settings
+    // Configure Firestore settings and persistence
     if (typeof window !== 'undefined') {
-      const settings = {
-        experimentalForceLongPolling: true,
-        useFetchStreams: false
-      };
-      
       try {
-        db.settings(settings);
-        console.log('Firestore settings configured successfully');
+        // Enable offline persistence with unlimited cache size
+        await retry(() => 
+          enableMultiTabIndexedDbPersistence(db)
+            .catch((err) => {
+              if (err.code === 'failed-precondition') {
+                // Multiple tabs open, fallback to single-tab persistence
+                return enableIndexedDbPersistence(db);
+              } else if (err.code === 'unimplemented') {
+                console.warn('Browser doesn\'t support persistence');
+              }
+              throw err;
+            })
+        );
+
+        // Configure Firestore settings
+        db.settings({
+          cacheSizeBytes: CACHE_SIZE_UNLIMITED,
+          experimentalForceLongPolling: true,
+          experimentalAutoDetectLongPolling: true,
+          ignoreUndefinedProperties: true
+        });
+
+        console.log('Firestore persistence and settings configured successfully');
       } catch (e) {
-        console.warn('Firestore settings initialization error:', e);
+        console.warn('Firestore persistence initialization error:', e);
       }
 
-      // Set auth persistence
-      setPersistence(auth, browserLocalPersistence)
-        .then(() => {
-          console.log('Auth persistence set successfully');
-        })
-        .catch((error) => {
-          console.error("Error setting auth persistence:", error);
-        });
+      // Set auth persistence with retry
+      await retry(() => 
+        setPersistence(auth, browserLocalPersistence)
+      );
     }
     
     console.log('Firebase initialization complete');
     return { app, auth, db, storage };
   } catch (error: any) {
-    console.error('Error initializing Firebase:', {
+    console.error('Firebase initialization failed:', {
       code: error.code,
       message: error.message,
       stack: error.stack,
-      config: {
-        ...firebaseConfig,
-        apiKey: firebaseConfig.apiKey ? '[REDACTED]' : undefined
-      }
+      timestamp: new Date().toISOString()
     });
-    throw new Error('Failed to initialize Firebase: ' + error.message);
+    throw new Error(`Failed to initialize Firebase: ${error.message}`);
   }
 };
 
-// Initialize Firebase
-const { app: initializedApp, auth: initializedAuth, db: initializedDb } = initializeFirebase();
-app = initializedApp;
-auth = initializedAuth;
-db = initializedDb;
+// Initialize Firebase with async/await
+let initialized = false;
+const initializeFirebaseAsync = async () => {
+  if (!initialized) {
+    const { app: initializedApp, auth: initializedAuth, db: initializedDb, storage: initializedStorage } = 
+      await initializeFirebase();
+    app = initializedApp;
+    auth = initializedAuth;
+    db = initializedDb;
+    storage = initializedStorage;
+    initialized = true;
+  }
+  return { app, auth, db, storage };
+};
 
-// Username management functions
+// Enhanced username management functions with retry mechanism
 export const checkUsernameAvailability = async (username: string): Promise<boolean> => {
   if (!db) throw new Error('Database not initialized');
   
@@ -147,80 +201,79 @@ export const checkUsernameAvailability = async (username: string): Promise<boole
     throw new Error('Username cannot be empty');
   }
 
-  // Validate username format
   const usernameRegex = /^[a-zA-Z0-9_-]{3,20}$/;
   if (!usernameRegex.test(username)) {
     console.log('Username check failed: Invalid format');
     throw new Error('Username must be 3-20 characters long and can only contain letters, numbers, underscores, and hyphens');
   }
 
-  try {
-    const normalizedUsername = username.toLowerCase().trim();
-    const usernamesRef = collection(db, 'usernames');
-    const q = query(usernamesRef, where('username', '==', normalizedUsername));
-    
-    console.log('Checking username in Firestore:', normalizedUsername);
-    
-    const querySnapshot = await getDocs(q);
-    const isAvailable = querySnapshot.empty;
-    
-    console.log('Username availability result:', {
-      username: normalizedUsername,
-      isAvailable,
-      timestamp: new Date().toISOString()
-    });
+  return retry(async () => {
+    try {
+      const normalizedUsername = username.toLowerCase().trim();
+      const usernamesRef = collection(db, 'usernames');
+      const q = query(usernamesRef, where('username', '==', normalizedUsername));
+      
+      const querySnapshot = await getDocs(q);
+      const isAvailable = querySnapshot.empty;
+      
+      console.log('Username availability result:', {
+        username: normalizedUsername,
+        isAvailable,
+        timestamp: new Date().toISOString()
+      });
 
-    return isAvailable;
-  } catch (error: any) {
-    console.error('Username check error:', {
-      username,
-      error: {
-        code: error.code,
-        message: error.message,
-        stack: error.stack
-      },
-      timestamp: new Date().toISOString()
-    });
+      return isAvailable;
+    } catch (error: any) {
+      console.error('Username check error:', {
+        username,
+        error: {
+          code: error.code,
+          message: error.message,
+          stack: error.stack
+        },
+        timestamp: new Date().toISOString()
+      });
 
-    if (error.code === 'permission-denied') {
-      throw new Error('Permission denied while checking username availability');
+      throw error;
     }
-
-    if (error.code === 'unavailable' || error.code === 'resource-exhausted') {
-      throw new Error('Service is temporarily unavailable. Please try again in a moment.');
-    }
-
-    throw new Error('Unable to check username availability. Please try again.');
-  }
+  });
 };
 
 export const reserveUsername = async (username: string, userId: string): Promise<void> => {
   if (!db) throw new Error('Database not initialized');
   
-  try {
-    const normalizedUsername = username.toLowerCase().trim();
-    await setDoc(doc(db, 'usernames', normalizedUsername), {
-      userId,
-      username: normalizedUsername,
-      originalUsername: username,
-      createdAt: new Date().toISOString()
-    });
-  } catch (error) {
-    console.error('Error reserving username:', error);
-    throw error;
-  }
+  return retry(async () => {
+    try {
+      const normalizedUsername = username.toLowerCase().trim();
+      await setDoc(doc(db, 'usernames', normalizedUsername), {
+        userId,
+        username: normalizedUsername,
+        originalUsername: username,
+        createdAt: new Date().toISOString(),
+        lastAction: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('Error reserving username:', error);
+      throw error;
+    }
+  });
 };
 
 export const releaseUsername = async (username: string): Promise<void> => {
   if (!db) throw new Error('Database not initialized');
   
-  try {
-    const normalizedUsername = username.toLowerCase().trim();
-    await deleteDoc(doc(db, 'usernames', normalizedUsername));
-  } catch (error) {
-    console.error('Error releasing username:', error);
-    throw error;
-  }
+  return retry(async () => {
+    try {
+      const normalizedUsername = username.toLowerCase().trim();
+      await deleteDoc(doc(db, 'usernames', normalizedUsername));
+    } catch (error) {
+      console.error('Error releasing username:', error);
+      throw error;
+    }
+  });
 };
+
+// Initialize Firebase asynchronously
+initializeFirebaseAsync().catch(console.error);
 
 export { auth, app, db, storage };
