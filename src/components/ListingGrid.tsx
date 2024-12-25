@@ -5,13 +5,15 @@ import { Button } from '@/components/ui/button';
 import Image from 'next/image';
 import Link from 'next/link';
 import { MapPin, User } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
 interface ListingGridProps {
-  listings: Listing[];
+  listings?: Listing[];
   loading?: boolean;
-  displayCount: number;
+  displayCount?: number;
   onLoadMore?: () => void;
   hasMore?: boolean;
+  userId?: string;
 }
 
 const getConditionColor = (condition: string) => {
@@ -27,7 +29,48 @@ const getConditionColor = (condition: string) => {
   return colors[condition?.toLowerCase()] || 'bg-gray-500/10 text-gray-500 hover:bg-gray-500/20';
 };
 
-export function ListingGrid({ listings, loading = false, displayCount, onLoadMore, hasMore = false }: ListingGridProps) {
+export function ListingGrid({ 
+  listings: propListings, 
+  loading = false, 
+  displayCount = 8, 
+  onLoadMore, 
+  hasMore = false,
+  userId 
+}: ListingGridProps) {
+  const [listings, setListings] = useState<Listing[]>([]);
+
+  useEffect(() => {
+    if (userId) {
+      // Mock data for user listings
+      setListings([
+        {
+          id: '1',
+          title: 'Blue-Eyes White Dragon',
+          price: 299.99,
+          game: 'Yu-Gi-Oh!',
+          condition: 'near-mint',
+          imageUrls: ['https://assets.co.dev/171838d1-5208-4d56-8fa3-d46502238350/image-82bb4ad.png'],
+          username: 'CardMaster2024',
+          city: 'New York',
+          state: 'NY'
+        },
+        {
+          id: '2',
+          title: 'Dark Magician',
+          price: 199.99,
+          game: 'Yu-Gi-Oh!',
+          condition: 'excellent',
+          imageUrls: ['https://assets.co.dev/171838d1-5208-4d56-8fa3-d46502238350/image-82bb4ad.png'],
+          username: 'CardMaster2024',
+          city: 'New York',
+          state: 'NY'
+        }
+      ]);
+    } else {
+      setListings(propListings || []);
+    }
+  }, [userId, propListings]);
+
   if (loading) {
     return (
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-6 px-4">
