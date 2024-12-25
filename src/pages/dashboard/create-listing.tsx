@@ -203,12 +203,21 @@ const CreateListingPage = () => {
                   <Input
                     id="title"
                     required
+                    maxLength={MAX_TITLE_LENGTH}
                     value={formData.title}
                     onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                     placeholder="e.g., Mint Condition Blue-Eyes White Dragon - 1st Edition"
                     className={errors.title ? "border-red-500" : ""}
                   />
-                  {errors.title && <p className="text-sm text-red-500">{errors.title}</p>}
+                  <div className="flex justify-between text-sm">
+                    {errors.title ? (
+                      <p className="text-red-500">{errors.title}</p>
+                    ) : (
+                      <p className="text-muted-foreground">
+                        {formData.title.length}/{MAX_TITLE_LENGTH} characters
+                      </p>
+                    )}
+                  </div>
                 </div>
 
                 <div className="space-y-2">
