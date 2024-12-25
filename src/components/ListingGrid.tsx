@@ -20,12 +20,10 @@ const getConditionColor = (condition: string) => {
     'near-mint': 'bg-[#bbdb44]/10 text-[#bbdb44] hover:bg-[#bbdb44]/20',
     'mint': 'bg-[#44ce1b]/10 text-[#44ce1b] hover:bg-[#44ce1b]/20'
   };
-  return colors[condition.toLowerCase()] || 'bg-gray-500/10 text-gray-500 hover:bg-gray-500/20';
+  return colors[condition?.toLowerCase()] || 'bg-gray-500/10 text-gray-500 hover:bg-gray-500/20';
 };
 
-export function ListingGrid({ listings: allListings, loading = false }: ListingGridProps) {
-  // Take only the first 6 listings
-  const listings = allListings.slice(0, 6);
+export function ListingGrid({ listings, loading = false }: ListingGridProps) {
   if (loading) {
     return (
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-6 px-4">
@@ -40,7 +38,7 @@ export function ListingGrid({ listings: allListings, loading = false }: ListingG
     );
   }
 
-  if (listings.length === 0) {
+  if (!listings || listings.length === 0) {
     return (
       <div className="text-center py-12">
         <p className="text-muted-foreground">No listings found.</p>
@@ -57,7 +55,7 @@ export function ListingGrid({ listings: allListings, loading = false }: ListingG
               {listing.imageUrls && listing.imageUrls[0] ? (
                 <Image
                   src={listing.imageUrls[0]}
-                  alt={listing.title}
+                  alt={listing.title || 'Card listing'}
                   fill
                   className="object-cover rounded-lg group-hover:scale-105 transition-transform duration-300"
                   sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
@@ -80,28 +78,34 @@ export function ListingGrid({ listings: allListings, loading = false }: ListingG
                   {listing.title}
                 </h3>
                 <span className="font-semibold text-base shrink-0">
-                  ${typeof listing.price === 'number' ? listing.price.toFixed(2) : listing.price}
+                  ${typeof listing.price === 'number' ? listing.price.toFixed(2) : '0.00'}
                 </span>
               </div>
 
               <div className="flex flex-wrap gap-2">
-                <Badge variant="secondary" className="text-xs rounded-md">
-                  {listing.game}
-                </Badge>
-                <Badge className={`text-xs rounded-md ${getConditionColor(listing.condition)}`}>
-                  {listing.condition}
-                </Badge>
+                {listing.game && (
+                  <Badge variant="secondary" className="text-xs rounded-md">
+                    {listing.game}
+                  </Badge>
+                )}
+                {listing.condition && (
+                  <Badge className={`text-xs rounded-md ${getConditionColor(listing.condition)}`}>
+                    {listing.condition}
+                  </Badge>
+                )}
               </div>
 
               <div className="flex items-center justify-between text-sm text-muted-foreground">
                 <div className="flex items-center gap-1">
                   <User className="h-4 w-4" />
-                  <span className="truncate">{listing.username}</span>
+                  <span className="truncate">{listing.username || 'Unknown seller'}</span>
                 </div>
-                <div className="flex items-center gap-1">
-                  <MapPin className="h-4 w-4" />
-                  <span className="truncate">{listing.city}, {listing.state}</span>
-                </div>
+                {listing.city && listing.state && (
+                  <div className="flex items-center gap-1">
+                    <MapPin className="h-4 w-4" />
+                    <span className="truncate">{listing.city}, {listing.state}</span>
+                  </div>
+                )}
               </div>
             </div>
           </Card>
