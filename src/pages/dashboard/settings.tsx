@@ -256,12 +256,21 @@ const SettingsPageContent = () => {
 
               {/* Location Section */}
               <div className="space-y-2">
-                <Label htmlFor="location">Location</Label>
-                <Input
-                  id="location"
-                  value={formData.location}
-                  onChange={(e) => setFormData(prev => ({ ...prev, location: e.target.value }))}
-                  placeholder="Your location"
+                <Label>Location</Label>
+                <LocationSearch
+                  onLocationSelect={(location) => {
+                    setFormData(prev => ({
+                      ...prev,
+                      address: location.address || '',
+                      city: location.city,
+                      state: location.state
+                    }));
+                  }}
+                  initialValues={{
+                    address: formData.address,
+                    city: formData.city,
+                    state: formData.state
+                  }}
                 />
               </div>
 
