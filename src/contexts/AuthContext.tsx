@@ -9,7 +9,8 @@ import {
   getIdToken,
   onIdTokenChanged
 } from 'firebase/auth';
-import { auth, checkUsernameAvailability, reserveUsername, releaseUsername } from '@/lib/firebase';
+import { auth, db, checkUsernameAvailability, reserveUsername, releaseUsername } from '@/lib/firebase';
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 
 type AuthContextType = {
   user: User | null;
