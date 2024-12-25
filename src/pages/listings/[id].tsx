@@ -66,18 +66,13 @@ export default function ListingPage() {
           }
         }
         
-        // Add retry mechanism for Firestore query with auth check
+        // Add retry mechanism for Firestore query
         let attempts = 0;
         const maxAttempts = 3;
         let listingDoc;
         
         while (attempts < maxAttempts) {
           try {
-            // Ensure we have a valid auth state before proceeding
-            if (auth.currentUser) {
-              await auth.currentUser.getIdToken(true);
-            }
-            
             listingDoc = await getDoc(doc(db, 'listings', id));
             
             // Verify that the document was actually retrieved
