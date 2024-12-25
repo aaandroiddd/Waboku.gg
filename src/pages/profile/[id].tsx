@@ -25,12 +25,14 @@ export default function ProfilePage() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    let isMounted = true;
+
     const fetchProfile = async () => {
       if (!id) return;
       
       try {
         // Mock data for demonstration
-        setProfile({
+        const profileData = {
           id: id as string,
           username: "CardMaster2024",
           joinDate: "December 2023",
@@ -39,15 +41,25 @@ export default function ProfilePage() {
           rating: 4.8,
           bio: "Passionate TCG collector and trader. Specializing in rare Pokemon and Yu-Gi-Oh cards.",
           avatarUrl: "https://assets.co.dev/171838d1-5208-4d56-8fa3-d46502238350/image-82bb4ad.png"
-        });
+        };
+
+        if (isMounted) {
+          setProfile(profileData);
+        }
       } catch (error) {
         console.error('Error fetching profile:', error);
       } finally {
-        setIsLoading(false);
+        if (isMounted) {
+          setIsLoading(false);
+        }
       }
     };
 
     fetchProfile();
+
+    return () => {
+      isMounted = false;
+    };
   }, [id]);
 
   if (!id) {
