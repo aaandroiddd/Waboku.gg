@@ -18,6 +18,13 @@ type AuthContextType = {
   signUp: (email: string, password: string, username: string) => Promise<{ error: Error | null, user: User | null }>;
   signOut: () => Promise<void>;
   updateUsername: (username: string) => Promise<{ error: Error | null }>;
+  updateProfile: (data: {
+    displayName?: string;
+    photoURL?: string;
+    bio?: string;
+    location?: string;
+    contact?: string;
+  }) => Promise<{ error: Error | null }>;
   refreshToken: () => Promise<string | null>;
 };
 
