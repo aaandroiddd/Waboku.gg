@@ -25,7 +25,7 @@ const getConditionColor = (condition: string) => {
     'near-mint': 'bg-[#bbdb44]/10 text-[#bbdb44] hover:bg-[#bbdb44]/20',
     'mint': 'bg-[#44ce1b]/10 text-[#44ce1b] hover:bg-[#44ce1b]/20'
   };
-  return colors[condition.toLowerCase()] || 'bg-gray-500/10 text-gray-500 hover:bg-gray-500/20';
+  return colors[condition?.toLowerCase()] || 'bg-gray-500/10 text-gray-500 hover:bg-gray-500/20';
 };
 
 export default function ListingPage() {
@@ -40,67 +40,34 @@ export default function ListingPage() {
   const { user } = useAuth();
 
   useEffect(() => {
+    let isMounted = true;
+
     async function fetchListing() {
-      if (!id) return;
-      setLoading(true);
-      setError(null);
+      if (!id || typeof id !== 'string') return;
+      
+      if (isMounted) setLoading(true);
+      if (isMounted) setError(null);
 
       try {
         const db = getFirestore(app);
-        
-        // Add retry logic for fetching the listing with improved error handling
-        let retryCount = 0;
-        const maxRetries = 3;
-        let listingDoc;
+        const listingDoc = await getDoc(doc(db, 'listings', id));
 
-        while (retryCount < maxRetries) {
-          try {
-            if (!navigator.onLine) {
-              throw new Error('No internet connection');
-            }
-
-            listingDoc = await getDoc(doc(db, 'listings', id as string));
-            break;
-          } catch (err: any) {
-            console.error(`Attempt ${retryCount + 1} failed:`, {
-              error: err,
-              code: err.code,
-              message: err.message,
-              isOnline: navigator.onLine
-            });
-            
-            retryCount++;
-            
-            if (err.code === 'permission-denied') {
-              throw new Error('You do not have permission to view this listing');
-            }
-            
-            if (err.code === 'unavailable' || !navigator.onLine) {
-              if (retryCount === maxRetries) {
-                throw new Error('Unable to load listing. Please check your internet connection and try again.');
-              }
-            } else if (retryCount === maxRetries) {
-              throw err;
-            }
-            
-            await new Promise(resolve => setTimeout(resolve, Math.min(1000 * Math.pow(2, retryCount), 10000))); // Exponential backoff with max 10s
+        if (!listingDoc.exists()) {
+          if (isMounted) {
+            setError('Listing not found');
+            setLoading(false);
           }
-        }
-
-        if (!listingDoc || !listingDoc.exists()) {
-          setError('Listing not found');
-          setLoading(false);
           return;
         }
 
         const data = listingDoc.data();
         
-        // Ensure all required fields are present
+        // Ensure all required fields are present with default values
         const listingData: Listing = {
           id: listingDoc.id,
           title: data.title || 'Untitled Listing',
           description: data.description || '',
-          price: typeof data.price === 'number' ? data.price : Number(data.price) || 0,
+          price: typeof data.price === 'number' ? data.price : 0,
           condition: data.condition || 'unknown',
           game: data.game || 'other',
           imageUrls: Array.isArray(data.imageUrls) ? data.imageUrls : [],
@@ -116,9 +83,13 @@ export default function ListingPage() {
           favoriteCount: typeof data.favoriteCount === 'number' ? data.favoriteCount : 0
         };
 
-        setListing(listingData);
+        if (isMounted) {
+          setListing(listingData);
+          setLoading(false);
+        }
 
-        if (user) {
+        // Check if the listing is favorited by the current user
+        if (user && isMounted) {
           const favoritesRef = collection(db, 'favorites');
           const q = query(
             favoritesRef,
@@ -126,17 +97,24 @@ export default function ListingPage() {
             where('listingId', '==', id)
           );
           const querySnapshot = await getDocs(q);
-          setIsFavorited(!querySnapshot.empty);
+          if (isMounted) {
+            setIsFavorited(!querySnapshot.empty);
+          }
         }
-      } catch (err) {
+      } catch (err: any) {
         console.error('Error fetching listing:', err);
-        setError('Failed to load listing. Please try again later.');
-      } finally {
-        setLoading(false);
+        if (isMounted) {
+          setError('Failed to load listing. Please try again later.');
+          setLoading(false);
+        }
       }
     }
 
     fetchListing();
+
+    return () => {
+      isMounted = false;
+    };
   }, [id, user]);
 
   const handleImageClick = (index: number) => {
@@ -216,6 +194,13 @@ export default function ListingPage() {
         <Card className="bg-destructive/10">
           <CardContent className="p-6">
             <p className="text-destructive">{error || 'Listing not found'}</p>
+            <Button 
+              variant="outline" 
+              className="mt-4" 
+              onClick={() => router.push('/listings')}
+            >
+              Back to Listings
+            </Button>
           </CardContent>
         </Card>
       </div>
