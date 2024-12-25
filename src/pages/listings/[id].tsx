@@ -216,16 +216,16 @@ export default function ListingPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8">
             {/* Images and Price - Moved to top for mobile */}
             <div className="space-y-4 md:space-y-6 order-1 md:order-2">
-              <Carousel className="w-full touch-pan-y">
+              <Carousel className="w-full h-[300px] md:h-[400px] touch-pan-y">
                 <CarouselContent>
                   {listing.imageUrls.map((url, index) => (
-                    <CarouselItem key={index} className="flex items-center justify-center min-h-[300px] md:min-h-[400px]">
+                    <CarouselItem key={index} className="flex items-center justify-center h-full">
                       <div 
                         className="relative w-full h-full group cursor-pointer flex items-center justify-center p-4" 
                         onClick={() => handleImageClick(index)}
                       >
                         <div className="relative w-full h-full flex items-center justify-center">
-                          <div className="relative w-full h-[300px] md:h-[400px]">
+                          <div className="relative w-full h-full">
                             <Image
                               src={url}
                               alt={`${listing.title} - Image ${index + 1}`}
@@ -247,8 +247,8 @@ export default function ListingPage() {
                     </CarouselItem>
                   ))}
                 </CarouselContent>
-                <CarouselPrevious className="hidden md:flex" />
-                <CarouselNext className="hidden md:flex" />
+                <CarouselPrevious className="hidden md:flex -left-4" />
+                <CarouselNext className="hidden md:flex -right-4" />
               </Carousel>
 
               <div className="text-center">
