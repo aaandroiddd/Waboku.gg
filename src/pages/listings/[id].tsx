@@ -333,12 +333,12 @@ export default function ListingPage() {
 
       {/* Enhanced Zoom Dialog */}
       <Dialog open={isZoomDialogOpen} onOpenChange={setIsZoomDialogOpen}>
-        <DialogContent className="max-w-[95vw] max-h-[95vh] w-full h-full p-0">
-          <div className="relative w-full h-[90vh]">
+        <DialogContent className="max-w-[95vw] max-h-[95vh] w-full h-full p-0 overflow-hidden">
+          <div className="relative w-full h-[90vh] flex items-center justify-center">
             <Carousel className="w-full h-full">
               <CarouselContent className="h-full">
                 {listing.imageUrls.map((url, index) => (
-                  <CarouselItem key={index} className="h-full">
+                  <CarouselItem key={index} className="h-full flex items-center justify-center">
                     <TransformWrapper
                       initialScale={1}
                       minScale={0.5}
@@ -353,16 +353,16 @@ export default function ListingPage() {
                       panning={{ disabled: false }}
                     >
                       {({ zoomIn, zoomOut, resetTransform }) => (
-                        <div className="relative w-full h-full">
+                        <>
                           <TransformComponent 
                             wrapperClass="!w-full !h-full !flex !items-center !justify-center" 
                             contentClass="!w-full !h-full !flex !items-center !justify-center"
                           >
-                            <div className="relative w-full h-full flex items-center justify-center">
+                            <div className="relative w-full h-full flex items-center justify-center p-4">
                               <img
                                 src={url}
                                 alt={`${listing.title} - Image ${index + 1}`}
-                                className="max-w-full max-h-[85vh] w-auto h-auto object-contain"
+                                className="max-w-full max-h-[80vh] w-auto h-auto object-contain"
                                 loading="eager"
                               />
                             </div>
@@ -397,7 +397,7 @@ export default function ListingPage() {
                               </Button>
                             </div>
                           </div>
-                        </div>
+                        </>
                       )}
                     </TransformWrapper>
                   </CarouselItem>
