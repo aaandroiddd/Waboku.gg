@@ -57,27 +57,49 @@ export default function ListingPage() {
       try {
         console.log('Fetching listing with ID:', id);
         
-        // Wait for Firebase to be fully initialized
+        // Wait for Firebase to be fully initialized and auth state to be determined
         if (!app || !db) {
           console.log('Waiting for Firebase initialization...');
-          await new Promise(resolve => setTimeout(resolve, 1000));
-          throw new Error('Firebase not initialized');
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          if (!app || !db) {
+            throw new Error('Firebase initialization timeout');
+          }
         }
         
-        // Add retry mechanism for Firestore query
+        // Add retry mechanism for Firestore query with auth check
         let attempts = 0;
         const maxAttempts = 3;
         let listingDoc;
         
         while (attempts < maxAttempts) {
           try {
+            // Ensure we have a valid auth state before proceeding
+            if (auth.currentUser) {
+              await auth.currentUser.getIdToken(true);
+            }
+            
             listingDoc = await getDoc(doc(db, 'listings', id));
+            
+            // Verify that the document was actually retrieved
+            if (!listingDoc.exists()) {
+              throw new Error('Listing not found');
+            }
+            
             break;
-          } catch (retryError) {
+          } catch (retryError: any) {
             attempts++;
-            console.error(`Attempt ${attempts} failed:`, retryError);
+            console.error(`Attempt ${attempts} failed:`, {
+              error: retryError,
+              code: retryError.code,
+              message: retryError.message,
+              authState: auth.currentUser ? 'logged-in' : 'logged-out'
+            });
+            
             if (attempts === maxAttempts) throw retryError;
-            await new Promise(resolve => setTimeout(resolve, Math.min(1000 * Math.pow(2, attempts), 10000))); // Exponential backoff with max 10s
+            
+            // Exponential backoff with max 10s
+            const delay = Math.min(1000 * Math.pow(2, attempts), 10000);
+            await new Promise(resolve => setTimeout(resolve, delay));
           }
         }
 
