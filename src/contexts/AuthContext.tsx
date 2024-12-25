@@ -320,6 +320,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     bio?: string;
     location?: string;
     contact?: string;
+    social?: {
+      youtube?: string;
+      twitter?: string;
+      facebook?: string;
+    };
   }) => {
     try {
       if (!user) {
@@ -327,19 +332,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       // Update Firebase user profile
-      await retryOperation(() =>
-        updateProfile(user, {
-          ...(data.displayName && { displayName: data.displayName }),
-          ...(data.photoURL && { photoURL: data.photoURL })
-        })
-      );
+      if (data.displayName || data.photoURL) {
+        await retryOperation(() =>
+          updateProfile(user, {
+            ...(data.displayName && { displayName: data.displayName }),
+            ...(data.photoURL && { photoURL: data.photoURL })
+          })
+        );
+      }
 
       // Update custom claims or additional user data in Firestore
       const userDocRef = doc(db, 'users', user.uid);
+      
+      // Parse location if it's a JSON string
+      let locationData = {};
+      if (data.location) {
+        try {
+          locationData = JSON.parse(data.location);
+        } catch (e) {
+          locationData = { location: data.location };
+        }
+      }
+
       await setDoc(userDocRef, {
-        bio: data.bio || '',
-        location: data.location || '',
-        contact: data.contact || '',
+        ...(data.bio !== undefined && { bio: data.bio }),
+        ...locationData,
+        ...(data.contact !== undefined && { contact: data.contact }),
+        ...(data.social && {
+          youtube: data.social.youtube || '',
+          twitter: data.social.twitter || '',
+          facebook: data.social.facebook || ''
+        }),
         updatedAt: serverTimestamp()
       }, { merge: true });
 
