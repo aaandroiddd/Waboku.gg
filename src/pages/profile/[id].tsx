@@ -12,8 +12,25 @@ import { format } from 'date-fns';
 export default function ProfilePage() {
   const router = useRouter();
   const { id } = router.query;
-  const { profile, isLoading, error } = useProfile(id as string);
+  const { profile, isLoading, error } = useProfile(typeof id === 'string' ? id : undefined);
   const { user } = useAuth();
+
+  if (!id) {
+    return (
+      <div className="container mx-auto p-6">
+        <Card>
+          <CardContent className="p-6">
+            <h1 className="text-2xl font-bold text-center text-destructive">
+              Invalid Profile
+            </h1>
+            <p className="text-center text-muted-foreground mt-2">
+              No profile ID provided.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (
