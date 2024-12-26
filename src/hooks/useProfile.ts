@@ -44,6 +44,30 @@ export function useProfile(userId: string | null) {
       }
 
       try {
+        // For demo purposes, return sample data for specific test IDs
+        if (userId === 'demo-user-1') {
+          if (isMounted) {
+            setProfile({
+              id: 'demo-user-1',
+              username: 'CardMaster',
+              joinDate: '2023-01-15T00:00:00Z',
+              totalSales: 157,
+              rating: 4.8,
+              bio: 'Passionate card collector with over 10 years of experience. Specializing in rare Yu-Gi-Oh! and Magic: The Gathering cards.',
+              avatarUrl: '/images/rect.png',
+              location: 'New York, NY',
+              contact: 'Available via messages',
+              social: {
+                youtube: 'https://youtube.com/@cardmaster',
+                twitter: 'https://twitter.com/cardmaster',
+              }
+            });
+            setError(null);
+          }
+          setIsLoading(false);
+          return;
+        }
+
         // Wait for Firebase to initialize
         await initializationPromise;
         
