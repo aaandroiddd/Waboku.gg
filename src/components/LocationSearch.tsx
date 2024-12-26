@@ -117,10 +117,16 @@ export const LocationSearch = ({ onLocationSelect, initialValues }: LocationSear
     });
   };
 
-  // Handle manual input confirmation
+  // Only submit when both city and state are present
   useEffect(() => {
     if (cityInput && stateInput) {
-      handleManualSubmit();
+      onLocationSelect({
+        city: cityInput,
+        state: stateInput
+      });
+    } else if (!cityInput && !stateInput) {
+      // Clear location if both fields are empty
+      onLocationSelect({});
     }
   }, [cityInput, stateInput]);
 
