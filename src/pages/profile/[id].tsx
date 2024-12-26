@@ -15,10 +15,6 @@ export default function ProfilePage() {
   const { profile, isLoading, error } = useProfile(id as string);
   const { user } = useAuth();
 
-  if (!id) {
-    return null;
-  }
-
   if (isLoading) {
     return (
       <div className="container mx-auto p-6">
@@ -31,27 +27,16 @@ export default function ProfilePage() {
     );
   }
 
-  if (error) {
+  if (error || !profile) {
     return (
       <div className="container mx-auto p-6">
         <Card>
           <CardContent className="p-6">
-            <h1 className="text-2xl font-bold text-center text-destructive">Error</h1>
-            <p className="text-center text-muted-foreground mt-2">{error}</p>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  if (!profile) {
-    return (
-      <div className="container mx-auto p-6">
-        <Card>
-          <CardContent className="p-6">
-            <h1 className="text-2xl font-bold text-center">Profile not found</h1>
+            <h1 className="text-2xl font-bold text-center text-destructive">
+              {error || 'Profile not found'}
+            </h1>
             <p className="text-center text-muted-foreground mt-2">
-              The requested profile could not be found.
+              {error || 'The requested profile could not be found.'}
             </p>
           </CardContent>
         </Card>
@@ -123,7 +108,7 @@ export default function ProfilePage() {
                   </div>
                 )}
 
-                {profile.social && (Object.values(profile.social).some(link => link)) && (
+                {profile.social && Object.values(profile.social).some(link => link) && (
                   <div>
                     <h2 className="font-semibold mb-2">Social Links</h2>
                     <div className="flex gap-4">
