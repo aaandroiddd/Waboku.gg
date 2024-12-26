@@ -9,71 +9,56 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useProfile } from '@/hooks/useProfile';
 import { format } from 'date-fns';
 
+const LoadingProfile = () => (
+  <div className="container mx-auto p-6">
+    <div className="animate-pulse">
+      <div className="h-64 bg-secondary rounded-lg mb-4"></div>
+      <div className="h-8 bg-secondary rounded w-1/4 mb-4"></div>
+      <div className="h-4 bg-secondary rounded w-3/4"></div>
+    </div>
+  </div>
+);
+
+const ErrorCard = ({ message }: { message: string }) => (
+  <div className="container mx-auto p-6">
+    <Card>
+      <CardContent className="p-6">
+        <h1 className="text-2xl font-bold text-center text-destructive">
+          {message}
+        </h1>
+        <p className="text-center text-muted-foreground mt-2">
+          Please try again later or contact support if the issue persists.
+        </p>
+      </CardContent>
+    </Card>
+  </div>
+);
+
 export default function ProfilePage() {
   const router = useRouter();
   const { user } = useAuth();
   
   // Wait for router to be ready
   if (!router.isReady) {
-    return (
-      <div className="container mx-auto p-6">
-        <div className="animate-pulse">
-          <div className="h-64 bg-secondary rounded-lg mb-4"></div>
-          <div className="h-8 bg-secondary rounded w-1/4 mb-4"></div>
-          <div className="h-4 bg-secondary rounded w-3/4"></div>
-        </div>
-      </div>
-    );
+    return <LoadingProfile />;
   }
 
   const { id } = router.query;
-  const userId = Array.isArray(id) ? id[0] : id;
-  const { profile, isLoading, error } = useProfile(userId);
+  const userId = typeof id === 'string' ? id : Array.isArray(id) ? id[0] : null;
 
+  // If no userId is available, show error
   if (!userId) {
-    return (
-      <div className="container mx-auto p-6">
-        <Card>
-          <CardContent className="p-6">
-            <h1 className="text-2xl font-bold text-center text-destructive">
-              Invalid Profile
-            </h1>
-            <p className="text-center text-muted-foreground mt-2">
-              No profile ID provided.
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-    );
+    return <ErrorCard message="Invalid Profile ID" />;
   }
 
+  const { profile, isLoading, error } = useProfile(userId);
+
   if (isLoading) {
-    return (
-      <div className="container mx-auto p-6">
-        <div className="animate-pulse">
-          <div className="h-64 bg-secondary rounded-lg mb-4"></div>
-          <div className="h-8 bg-secondary rounded w-1/4 mb-4"></div>
-          <div className="h-4 bg-secondary rounded w-3/4"></div>
-        </div>
-      </div>
-    );
+    return <LoadingProfile />;
   }
 
   if (error || !profile) {
-    return (
-      <div className="container mx-auto p-6">
-        <Card>
-          <CardContent className="p-6">
-            <h1 className="text-2xl font-bold text-center text-destructive">
-              {error || 'Profile not found'}
-            </h1>
-            <p className="text-center text-muted-foreground mt-2">
-              {error || 'The requested profile could not be found.'}
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-    );
+    return <ErrorCard message={error || 'Profile not found'} />;
   }
 
   const joinDate = format(new Date(profile.joinDate), 'MMMM yyyy');
@@ -87,7 +72,7 @@ export default function ProfilePage() {
               <div className="relative w-full aspect-square rounded-lg overflow-hidden">
                 <Image
                   src={profile.avatarUrl || '/images/rect.png'}
-                  alt={profile.username}
+                  alt={profile.username || 'User avatar'}
                   fill
                   sizes="(max-width: 768px) 100vw, 25vw"
                   priority
@@ -98,7 +83,7 @@ export default function ProfilePage() {
             <div className="flex-1">
               <div className="flex justify-between items-start">
                 <div>
-                  <h1 className="text-3xl font-bold mb-2">{profile.username}</h1>
+                  <h1 className="text-3xl font-bold mb-2">{profile.username || 'Anonymous User'}</h1>
                   <p className="text-muted-foreground">Member since {joinDate}</p>
                 </div>
                 {user && user.uid !== userId && (
