@@ -135,7 +135,7 @@ export const LocationSearch = ({ onLocationSelect, initialValues }: LocationSear
       <div className="space-y-4">
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label htmlFor="city" className="required">City</Label>
+            <Label htmlFor="city">City</Label>
             <div className="relative">
               <Input
                 id="city"
@@ -144,8 +144,7 @@ export const LocationSearch = ({ onLocationSelect, initialValues }: LocationSear
                   setCityInput(e.target.value);
                   setIsConfirmed(false);
                 }}
-                placeholder="Enter city"
-                required
+                placeholder="Enter city (optional)"
                 className="pr-10"
                 autoComplete="off"
               />
