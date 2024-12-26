@@ -140,6 +140,7 @@ export default function Home() {
   );
   const [listings, setListings] = useState<Listing[]>([]);
   const [filteredListings, setFilteredListings] = useState<Listing[]>([]);
+  const [isInitialized, setIsInitialized] = useState(false);
   const [loading, setLoading] = useState(true);
   const [displayCount, setDisplayCount] = useState(8);
 
