@@ -176,7 +176,7 @@ export const LocationSearch = ({ onLocationSelect, initialValues }: LocationSear
             )}
           </div>
           <div className="space-y-2">
-            <Label htmlFor="state" className="required">State</Label>
+            <Label htmlFor="state">State</Label>
             <div className="relative">
               <Input
                 id="state"
@@ -185,9 +185,8 @@ export const LocationSearch = ({ onLocationSelect, initialValues }: LocationSear
                   setStateInput(e.target.value.toUpperCase());
                   setIsConfirmed(false);
                 }}
-                placeholder="Enter state (e.g., CA)"
+                placeholder="Enter state (optional)"
                 maxLength={2}
-                required
               />
               {isConfirmed && stateInput && (
                 <CheckCircle2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-green-500" />
