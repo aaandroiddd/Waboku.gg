@@ -8,6 +8,7 @@ import ListingGrid from '@/components/ListingGrid';
 import { useAuth } from '@/contexts/AuthContext';
 import { useProfile } from '@/hooks/useProfile';
 import { format } from 'date-fns';
+import { useEffect, useState } from 'react';
 
 const LoadingProfile = () => (
   <div className="container mx-auto p-6">
@@ -32,7 +33,7 @@ const LoadingProfile = () => (
   </div>
 );
 
-const ErrorCard = ({ message }: { message: string }) => (
+const ErrorCard = ({ message, onRetry }: { message: string; onRetry?: () => void }) => (
   <div className="container mx-auto p-6">
     <Card>
       <CardContent className="p-6">
@@ -43,12 +44,14 @@ const ErrorCard = ({ message }: { message: string }) => (
           <p className="text-muted-foreground mb-4">
             Please try again later or contact support if the issue persists.
           </p>
-          <Button 
-            variant="outline" 
-            onClick={() => window.location.reload()}
-          >
-            Retry
-          </Button>
+          {onRetry && (
+            <Button 
+              variant="outline" 
+              onClick={onRetry}
+            >
+              Retry
+            </Button>
+          )}
         </div>
       </CardContent>
     </Card>
@@ -59,13 +62,25 @@ const ProfileContent = ({ userId }: { userId: string }) => {
   const { user } = useAuth();
   const router = useRouter();
   const { profile, isLoading, error } = useProfile(userId);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) {
+    return <LoadingProfile />;
+  }
 
   if (isLoading) {
     return <LoadingProfile />;
   }
 
   if (error || !profile) {
-    return <ErrorCard message={error || 'Profile not found'} />;
+    return <ErrorCard 
+      message={error || 'Profile not found'} 
+      onRetry={() => window.location.reload()}
+    />;
   }
 
   const joinDate = profile.joinDate ? format(new Date(profile.joinDate), 'MMMM yyyy') : 'Unknown';
@@ -197,8 +212,13 @@ const ProfileContent = ({ userId }: { userId: string }) => {
 
 export default function ProfilePage() {
   const router = useRouter();
-  
-  if (!router.isReady) {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted || !router.isReady) {
     return <LoadingProfile />;
   }
 
