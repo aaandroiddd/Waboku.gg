@@ -143,7 +143,12 @@ const SettingsPageContent = () => {
 
       let photoURL = user?.photoURL;
       if (avatarFile) {
-        photoURL = await uploadAvatar(avatarFile);
+        try {
+          photoURL = await uploadAvatar(avatarFile);
+        } catch (error: any) {
+          console.error('Avatar upload error:', error);
+          throw new Error("Failed to upload profile picture. Please try again.");
+        }
       }
 
       // Prepare location data - only include if values are present
@@ -160,9 +165,9 @@ const SettingsPageContent = () => {
         location: Object.keys(locationData).length > 0 ? JSON.stringify(locationData) : undefined,
         contact: formData.contact,
         social: {
-          youtube: formData.youtube,
-          twitter: formData.twitter,
-          facebook: formData.facebook
+          youtube: formData.youtube || '',
+          twitter: formData.twitter || '',
+          facebook: formData.facebook || ''
         }
       });
 
