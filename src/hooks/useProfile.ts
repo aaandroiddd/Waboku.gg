@@ -31,6 +31,7 @@ export function useProfile(userId: string | undefined) {
     const fetchProfile = async () => {
       if (!userId) {
         setIsLoading(false);
+        setError('Invalid user ID');
         return;
       }
       
@@ -49,6 +50,14 @@ export function useProfile(userId: string | undefined) {
         }
 
         const userData = userDoc.data();
+        if (!userData) {
+          if (isMounted) {
+            setError('Invalid profile data');
+            setProfile(null);
+          }
+          return;
+        }
+
         const profileData: UserProfile = {
           id: userDoc.id,
           username: userData.username || 'Anonymous User',
@@ -65,11 +74,13 @@ export function useProfile(userId: string | undefined) {
 
         if (isMounted) {
           setProfile(profileData);
+          setError(null);
         }
       } catch (err) {
         console.error('Error fetching profile:', err);
         if (isMounted) {
           setError('Failed to load profile. Please try again later.');
+          setProfile(null);
         }
       } finally {
         if (isMounted) {
