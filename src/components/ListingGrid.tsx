@@ -30,7 +30,7 @@ const getConditionColor = (condition: string) => {
 };
 
 export function ListingGrid({ 
-  listings: propListings, 
+  listings: propListings = [], 
   loading = false, 
   displayCount = 8, 
   onLoadMore, 
