@@ -7,10 +7,11 @@ import { Loader2, CheckCircle2 } from "lucide-react";
 import { Alert } from "@/components/ui/alert";
 
 interface LocationSearchProps {
-  onLocationSelect: (location: { city: string; state: string }) => void;
+  onLocationSelect: (location: { city?: string; state?: string; address?: string }) => void;
   initialValues?: {
     city?: string;
     state?: string;
+    address?: string;
   };
 }
 
