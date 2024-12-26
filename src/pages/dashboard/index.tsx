@@ -155,9 +155,19 @@ const DashboardComponent = () => {
             </Avatar>
             <div className="flex-1">
               <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-2xl font-bold">{user.displayName || 'User'}</h2>
-                  <p className="text-muted-foreground">{user.email}</p>
+                <div className="flex items-center gap-4">
+                  <div>
+                    <h2 className="text-2xl font-bold">{user.displayName || 'User'}</h2>
+                    <p className="text-muted-foreground">{user.email}</p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => router.push(`/profile/${user.uid}`)}
+                  >
+                    <ExternalLink className="h-4 w-4 mr-1" />
+                    View Profile
+                  </Button>
                 </div>
               </div>
               <div className="mt-4">
