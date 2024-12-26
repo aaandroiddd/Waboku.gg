@@ -11,11 +11,24 @@ import { format } from 'date-fns';
 
 const LoadingProfile = () => (
   <div className="container mx-auto p-6">
-    <div className="animate-pulse">
-      <div className="h-64 bg-secondary rounded-lg mb-4"></div>
-      <div className="h-8 bg-secondary rounded w-1/4 mb-4"></div>
-      <div className="h-4 bg-secondary rounded w-3/4"></div>
-    </div>
+    <Card className="mb-6">
+      <CardContent className="p-6">
+        <div className="flex flex-col md:flex-row gap-6">
+          <div className="w-full md:w-1/4">
+            <div className="animate-pulse bg-secondary aspect-square rounded-lg"></div>
+          </div>
+          <div className="flex-1 space-y-4">
+            <div className="animate-pulse h-8 bg-secondary rounded w-1/3"></div>
+            <div className="animate-pulse h-4 bg-secondary rounded w-1/4"></div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="animate-pulse bg-secondary rounded-lg h-24"></div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   </div>
 );
 
@@ -23,12 +36,20 @@ const ErrorCard = ({ message }: { message: string }) => (
   <div className="container mx-auto p-6">
     <Card>
       <CardContent className="p-6">
-        <h1 className="text-2xl font-bold text-center text-destructive">
-          {message}
-        </h1>
-        <p className="text-center text-muted-foreground mt-2">
-          Please try again later or contact support if the issue persists.
-        </p>
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-destructive mb-2">
+            {message}
+          </h1>
+          <p className="text-muted-foreground mb-4">
+            Please try again later or contact support if the issue persists.
+          </p>
+          <Button 
+            variant="outline" 
+            onClick={() => window.location.reload()}
+          >
+            Retry
+          </Button>
+        </div>
       </CardContent>
     </Card>
   </div>
@@ -61,7 +82,7 @@ export default function ProfilePage() {
     return <ErrorCard message={error || 'Profile not found'} />;
   }
 
-  const joinDate = format(new Date(profile.joinDate), 'MMMM yyyy');
+  const joinDate = profile.joinDate ? format(new Date(profile.joinDate), 'MMMM yyyy') : 'Unknown';
 
   return (
     <div className="container mx-auto p-6">
@@ -69,7 +90,7 @@ export default function ProfilePage() {
         <CardContent className="p-6">
           <div className="flex flex-col md:flex-row gap-6">
             <div className="w-full md:w-1/4">
-              <div className="relative w-full aspect-square rounded-lg overflow-hidden">
+              <div className="relative w-full aspect-square rounded-lg overflow-hidden bg-secondary">
                 <Image
                   src={profile.avatarUrl || '/images/rect.png'}
                   alt={profile.username || 'User avatar'}
