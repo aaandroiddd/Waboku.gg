@@ -24,12 +24,18 @@ export function useProfile(userId: string | null) {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    return () => setMounted(false);
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
 
     const fetchProfile = async () => {
-      if (!isMounted) return;
+      if (!isMounted || !mounted) return;
 
       // Reset states at the start of each fetch
       setIsLoading(true);
@@ -46,7 +52,7 @@ export function useProfile(userId: string | null) {
       try {
         // For demo purposes, return sample data for specific test IDs
         if (userId === 'demo-user-1') {
-          if (isMounted) {
+          if (isMounted && mounted) {
             setProfile({
               id: 'demo-user-1',
               username: 'CardMaster',
@@ -64,7 +70,9 @@ export function useProfile(userId: string | null) {
             });
             setError(null);
           }
-          setIsLoading(false);
+          if (isMounted) {
+            setIsLoading(false);
+          }
           return;
         }
 
