@@ -146,16 +146,18 @@ const SettingsPageContent = () => {
         photoURL = await uploadAvatar(avatarFile);
       }
 
+      // Prepare location data - only include if values are present
+      const locationData: any = {};
+      if (formData.address) locationData.address = formData.address;
+      if (formData.city) locationData.city = formData.city;
+      if (formData.state) locationData.state = formData.state;
+
       // Update profile with all user data
       const { error: updateError } = await updateProfile({
         displayName: formData.username,
         photoURL,
         bio: formData.bio,
-        location: JSON.stringify({
-          address: formData.address,
-          city: formData.city,
-          state: formData.state
-        }),
+        location: Object.keys(locationData).length > 0 ? JSON.stringify(locationData) : undefined,
         contact: formData.contact,
         social: {
           youtube: formData.youtube,
