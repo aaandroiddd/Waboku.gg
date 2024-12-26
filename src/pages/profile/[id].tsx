@@ -55,23 +55,9 @@ const ErrorCard = ({ message }: { message: string }) => (
   </div>
 );
 
-export default function ProfilePage() {
-  const router = useRouter();
+const ProfileContent = ({ userId }: { userId: string }) => {
   const { user } = useAuth();
-  
-  // Wait for router to be ready
-  if (!router.isReady) {
-    return <LoadingProfile />;
-  }
-
-  const { id } = router.query;
-  const userId = typeof id === 'string' ? id : Array.isArray(id) ? id[0] : null;
-
-  // If no userId is available, show error
-  if (!userId) {
-    return <ErrorCard message="Invalid Profile ID" />;
-  }
-
+  const router = useRouter();
   const { profile, isLoading, error } = useProfile(userId);
 
   if (isLoading) {
@@ -207,4 +193,21 @@ export default function ProfilePage() {
       </Tabs>
     </div>
   );
+};
+
+export default function ProfilePage() {
+  const router = useRouter();
+  
+  if (!router.isReady) {
+    return <LoadingProfile />;
+  }
+
+  const { id } = router.query;
+  const userId = typeof id === 'string' ? id : Array.isArray(id) ? id[0] : null;
+
+  if (!userId) {
+    return <ErrorCard message="Invalid Profile ID" />;
+  }
+
+  return <ProfileContent userId={userId} />;
 }
