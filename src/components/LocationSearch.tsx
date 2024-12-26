@@ -3,7 +3,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Loader2, CheckCircle2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { Alert } from "@/components/ui/alert";
 
 interface LocationSearchProps {
@@ -30,6 +30,7 @@ export const LocationSearch = ({ onLocationSelect, initialValues }: LocationSear
   const [isGoogleLoaded, setIsGoogleLoaded] = useState(false);
   const autocompleteService = useRef<any>(null);
   const debounceTimer = useRef<NodeJS.Timeout>();
+  const shouldNotifyParent = useRef(false);
 
   // Initialize Google Maps
   useEffect(() => {
@@ -39,11 +40,12 @@ export const LocationSearch = ({ onLocationSelect, initialValues }: LocationSear
     }
   }, []);
 
-  // Set initial values
+  // Set initial values without triggering onLocationSelect
   useEffect(() => {
     if (initialValues) {
       setCityInput(initialValues.city || '');
       setStateInput(initialValues.state || '');
+      shouldNotifyParent.current = false;
     }
   }, [initialValues]);
 
@@ -86,6 +88,7 @@ export const LocationSearch = ({ onLocationSelect, initialValues }: LocationSear
 
   const handleCityInputChange = (value: string) => {
     setCityInput(value);
+    shouldNotifyParent.current = true;
     
     // Clear any existing timer
     if (debounceTimer.current) {
@@ -111,8 +114,9 @@ export const LocationSearch = ({ onLocationSelect, initialValues }: LocationSear
       setCityInput(city);
       setStateInput(state);
       setPredictions([]);
+      shouldNotifyParent.current = true;
       
-      // Only notify parent when we have both values
+      // Notify parent when we have both values
       if (city && state) {
         onLocationSelect({ city, state });
       }
@@ -122,9 +126,10 @@ export const LocationSearch = ({ onLocationSelect, initialValues }: LocationSear
   const handleStateInputChange = (value: string) => {
     const upperValue = value.toUpperCase();
     setStateInput(upperValue);
+    shouldNotifyParent.current = true;
     
-    // Only notify parent when we have both values
-    if (cityInput && upperValue) {
+    // Notify parent when we have both values and should notify flag is true
+    if (cityInput && upperValue && shouldNotifyParent.current) {
       onLocationSelect({ city: cityInput, state: upperValue });
     }
   };
