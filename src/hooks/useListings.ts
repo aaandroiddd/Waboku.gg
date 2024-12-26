@@ -42,13 +42,16 @@ export function useListings() {
       const querySnapshot = await getDocs(q);
       const fetchedListings = querySnapshot.docs.map(doc => {
         const data = doc.data();
+        console.log('Fetched listing data:', { id: doc.id, ...data }); // Debug log
         return {
           id: doc.id,
           ...data,
+          userId: data.userId || 'unknown', // Ensure userId is never undefined
           createdAt: data.createdAt?.toDate() || new Date()
         };
       }) as Listing[];
 
+      console.log('Processed listings:', fetchedListings); // Debug log
       setListings(fetchedListings);
     } catch (err: any) {
       console.error('Error fetching listings:', err);
