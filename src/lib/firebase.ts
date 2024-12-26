@@ -112,6 +112,12 @@ const initializeFirebase = async () => {
     console.log('Initializing Firebase...');
     validateFirebaseConfig();
 
+    // Check if we're in a browser environment
+    if (typeof window === 'undefined') {
+      console.log('Skipping Firebase initialization in non-browser environment');
+      return { app: null, auth: null, db: null, storage: null };
+    }
+
     // Initialize Firebase app if it hasn't been initialized yet
     if (!getApps().length) {
       console.log('No existing Firebase app, initializing new one');
