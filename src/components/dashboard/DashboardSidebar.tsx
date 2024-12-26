@@ -39,11 +39,6 @@ export function DashboardSidebar({ onNavigate, isMobile = false }: DashboardSide
   const { user } = useAuth();
   
   const navigationItems = [
-    ...(user ? [{
-      href: `/profile/${user.uid}`,
-      icon: User,
-      label: "View Profile"
-    }] : []),
     {
       href: "/dashboard",
       icon: LayoutDashboard,
