@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic'
-import { LocationSearch } from '@/components/LocationSearch';
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -33,9 +32,6 @@ const SettingsPageContent = () => {
   const [formData, setFormData] = useState({
     username: user?.displayName || "",
     bio: "",
-    address: "",
-    city: "",
-    state: "",
     contact: "",
     youtube: "",
     twitter: "",
@@ -63,9 +59,6 @@ const SettingsPageContent = () => {
           setFormData({
             username: user.displayName || "",
             bio: userData.bio || "",
-            address: userData.address || "",
-            city: userData.city || "",
-            state: userData.state || "",
             contact: userData.contact || "",
             youtube: userData.youtube || "",
             twitter: userData.twitter || "",
@@ -75,9 +68,6 @@ const SettingsPageContent = () => {
           setFormData({
             username: user.displayName || "",
             bio: "",
-            address: "",
-            city: "",
-            state: "",
             contact: "",
             youtube: "",
             twitter: "",
@@ -151,18 +141,11 @@ const SettingsPageContent = () => {
         }
       }
 
-      // Prepare location data - only include if values are present
-      const locationData: any = {};
-      if (formData.address) locationData.address = formData.address;
-      if (formData.city) locationData.city = formData.city;
-      if (formData.state) locationData.state = formData.state;
-
       // Update profile with all user data
       const { error: updateError } = await updateProfile({
         displayName: formData.username,
         photoURL,
         bio: formData.bio,
-        location: Object.keys(locationData).length > 0 ? JSON.stringify(locationData) : undefined,
         contact: formData.contact,
         social: {
           youtube: formData.youtube || '',
@@ -310,26 +293,6 @@ const SettingsPageContent = () => {
               </div>
 
               <Separator />
-
-              {/* Location Section */}
-              <div className="space-y-2">
-                <Label>Location</Label>
-                <LocationSearch
-                  onLocationSelect={(location) => {
-                    setFormData(prev => ({
-                      ...prev,
-                      address: location.address || '',
-                      city: location.city,
-                      state: location.state
-                    }));
-                  }}
-                  initialValues={{
-                    address: formData.address,
-                    city: formData.city,
-                    state: formData.state
-                  }}
-                />
-              </div>
 
               {/* Contact Section */}
               <div className="space-y-2">
