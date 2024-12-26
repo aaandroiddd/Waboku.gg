@@ -51,7 +51,7 @@ const SettingsPageContent = () => {
   // Load user data when component mounts
   useEffect(() => {
     const loadUserData = async () => {
-      if (!user) {
+      if (!user?.uid) {
         router.push('/auth/sign-in');
         return;
       }
@@ -60,8 +60,7 @@ const SettingsPageContent = () => {
         const userDoc = await getDoc(doc(db, 'users', user.uid));
         if (userDoc.exists()) {
           const userData = userDoc.data();
-          setFormData(prev => ({
-            ...prev,
+          setFormData({
             username: user.displayName || "",
             bio: userData.bio || "",
             address: userData.address || "",
@@ -71,15 +70,28 @@ const SettingsPageContent = () => {
             youtube: userData.youtube || "",
             twitter: userData.twitter || "",
             facebook: userData.facebook || "",
-          }));
+          });
+        } else {
+          setFormData({
+            username: user.displayName || "",
+            bio: "",
+            address: "",
+            city: "",
+            state: "",
+            contact: "",
+            youtube: "",
+            twitter: "",
+            facebook: "",
+          });
         }
       } catch (err) {
         console.error('Error loading user data:', err);
+        setError("Failed to load user data. Please try refreshing the page.");
       }
     };
 
     loadUserData();
-  }, [user, router]);
+  }, [user?.uid]);
 
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
