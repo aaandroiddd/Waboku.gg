@@ -15,7 +15,14 @@ import { Listing } from '@/types/database';
 
 const DashboardComponent = () => {
   const { toast } = useToast();
+  const router = useRouter();
+  const { tab = 'active', new: newListingId } = router.query;
+  const { user, loading: authLoading } = useAuth();
+  const [error, setError] = useState<string | null>(null);
+  const { listings, loading: listingsLoading, error: listingsError, deleteListing, refreshListings } = useListings();
   
+  const loading = authLoading || listingsLoading;
+
   const handleShare = (listingId: string) => {
     const url = `${window.location.origin}/listings/${listingId}`;
     navigator.clipboard.writeText(url);
@@ -29,13 +36,6 @@ const DashboardComponent = () => {
   const handleViewListing = (listingId: string) => {
     router.push(`/listings/${listingId}`);
   };
-  const { tab = 'active', new: newListingId } = useRouter().query;
-  const { user, loading: authLoading } = useAuth();
-  const router = useRouter();
-  const [error, setError] = useState<string | null>(null);
-  const { listings, loading: listingsLoading, error: listingsError, deleteListing, refreshListings } = useListings();
-  
-  const loading = authLoading || listingsLoading;
 
   // Add a retry mechanism for initial data loading
   useEffect(() => {
@@ -48,9 +48,9 @@ const DashboardComponent = () => {
       }, 2000);
       return () => clearTimeout(timer);
     }
-  }, [listingsError, user]);
+  }, [listingsError, user, refreshListings]);
   
-  const sortedListings = [...listings].sort((a, b) => {
+  const sortedListings = [...(listings || [])].sort((a, b) => {
     const dateA = a.createdAt instanceof Date ? a.createdAt : new Date(a.createdAt);
     const dateB = b.createdAt instanceof Date ? b.createdAt : new Date(b.createdAt);
     return dateB.getTime() - dateA.getTime();
@@ -99,31 +99,48 @@ const DashboardComponent = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-      </div>
+      <DashboardLayout>
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+        </div>
+      </DashboardLayout>
     );
   }
 
   if (error || listingsError) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold text-red-600 mb-4">Error</h2>
-          <p className="text-gray-600">{error || listingsError}</p>
-          <Button
-            className="mt-4"
-            onClick={() => router.push('/auth/sign-in')}
-          >
-            Return to Sign In
-          </Button>
+      <DashboardLayout>
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="text-center">
+            <h2 className="text-2xl font-bold text-red-600 mb-4">Error</h2>
+            <p className="text-gray-600">{error || listingsError}</p>
+            <Button
+              className="mt-4"
+              onClick={() => router.push('/auth/sign-in')}
+            >
+              Return to Sign In
+            </Button>
+          </div>
         </div>
-      </div>
+      </DashboardLayout>
     );
   }
 
   if (!user) {
-    return null;
+    return (
+      <DashboardLayout>
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="text-center">
+            <h2 className="text-2xl font-bold mb-4">Please sign in</h2>
+            <Button
+              onClick={() => router.push('/auth/sign-in')}
+            >
+              Sign In
+            </Button>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
   }
 
   return (
@@ -133,8 +150,8 @@ const DashboardComponent = () => {
         <CardContent className="p-6">
           <div className="flex items-start gap-6">
             <Avatar className="h-24 w-24">
-              <AvatarImage src={user.photoURL || ''} />
-              <AvatarFallback>{user.email?.charAt(0).toUpperCase()}</AvatarFallback>
+              <AvatarImage src={user.photoURL || undefined} alt={user.displayName || 'User avatar'} />
+              <AvatarFallback>{user.email ? user.email.charAt(0).toUpperCase() : 'U'}</AvatarFallback>
             </Avatar>
             <div className="flex-1">
               <div className="flex items-center justify-between">
