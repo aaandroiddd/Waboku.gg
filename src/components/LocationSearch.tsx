@@ -26,29 +26,35 @@ export const LocationSearch = ({ onLocationSelect, initialValues }: LocationSear
   const [stateInput, setStateInput] = useState(initialValues?.state || '');
   const [predictions, setPredictions] = useState<any[]>([]);
   const [error, setError] = useState('');
-  const [isConfirmed, setIsConfirmed] = useState(false);
-  const autocompleteService = useRef<any>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoaded, setIsGoogleLoaded] = useState(false);
+  const autocompleteService = useRef<any>(null);
+  const debounceTimer = useRef<NodeJS.Timeout>();
 
+  // Initialize Google Maps
   useEffect(() => {
-    const checkGoogleMapsLoaded = () => {
-      if (window.google && window.google.maps && window.google.maps.places) {
-        autocompleteService.current = new window.google.maps.places.AutocompleteService();
-        setIsGoogleLoaded(true);
-      } else {
-        setTimeout(checkGoogleMapsLoaded, 100);
-      }
-    };
-
-    checkGoogleMapsLoaded();
+    if (window.google && window.google.maps && window.google.maps.places) {
+      autocompleteService.current = new window.google.maps.places.AutocompleteService();
+      setIsGoogleLoaded(true);
+    }
   }, []);
 
+  // Set initial values
+  useEffect(() => {
+    if (initialValues) {
+      setCityInput(initialValues.city || '');
+      setStateInput(initialValues.state || '');
+    }
+  }, [initialValues]);
+
   const handleCitySearch = async (input: string) => {
-    if (!input || !autocompleteService.current || !isGoogleLoaded) return;
+    if (!input || !autocompleteService.current || !isGoogleLoaded) {
+      setPredictions([]);
+      return;
+    }
+
     setIsLoading(true);
     setError('');
-    setIsConfirmed(false);
 
     try {
       const response = await new Promise((resolve, reject) => {
@@ -78,6 +84,24 @@ export const LocationSearch = ({ onLocationSelect, initialValues }: LocationSear
     }
   };
 
+  const handleCityInputChange = (value: string) => {
+    setCityInput(value);
+    
+    // Clear any existing timer
+    if (debounceTimer.current) {
+      clearTimeout(debounceTimer.current);
+    }
+
+    // Set new timer for search
+    if (value.length >= 2) {
+      debounceTimer.current = setTimeout(() => {
+        handleCitySearch(value);
+      }, 300);
+    } else {
+      setPredictions([]);
+    }
+  };
+
   const handlePredictionSelect = (description: string) => {
     const parts = description.split(',');
     if (parts.length >= 2) {
@@ -87,108 +111,71 @@ export const LocationSearch = ({ onLocationSelect, initialValues }: LocationSear
       setCityInput(city);
       setStateInput(state);
       setPredictions([]);
-      setIsConfirmed(true);
-      onLocationSelect({ city, state });
-    }
-  };
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (cityInput.length >= 2 && isGoogleLoaded) {
-        handleCitySearch(cityInput);
-      } else {
-        setPredictions([]);
+      
+      // Only notify parent when we have both values
+      if (city && state) {
+        onLocationSelect({ city, state });
       }
-    }, 300);
-
-    return () => clearTimeout(timer);
-  }, [cityInput, isGoogleLoaded]);
-
-  const handleManualSubmit = () => {
-    if (!cityInput || !stateInput) {
-      setError('Both city and state are required');
-      return;
     }
-    setError('');
-    setIsConfirmed(true);
-    onLocationSelect({
-      city: cityInput,
-      state: stateInput
-    });
   };
 
-  // Only submit when explicitly confirmed
-  useEffect(() => {
-    if (isConfirmed && cityInput && stateInput) {
-      onLocationSelect({
-        city: cityInput,
-        state: stateInput
-      });
+  const handleStateInputChange = (value: string) => {
+    const upperValue = value.toUpperCase();
+    setStateInput(upperValue);
+    
+    // Only notify parent when we have both values
+    if (cityInput && upperValue) {
+      onLocationSelect({ city: cityInput, state: upperValue });
     }
-  }, [isConfirmed]);
+  };
 
   return (
     <div className="space-y-4">
-      <div className="space-y-4">
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="city">City</Label>
-            <div className="relative">
-              <Input
-                id="city"
-                value={cityInput}
-                onChange={(e) => {
-                  setCityInput(e.target.value);
-                  setIsConfirmed(false);
-                }}
-                placeholder="Enter city (optional)"
-                className="pr-10"
-                autoComplete="off"
-              />
-              {isLoading ? (
-                <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                  <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                </div>
-              ) : (
-                isConfirmed && cityInput && (
-                  <CheckCircle2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-green-500" />
-                )
-              )}
-            </div>
-            {predictions.length > 0 && (
-              <Card className="absolute z-50 w-[calc(50%-1rem)] mt-1 max-h-60 overflow-auto shadow-lg">
-                <div className="p-2 space-y-1">
-                  {predictions.map((prediction) => (
-                    <Button
-                      key={prediction.place_id}
-                      variant="ghost"
-                      className="w-full justify-start text-left hover:bg-muted"
-                      onClick={() => handlePredictionSelect(prediction.description)}
-                    >
-                      {prediction.description}
-                    </Button>
-                  ))}
-                </div>
-              </Card>
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="city">City</Label>
+          <div className="relative">
+            <Input
+              id="city"
+              value={cityInput}
+              onChange={(e) => handleCityInputChange(e.target.value)}
+              placeholder="Enter city (optional)"
+              className="pr-10"
+              autoComplete="off"
+            />
+            {isLoading && (
+              <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+              </div>
             )}
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="state">State</Label>
-            <div className="relative">
-              <Input
-                id="state"
-                value={stateInput}
-                onChange={(e) => {
-                  setStateInput(e.target.value.toUpperCase());
-                  setIsConfirmed(false);
-                }}
-                placeholder="Enter state (optional)"
-                maxLength={2}
-              />
-              {isConfirmed && stateInput && (
-                <CheckCircle2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-green-500" />
-              )}
-            </div>
+          {predictions.length > 0 && (
+            <Card className="absolute z-50 w-[calc(50%-1rem)] mt-1 max-h-60 overflow-auto shadow-lg">
+              <div className="p-2 space-y-1">
+                {predictions.map((prediction) => (
+                  <Button
+                    key={prediction.place_id}
+                    variant="ghost"
+                    className="w-full justify-start text-left hover:bg-muted"
+                    onClick={() => handlePredictionSelect(prediction.description)}
+                  >
+                    {prediction.description}
+                  </Button>
+                ))}
+              </div>
+            </Card>
+          )}
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="state">State</Label>
+          <div className="relative">
+            <Input
+              id="state"
+              value={stateInput}
+              onChange={(e) => handleStateInputChange(e.target.value)}
+              placeholder="Enter state (optional)"
+              maxLength={2}
+            />
           </div>
         </div>
       </div>
