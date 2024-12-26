@@ -6,14 +6,17 @@ export interface UserProfile {
   id: string;
   username: string;
   joinDate: string;
-  address?: string;
-  city?: string;
-  state?: string;
   totalSales?: number;
   rating?: number;
   bio?: string;
   avatarUrl?: string;
   email: string;
+  contact?: string;
+  social?: {
+    youtube?: string;
+    twitter?: string;
+    facebook?: string;
+  };
 }
 
 export function useProfile(userId: string | undefined) {
