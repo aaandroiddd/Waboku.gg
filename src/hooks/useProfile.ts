@@ -10,8 +10,9 @@ export interface UserProfile {
   rating?: number;
   bio?: string;
   avatarUrl?: string;
-  email: string;
+  email?: string;
   contact?: string;
+  location?: string;
   social?: {
     youtube?: string;
     twitter?: string;
@@ -28,7 +29,10 @@ export function useProfile(userId: string | undefined) {
     let isMounted = true;
 
     const fetchProfile = async () => {
-      if (!userId) return;
+      if (!userId) {
+        setIsLoading(false);
+        return;
+      }
       
       try {
         setIsLoading(true);
@@ -50,13 +54,13 @@ export function useProfile(userId: string | undefined) {
           username: userData.username || 'Anonymous User',
           email: userData.email,
           joinDate: userData.createdAt || new Date().toISOString(),
-          address: userData.address,
-          city: userData.city,
-          state: userData.state,
+          location: userData.location,
           totalSales: userData.totalSales || 0,
           rating: userData.rating || 0,
-          bio: userData.bio,
-          avatarUrl: userData.avatarUrl || '/images/rect.png'
+          bio: userData.bio || '',
+          avatarUrl: userData.avatarUrl || '/images/rect.png',
+          contact: userData.contact,
+          social: userData.social || {}
         };
 
         if (isMounted) {
