@@ -20,7 +20,7 @@ export interface UserProfile {
   };
 }
 
-export function useProfile(userId: string | undefined) {
+export function useProfile(userId: string | undefined | null) {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -30,8 +30,11 @@ export function useProfile(userId: string | undefined) {
 
     const fetchProfile = async () => {
       if (!userId) {
-        setIsLoading(false);
-        setError('Invalid user ID');
+        if (isMounted) {
+          setIsLoading(false);
+          setError('Invalid user ID');
+          setProfile(null);
+        }
         return;
       }
       
