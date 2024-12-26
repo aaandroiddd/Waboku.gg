@@ -8,7 +8,7 @@ import Head from "next/head";
 import Header from "@/components/Header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent } from "@/components/ui/card";
+import { Slider } from "@/components/ui/slider";
 import {
   Command,
   CommandEmpty,
@@ -23,41 +23,45 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
-import { Search, MapPin, Star, Check } from "lucide-react";
+import { Search, MapPin, Star, Check, Filter } from "lucide-react";
 import Link from "next/link";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+  SheetFooter,
+} from "@/components/ui/sheet";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
-// Mock data for featured listings
-const featuredListings = [
-  {
-    id: 1,
-    cardName: "Blue-Eyes White Dragon",
-    game: "Yu-Gi-Oh",
-    condition: "Near Mint",
-    price: 149.99,
-    location: "New York, NY",
-    seller: "CardMaster",
-    rating: 4.8,
-  },
-  {
-    id: 2,
-    cardName: "Charizard VMAX",
-    game: "Pokémon",
-    condition: "Excellent",
-    price: 299.99,
-    location: "Los Angeles, CA",
-    seller: "PokéCollector",
-    rating: 4.9,
-  },
-  {
-    id: 3,
-    cardName: "Monkey D. Luffy",
-    game: "One Piece",
-    condition: "Mint",
-    price: 89.99,
-    location: "Miami, FL",
-    seller: "OnePieceTrader",
-    rating: 4.7,
-  },
+const games = [
+  { value: "all", label: "All Games" },
+  { value: "yugioh", label: "Yu-Gi-Oh!" },
+  { value: "pokemon", label: "Pokémon" },
+  { value: "mtg", label: "Magic: The Gathering" },
+  { value: "onepiece", label: "One Piece" },
+  { value: "digimon", label: "Digimon" },
+  { value: "flesh", label: "Flesh and Blood" },
+  { value: "weiss", label: "Weiss Schwarz" },
+];
+
+const conditions = [
+  { value: "all", label: "All Conditions" },
+  { value: "mint", label: "Mint" },
+  { value: "near-mint", label: "Near Mint" },
+  { value: "excellent", label: "Excellent" },
+  { value: "good", label: "Good" },
+  { value: "light-played", label: "Light Played" },
+  { value: "played", label: "Played" },
+  { value: "poor", label: "Poor" },
 ];
 
 // US States for location filter
@@ -126,14 +130,18 @@ const subtitles = [
 export default function Home() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedState, setSelectedState] = useState("all");
+  const [selectedGame, setSelectedGame] = useState("all");
+  const [selectedCondition, setSelectedCondition] = useState("all");
+  const [priceRange, setPriceRange] = useState([0, 1000]);
   const [stateOpen, setStateOpen] = useState(false);
+  const [filterOpen, setFilterOpen] = useState(false);
   const [randomSubtitle] = useState(() => 
     subtitles[Math.floor(Math.random() * subtitles.length)]
   );
   const [listings, setListings] = useState<Listing[]>([]);
+  const [filteredListings, setFilteredListings] = useState<Listing[]>([]);
   const [loading, setLoading] = useState(true);
   const [displayCount, setDisplayCount] = useState(8);
-  const [hasMore, setHasMore] = useState(false);
 
   const { latitude, longitude, loading: geoLoading } = useGeolocation();
 
@@ -143,7 +151,7 @@ export default function Home() {
       const q = query(
         collection(db, 'listings'),
         orderBy('createdAt', 'desc'),
-        limit(20) // Fetch more initially to allow for location-based sorting
+        limit(20)
       );
 
       try {
@@ -157,7 +165,6 @@ export default function Home() {
           };
         }) as Listing[];
 
-        // If we have user's location, sort listings by distance
         if (latitude && longitude) {
           fetchedListings = fetchedListings
             .map(listing => {
@@ -172,6 +179,7 @@ export default function Home() {
         }
 
         setListings(fetchedListings);
+        setFilteredListings(fetchedListings);
       } catch (error) {
         console.error('Error fetching listings:', error);
       } finally {
@@ -180,7 +188,60 @@ export default function Home() {
     }
 
     fetchListings();
-  }, []);
+  }, [latitude, longitude]);
+
+  useEffect(() => {
+    let filtered = [...listings];
+
+    // Apply search filter
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(listing => 
+        listing.title?.toLowerCase().includes(query) ||
+        listing.description?.toLowerCase().includes(query)
+      );
+    }
+
+    // Apply game filter
+    if (selectedGame !== "all") {
+      filtered = filtered.filter(listing => 
+        listing.game?.toLowerCase() === selectedGame.toLowerCase()
+      );
+    }
+
+    // Apply condition filter
+    if (selectedCondition !== "all") {
+      filtered = filtered.filter(listing => 
+        listing.condition?.toLowerCase() === selectedCondition.toLowerCase()
+      );
+    }
+
+    // Apply location filter
+    if (selectedState !== "all") {
+      filtered = filtered.filter(listing => 
+        listing.state?.toLowerCase() === selectedState.toLowerCase()
+      );
+    }
+
+    // Apply price filter
+    filtered = filtered.filter(listing => 
+      listing.price >= priceRange[0] && listing.price <= priceRange[1]
+    );
+
+    setFilteredListings(filtered);
+  }, [searchQuery, selectedGame, selectedCondition, selectedState, priceRange, listings]);
+
+  const handleSearch = () => {
+    // The filtering is already handled by the useEffect above
+    setFilterOpen(false);
+  };
+
+  const resetFilters = () => {
+    setSelectedGame("all");
+    setSelectedCondition("all");
+    setPriceRange([0, 1000]);
+    setFilterOpen(false);
+  };
 
   return (
     <>
@@ -237,6 +298,7 @@ export default function Home() {
                           role="combobox"
                           className="w-full sm:w-[200px] h-12 justify-between"
                         >
+                          <MapPin className="mr-2 h-4 w-4" />
                           {selectedState === "all" 
                             ? "All Locations"
                             : usStates.find((state) => state.value === selectedState)?.label || "Select location"}
@@ -271,29 +333,133 @@ export default function Home() {
                         </Command>
                       </PopoverContent>
                     </Popover>
-                    <Button className="h-12 w-12 sm:w-12" size="icon">
+
+                    <Sheet open={filterOpen} onOpenChange={setFilterOpen}>
+                      <SheetTrigger asChild>
+                        <Button variant="outline" className="h-12 px-4">
+                          <Filter className="h-4 w-4 mr-2" />
+                          Filters
+                        </Button>
+                      </SheetTrigger>
+                      <SheetContent>
+                        <SheetHeader>
+                          <SheetTitle>Filter Listings</SheetTitle>
+                          <SheetDescription>
+                            Refine your search with these filters
+                          </SheetDescription>
+                        </SheetHeader>
+                        <div className="py-4 space-y-6">
+                          <div className="space-y-2">
+                            <label className="text-sm font-medium">Game</label>
+                            <Select value={selectedGame} onValueChange={setSelectedGame}>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select game" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {games.map((game) => (
+                                  <SelectItem key={game.value} value={game.value}>
+                                    {game.label}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          <div className="space-y-2">
+                            <label className="text-sm font-medium">Condition</label>
+                            <Select value={selectedCondition} onValueChange={setSelectedCondition}>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select condition" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {conditions.map((condition) => (
+                                  <SelectItem key={condition.value} value={condition.value}>
+                                    {condition.label}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          <div className="space-y-4">
+                            <label className="text-sm font-medium">Price Range</label>
+                            <div className="px-2">
+                              <Slider
+                                min={0}
+                                max={1000}
+                                step={10}
+                                value={priceRange}
+                                onValueChange={setPriceRange}
+                              />
+                            </div>
+                            <div className="flex justify-between text-sm text-muted-foreground">
+                              <span>${priceRange[0]}</span>
+                              <span>${priceRange[1]}</span>
+                            </div>
+                          </div>
+                        </div>
+                        <SheetFooter>
+                          <Button variant="outline" onClick={resetFilters}>
+                            Reset Filters
+                          </Button>
+                          <Button onClick={handleSearch}>
+                            Apply Filters
+                          </Button>
+                        </SheetFooter>
+                      </SheetContent>
+                    </Sheet>
+
+                    <Button className="h-12 w-12 sm:w-12" size="icon" onClick={handleSearch}>
                       <Search className="h-5 w-5" />
                     </Button>
                   </div>
                 </div>
+
+                {/* Active Filters */}
+                {(selectedGame !== "all" || selectedCondition !== "all" || selectedState !== "all" || priceRange[0] !== 0 || priceRange[1] !== 1000) && (
+                  <div className="flex flex-wrap gap-2 mt-4 justify-center">
+                    {selectedGame !== "all" && (
+                      <Badge variant="secondary" className="px-3 py-1">
+                        {games.find(g => g.value === selectedGame)?.label}
+                      </Badge>
+                    )}
+                    {selectedCondition !== "all" && (
+                      <Badge variant="secondary" className="px-3 py-1">
+                        {conditions.find(c => c.value === selectedCondition)?.label}
+                      </Badge>
+                    )}
+                    {selectedState !== "all" && (
+                      <Badge variant="secondary" className="px-3 py-1">
+                        {usStates.find(s => s.value === selectedState)?.label}
+                      </Badge>
+                    )}
+                    {(priceRange[0] !== 0 || priceRange[1] !== 1000) && (
+                      <Badge variant="secondary" className="px-3 py-1">
+                        ${priceRange[0]} - ${priceRange[1]}
+                      </Badge>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           </div>
 
-          {/* Featured Listings Section */}
+          {/* Listings Section */}
           <section className="container mx-auto px-4 py-8 sm:py-12">
             <div className="flex items-center justify-between mb-8">
-              <h2 className="text-2xl font-semibold">Latest Listings Near You</h2>
+              <h2 className="text-2xl font-semibold">
+                {latitude && longitude ? "Latest Listings Near You" : "Latest Listings"}
+              </h2>
               <Link href="/listings">
                 <Button variant="outline" size="sm">View All</Button>
               </Link>
             </div>
             <div className="max-w-[1400px] mx-auto">
               <ListingGrid 
-                listings={listings} 
+                listings={filteredListings} 
                 loading={loading} 
                 displayCount={displayCount}
-                hasMore={listings.length > displayCount}
+                hasMore={filteredListings.length > displayCount}
                 onLoadMore={() => setDisplayCount(prev => prev + 8)}
               />
             </div>
