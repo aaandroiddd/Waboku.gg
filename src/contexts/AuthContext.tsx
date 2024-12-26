@@ -176,6 +176,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             displayName: username
           })
         );
+
+        // Create initial user profile in Firestore
+        const userDocRef = doc(db, 'users', userCredential.user.uid);
+        await retryOperation(async () => {
+          await setDoc(userDocRef, {
+            username: username,
+            email: email,
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
+            totalSales: 0,
+            rating: 0,
+            bio: '',
+            avatarUrl: '/images/rect.png',
+            social: {
+              youtube: '',
+              twitter: '',
+              facebook: ''
+            }
+          });
+        });
       } catch (error) {
         await releaseUsername(username);
         await userCredential.user.delete();
