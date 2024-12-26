@@ -11,11 +11,26 @@ import { format } from 'date-fns';
 
 export default function ProfilePage() {
   const router = useRouter();
-  const { id } = router.query;
-  const { profile, isLoading, error } = useProfile(typeof id === 'string' ? id : undefined);
   const { user } = useAuth();
+  
+  // Wait for router to be ready
+  if (!router.isReady) {
+    return (
+      <div className="container mx-auto p-6">
+        <div className="animate-pulse">
+          <div className="h-64 bg-secondary rounded-lg mb-4"></div>
+          <div className="h-8 bg-secondary rounded w-1/4 mb-4"></div>
+          <div className="h-4 bg-secondary rounded w-3/4"></div>
+        </div>
+      </div>
+    );
+  }
 
-  if (!id) {
+  const { id } = router.query;
+  const userId = Array.isArray(id) ? id[0] : id;
+  const { profile, isLoading, error } = useProfile(userId);
+
+  if (!userId) {
     return (
       <div className="container mx-auto p-6">
         <Card>
@@ -86,8 +101,8 @@ export default function ProfilePage() {
                   <h1 className="text-3xl font-bold mb-2">{profile.username}</h1>
                   <p className="text-muted-foreground">Member since {joinDate}</p>
                 </div>
-                {user && user.uid !== id && (
-                  <Button variant="secondary" onClick={() => router.push(`/messages?userId=${id}`)}>
+                {user && user.uid !== userId && (
+                  <Button variant="secondary" onClick={() => router.push(`/messages?userId=${userId}`)}>
                     Message
                   </Button>
                 )}
@@ -162,7 +177,7 @@ export default function ProfilePage() {
         
         <TabsContent value="listings">
           <div className="mt-6">
-            <ListingGrid userId={id as string} />
+            <ListingGrid userId={userId} />
           </div>
         </TabsContent>
         
