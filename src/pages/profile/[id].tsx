@@ -108,11 +108,43 @@ export default function ProfilePage() {
 
               <Separator className="my-6" />
 
-              <div>
-                <h2 className="font-semibold mb-2">About</h2>
-                <p className="text-muted-foreground">
-                  {profile.bio || 'This user hasn\'t added a bio yet.'}
-                </p>
+              <div className="space-y-4">
+                <div>
+                  <h2 className="font-semibold mb-2">About</h2>
+                  <p className="text-muted-foreground">
+                    {profile.bio || 'This user hasn\'t added a bio yet.'}
+                  </p>
+                </div>
+
+                {profile.contact && (
+                  <div>
+                    <h2 className="font-semibold mb-2">Contact</h2>
+                    <p className="text-muted-foreground">{profile.contact}</p>
+                  </div>
+                )}
+
+                {profile.social && (Object.values(profile.social).some(link => link)) && (
+                  <div>
+                    <h2 className="font-semibold mb-2">Social Links</h2>
+                    <div className="flex gap-4">
+                      {profile.social.youtube && (
+                        <a href={profile.social.youtube} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary">
+                          YouTube
+                        </a>
+                      )}
+                      {profile.social.twitter && (
+                        <a href={profile.social.twitter} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary">
+                          X (Twitter)
+                        </a>
+                      )}
+                      {profile.social.facebook && (
+                        <a href={profile.social.facebook} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary">
+                          Facebook
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
