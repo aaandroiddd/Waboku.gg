@@ -333,12 +333,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       // Update Firebase user profile
       if (data.displayName || data.photoURL) {
-        await retryOperation(() =>
-          updateProfile(user, {
-            ...(data.displayName && { displayName: data.displayName }),
-            ...(data.photoURL && { photoURL: data.photoURL })
-          })
-        );
+        const profileUpdate = {
+          ...(data.displayName && { displayName: data.displayName }),
+          ...(data.photoURL && { photoURL: data.photoURL })
+        };
+        
+        await retryOperation(async () => {
+          const currentUser = auth.currentUser;
+          if (!currentUser) throw new Error('User not found');
+          return await updateProfile(currentUser, profileUpdate);
+        });
       }
 
       // Update custom claims or additional user data in Firestore
@@ -354,17 +358,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       }
 
-      await setDoc(userDocRef, {
+      const updateData = {
         ...(data.bio !== undefined && { bio: data.bio }),
         ...locationData,
         ...(data.contact !== undefined && { contact: data.contact }),
         ...(data.social && {
-          youtube: data.social.youtube || '',
-          twitter: data.social.twitter || '',
-          facebook: data.social.facebook || ''
+          social: {
+            youtube: data.social.youtube || '',
+            twitter: data.social.twitter || '',
+            facebook: data.social.facebook || ''
+          }
         }),
         updatedAt: serverTimestamp()
-      }, { merge: true });
+      };
+
+      await retryOperation(async () => {
+        await setDoc(userDocRef, updateData, { merge: true });
+      });
 
       return { error: null };
     } catch (error: any) {
