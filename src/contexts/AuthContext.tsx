@@ -348,19 +348,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Update custom claims or additional user data in Firestore
       const userDocRef = doc(db, 'users', user.uid);
       
-      // Parse location if it's a JSON string
-      let locationData = {};
-      if (data.location) {
-        try {
-          locationData = JSON.parse(data.location);
-        } catch (e) {
-          locationData = { location: data.location };
-        }
-      }
-
       const updateData = {
+        username: data.displayName || user.displayName,
+        avatarUrl: data.photoURL || user.photoURL,
         ...(data.bio !== undefined && { bio: data.bio }),
-        ...locationData,
         ...(data.contact !== undefined && { contact: data.contact }),
         ...(data.social && {
           social: {
@@ -369,7 +360,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             facebook: data.social.facebook || ''
           }
         }),
-        updatedAt: serverTimestamp()
+        updatedAt: serverTimestamp(),
+        // Ensure we have these fields for new users
+        createdAt: serverTimestamp(),
+        email: user.email,
       };
 
       await retryOperation(async () => {
