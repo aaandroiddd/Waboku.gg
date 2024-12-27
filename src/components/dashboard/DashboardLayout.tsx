@@ -1,65 +1,13 @@
-import { useEffect, useState } from "react";
-import { useRouter } from "next/router";
-import { useAuth } from "@/contexts/AuthContext";
-import { DashboardSidebar } from "./DashboardSidebar";
-import { Button } from "@/components/ui/button";
-import { Menu } from "lucide-react";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { ReactNode } from 'react';
+import DashboardSidebar from './DashboardSidebar';
 
-interface DashboardLayoutProps {
-  children: React.ReactNode;
-}
-
-export function DashboardLayout({ children }: DashboardLayoutProps) {
-  const router = useRouter();
-  const [isMobileOpen, setIsMobileOpen] = useState(false);
-  const { user, loading } = useAuth();
-
-  useEffect(() => {
-    if (!loading && !user) {
-      router.replace("/auth/sign-in");
-    }
-  }, [user, loading, router]);
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-      </div>
-    );
-  }
-
-  if (!user) {
-    return null;
-  }
-
+export function DashboardLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="min-h-screen bg-background flex">
-      {/* Mobile Menu Button */}
-      <div className="lg:hidden fixed top-0 left-0 z-50 p-4">
-        <Sheet open={isMobileOpen} onOpenChange={setIsMobileOpen}>
-          <SheetTrigger asChild>
-            <Button variant="ghost" size="icon" className="bg-card">
-              <Menu className="h-5 w-5" />
-            </Button>
-          </SheetTrigger>
-          <SheetContent side="left" className="p-0 w-16">
-            <DashboardSidebar onNavigate={() => setIsMobileOpen(false)} isMobile={true} />
-          </SheetContent>
-        </Sheet>
-      </div>
-
-      {/* Desktop Sidebar */}
-      <div className="hidden lg:block">
-        <DashboardSidebar isMobile={false} />
-      </div>
-
-      {/* Main Content */}
-      <div className="flex-1 w-full">
-        <main className="container mx-auto py-6 px-4 mt-16 lg:mt-6">
-          {children}
-        </main>
-      </div>
+    <div className="flex min-h-screen">
+      <DashboardSidebar />
+      <main className="flex-1 p-6">
+        {children}
+      </main>
     </div>
   );
 }
