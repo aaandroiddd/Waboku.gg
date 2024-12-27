@@ -1,104 +1,46 @@
-import { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import Link from "next/link";
-import { useRouter } from "next/router";
-import { Logo } from "@/components/Logo";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { useAuth } from "@/contexts/AuthContext";
-import { AuthProvider } from "@/contexts/AuthContext";
+import { useState } from 'react';
+import { useRouter } from 'next/router';
+import Link from 'next/link';
+import { useAuth } from '@/contexts/AuthContext';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Label } from '@/components/ui/label';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
-const SignUpForm = () => {
+export default function SignUp() {
   const router = useRouter();
-  const [email, setEmail] = useState("");
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [error, setError] = useState("");
+  const { signUp } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
-  const { user, signUp } = useAuth();
-
-  useEffect(() => {
-    if (user) {
-      router.push("/dashboard");
-    }
-  }, [user, router]);
+  const [error, setError] = useState<string | null>(null);
+  const [formData, setFormData] = useState({
+    email: '',
+    password: '',
+    username: '',
+  });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
     setIsLoading(true);
-    
+    setError(null);
+
     try {
-      // Check if we have internet connection
-      if (!navigator.onLine) {
-        throw new Error("No internet connection. Please check your network and try again.");
-      }
-      
-      // Basic validation
-      if (!email || !password || !confirmPassword || !username) {
-        throw new Error("All fields are required");
-      }
-
-      if (!email.includes('@')) {
-        throw new Error("Please enter a valid email address");
-      }
-
-      if (username.length < 3) {
-        throw new Error("Username must be at least 3 characters long");
-      }
-
-      if (username.length > 20) {
-        throw new Error("Username must be less than 20 characters long");
-      }
-
-      // Username can only contain letters, numbers, underscores, and hyphens
-      if (!/^[a-zA-Z0-9_-]+$/.test(username)) {
-        throw new Error("Username can only contain letters, numbers, underscores, and hyphens");
-      }
-
-      if (password !== confirmPassword) {
-        throw new Error("Passwords don't match!");
-      }
-
-      if (password.length < 6) {
-        throw new Error("Password must be at least 6 characters long");
-      }
-
-      console.log('Starting sign up process...');
-      const { error: signUpError, user: newUser } = await signUp(email, password, username);
-      
-      if (signUpError) {
-        throw signUpError;
-      }
-
-      if (!newUser) {
-        throw new Error("Failed to create account. Please try again.");
-      }
-
-      console.log('Sign up successful, redirecting...');
-      // Redirect to dashboard immediately after successful signup
-      router.push("/dashboard");
+      await signUp(formData.email, formData.password, formData.username);
+      router.push('/dashboard');
     } catch (err: any) {
-      console.error('Sign up error:', err);
-      setError(err.message || "An unexpected error occurred. Please try again.");
+      setError(err.message);
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-background">
-      <Link href="/" className="mb-8">
-        <Logo className="h-auto text-3xl" alwaysShowFull={true} />
-      </Link>
-      <Card className="w-[400px]">
+    <div className="container mx-auto flex items-center justify-center min-h-screen p-4">
+      <Card className="w-full max-w-md">
         <CardHeader>
           <CardTitle>Create Account</CardTitle>
           <CardDescription>
-            Create an account to start trading cards in your local area
+            Join Waboku.gg to start trading cards
           </CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit}>
@@ -108,99 +50,57 @@ const SignUpForm = () => {
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             )}
+            
             <div className="space-y-2">
-              <label htmlFor="username" className="text-sm font-medium">
-                Username
-              </label>
+              <Label htmlFor="username">Username</Label>
               <Input
                 id="username"
-                type="text"
-                placeholder="Choose your username"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
+                placeholder="Choose a username"
+                value={formData.username}
+                onChange={(e) => setFormData(prev => ({ ...prev, username: e.target.value }))}
                 required
-                disabled={isLoading}
-                autoComplete="username"
               />
-              <p className="text-xs text-muted-foreground">
-                This will be your public display name
-              </p>
             </div>
+
             <div className="space-y-2">
-              <label htmlFor="email" className="text-sm font-medium">
-                Email
-              </label>
+              <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
                 type="email"
                 placeholder="Enter your email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                value={formData.email}
+                onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
                 required
-                disabled={isLoading}
-                autoComplete="email"
               />
             </div>
+            
             <div className="space-y-2">
-              <label htmlFor="password" className="text-sm font-medium">
-                Password
-              </label>
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Input
-                      id="password"
-                      type="password"
-                      placeholder="Create a password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      required
-                      disabled={isLoading}
-                      autoComplete="new-password"
-                    />
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Password must:</p>
-                    <ul className="list-disc list-inside text-sm">
-                      <li>Be at least 6 characters long</li>
-                      <li>Include a mix of letters and numbers</li>
-                      <li>Not contain common words</li>
-                    </ul>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </div>
-            <div className="space-y-2">
-              <label htmlFor="confirmPassword" className="text-sm font-medium">
-                Confirm Password
-              </label>
+              <Label htmlFor="password">Password</Label>
               <Input
-                id="confirmPassword"
+                id="password"
                 type="password"
-                placeholder="Confirm your password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Create a password"
+                value={formData.password}
+                onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
                 required
-                disabled={isLoading}
-                autoComplete="new-password"
+                minLength={6}
               />
             </div>
           </CardContent>
+          
           <CardFooter className="flex flex-col space-y-4">
-            <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? (
-                <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                  Creating Account...
-                </div>
-              ) : (
-                "Create Account"
-              )}
+            <Button 
+              type="submit" 
+              className="w-full"
+              disabled={isLoading}
+            >
+              {isLoading ? 'Creating Account...' : 'Create Account'}
             </Button>
-            <p className="text-sm text-center">
-              Already have an account?{" "}
+            
+            <p className="text-sm text-center text-muted-foreground">
+              Already have an account?{' '}
               <Link href="/auth/sign-in" className="text-primary hover:underline">
-                Sign In
+                Sign in
               </Link>
             </p>
           </CardFooter>
@@ -208,14 +108,4 @@ const SignUpForm = () => {
       </Card>
     </div>
   );
-};
-
-const SignUpPage = () => {
-  return (
-    <AuthProvider>
-      <SignUpForm />
-    </AuthProvider>
-  );
-};
-
-export default SignUpPage;
+}
