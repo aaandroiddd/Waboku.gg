@@ -65,7 +65,9 @@ const DashboardComponent = () => {
     }
   }, [user, loading, router]);
 
-  const getConditionColor = (condition: string) => {
+  const getConditionColor = (condition: string | undefined | null) => {
+    if (!condition) return 'bg-gray-100 text-gray-800';
+    
     switch (condition.toLowerCase()) {
       case 'mint':
       case 'near-mint':
