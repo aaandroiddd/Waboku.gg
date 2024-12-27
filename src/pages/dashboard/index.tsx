@@ -66,9 +66,13 @@ const DashboardComponent = () => {
   }, [user, loading, router]);
 
   const getConditionColor = (condition: string | undefined | null) => {
-    if (!condition) return 'bg-gray-100 text-gray-800';
+    // If condition is not a string or is empty, return default color
+    if (!condition || typeof condition !== 'string') return 'bg-gray-100 text-gray-800';
     
-    switch (condition.toLowerCase()) {
+    // Now we know condition is a string, we can safely use toLowerCase
+    const conditionLower = condition.toLowerCase();
+    
+    switch (conditionLower) {
       case 'mint':
       case 'near-mint':
         return 'bg-green-100 text-green-800';
