@@ -2,11 +2,15 @@ import { useState, useEffect } from 'react';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Listing } from '@/types/database';
+import { useAuth } from '@/contexts/AuthContext';
+import { useFavorites } from './useFavorites';
 
 export function useListings(userId?: string) {
   const [listings, setListings] = useState<Listing[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { user } = useAuth();
+  const { favorites } = useFavorites();
 
   useEffect(() => {
     const fetchListings = async () => {
@@ -14,6 +18,12 @@ export function useListings(userId?: string) {
         setIsLoading(true);
         setError(null);
         
+        if (userId === 'favorites') {
+          setListings(favorites);
+          setIsLoading(false);
+          return;
+        }
+
         let q = collection(db, 'listings');
         if (userId) {
           q = query(q, where('userId', '==', userId));
@@ -35,7 +45,7 @@ export function useListings(userId?: string) {
     };
 
     fetchListings();
-  }, [userId]);
+  }, [userId, favorites]);
 
   return { listings, isLoading, error };
 }
