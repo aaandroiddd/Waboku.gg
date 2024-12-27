@@ -112,6 +112,11 @@ const initializeFirebase = async () => {
     console.log('Initializing Firebase...');
     validateFirebaseConfig();
 
+    // Additional validation for storage bucket
+    if (!firebaseConfig.storageBucket || firebaseConfig.storageBucket.trim() === '') {
+      throw new Error('Storage bucket configuration is missing or empty');
+    }
+
     // Check if we're in a browser environment
     if (typeof window === 'undefined') {
       console.log('Skipping Firebase initialization in non-browser environment');
