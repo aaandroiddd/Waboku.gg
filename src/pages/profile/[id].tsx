@@ -103,6 +103,7 @@ const ProfileContent = ({ userId }: { userId: string }) => {
                     const target = e.target as HTMLImageElement;
                     target.src = '/images/rect.png';
                   }}
+                  unoptimized={profile.avatarUrl?.startsWith('https://firebasestorage.googleapis.com')}
                 />
               </div>
             </div>
