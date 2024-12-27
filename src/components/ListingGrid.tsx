@@ -43,38 +43,22 @@ export function ListingGrid({
     let isMounted = true;
 
     const loadListings = async () => {
-      if (userId) {
-        // Mock data for user listings
-        const mockListings = [
-          {
-            id: '1',
-            title: 'Blue-Eyes White Dragon',
-            price: 299.99,
-            game: 'Yu-Gi-Oh!',
-            condition: 'near-mint',
-            imageUrls: ['https://assets.co.dev/171838d1-5208-4d56-8fa3-d46502238350/image-82bb4ad.png'],
-            username: 'CardMaster2024',
-            city: 'New York',
-            state: 'NY'
-          },
-          {
-            id: '2',
-            title: 'Dark Magician',
-            price: 199.99,
-            game: 'Yu-Gi-Oh!',
-            condition: 'excellent',
-            imageUrls: ['https://assets.co.dev/171838d1-5208-4d56-8fa3-d46502238350/image-82bb4ad.png'],
-            username: 'CardMaster2024',
-            city: 'New York',
-            state: 'NY'
+      try {
+        if (userId) {
+          // Filter listings for specific user
+          const userListings = propListings.filter(listing => listing.userId === userId);
+          if (isMounted) {
+            setListings(userListings);
           }
-        ];
-        
-        if (isMounted) {
-          setListings(mockListings);
+        } else if (isMounted) {
+          setListings(propListings || []);
         }
-      } else if (isMounted) {
-        setListings(propListings || []);
+      } catch (error) {
+        console.error('Error loading listings:', error);
+        // Set empty listings array on error
+        if (isMounted) {
+          setListings([]);
+        }
       }
     };
 
