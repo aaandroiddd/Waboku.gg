@@ -103,6 +103,7 @@ const ProfileContent = ({ userId }: { userId: string }) => {
                     const target = e.target as HTMLImageElement;
                     target.src = '/images/rect.png';
                   }}
+                />
               </div>
             </div>
             <div className="flex-1">
