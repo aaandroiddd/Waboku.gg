@@ -138,15 +138,10 @@ export default function ListingPage() {
 
         // Check if the listing is favorited by the current user
         if (user && isMounted) {
-          const favoritesRef = collection(db, 'favorites');
-          const q = query(
-            favoritesRef,
-            where('userId', '==', user.uid),
-            where('listingId', '==', id)
-          );
-          const querySnapshot = await getDocs(q);
+          const favoriteRef = doc(db, 'users', user.uid, 'favorites', id as string);
+          const favoriteDoc = await getDoc(favoriteRef);
           if (isMounted) {
-            setIsFavorited(!querySnapshot.empty);
+            setIsFavorited(favoriteDoc.exists());
           }
         }
       } catch (err: any) {
