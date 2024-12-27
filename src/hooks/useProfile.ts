@@ -79,8 +79,13 @@ export function useProfile(userId: string | null) {
         // Wait for Firebase to initialize
         await initializationPromise;
         
+        // Get user profile from Firestore
         const userDocRef = doc(db, 'users', userId);
         const userDoc = await getDoc(userDocRef);
+
+        // Get username from usernames collection
+        const usernameDocRef = doc(db, 'usernames', userId);
+        const usernameDoc = await getDoc(usernameDocRef);
         
         if (!isMounted) return;
 
