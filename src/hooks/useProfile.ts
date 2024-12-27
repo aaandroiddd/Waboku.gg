@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { doc, getDoc } from 'firebase/firestore';
-import { db, initializationPromise } from '@/lib/firebase';
+import { ref, getDownloadURL } from 'firebase/storage';
+import { db, storage, initializationPromise } from '@/lib/firebase';
 
 export interface UserProfile {
   id: string;
