@@ -2,7 +2,15 @@ rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
     match /{allPaths=**} {
-      allow read, write: if true;  // Temporarily allow all access for debugging
+      // Allow read access to anyone
+      allow read: if true;
+      
+      // Allow write access only to authenticated users
+      allow write: if request.auth != null;
+      
+      // Allow delete only if the user owns the file
+      allow delete: if request.auth != null && 
+        resource.metadata.owner == request.auth.uid;
     }
   }
 }
