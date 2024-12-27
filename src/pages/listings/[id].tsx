@@ -178,26 +178,17 @@ export default function ListingPage() {
 
     if (!listing) return;
 
-    const db = getFirestore(app);
-    const favoritesRef = collection(db, 'favorites');
+    const favoriteRef = doc(db, 'users', user.uid, 'favorites', listing.id);
+    const listingRef = doc(db, 'listings', listing.id);
 
     try {
       if (isFavorited) {
-        const q = query(
-          favoritesRef,
-          where('userId', '==', user.uid),
-          where('listingId', '==', listing.id)
-        );
-        const querySnapshot = await getDocs(q);
-        querySnapshot.forEach((doc) => {
-          deleteDoc(doc.ref);
-        });
+        await deleteDoc(favoriteRef);
         setIsFavorited(false);
         toast.success('Removed from favorites');
       } else {
-        await addDoc(favoritesRef, {
-          userId: user.uid,
-          listingId: listing.id,
+        await setDoc(favoriteRef, {
+          listingRef,
           createdAt: new Date()
         });
         setIsFavorited(true);
