@@ -1,421 +1,132 @@
-import { createContext, useContext, useEffect, useState, useCallback } from 'react';
-import { 
-  User,
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   signOut as firebaseSignOut,
   onAuthStateChanged,
-  updateProfile,
-  getIdToken,
-  onIdTokenChanged
+  User
 } from 'firebase/auth';
-import { auth, db, checkUsernameAvailability, reserveUsername, releaseUsername } from '@/lib/firebase';
-import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, setDoc, getDoc } from 'firebase/firestore';
+import { auth, db } from '@/lib/firebase';
+import { UserProfile } from '@/types/database';
 
-type AuthContextType = {
+interface AuthContextType {
   user: User | null;
-  loading: boolean;
-  signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
-  signUp: (email: string, password: string, username: string) => Promise<{ error: Error | null, user: User | null }>;
+  profile: UserProfile | null;
+  isLoading: boolean;
+  error: string | null;
+  signUp: (email: string, password: string, username: string) => Promise<void>;
+  signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
-  updateUsername: (username: string) => Promise<{ error: Error | null }>;
-  updateProfile: (data: {
-    displayName?: string;
-    photoURL?: string;
-    bio?: string;
-    location?: string;
-    contact?: string;
-  }) => Promise<{ error: Error | null }>;
-  refreshToken: () => Promise<string | null>;
-};
+  updateProfile: (data: Partial<UserProfile>) => Promise<void>;
+}
 
-const AuthContext = createContext<AuthContextType | null>(null);
-
-const TOKEN_REFRESH_INTERVAL = 10 * 60 * 1000; // 10 minutes
-const MAX_RETRY_ATTEMPTS = 3;
-const RETRY_DELAY = 1000;
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [initialized, setInitialized] = useState(false);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Retry mechanism with exponential backoff
-  const retryOperation = async <T,>(
-    operation: () => Promise<T>,
-    attempts = MAX_RETRY_ATTEMPTS
-  ): Promise<T> => {
-    for (let i = 0; i < attempts; i++) {
-      try {
-        return await operation();
-      } catch (error: any) {
-        if (i === attempts - 1) throw error;
-        
-        const delay = RETRY_DELAY * Math.pow(2, i);
-        console.warn(`Operation failed, retrying in ${delay}ms...`, {
-          attempt: i + 1,
-          error: error.message
-        });
-        await new Promise(resolve => setTimeout(resolve, delay));
-      }
-    }
-    throw new Error('Retry operation failed');
-  };
-
-  // Token refresh mechanism
-  const refreshToken = useCallback(async (): Promise<string | null> => {
-    if (!user) return null;
-
-    try {
-      return await retryOperation(async () => {
-        const token = await user.getIdToken(true);
-        return token;
-      });
-    } catch (error) {
-      console.error('Token refresh failed:', error);
-      return null;
-    }
-  }, [user]);
-
-  // Enhanced auth state management
   useEffect(() => {
-    let tokenRefreshInterval: NodeJS.Timeout;
-
-    try {
-      const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
-        if (user) {
-          try {
-            if (!navigator.onLine) {
-              console.warn('No internet connection detected');
-              return;
-            }
-
-            await retryOperation(async () => {
-              const token = await user.getIdToken();
-              const decodedToken = JSON.parse(atob(token.split('.')[1]));
-              const expirationTime = decodedToken.exp * 1000;
-              
-              if (Date.now() + 5 * 60 * 1000 > expirationTime) {
-                await user.getIdToken(true);
-              }
-            });
-          } catch (error: any) {
-            console.error('Token validation error:', {
-              code: error.code,
-              message: error.message,
-              isOnline: navigator.onLine
-            });
-
-            if (error.code === 'auth/network-request-failed' || !navigator.onLine) {
-              // Handle offline scenario
-              console.log('Operating in offline mode');
-            } else {
-              await signOut();
-            }
-          }
-        }
-        setUser(user);
-        setLoading(false);
-        setInitialized(true);
-      });
-
-      // Token refresh listener
-      const unsubscribeToken = onIdTokenChanged(auth, async (user) => {
-        if (user) {
-          try {
-            await user.getIdToken(true);
-          } catch (error) {
-            console.error('Token refresh error:', error);
-          }
-        }
-      });
-
-      // Set up periodic token refresh
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      setUser(user);
       if (user) {
-        tokenRefreshInterval = setInterval(refreshToken, TOKEN_REFRESH_INTERVAL);
+        try {
+          const profileDoc = await getDoc(doc(db, 'users', user.uid));
+          if (profileDoc.exists()) {
+            setProfile(profileDoc.data() as UserProfile);
+          }
+        } catch (err) {
+          console.error('Error fetching user profile:', err);
+        }
+      } else {
+        setProfile(null);
       }
+      setIsLoading(false);
+    });
 
-      return () => {
-        unsubscribeAuth();
-        unsubscribeToken();
-        if (tokenRefreshInterval) clearInterval(tokenRefreshInterval);
-      };
-    } catch (error) {
-      console.error('Auth initialization error:', error);
-      setLoading(false);
-      setInitialized(true);
-    }
-  }, [user, refreshToken]);
+    return () => unsubscribe();
+  }, []);
 
   const signUp = async (email: string, password: string, username: string) => {
     try {
-      const isAvailable = await retryOperation(() => 
-        checkUsernameAvailability(username)
-      );
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const { user } = userCredential;
 
-      if (!isAvailable) {
-        throw new Error('This username is already taken. Please choose another one.');
-      }
-
-      const userCredential = await retryOperation(() =>
-        createUserWithEmailAndPassword(auth, email, password)
-      );
-      
-      try {
-        await retryOperation(() =>
-          reserveUsername(username, userCredential.user.uid)
-        );
-      } catch (error) {
-        await userCredential.user.delete();
-        throw error;
-      }
-
-      try {
-        await retryOperation(() =>
-          updateProfile(userCredential.user, {
-            displayName: username
-          })
-        );
-
-        // Create initial user profile in Firestore
-        const userDocRef = doc(db, 'users', userCredential.user.uid);
-        await retryOperation(async () => {
-          await setDoc(userDocRef, {
-            username: username,
-            email: email,
-            createdAt: serverTimestamp(),
-            updatedAt: serverTimestamp(),
-            totalSales: 0,
-            rating: 0,
-            bio: '',
-            avatarUrl: '/images/rect.png',
-            social: {
-              youtube: '',
-              twitter: '',
-              facebook: ''
-            }
-          });
-        });
-      } catch (error) {
-        await releaseUsername(username);
-        await userCredential.user.delete();
-        throw error;
-      }
-
-      return { error: null, user: userCredential.user };
-    } catch (error: any) {
-      console.error('Sign up error:', {
-        code: error.code,
-        message: error.message,
-        stack: error.stack
-      });
-
-      const errorMessage = getAuthErrorMessage(error);
-      return { 
-        error: new Error(errorMessage),
-        user: null
+      const newProfile: UserProfile = {
+        uid: user.uid,
+        email: user.email!,
+        username,
+        joinDate: new Date().toISOString(),
+        totalSales: 0,
+        lastUpdated: new Date().toISOString()
       };
+
+      await setDoc(doc(db, 'users', user.uid), newProfile);
+      setProfile(newProfile);
+    } catch (err: any) {
+      setError(err.message);
+      throw err;
     }
   };
 
   const signIn = async (email: string, password: string) => {
     try {
-      console.log('Starting sign in process');
-      
-      if (!auth) {
-        console.error('Auth instance is not initialized');
-        throw new Error('Authentication service is not available');
-      }
-
-      await retryOperation(() =>
-        signInWithEmailAndPassword(auth, email, password)
-      );
-
-      return { error: null };
-    } catch (error: any) {
-      console.error('Sign in error:', {
-        code: error.code,
-        message: error.message,
-        stack: error.stack
-      });
-      
-      const errorMessage = getAuthErrorMessage(error);
-      const errorWithCode = new Error(errorMessage);
-      errorWithCode.name = error.code || 'auth/unknown';
-      
-      return { error: errorWithCode };
+      await signInWithEmailAndPassword(auth, email, password);
+    } catch (err: any) {
+      setError(err.message);
+      throw err;
     }
   };
 
   const signOut = async () => {
     try {
-      await retryOperation(() => firebaseSignOut(auth));
-    } catch (error) {
-      console.error('Sign out error:', error);
-      throw error;
+      await firebaseSignOut(auth);
+      setUser(null);
+      setProfile(null);
+    } catch (err: any) {
+      setError(err.message);
+      throw err;
     }
   };
 
-  const updateUsername = async (username: string) => {
+  const updateProfile = async (data: Partial<UserProfile>) => {
+    if (!user) throw new Error('No user logged in');
+
     try {
-      if (!user) {
-        throw new Error('No user logged in');
-      }
-
-      const isAvailable = await retryOperation(() =>
-        checkUsernameAvailability(username)
-      );
-
-      if (!isAvailable) {
-        throw new Error('This username is already taken. Please choose another one.');
-      }
-
-      if (user.displayName) {
-        await retryOperation(() =>
-          releaseUsername(user.displayName)
-        );
-      }
-
-      await retryOperation(() =>
-        reserveUsername(username, user.uid)
-      );
-
-      await retryOperation(() =>
-        updateProfile(user, {
-          displayName: username
-        })
-      );
-
-      setUser({ ...user });
-
-      return { error: null };
-    } catch (error: any) {
-      console.error('Update username error:', error);
-      return { error: new Error(error.message || 'Failed to update username. Please try again.') };
-    }
-  };
-
-  // Helper function to get user-friendly error messages
-  const getAuthErrorMessage = (error: any): string => {
-    switch (error.code) {
-      case 'auth/email-already-in-use':
-        return 'This email is already registered. Please try signing in instead.';
-      case 'auth/invalid-email':
-        return 'Please enter a valid email address.';
-      case 'auth/weak-password':
-        return 'Please choose a stronger password. It should be at least 6 characters long.';
-      case 'auth/user-disabled':
-        return 'This account has been disabled. Please contact support.';
-      case 'auth/user-not-found':
-      case 'auth/wrong-password':
-        return 'Invalid email or password.';
-      case 'auth/network-request-failed':
-        return 'Network error. Please check your internet connection.';
-      case 'auth/too-many-requests':
-        return 'Too many failed attempts. Please try again later.';
-      case 'auth/internal-error':
-        return 'Authentication service error. Please try again later.';
-      case 'auth/configuration-not-found':
-      case 'auth/invalid-api-key':
-        return 'Authentication service configuration error. Please contact support.';
-      default:
-        if (error.message?.includes('fetch')) {
-          return 'Network error. Please check your internet connection and try again.';
-        }
-        return 'Failed to authenticate. Please try again.';
-    }
-  };
-
-  if (!initialized) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-      </div>
-    );
-  }
-
-  const updateProfile = async (data: {
-    displayName?: string;
-    photoURL?: string;
-    bio?: string;
-    location?: string;
-    contact?: string;
-    social?: {
-      youtube?: string;
-      twitter?: string;
-      facebook?: string;
-    };
-  }) => {
-    try {
-      if (!user) {
-        throw new Error('No user logged in');
-      }
-
-      // Update Firebase user profile
-      if (data.displayName || data.photoURL) {
-        const profileUpdate = {
-          ...(data.displayName && { displayName: data.displayName }),
-          ...(data.photoURL && { photoURL: data.photoURL })
-        };
-        
-        await retryOperation(async () => {
-          const currentUser = auth.currentUser;
-          if (!currentUser) throw new Error('User not found');
-          return await updateProfile(currentUser, profileUpdate);
-        });
-      }
-
-      // Update custom claims or additional user data in Firestore
-      const userDocRef = doc(db, 'users', user.uid);
-      
-      const updateData = {
-        username: data.displayName || user.displayName,
-        avatarUrl: data.photoURL || user.photoURL,
-        ...(data.bio !== undefined && { bio: data.bio }),
-        ...(data.contact !== undefined && { contact: data.contact }),
-        ...(data.social && {
-          social: {
-            youtube: data.social.youtube || '',
-            twitter: data.social.twitter || '',
-            facebook: data.social.facebook || ''
-          }
-        }),
-        updatedAt: serverTimestamp(),
-        // Ensure we have these fields for new users
-        createdAt: serverTimestamp(),
-        email: user.email,
+      const updatedProfile = {
+        ...profile,
+        ...data,
+        lastUpdated: new Date().toISOString()
       };
 
-      await retryOperation(async () => {
-        await setDoc(userDocRef, updateData, { merge: true });
-      });
-
-      return { error: null };
-    } catch (error: any) {
-      console.error('Update profile error:', error);
-      return { error: new Error(error.message || 'Failed to update profile. Please try again.') };
+      await setDoc(doc(db, 'users', user.uid), updatedProfile, { merge: true });
+      setProfile(updatedProfile as UserProfile);
+    } catch (err: any) {
+      setError(err.message);
+      throw err;
     }
   };
 
-  return (
-    <AuthContext.Provider value={{ 
-      user, 
-      loading, 
-      signIn, 
-      signUp, 
-      signOut, 
-      updateUsername,
-      updateProfile,
-      refreshToken 
-    }}>
-      {children}
-    </AuthContext.Provider>
-  );
+  const value = {
+    user,
+    profile,
+    isLoading,
+    error,
+    signUp,
+    signIn,
+    signOut,
+    updateProfile
+  };
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {
   const context = useContext(AuthContext);
-  if (!context) {
+  if (context === undefined) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
