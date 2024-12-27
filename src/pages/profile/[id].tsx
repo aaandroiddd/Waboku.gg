@@ -99,7 +99,10 @@ const ProfileContent = ({ userId }: { userId: string }) => {
                   sizes="(max-width: 768px) 100vw, 25vw"
                   priority
                   className="object-cover"
-                />
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    target.src = '/images/rect.png';
+                  }}
               </div>
             </div>
             <div className="flex-1">
