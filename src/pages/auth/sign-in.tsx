@@ -88,16 +88,7 @@ function SignInComponent() {
       }
 
       console.log('Attempting to sign in...');
-      const { error: signInError } = await signIn(email, password);
-      
-      if (signInError) {
-        console.error('Sign in error details:', {
-          code: signInError.name,
-          message: signInError.message,
-          timestamp: new Date().toISOString()
-        });
-        throw signInError;
-      }
+      await signIn(email, password);
       
       console.log('Sign in successful');
     } catch (err: any) {
