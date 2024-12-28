@@ -294,13 +294,13 @@ export default function Home() {
                     />
                   </div>
                   
-                  <div className="flex flex-col sm:flex-row gap-4">
+                  <div className="flex">
                     <Popover open={stateOpen} onOpenChange={setStateOpen}>
                       <PopoverTrigger asChild>
                         <Button
                           variant="outline"
                           role="combobox"
-                          className="w-full sm:w-[200px] h-12 justify-between"
+                          className="h-12 whitespace-nowrap"
                         >
                           <MapPin className="mr-2 h-4 w-4" />
                           {selectedState === "all" 
@@ -308,7 +308,7 @@ export default function Home() {
                             : usStates.find((state) => state.value === selectedState)?.label || "Select location"}
                         </Button>
                       </PopoverTrigger>
-                      <PopoverContent className="w-[200px] p-0">
+                      <PopoverContent className="w-fit p-0">
                         <Command>
                           <CommandInput placeholder="Search state..." className="h-9" />
                           <CommandEmpty>No state found.</CommandEmpty>
@@ -338,112 +338,11 @@ export default function Home() {
                       </PopoverContent>
                     </Popover>
 
-                    <Sheet open={filterOpen} onOpenChange={setFilterOpen}>
-                      <SheetTrigger asChild>
-                        <Button variant="outline" className="h-12 px-4">
-                          <Filter className="h-4 w-4 mr-2" />
-                          Filters
-                        </Button>
-                      </SheetTrigger>
-                      <SheetContent>
-                        <SheetHeader>
-                          <SheetTitle>Filter Listings</SheetTitle>
-                          <SheetDescription>
-                            Refine your search with these filters
-                          </SheetDescription>
-                        </SheetHeader>
-                        <div className="py-4 space-y-6">
-                          <div className="space-y-2">
-                            <label className="text-sm font-medium">Game</label>
-                            <Select value={selectedGame} onValueChange={setSelectedGame}>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select game" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {games.map((game) => (
-                                  <SelectItem key={game.value} value={game.value}>
-                                    {game.label}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-
-                          <div className="space-y-2">
-                            <label className="text-sm font-medium">Condition</label>
-                            <Select value={selectedCondition} onValueChange={setSelectedCondition}>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select condition" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {conditions.map((condition) => (
-                                  <SelectItem key={condition.value} value={condition.value}>
-                                    {condition.label}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-
-                          <div className="space-y-4">
-                            <label className="text-sm font-medium">Price Range</label>
-                            <div className="px-2">
-                              <Slider
-                                min={0}
-                                max={1000}
-                                step={10}
-                                value={priceRange}
-                                onValueChange={setPriceRange}
-                              />
-                            </div>
-                            <div className="flex justify-between text-sm text-muted-foreground">
-                              <span>${priceRange[0]}</span>
-                              <span>${priceRange[1]}</span>
-                            </div>
-                          </div>
-                        </div>
-                        <SheetFooter>
-                          <Button variant="outline" onClick={resetFilters}>
-                            Reset Filters
-                          </Button>
-                          <Button onClick={handleSearch}>
-                            Apply Filters
-                          </Button>
-                        </SheetFooter>
-                      </SheetContent>
-                    </Sheet>
-
-                    <Button className="h-12 w-12 sm:w-12" size="icon" onClick={handleSearch}>
+                    <Button className="h-12 w-12 ml-2" size="icon" onClick={handleSearch}>
                       <Search className="h-5 w-5" />
                     </Button>
                   </div>
                 </div>
-
-                {/* Active Filters */}
-                {(selectedGame !== "all" || selectedCondition !== "all" || selectedState !== "all" || priceRange[0] !== 0 || priceRange[1] !== 1000) && (
-                  <div className="flex flex-wrap gap-2 mt-4 justify-center">
-                    {selectedGame !== "all" && (
-                      <Badge variant="secondary" className="px-3 py-1">
-                        {games.find(g => g.value === selectedGame)?.label}
-                      </Badge>
-                    )}
-                    {selectedCondition !== "all" && (
-                      <Badge variant="secondary" className="px-3 py-1">
-                        {conditions.find(c => c.value === selectedCondition)?.label}
-                      </Badge>
-                    )}
-                    {selectedState !== "all" && (
-                      <Badge variant="secondary" className="px-3 py-1">
-                        {usStates.find(s => s.value === selectedState)?.label}
-                      </Badge>
-                    )}
-                    {(priceRange[0] !== 0 || priceRange[1] !== 1000) && (
-                      <Badge variant="secondary" className="px-3 py-1">
-                        ${priceRange[0]} - ${priceRange[1]}
-                      </Badge>
-                    )}
-                  </div>
-                )}
               </div>
             </div>
           </div>
