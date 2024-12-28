@@ -155,22 +155,37 @@ const ProfileContent = ({ userId }: { userId: string | null }) => {
                   </div>
                 )}
 
-                {profile.social && Object.values(profile.social).some(link => link) && (
+                {profile.social && (
                   <div>
                     <h2 className="font-semibold mb-2">Social Links</h2>
                     <div className="flex gap-4">
                       {profile.social.youtube && (
-                        <a href={profile.social.youtube} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary">
+                        <a 
+                          href={profile.social.youtube} 
+                          target="_blank" 
+                          rel="noopener noreferrer" 
+                          className="text-muted-foreground hover:text-primary"
+                        >
                           YouTube
                         </a>
                       )}
                       {profile.social.twitter && (
-                        <a href={profile.social.twitter} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary">
+                        <a 
+                          href={profile.social.twitter} 
+                          target="_blank" 
+                          rel="noopener noreferrer" 
+                          className="text-muted-foreground hover:text-primary"
+                        >
                           X (Twitter)
                         </a>
                       )}
                       {profile.social.facebook && (
-                        <a href={profile.social.facebook} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary">
+                        <a 
+                          href={profile.social.facebook} 
+                          target="_blank" 
+                          rel="noopener noreferrer" 
+                          className="text-muted-foreground hover:text-primary"
+                        >
                           Facebook
                         </a>
                       )}
