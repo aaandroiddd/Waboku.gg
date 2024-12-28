@@ -58,7 +58,10 @@ const ErrorCard = ({ message, onRetry }: { message: string; onRetry?: () => void
   </div>
 );
 
-const ProfileContent = ({ userId }: { userId: string }) => {
+const ProfileContent = ({ userId }: { userId: string | null }) => {
+  if (!userId) {
+    return <ErrorCard message="Invalid Profile ID" />;
+  }
   const { user } = useAuth();
   const router = useRouter();
   const { profile, isLoading, error } = useProfile(userId);
