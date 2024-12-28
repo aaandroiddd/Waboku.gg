@@ -150,14 +150,16 @@ export default function Home() {
 
   useEffect(() => {
     async function fetchListings() {
-      const db = getFirestore(app);
-      const q = query(
-        collection(db, 'listings'),
-        orderBy('createdAt', 'desc'),
-        limit(20)
-      );
-
+      if (typeof window === 'undefined') return;
+      
       try {
+        const db = getFirestore(app);
+        const q = query(
+          collection(db, 'listings'),
+          orderBy('createdAt', 'desc'),
+          limit(20)
+        );
+
         const querySnapshot = await getDocs(q);
         let fetchedListings = querySnapshot.docs.map(doc => {
           const data = doc.data();
