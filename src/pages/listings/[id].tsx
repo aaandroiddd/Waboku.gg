@@ -167,7 +167,8 @@ export default function ListingPage() {
 
   const handleFavoriteToggle = async () => {
     if (!user) {
-      toast.error('Please sign in to save favorites');
+      toast.error('Please sign up to save favorites');
+      router.push('/auth/sign-up');
       return;
     }
 
