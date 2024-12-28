@@ -96,6 +96,9 @@ export default function ListingsPage() {
     if (minPrice && maxPrice) {
       setPriceRange([Number(minPrice), Number(maxPrice)]);
     }
+    
+    // Apply filters immediately when URL parameters change
+    applyFilters();
   }, [router.query]);
 
   useEffect(() => {
