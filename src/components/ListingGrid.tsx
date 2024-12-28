@@ -17,16 +17,16 @@ interface ListingGridProps {
 }
 
 const getConditionColor = (condition: string): string => {
-  const conditionMap: { [key: string]: string } = {
-    'Mint': 'bg-emerald-500 text-white',
-    'Near Mint': 'bg-green-500 text-white',
-    'Excellent': 'bg-blue-500 text-white',
-    'Good': 'bg-yellow-500 text-white',
-    'Light Played': 'bg-orange-500 text-white',
-    'Played': 'bg-red-500 text-white',
-    'Poor': 'bg-red-700 text-white'
+  const colors: Record<string, string> = {
+    'poor': 'bg-[#e51f1f]/10 text-[#e51f1f]',
+    'played': 'bg-[#e85f2a]/10 text-[#e85f2a]',
+    'light played': 'bg-[#f2a134]/10 text-[#f2a134]',
+    'good': 'bg-[#f2a134]/10 text-[#f2a134]',
+    'excellent': 'bg-[#f7e379]/10 text-[#f7e379]',
+    'near mint': 'bg-[#bbdb44]/10 text-[#bbdb44]',
+    'mint': 'bg-[#44ce1b]/10 text-[#44ce1b]'
   };
-  return conditionMap[condition] || 'bg-secondary text-foreground';
+  return colors[condition?.toLowerCase()] || 'bg-gray-500/10 text-gray-500';
 };
 
 export function ListingGrid({ 
