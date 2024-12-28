@@ -192,12 +192,20 @@ export default function Home() {
     fetchListings();
   }, [latitude, longitude]);
 
+  const [activeSearchParams, setActiveSearchParams] = useState({
+    query: "",
+    state: "all",
+    game: "all",
+    condition: "all",
+    priceRange: [0, 1000]
+  });
+
   useEffect(() => {
     let filtered = [...listings];
 
-    // Apply search filter
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
+    // Apply active search parameters
+    if (activeSearchParams.query) {
+      const query = activeSearchParams.query.toLowerCase();
       filtered = filtered.filter(listing => 
         listing.title?.toLowerCase().includes(query) ||
         listing.description?.toLowerCase().includes(query)
@@ -205,33 +213,34 @@ export default function Home() {
     }
 
     // Apply game filter
-    if (selectedGame !== "all") {
+    if (activeSearchParams.game !== "all") {
       filtered = filtered.filter(listing => 
-        listing.game?.toLowerCase() === selectedGame.toLowerCase()
+        listing.game?.toLowerCase() === activeSearchParams.game.toLowerCase()
       );
     }
 
     // Apply condition filter
-    if (selectedCondition !== "all") {
+    if (activeSearchParams.condition !== "all") {
       filtered = filtered.filter(listing => 
-        listing.condition?.toLowerCase() === selectedCondition.toLowerCase()
+        listing.condition?.toLowerCase() === activeSearchParams.condition.toLowerCase()
       );
     }
 
     // Apply location filter
-    if (selectedState !== "all") {
+    if (activeSearchParams.state !== "all") {
       filtered = filtered.filter(listing => 
-        listing.state?.toLowerCase() === selectedState.toLowerCase()
+        listing.state?.toLowerCase() === activeSearchParams.state.toLowerCase()
       );
     }
 
     // Apply price filter
     filtered = filtered.filter(listing => 
-      listing.price >= priceRange[0] && listing.price <= priceRange[1]
+      listing.price >= activeSearchParams.priceRange[0] && 
+      listing.price <= activeSearchParams.priceRange[1]
     );
 
     setFilteredListings(filtered);
-  }, [searchQuery, selectedGame, selectedCondition, selectedState, priceRange, listings]);
+  }, [activeSearchParams, listings]);
 
   const handleSearch = () => {
     // The filtering is already handled by the useEffect above
