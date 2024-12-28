@@ -41,6 +41,9 @@ const CreateListingPage = () => {
     images: [] as File[],
     city: "",
     state: "",
+    isGraded: false,
+    gradeLevel: undefined as number | undefined,
+    gradingCompany: undefined as string | undefined,
   });
 
   const [errors, setErrors] = useState<{
