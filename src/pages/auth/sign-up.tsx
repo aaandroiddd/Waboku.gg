@@ -1,14 +1,50 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Logo } from '@/components/Logo';
+import { Skeleton } from '@/components/ui/skeleton';
+import { ChevronLeft } from 'lucide-react';
 
-export default function SignUp() {
+function LoadingState() {
+  return (
+    <div className="min-h-screen flex flex-col items-center justify-center bg-background">
+      <div className="w-[400px] space-y-4">
+        <Skeleton className="h-12 w-32 mx-auto" />
+        <Card>
+          <CardHeader>
+            <Skeleton className="h-8 w-32" />
+            <Skeleton className="h-4 w-64" />
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Skeleton className="h-4 w-16" />
+              <Skeleton className="h-10 w-full" />
+            </div>
+            <div className="space-y-2">
+              <Skeleton className="h-4 w-16" />
+              <Skeleton className="h-10 w-full" />
+            </div>
+            <div className="space-y-2">
+              <Skeleton className="h-4 w-16" />
+              <Skeleton className="h-10 w-full" />
+            </div>
+          </CardContent>
+          <CardFooter className="flex flex-col space-y-4">
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-4 w-48 mx-auto" />
+          </CardFooter>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+function SignUpComponent() {
   const router = useRouter();
   const { signUp } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
@@ -25,18 +61,69 @@ export default function SignUp() {
     setError(null);
 
     try {
+      if (!navigator.onLine) {
+        throw new Error('No internet connection. Please check your network and try again.');
+      }
+
+      // Basic email validation
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(formData.email)) {
+        throw new Error('Please enter a valid email address.');
+      }
+
+      // Basic password validation
+      if (formData.password.length < 6) {
+        throw new Error('Password must be at least 6 characters long.');
+      }
+
       await signUp(formData.email, formData.password, formData.username);
       router.push('/dashboard');
     } catch (err: any) {
-      setError(err.message);
+      console.error('Sign up error:', {
+        errorCode: err.code || 'unknown',
+        errorName: err.name,
+        errorMessage: err.message,
+        timestamp: new Date().toISOString()
+      });
+      
+      let errorMessage = 'Failed to create account. Please try again.';
+      
+      if (err.code === 'auth/email-already-in-use') {
+        errorMessage = 'This email is already registered. Please sign in instead.';
+      } else if (err.code === 'auth/invalid-email' || err.message.includes('valid email')) {
+        errorMessage = 'Please enter a valid email address.';
+      } else if (err.code === 'auth/network-request-failed' || !navigator.onLine) {
+        errorMessage = 'Network error. Please check your internet connection and try again.';
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
   };
 
+  const handleBack = () => {
+    router.back();
+  };
+
   return (
-    <div className="container mx-auto flex items-center justify-center min-h-screen p-4">
-      <Card className="w-full max-w-md">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-background relative">
+      <Button
+        variant="ghost"
+        className="absolute top-4 left-4"
+        onClick={handleBack}
+      >
+        <ChevronLeft className="h-4 w-4 mr-2" />
+        Back
+      </Button>
+      
+      <Link href="/" className="mb-8">
+        <Logo className="h-auto text-3xl" alwaysShowFull={true} />
+      </Link>
+
+      <Card className="w-[400px]">
         <CardHeader>
           <CardTitle>Create Account</CardTitle>
           <CardDescription>
@@ -52,18 +139,23 @@ export default function SignUp() {
             )}
             
             <div className="space-y-2">
-              <Label htmlFor="username">Username</Label>
+              <label htmlFor="username" className="text-sm font-medium">
+                Username
+              </label>
               <Input
                 id="username"
                 placeholder="Choose a username"
                 value={formData.username}
                 onChange={(e) => setFormData(prev => ({ ...prev, username: e.target.value }))}
                 required
+                disabled={isLoading}
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <label htmlFor="email" className="text-sm font-medium">
+                Email
+              </label>
               <Input
                 id="email"
                 type="email"
@@ -71,11 +163,15 @@ export default function SignUp() {
                 value={formData.email}
                 onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
                 required
+                disabled={isLoading}
+                autoComplete="email"
               />
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <label htmlFor="password" className="text-sm font-medium">
+                Password
+              </label>
               <Input
                 id="password"
                 type="password"
@@ -83,7 +179,9 @@ export default function SignUp() {
                 value={formData.password}
                 onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
                 required
+                disabled={isLoading}
                 minLength={6}
+                autoComplete="new-password"
               />
             </div>
           </CardContent>
@@ -94,18 +192,41 @@ export default function SignUp() {
               className="w-full"
               disabled={isLoading}
             >
-              {isLoading ? 'Creating Account...' : 'Create Account'}
+              {isLoading ? (
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  Creating Account...
+                </div>
+              ) : (
+                "Create Account"
+              )}
             </Button>
             
-            <p className="text-sm text-center text-muted-foreground">
-              Already have an account?{' '}
-              <Link href="/auth/sign-in" className="text-primary hover:underline">
-                Sign in
-              </Link>
-            </p>
+            <div className="text-sm text-center">
+              <p>
+                Already have an account?{' '}
+                <Link href="/auth/sign-in" className="text-primary hover:underline">
+                  Sign In
+                </Link>
+              </p>
+            </div>
           </CardFooter>
         </form>
       </Card>
     </div>
   );
+}
+
+export default function SignUpPage() {
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  if (!isClient) {
+    return <LoadingState />;
+  }
+
+  return <SignUpComponent />;
 }
