@@ -243,7 +243,13 @@ export default function Home() {
   }, [activeSearchParams, listings]);
 
   const handleSearch = () => {
-    // The filtering is already handled by the useEffect above
+    setActiveSearchParams({
+      query: searchQuery,
+      state: selectedState,
+      game: selectedGame,
+      condition: selectedCondition,
+      priceRange: priceRange
+    });
     setFilterOpen(false);
   };
 
