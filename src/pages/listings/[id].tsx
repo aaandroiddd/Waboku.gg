@@ -315,7 +315,18 @@ export default function ListingPage() {
                       {listing.condition}
                     </Badge>
                     {listing.isGraded && (
-                      <Badge variant="outline" className="bg-blue-500/10 text-blue-500 text-sm">
+                      <Badge variant="outline" className="bg-blue-500 text-white text-sm flex items-center gap-1">
+                        <svg 
+                          viewBox="0 0 24 24" 
+                          className="w-4 h-4" 
+                          fill="none" 
+                          stroke="currentColor" 
+                          strokeWidth="2"
+                        >
+                          <path d="M12 2L2 7L12 12L22 7L12 2Z" />
+                          <path d="M2 17L12 22L22 17" />
+                          <path d="M2 12L12 17L22 12" />
+                        </svg>
                         {listing.gradingCompany} {listing.gradeLevel}
                       </Badge>
                     )}
