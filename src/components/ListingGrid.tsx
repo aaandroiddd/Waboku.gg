@@ -83,6 +83,16 @@ export function ListingGrid({
                     </span>
                   </div>
                   
+                  {/* Graded Badge */}
+                  {listing.isGraded && (
+                    <div className="absolute top-2 left-2 z-10">
+                      <span className="px-3 py-1 bg-primary text-primary-foreground rounded-md font-semibold flex items-center gap-1">
+                        <span className="text-xs">{listing.gradingCompany}</span>
+                        <span className="font-bold">{listing.gradeLevel}</span>
+                      </span>
+                    </div>
+                  )}
+                  
                   {listing.imageUrls && listing.imageUrls.length > 0 ? (
                     <div className="relative w-full h-full">
                       <img
