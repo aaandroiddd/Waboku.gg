@@ -271,16 +271,18 @@ export default function Home() {
             <div className="absolute inset-0 bg-gradient-to-r from-blue-600/5 via-purple-500/5 to-blue-600/5" />
             
             <div className="relative container mx-auto px-4 py-8 sm:py-12 md:py-16 lg:py-24">
-              <div className="text-center max-w-3xl mx-auto">
-                <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-4 tracking-tight glow-text">
-                  Your Local TCG Marketplace
-                </h1>
-                <p className="text-base sm:text-lg md:text-xl text-muted-foreground mb-8">
-                  {randomSubtitle}
-                </p>
+              <div className="text-center max-w-3xl mx-auto space-y-8 sm:space-y-12">
+                <div className="space-y-4 sm:space-y-6">
+                  <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight glow-text">
+                    Your Local TCG Marketplace
+                  </h1>
+                  <p className="text-base sm:text-lg md:text-xl text-muted-foreground">
+                    {randomSubtitle}
+                  </p>
+                </div>
 
                 {/* Search Section */}
-                <div className="flex flex-col sm:flex-row gap-4 max-w-2xl mx-auto">
+                <div className="flex flex-col sm:flex-row gap-4 max-w-2xl mx-auto pt-4 sm:pt-6">
                   <div className="relative flex-1">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
                     <Input
