@@ -29,6 +29,9 @@ const DashboardLayout = dynamic(
 );
 
 const SettingsPageContent = () => {
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [deleteConfirmation, setDeleteConfirmation] = useState("");
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
   const { user, updateProfile } = useAuth();
   const [formData, setFormData] = useState({
     username: user?.displayName || "",
