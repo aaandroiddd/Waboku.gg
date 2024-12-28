@@ -37,3 +37,21 @@ export interface UserFavorite {
   listingId: string;
   createdAt: Date;
 }
+
+export interface UserProfile {
+  uid: string;
+  username: string;
+  email: string;
+  avatarUrl?: string;
+  bio?: string;
+  location?: string;
+  joinDate: string;
+  totalSales?: number;
+  rating?: number;
+  contact?: string;
+  social?: {
+    youtube?: string;
+    twitter?: string;
+    facebook?: string;
+  };
+}
