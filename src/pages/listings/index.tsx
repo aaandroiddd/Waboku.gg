@@ -1,6 +1,4 @@
 import { useEffect, useState } from 'react';
-import { getFirestore, collection, query, orderBy, getDocs } from 'firebase/firestore';
-import { app } from '@/lib/firebase';
 import { Listing } from '@/types/database';
 import { ListingGrid } from '@/components/ListingGrid';
 import Head from 'next/head';
@@ -10,6 +8,7 @@ import { useRouter } from 'next/router';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Search, MapPin, Filter, Check } from 'lucide-react';
+import { useListings } from '@/hooks/useListings';
 import {
   Select,
   SelectContent,
@@ -72,10 +71,6 @@ const usStates = [
 
 export default function ListingsPage() {
   const router = useRouter();
-  const [listings, setListings] = useState<Listing[]>([]);
-  const [filteredListings, setFilteredListings] = useState<Listing[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [stateOpen, setStateOpen] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
 
@@ -85,6 +80,13 @@ export default function ListingsPage() {
   const [selectedGame, setSelectedGame] = useState("all");
   const [selectedCondition, setSelectedCondition] = useState("all");
   const [priceRange, setPriceRange] = useState([0, 1000]);
+
+  // Use the enhanced useListings hook
+  const { listings: allListings, isLoading, error } = useListings({ 
+    searchQuery: searchQuery 
+  });
+
+  const [filteredListings, setFilteredListings] = useState<Listing[]>([]);
 
   useEffect(() => {
     // Initialize filters from URL parameters
@@ -96,76 +98,10 @@ export default function ListingsPage() {
     if (minPrice && maxPrice) {
       setPriceRange([Number(minPrice), Number(maxPrice)]);
     }
-    
-    // Apply filters immediately when URL parameters change
-    applyFilters();
   }, [router.query]);
 
   useEffect(() => {
-    async function fetchListings() {
-      setLoading(true);
-      setError(null);
-      
-      try {
-        const db = getFirestore(app);
-        const q = query(
-          collection(db, 'listings'),
-          orderBy('createdAt', 'desc')
-        );
-
-        const querySnapshot = await getDocs(q);
-        const fetchedListings = querySnapshot.docs.map(doc => {
-          const data = doc.data();
-          return {
-            id: doc.id,
-            ...data,
-            createdAt: data.createdAt?.toDate() || new Date(),
-            price: Number(data.price) || 0,
-            favoriteCount: data.favoriteCount || 0,
-            status: data.status || 'active',
-            imageUrls: Array.isArray(data.imageUrls) ? data.imageUrls : []
-          } as Listing;
-        });
-
-        setListings(fetchedListings);
-        applyFilters(fetchedListings);
-      } catch (error) {
-        console.error('Error fetching listings:', error);
-        setError('Failed to load listings. Please try again later.');
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    fetchListings();
-  }, []);
-
-  const applyFilters = (listingsToFilter = listings) => {
-    let filtered = [...listingsToFilter];
-
-    // Apply search query
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(listing => {
-        const titleMatch = listing.title?.toLowerCase().includes(query);
-        const descriptionMatch = listing.description?.toLowerCase().includes(query);
-        
-        // Prioritize title matches by returning true immediately if title matches
-        return titleMatch || descriptionMatch;
-      });
-      
-      // Sort results to show title matches first
-      filtered.sort((a, b) => {
-        const aTitle = a.title?.toLowerCase() || '';
-        const bTitle = b.title?.toLowerCase() || '';
-        const queryInA = aTitle.includes(query);
-        const queryInB = bTitle.includes(query);
-        
-        if (queryInA && !queryInB) return -1;
-        if (!queryInA && queryInB) return 1;
-        return 0;
-      });
-    }
+    let filtered = [...allListings];
 
     // Apply game filter
     if (selectedGame !== "all") {
@@ -195,11 +131,7 @@ export default function ListingsPage() {
     );
 
     setFilteredListings(filtered);
-  };
-
-  useEffect(() => {
-    applyFilters();
-  }, [searchQuery, selectedState, selectedGame, selectedCondition, priceRange]);
+  }, [allListings, selectedState, selectedGame, selectedCondition, priceRange]);
 
   const handleSearch = () => {
     // Update URL with search parameters
@@ -386,7 +318,7 @@ export default function ListingsPage() {
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             ) : (
-              <ListingGrid listings={filteredListings} loading={loading} />
+              <ListingGrid listings={filteredListings} loading={isLoading} />
             )}
           </div>
         </main>
