@@ -23,14 +23,18 @@ export function useProfile(userId: string) {
             uid: userId,
             username: data.username || 'Anonymous User',
             email: data.email || '',
-            avatarUrl: data.avatarUrl,
-            bio: data.bio,
-            location: data.location,
+            avatarUrl: data.avatarUrl || '',
+            bio: data.bio || '',
+            location: data.location || '',
             joinDate: data.joinDate || new Date().toISOString(),
             totalSales: data.totalSales || 0,
-            rating: data.rating,
-            contact: data.contact,
-            social: data.social || {}
+            rating: data.rating || 0,
+            contact: data.contact || '',
+            social: {
+              youtube: data.social?.youtube || '',
+              twitter: data.social?.twitter || '',
+              facebook: data.social?.facebook || ''
+            }
           };
           setProfile(profileData);
         } else {
