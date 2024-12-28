@@ -309,6 +309,20 @@ const SettingsPageContent = () => {
                 </p>
               </div>
 
+              {/* Location Section */}
+              <div className="space-y-2">
+                <Label htmlFor="location">Location</Label>
+                <Input
+                  id="location"
+                  value={formData.location}
+                  onChange={(e) => setFormData(prev => ({ ...prev, location: e.target.value }))}
+                  placeholder="Your location (city, country)"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Help others find local trades
+                </p>
+              </div>
+
               <Button type="submit" disabled={isLoading} className="w-full">
                 {isLoading ? (
                   <div className="flex items-center gap-2">
