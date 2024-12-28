@@ -29,18 +29,18 @@ export function useProfile(userId: string | null) {
             uid: userId,
             username: data.username || 'Anonymous User',
             email: data.email || '',
-            avatarUrl: data.avatarUrl || '',
+            avatarUrl: data.avatarUrl || null,
             bio: data.bio || '',
             location: data.location || '',
             joinDate: data.joinDate || new Date().toISOString(),
-            totalSales: data.totalSales || 0,
-            rating: data.rating || 0,
+            totalSales: typeof data.totalSales === 'number' ? data.totalSales : 0,
+            rating: typeof data.rating === 'number' ? data.rating : null,
             contact: data.contact || '',
-            social: {
-              youtube: data.social?.youtube || '',
-              twitter: data.social?.twitter || '',
-              facebook: data.social?.facebook || ''
-            }
+            social: data.social ? {
+              youtube: data.social.youtube || null,
+              twitter: data.social.twitter || null,
+              facebook: data.social.facebook || null
+            } : null
           };
           setProfile(profileData);
         } else {
