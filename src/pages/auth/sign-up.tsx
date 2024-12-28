@@ -212,6 +212,26 @@ function SignUpComponent() {
                 minLength={6}
                 autoComplete="new-password"
               />
+              <p className="text-xs text-muted-foreground">
+                Password must contain at least 6 characters, one uppercase letter, one lowercase letter, and one number.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <label htmlFor="confirmPassword" className="text-sm font-medium">
+                Confirm Password
+              </label>
+              <Input
+                id="confirmPassword"
+                type="password"
+                placeholder="Confirm your password"
+                value={formData.confirmPassword}
+                onChange={(e) => setFormData(prev => ({ ...prev, confirmPassword: e.target.value }))}
+                required
+                disabled={isLoading}
+                minLength={6}
+                autoComplete="new-password"
+              />
             </div>
           </CardContent>
           
