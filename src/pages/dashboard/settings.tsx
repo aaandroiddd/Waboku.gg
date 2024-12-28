@@ -143,19 +143,18 @@ const SettingsPageContent = () => {
       }
 
       // Update profile with all user data
-      const { error: updateError } = await updateProfile({
+      await updateProfile({
         displayName: formData.username,
         photoURL,
         bio: formData.bio,
         contact: formData.contact,
+        location: formData.location,
         social: {
           youtube: formData.youtube || '',
           twitter: formData.twitter || '',
           facebook: formData.facebook || ''
         }
       });
-
-      if (updateError) throw updateError;
 
       setSuccess("Profile updated successfully!");
       
