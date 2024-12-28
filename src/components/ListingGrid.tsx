@@ -78,21 +78,19 @@ export function ListingGrid({
                     </div>
                   )}
                 </div>
-                <div className="space-y-2">
-                  <h3 className="font-semibold text-lg line-clamp-1">{listing.title}</h3>
-                  <p className="text-xl font-bold">${listing.price.toLocaleString()}</p>
-                  <div className="flex flex-col gap-2">
-                    <div className="flex justify-between items-center">
-                      <p className="text-sm text-muted-foreground">{listing.condition}</p>
-                      {listing.isGraded && (
-                        <span className="text-sm bg-primary/10 text-primary px-2 py-1 rounded-full">
-                          {listing.gradingCompany} {listing.gradeLevel}
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-sm text-muted-foreground">{listing.game}</p>
-                    <p className="text-sm text-muted-foreground">{listing.city}, {listing.state}</p>
+                <div className="space-y-1">
+                  <h3 className="font-medium text-base line-clamp-1">{listing.title}</h3>
+                  <p className="text-lg font-semibold">${listing.price.toLocaleString()}</p>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-xs px-2 py-0.5 bg-secondary rounded-full">{listing.game}</span>
+                    <span className="text-xs px-2 py-0.5 bg-secondary rounded-full">{listing.condition}</span>
+                    {listing.isGraded && (
+                      <span className="text-xs px-2 py-0.5 bg-primary/10 text-primary rounded-full">
+                        {listing.gradingCompany} {listing.gradeLevel}
+                      </span>
+                    )}
                   </div>
+                  <p className="text-xs text-muted-foreground mt-1">{listing.city}, {listing.state}</p>
                 </div>
               </CardContent>
             </Link>
