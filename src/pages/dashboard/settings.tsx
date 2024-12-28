@@ -107,15 +107,17 @@ const SettingsPageContent = () => {
             username: user.displayName || "",
             bio: userData.bio || "",
             contact: userData.contact || "",
-            youtube: userData.youtube || "",
-            twitter: userData.twitter || "",
-            facebook: userData.facebook || "",
+            location: userData.location || "",
+            youtube: userData.social?.youtube || "",
+            twitter: userData.social?.twitter || "",
+            facebook: userData.social?.facebook || "",
           });
         } else {
           setFormData({
             username: user.displayName || "",
             bio: "",
             contact: "",
+            location: "",
             youtube: "",
             twitter: "",
             facebook: "",
