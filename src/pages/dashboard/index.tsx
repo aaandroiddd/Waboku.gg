@@ -163,7 +163,7 @@ const DashboardComponent = () => {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
                   <div>
-                    <h2 className="text-2xl font-bold">{user.displayName || 'User'}</h2>
+                    <h2 className="text-2xl font-bold">{user.displayName || profile?.username || 'User'}</h2>
                     <p className="text-muted-foreground">{user.email}</p>
                   </div>
                   <Button
