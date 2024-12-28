@@ -1,6 +1,25 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { db } from '@/lib/firebase';
-import { collection, getDocs, query, deleteDoc, doc } from 'firebase/firestore';
+import { initializeApp, getApps, cert } from 'firebase-admin/app';
+import { getFirestore } from 'firebase-admin/firestore';
+
+// Initialize Firebase Admin
+if (!getApps().length) {
+  const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
+  if (!projectId) {
+    throw new Error('Firebase Project ID is not set in environment variables');
+  }
+
+  initializeApp({
+    credential: cert({
+      projectId: projectId,
+      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+      privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+    }),
+    projectId: projectId,
+  });
+}
+
+const adminDb = getFirestore();
 
 export default async function handler(
   req: NextApiRequest,
@@ -25,12 +44,10 @@ export default async function handler(
     };
 
     // Get all listings
-    const listingsRef = collection(db, 'listings');
-    const listingsSnapshot = await getDocs(query(listingsRef));
+    const listingsSnapshot = await adminDb.collection('listings').get();
     
-    // Get all users for checking
-    const usersRef = collection(db, 'users');
-    const usersSnapshot = await getDocs(query(usersRef));
+    // Get all users
+    const usersSnapshot = await adminDb.collection('users').get();
     
     // Create a Set of user IDs for faster lookup
     const userIds = new Set<string>();
@@ -48,7 +65,7 @@ export default async function handler(
       
       if (!hasValidUser) {
         try {
-          await deleteDoc(doc(db, 'listings', listingDoc.id));
+          await listingDoc.ref.delete();
           results.deletedListings++;
         } catch (error) {
           results.errors.push(`Failed to delete listing ${listingDoc.id}: ${error}`);
