@@ -24,10 +24,15 @@ export default function Header() {
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container mx-auto px-4 h-16 flex items-center justify-between">
+      <div className="container mx-auto px-4 h-16 flex items-center justify-between gap-4">
         <Link href="/" className="flex items-center">
           <Logo />
         </Link>
+
+        {/* Search Bar */}
+        <div className="hidden md:block flex-1 max-w-xl mx-4">
+          <SearchBar />
+        </div>
 
         {/* Desktop Navigation */}
         <nav className="hidden md:flex items-center gap-4">
@@ -47,6 +52,10 @@ export default function Header() {
             </SheetTrigger>
             <SheetContent side="right" className="w-[300px] sm:w-[400px]">
               <nav className="flex flex-col gap-4">
+                {/* Mobile Search Bar */}
+                <div className="mt-4">
+                  <SearchBar />
+                </div>
                 {!isAuthPage && (
                   <div className="flex flex-col gap-4 mt-4">
                     <AuthNav />
