@@ -244,8 +244,9 @@ export default function ListingPage() {
   }
 
   return (
-    <div className="container mx-auto p-4">
-      <Button 
+    <div className="min-h-screen flex flex-col">
+      <div className="container mx-auto p-4 flex-1">
+        <Button 
         variant="ghost" 
         className="mb-4" 
         onClick={() => router.back()}
