@@ -12,7 +12,6 @@ import {
 import { Menu } from "lucide-react";
 import { useState } from "react";
 import SearchBar from "./SearchBar";
-import { SearchBar } from "./SearchBar";
 
 // Dynamically import the auth-dependent navigation component
 const AuthNav = dynamic(() => import("./AuthNav"), {
