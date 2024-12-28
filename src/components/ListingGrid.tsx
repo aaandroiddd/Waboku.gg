@@ -100,7 +100,16 @@ export function ListingGrid({
                 </div>
                 <div className="space-y-2">
                   <h3 className="font-medium text-base line-clamp-1">{listing.title}</h3>
-                  <p className="text-sm text-muted-foreground">by {listing.username}</p>
+                  <p className="text-sm text-muted-foreground">
+                    by{" "}
+                    <Link
+                      href={`/profile/${listing.userId}`}
+                      className="hover:text-primary hover:underline"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {listing.username}
+                    </Link>
+                  </p>
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-xs px-2 py-0.5 bg-secondary rounded-full">{listing.game}</span>
                     <span className={`text-xs px-2 py-0.5 rounded-full ${getConditionColor(listing.condition)}`}>
