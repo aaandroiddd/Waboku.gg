@@ -252,7 +252,7 @@ export default function ListingPage() {
         Back
       </Button>
 
-      <Card className="max-w-6xl mx-auto bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-muted">
+      <Card className="max-w-6xl mx-auto bg-black/[0.2] dark:bg-black/40 backdrop-blur-md border-muted">
         <CardContent className="p-4 md:p-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8">
             {/* Images and Price - Moved to top for mobile */}
