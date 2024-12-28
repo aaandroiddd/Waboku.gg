@@ -20,30 +20,33 @@ export function useProfile(userId: string | null) {
         setIsLoading(true);
         setError(null);
         
-        const profileDoc = await getDoc(doc(db, 'users', userId));
+        // First try to get the user document
+        const userDoc = await getDoc(doc(db, 'users', userId));
         
-        if (profileDoc.exists()) {
-          const data = profileDoc.data();
-          // Create a profile object with default values for missing fields
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+          
+          // Create a profile object with data from the user document
           const profileData: UserProfile = {
             uid: userId,
-            username: data.username || 'Anonymous User',
-            email: data.email || '',
-            avatarUrl: data.avatarUrl || null,
-            bio: data.bio || '',
-            location: data.location || '',
-            joinDate: data.joinDate || new Date().toISOString(),
-            totalSales: typeof data.totalSales === 'number' ? data.totalSales : 0,
-            rating: typeof data.rating === 'number' ? data.rating : null,
-            contact: data.contact || '',
-            social: data.social ? {
-              youtube: data.social.youtube || null,
-              twitter: data.social.twitter || null,
-              facebook: data.social.facebook || null
+            username: userData.displayName || userData.username || 'Anonymous User',
+            email: userData.email || '',
+            avatarUrl: userData.photoURL || userData.avatarUrl || null,
+            bio: userData.bio || '',
+            location: userData.location || '',
+            joinDate: userData.createdAt || userData.joinDate || new Date().toISOString(),
+            totalSales: typeof userData.totalSales === 'number' ? userData.totalSales : 0,
+            rating: typeof userData.rating === 'number' ? userData.rating : null,
+            contact: userData.contact || '',
+            social: userData.social ? {
+              youtube: userData.social.youtube || null,
+              twitter: userData.social.twitter || null,
+              facebook: userData.social.facebook || null
             } : null
           };
           setProfile(profileData);
         } else {
+          // If no user document exists, try to get profile data from auth
           setError('Profile not found');
           setProfile(null);
         }
