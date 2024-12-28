@@ -23,7 +23,7 @@ const DashboardComponent = () => {
   const { listings, loading: listingsLoading, error: listingsError, deleteListing, refreshListings } = useListings();
   const { profile, loading: profileLoading } = useProfile(user?.uid || null);
   
-  const loading = authLoading || listingsLoading;
+  const loading = authLoading || listingsLoading || profileLoading;
 
   const handleShare = (listingId: string) => {
     const url = `${window.location.origin}/listings/${listingId}`;
