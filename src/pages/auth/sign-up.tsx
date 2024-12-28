@@ -89,9 +89,20 @@ function SignUpComponent() {
         throw new Error('Please enter a valid email address.');
       }
 
-      // Basic password validation
-      if (formData.password.length < 6) {
-        throw new Error('Password must be at least 6 characters long.');
+      // Password validation
+      const { isValid, errors } = validatePassword(formData.password);
+      if (!isValid) {
+        const errorMessages = [];
+        if (errors.minLength) errorMessages.push("at least 6 characters");
+        if (errors.hasUpperCase) errorMessages.push("one uppercase letter");
+        if (errors.hasLowerCase) errorMessages.push("one lowercase letter");
+        if (errors.hasNumber) errorMessages.push("one number");
+        throw new Error(`Password must contain ${errorMessages.join(", ")}.`);
+      }
+
+      // Password confirmation check
+      if (formData.password !== formData.confirmPassword) {
+        throw new Error('Passwords do not match.');
       }
 
       await signUp(formData.email, formData.password, formData.username);
