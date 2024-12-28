@@ -3,13 +3,19 @@ import { doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { UserProfile } from '@/types/database';
 
-export function useProfile(userId: string) {
+export function useProfile(userId: string | null) {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchProfile = async () => {
+      if (!userId) {
+        setError('Invalid user ID');
+        setIsLoading(false);
+        return;
+      }
+
       try {
         setIsLoading(true);
         setError(null);
@@ -39,18 +45,18 @@ export function useProfile(userId: string) {
           setProfile(profileData);
         } else {
           setError('Profile not found');
+          setProfile(null);
         }
       } catch (err: any) {
-        setError(err.message);
+        setError(err.message || 'Error fetching profile');
+        setProfile(null);
         console.error('Error fetching profile:', err);
       } finally {
         setIsLoading(false);
       }
     };
 
-    if (userId) {
-      fetchProfile();
-    }
+    fetchProfile();
   }, [userId]);
 
   return { profile, isLoading, error };
