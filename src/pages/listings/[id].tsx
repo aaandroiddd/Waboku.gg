@@ -14,6 +14,7 @@ import { ArrowLeft, Calendar, Heart, MapPin, MessageCircle, User, ZoomIn, ZoomOu
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
+import { Footer } from '@/components/Footer';
 
 const getConditionColor = (condition: string) => {
   const colors: Record<string, string> = {
