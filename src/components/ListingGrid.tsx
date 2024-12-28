@@ -16,6 +16,19 @@ interface ListingGridProps {
   userId?: string;
 }
 
+const getConditionColor = (condition: string): string => {
+  const conditionMap: { [key: string]: string } = {
+    'Mint': 'bg-emerald-500 text-white',
+    'Near Mint': 'bg-green-500 text-white',
+    'Excellent': 'bg-blue-500 text-white',
+    'Good': 'bg-yellow-500 text-white',
+    'Light Played': 'bg-orange-500 text-white',
+    'Played': 'bg-red-500 text-white',
+    'Poor': 'bg-red-700 text-white'
+  };
+  return conditionMap[condition] || 'bg-secondary text-foreground';
+};
+
 export function ListingGrid({ 
   listings, 
   loading, 
@@ -63,6 +76,13 @@ export function ListingGrid({
             <Link href={`/listings/${listing.id}`}>
               <CardContent className="p-4">
                 <div className="aspect-square bg-muted rounded-lg mb-4 relative overflow-hidden">
+                  {/* Price Badge */}
+                  <div className="absolute top-2 left-2 z-10">
+                    <span className="px-3 py-1 bg-black/75 text-white rounded-md font-semibold">
+                      ${listing.price.toLocaleString()}
+                    </span>
+                  </div>
+                  
                   {listing.imageUrls && listing.imageUrls.length > 0 ? (
                     <div className="relative w-full h-full">
                       <img
@@ -78,19 +98,21 @@ export function ListingGrid({
                     </div>
                   )}
                 </div>
-                <div className="space-y-1">
+                <div className="space-y-2">
                   <h3 className="font-medium text-base line-clamp-1">{listing.title}</h3>
-                  <p className="text-lg font-semibold">${listing.price.toLocaleString()}</p>
+                  <p className="text-sm text-muted-foreground">by {listing.username}</p>
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-xs px-2 py-0.5 bg-secondary rounded-full">{listing.game}</span>
-                    <span className="text-xs px-2 py-0.5 bg-secondary rounded-full">{listing.condition}</span>
+                    <span className={`text-xs px-2 py-0.5 rounded-full ${getConditionColor(listing.condition)}`}>
+                      {listing.condition}
+                    </span>
                     {listing.isGraded && (
                       <span className="text-xs px-2 py-0.5 bg-primary/10 text-primary rounded-full">
                         {listing.gradingCompany} {listing.gradeLevel}
                       </span>
                     )}
                   </div>
-                  <p className="text-xs text-muted-foreground mt-1">{listing.city}, {listing.state}</p>
+                  <p className="text-xs text-muted-foreground">{listing.city}, {listing.state}</p>
                 </div>
               </CardContent>
             </Link>
