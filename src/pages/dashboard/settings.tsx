@@ -33,6 +33,7 @@ const SettingsPageContent = () => {
     username: user?.displayName || "",
     bio: "",
     contact: "",
+    location: "",
     youtube: "",
     twitter: "",
     facebook: "",
