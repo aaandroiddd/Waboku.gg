@@ -454,6 +454,7 @@ export default function ListingPage() {
           </div>
         </DialogContent>
       </Dialog>
+      <Footer />
     </div>
   );
 }
