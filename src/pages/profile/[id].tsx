@@ -173,9 +173,10 @@ const ProfileContent = ({ userId }: { userId: string | null }) => {
                           href={profile.social.youtube} 
                           target="_blank" 
                           rel="noopener noreferrer" 
-                          className="text-muted-foreground hover:text-primary"
+                          className="flex items-center gap-2 text-muted-foreground hover:text-[#FF0000] transition-colors"
                         >
-                          YouTube
+                          <Youtube className="h-5 w-5" />
+                          <span>YouTube</span>
                         </a>
                       )}
                       {profile.social.twitter && (
@@ -183,9 +184,10 @@ const ProfileContent = ({ userId }: { userId: string | null }) => {
                           href={profile.social.twitter} 
                           target="_blank" 
                           rel="noopener noreferrer" 
-                          className="text-muted-foreground hover:text-primary"
+                          className="flex items-center gap-2 text-muted-foreground hover:text-[#1DA1F2] transition-colors"
                         >
-                          X (Twitter)
+                          <Twitter className="h-5 w-5" />
+                          <span>X (Twitter)</span>
                         </a>
                       )}
                       {profile.social.facebook && (
@@ -193,9 +195,10 @@ const ProfileContent = ({ userId }: { userId: string | null }) => {
                           href={profile.social.facebook} 
                           target="_blank" 
                           rel="noopener noreferrer" 
-                          className="text-muted-foreground hover:text-primary"
+                          className="flex items-center gap-2 text-muted-foreground hover:text-[#4267B2] transition-colors"
                         >
-                          Facebook
+                          <Facebook className="h-5 w-5" />
+                          <span>Facebook</span>
                         </a>
                       )}
                     </div>
