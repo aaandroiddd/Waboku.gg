@@ -52,8 +52,26 @@ function SignUpComponent() {
   const [formData, setFormData] = useState({
     email: '',
     password: '',
+    confirmPassword: '',
     username: '',
   });
+
+  const validatePassword = (password: string) => {
+    const minLength = password.length >= 6;
+    const hasUpperCase = /[A-Z]/.test(password);
+    const hasLowerCase = /[a-z]/.test(password);
+    const hasNumber = /[0-9]/.test(password);
+    
+    return {
+      isValid: minLength && hasUpperCase && hasLowerCase && hasNumber,
+      errors: {
+        minLength: !minLength,
+        hasUpperCase: !hasUpperCase,
+        hasLowerCase: !hasLowerCase,
+        hasNumber: !hasNumber,
+      }
+    };
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
