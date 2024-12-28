@@ -81,15 +81,18 @@ export function ListingGrid({
                 <div className="space-y-2">
                   <h3 className="font-semibold text-lg line-clamp-1">{listing.title}</h3>
                   <p className="text-xl font-bold">${listing.price.toLocaleString()}</p>
-                  <div className="flex justify-between items-center">
-                    <p className="text-sm text-muted-foreground">{listing.condition}</p>
-                    {listing.isGraded && (
-                      <span className="text-sm bg-primary/10 text-primary px-2 py-1 rounded-full">
-                        {listing.gradingCompany} {listing.gradeLevel}
-                      </span>
-                    )}
+                  <div className="flex flex-col gap-2">
+                    <div className="flex justify-between items-center">
+                      <p className="text-sm text-muted-foreground">{listing.condition}</p>
+                      {listing.isGraded && (
+                        <span className="text-sm bg-primary/10 text-primary px-2 py-1 rounded-full">
+                          {listing.gradingCompany} {listing.gradeLevel}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-sm text-muted-foreground">{listing.game}</p>
+                    <p className="text-sm text-muted-foreground">{listing.city}, {listing.state}</p>
                   </div>
-                  <p className="text-sm text-muted-foreground">{listing.city}, {listing.state}</p>
                 </div>
               </CardContent>
             </Link>
