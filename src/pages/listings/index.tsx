@@ -138,7 +138,7 @@ export default function ListingsPage() {
     }
 
     setFilteredListings(filtered);
-  }, [allListings, selectedState, selectedGame, selectedCondition, priceRange]);
+  }, [allListings, selectedState, selectedGame, selectedCondition, priceRange, showGradedOnly]);
 
   const handleSearch = () => {
     // Update URL with search parameters
