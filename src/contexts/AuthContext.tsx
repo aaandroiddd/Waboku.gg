@@ -57,6 +57,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const { user } = userCredential;
 
+      // Update the user's display name
+      await user.updateProfile({
+        displayName: username
+      });
+
       const newProfile: UserProfile = {
         uid: user.uid,
         email: user.email!,
