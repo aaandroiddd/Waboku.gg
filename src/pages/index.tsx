@@ -243,14 +243,18 @@ export default function Home() {
   }, [activeSearchParams, listings]);
 
   const handleSearch = () => {
-    setActiveSearchParams({
-      query: searchQuery,
-      state: selectedState,
-      game: selectedGame,
-      condition: selectedCondition,
-      priceRange: priceRange
+    // Redirect to listings page with search parameters
+    router.push({
+      pathname: '/listings',
+      query: {
+        ...(searchQuery && { query: searchQuery }),
+        ...(selectedState !== 'all' && { state: selectedState }),
+        ...(selectedGame !== 'all' && { game: selectedGame }),
+        ...(selectedCondition !== 'all' && { condition: selectedCondition }),
+        ...(priceRange[0] !== 0 && { minPrice: priceRange[0] }),
+        ...(priceRange[1] !== 1000 && { maxPrice: priceRange[1] }),
+      },
     });
-    setFilterOpen(false);
   };
 
   const resetFilters = () => {
