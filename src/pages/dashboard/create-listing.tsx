@@ -315,6 +315,65 @@ const CreateListingPage = () => {
                   </Select>
                 </div>
 
+                <div className="space-y-4">
+                  <div className="flex items-center space-x-2">
+                    <Label htmlFor="isGraded">Graded Card</Label>
+                    <Switch
+                      id="isGraded"
+                      checked={formData.isGraded}
+                      onCheckedChange={(checked) => {
+                        setFormData({
+                          ...formData,
+                          isGraded: checked,
+                          gradeLevel: checked ? formData.gradeLevel : undefined,
+                          gradingCompany: checked ? formData.gradingCompany : undefined
+                        });
+                      }}
+                    />
+                  </div>
+
+                  {formData.isGraded && (
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="gradeLevel">Grade Level</Label>
+                        <Select
+                          value={formData.gradeLevel?.toString()}
+                          onValueChange={(value) => setFormData({ ...formData, gradeLevel: parseInt(value) })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select grade" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {[10, 9.5, 9, 8.5, 8, 7.5, 7, 6.5, 6, 5.5, 5].map((grade) => (
+                              <SelectItem key={grade} value={grade.toString()}>
+                                {grade}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="gradingCompany">Grading Company</Label>
+                        <Select
+                          value={formData.gradingCompany}
+                          onValueChange={(value) => setFormData({ ...formData, gradingCompany: value })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select company" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="PSA">PSA</SelectItem>
+                            <SelectItem value="BGS">BGS</SelectItem>
+                            <SelectItem value="CGC">CGC</SelectItem>
+                            <SelectItem value="other">Other</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
                 <LocationInput
                   onLocationSelect={(city, state) => {
                     setFormData(prev => ({ ...prev, city, state }));
