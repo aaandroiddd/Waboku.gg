@@ -9,6 +9,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useProfile } from '@/hooks/useProfile';
 import { format } from 'date-fns';
 import { useEffect, useState } from 'react';
+import { Youtube, Twitter, Facebook } from 'lucide-react';
 
 const LoadingProfile = () => (
   <div className="container mx-auto p-6">
