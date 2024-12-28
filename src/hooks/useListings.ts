@@ -11,6 +11,29 @@ interface UseListingsProps {
 }
 
 export function useListings({ userId, searchQuery }: UseListingsProps = {}) {
+  const createListing = async (listingData: any) => {
+    if (!user) throw new Error('Must be logged in to create a listing');
+
+    try {
+      const listingRef = collection(db, 'listings');
+      const newListing = {
+        ...listingData,
+        userId: user.uid,
+        username: user.displayName || 'Anonymous',
+        createdAt: new Date(),
+        status: 'active',
+        isGraded: Boolean(listingData.isGraded),
+        gradeLevel: listingData.isGraded ? Number(listingData.gradeLevel) : undefined,
+        gradingCompany: listingData.isGraded ? listingData.gradingCompany : undefined,
+      };
+
+      const docRef = await addDoc(listingRef, newListing);
+      return { id: docRef.id, ...newListing };
+    } catch (error: any) {
+      console.error('Error creating listing:', error);
+      throw new Error(error.message || 'Error creating listing');
+    }
+  };
   const [listings, setListings] = useState<Listing[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
