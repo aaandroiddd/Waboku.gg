@@ -17,6 +17,12 @@ export function RouteGuard({ children, requireAuth = false }: RouteGuardProps) {
     // Only run authorization check if the loading is complete
     if (!isLoading) {
       const authCheck = () => {
+        // Allow profile pages without authentication
+        if (router.pathname.startsWith('/profile/')) {
+          setAuthorized(true);
+          return;
+        }
+
         // If auth is required and user is not logged in
         if (requireAuth && !user) {
           setAuthorized(false);
