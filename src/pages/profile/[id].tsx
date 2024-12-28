@@ -95,19 +95,27 @@ const ProfileContent = ({ userId }: { userId: string | null }) => {
           <div className="flex flex-col md:flex-row gap-6">
             <div className="w-full md:w-1/4">
               <div className="relative w-full aspect-square rounded-lg overflow-hidden bg-secondary">
-                <Image
-                  src={profile.avatarUrl || '/images/rect.png'}
-                  alt={profile.username || 'User avatar'}
-                  fill
-                  sizes="(max-width: 768px) 100vw, 25vw"
-                  priority
-                  className="object-cover"
-                  onError={(e) => {
-                    const target = e.target as HTMLImageElement;
-                    target.src = '/images/rect.png';
-                  }}
-                  unoptimized={profile.avatarUrl?.startsWith('https://firebasestorage.googleapis.com')}
-                />
+                {profile.avatarUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={profile.avatarUrl}
+                    alt={profile.username || 'User avatar'}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      target.src = '/images/rect.png';
+                    }}
+                  />
+                ) : (
+                  <Image
+                    src="/images/rect.png"
+                    alt="Default avatar"
+                    fill
+                    sizes="(max-width: 768px) 100vw, 25vw"
+                    priority
+                    className="object-cover"
+                  />
+                )}
               </div>
             </div>
             <div className="flex-1">
