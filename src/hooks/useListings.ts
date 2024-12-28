@@ -44,14 +44,8 @@ export function useListings({ userId, searchQuery }: UseListingsProps = {}) {
           constraints.push(where('userId', '==', userId));
         }
 
-        // Add title search if specified
-        if (searchQuery) {
-          // Firebase doesn't support case-insensitive search directly
-          // We'll fetch all results and filter in memory for now
-          // In a production environment, you might want to use Algolia or a similar service
-          constraints.push(where('title', '>=', searchQuery.toLowerCase()));
-          constraints.push(where('title', '<=', searchQuery.toLowerCase() + '\uf8ff'));
-        }
+        // For search, we'll fetch all listings and filter in memory
+        // This ensures we catch all possible matches regardless of case
 
         // Always order by creation date
         constraints.push(orderBy('createdAt', 'desc'));
