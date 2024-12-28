@@ -17,7 +17,22 @@ export function useProfile(userId: string) {
         const profileDoc = await getDoc(doc(db, 'users', userId));
         
         if (profileDoc.exists()) {
-          setProfile(profileDoc.data() as UserProfile);
+          const data = profileDoc.data();
+          // Create a profile object with default values for missing fields
+          const profileData: UserProfile = {
+            uid: userId,
+            username: data.username || 'Anonymous User',
+            email: data.email || '',
+            avatarUrl: data.avatarUrl,
+            bio: data.bio,
+            location: data.location,
+            joinDate: data.joinDate || new Date().toISOString(),
+            totalSales: data.totalSales || 0,
+            rating: data.rating,
+            contact: data.contact,
+            social: data.social || {}
+          };
+          setProfile(profileData);
         } else {
           setError('Profile not found');
         }
