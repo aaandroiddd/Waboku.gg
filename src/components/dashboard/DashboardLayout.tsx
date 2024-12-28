@@ -2,36 +2,40 @@ import { ReactNode, useState } from 'react';
 import { DashboardSidebar } from './DashboardSidebar';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { Footer } from '../Footer';
 
 export function DashboardLayout({ children }: { children: ReactNode }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   return (
-    <div className="flex min-h-screen">
-      {/* Desktop Sidebar */}
-      <div className="hidden md:block">
-        <DashboardSidebar />
+    <div className="flex min-h-screen flex-col">
+      <div className="flex flex-1">
+        {/* Desktop Sidebar */}
+        <div className="hidden md:block">
+          <DashboardSidebar />
+        </div>
+
+        {/* Mobile Sidebar */}
+        <Sheet open={isSidebarOpen} onOpenChange={setIsSidebarOpen}>
+          <SheetTrigger asChild>
+            <Button
+              variant="ghost"
+              className="md:hidden fixed top-4 left-4 z-40"
+              size="icon"
+            >
+              <MenuIcon className="h-6 w-6" />
+            </Button>
+          </SheetTrigger>
+          <SheetContent side="left" className="p-0 w-72">
+            <DashboardSidebar onNavigate={() => setIsSidebarOpen(false)} />
+          </SheetContent>
+        </Sheet>
+
+        <main className="flex-1 p-6 md:p-8 pt-20 md:pt-8 flex flex-col">
+          {children}
+        </main>
       </div>
-
-      {/* Mobile Sidebar */}
-      <Sheet open={isSidebarOpen} onOpenChange={setIsSidebarOpen}>
-        <SheetTrigger asChild>
-          <Button
-            variant="ghost"
-            className="md:hidden fixed top-4 left-4 z-40"
-            size="icon"
-          >
-            <MenuIcon className="h-6 w-6" />
-          </Button>
-        </SheetTrigger>
-        <SheetContent side="left" className="p-0 w-72">
-          <DashboardSidebar onNavigate={() => setIsSidebarOpen(false)} />
-        </SheetContent>
-      </Sheet>
-
-      <main className="flex-1 p-6 md:p-8 pt-20 md:pt-8">
-        {children}
-      </main>
+      <Footer />
     </div>
   );
 }
