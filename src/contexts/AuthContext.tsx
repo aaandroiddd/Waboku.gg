@@ -74,7 +74,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       };
 
+      // Save user profile
       await setDoc(doc(db, 'users', user.uid), newProfile);
+      
+      // Reserve username
+      await setDoc(doc(db, 'usernames', username), {
+        uid: user.uid,
+        createdAt: new Date().toISOString()
+      });
+      
       setProfile(newProfile);
     } catch (err: any) {
       setError(err.message);
