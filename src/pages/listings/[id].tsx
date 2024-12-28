@@ -198,7 +198,8 @@ export default function ListingPage() {
 
   const handleMessage = () => {
     if (!user) {
-      toast.error('Please sign in to send messages');
+      toast.error('Please sign up to send messages');
+      router.push('/auth/sign-up');
       return;
     }
 
