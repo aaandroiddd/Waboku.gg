@@ -80,6 +80,7 @@ export default function ListingsPage() {
   const [selectedGame, setSelectedGame] = useState("all");
   const [selectedCondition, setSelectedCondition] = useState("all");
   const [priceRange, setPriceRange] = useState([0, 1000]);
+  const [showGradedOnly, setShowGradedOnly] = useState(false);
 
   // Use the enhanced useListings hook
   const { listings: allListings, isLoading, error } = useListings({ 
