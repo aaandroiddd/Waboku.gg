@@ -77,7 +77,7 @@ export function ListingGrid({
               <CardContent className="p-4">
                 <div className="aspect-square bg-muted rounded-lg mb-4 relative overflow-hidden">
                   {/* Price Badge */}
-                  <div className="absolute top-2 left-2 z-10">
+                  <div className="absolute top-2 right-2 z-10">
                     <span className="px-3 py-1 bg-black/75 text-white rounded-md font-semibold">
                       ${listing.price.toLocaleString()}
                     </span>
