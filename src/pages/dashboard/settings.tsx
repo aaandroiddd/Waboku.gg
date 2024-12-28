@@ -13,7 +13,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, deleteDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
 const DashboardLayout = dynamic(
