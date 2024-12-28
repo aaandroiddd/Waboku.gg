@@ -20,6 +20,7 @@ const DashboardComponent = () => {
   const { user, loading: authLoading } = useAuth();
   const [error, setError] = useState<string | null>(null);
   const { listings, loading: listingsLoading, error: listingsError, deleteListing, refreshListings } = useListings();
+  const { profile, loading: profileLoading } = useProfile(user?.uid || null);
   
   const loading = authLoading || listingsLoading;
 
