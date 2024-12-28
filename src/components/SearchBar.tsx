@@ -10,7 +10,10 @@ export default function SearchBar() {
 
   const handleSearch = () => {
     if (searchQuery.trim()) {
-      router.push(`/listings?search=${encodeURIComponent(searchQuery.trim())}`);
+      router.push({
+        pathname: '/listings',
+        query: { query: searchQuery.trim() }
+      });
     }
   };
 
@@ -28,7 +31,7 @@ export default function SearchBar() {
           placeholder="Search cards..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          onKeyPress={handleKeyPress}
+          onKeyDown={handleKeyPress}
           className="pr-10"
         />
         <Button
