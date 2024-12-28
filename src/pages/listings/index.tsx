@@ -296,6 +296,19 @@ export default function ListingsPage() {
                             </div>
                           </div>
                         </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="graded"
+                            checked={showGradedOnly}
+                            onCheckedChange={(checked) => setShowGradedOnly(checked as boolean)}
+                          />
+                          <label
+                            htmlFor="graded"
+                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                          >
+                            Show Graded Cards Only
+                          </label>
+                        </div>
                       </div>
                       <SheetFooter>
                         <Button variant="outline" onClick={resetFilters}>Reset</Button>
