@@ -306,6 +306,11 @@ export default function Home() {
                       className="pl-10 h-12 w-full"
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          handleSearch();
+                        }
+                      }}
                     />
                   </div>
                   
