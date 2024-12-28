@@ -325,11 +325,7 @@ export default function ListingPage() {
                 <Button
                   variant="ghost"
                   className="flex items-center justify-start space-x-2 h-8"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    router.push(`/profile/${listing.userId}`, undefined, { shallow: true });
-                  }}
+                  onClick={() => router.push(`/profile/${listing.userId}`)}
                 >
                   <User className="h-4 w-4" />
                   <span>{listing.username}</span>
