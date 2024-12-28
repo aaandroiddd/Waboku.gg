@@ -120,6 +120,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const deleteAccount = async () => {
+    if (!user || !profile) throw new Error('No user logged in');
+
+    try {
+      // Delete user's profile document
+      await deleteDoc(doc(db, 'users', user.uid));
+      
+      // Delete username from usernames collection
+      await deleteDoc(doc(db, 'usernames', profile.username));
+      
+      // Delete the user's auth account
+      await deleteUser(user);
+      
+      setUser(null);
+      setProfile(null);
+    } catch (err: any) {
+      setError(err.message);
+      throw err;
+    }
+  };
+
   const value = {
     user,
     profile,
@@ -128,7 +149,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signUp,
     signIn,
     signOut,
-    updateProfile
+    updateProfile,
+    deleteAccount
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
