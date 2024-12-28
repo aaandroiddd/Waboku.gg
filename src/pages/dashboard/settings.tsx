@@ -32,6 +32,37 @@ const SettingsPageContent = () => {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [deleteConfirmation, setDeleteConfirmation] = useState("");
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+  
+  const handleDeleteAccount = async () => {
+    if (!user || deleteConfirmation.toLowerCase() !== 'delete') {
+      return;
+    }
+
+    setIsDeletingAccount(true);
+    try {
+      // Delete all user's listings
+      const listingsRef = collection(db, 'listings');
+      const q = query(listingsRef, where('userId', '==', user.uid));
+      const querySnapshot = await getDocs(q);
+      const deletePromises = querySnapshot.docs.map(doc => deleteDoc(doc.ref));
+      await Promise.all(deletePromises);
+
+      // Delete user profile
+      await deleteDoc(doc(db, 'users', user.uid));
+
+      // Delete user authentication
+      await user.delete();
+
+      // Redirect to home page
+      router.push('/');
+    } catch (err) {
+      console.error('Error deleting account:', err);
+      setError('Failed to delete account. Please try again.');
+    } finally {
+      setIsDeletingAccount(false);
+      setShowDeleteDialog(false);
+    }
+  };
   const { user, updateProfile } = useAuth();
   const [formData, setFormData] = useState({
     username: user?.displayName || "",
