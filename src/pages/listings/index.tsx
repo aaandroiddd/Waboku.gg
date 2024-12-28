@@ -146,10 +146,25 @@ export default function ListingsPage() {
     // Apply search query
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(listing => 
-        listing.title?.toLowerCase().includes(query) ||
-        listing.description?.toLowerCase().includes(query)
-      );
+      filtered = filtered.filter(listing => {
+        const titleMatch = listing.title?.toLowerCase().includes(query);
+        const descriptionMatch = listing.description?.toLowerCase().includes(query);
+        
+        // Prioritize title matches by returning true immediately if title matches
+        return titleMatch || descriptionMatch;
+      });
+      
+      // Sort results to show title matches first
+      filtered.sort((a, b) => {
+        const aTitle = a.title?.toLowerCase() || '';
+        const bTitle = b.title?.toLowerCase() || '';
+        const queryInA = aTitle.includes(query);
+        const queryInB = bTitle.includes(query);
+        
+        if (queryInA && !queryInB) return -1;
+        if (!queryInA && queryInB) return 1;
+        return 0;
+      });
     }
 
     // Apply game filter
