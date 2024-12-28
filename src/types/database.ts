@@ -42,16 +42,16 @@ export interface UserProfile {
   uid: string;
   username: string;
   email: string;
-  avatarUrl?: string;
-  bio?: string;
-  location?: string;
+  avatarUrl: string | null;
+  bio: string;
+  location: string;
   joinDate: string;
-  totalSales?: number;
-  rating?: number;
-  contact?: string;
-  social?: {
-    youtube?: string;
-    twitter?: string;
-    facebook?: string;
-  };
+  totalSales: number;
+  rating: number | null;
+  contact: string;
+  social: {
+    youtube: string | null;
+    twitter: string | null;
+    facebook: string | null;
+  } | null;
 }
