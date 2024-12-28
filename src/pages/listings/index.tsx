@@ -132,6 +132,11 @@ export default function ListingsPage() {
       listing.price <= priceRange[1]
     );
 
+    // Apply graded filter
+    if (showGradedOnly) {
+      filtered = filtered.filter(listing => listing.isGraded);
+    }
+
     setFilteredListings(filtered);
   }, [allListings, selectedState, selectedGame, selectedCondition, priceRange]);
 
