@@ -61,7 +61,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         username,
         joinDate: new Date().toISOString(),
         totalSales: 0,
-        lastUpdated: new Date().toISOString()
+        rating: 0,
+        bio: '',
+        location: '',
+        avatarUrl: '',
+        social: {
+          youtube: '',
+          twitter: '',
+          facebook: ''
+        }
       };
 
       await setDoc(doc(db, 'users', user.uid), newProfile);
