@@ -371,6 +371,86 @@ const SettingsPageContent = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Delete Account Section */}
+      <div className="container mx-auto p-6">
+        <Card className="border-red-200">
+          <CardHeader>
+            <CardTitle className="text-red-600">Delete Account</CardTitle>
+            <CardDescription>
+              Permanently delete your account and all associated data
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                This action cannot be undone. This will permanently delete your account, profile information, and all your listings.
+              </p>
+              <Button
+                variant="destructive"
+                onClick={() => setShowDeleteDialog(true)}
+                className="w-full"
+              >
+                Delete Account
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              <div className="space-y-4">
+                <p>
+                  This action cannot be undone. This will permanently delete your account
+                  and remove all of your data from our servers, including:
+                </p>
+                <ul className="list-disc list-inside space-y-1">
+                  <li>Your profile information</li>
+                  <li>All your listings</li>
+                  <li>Your saved preferences</li>
+                </ul>
+                <div className="space-y-2">
+                  <p className="font-medium">Type &quot;delete&quot; to confirm:</p>
+                  <Input
+                    value={deleteConfirmation}
+                    onChange={(e) => setDeleteConfirmation(e.target.value)}
+                    placeholder="Type 'delete' here"
+                    className="max-w-[300px]"
+                  />
+                </div>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowDeleteDialog(false)}
+              disabled={isDeletingAccount}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteAccount}
+              disabled={deleteConfirmation.toLowerCase() !== 'delete' || isDeletingAccount}
+            >
+              {isDeletingAccount ? (
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  Deleting...
+                </div>
+              ) : (
+                "Delete Account"
+              )}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </DashboardLayout>
   );
 };
