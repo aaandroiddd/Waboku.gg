@@ -116,5 +116,5 @@ export function useListings({ userId, searchQuery }: UseListingsProps = {}) {
     fetchListings();
   }, [userId, searchQuery, favorites]);
 
-  return { listings, isLoading, error };
+  return { listings, isLoading, error, createListing };
 }
