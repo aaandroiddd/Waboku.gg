@@ -86,7 +86,18 @@ export function ListingGrid({
                   {/* Graded Badge */}
                   {listing.isGraded && (
                     <div className="absolute top-2 left-2 z-10">
-                      <span className="px-3 py-1 bg-primary text-primary-foreground rounded-md font-semibold flex items-center gap-1">
+                      <span className="px-3 py-1 bg-blue-500/90 text-white rounded-md font-semibold flex items-center gap-1">
+                        <svg 
+                          viewBox="0 0 24 24" 
+                          className="w-4 h-4 mr-1" 
+                          fill="none" 
+                          stroke="currentColor" 
+                          strokeWidth="2"
+                        >
+                          <path d="M12 2L2 7L12 12L22 7L12 2Z" />
+                          <path d="M2 17L12 22L22 17" />
+                          <path d="M2 12L12 17L22 12" />
+                        </svg>
                         <span className="text-xs">{listing.gradingCompany}</span>
                         <span className="font-bold">{listing.gradeLevel}</span>
                       </span>
