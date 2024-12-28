@@ -45,7 +45,12 @@ export function useListings(userId?: string) {
             imageUrls: Array.isArray(data.imageUrls) ? data.imageUrls : [],
             isGraded: Boolean(data.isGraded),
             gradeLevel: data.gradeLevel ? Number(data.gradeLevel) : undefined,
-            status: data.status || 'active'
+            status: data.status || 'active',
+            condition: data.condition || 'Not specified',
+            game: data.game || 'Not specified',
+            city: data.city || 'Unknown',
+            state: data.state || 'Unknown',
+            gradingCompany: data.gradingCompany || undefined
           } as Listing;
         });
         
