@@ -1,11 +1,16 @@
 import { useState, useEffect } from 'react';
-import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
+import { collection, query, where, getDocs, orderBy, QueryConstraint } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Listing } from '@/types/database';
 import { useAuth } from '@/contexts/AuthContext';
 import { useFavorites } from './useFavorites';
 
-export function useListings(userId?: string) {
+interface UseListingsProps {
+  userId?: string;
+  searchQuery?: string;
+}
+
+export function useListings({ userId, searchQuery }: UseListingsProps = {}) {
   const [listings, setListings] = useState<Listing[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -19,23 +24,42 @@ export function useListings(userId?: string) {
         setError(null);
         
         if (userId === 'favorites') {
-          setListings(favorites);
+          let filteredFavorites = favorites;
+          if (searchQuery) {
+            filteredFavorites = favorites.filter(listing => 
+              listing.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+              listing.description?.toLowerCase().includes(searchQuery.toLowerCase())
+            );
+          }
+          setListings(filteredFavorites);
           setIsLoading(false);
           return;
         }
 
         const listingsRef = collection(db, 'listings');
-        let q = query(listingsRef, orderBy('createdAt', 'desc'));
-        
+        const constraints: QueryConstraint[] = [];
+
+        // Add user filter if specified
         if (userId) {
-          q = query(listingsRef, 
-            where('userId', '==', userId),
-            orderBy('createdAt', 'desc')
-          );
+          constraints.push(where('userId', '==', userId));
         }
+
+        // Add title search if specified
+        if (searchQuery) {
+          // Firebase doesn't support case-insensitive search directly
+          // We'll fetch all results and filter in memory for now
+          // In a production environment, you might want to use Algolia or a similar service
+          constraints.push(where('title', '>=', searchQuery.toLowerCase()));
+          constraints.push(where('title', '<=', searchQuery.toLowerCase() + '\uf8ff'));
+        }
+
+        // Always order by creation date
+        constraints.push(orderBy('createdAt', 'desc'));
         
+        const q = query(listingsRef, ...constraints);
         const querySnapshot = await getDocs(q);
-        const fetchedListings = querySnapshot.docs.map(doc => {
+        
+        let fetchedListings = querySnapshot.docs.map(doc => {
           const data = doc.data();
           return {
             id: doc.id,
@@ -53,6 +77,15 @@ export function useListings(userId?: string) {
             gradingCompany: data.gradingCompany || undefined
           } as Listing;
         });
+
+        // If there's a search query, filter results in memory to handle case-insensitive search
+        if (searchQuery) {
+          const searchLower = searchQuery.toLowerCase();
+          fetchedListings = fetchedListings.filter(listing => 
+            listing.title?.toLowerCase().includes(searchLower) ||
+            listing.description?.toLowerCase().includes(searchLower)
+          );
+        }
         
         setListings(fetchedListings);
       } catch (err: any) {
@@ -64,7 +97,7 @@ export function useListings(userId?: string) {
     };
 
     fetchListings();
-  }, [userId, favorites]);
+  }, [userId, searchQuery, favorites]);
 
   return { listings, isLoading, error };
 }
