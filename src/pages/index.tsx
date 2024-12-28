@@ -245,6 +245,8 @@ export default function Home() {
     setFilteredListings(filtered);
   }, [activeSearchParams, listings]);
 
+  const router = useRouter();
+
   const handleSearch = () => {
     // Redirect to listings page with search parameters
     router.push({
