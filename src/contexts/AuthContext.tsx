@@ -176,7 +176,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         });
 
         // Update auth display name
-        await user.updateProfile({
+        await firebaseUpdateProfile(user, {
           displayName: data.username
         });
       }
