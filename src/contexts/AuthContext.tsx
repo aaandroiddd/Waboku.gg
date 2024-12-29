@@ -54,8 +54,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signUp = async (email: string, password: string, username: string) => {
     try {
+      // First check if username is available
+      const usernameDoc = await getDoc(doc(db, 'usernames', username));
+      if (usernameDoc.exists()) {
+        throw new Error('Username is already taken. Please choose another one.');
+      }
+
+      // Create auth user
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const { user } = userCredential;
+
+      // First create username document to establish ownership
+      await setDoc(doc(db, 'usernames', username), {
+        uid: user.uid,
+        username: username,
+        createdAt: new Date().toISOString()
+      });
 
       // Update the user's display name
       await user.updateProfile({
@@ -79,17 +93,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       };
 
-      // Save user profile
+      // Save user profile after username is reserved
       await setDoc(doc(db, 'users', user.uid), newProfile);
-      
-      // Reserve username
-      await setDoc(doc(db, 'usernames', username), {
-        uid: user.uid,
-        createdAt: new Date().toISOString()
-      });
       
       setProfile(newProfile);
     } catch (err: any) {
+      // If anything fails, clean up any created documents
+      if (auth.currentUser) {
+        try {
+          await deleteDoc(doc(db, 'usernames', username));
+          await deleteUser(auth.currentUser);
+        } catch (cleanupErr) {
+          console.error('Cleanup error:', cleanupErr);
+        }
+      }
+      
       setError(err.message);
       throw err;
     }
