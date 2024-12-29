@@ -105,7 +105,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
 
       // Update auth profile
-      await createdUser.updateProfile({
+      await firebaseUpdateProfile(createdUser, {
         displayName: username
       });
 
