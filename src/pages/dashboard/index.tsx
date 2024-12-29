@@ -164,12 +164,12 @@ const DashboardComponent = () => {
             <div className="flex-1">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
-                  <div className="group cursor-pointer" onClick={() => router.push(`/profile/${user.uid}`)}>
+                  <div className="group cursor-pointer max-w-full" onClick={() => router.push(`/profile/${user.uid}`)}>
                     <div className="relative">
-                      <h2 className="text-2xl font-bold hover:text-primary transition-colors">
+                      <h2 className="text-2xl font-bold hover:text-primary transition-colors truncate">
                         {user.displayName || profile?.username || 'User'}
                       </h2>
-                      <p className="text-muted-foreground hover:text-primary transition-colors">
+                      <p className="text-muted-foreground hover:text-primary transition-colors truncate max-w-[300px]">
                         {user.email}
                       </p>
                       <div className="absolute invisible group-hover:visible bg-popover text-popover-foreground px-3 py-2 rounded-md text-sm -bottom-2 left-1/2 transform -translate-x-1/2 translate-y-full whitespace-nowrap shadow-md">
