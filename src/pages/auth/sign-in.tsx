@@ -75,6 +75,19 @@ function SignInComponent() {
         throw new Error('No internet connection. Please check your network and try again.');
       }
 
+      console.log('Checking Firebase configuration...');
+      const configStatus = {
+        apiKeyPresent: !!process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+        authDomainPresent: !!process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+        projectIdPresent: !!process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID
+      };
+      
+      console.log('Firebase Config Status:', configStatus);
+      
+      if (!configStatus.apiKeyPresent || !configStatus.authDomainPresent || !configStatus.projectIdPresent) {
+        throw new Error('Authentication service configuration is incomplete. Please contact support.');
+      }
+
       console.log('Validating input...');
       // Basic email validation
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
