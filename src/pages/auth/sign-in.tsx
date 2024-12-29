@@ -116,8 +116,10 @@ function SignInComponent() {
       
       if (err.code === 'auth/invalid-email' || err.message.includes('valid email')) {
         errorMessage = 'Please enter a valid email address.';
-      } else if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password') {
-        errorMessage = 'Invalid email or password.';
+      } else if (err.code === 'auth/user-not-found') {
+        errorMessage = 'No account found with this email address. Please check your email or sign up for a new account.';
+      } else if (err.code === 'auth/wrong-password') {
+        errorMessage = 'Incorrect password. Please try again.';
       } else if (err.code === 'auth/too-many-requests') {
         errorMessage = 'Too many failed attempts. Please try again later.';
       } else if (err.code === 'auth/network-request-failed' || !navigator.onLine || err.message.includes('network')) {
