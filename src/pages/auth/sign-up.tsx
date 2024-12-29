@@ -9,6 +9,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Logo } from '@/components/Logo';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ChevronLeft } from 'lucide-react';
+import { PasswordStrengthIndicator } from '@/components/PasswordStrengthIndicator';
 
 function LoadingState() {
   return (
