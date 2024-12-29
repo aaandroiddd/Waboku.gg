@@ -72,7 +72,7 @@ export function DashboardSidebar({ onNavigate }: DashboardSidebarProps) {
   };
 
   return (
-    <div className="flex flex-col h-full min-h-screen w-72 bg-card border-r">
+    <div className="flex flex-col h-screen sticky top-0 bg-card border-r">
       <div className="p-6 border-b">
         <Logo className="h-8" alwaysShowFull={true} />
       </div>
