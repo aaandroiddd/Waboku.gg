@@ -26,6 +26,16 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID
 };
 
+// Log Firebase config for debugging (excluding sensitive data)
+console.log('Firebase Config Status:', {
+  apiKeyPresent: !!firebaseConfig.apiKey,
+  authDomainPresent: !!firebaseConfig.authDomain,
+  projectIdPresent: !!firebaseConfig.projectId,
+  storageBucketPresent: !!firebaseConfig.storageBucket,
+  messagingSenderIdPresent: !!firebaseConfig.messagingSenderId,
+  appIdPresent: !!firebaseConfig.appId
+});
+
 let app: FirebaseApp;
 let auth: Auth;
 let db: Firestore;
