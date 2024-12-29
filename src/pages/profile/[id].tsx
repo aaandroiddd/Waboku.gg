@@ -105,7 +105,7 @@ const ProfileContent = ({ userId }: { userId: string | null }) => {
         <Card className="mb-6">
           <CardContent className="p-6">
             <div className="flex flex-col md:flex-row gap-6">
-              <div className="w-full md:w-1/4">
+              <div className="w-full md:w-1/4 flex flex-col gap-4">
                 <div className="relative w-full aspect-square rounded-lg overflow-hidden bg-secondary">
                   {profile.avatarUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
@@ -129,15 +129,30 @@ const ProfileContent = ({ userId }: { userId: string | null }) => {
                     />
                   )}
                 </div>
+                {/* Message button for mobile */}
+                {user && user.uid !== userId && (
+                  <Button 
+                    variant="secondary" 
+                    onClick={() => router.push(`/messages?userId=${userId}`)}
+                    className="w-full md:hidden"
+                  >
+                    Message
+                  </Button>
+                )}
               </div>
               <div className="flex-1">
-                <div className="flex justify-between items-start">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center">
                   <div>
-                    <h1 className="text-3xl font-bold mb-2">{profile.username || 'Anonymous User'}</h1>
+                    <h1 className="text-2xl md:text-3xl font-bold mb-2">{profile.username || 'Anonymous User'}</h1>
                     <p className="text-muted-foreground">Member since {joinDate}</p>
                   </div>
+                  {/* Message button for desktop */}
                   {user && user.uid !== userId && (
-                    <Button variant="secondary" onClick={() => router.push(`/messages?userId=${userId}`)}>
+                    <Button 
+                      variant="secondary" 
+                      onClick={() => router.push(`/messages?userId=${userId}`)}
+                      className="hidden md:flex mt-4 md:mt-0"
+                    >
                       Message
                     </Button>
                   )}
