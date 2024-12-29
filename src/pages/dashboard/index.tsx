@@ -164,18 +164,19 @@ const DashboardComponent = () => {
             <div className="flex-1">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
-                  <div>
-                    <h2 className="text-2xl font-bold">{user.displayName || profile?.username || 'User'}</h2>
-                    <p className="text-muted-foreground">{user.email}</p>
+                  <div className="group cursor-pointer" onClick={() => router.push(`/profile/${user.uid}`)}>
+                    <div className="relative">
+                      <h2 className="text-2xl font-bold hover:text-primary transition-colors">
+                        {user.displayName || profile?.username || 'User'}
+                      </h2>
+                      <p className="text-muted-foreground hover:text-primary transition-colors">
+                        {user.email}
+                      </p>
+                      <div className="absolute invisible group-hover:visible bg-popover text-popover-foreground px-3 py-2 rounded-md text-sm -bottom-2 left-1/2 transform -translate-x-1/2 translate-y-full whitespace-nowrap shadow-md">
+                        Click to view your profile
+                      </div>
+                    </div>
                   </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => router.push(`/profile/${user.uid}`)}
-                  >
-                    <ExternalLink className="h-4 w-4 mr-1" />
-                    View Profile
-                  </Button>
                 </div>
               </div>
               <div className="mt-4">
