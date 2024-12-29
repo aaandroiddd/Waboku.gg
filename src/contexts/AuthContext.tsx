@@ -61,11 +61,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw new Error('Username is already taken. Please choose another one.');
       }
 
-      // Create auth user
+      // Create auth user first
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       createdUser = userCredential.user;
 
-      // Create the profile first
+      // Wait for auth state to be updated
+      await new Promise((resolve) => {
+        const unsubscribe = onAuthStateChanged(auth, (user) => {
+          if (user) {
+            unsubscribe();
+            resolve(user);
+          }
+        });
+      });
+
+      // Create the profile
       const newProfile: UserProfile = {
         uid: createdUser.uid,
         email: createdUser.email!,
@@ -83,18 +93,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       };
 
-      // Create both documents in a transaction-like manner
-      await Promise.all([
-        setDoc(doc(db, 'users', createdUser.uid), newProfile),
-        setDoc(doc(db, 'usernames', username), {
-          uid: createdUser.uid,
-          username: username,
-          createdAt: new Date().toISOString()
-        }),
-        createdUser.updateProfile({
-          displayName: username
-        })
-      ]);
+      // Create user profile first
+      await setDoc(doc(db, 'users', createdUser.uid), newProfile);
+
+      // Then create username document
+      await setDoc(doc(db, 'usernames', username), {
+        uid: createdUser.uid,
+        username: username,
+        createdAt: new Date().toISOString()
+      });
+
+      // Update auth profile
+      await createdUser.updateProfile({
+        displayName: username
+      });
 
       setProfile(newProfile);
     } catch (err: any) {
