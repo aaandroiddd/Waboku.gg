@@ -116,7 +116,7 @@ function SignInComponent() {
       
       if (err.code === 'auth/invalid-email' || err.message.includes('valid email')) {
         errorMessage = 'Please enter a valid email address.';
-      } else if (err.code === 'auth/user-not-found') {
+      } else if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') {
         errorMessage = 'No account found with this email address. Please check your email or sign up for a new account.';
       } else if (err.code === 'auth/wrong-password') {
         errorMessage = 'Incorrect password. Please try again.';
