@@ -11,7 +11,6 @@ import {
 } from "@/components/ui/sheet";
 import { Menu } from "lucide-react";
 import { useState } from "react";
-import SearchBar from "./SearchBar";
 
 // Dynamically import the auth-dependent navigation component
 const AuthNav = dynamic(() => import("./AuthNav"), {
@@ -29,11 +28,6 @@ export default function Header() {
         <Link href="/" className="flex items-center">
           <Logo />
         </Link>
-
-        {/* Search Bar */}
-        <div className="hidden md:block flex-1 max-w-xl mx-4">
-          <SearchBar />
-        </div>
 
         {/* Desktop Navigation */}
         <nav className="hidden md:flex items-center gap-4">
@@ -53,10 +47,6 @@ export default function Header() {
             </SheetTrigger>
             <SheetContent side="right" className="w-[300px] sm:w-[400px]">
               <nav className="flex flex-col gap-4">
-                {/* Mobile Search Bar */}
-                <div className="mt-4">
-                  <SearchBar />
-                </div>
                 {!isAuthPage && (
                   <div className="flex flex-col gap-4 mt-4">
                     <AuthNav />
