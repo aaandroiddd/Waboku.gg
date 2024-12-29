@@ -9,7 +9,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useProfile } from '@/hooks/useProfile';
 import { format } from 'date-fns';
 import { useEffect, useState } from 'react';
-import { Youtube, Twitter, Facebook } from 'lucide-react';
+import { Youtube, Twitter, Facebook, ArrowLeft } from 'lucide-react';
+import { Footer } from '@/components/Footer';
 
 const LoadingProfile = () => (
   <div className="container mx-auto p-6">
@@ -90,157 +91,169 @@ const ProfileContent = ({ userId }: { userId: string | null }) => {
   const joinDate = profile.joinDate ? format(new Date(profile.joinDate), 'MMMM yyyy') : 'Unknown';
 
   return (
-    <div className="container mx-auto p-6">
-      <Card className="mb-6">
-        <CardContent className="p-6">
-          <div className="flex flex-col md:flex-row gap-6">
-            <div className="w-full md:w-1/4">
-              <div className="relative w-full aspect-square rounded-lg overflow-hidden bg-secondary">
-                {profile.avatarUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={profile.avatarUrl}
-                    alt={profile.username || 'User avatar'}
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      const target = e.target as HTMLImageElement;
-                      target.src = '/images/rect.png';
-                    }}
-                  />
-                ) : (
-                  <Image
-                    src="/images/rect.png"
-                    alt="Default avatar"
-                    fill
-                    sizes="(max-width: 768px) 100vw, 25vw"
-                    priority
-                    className="object-cover"
-                  />
-                )}
-              </div>
-            </div>
-            <div className="flex-1">
-              <div className="flex justify-between items-start">
-                <div>
-                  <h1 className="text-3xl font-bold mb-2">{profile.username || 'Anonymous User'}</h1>
-                  <p className="text-muted-foreground">Member since {joinDate}</p>
-                </div>
-                {user && user.uid !== userId && (
-                  <Button variant="secondary" onClick={() => router.push(`/messages?userId=${userId}`)}>
-                    Message
-                  </Button>
-                )}
-              </div>
-              
-              <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="text-center p-4 bg-secondary rounded-lg">
-                  <div className="text-2xl font-bold">{profile.totalSales || 0}</div>
-                  <div className="text-sm text-muted-foreground">Total Sales</div>
-                </div>
-                <div className="text-center p-4 bg-secondary rounded-lg">
-                  <div className="text-2xl font-bold">{profile.rating || 'N/A'}</div>
-                  <div className="text-sm text-muted-foreground">Rating</div>
-                </div>
-                <div className="text-center p-4 bg-secondary rounded-lg">
-                  <div className="text-sm font-medium">{profile.location || 'Not specified'}</div>
-                  <div className="text-sm text-muted-foreground">Location</div>
+    <div className="min-h-screen flex flex-col">
+      <div className="container mx-auto p-6 flex-grow">
+        <Button
+          variant="ghost"
+          className="mb-4"
+          onClick={() => router.back()}
+        >
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Back
+        </Button>
+
+        <Card className="mb-6">
+          <CardContent className="p-6">
+            <div className="flex flex-col md:flex-row gap-6">
+              <div className="w-full md:w-1/4">
+                <div className="relative w-full aspect-square rounded-lg overflow-hidden bg-secondary">
+                  {profile.avatarUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={profile.avatarUrl}
+                      alt={profile.username || 'User avatar'}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.src = '/images/rect.png';
+                      }}
+                    />
+                  ) : (
+                    <Image
+                      src="/images/rect.png"
+                      alt="Default avatar"
+                      fill
+                      sizes="(max-width: 768px) 100vw, 25vw"
+                      priority
+                      className="object-cover"
+                    />
+                  )}
                 </div>
               </div>
-
-              <Separator className="my-6" />
-
-              <div className="space-y-4">
-                <div>
-                  <h2 className="font-semibold mb-2">About</h2>
-                  <p className="text-muted-foreground">
-                    {profile.bio || 'This user hasn\'t added a bio yet.'}
-                  </p>
-                </div>
-
-                {profile.contact && (
+              <div className="flex-1">
+                <div className="flex justify-between items-start">
                   <div>
-                    <h2 className="font-semibold mb-2">Contact</h2>
-                    <p className="text-muted-foreground">{profile.contact}</p>
+                    <h1 className="text-3xl font-bold mb-2">{profile.username || 'Anonymous User'}</h1>
+                    <p className="text-muted-foreground">Member since {joinDate}</p>
                   </div>
-                )}
+                  {user && user.uid !== userId && (
+                    <Button variant="secondary" onClick={() => router.push(`/messages?userId=${userId}`)}>
+                      Message
+                    </Button>
+                  )}
+                </div>
+                
+                <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="text-center p-4 bg-secondary rounded-lg">
+                    <div className="text-2xl font-bold">{profile.totalSales || 0}</div>
+                    <div className="text-sm text-muted-foreground">Total Sales</div>
+                  </div>
+                  <div className="text-center p-4 bg-secondary rounded-lg">
+                    <div className="text-2xl font-bold">{profile.rating || 'N/A'}</div>
+                    <div className="text-sm text-muted-foreground">Rating</div>
+                  </div>
+                  <div className="text-center p-4 bg-secondary rounded-lg">
+                    <div className="text-sm font-medium">{profile.location || 'Not specified'}</div>
+                    <div className="text-sm text-muted-foreground">Location</div>
+                  </div>
+                </div>
 
-                {profile.social && (
+                <Separator className="my-6" />
+
+                <div className="space-y-4">
                   <div>
-                    <h2 className="font-semibold mb-2">Social Links</h2>
-                    <div className="flex gap-4">
-                      {profile.social.youtube && (
-                        <a 
-                          href={profile.social.youtube} 
-                          target="_blank" 
-                          rel="noopener noreferrer" 
-                          className="flex items-center gap-2 text-muted-foreground hover:text-[#FF0000] transition-colors"
-                        >
-                          <Youtube className="h-5 w-5" />
-                          <span>YouTube</span>
-                        </a>
-                      )}
-                      {profile.social.twitter && (
-                        <a 
-                          href={profile.social.twitter} 
-                          target="_blank" 
-                          rel="noopener noreferrer" 
-                          className="flex items-center gap-2 text-muted-foreground hover:text-[#1DA1F2] transition-colors"
-                        >
-                          <Twitter className="h-5 w-5" />
-                          <span>X (Twitter)</span>
-                        </a>
-                      )}
-                      {profile.social.facebook && (
-                        <a 
-                          href={profile.social.facebook} 
-                          target="_blank" 
-                          rel="noopener noreferrer" 
-                          className="flex items-center gap-2 text-muted-foreground hover:text-[#4267B2] transition-colors"
-                        >
-                          <Facebook className="h-5 w-5" />
-                          <span>Facebook</span>
-                        </a>
-                      )}
+                    <h2 className="font-semibold mb-2">About</h2>
+                    <p className="text-muted-foreground">
+                      {profile.bio || 'This user hasn\'t added a bio yet.'}
+                    </p>
+                  </div>
+
+                  {profile.contact && (
+                    <div>
+                      <h2 className="font-semibold mb-2">Contact</h2>
+                      <p className="text-muted-foreground">{profile.contact}</p>
                     </div>
-                  </div>
-                )}
+                  )}
+
+                  {profile.social && (
+                    <div>
+                      <h2 className="font-semibold mb-2">Social Links</h2>
+                      <div className="flex gap-4">
+                        {profile.social.youtube && (
+                          <a 
+                            href={profile.social.youtube} 
+                            target="_blank" 
+                            rel="noopener noreferrer" 
+                            className="flex items-center gap-2 text-muted-foreground hover:text-[#FF0000] transition-colors"
+                          >
+                            <Youtube className="h-5 w-5" />
+                            <span>YouTube</span>
+                          </a>
+                        )}
+                        {profile.social.twitter && (
+                          <a 
+                            href={profile.social.twitter} 
+                            target="_blank" 
+                            rel="noopener noreferrer" 
+                            className="flex items-center gap-2 text-muted-foreground hover:text-[#1DA1F2] transition-colors"
+                          >
+                            <Twitter className="h-5 w-5" />
+                            <span>X (Twitter)</span>
+                          </a>
+                        )}
+                        {profile.social.facebook && (
+                          <a 
+                            href={profile.social.facebook} 
+                            target="_blank" 
+                            rel="noopener noreferrer" 
+                            className="flex items-center gap-2 text-muted-foreground hover:text-[#4267B2] transition-colors"
+                          >
+                            <Facebook className="h-5 w-5" />
+                            <span>Facebook</span>
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
 
-      <Tabs defaultValue="listings" className="w-full">
-        <TabsList>
-          <TabsTrigger value="listings">Active Listings</TabsTrigger>
-          <TabsTrigger value="sold">Sold Items</TabsTrigger>
-          <TabsTrigger value="reviews">Reviews</TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="listings">
-          <div className="mt-6">
-            <ListingGrid userId={userId} />
-          </div>
-        </TabsContent>
-        
-        <TabsContent value="sold">
-          <Card className="mt-6">
-            <CardContent className="p-6">
-              <h3 className="text-xl font-semibold mb-4">Sold Items History</h3>
-              <p className="text-muted-foreground">No sold items to display.</p>
-            </CardContent>
-          </Card>
-        </TabsContent>
-        
-        <TabsContent value="reviews">
-          <Card className="mt-6">
-            <CardContent className="p-6">
-              <h3 className="text-xl font-semibold mb-4">User Reviews</h3>
-              <p className="text-muted-foreground">No reviews yet.</p>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+        <Tabs defaultValue="listings" className="w-full">
+          <TabsList>
+            <TabsTrigger value="listings">Active Listings</TabsTrigger>
+            <TabsTrigger value="sold">Sold Items</TabsTrigger>
+            <TabsTrigger value="reviews">Reviews</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="listings">
+            <div className="mt-6">
+              <ListingGrid userId={userId} />
+            </div>
+          </TabsContent>
+          
+          <TabsContent value="sold">
+            <Card className="mt-6">
+              <CardContent className="p-6">
+                <h3 className="text-xl font-semibold mb-4">Sold Items History</h3>
+                <p className="text-muted-foreground">No sold items to display.</p>
+              </CardContent>
+            </Card>
+          </TabsContent>
+          
+          <TabsContent value="reviews">
+            <Card className="mt-6">
+              <CardContent className="p-6">
+                <h3 className="text-xl font-semibold mb-4">User Reviews</h3>
+                <p className="text-muted-foreground">No reviews yet.</p>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      </div>
+      <Footer />
     </div>
   );
 };
