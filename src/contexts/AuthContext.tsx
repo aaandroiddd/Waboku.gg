@@ -135,8 +135,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const updateProfile = async (data: Partial<UserProfile>) => {
     if (!user) throw new Error('No user logged in');
+    if (!profile) throw new Error('No profile found');
 
     try {
+      // If username is being updated
+      if (data.username && data.username !== profile.username) {
+        // Check if new username is available
+        const usernameDoc = await getDoc(doc(db, 'usernames', data.username));
+        if (usernameDoc.exists()) {
+          throw new Error('Username is already taken. Please choose another one.');
+        }
+
+        // Delete old username document
+        await deleteDoc(doc(db, 'usernames', profile.username));
+
+        // Create new username document
+        await setDoc(doc(db, 'usernames', data.username), {
+          uid: user.uid,
+          username: data.username,
+          createdAt: new Date().toISOString()
+        });
+
+        // Update auth display name
+        await user.updateProfile({
+          displayName: data.username
+        });
+      }
+
       const updatedProfile = {
         ...profile,
         ...data,
@@ -146,6 +171,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await setDoc(doc(db, 'users', user.uid), updatedProfile, { merge: true });
       setProfile(updatedProfile as UserProfile);
     } catch (err: any) {
+      // If username update fails, revert changes
+      if (data.username && data.username !== profile.username) {
+        try {
+          await deleteDoc(doc(db, 'usernames', data.username));
+          await setDoc(doc(db, 'usernames', profile.username), {
+            uid: user.uid,
+            username: profile.username,
+            createdAt: profile.joinDate
+          });
+        } catch (cleanupErr) {
+          console.error('Cleanup error:', cleanupErr);
+        }
+      }
       setError(err.message);
       throw err;
     }
