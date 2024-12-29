@@ -5,7 +5,8 @@ import {
   signOut as firebaseSignOut,
   onAuthStateChanged,
   deleteUser,
-  User
+  User,
+  updateProfile as firebaseUpdateProfile
 } from 'firebase/auth';
 import { doc, setDoc, getDoc, deleteDoc, collection } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
