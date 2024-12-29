@@ -149,7 +149,7 @@ function SignUpComponent() {
         Back
       </Button>
       
-      <Link href="/" className="mb-8">
+      <Link href="/" className="mb-8 mt-12">
         <Logo className="h-auto text-3xl" alwaysShowFull={true} />
       </Link>
 
