@@ -193,7 +193,7 @@ const ProfileContent = ({ userId }: { userId: string | null }) => {
                   {profile.social && (
                     <div>
                       <h2 className="font-semibold mb-2">Social Links</h2>
-                      <div className="flex gap-4">
+                      <div className="flex flex-wrap gap-4">
                         {profile.social.youtube && (
                           <a 
                             href={profile.social.youtube} 
@@ -202,7 +202,7 @@ const ProfileContent = ({ userId }: { userId: string | null }) => {
                             className="flex items-center gap-2 text-muted-foreground hover:text-[#FF0000] transition-colors"
                           >
                             <Youtube className="h-5 w-5" />
-                            <span>YouTube</span>
+                            <span className="text-sm md:text-base">YouTube</span>
                           </a>
                         )}
                         {profile.social.twitter && (
@@ -213,7 +213,7 @@ const ProfileContent = ({ userId }: { userId: string | null }) => {
                             className="flex items-center gap-2 text-muted-foreground hover:text-[#1DA1F2] transition-colors"
                           >
                             <Twitter className="h-5 w-5" />
-                            <span>X (Twitter)</span>
+                            <span className="text-sm md:text-base">X (Twitter)</span>
                           </a>
                         )}
                         {profile.social.facebook && (
@@ -224,7 +224,7 @@ const ProfileContent = ({ userId }: { userId: string | null }) => {
                             className="flex items-center gap-2 text-muted-foreground hover:text-[#4267B2] transition-colors"
                           >
                             <Facebook className="h-5 w-5" />
-                            <span>Facebook</span>
+                            <span className="text-sm md:text-base">Facebook</span>
                           </a>
                         )}
                       </div>
