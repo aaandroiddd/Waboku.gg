@@ -53,6 +53,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signUp = async (email: string, password: string, username: string) => {
+    let createdUser = null;
     try {
       // First check if username is available
       const usernameDoc = await getDoc(doc(db, 'usernames', username));
@@ -62,23 +63,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       // Create auth user
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      const { user } = userCredential;
+      createdUser = userCredential.user;
 
-      // First create username document to establish ownership
-      await setDoc(doc(db, 'usernames', username), {
-        uid: user.uid,
-        username: username,
-        createdAt: new Date().toISOString()
-      });
-
-      // Update the user's display name
-      await user.updateProfile({
-        displayName: username
-      });
-
+      // Create the profile first
       const newProfile: UserProfile = {
-        uid: user.uid,
-        email: user.email!,
+        uid: createdUser.uid,
+        email: createdUser.email!,
         username,
         joinDate: new Date().toISOString(),
         totalSales: 0,
@@ -93,16 +83,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       };
 
-      // Save user profile after username is reserved
-      await setDoc(doc(db, 'users', user.uid), newProfile);
-      
+      // Create both documents in a transaction-like manner
+      await Promise.all([
+        setDoc(doc(db, 'users', createdUser.uid), newProfile),
+        setDoc(doc(db, 'usernames', username), {
+          uid: createdUser.uid,
+          username: username,
+          createdAt: new Date().toISOString()
+        }),
+        createdUser.updateProfile({
+          displayName: username
+        })
+      ]);
+
       setProfile(newProfile);
     } catch (err: any) {
-      // If anything fails, clean up any created documents
-      if (auth.currentUser) {
+      console.error('Sign up error:', err);
+      
+      // Clean up if anything fails
+      if (createdUser) {
         try {
-          await deleteDoc(doc(db, 'usernames', username));
-          await deleteUser(auth.currentUser);
+          // Clean up in reverse order
+          await Promise.all([
+            deleteDoc(doc(db, 'users', createdUser.uid)),
+            deleteDoc(doc(db, 'usernames', username))
+          ]);
+          await deleteUser(createdUser);
         } catch (cleanupErr) {
           console.error('Cleanup error:', cleanupErr);
         }
