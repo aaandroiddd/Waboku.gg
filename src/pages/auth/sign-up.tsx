@@ -212,9 +212,7 @@ function SignUpComponent() {
                 minLength={6}
                 autoComplete="new-password"
               />
-              <p className="text-xs text-muted-foreground">
-                Password must contain at least 6 characters, one uppercase letter, one lowercase letter, and one number.
-              </p>
+              <PasswordStrengthIndicator password={formData.password} />
             </div>
 
             <div className="space-y-2">
