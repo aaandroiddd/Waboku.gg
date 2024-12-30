@@ -295,7 +295,7 @@ export default function Home() {
                   <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight glow-text">
                     Your Local TCG Marketplace
                   </h1>
-                  <p className="text-base sm:text-lg md:text-xl text-muted-foreground">
+                  <p className="text-base sm:text-lg md:text-xl text-white opacity-90 glow-text-subtle">
                     {randomSubtitle}
                   </p>
                 </div>
