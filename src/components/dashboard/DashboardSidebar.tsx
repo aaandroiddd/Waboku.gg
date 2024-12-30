@@ -14,7 +14,7 @@ interface DashboardSidebarProps {
 
 export function DashboardSidebar({ onNavigate }: DashboardSidebarProps) {
   const router = useRouter();
-  const { signOut } = useAuth();
+  const { user, signOut, isEmailVerified } = useAuth();
   const [showSignOutDialog, setShowSignOutDialog] = useState(false);
 
   const handleSignOut = async () => {
