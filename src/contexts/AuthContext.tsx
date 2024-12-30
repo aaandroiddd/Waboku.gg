@@ -25,6 +25,9 @@ interface AuthContextType {
   signOut: () => Promise<void>;
   updateProfile: (data: Partial<UserProfile>) => Promise<void>;
   deleteAccount: () => Promise<void>;
+  sendVerificationEmail: () => Promise<void>;
+  isEmailVerified: () => boolean;
+  checkVerificationStatus: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
