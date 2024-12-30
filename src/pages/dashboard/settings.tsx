@@ -157,10 +157,17 @@ const SettingsPageContent = () => {
   const uploadAvatar = async (file: File): Promise<string> => {
     const storage = getStorage();
     const fileExtension = file.name.split('.').pop();
-    const fileName = `avatars/${user!.uid}/${Date.now()}.${fileExtension}`;
+    // Store directly in avatars/{userId} as per storage rules
+    const fileName = `avatars/${user!.uid}`;
     const storageRef = ref(storage, fileName);
     
-    await uploadBytes(storageRef, file);
+    // Add metadata to indicate file ownership
+    const metadata = {
+      contentType: file.type,
+      owner: user!.uid
+    };
+    
+    await uploadBytes(storageRef, file, { customMetadata: metadata });
     return await getDownloadURL(storageRef);
   };
 
