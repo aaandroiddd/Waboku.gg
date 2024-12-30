@@ -51,6 +51,7 @@ const games = [
   { value: "onepiece", label: "One Piece Card Game" },
   { value: "pokemon", label: "Pokemon" },
   { value: "star-wars", label: "Star Wars: Unlimited" },
+  { value: "union-arena", label: "Union Arena" },
   { value: "universus", label: "Universus" },
   { value: "vanguard", label: "Vanguard" },
   { value: "weiss", label: "Weiss Schwarz" },
