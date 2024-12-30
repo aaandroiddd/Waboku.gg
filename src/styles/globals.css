@@ -186,12 +186,22 @@
 
 @layer components {
   .glow-text {
+    @apply dark:text-white text-foreground;
+    text-shadow: none;
+  }
+  
+  .dark .glow-text {
     text-shadow: 0 0 10px rgba(59, 130, 246, 0.5),
                  0 0 20px rgba(59, 130, 246, 0.3),
                  0 0 30px rgba(59, 130, 246, 0.1);
   }
   
   .glow-text-subtle {
+    @apply dark:text-white text-foreground;
+    text-shadow: none;
+  }
+
+  .dark .glow-text-subtle {
     text-shadow: 0 0 8px rgba(59, 130, 246, 0.3),
                  0 0 15px rgba(59, 130, 246, 0.2);
   }
