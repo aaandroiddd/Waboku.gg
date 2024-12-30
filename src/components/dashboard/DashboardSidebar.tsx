@@ -6,6 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Logo } from '@/components/Logo';
 import { useState } from 'react';
 import { SignOutDialog } from '@/components/SignOutDialog';
+import { Badge } from '@/components/ui/badge';
 
 interface DashboardSidebarProps {
   onNavigate?: () => void;
