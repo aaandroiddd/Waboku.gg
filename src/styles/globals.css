@@ -63,7 +63,7 @@
   );
 }
 
-.hero-background::after {
+.dark .hero-background::after {
   content: '';
   position: absolute;
   top: 0;
