@@ -39,11 +39,13 @@ service cloud.firestore {
     }
 
     function isValidProfile(data) {
-      return data.username is string
-        && data.email is string
+      return (!('username' in data) || data.username is string)
+        && (!('email' in data) || data.email is string)
         && (!('bio' in data) || (data.bio is string && data.bio.size() <= 1000))
-        && (!('profilePicture' in data) || data.profilePicture is string)
-        && (!('links' in data) || data.links is map);
+        && (!('avatarUrl' in data) || data.avatarUrl is string)
+        && (!('photoURL' in data) || data.photoURL is string)
+        && (!('links' in data) || data.links is map)
+        && (!('social' in data) || data.social is map);
     }
 
     // Allow read access to usernames collection for everyone
