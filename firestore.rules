@@ -40,7 +40,10 @@ service cloud.firestore {
 
     function isValidProfile(data) {
       return data.username is string
-        && data.email is string;
+        && data.email is string
+        && (!('bio' in data) || (data.bio is string && data.bio.size() <= 1000))
+        && (!('profilePicture' in data) || data.profilePicture is string)
+        && (!('links' in data) || data.links is map);
     }
 
     // Allow read access to usernames collection for everyone
