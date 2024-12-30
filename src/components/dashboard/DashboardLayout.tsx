@@ -3,6 +3,7 @@ import { DashboardSidebar } from './DashboardSidebar';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Footer } from '../Footer';
+import { VerificationStatus } from '../VerificationStatus';
 
 export function DashboardLayout({ children }: { children: ReactNode }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
