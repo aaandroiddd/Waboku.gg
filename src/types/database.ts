@@ -55,4 +55,6 @@ export interface UserProfile {
     facebook?: string;
   };
   lastUpdated?: string;
+  isEmailVerified: boolean;
+  verificationSentAt?: string;
 }
