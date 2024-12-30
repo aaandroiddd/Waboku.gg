@@ -87,9 +87,14 @@ export function DashboardSidebar({ onNavigate }: DashboardSidebarProps) {
         {user && (
           <div className="mt-4 flex flex-col gap-1">
             <p className="text-sm text-muted-foreground truncate">{user.email}</p>
-            <Badge variant={isEmailVerified() ? "default" : "secondary"}>
+            <div className={cn(
+              "inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
+              isEmailVerified() 
+                ? "border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80"
+                : "border-border bg-background hover:bg-accent hover:text-accent-foreground"
+            )}>
               {isEmailVerified() ? "Verified Seller" : "Unverified Seller"}
-            </Badge>
+            </div>
           </div>
         )}
       </div>
