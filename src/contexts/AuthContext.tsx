@@ -6,7 +6,10 @@ import {
   onAuthStateChanged,
   deleteUser,
   User,
-  updateProfile as firebaseUpdateProfile
+  updateProfile as firebaseUpdateProfile,
+  sendEmailVerification,
+  applyActionCode,
+  sendPasswordResetEmail
 } from 'firebase/auth';
 import { doc, setDoc, getDoc, deleteDoc, collection } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
