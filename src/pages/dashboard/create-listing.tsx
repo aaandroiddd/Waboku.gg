@@ -293,6 +293,7 @@ const CreateListingPage = () => {
                         <SelectItem value="onepiece">One Piece Card Game</SelectItem>
                         <SelectItem value="pokemon">Pokemon</SelectItem>
                         <SelectItem value="star-wars">Star Wars: Unlimited</SelectItem>
+                        <SelectItem value="union-arena">Union Arena</SelectItem>
                         <SelectItem value="universus">Universus</SelectItem>
                         <SelectItem value="vanguard">Vanguard</SelectItem>
                         <SelectItem value="weiss">Weiss Schwarz</SelectItem>
