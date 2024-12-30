@@ -84,6 +84,14 @@ export function DashboardSidebar({ onNavigate }: DashboardSidebarProps) {
     <div className="flex flex-col h-screen sticky top-0 bg-card border-r">
       <div className="p-6 border-b">
         <Logo className="h-8" alwaysShowFull={true} />
+        {user && (
+          <div className="mt-4 flex flex-col gap-1">
+            <p className="text-sm text-muted-foreground truncate">{user.email}</p>
+            <Badge variant={isEmailVerified() ? "default" : "secondary"}>
+              {isEmailVerified() ? "Verified Seller" : "Unverified Seller"}
+            </Badge>
+          </div>
+        )}
       </div>
       <div className="flex-1 flex flex-col py-6 overflow-y-auto">
         <nav className="px-4 space-y-1">
