@@ -285,9 +285,18 @@ const CreateListingPage = () => {
                         <SelectValue placeholder="Select game" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="yugioh">Yu-Gi-Oh!</SelectItem>
-                        <SelectItem value="pokemon">Pokémon</SelectItem>
+                        <SelectItem value="pokemon">Pokemon</SelectItem>
                         <SelectItem value="mtg">Magic: The Gathering</SelectItem>
+                        <SelectItem value="yugioh">Yu-Gi-Oh!</SelectItem>
+                        <SelectItem value="lorcana">Disney Lorcana</SelectItem>
+                        <SelectItem value="onepiece">One Piece Card Game</SelectItem>
+                        <SelectItem value="dbs">Dragon Ball Super Card Game</SelectItem>
+                        <SelectItem value="star-wars">Star Wars: Unlimited</SelectItem>
+                        <SelectItem value="flesh-and-blood">Flesh and Blood</SelectItem>
+                        <SelectItem value="weiss">Weiss Schwarz</SelectItem>
+                        <SelectItem value="universus">Universus</SelectItem>
+                        <SelectItem value="digimon">Digimon</SelectItem>
+                        <SelectItem value="vanguard">Vanguard</SelectItem>
                         <SelectItem value="other">Other</SelectItem>
                       </SelectContent>
                     </Select>
