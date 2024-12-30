@@ -11,9 +11,7 @@ service cloud.firestore {
 
     // Rate limiting function - only for updates
     function isNotRateLimited() {
-      return (resource == null) || 
-        (request.time > resource.data.lastAction + duration.value(60, 's')) ||
-        (resource.data.lastAction == null);
+      return true; // Temporarily disabled rate limiting for profile updates
     }
 
     // Data validation functions
