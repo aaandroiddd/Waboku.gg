@@ -286,13 +286,8 @@ export default function Home() {
         <main className="flex-1">
           {/* Hero Section */}
           <div className="relative">
-            {/* Background Cards */}
-            <div className="absolute inset-0 overflow-hidden">
-              <div className="absolute inset-0 bg-[url('/images/tcg-bg.svg')] bg-repeat opacity-20" />
-              <div className="absolute inset-0 bg-gradient-to-b from-background/95 via-background/90 to-background" />
-              <div className="absolute inset-0 bg-gradient-to-t from-background via-background/80 to-transparent" />
-            </div>
-            <div className="absolute inset-0 bg-gradient-to-r from-blue-600/5 via-purple-500/5 to-blue-600/5" />
+            {/* Animated Background */}
+            <div className="hero-background" />
             
             <div className="relative container mx-auto px-4 py-8 sm:py-12 md:py-16 lg:py-24">
               <div className="text-center max-w-3xl mx-auto space-y-8 sm:space-y-12">
