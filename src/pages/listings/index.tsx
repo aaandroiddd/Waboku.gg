@@ -347,12 +347,43 @@ export default function ListingsPage() {
                               value={priceRange}
                               min={0}
                               max={1000}
-                              step={10}
+                              step={1}
                               onValueChange={setPriceRange}
                             />
-                            <div className="flex justify-between mt-2">
-                              <span className="text-sm">${priceRange[0]}</span>
-                              <span className="text-sm">${priceRange[1]}</span>
+                            <div className="flex items-center gap-2 mt-2">
+                              <div className="flex items-center">
+                                <span className="text-sm mr-2">$</span>
+                                <Input
+                                  type="number"
+                                  value={priceRange[0]}
+                                  onChange={(e) => {
+                                    const value = Number(e.target.value);
+                                    if (value >= 0 && value <= priceRange[1]) {
+                                      setPriceRange([value, priceRange[1]]);
+                                    }
+                                  }}
+                                  className="w-24 h-8"
+                                  min={0}
+                                  max={priceRange[1]}
+                                />
+                              </div>
+                              <span className="text-sm">to</span>
+                              <div className="flex items-center">
+                                <span className="text-sm mr-2">$</span>
+                                <Input
+                                  type="number"
+                                  value={priceRange[1]}
+                                  onChange={(e) => {
+                                    const value = Number(e.target.value);
+                                    if (value >= priceRange[0] && value <= 1000) {
+                                      setPriceRange([priceRange[0], value]);
+                                    }
+                                  }}
+                                  className="w-24 h-8"
+                                  min={priceRange[0]}
+                                  max={1000}
+                                />
+                              </div>
                             </div>
                           </div>
                         </div>
