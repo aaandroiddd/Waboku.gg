@@ -3,10 +3,13 @@ import { Button } from "./ui/button";
 import Link from "next/link";
 import { LogOut, LayoutDashboard } from "lucide-react";
 import { useRouter } from "next/router";
+import { useState } from "react";
+import { SignOutDialog } from "./SignOutDialog";
 
 export default function AuthNav() {
   const { user, signOut } = useAuth();
   const router = useRouter();
+  const [showSignOutDialog, setShowSignOutDialog] = useState(false);
 
   const handleSignOut = async () => {
     await signOut();
@@ -24,12 +27,17 @@ export default function AuthNav() {
         </Link>
         <Button 
           variant="ghost" 
-          onClick={handleSignOut}
+          onClick={() => setShowSignOutDialog(true)}
           className="text-red-500 hover:text-red-600 hover:bg-red-50 gap-2"
         >
           <LogOut className="h-4 w-4" />
           Sign Out
         </Button>
+        <SignOutDialog
+          isOpen={showSignOutDialog}
+          onConfirm={handleSignOut}
+          onCancel={() => setShowSignOutDialog(false)}
+        />
       </>
     );
   }
