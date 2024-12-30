@@ -143,7 +143,12 @@ const ProfileContent = ({ userId }: { userId: string | null }) => {
               <div className="flex-1">
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center">
                   <div>
-                    <h1 className="text-2xl md:text-3xl font-bold mb-2">{profile.username || 'Anonymous User'}</h1>
+                    <div className="flex items-center gap-3 mb-2">
+                      <h1 className="text-2xl md:text-3xl font-bold">{profile.username || 'Anonymous User'}</h1>
+                      <div className={`inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent ${profile.isEmailVerified ? 'bg-green-500/10 text-green-500' : 'bg-yellow-500/10 text-yellow-500'}`}>
+                        {profile.isEmailVerified ? 'Verified Seller' : 'Unverified Seller'}
+                      </div>
+                    </div>
                     <p className="text-muted-foreground">Member since {joinDate}</p>
                   </div>
                   {/* Message button for desktop */}
