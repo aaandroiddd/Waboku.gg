@@ -289,8 +289,8 @@ export default function Home() {
             {/* Animated Background */}
             <div className="hero-background" />
             
-            <div className="relative container mx-auto px-4 py-8 sm:py-12 md:py-16 lg:py-24">
-              <div className="text-center max-w-3xl mx-auto space-y-8 sm:space-y-12">
+            <div className="relative container mx-auto px-4 py-8 sm:py-10 md:py-12 lg:py-16">
+              <div className="text-center max-w-3xl mx-auto space-y-6 sm:space-y-8">
                 <div className="space-y-4 sm:space-y-6">
                   <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight glow-text">
                     Your Local TCG Marketplace
