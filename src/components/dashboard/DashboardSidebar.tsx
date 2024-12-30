@@ -4,6 +4,8 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { Logo } from '@/components/Logo';
+import { useState } from 'react';
+import { SignOutDialog } from '@/components/SignOutDialog';
 
 interface DashboardSidebarProps {
   onNavigate?: () => void;
