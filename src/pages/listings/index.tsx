@@ -43,13 +43,19 @@ import { Checkbox } from "@/components/ui/checkbox";
 
 const games = [
   { value: "all", label: "All Games" },
-  { value: "yugioh", label: "Yu-Gi-Oh!" },
-  { value: "pokemon", label: "Pokémon" },
+  { value: "pokemon", label: "Pokemon" },
   { value: "mtg", label: "Magic: The Gathering" },
-  { value: "onepiece", label: "One Piece" },
-  { value: "digimon", label: "Digimon" },
-  { value: "flesh", label: "Flesh and Blood" },
+  { value: "yugioh", label: "Yu-Gi-Oh!" },
+  { value: "lorcana", label: "Disney Lorcana" },
+  { value: "onepiece", label: "One Piece Card Game" },
+  { value: "dbs", label: "Dragon Ball Super Card Game" },
+  { value: "star-wars", label: "Star Wars: Unlimited" },
+  { value: "flesh-and-blood", label: "Flesh and Blood" },
   { value: "weiss", label: "Weiss Schwarz" },
+  { value: "universus", label: "Universus" },
+  { value: "digimon", label: "Digimon" },
+  { value: "vanguard", label: "Vanguard" },
+  { value: "other", label: "Other" }
 ];
 
 const conditions = [
