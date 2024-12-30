@@ -247,16 +247,66 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const sendVerificationEmail = async () => {
+    if (!user) throw new Error('No user logged in');
+    try {
+      await sendEmailVerification(user);
+      await setDoc(doc(db, 'users', user.uid), {
+        ...profile,
+        verificationSentAt: new Date().toISOString()
+      }, { merge: true });
+    } catch (err: any) {
+      setError(err.message);
+      throw err;
+    }
+  };
+
+  const isEmailVerified = () => {
+    return user?.emailVerified || false;
+  };
+
+  const checkVerificationStatus = async () => {
+    if (!user || !profile) return;
+    
+    try {
+      // Reload the user to get the latest verification status
+      await user.reload();
+      
+      if (user.emailVerified && !profile.isEmailVerified) {
+        // Update the profile to reflect verified status
+        const updatedProfile = {
+          ...profile,
+          isEmailVerified: true
+        };
+        await setDoc(doc(db, 'users', user.uid), updatedProfile);
+        setProfile(updatedProfile);
+      }
+    } catch (err: any) {
+      console.error('Error checking verification status:', err);
+    }
+  };
+
+  // Modify signUp to send verification email
+  const signUpWithVerification = async (email: string, password: string, username: string) => {
+    await signUp(email, password, username);
+    if (user) {
+      await sendVerificationEmail();
+    }
+  };
+
   const value = {
     user,
     profile,
     isLoading,
     error,
-    signUp,
+    signUp: signUpWithVerification,
     signIn,
     signOut,
     updateProfile,
-    deleteAccount
+    deleteAccount,
+    sendVerificationEmail,
+    isEmailVerified,
+    checkVerificationStatus
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
