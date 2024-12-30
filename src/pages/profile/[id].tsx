@@ -178,9 +178,16 @@ const ProfileContent = ({ userId }: { userId: string | null }) => {
                 <div className="space-y-4">
                   <div>
                     <h2 className="font-semibold mb-2">About</h2>
-                    <p className="text-muted-foreground">
-                      {profile.bio || 'This user hasn\'t added a bio yet.'}
-                    </p>
+                    <div className="text-muted-foreground space-y-4">
+                      {profile.bio ? 
+                        profile.bio.split('\n').map((paragraph, index) => (
+                          <p key={index} className={paragraph.trim() === '' ? 'h-4' : ''}>
+                            {paragraph}
+                          </p>
+                        ))
+                        : 'This user hasn\'t added a bio yet.'
+                      }
+                    </div>
                   </div>
 
                   {profile.contact && (
