@@ -31,7 +31,7 @@ export function useProfile(userId: string | null) {
             uid: userId,
             username: userData.displayName || userData.username || 'Anonymous User',
             email: userData.email || '',
-            avatarUrl: userData.photoURL || userData.avatarUrl || null,
+            avatarUrl: userData.avatarUrl || userData.photoURL || null,
             bio: userData.bio || '',
             location: userData.location || '',
             joinDate: userData.createdAt || userData.joinDate || new Date().toISOString(),
