@@ -152,7 +152,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const updateProfile = async (data: Partial<UserProfile>) => {
+  const updateProfile = async (data: Partial<UserProfile> & { photoURL?: string }) => {
     if (!user) throw new Error('No user logged in');
     if (!profile) throw new Error('No profile found');
 
@@ -174,20 +174,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           username: data.username,
           createdAt: new Date().toISOString()
         });
+      }
 
-        // Update auth display name
+      // Update Firebase Auth profile if username or photo URL changed
+      if (data.username || data.photoURL) {
         await firebaseUpdateProfile(user, {
-          displayName: data.username
+          displayName: data.username || user.displayName,
+          photoURL: data.photoURL || user.photoURL
         });
       }
 
+      // Prepare profile update data
       const updatedProfile = {
         ...profile,
-        ...data,
+        username: data.username || profile.username,
+        bio: data.bio || profile.bio || '',
+        avatarUrl: data.photoURL || profile.avatarUrl || '',
+        location: data.location || profile.location || '',
+        social: {
+          ...profile.social,
+          ...(data.social || {})
+        },
         lastUpdated: new Date().toISOString()
       };
 
-      await setDoc(doc(db, 'users', user.uid), updatedProfile, { merge: true });
+      // Update Firestore profile
+      await setDoc(doc(db, 'users', user.uid), updatedProfile);
       setProfile(updatedProfile as UserProfile);
     } catch (err: any) {
       // If username update fails, revert changes
