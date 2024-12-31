@@ -16,11 +16,8 @@ export function SellerBadge({ className, userId }: SellerBadgeProps) {
     }
   }, [user, checkVerificationStatus]);
   
-  // If viewing another user's profile, use their profile data
-  // Otherwise, use the current user's verification status
-  const isVerified = userId 
-    ? profile?.isEmailVerified 
-    : user?.emailVerified;
+  // Always use the profile's isEmailVerified status
+  const isVerified = profile?.isEmailVerified ?? false;
   
   if (!user && !userId) return null;
   
