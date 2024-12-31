@@ -142,6 +142,11 @@ const retry = async (
 const initializeFirebase = async () => {
   try {
     console.log('Initializing Firebase...');
+    // Add detailed logging for API initialization
+    console.log('Firebase API Status:', {
+      apiKey: firebaseConfig.apiKey ? 'Present' : 'Missing',
+      timestamp: new Date().toISOString()
+    });
     validateFirebaseConfig();
 
     // Additional validation for storage bucket
