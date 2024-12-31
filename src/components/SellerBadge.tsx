@@ -11,17 +11,22 @@ export function SellerBadge({ className, userId }: SellerBadgeProps) {
   const { user, profile, checkVerificationStatus } = useAuth();
   
   useEffect(() => {
-    if (user && !userId) {
+    if (user) {
       checkVerificationStatus();
     }
-  }, [user, userId, checkVerificationStatus]);
+  }, [user, checkVerificationStatus]);
   
-  // Always use profile.isEmailVerified for consistency
-  const isVerified = userId ? profile?.isEmailVerified : user?.emailVerified;
+  // If viewing another user's profile, use their profile data
+  // Otherwise, use the current user's verification status
+  const isVerified = userId 
+    ? profile?.isEmailVerified 
+    : user?.emailVerified;
+  
+  if (!user && !userId) return null;
   
   return (
     <Badge 
-      variant={isVerified ? "secondary" : "warning"}
+      variant={isVerified ? "success" : "destructive"}
       className={className}
     >
       {isVerified ? "Verified Seller" : "Unverified Seller"}
