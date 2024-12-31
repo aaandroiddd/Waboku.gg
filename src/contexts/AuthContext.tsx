@@ -271,15 +271,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       // Reload the user to get the latest verification status
       await user.reload();
+      const freshUser = auth.currentUser;  // Get fresh user object
       
-      if (user.emailVerified && !profile.isEmailVerified) {
-        // Update the profile to reflect verified status
+      if (freshUser?.emailVerified !== profile.isEmailVerified) {
+        // Update the profile to reflect current verification status
         const updatedProfile = {
           ...profile,
-          isEmailVerified: true
+          isEmailVerified: freshUser?.emailVerified || false,
+          lastVerificationCheck: new Date().toISOString()
         };
         await setDoc(doc(db, 'users', user.uid), updatedProfile);
         setProfile(updatedProfile);
+        // Force user object update
+        setUser(freshUser);
       }
     } catch (err: any) {
       console.error('Error checking verification status:', err);
