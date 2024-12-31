@@ -1,4 +1,3 @@
-import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
 import { useEffect } from 'react';
 
@@ -21,12 +20,11 @@ export function SellerBadge({ className, userId }: SellerBadgeProps) {
   const verified = isEmailVerified();
   
   return (
-    <Badge 
-      variant="outline"
-      className={`${
+    <div 
+      className={`inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 ${
         verified 
           ? "text-green-500 bg-green-500/10 hover:bg-green-500/20 border-green-500/20"
-          : "bg-yellow-500/10 text-yellow-500"
+          : "border-transparent bg-yellow-500/10 text-yellow-500"
       } ${className || ""}`}
     >
       {verified && (
@@ -46,7 +44,7 @@ export function SellerBadge({ className, userId }: SellerBadgeProps) {
           <path d="m9 12 2 2 4-4" />
         </svg>
       )}
-      {verified ? "Verified Seller" : "Unverified Seller"}
-    </Badge>
+      {verified ? "Verified" : "Unverified Seller"}
+    </div>
   );
 }
