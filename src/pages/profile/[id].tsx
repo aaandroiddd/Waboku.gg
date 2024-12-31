@@ -11,6 +11,7 @@ import { format } from 'date-fns';
 import { useEffect, useState } from 'react';
 import { Youtube, Twitter, Facebook, ArrowLeft } from 'lucide-react';
 import { Footer } from '@/components/Footer';
+import { SellerBadge } from '@/components/SellerBadge';
 
 const LoadingProfile = () => (
   <div className="container mx-auto p-6">
