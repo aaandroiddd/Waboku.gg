@@ -152,11 +152,7 @@ const ProfileContent = ({ userId }: { userId: string | null }) => {
                   <div>
                     <div className="flex items-center gap-3 mb-2">
                       <h1 className="text-2xl md:text-3xl font-bold">{profile.username || 'Anonymous User'}</h1>
-                      {profile.isEmailVerified && (
-                        <div className="inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent bg-green-500/10 text-green-500">
-                          Verified Seller
-                        </div>
-                      )}
+                      <SellerBadge userId={userId} />
                     </div>
                     <p className="text-muted-foreground">Member since {joinDate}</p>
                   </div>
