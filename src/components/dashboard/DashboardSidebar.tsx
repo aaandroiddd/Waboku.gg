@@ -89,7 +89,7 @@ export function DashboardSidebar({ onNavigate }: DashboardSidebarProps) {
             <p className="text-sm text-muted-foreground truncate">{user.email}</p>
             {isEmailVerified() && (
               <div className="flex items-center gap-2">
-                <Badge variant="outline" className="text-green-500 bg-green-500/10 hover:bg-green-500/20 border-green-500/20">
+                <div className="inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 text-green-500 bg-green-500/10 hover:bg-green-500/20 border-green-500/20">
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
                     width="12"
@@ -106,7 +106,7 @@ export function DashboardSidebar({ onNavigate }: DashboardSidebarProps) {
                     <path d="m9 12 2 2 4-4" />
                   </svg>
                   Verified
-                </Badge>
+                </div>
               </div>
             )}
           </div>
