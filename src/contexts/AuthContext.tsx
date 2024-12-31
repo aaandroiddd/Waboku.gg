@@ -32,6 +32,11 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const actionCodeSettings = {
+  url: `${process.env.NEXT_PUBLIC_APP_URL || window.location.origin}/auth/verify-email`,
+  handleCodeInApp: true
+};
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
