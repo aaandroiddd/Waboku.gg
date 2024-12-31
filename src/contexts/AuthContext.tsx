@@ -296,7 +296,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Modify signUp to send verification email
   const signUpWithVerification = async (email: string, password: string, username: string) => {
     await signUp(email, password, username);
-    if (user) {
+    // We need to wait for the auth state to be updated
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    if (auth.currentUser) {
       await sendVerificationEmail();
     }
   };
