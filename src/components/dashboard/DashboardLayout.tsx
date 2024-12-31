@@ -37,10 +37,6 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
         <div className="flex-1 flex flex-col min-w-0">
           <div className="p-4 md:p-8 pt-16 md:pt-8 flex flex-col gap-4">
             <VerificationStatus />
-            <div className="flex items-center gap-2">
-              <h2 className="text-xl font-semibold">Account Status:</h2>
-              <SellerBadge />
-            </div>
             <main className="flex-1">
               {children}
             </main>
