@@ -252,7 +252,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const sendVerificationEmail = async () => {
     if (!user) throw new Error('No user logged in');
     try {
-      await sendEmailVerification(user);
+      await sendEmailVerification(user, actionCodeSettings);
       await setDoc(doc(db, 'users', user.uid), {
         ...profile,
         verificationSentAt: new Date().toISOString()
