@@ -93,6 +93,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         bio: '',
         location: '',
         avatarUrl: '',
+        isEmailVerified: false,
         social: {
           youtube: '',
           twitter: '',
