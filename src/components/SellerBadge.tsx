@@ -16,8 +16,8 @@ export function SellerBadge({ className, userId }: SellerBadgeProps) {
     }
   }, [user, checkVerificationStatus]);
   
-  // Always use the profile's isEmailVerified status
-  const isVerified = profile?.isEmailVerified ?? false;
+  // Use the user's emailVerified status directly from Firebase Auth
+  const isVerified = user?.emailVerified ?? false;
   
   if (!user && !userId) return null;
   
