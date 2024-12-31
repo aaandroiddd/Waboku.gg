@@ -154,6 +154,9 @@ const DashboardComponent = () => {
 
   return (
     <DashboardLayout>
+      {/* Verification Status Alert */}
+      <VerificationStatus />
+
       {/* User Profile Section */}
       <Card className="mb-6">
         <CardContent className="p-6">
