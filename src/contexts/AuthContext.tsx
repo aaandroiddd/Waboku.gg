@@ -234,14 +234,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const deleteAccount = async () => {
-    if (!user || !profile) throw new Error('No user logged in');
+    if (!user) throw new Error('No user logged in');
 
     try {
+      // First get the user profile to ensure we have the username
+      const profileDoc = await getDoc(doc(db, 'users', user.uid));
+      const userProfile = profileDoc.exists() ? profileDoc.data() as UserProfile : null;
+
+      // Get all usernames documents where uid matches the user's uid
+      const usernamesCollection = collection(db, 'usernames');
+      const usernamesDocs = await getDocs(usernamesCollection);
+      const usernamesToDelete = usernamesDocs.docs
+        .filter(doc => doc.data().uid === user.uid)
+        .map(doc => deleteDoc(doc.ref));
+
       // Delete user's profile document
       await deleteDoc(doc(db, 'users', user.uid));
       
-      // Delete username from usernames collection
-      await deleteDoc(doc(db, 'usernames', profile.username));
+      // Delete all username documents associated with this user
+      await Promise.all(usernamesToDelete);
+
+      // If we have the specific username from profile, ensure it's deleted
+      if (userProfile?.username) {
+        await deleteDoc(doc(db, 'usernames', userProfile.username));
+      }
       
       // Delete the user's auth account
       await deleteUser(user);
@@ -249,6 +265,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(null);
       setProfile(null);
     } catch (err: any) {
+      console.error('Error deleting account:', err);
       setError(err.message);
       throw err;
     }
