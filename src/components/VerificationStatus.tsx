@@ -36,11 +36,19 @@ export function VerificationStatus() {
 
   if (!user || isEmailVerified()) return null;
 
+  const [showSuccess, setShowSuccess] = useState(false);
+
   const handleResend = async () => {
     if (!canResend) return;
-    await sendVerificationEmail();
-    setLastSent(new Date());
-    setCanResend(false);
+    try {
+      await sendVerificationEmail();
+      setLastSent(new Date());
+      setCanResend(false);
+      setShowSuccess(true);
+      setTimeout(() => setShowSuccess(false), 3000); // Hide success message after 3 seconds
+    } catch (error) {
+      console.error('Error sending verification email:', error);
+    }
   };
 
   return (
