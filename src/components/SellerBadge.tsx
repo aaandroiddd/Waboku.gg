@@ -3,17 +3,22 @@ import { useAuth } from '@/contexts/AuthContext';
 
 interface SellerBadgeProps {
   className?: string;
+  userId?: string;
 }
 
-export function SellerBadge({ className }: SellerBadgeProps) {
-  const { isEmailVerified } = useAuth();
+export function SellerBadge({ className, userId }: SellerBadgeProps) {
+  const { user, profile } = useAuth();
+  
+  // If userId is provided, we're viewing someone else's profile
+  // If not, we're viewing our own profile
+  const isVerified = userId ? profile?.isEmailVerified : user?.emailVerified;
   
   return (
     <Badge 
-      variant={isEmailVerified() ? "secondary" : "destructive"}
+      variant={isVerified ? "secondary" : "warning"}
       className={className}
     >
-      {isEmailVerified() ? "Verified Seller" : "Unverified Seller"}
+      {isVerified ? "Verified Seller" : "Unverified Seller"}
     </Badge>
   );
 }
