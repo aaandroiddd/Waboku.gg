@@ -64,10 +64,16 @@ const ProfileContent = ({ userId }: { userId: string | null }) => {
   if (!userId) {
     return <ErrorCard message="Invalid Profile ID" />;
   }
-  const { user } = useAuth();
+  const { user, checkVerificationStatus } = useAuth();
   const router = useRouter();
   const { profile, isLoading, error } = useProfile(userId);
   const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    if (user && user.uid === userId) {
+      checkVerificationStatus();
+    }
+  }, [user, userId, checkVerificationStatus]);
 
   useEffect(() => {
     setMounted(true);
