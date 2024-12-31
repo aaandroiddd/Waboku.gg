@@ -42,6 +42,12 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID
 };
 
+// Configure actionCodeSettings for email verification
+export const actionCodeSettings = {
+  url: typeof window !== 'undefined' ? `${window.location.origin}/auth/verify-email` : '',
+  handleCodeInApp: true
+};
+
 // Log Firebase config for debugging (excluding sensitive data)
 console.log('Firebase Config Status:', {
   apiKeyPresent: !!firebaseConfig.apiKey,
