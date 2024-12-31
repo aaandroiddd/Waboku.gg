@@ -93,7 +93,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         bio: '',
         location: '',
         avatarUrl: '',
-        isEmailVerified: false,
+        isEmailVerified: false, // Explicitly set to false for new users
+        verificationSentAt: null,
         social: {
           youtube: '',
           twitter: '',
