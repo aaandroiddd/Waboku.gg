@@ -10,7 +10,7 @@ export function SellerBadge({ className }: SellerBadgeProps) {
   
   return (
     <Badge 
-      variant={isEmailVerified() ? "default" : "destructive"}
+      variant={isEmailVerified() ? "secondary" : "destructive"}
       className={className}
     >
       {isEmailVerified() ? "Verified Seller" : "Unverified Seller"}
