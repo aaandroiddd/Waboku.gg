@@ -64,6 +64,11 @@ export function VerificationStatus() {
           >
             {canResend ? 'Resend Verification Email' : 'Wait 1 minute before resending'}
           </Button>
+          {showSuccess && (
+            <p className="text-green-600 mt-2">
+              Verification email sent! Please check your inbox.
+            </p>
+          )}
         </div>
       </AlertDescription>
     </Alert>
