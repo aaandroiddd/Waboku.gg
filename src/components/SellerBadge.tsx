@@ -1,5 +1,6 @@
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
+import { useEffect } from 'react';
 
 interface SellerBadgeProps {
   className?: string;
@@ -7,10 +8,15 @@ interface SellerBadgeProps {
 }
 
 export function SellerBadge({ className, userId }: SellerBadgeProps) {
-  const { user, profile } = useAuth();
+  const { user, profile, checkVerificationStatus } = useAuth();
   
-  // If userId is provided, we're viewing someone else's profile
-  // If not, we're viewing our own profile
+  useEffect(() => {
+    if (user && !userId) {
+      checkVerificationStatus();
+    }
+  }, [user, userId, checkVerificationStatus]);
+  
+  // Always use profile.isEmailVerified for consistency
   const isVerified = userId ? profile?.isEmailVerified : user?.emailVerified;
   
   return (
