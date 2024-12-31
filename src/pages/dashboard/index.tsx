@@ -174,9 +174,6 @@ const DashboardComponent = () => {
                         <h2 className="text-2xl font-bold hover:text-primary transition-colors truncate">
                           {user.displayName || profile?.username || 'User'}
                         </h2>
-                        <div className="inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent bg-yellow-500/10 text-yellow-500">
-                          {profile?.isEmailVerified ? "Verified Seller" : "Unverified Seller"}
-                        </div>
                       </div>
                       <p className="text-muted-foreground hover:text-primary transition-colors truncate max-w-[300px]">
                         {user.email}
