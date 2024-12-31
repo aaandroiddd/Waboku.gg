@@ -25,8 +25,18 @@ export default function VerifyEmail() {
         await applyActionCode(auth, oobCode);
         setStatus('success');
       } catch (error: any) {
+        console.error('Email verification error:', {
+          code: error.code,
+          message: error.message,
+          details: error.details
+        });
+        
         setStatus('error');
-        setError(error.message || 'Failed to verify email');
+        if (error.message.includes('API_KEY_SERVICE_BLOCKED')) {
+          setError('The verification service is temporarily unavailable. Please try again in a few minutes or contact support if the issue persists.');
+        } else {
+          setError(error.message || 'Failed to verify email');
+        }
       }
     };
 
