@@ -266,25 +266,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const checkVerificationStatus = async () => {
-    if (!user || !profile) return;
+    if (!user) return;
     
     try {
       // Reload the user to get the latest verification status
       await user.reload();
-      const freshUser = auth.currentUser;  // Get fresh user object
+      const freshUser = auth.currentUser;
       
-      if (freshUser?.emailVerified !== profile.isEmailVerified) {
-        // Update the profile to reflect current verification status
-        const updatedProfile = {
-          ...profile,
-          isEmailVerified: freshUser?.emailVerified || false,
-          lastVerificationCheck: new Date().toISOString()
-        };
-        await setDoc(doc(db, 'users', user.uid), updatedProfile);
-        setProfile(updatedProfile);
-        // Force user object update
-        setUser(freshUser);
-      }
+      if (!freshUser) return;
+      
+      // Always update profile to ensure consistency
+      const currentProfile = profile || {};
+      const updatedProfile = {
+        ...currentProfile,
+        isEmailVerified: freshUser.emailVerified,
+        lastVerificationCheck: new Date().toISOString()
+      };
+      
+      await setDoc(doc(db, 'users', freshUser.uid), updatedProfile, { merge: true });
+      setProfile(updatedProfile as UserProfile);
+      setUser(freshUser);
     } catch (err: any) {
       console.error('Error checking verification status:', err);
     }
