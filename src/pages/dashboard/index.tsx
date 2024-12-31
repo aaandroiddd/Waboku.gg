@@ -179,9 +179,7 @@ const DashboardComponent = () => {
                   </div>
                 </div>
               </div>
-              <div className="mt-4">
-                <Badge variant="secondary">Verified Seller</Badge>
-              </div>
+
             </div>
           </div>
         </CardContent>
