@@ -299,16 +299,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       if (!freshUser) return;
       
-      // Always update profile to ensure consistency
-      const currentProfile = profile || {};
-      const updatedProfile = {
-        ...currentProfile,
-        isEmailVerified: freshUser.emailVerified,
-        lastVerificationCheck: new Date().toISOString()
-      };
+      // Only update if verification status has changed
+      if (freshUser.emailVerified !== profile?.isEmailVerified) {
+        const updatedProfile = {
+          ...profile,
+          isEmailVerified: freshUser.emailVerified,
+          lastVerificationCheck: new Date().toISOString()
+        };
+        
+        await setDoc(doc(db, 'users', freshUser.uid), updatedProfile, { merge: true });
+        setProfile(updatedProfile as UserProfile);
+      }
       
-      await setDoc(doc(db, 'users', freshUser.uid), updatedProfile, { merge: true });
-      setProfile(updatedProfile as UserProfile);
       setUser(freshUser);
     } catch (err: any) {
       console.error('Error checking verification status:', err);
