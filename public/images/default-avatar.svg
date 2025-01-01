@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="200" height="200" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <!-- Background Circle -->
+    <circle cx="100" cy="100" r="100" fill="#E2E8F0"/>
+    
+    <!-- Stylized Card Shape -->
+    <rect x="70" y="50" width="60" height="80" rx="4" fill="#94A3B8" />
+    
+    <!-- Person Silhouette -->
+    <circle cx="100" cy="75" r="22" fill="#64748B"/>
+    <path d="M100 105C77.909 105 60 122.909 60 145V155H140V145C140 122.909 122.091 105 100 105Z" fill="#64748B"/>
+</svg>
