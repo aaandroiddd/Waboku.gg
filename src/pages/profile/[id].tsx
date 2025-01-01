@@ -122,12 +122,12 @@ const ProfileContent = ({ userId }: { userId: string | null }) => {
                       className="w-full h-full object-cover"
                       onError={(e) => {
                         const target = e.target as HTMLImageElement;
-                        target.src = '/images/rect.png';
+                        target.src = '/images/default-avatar.svg';
                       }}
                     />
                   ) : (
                     <Image
-                      src="/images/rect.png"
+                      src="/images/default-avatar.svg"
                       alt="Default avatar"
                       fill
                       sizes="(max-width: 768px) 100vw, 25vw"
