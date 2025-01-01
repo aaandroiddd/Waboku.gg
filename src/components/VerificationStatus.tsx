@@ -10,9 +10,14 @@ export function VerificationStatus() {
 
   useEffect(() => {
     if (user && !isEmailVerified()) {
+      // Initial check
+      checkVerificationStatus();
+      
+      // Set up interval for subsequent checks
       const interval = setInterval(() => {
         checkVerificationStatus();
-      }, 10000); // Check every 10 seconds
+      }, 30000); // Check every 30 seconds instead of 10
+      
       return () => clearInterval(interval);
     }
   }, [user, checkVerificationStatus]);
