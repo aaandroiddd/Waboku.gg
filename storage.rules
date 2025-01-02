@@ -16,7 +16,30 @@ service firebase.storage {
       return request.auth != null;
     }
 
-    match /avatars/{userId}/{fileName} {
+    // Function to check filename length and format
+    function isValidFilename(filename) {
+      return filename.size() > 0 
+        && filename.size() < 200 
+        && filename.matches('^[0-9]+-[a-zA-Z0-9._-]+\\.(jpg|jpeg|png|webp)$');
+    }
+
+    match /listings/{userId}/{filename} {
+      // Allow read access to anyone for listing images
+      allow read: if true;
+      
+      // Allow write access only to authenticated users with validation
+      allow create: if isAuthenticated()
+                   && userId == request.auth.uid
+                   && isValidSize()
+                   && isImageType()
+                   && isValidFilename(filename);
+
+      // Allow update and delete only to the owner
+      allow update, delete: if isAuthenticated()
+                          && userId == request.auth.uid;
+    }
+
+    match /avatars/{userId}/{filename} {
       // Allow read access to anyone for avatars
       allow read: if true;
       
@@ -25,26 +48,11 @@ service firebase.storage {
                            && userId == request.auth.uid
                            && isValidSize()
                            && isImageType()
-                           && fileName.matches('profile\\.(jpg|jpeg|png|webp)$');
+                           && filename.matches('profile\\.(jpg|jpeg|png|webp)$');
 
       // Allow users to delete their own avatar
       allow delete: if isAuthenticated()
                    && userId == request.auth.uid;
-    }
-
-    match /listings/{userId}/{fileName} {
-      // Allow read access to anyone for listing images
-      allow read: if true;
-      
-      // Allow write access only to authenticated users with validation
-      allow create: if isAuthenticated()
-                   && userId == request.auth.uid
-                   && isValidSize()
-                   && isImageType();
-
-      // Allow update and delete only to the owner
-      allow update, delete: if isAuthenticated()
-                          && userId == request.auth.uid;
     }
 
     // Default rule - deny everything else
