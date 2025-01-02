@@ -1,19 +1,19 @@
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
-    match /avatars/{userId} {
+    match /avatars/{userId}/{allPaths=**} {
       // Allow read access to anyone for avatars
       allow read: if true;
       
       // Allow users to upload their own avatar
       allow create, update: if request.auth != null 
-        && request.auth.uid == userId
+        && request.auth.uid == userId.split('.')[0]  // Extract userId from filename
         && request.resource.size < 5 * 1024 * 1024 // 5MB max
         && request.resource.contentType.matches('image/.*');
       
       // Allow users to delete their own avatar
       allow delete: if request.auth != null 
-        && request.auth.uid == userId;
+        && request.auth.uid == userId.split('.')[0];  // Extract userId from filename
     }
 
     match /listings/{listingId}/{fileName} {
