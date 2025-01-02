@@ -157,8 +157,8 @@ const SettingsPageContent = () => {
   const uploadAvatar = async (file: File): Promise<string> => {
     const storage = getStorage();
     const fileExtension = file.name.split('.').pop();
-    // Include file extension in the storage path
-    const fileName = `avatars/${user!.uid}.${fileExtension}`;
+    // Include userId in the path and file extension in the name
+    const fileName = `avatars/${user!.uid}/profile.${fileExtension}`;
     const storageRef = ref(storage, fileName);
     
     // Add metadata to indicate file ownership
