@@ -1,24 +1,51 @@
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
+    // Function to check if the file is an image
+    function isImageType() {
+      return request.resource.contentType.matches('image/.*');
+    }
+
+    // Function to check file size (5MB max)
+    function isValidSize() {
+      return request.resource.size < 5 * 1024 * 1024;
+    }
+
+    // Function to check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
     match /avatars/{userId}/{fileName} {
       // Allow read access to anyone for avatars
       allow read: if true;
       
-      // Allow users to upload their own avatar
-      allow write: if request.auth != null 
-                   && userId == request.auth.uid
-                   && request.resource.size < 5 * 1024 * 1024 // 5MB max
-                   && request.resource.contentType.matches('image/.*')
-                   && fileName.matches('profile\\.[a-zA-Z]+'); // Only allow profile.* files
+      // Allow users to upload their own avatar with strict validation
+      allow create, update: if isAuthenticated()
+                           && userId == request.auth.uid
+                           && isValidSize()
+                           && isImageType()
+                           && fileName.matches('profile\\.(jpg|jpeg|png|webp)$');
+
+      // Allow users to delete their own avatar
+      allow delete: if isAuthenticated()
+                   && userId == request.auth.uid;
     }
 
     match /listings/{listingId}/{fileName} {
       // Allow read access to anyone for listing images
       allow read: if true;
       
-      // Allow write access only to authenticated users
-      allow write: if request.auth != null;
+      // Allow write access only to authenticated users with validation
+      allow create: if isAuthenticated()
+                   && isValidSize()
+                   && isImageType()
+                   && fileName.matches('^[a-zA-Z0-9_-]+\\.(jpg|jpeg|png|webp)$');
+
+      // Allow update and delete only to the listing owner
+      allow update, delete: if isAuthenticated()
+                          && exists(/databases/$(database)/documents/listings/$(listingId))
+                          && get(/databases/$(database)/documents/listings/$(listingId)).data.userId == request.auth.uid;
     }
 
     // Default rule - deny everything else
