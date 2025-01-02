@@ -156,8 +156,16 @@ const SettingsPageContent = () => {
 
   const uploadAvatar = async (file: File): Promise<string> => {
     const storage = getStorage();
-    const fileExtension = file.name.split('.').pop();
-    // Include userId in the path and file extension in the name
+    
+    // Get file extension from mime type
+    const mimeToExt: { [key: string]: string } = {
+      'image/jpeg': 'jpg',
+      'image/png': 'png',
+      'image/gif': 'gif',
+      'image/webp': 'webp'
+    };
+    
+    const fileExtension = mimeToExt[file.type] || 'jpg';
     const fileName = `avatars/${user!.uid}/profile.${fileExtension}`;
     const storageRef = ref(storage, fileName);
     
@@ -171,6 +179,13 @@ const SettingsPageContent = () => {
     };
     
     try {
+      console.log('Uploading avatar:', {
+        fileName,
+        contentType: file.type,
+        size: file.size,
+        userId: user!.uid
+      });
+      
       const snapshot = await uploadBytes(storageRef, file, metadata);
       return await getDownloadURL(snapshot.ref);
     } catch (error: any) {
