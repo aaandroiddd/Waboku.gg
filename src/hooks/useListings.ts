@@ -64,18 +64,26 @@ export function useListings({ userId, searchQuery }: UseListingsProps = {}) {
 
       // Create the listing document with image URLs
       const listingRef = collection(db, 'listings');
+      // Prepare base listing data
       const newListing = {
         ...cleanListingData,
-        imageUrls, // Add the array of image URLs
+        imageUrls,
         userId: user.uid,
         username: user.displayName || 'Anonymous',
         createdAt: new Date(),
         status: 'active',
-        isGraded: Boolean(cleanListingData.isGraded),
-        // Only include gradeLevel and gradingCompany if isGraded is true and values are provided
-        ...(cleanListingData.isGraded && cleanListingData.gradeLevel ? { gradeLevel: Number(cleanListingData.gradeLevel) } : {}),
-        ...(cleanListingData.isGraded && cleanListingData.gradingCompany ? { gradingCompany: cleanListingData.gradingCompany } : {}),
+        isGraded: Boolean(cleanListingData.isGraded)
       };
+
+      // Only add grading fields if the card is graded and has valid values
+      if (newListing.isGraded) {
+        if (cleanListingData.gradeLevel) {
+          newListing.gradeLevel = Number(cleanListingData.gradeLevel);
+        }
+        if (cleanListingData.gradingCompany) {
+          newListing.gradingCompany = cleanListingData.gradingCompany;
+        }
+      }
 
       const docRef = await addDoc(listingRef, newListing);
       return { id: docRef.id, ...newListing };
