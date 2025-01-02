@@ -1,27 +1,15 @@
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
-    match /avatars/{fileName} {
+    match /avatars/{userId}/{fileName} {
       // Allow read access to anyone for avatars
       allow read: if true;
       
       // Allow users to upload their own avatar
-      allow create, update: if request.auth != null 
-        && (
-          // Allow if the filename starts with the user's UID
-          fileName.matches(request.auth.uid + '.*') ||
-          // Or if the path contains the user's UID
-          request.resource.name.matches('avatars/' + request.auth.uid + '.*')
-        )
-        && request.resource.size < 5 * 1024 * 1024 // 5MB max
-        && request.resource.contentType.matches('image/.*');
-      
-      // Allow users to delete their own avatar
-      allow delete: if request.auth != null 
-        && (
-          fileName.matches(request.auth.uid + '.*') ||
-          resource.name.matches('avatars/' + request.auth.uid + '.*')
-        );
+      allow write: if request.auth != null 
+                   && userId == request.auth.uid
+                   && request.resource.size < 5 * 1024 * 1024 // 5MB max
+                   && request.resource.contentType.matches('image/.*');
     }
 
     match /listings/{listingId}/{fileName} {
@@ -29,10 +17,7 @@ service firebase.storage {
       allow read: if true;
       
       // Allow write access only to authenticated users
-      allow create, update: if request.auth != null;
-      
-      // Allow delete only if the user owns the file
-      allow delete: if request.auth != null;
+      allow write: if request.auth != null;
     }
 
     // Default rule - deny everything else
