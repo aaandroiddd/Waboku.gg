@@ -40,10 +40,7 @@ service firebase.storage {
       allow create: if isAuthenticated()
                    && userId == request.auth.uid
                    && isValidSize()
-                   && isImageType()
-                   && fileName.size() > 0
-                   && fileName.size() < 200
-                   && fileName.matches('[0-9]+-[a-zA-Z0-9_.-]+\\.(jpg|jpeg|png|webp)$');
+                   && isImageType();
 
       // Allow update and delete only to the owner
       allow update, delete: if isAuthenticated()
