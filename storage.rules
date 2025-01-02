@@ -43,7 +43,7 @@ service firebase.storage {
                    && isImageType()
                    && fileName.size() > 0
                    && fileName.size() < 200
-                   && fileName.matches('.*\\.(jpg|jpeg|png|webp)$');
+                   && fileName.matches('[0-9]+-[a-zA-Z0-9_.-]+\\.(jpg|jpeg|png|webp)$');
 
       // Allow update and delete only to the owner
       allow update, delete: if isAuthenticated()
