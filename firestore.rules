@@ -19,12 +19,12 @@ service cloud.firestore {
       return data.title is string
         && data.title.size() >= 3
         && data.title.size() <= 100
-        && data.price is number
-        && data.price >= 0
-        && data.description is string
-        && data.description.size() <= 2000
+        && (data.price is number || data.price is string)  // price can be string or number
+        && (data.description is string || !("description" in data))  // description is optional
         && data.userId is string
-        && data.createdAt is string;
+        && (data.createdAt is timestamp || data.createdAt is string)  // createdAt can be timestamp or string
+        && data.imageUrls is list  // validate imageUrls is a list
+        && data.status is string;  // validate status field
     }
 
     function isValidMessage(data) {
