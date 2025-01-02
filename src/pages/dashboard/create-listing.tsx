@@ -336,8 +336,9 @@ const CreateListingPage = () => {
                         setFormData({
                           ...formData,
                           isGraded: checked,
-                          gradeLevel: checked ? formData.gradeLevel : undefined,
-                          gradingCompany: checked ? formData.gradingCompany : undefined
+                          // Reset grading fields when unchecking
+                          gradeLevel: checked ? formData.gradeLevel : null,
+                          gradingCompany: checked ? formData.gradingCompany : null
                         });
                       }}
                     />
