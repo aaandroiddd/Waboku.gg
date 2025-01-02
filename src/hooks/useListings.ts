@@ -12,6 +12,12 @@ interface UseListingsProps {
 }
 
 export function useListings({ userId, searchQuery }: UseListingsProps = {}) {
+  const [listings, setListings] = useState<Listing[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const { user } = useAuth();
+  const { favorites } = useFavorites();
+
   const createListing = async (listingData: any) => {
     if (!user) throw new Error('Must be logged in to create a listing');
 
@@ -21,32 +27,35 @@ export function useListings({ userId, searchQuery }: UseListingsProps = {}) {
       const storage = getStorage();
       
       for (const imageFile of listingData.images) {
-        // Clean the file name to ensure it's valid
-        const cleanFileName = imageFile.name.replace(/[^a-zA-Z0-9.-]/g, '_');
-        const fileName = `${Date.now()}-${cleanFileName}`;
-        
-        // Validate file name
-        if (fileName.length > 200) {
-          throw new Error('File name is too long. Please use a shorter file name.');
-        }
-        
-        const storageRef = ref(storage, `listings/${user.uid}/${fileName}`);
-        
-        // Upload the file with progress monitoring
-        const uploadTask = uploadBytesResumable(storageRef, imageFile);
-        
-        // Monitor upload progress if callback provided
-        if (listingData.onUploadProgress) {
-          uploadTask.on('state_changed', (snapshot) => {
-            const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-            listingData.onUploadProgress(progress);
-          });
-        }
+        try {
+          // Generate a simple timestamp-based filename
+          const timestamp = Date.now();
+          const extension = imageFile.name.split('.').pop()?.toLowerCase() || 'jpg';
+          const fileName = `${timestamp}.${extension}`;
+          
+          const storageRef = ref(storage, `listings/${user.uid}/${fileName}`);
+          
+          // Upload the file with progress monitoring
+          const uploadTask = uploadBytesResumable(storageRef, imageFile);
+          
+          // Monitor upload progress if callback provided
+          if (listingData.onUploadProgress) {
+            uploadTask.on('state_changed', (snapshot) => {
+              const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+              listingData.onUploadProgress(progress);
+            });
+          }
 
-        // Wait for upload to complete and get download URL
-        await uploadTask;
-        const downloadURL = await getDownloadURL(storageRef);
-        imageUrls.push(downloadURL);
+          // Wait for upload to complete
+          await uploadTask;
+          
+          // Get the download URL
+          const downloadURL = await getDownloadURL(storageRef);
+          imageUrls.push(downloadURL);
+        } catch (uploadError) {
+          console.error('Error uploading image:', uploadError);
+          throw new Error('Failed to upload image. Please try again.');
+        }
       }
 
       // Remove the File objects and progress callback from listing data
@@ -73,11 +82,6 @@ export function useListings({ userId, searchQuery }: UseListingsProps = {}) {
       throw new Error(error.message || 'Error creating listing');
     }
   };
-  const [listings, setListings] = useState<Listing[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const { user } = useAuth();
-  const { favorites } = useFavorites();
 
   useEffect(() => {
     const fetchListings = async () => {
