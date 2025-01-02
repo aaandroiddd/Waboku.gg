@@ -157,18 +157,26 @@ const SettingsPageContent = () => {
   const uploadAvatar = async (file: File): Promise<string> => {
     const storage = getStorage();
     const fileExtension = file.name.split('.').pop();
-    // Store directly in avatars/{userId} as per storage rules
-    const fileName = `avatars/${user!.uid}`;
+    // Include file extension in the storage path
+    const fileName = `avatars/${user!.uid}.${fileExtension}`;
     const storageRef = ref(storage, fileName);
     
     // Add metadata to indicate file ownership
     const metadata = {
       contentType: file.type,
-      owner: user!.uid
+      customMetadata: {
+        owner: user!.uid,
+        uploadedAt: new Date().toISOString()
+      }
     };
     
-    await uploadBytes(storageRef, file, { customMetadata: metadata });
-    return await getDownloadURL(storageRef);
+    try {
+      const snapshot = await uploadBytes(storageRef, file, metadata);
+      return await getDownloadURL(snapshot.ref);
+    } catch (error: any) {
+      console.error('Storage error details:', error);
+      throw error;
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
