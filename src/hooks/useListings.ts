@@ -28,10 +28,11 @@ export function useListings({ userId, searchQuery }: UseListingsProps = {}) {
       
       for (const imageFile of listingData.images) {
         try {
-          // Generate a simple timestamp-based filename
+          // Generate a filename that matches the storage rules pattern
           const timestamp = Date.now();
+          const sanitizedOriginalName = imageFile.name.replace(/[^a-zA-Z0-9._-]/g, '-');
           const extension = imageFile.name.split('.').pop()?.toLowerCase() || 'jpg';
-          const fileName = `${timestamp}.${extension}`;
+          const fileName = `${timestamp}-${sanitizedOriginalName}`;
           
           const storageRef = ref(storage, `listings/${user.uid}/${fileName}`);
           
