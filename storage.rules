@@ -27,15 +27,14 @@ service firebase.storage {
       // Allow read access to anyone for listing images
       allow read: if true;
       
-      // Allow write access only to authenticated users with validation
-      allow create: if isAuthenticated()
+      // Allow write access only to authenticated users with basic validation
+      allow create: if request.auth != null
                    && userId == request.auth.uid
-                   && isValidSize()
-                   && isImageType()
-                   && isValidFilename(filename);
+                   && request.resource.size < 5 * 1024 * 1024
+                   && request.resource.contentType.matches('image/.*');
 
       // Allow update and delete only to the owner
-      allow update, delete: if isAuthenticated()
+      allow update, delete: if request.auth != null
                           && userId == request.auth.uid;
     }
 
