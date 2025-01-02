@@ -99,6 +99,12 @@ export function useListings({ userId, searchQuery }: UseListingsProps = {}) {
         setIsLoading(true);
         setError(null);
         
+        // Wait for Firebase initialization
+        const { db } = await import('@/lib/firebase');
+        await import('@/lib/firebase').then(({ initializationPromise }) => initializationPromise);
+        
+        console.log('Firebase initialized, fetching listings...');
+        
         if (userId === 'favorites') {
           let filteredFavorites = favorites;
           if (searchQuery) {
@@ -120,14 +126,14 @@ export function useListings({ userId, searchQuery }: UseListingsProps = {}) {
           constraints.push(where('userId', '==', userId));
         }
 
-        // For search, we'll fetch all listings and filter in memory
-        // This ensures we catch all possible matches regardless of case
-
         // Always order by creation date
         constraints.push(orderBy('createdAt', 'desc'));
         
+        console.log('Executing Firestore query...');
         const q = query(listingsRef, ...constraints);
         const querySnapshot = await getDocs(q);
+        
+        console.log(`Found ${querySnapshot.size} listings`);
         
         let fetchedListings = querySnapshot.docs.map(doc => {
           const data = doc.data();
@@ -155,11 +161,17 @@ export function useListings({ userId, searchQuery }: UseListingsProps = {}) {
             listing.title?.toLowerCase().includes(searchLower) ||
             listing.description?.toLowerCase().includes(searchLower)
           );
+          console.log(`After search filter: ${fetchedListings.length} listings`);
         }
         
         setListings(fetchedListings);
       } catch (err: any) {
-        console.error('Error fetching listings:', err);
+        console.error('Error fetching listings:', {
+          error: err,
+          message: err.message,
+          code: err.code,
+          stack: err.stack
+        });
         setError(err.message || 'Error fetching listings');
       } finally {
         setIsLoading(false);
