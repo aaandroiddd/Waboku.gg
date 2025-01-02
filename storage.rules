@@ -20,7 +20,7 @@ service firebase.storage {
     function isValidFilename(filename) {
       return filename.size() > 0 
         && filename.size() < 200 
-        && filename.matches('^[0-9]+-[a-zA-Z0-9._-]+\\.(jpg|jpeg|png|webp)$');
+        && filename.matches('^[a-zA-Z0-9._-]+\\.(jpg|jpeg|png|webp)$');
     }
 
     match /listings/{userId}/{filename} {
