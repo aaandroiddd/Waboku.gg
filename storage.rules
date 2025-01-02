@@ -32,20 +32,20 @@ service firebase.storage {
                    && userId == request.auth.uid;
     }
 
-    match /listings/{listingId}/{fileName} {
+    match /listings/{userId}/{fileName} {
       // Allow read access to anyone for listing images
       allow read: if true;
       
       // Allow write access only to authenticated users with validation
       allow create: if isAuthenticated()
+                   && userId == request.auth.uid
                    && isValidSize()
                    && isImageType()
-                   && fileName.matches('^[a-zA-Z0-9_-]+\\.(jpg|jpeg|png|webp)$');
+                   && fileName.matches('^[\\w\\-\\.]+\\.(jpg|jpeg|png|webp)$');
 
-      // Allow update and delete only to the listing owner
+      // Allow update and delete only to the owner
       allow update, delete: if isAuthenticated()
-                          && exists(/databases/$(database)/documents/listings/$(listingId))
-                          && get(/databases/$(database)/documents/listings/$(listingId)).data.userId == request.auth.uid;
+                          && userId == request.auth.uid;
     }
 
     // Default rule - deny everything else
