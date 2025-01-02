@@ -7,13 +7,21 @@ service firebase.storage {
       
       // Allow users to upload their own avatar
       allow create, update: if request.auth != null 
-        && request.auth.uid == fileName.split('.')[0]  // Extract userId from filename
+        && (
+          // Allow if the filename starts with the user's UID
+          fileName.matches(request.auth.uid + '.*') ||
+          // Or if the path contains the user's UID
+          request.resource.name.matches('avatars/' + request.auth.uid + '.*')
+        )
         && request.resource.size < 5 * 1024 * 1024 // 5MB max
         && request.resource.contentType.matches('image/.*');
       
       // Allow users to delete their own avatar
       allow delete: if request.auth != null 
-        && request.auth.uid == fileName.split('.')[0];  // Extract userId from filename
+        && (
+          fileName.matches(request.auth.uid + '.*') ||
+          resource.name.matches('avatars/' + request.auth.uid + '.*')
+        );
     }
 
     match /listings/{listingId}/{fileName} {
