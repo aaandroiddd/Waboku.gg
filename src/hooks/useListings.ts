@@ -15,16 +15,46 @@ export function useListings({ userId, searchQuery }: UseListingsProps = {}) {
     if (!user) throw new Error('Must be logged in to create a listing');
 
     try {
+      // First, upload images to Firebase Storage
+      const imageUrls = [];
+      const storage = getStorage();
+      
+      for (const imageFile of listingData.images) {
+        const fileName = `${Date.now()}-${imageFile.name}`;
+        const storageRef = ref(storage, `listings/${user.uid}/${fileName}`);
+        
+        // Upload the file with progress monitoring
+        const uploadTask = uploadBytesResumable(storageRef, imageFile);
+        
+        // Monitor upload progress if callback provided
+        if (listingData.onUploadProgress) {
+          uploadTask.on('state_changed', (snapshot) => {
+            const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+            listingData.onUploadProgress(progress);
+          });
+        }
+
+        // Wait for upload to complete and get download URL
+        await uploadTask;
+        const downloadURL = await getDownloadURL(storageRef);
+        imageUrls.push(downloadURL);
+      }
+
+      // Remove the File objects and progress callback from listing data
+      const { images, onUploadProgress, ...cleanListingData } = listingData;
+
+      // Create the listing document with image URLs
       const listingRef = collection(db, 'listings');
       const newListing = {
-        ...listingData,
+        ...cleanListingData,
+        imageUrls, // Add the array of image URLs
         userId: user.uid,
         username: user.displayName || 'Anonymous',
         createdAt: new Date(),
         status: 'active',
-        isGraded: Boolean(listingData.isGraded),
-        gradeLevel: listingData.isGraded ? Number(listingData.gradeLevel) : undefined,
-        gradingCompany: listingData.isGraded ? listingData.gradingCompany : undefined,
+        isGraded: Boolean(cleanListingData.isGraded),
+        gradeLevel: cleanListingData.isGraded ? Number(cleanListingData.gradeLevel) : undefined,
+        gradingCompany: cleanListingData.isGraded ? cleanListingData.gradingCompany : undefined,
       };
 
       const docRef = await addDoc(listingRef, newListing);
