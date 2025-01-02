@@ -22,19 +22,17 @@ service cloud.firestore {
         && (data.price is number || data.price is string)
         && (data.description is string || !("description" in data))
         && data.userId is string
-        && data.username is string
         && data.imageUrls is list
         && data.status is string
         && data.city is string
         && data.state is string
         && data.game is string
         && data.condition is string
-        && data.isGraded is bool
+        && (data.isGraded == true || data.isGraded == false)
         && (!data.isGraded || (
-          ("gradeLevel" in data && (data.gradeLevel is number || data.gradeLevel == null)) &&
-          ("gradingCompany" in data && (data.gradingCompany is string || data.gradingCompany == null))
-        ))
-        && (data.createdAt is timestamp || data.createdAt == null);
+          (!("gradeLevel" in data) || data.gradeLevel == null || data.gradeLevel is number) &&
+          (!("gradingCompany" in data) || data.gradingCompany == null || data.gradingCompany is string)
+        ));
     }
 
     function isValidMessage(data) {
