@@ -57,44 +57,16 @@ export default function ListingPage() {
       try {
         console.log('Fetching listing with ID:', id);
         
-        // Add retry mechanism for Firestore query
-        let attempts = 0;
-        const maxAttempts = 3;
-        let listingDoc;
+        // Wait for Firebase initialization
+        await initializationPromise;
         
-        while (attempts < maxAttempts) {
-          try {
-            // Get a fresh reference to the document
-            const listingRef = doc(db, 'listings', id);
-            listingDoc = await getDoc(listingRef);
-            
-            // Verify that the document was actually retrieved
-            if (!listingDoc.exists()) {
-              throw new Error('Listing not found');
-            }
-            
-            break;
-          } catch (retryError: any) {
-            attempts++;
-            console.error(`Attempt ${attempts} failed:`, {
-              error: retryError,
-              code: retryError.code,
-              message: retryError.message,
-              authState: user ? 'logged-in' : 'logged-out'
-            });
-            
-            if (attempts === maxAttempts) {
-              // If we've exhausted all attempts, check if it's a permissions error
-              if (retryError.code === 'permission-denied') {
-                throw new Error('You do not have permission to view this listing.');
-              }
-              throw retryError;
-            }
-            
-            // Exponential backoff with max 10s
-            const delay = Math.min(1000 * Math.pow(2, attempts), 10000);
-            await new Promise(resolve => setTimeout(resolve, delay));
-          }
+        // Get a fresh reference to the document
+        const listingRef = doc(db, 'listings', id);
+        const listingDoc = await getDoc(listingRef);
+        
+        // Verify that the document was actually retrieved
+        if (!listingDoc.exists()) {
+          throw new Error('Listing not found');
         }
 
         if (!listingDoc?.exists()) {
