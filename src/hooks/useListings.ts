@@ -21,7 +21,15 @@ export function useListings({ userId, searchQuery }: UseListingsProps = {}) {
       const storage = getStorage();
       
       for (const imageFile of listingData.images) {
-        const fileName = `${Date.now()}-${imageFile.name}`;
+        // Clean the file name to ensure it's valid
+        const cleanFileName = imageFile.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+        const fileName = `${Date.now()}-${cleanFileName}`;
+        
+        // Validate file name
+        if (fileName.length > 200) {
+          throw new Error('File name is too long. Please use a shorter file name.');
+        }
+        
         const storageRef = ref(storage, `listings/${user.uid}/${fileName}`);
         
         // Upload the file with progress monitoring
