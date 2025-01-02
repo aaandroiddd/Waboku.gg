@@ -60,8 +60,14 @@ export default function ListingPage() {
         // Wait for Firebase initialization
         await initializationPromise;
         
+        // Ensure db is initialized
+        if (!db) {
+          throw new Error('Database not initialized');
+        }
+        
         // Get a fresh reference to the document
         const listingRef = doc(db, 'listings', id);
+        console.log('Attempting to fetch document:', id);
         const listingDoc = await getDoc(listingRef);
         
         // Verify that the document was actually retrieved
