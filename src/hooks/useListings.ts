@@ -72,8 +72,9 @@ export function useListings({ userId, searchQuery }: UseListingsProps = {}) {
         createdAt: new Date(),
         status: 'active',
         isGraded: Boolean(cleanListingData.isGraded),
-        gradeLevel: cleanListingData.isGraded ? Number(cleanListingData.gradeLevel) : undefined,
-        gradingCompany: cleanListingData.isGraded ? cleanListingData.gradingCompany : undefined,
+        // Only include gradeLevel and gradingCompany if isGraded is true and values are provided
+        ...(cleanListingData.isGraded && cleanListingData.gradeLevel ? { gradeLevel: Number(cleanListingData.gradeLevel) } : {}),
+        ...(cleanListingData.isGraded && cleanListingData.gradingCompany ? { gradingCompany: cleanListingData.gradingCompany } : {}),
       };
 
       const docRef = await addDoc(listingRef, newListing);
