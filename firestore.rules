@@ -19,12 +19,22 @@ service cloud.firestore {
       return data.title is string
         && data.title.size() >= 3
         && data.title.size() <= 100
-        && (data.price is number || data.price is string)  // price can be string or number
-        && (data.description is string || !("description" in data))  // description is optional
+        && (data.price is number || data.price is string)
+        && (data.description is string || !("description" in data))
         && data.userId is string
-        && (data.createdAt is timestamp || data.createdAt is string)  // createdAt can be timestamp or string
-        && data.imageUrls is list  // validate imageUrls is a list
-        && data.status is string;  // validate status field
+        && data.username is string
+        && data.imageUrls is list
+        && data.status is string
+        && data.city is string
+        && data.state is string
+        && data.game is string
+        && data.condition is string
+        && data.isGraded is bool
+        && (!data.isGraded || (
+          ("gradeLevel" in data && (data.gradeLevel is number || data.gradeLevel == null)) &&
+          ("gradingCompany" in data && (data.gradingCompany is string || data.gradingCompany == null))
+        ))
+        && (data.createdAt is timestamp || data.createdAt == null);
     }
 
     function isValidMessage(data) {
