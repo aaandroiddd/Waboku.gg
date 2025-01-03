@@ -54,8 +54,7 @@ export default function ListingPage() {
           setError(null);
         }
 
-        // Wait for Firebase initialization
-        await initializationPromise;
+        const { db } = getFirebaseServices();
         
         if (!db) {
           throw new Error('Database not initialized');
