@@ -133,6 +133,12 @@ export default function ListingPage() {
 
     if (!listing) return;
 
+    const { db } = getFirebaseServices();
+    if (!db) {
+      toast.error('Failed to update favorites');
+      return;
+    }
+    
     const favoriteRef = doc(db, 'users', user.uid, 'favorites', listing.id);
     const listingRef = doc(db, 'listings', listing.id);
 
