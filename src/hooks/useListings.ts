@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { collection, query, where, getDocs, orderBy, QueryConstraint, addDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, orderBy, QueryConstraint, addDoc, doc, getDoc } from 'firebase/firestore';
 import { getStorage, ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { getFirebaseServices } from '@/lib/firebase';
 import { Listing } from '@/types/database';
@@ -17,6 +17,38 @@ export function useListings({ userId, searchQuery }: UseListingsProps = {}) {
   const [error, setError] = useState<string | null>(null);
   const { user } = useAuth();
   const { favorites } = useFavorites();
+
+  const fetchListing = async (listingId: string): Promise<Listing> => {
+    try {
+      const { db } = await getFirebaseServices();
+      const listingRef = doc(db, 'listings', listingId);
+      const listingSnap = await getDoc(listingRef);
+      
+      if (!listingSnap.exists()) {
+        throw new Error('Listing not found');
+      }
+
+      const data = listingSnap.data();
+      return {
+        id: listingSnap.id,
+        ...data,
+        createdAt: data.createdAt?.toDate() || new Date(),
+        price: Number(data.price) || 0,
+        imageUrls: Array.isArray(data.imageUrls) ? data.imageUrls : [],
+        isGraded: Boolean(data.isGraded),
+        gradeLevel: data.gradeLevel ? Number(data.gradeLevel) : undefined,
+        status: data.status || 'active',
+        condition: data.condition || 'Not specified',
+        game: data.game || 'Not specified',
+        city: data.city || 'Unknown',
+        state: data.state || 'Unknown',
+        gradingCompany: data.gradingCompany || undefined
+      } as Listing;
+    } catch (error: any) {
+      console.error('Error fetching listing:', error);
+      throw new Error(error.message || 'Error fetching listing');
+    }
+  };
 
   const createListing = async (listingData: any) => {
     if (!user) throw new Error('Must be logged in to create a listing');
@@ -165,5 +197,5 @@ export function useListings({ userId, searchQuery }: UseListingsProps = {}) {
     fetchListings();
   }, [userId, searchQuery, favorites]);
 
-  return { listings, isLoading, error, createListing };
+  return { listings, isLoading, error, createListing, fetchListing };
 }
