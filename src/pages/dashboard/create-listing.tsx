@@ -333,13 +333,19 @@ const CreateListingPage = () => {
                       id="isGraded"
                       checked={formData.isGraded}
                       onCheckedChange={(checked) => {
-                        setFormData({
-                          ...formData,
-                          isGraded: checked,
-                          // Reset grading fields when unchecking
-                          gradeLevel: checked ? formData.gradeLevel : null,
-                          gradingCompany: checked ? formData.gradingCompany : null
-                        });
+                        if (!checked) {
+                          // Remove grading fields when unchecking
+                          const { gradeLevel, gradingCompany, ...rest } = formData;
+                          setFormData({
+                            ...rest,
+                            isGraded: false
+                          });
+                        } else {
+                          setFormData({
+                            ...formData,
+                            isGraded: true
+                          });
+                        }
                       }}
                     />
                   </div>
