@@ -103,13 +103,11 @@ service cloud.firestore {
         && resource.data.senderId == request.auth.uid;
     }
 
-    // Favorites collection rules with rate limiting
-    match /favorites/{favoriteId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated() 
-        && request.resource.data.userId == request.auth.uid;
-      allow delete: if isAuthenticated() 
-        && resource.data.userId == request.auth.uid;
+    // Favorites subcollection rules
+    match /users/{userId}/favorites/{favoriteId} {
+      allow read: if isAuthenticated() && request.auth.uid == userId;
+      allow create: if isAuthenticated() && request.auth.uid == userId;
+      allow delete: if isAuthenticated() && request.auth.uid == userId;
     }
 
     // Default rule - deny everything else
