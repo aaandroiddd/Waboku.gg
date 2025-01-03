@@ -55,13 +55,13 @@ export default function ListingPage() {
         }
 
         // Wait for Firebase initialization
-        const { db: initializedDb } = await initializationPromise;
+        await initializationPromise;
         
-        if (!initializedDb) {
+        if (!db) {
           throw new Error('Database not initialized');
         }
 
-        const listingRef = doc(initializedDb, 'listings', id);
+        const listingRef = doc(db, 'listings', id);
         const listingDoc = await getDoc(listingRef);
 
         if (!listingDoc.exists()) {
