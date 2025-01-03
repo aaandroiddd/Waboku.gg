@@ -44,43 +44,28 @@ export default function ListingPage() {
     let isMounted = true;
 
     async function fetchListing() {
-      if (!id || typeof id !== 'string') {
-        console.log('Invalid listing ID:', id);
-        return;
-      }
-      
-      if (isMounted) {
-        setLoading(true);
-        setError(null);
-      }
-
       try {
-        console.log('Fetching listing with ID:', id);
-        
+        if (!id || typeof id !== 'string') {
+          throw new Error('Invalid listing ID');
+        }
+
+        if (isMounted) {
+          setLoading(true);
+          setError(null);
+        }
+
         // Wait for Firebase initialization
         await initializationPromise;
         
-        // Ensure db is initialized
         if (!db) {
           throw new Error('Database not initialized');
         }
-        
-        // Get a fresh reference to the document
+
         const listingRef = doc(db, 'listings', id);
-        console.log('Attempting to fetch document:', id);
         const listingDoc = await getDoc(listingRef);
-        
-        // Verify that the document was actually retrieved
+
         if (!listingDoc.exists()) {
           throw new Error('Listing not found');
-        }
-
-        if (!listingDoc?.exists()) {
-          if (isMounted) {
-            setError('Listing not found');
-            setLoading(false);
-          }
-          return;
         }
 
         const data = listingDoc.data();
