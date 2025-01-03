@@ -69,16 +69,18 @@ service cloud.firestore {
 
     // Listings collection rules with rate limiting and validation
     match /listings/{listingId} {
-      // Allow anyone to read listings
+      // Allow anyone to read listings without authentication
       allow read: if true;
       
-      // Allow authenticated users to create listings
+      // Allow authenticated users to create listings with validation
       allow create: if isAuthenticated() 
-        && request.resource.data.userId == request.auth.uid;
+        && request.resource.data.userId == request.auth.uid
+        && isValidListing(request.resource.data);
       
-      // Allow owners to update their listings
+      // Allow owners to update their listings with validation
       allow update: if isAuthenticated() 
-        && resource.data.userId == request.auth.uid;
+        && resource.data.userId == request.auth.uid
+        && isValidListing(request.resource.data);
       
       // Allow owners to delete their listings
       allow delete: if isAuthenticated() 
