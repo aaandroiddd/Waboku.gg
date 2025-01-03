@@ -60,6 +60,7 @@ export default function ListingPage() {
           throw new Error('Database not initialized');
         }
 
+        // First check if the listing exists
         const listingRef = doc(db, 'listings', id);
         const listingDoc = await getDoc(listingRef);
 
