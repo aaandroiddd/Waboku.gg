@@ -97,72 +97,62 @@ export function useListings({ userId, searchQuery }: UseListingsProps = {}) {
         setIsLoading(true);
         setError(null);
         
-        // Wait for Firebase initialization
-        const { db } = await import('@/lib/firebase');
-        await import('@/lib/firebase').then(({ initializationPromise }) => initializationPromise);
-        
-        console.log('Firebase initialized, fetching listings...');
-        
-        if (userId === 'favorites') {
-          let filteredFavorites = favorites;
-          if (searchQuery) {
-            filteredFavorites = favorites.filter(listing => 
-              listing.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-              listing.description?.toLowerCase().includes(searchQuery.toLowerCase())
-            );
-          }
-          setListings(filteredFavorites);
-          setIsLoading(false);
-          return;
-        }
-
+        // Simplified initialization
         const listingsRef = collection(db, 'listings');
         const constraints: QueryConstraint[] = [];
 
-        // Add user filter if specified
-        if (userId) {
+        // Only add valid constraints
+        if (userId && userId !== 'favorites') {
           constraints.push(where('userId', '==', userId));
         }
 
-        // Always order by creation date
+        // Add status filter for active listings
+        constraints.push(where('status', '==', 'active'));
+
+        // Order by creation date
         constraints.push(orderBy('createdAt', 'desc'));
         
-        console.log('Executing Firestore query...');
+        console.log('Executing Firestore query with constraints:', constraints);
         const q = query(listingsRef, ...constraints);
-        const querySnapshot = await getDocs(q);
         
-        console.log(`Found ${querySnapshot.size} listings`);
-        
-        let fetchedListings = querySnapshot.docs.map(doc => {
-          const data = doc.data();
-          return {
-            id: doc.id,
-            ...data,
-            createdAt: data.createdAt?.toDate() || new Date(),
-            price: Number(data.price) || 0,
-            imageUrls: Array.isArray(data.imageUrls) ? data.imageUrls : [],
-            isGraded: Boolean(data.isGraded),
-            gradeLevel: data.gradeLevel ? Number(data.gradeLevel) : undefined,
-            status: data.status || 'active',
-            condition: data.condition || 'Not specified',
-            game: data.game || 'Not specified',
-            city: data.city || 'Unknown',
-            state: data.state || 'Unknown',
-            gradingCompany: data.gradingCompany || undefined
-          } as Listing;
-        });
+        try {
+          const querySnapshot = await getDocs(q);
+          console.log(`Found ${querySnapshot.size} listings`);
+          
+          let fetchedListings = querySnapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+              id: doc.id,
+              ...data,
+              createdAt: data.createdAt?.toDate() || new Date(),
+              price: Number(data.price) || 0,
+              imageUrls: Array.isArray(data.imageUrls) ? data.imageUrls : [],
+              isGraded: Boolean(data.isGraded),
+              gradeLevel: data.gradeLevel ? Number(data.gradeLevel) : undefined,
+              status: data.status || 'active',
+              condition: data.condition || 'Not specified',
+              game: data.game || 'Not specified',
+              city: data.city || 'Unknown',
+              state: data.state || 'Unknown',
+              gradingCompany: data.gradingCompany || undefined
+            } as Listing;
+          });
 
-        // If there's a search query, filter results in memory to handle case-insensitive search
-        if (searchQuery) {
-          const searchLower = searchQuery.toLowerCase();
-          fetchedListings = fetchedListings.filter(listing => 
-            listing.title?.toLowerCase().includes(searchLower) ||
-            listing.description?.toLowerCase().includes(searchLower)
-          );
-          console.log(`After search filter: ${fetchedListings.length} listings`);
+          // If there's a search query, filter results in memory to handle case-insensitive search
+          if (searchQuery) {
+            const searchLower = searchQuery.toLowerCase();
+            fetchedListings = fetchedListings.filter(listing => 
+              listing.title?.toLowerCase().includes(searchLower) ||
+              listing.description?.toLowerCase().includes(searchLower)
+            );
+            console.log(`After search filter: ${fetchedListings.length} listings`);
+          }
+          
+          setListings(fetchedListings);
+        } catch (queryError) {
+          console.error('Query execution error:', queryError);
+          throw queryError;
         }
-        
-        setListings(fetchedListings);
       } catch (err: any) {
         console.error('Error fetching listings:', {
           error: err,
