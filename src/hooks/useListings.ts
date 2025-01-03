@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { collection, query, where, getDocs, orderBy, QueryConstraint, addDoc } from 'firebase/firestore';
 import { getStorage, ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
-import { db } from '@/lib/firebase';
+import { getFirebaseServices } from '@/lib/firebase';
 import { Listing } from '@/types/database';
 import { useAuth } from '@/contexts/AuthContext';
 import { useFavorites } from './useFavorites';
@@ -62,6 +62,7 @@ export function useListings({ userId, searchQuery }: UseListingsProps = {}) {
       // Remove the File objects and progress callback from listing data
       const { images, onUploadProgress, ...cleanListingData } = listingData;
 
+      const { db } = await getFirebaseServices();
       // Create the listing document with image URLs
       const listingRef = collection(db, 'listings');
       // Prepare base listing data without grading fields
@@ -97,62 +98,57 @@ export function useListings({ userId, searchQuery }: UseListingsProps = {}) {
         setIsLoading(true);
         setError(null);
         
-        // Simplified initialization
+        const { db } = await getFirebaseServices();
         const listingsRef = collection(db, 'listings');
         const constraints: QueryConstraint[] = [];
 
-        // Only add valid constraints
-        if (userId && userId !== 'favorites') {
+        // Match the existing index order
+        if (userId) {
+          // This will use index #2
           constraints.push(where('userId', '==', userId));
+          constraints.push(orderBy('createdAt', 'desc'));
+        } else {
+          // This will use index #3
+          constraints.push(where('status', '==', 'active'));
+          constraints.push(orderBy('createdAt', 'desc'));
         }
 
-        // Add status filter for active listings
-        constraints.push(where('status', '==', 'active'));
-
-        // Order by creation date
-        constraints.push(orderBy('createdAt', 'desc'));
-        
-        console.log('Executing Firestore query with constraints:', constraints);
+        console.log('Executing query with constraints:', constraints);
         const q = query(listingsRef, ...constraints);
         
-        try {
-          const querySnapshot = await getDocs(q);
-          console.log(`Found ${querySnapshot.size} listings`);
+        const querySnapshot = await getDocs(q);
+        console.log(`Found ${querySnapshot.size} listings`);
           
-          let fetchedListings = querySnapshot.docs.map(doc => {
-            const data = doc.data();
-            return {
-              id: doc.id,
-              ...data,
-              createdAt: data.createdAt?.toDate() || new Date(),
-              price: Number(data.price) || 0,
-              imageUrls: Array.isArray(data.imageUrls) ? data.imageUrls : [],
-              isGraded: Boolean(data.isGraded),
-              gradeLevel: data.gradeLevel ? Number(data.gradeLevel) : undefined,
-              status: data.status || 'active',
-              condition: data.condition || 'Not specified',
-              game: data.game || 'Not specified',
-              city: data.city || 'Unknown',
-              state: data.state || 'Unknown',
-              gradingCompany: data.gradingCompany || undefined
-            } as Listing;
-          });
+        let fetchedListings = querySnapshot.docs.map(doc => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            ...data,
+            createdAt: data.createdAt?.toDate() || new Date(),
+            price: Number(data.price) || 0,
+            imageUrls: Array.isArray(data.imageUrls) ? data.imageUrls : [],
+            isGraded: Boolean(data.isGraded),
+            gradeLevel: data.gradeLevel ? Number(data.gradeLevel) : undefined,
+            status: data.status || 'active',
+            condition: data.condition || 'Not specified',
+            game: data.game || 'Not specified',
+            city: data.city || 'Unknown',
+            state: data.state || 'Unknown',
+            gradingCompany: data.gradingCompany || undefined
+          } as Listing;
+        });
 
-          // If there's a search query, filter results in memory to handle case-insensitive search
-          if (searchQuery) {
-            const searchLower = searchQuery.toLowerCase();
-            fetchedListings = fetchedListings.filter(listing => 
-              listing.title?.toLowerCase().includes(searchLower) ||
-              listing.description?.toLowerCase().includes(searchLower)
-            );
-            console.log(`After search filter: ${fetchedListings.length} listings`);
-          }
-          
-          setListings(fetchedListings);
-        } catch (queryError) {
-          console.error('Query execution error:', queryError);
-          throw queryError;
+        // If there's a search query, filter results in memory to handle case-insensitive search
+        if (searchQuery) {
+          const searchLower = searchQuery.toLowerCase();
+          fetchedListings = fetchedListings.filter(listing => 
+            listing.title?.toLowerCase().includes(searchLower) ||
+            listing.description?.toLowerCase().includes(searchLower)
+          );
+          console.log(`After search filter: ${fetchedListings.length} listings`);
         }
+        
+        setListings(fetchedListings);
       } catch (err: any) {
         console.error('Error fetching listings:', {
           error: err,
