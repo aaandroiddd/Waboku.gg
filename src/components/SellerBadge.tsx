@@ -1,5 +1,7 @@
 import { useAuth } from '@/contexts/AuthContext';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
 interface SellerBadgeProps {
   className?: string;
@@ -7,17 +9,32 @@ interface SellerBadgeProps {
 }
 
 export function SellerBadge({ className, userId }: SellerBadgeProps) {
-  const { user, isEmailVerified, checkVerificationStatus } = useAuth();
+  const { user, isEmailVerified } = useAuth();
+  const [isVerified, setIsVerified] = useState<boolean | null>(null);
   
   useEffect(() => {
-    if (user) {
-      checkVerificationStatus();
-    }
-  }, [user, checkVerificationStatus]);
+    const checkUserVerification = async () => {
+      if (userId) {
+        try {
+          const userDoc = await getDoc(doc(db, 'users', userId));
+          if (userDoc.exists()) {
+            setIsVerified(userDoc.data().emailVerified === true);
+          }
+        } catch (error) {
+          console.error('Error checking user verification:', error);
+          setIsVerified(false);
+        }
+      } else if (user) {
+        setIsVerified(isEmailVerified());
+      }
+    };
+
+    checkUserVerification();
+  }, [userId, user, isEmailVerified]);
   
   if (!user && !userId) return null;
   
-  const verified = isEmailVerified();
+  const verified = isVerified;
   
   if (verified) {
     return (
