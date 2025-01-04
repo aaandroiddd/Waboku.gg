@@ -9,7 +9,7 @@ interface SellerBadgeProps {
   showOnlyOnProfile?: boolean;
 }
 
-export function SellerBadge({ className, userId }: SellerBadgeProps) {
+export function SellerBadge({ className, userId, showOnlyOnProfile = false }: SellerBadgeProps) {
   const { user } = useAuth();
   const [isVerified, setIsVerified] = useState<boolean | null>(null);
   
