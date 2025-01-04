@@ -76,7 +76,7 @@ export default function ListingPage() {
           id: listingDoc.id,
           title: data.title || 'Untitled Listing',
           description: data.description || '',
-          price: typeof data.price === 'number' ? data.price : 0,
+          price: data.price ?? 0,
           condition: data.condition || 'unknown',
           game: data.game || 'other',
           imageUrls: Array.isArray(data.imageUrls) ? data.imageUrls : [],
