@@ -1,4 +1,3 @@
-import { useAuth } from '@/contexts/AuthContext';
 import { useEffect, useState } from 'react';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -10,19 +9,12 @@ interface SellerBadgeProps {
 }
 
 export function SellerBadge({ className, userId, showOnlyOnProfile = false }: SellerBadgeProps) {
-  const { user } = useAuth();
   const [isVerified, setIsVerified] = useState<boolean | null>(null);
   
   useEffect(() => {
     const checkUserVerification = async () => {
       try {
-        // If viewing own profile, use the current user's verification status
-        if (user && (!userId || userId === user.uid)) {
-          setIsVerified(user.emailVerified);
-          return;
-        }
-        
-        // If viewing another user's profile, check their verification status in Firestore
+        // Check user's verification status in Firestore
         if (userId) {
           const userDoc = await getDoc(doc(db, 'users', userId));
           if (userDoc.exists()) {
@@ -38,8 +30,10 @@ export function SellerBadge({ className, userId, showOnlyOnProfile = false }: Se
       }
     };
 
-    checkUserVerification();
-  }, [userId, user]);
+    if (userId) {
+      checkUserVerification();
+    }
+  }, [userId]);
 
   // Don't show if not verified or if showOnlyOnProfile is true and we're not in a profile context
   if (!isVerified || (showOnlyOnProfile && !userId)) return null;
