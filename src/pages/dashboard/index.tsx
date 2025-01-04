@@ -16,6 +16,24 @@ import { useProfile } from '@/hooks/useProfile';
 import { Listing } from '@/types/database';
 
 const DashboardComponent = () => {
+  const handleRestoreListing = async (listingId: string) => {
+    try {
+      await updateListingStatus(listingId, 'active');
+      toast({
+        title: "Listing restored",
+        description: "The listing has been moved back to your active listings.",
+        duration: 3000,
+      });
+    } catch (err: any) {
+      console.error('Error restoring listing:', err);
+      toast({
+        title: "Error",
+        description: err.message || "Failed to restore listing",
+        variant: "destructive",
+        duration: 3000,
+      });
+    }
+  };
   const { toast } = useToast();
   const router = useRouter();
   const { tab = 'active', new: newListingId } = router.query;
