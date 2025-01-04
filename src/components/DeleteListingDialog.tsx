@@ -17,9 +17,9 @@ interface DeleteListingDialogProps {
 }
 
 export function DeleteListingDialog({ isOpen, onClose, onConfirm, mode }: DeleteListingDialogProps) {
-  const title = mode === 'deactivate' ? 'Deactivate Listing' : 'Permanently Delete Listing';
-  const description = mode === 'deactivate'
-    ? 'This will move the listing to your previous listings. You can restore it later.'
+  const title = mode === 'archive' ? 'Archive Listing' : 'Permanently Delete Listing';
+  const description = mode === 'archive'
+    ? 'This will move the listing to your archived listings. You can restore it later, but it will be automatically deleted after 7 days.'
     : 'This will permanently delete the listing. This action cannot be undone.';
 
   return (
