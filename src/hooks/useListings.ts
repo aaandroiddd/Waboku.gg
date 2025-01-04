@@ -104,11 +104,15 @@ export function useListings({ userId, searchQuery }: UseListingsProps = {}) {
       // Prepare update data
       const updateData: any = { status };
       
-      // If status is being changed to archived, always set/update the archivedAt timestamp
       if (status === 'archived') {
+        // When archiving, set the archivedAt timestamp
         updateData.archivedAt = new Date();
+      } else if (status === 'active') {
+        // When activating/restoring, set new createdAt and remove archivedAt
+        updateData.createdAt = new Date();
+        updateData.archivedAt = null;
       } else {
-        // If status is changed to active or inactive, remove the archivedAt timestamp
+        // For inactive status, just remove archivedAt
         updateData.archivedAt = null;
       }
 
@@ -119,7 +123,11 @@ export function useListings({ userId, searchQuery }: UseListingsProps = {}) {
       setListings(prevListings => 
         prevListings.map(listing => 
           listing.id === listingId 
-            ? { ...listing, ...updateData } 
+            ? { 
+                ...listing, 
+                ...updateData,
+                createdAt: updateData.createdAt || listing.createdAt 
+              } 
             : listing
         )
       );
