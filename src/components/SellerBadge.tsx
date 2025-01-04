@@ -38,9 +38,11 @@ export function SellerBadge({ className, userId, showOnlyOnProfile = false }: Se
   // If not verified, don't show the badge
   if (!isVerified) return null;
   
-  // If showOnlyOnProfile is true, show only when we have a userId (we're on a profile page)
-  // If showOnlyOnProfile is false, show only when we don't have a userId (we're not on a profile page)
-  if (showOnlyOnProfile !== Boolean(userId)) return null;
+  // If showOnlyOnProfile is true and we're not on a profile page, don't show the badge
+  if (showOnlyOnProfile && !userId) return null;
+  
+  // If showOnlyOnProfile is false and we are on a profile page, don't show the badge
+  if (!showOnlyOnProfile && userId) return null;
   
   return (
     <div 
