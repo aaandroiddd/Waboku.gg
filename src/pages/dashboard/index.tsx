@@ -16,6 +16,16 @@ import { useProfile } from '@/hooks/useProfile';
 import { Listing } from '@/types/database';
 
 const DashboardComponent = () => {
+  const [dialogState, setDialogState] = useState<{
+    isOpen: boolean;
+    listingId: string;
+    mode: 'deactivate' | 'permanent';
+  }>({
+    isOpen: false,
+    listingId: '',
+    mode: 'deactivate'
+  });
+
   const handleRestoreListing = async (listingId: string) => {
     try {
       await updateListingStatus(listingId, 'active');
