@@ -314,7 +314,7 @@ const DashboardComponent = () => {
                         }}
                       >
                         <Trash2 className="h-4 w-4 mr-1" />
-                        Delete
+                        Archive
                       </Button>
                       <Button
                         variant="outline"
