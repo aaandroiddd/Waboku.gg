@@ -6,6 +6,7 @@ import { Heart } from 'lucide-react';
 import Link from 'next/link';
 import { Listing } from '@/types/database';
 import Image from 'next/image';
+import { formatPrice } from '@/lib/price';
 
 interface ListingGridProps {
   listings: Listing[];
