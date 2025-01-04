@@ -270,7 +270,7 @@ export default function ListingPage() {
 
                 <div className="text-center">
                   <div className="text-3xl md:text-4xl font-bold">
-                    ${typeof listing.price === 'string' ? parseFloat(listing.price || '0').toFixed(2) : (listing.price || 0).toFixed(2)}
+                    {formatPrice(listing.price)}
                   </div>
                 </div>
               </div>
