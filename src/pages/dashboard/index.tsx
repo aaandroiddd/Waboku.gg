@@ -203,6 +203,15 @@ const DashboardComponent = () => {
 
   return (
     <DashboardLayout>
+      <DeleteListingDialog
+        isOpen={dialogState.isOpen}
+        onClose={() => setDialogState({ ...dialogState, isOpen: false })}
+        onConfirm={() => {
+          handleDeleteListing(dialogState.listingId, dialogState.mode);
+          setDialogState({ ...dialogState, isOpen: false });
+        }}
+        mode={dialogState.mode}
+      />
       {/* User Profile Section */}
       <Card className="mb-6">
         <CardContent className="p-6">
