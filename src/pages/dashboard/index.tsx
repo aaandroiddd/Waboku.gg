@@ -321,10 +321,14 @@ const DashboardComponent = () => {
             <h3 className="text-lg font-semibold mb-4">Previous Listings</h3>
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {previousListings.map((listing) => (
-                <Card key={listing.id}>
+                <Card key={listing.id} className="relative group hover:shadow-lg transition-shadow">
                   <CardHeader>
-                    <CardTitle>{listing.title}</CardTitle>
-                    <CardDescription>{listing.game}</CardDescription>
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <CardTitle>{listing.title}</CardTitle>
+                        <CardDescription>{listing.game}</CardDescription>
+                      </div>
+                    </div>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-2">
@@ -336,6 +340,24 @@ const DashboardComponent = () => {
                       </div>
                       <div className="text-sm text-muted-foreground">
                         Listed on {new Date(listing.createdAt).toLocaleDateString()}
+                      </div>
+                      <div className="flex flex-wrap gap-2 mt-4">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                          onClick={() => handleRestoreListing(listing.id)}
+                        >
+                          Restore Listing
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleViewListing(listing.id)}
+                        >
+                          <ExternalLink className="h-4 w-4 mr-1" />
+                          View
+                        </Button>
                       </div>
                     </div>
                   </CardContent>
