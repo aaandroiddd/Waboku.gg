@@ -374,7 +374,7 @@ const DashboardComponent = () => {
                       {/* Timer for archived listings */}
                       <div className="mt-2">
                         <ListingTimer
-                          deactivatedAt={listing.updatedAt}
+                          deactivatedAt={listing.createdAt}
                           expiresIn={7 * 24 * 60 * 60 * 1000} // 7 days in milliseconds
                         />
                       </div>
