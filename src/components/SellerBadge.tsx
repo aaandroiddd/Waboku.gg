@@ -2,8 +2,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useEffect, useState } from 'react';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { Badge } from '@/components/ui/badge';
-import { cn } from '@/lib/utils';
 
 interface SellerBadgeProps {
   className?: string;
@@ -11,41 +9,43 @@ interface SellerBadgeProps {
 }
 
 export function SellerBadge({ className, userId }: SellerBadgeProps) {
-  const { user, isEmailVerified } = useAuth();
+  const { user } = useAuth();
   const [isVerified, setIsVerified] = useState<boolean | null>(null);
   
   useEffect(() => {
     const checkUserVerification = async () => {
-      if (userId) {
-        try {
+      try {
+        // If viewing own profile, use the current user's verification status
+        if (user && (!userId || userId === user.uid)) {
+          setIsVerified(user.emailVerified);
+          return;
+        }
+        
+        // If viewing another user's profile, check their verification status in Firestore
+        if (userId) {
           const userDoc = await getDoc(doc(db, 'users', userId));
           if (userDoc.exists()) {
-            setIsVerified(userDoc.data().emailVerified === true);
+            const userData = userDoc.data();
+            setIsVerified(userData.emailVerified === true);
+          } else {
+            setIsVerified(false);
           }
-        } catch (error) {
-          console.error('Error checking user verification:', error);
-          setIsVerified(false);
         }
-      } else if (user) {
-        setIsVerified(isEmailVerified());
+      } catch (error) {
+        console.error('Error checking user verification:', error);
+        setIsVerified(false);
       }
     };
 
     checkUserVerification();
-  }, [userId, user, isEmailVerified]);
+  }, [userId, user]);
+
+  if (isVerified === null) return null;
   
-  if (!user && !userId) return null;
-  
-  const verified = isVerified;
-  
-  if (verified) {
+  if (isVerified) {
     return (
-      <Badge 
-        variant="secondary"
-        className={cn(
-          "bg-green-500/10 hover:bg-green-500/15 text-green-700 border-green-500/20",
-          className
-        )}
+      <div 
+        className={`inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 text-green-500 bg-green-500/10 hover:bg-green-500/20 border-green-500/20 ${className || ""}`}
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -63,17 +63,13 @@ export function SellerBadge({ className, userId }: SellerBadgeProps) {
           <path d="m9 12 2 2 4-4" />
         </svg>
         Verified
-      </Badge>
+      </div>
     );
   }
   
   return (
-    <Badge 
-      variant="secondary"
-      className={cn(
-        "bg-red-500/10 hover:bg-red-500/15 text-red-700 border-red-500/20",
-        className
-      )}
+    <div 
+      className={`inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 text-red-500 bg-red-500/10 hover:bg-red-500/20 border-red-500/20 ${className || ""}`}
     >
       <svg
         xmlns="http://www.w3.org/2000/svg"
@@ -92,6 +88,6 @@ export function SellerBadge({ className, userId }: SellerBadgeProps) {
         <path d="M9 9l6 6" />
       </svg>
       Unverified
-    </Badge>
+    </div>
   );
 }
