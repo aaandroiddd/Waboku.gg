@@ -2,18 +2,19 @@ import { useEffect, useState } from 'react';
 import { Progress } from "@/components/ui/progress"
 
 interface ListingTimerProps {
-  deactivatedAt: number;
-  expiresIn: number; // in milliseconds
+  deactivatedAt: Date | number;
+  expiresIn?: number; // in milliseconds, default 7 days
 }
 
-export function ListingTimer({ deactivatedAt, expiresIn }: ListingTimerProps) {
+export function ListingTimer({ deactivatedAt, expiresIn = 7 * 24 * 60 * 60 * 1000 }: ListingTimerProps) {
   const [timeLeft, setTimeLeft] = useState<number>(0);
   const [progress, setProgress] = useState<number>(0);
 
   useEffect(() => {
     const calculateTimeLeft = () => {
+      const deactivatedTime = deactivatedAt instanceof Date ? deactivatedAt.getTime() : deactivatedAt;
       const now = Date.now();
-      const elapsed = now - deactivatedAt;
+      const elapsed = now - deactivatedTime;
       const remaining = Math.max(0, expiresIn - elapsed);
       const progressValue = ((expiresIn - remaining) / expiresIn) * 100;
       
