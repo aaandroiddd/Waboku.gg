@@ -83,7 +83,7 @@ export function useListings({ userId, searchQuery }: UseListingsProps = {}) {
   const { user } = useAuth();
   const { favorites } = useFavorites();
 
-  const updateListingStatus = async (listingId: string, status: 'active' | 'inactive') => {
+  const updateListingStatus = async (listingId: string, status: 'active' | 'inactive' | 'archived') => {
     if (!user) throw new Error('Must be logged in to update a listing');
 
     try {
@@ -101,14 +101,20 @@ export function useListings({ userId, searchQuery }: UseListingsProps = {}) {
         throw new Error('You do not have permission to update this listing');
       }
 
+      // If status is being changed to archived, set the archivedAt timestamp
+      const updateData = {
+        status,
+        ...(status === 'archived' ? { archivedAt: new Date() } : {})
+      };
+
       // Update the listing status
-      await updateDoc(listingRef, { status });
+      await updateDoc(listingRef, updateData);
       
       // Update local state
       setListings(prevListings => 
         prevListings.map(listing => 
           listing.id === listingId 
-            ? { ...listing, status } 
+            ? { ...listing, ...updateData } 
             : listing
         )
       );
