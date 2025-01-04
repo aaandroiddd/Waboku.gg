@@ -152,7 +152,7 @@ const ProfileContent = ({ userId }: { userId: string | null }) => {
                   <div>
                     <div className="flex items-center gap-3 mb-2">
                       <h1 className="text-2xl md:text-3xl font-bold">{profile.username || 'Anonymous User'}</h1>
-                      <SellerBadge userId={userId} />
+                      <SellerBadge userId={userId} showOnlyOnProfile={true} />
                     </div>
                     <p className="text-muted-foreground">Member since {joinDate}</p>
                   </div>
