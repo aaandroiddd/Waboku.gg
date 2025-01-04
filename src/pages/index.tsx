@@ -289,9 +289,9 @@ export default function Home() {
             {/* Animated Background */}
             <div className="hero-background" />
             
-            <div className="relative container mx-auto px-4 py-8 sm:py-10 md:py-12 lg:py-16">
+            <div className="relative container mx-auto px-4 py-16 sm:py-20 md:py-24 lg:py-32">
               <div className="text-center max-w-3xl mx-auto space-y-6 sm:space-y-8">
-                <div className="space-y-4 sm:space-y-6">
+                <div className="space-y-4 sm:space-y-6 pt-8 sm:pt-12 md:pt-16">
                   <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight glow-text">
                     Your Local TCG Marketplace
                   </h1>
@@ -301,7 +301,7 @@ export default function Home() {
                 </div>
 
                 {/* Search Section */}
-                <div className="flex flex-col sm:flex-row gap-4 max-w-2xl mx-auto pt-4 sm:pt-6">
+                <div className="flex flex-col sm:flex-row gap-4 max-w-2xl mx-auto pt-4 sm:pt-6 pb-8 sm:pb-12 md:pb-16">
                   <div className="relative flex-1">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
                     <Input
