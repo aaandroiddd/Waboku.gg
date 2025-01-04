@@ -6,6 +6,7 @@ import { db } from '@/lib/firebase';
 interface SellerBadgeProps {
   className?: string;
   userId?: string;
+  showOnlyOnProfile?: boolean;
 }
 
 export function SellerBadge({ className, userId }: SellerBadgeProps) {
