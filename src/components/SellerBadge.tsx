@@ -41,7 +41,8 @@ export function SellerBadge({ className, userId, showOnlyOnProfile = false }: Se
     checkUserVerification();
   }, [userId, user]);
 
-  if (!isVerified) return null;
+  // Don't show if not verified or if showOnlyOnProfile is true and we're not in a profile context
+  if (!isVerified || (showOnlyOnProfile && !userId)) return null;
   
   return (
     <div 
