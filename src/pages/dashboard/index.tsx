@@ -96,9 +96,20 @@ const DashboardComponent = () => {
 
   const handleDeleteListing = async (listingId: string) => {
     try {
-      await deleteListing(listingId);
-    } catch (err) {
-      console.error('Error deleting listing:', err);
+      await updateListingStatus(listingId, 'inactive');
+      toast({
+        title: "Listing deactivated",
+        description: "The listing has been moved to your previous listings.",
+        duration: 3000,
+      });
+    } catch (err: any) {
+      console.error('Error deactivating listing:', err);
+      toast({
+        title: "Error",
+        description: err.message || "Failed to deactivate listing",
+        variant: "destructive",
+        duration: 3000,
+      });
     }
   };
 
