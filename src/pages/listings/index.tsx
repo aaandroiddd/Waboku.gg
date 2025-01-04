@@ -157,7 +157,8 @@ export default function ListingsPage() {
   }, [router.query]);
 
   useEffect(() => {
-    let filtered = [...allListings];
+    // First filter out inactive listings
+    let filtered = allListings.filter(listing => listing.status === 'active');
 
     // Apply game filter
     if (selectedGame !== "all") {
