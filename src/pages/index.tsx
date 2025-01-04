@@ -372,7 +372,7 @@ export default function Home() {
           </div>
 
           {/* Listings Section */}
-          <section className="container mx-auto px-4 py-8 sm:py-12 relative z-10 bg-background/80 backdrop-blur-sm rounded-lg mt-[-2rem]">
+          <section className="container mx-auto px-4 py-8 sm:py-12 relative z-10 bg-background mt-0">
             <div className="flex items-center justify-between mb-8">
               <h2 className="text-2xl font-semibold text-foreground">
                 {latitude && longitude ? "Latest Listings Near You" : "Latest Listings"}
