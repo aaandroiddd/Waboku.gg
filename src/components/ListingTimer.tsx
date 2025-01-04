@@ -12,9 +12,9 @@ export function ListingTimer({ archivedAt, expiresIn = 7 * 24 * 60 * 60 * 1000 }
 
   useEffect(() => {
     const calculateTimeLeft = () => {
-      const deactivatedTime = deactivatedAt instanceof Date ? deactivatedAt.getTime() : deactivatedAt;
+      const archiveTime = archivedAt instanceof Date ? archivedAt.getTime() : archivedAt;
       const now = Date.now();
-      const elapsed = now - deactivatedTime;
+      const elapsed = now - archiveTime;
       const remaining = Math.max(0, expiresIn - elapsed);
       const progressValue = ((expiresIn - remaining) / expiresIn) * 100;
       
