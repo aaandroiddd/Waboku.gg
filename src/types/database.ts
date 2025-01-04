@@ -9,7 +9,8 @@ export interface Listing {
   userId: string;
   username: string;
   createdAt: Date;
-  status: 'active' | 'sold' | 'pending';
+  status: 'active' | 'sold' | 'pending' | 'inactive' | 'archived';
+  archivedAt?: Date;
   isGraded: boolean;
   gradeLevel?: number;
   gradingCompany?: string;
