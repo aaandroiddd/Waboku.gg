@@ -79,7 +79,7 @@ export function ListingGrid({
                   {/* Price Badge */}
                   <div className="absolute top-2 right-2 z-10">
                     <span className="px-3 py-1 bg-black/75 text-white rounded-md font-semibold">
-                      ${typeof listing.price === 'number' ? listing.price.toFixed(2) : listing.price}
+                      ${(listing.price || 0).toFixed(2)}
                     </span>
                   </div>
                   
