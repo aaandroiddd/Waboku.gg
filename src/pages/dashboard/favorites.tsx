@@ -32,12 +32,16 @@ export default function FavoritesPage() {
                         <CardContent className="p-4">
                           <div className="aspect-square relative mb-2">
                             {listing.images && listing.images[0] && (
-                              /* eslint-disable-next-line @next/next/no-img-element */
-                              <img
-                                src={listing.images[0]}
-                                alt={listing.title}
-                                className="object-cover w-full h-full rounded-md"
-                              />
+                              <div className="relative w-full h-full">
+                                <Image
+                                  src={listing.images[0]}
+                                  alt={listing.title}
+                                  fill
+                                  className="object-cover rounded-md"
+                                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                                  priority={false}
+                                />
+                              </div>
                             )}
                           </div>
                           <h3 className="font-semibold text-lg mb-1">{listing.title}</h3>
