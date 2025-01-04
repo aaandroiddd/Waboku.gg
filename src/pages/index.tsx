@@ -301,7 +301,7 @@ export default function Home() {
                 </div>
 
                 {/* Search Section */}
-                <div className="flex flex-col sm:flex-row gap-4 max-w-2xl mx-auto pt-4 sm:pt-6 pb-8 sm:pb-12 md:pb-16">
+                <div className="flex flex-col sm:flex-row gap-4 max-w-2xl mx-auto pt-4 sm:pt-6 pb-4 sm:pb-8">
                   <div className="relative flex-1">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
                     <Input
