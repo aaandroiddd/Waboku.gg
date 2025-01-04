@@ -79,7 +79,7 @@ export function ListingGrid({
                   {/* Price Badge */}
                   <div className="absolute top-2 right-2 z-10">
                     <span className="px-3 py-1 bg-black/75 text-white rounded-md font-semibold">
-                      ${(listing.price || 0).toFixed(2)}
+                      ${typeof listing.price === 'string' ? parseFloat(listing.price || '0').toFixed(2) : (listing.price || 0).toFixed(2)}
                     </span>
                   </div>
                   
