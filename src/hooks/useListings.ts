@@ -12,6 +12,37 @@ interface UseListingsProps {
 }
 
 export function useListings({ userId, searchQuery }: UseListingsProps = {}) {
+  const permanentlyDeleteListing = async (listingId: string) => {
+    if (!user) throw new Error('Must be logged in to delete a listing');
+
+    try {
+      const { db } = await getFirebaseServices();
+      const listingRef = doc(db, 'listings', listingId);
+      
+      // First verify the listing exists and belongs to the user
+      const listingSnap = await getDoc(listingRef);
+      if (!listingSnap.exists()) {
+        throw new Error('Listing not found');
+      }
+      
+      const listingData = listingSnap.data();
+      if (listingData.userId !== user.uid) {
+        throw new Error('You do not have permission to delete this listing');
+      }
+
+      // Delete the listing
+      await deleteDoc(listingRef);
+      
+      // Update local state
+      setListings(prevListings => prevListings.filter(listing => listing.id !== listingId));
+
+      return true;
+    } catch (error: any) {
+      console.error('Error deleting listing:', error);
+      throw new Error(error.message || 'Error deleting listing');
+    }
+  };
+
   const deleteListing = async (listingId: string) => {
     if (!user) throw new Error('Must be logged in to delete a listing');
 
