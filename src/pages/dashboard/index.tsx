@@ -123,19 +123,28 @@ const DashboardComponent = () => {
     router.push('/dashboard/edit-listing/' + listingId);
   };
 
-  const handleDeleteListing = async (listingId: string) => {
+  const handleDeleteListing = async (listingId: string, mode: 'deactivate' | 'permanent') => {
     try {
-      await updateListingStatus(listingId, 'inactive');
-      toast({
-        title: "Listing deactivated",
-        description: "The listing has been moved to your previous listings.",
-        duration: 3000,
-      });
+      if (mode === 'permanent') {
+        await permanentlyDeleteListing(listingId);
+        toast({
+          title: "Listing deleted",
+          description: "The listing has been permanently deleted.",
+          duration: 3000,
+        });
+      } else {
+        await updateListingStatus(listingId, 'inactive');
+        toast({
+          title: "Listing deactivated",
+          description: "The listing has been moved to your previous listings.",
+          duration: 3000,
+        });
+      }
     } catch (err: any) {
-      console.error('Error deactivating listing:', err);
+      console.error('Error with listing:', err);
       toast({
         title: "Error",
-        description: err.message || "Failed to deactivate listing",
+        description: err.message || `Failed to ${mode === 'permanent' ? 'delete' : 'deactivate'} listing`,
         variant: "destructive",
         duration: 3000,
       });
