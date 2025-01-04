@@ -325,6 +325,8 @@ export function useListings({ userId, searchQuery }: UseListingsProps = {}) {
     createListing, 
     fetchListing, 
     updateListingStatus,
-    permanentlyDeleteListing
+    permanentlyDeleteListing,
+    deleteListing,
+    restoreListing
   };
 }
