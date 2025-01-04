@@ -14,12 +14,12 @@ export function SellerBadge({ className, userId, showOnlyOnProfile = false }: Se
   useEffect(() => {
     const checkUserVerification = async () => {
       try {
-        // Check user's verification status in Firestore
         if (userId) {
           const userDoc = await getDoc(doc(db, 'users', userId));
           if (userDoc.exists()) {
             const userData = userDoc.data();
-            setIsVerified(userData.emailVerified === true);
+            // Check both emailVerified and isVerified fields
+            setIsVerified(userData.emailVerified === true || userData.isVerified === true);
           } else {
             setIsVerified(false);
           }
@@ -35,14 +35,8 @@ export function SellerBadge({ className, userId, showOnlyOnProfile = false }: Se
     }
   }, [userId]);
 
-  // If not verified, don't show the badge
-  if (!isVerified) return null;
-  
-  // If showOnlyOnProfile is true and we're not on a profile page, don't show the badge
-  if (showOnlyOnProfile && !userId) return null;
-  
-  // If showOnlyOnProfile is false and we are on a profile page, don't show the badge
-  if (!showOnlyOnProfile && userId) return null;
+  // If not verified or no userId, don't show the badge
+  if (!isVerified || !userId) return null;
   
   return (
     <div 
