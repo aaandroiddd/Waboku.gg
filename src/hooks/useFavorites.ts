@@ -30,7 +30,13 @@ export function useFavorites() {
         
         const listingDoc = await getDoc(doc.data().listingRef);
         if (listingDoc.exists()) {
-          return { id: listingDoc.id, ...listingDoc.data() } as Listing;
+          const data = listingDoc.data();
+          return {
+            id: listingDoc.id,
+            ...data,
+            createdAt: data.createdAt?.toDate(),
+            archivedAt: data.archivedAt?.toDate()
+          } as Listing;
         }
         return null;
       });
