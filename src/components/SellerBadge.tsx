@@ -35,8 +35,14 @@ export function SellerBadge({ className, userId, showOnlyOnProfile = false }: Se
     }
   }, [userId]);
 
-  // Don't show if not verified or if showOnlyOnProfile is true and we're not in a profile context
-  if (!isVerified || (showOnlyOnProfile && !userId)) return null;
+  // If not verified, don't show the badge
+  if (!isVerified) return null;
+  
+  // If showOnlyOnProfile is true and we're not in a profile context (no userId), don't show the badge
+  if (showOnlyOnProfile && !userId) return null;
+
+  // If showOnlyOnProfile is false and we're in a profile context (has userId), don't show the badge
+  if (!showOnlyOnProfile && userId) return null;
   
   return (
     <div 
