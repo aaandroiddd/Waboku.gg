@@ -10,12 +10,7 @@
   height: 600px;
   z-index: 0;
   @apply bg-background;
-  background: linear-gradient(to bottom,
-    hsl(var(--background)) 0%,
-    hsl(var(--background)) 70%,
-    hsl(var(--background) / 0.8) 85%,
-    hsl(var(--background) / 0.2) 100%
-  );
+  background: hsl(var(--background));
 }
 
 .dark .hero-background {
