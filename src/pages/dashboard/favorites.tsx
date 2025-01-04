@@ -31,10 +31,10 @@ export default function FavoritesPage() {
                       <Card className="hover:shadow-lg transition-shadow">
                         <CardContent className="p-4">
                           <div className="aspect-square relative mb-2">
-                            {listing.images && listing.images[0] && (
+                            {listing.imageUrls && listing.imageUrls[0] && (
                               <div className="relative w-full h-full">
                                 <Image
-                                  src={listing.images[0]}
+                                  src={listing.imageUrls[0]}
                                   alt={listing.title}
                                   fill
                                   className="object-cover rounded-md"
