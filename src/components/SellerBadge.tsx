@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface SellerBadgeProps {
   className?: string;
@@ -9,6 +10,7 @@ interface SellerBadgeProps {
 }
 
 export function SellerBadge({ className, userId, showOnlyOnProfile = false }: SellerBadgeProps) {
+  const { user } = useAuth();
   const [isVerified, setIsVerified] = useState<boolean | null>(null);
   
   useEffect(() => {
@@ -18,8 +20,7 @@ export function SellerBadge({ className, userId, showOnlyOnProfile = false }: Se
           const userDoc = await getDoc(doc(db, 'users', userId));
           if (userDoc.exists()) {
             const userData = userDoc.data();
-            // Check both emailVerified and isVerified fields
-            setIsVerified(userData.emailVerified === true || userData.isVerified === true);
+            setIsVerified(userData.isEmailVerified === true);
           } else {
             setIsVerified(false);
           }
