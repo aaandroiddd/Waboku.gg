@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Progress } from "@/components/ui/progress"
 
 interface ListingTimerProps {
-  archivedAt: Date | number;
+  archivedAt: Date | number | string;
   expiresIn?: number; // in milliseconds, default 7 days
 }
 
@@ -12,7 +12,12 @@ export function ListingTimer({ archivedAt, expiresIn = 7 * 24 * 60 * 60 * 1000 }
 
   useEffect(() => {
     const calculateTimeLeft = () => {
-      const archiveTime = archivedAt instanceof Date ? archivedAt.getTime() : archivedAt;
+      const archiveTime = archivedAt instanceof Date 
+        ? archivedAt.getTime() 
+        : typeof archivedAt === 'string' 
+          ? new Date(archivedAt).getTime() 
+          : archivedAt;
+      
       const now = Date.now();
       const elapsed = now - archiveTime;
       const remaining = Math.max(0, expiresIn - elapsed);
