@@ -222,7 +222,7 @@ const SettingsPageContent = () => {
 
       // Update profile with all user data
       await updateProfile({
-        displayName: formData.username,
+        username: formData.username,
         photoURL,
         bio: formData.bio,
         contact: formData.contact,
