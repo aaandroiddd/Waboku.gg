@@ -101,11 +101,16 @@ export function useListings({ userId, searchQuery }: UseListingsProps = {}) {
         throw new Error('You do not have permission to update this listing');
       }
 
-      // If status is being changed to archived, set the archivedAt timestamp
-      const updateData = {
-        status,
-        ...(status === 'archived' ? { archivedAt: new Date() } : {})
-      };
+      // Prepare update data
+      const updateData: any = { status };
+      
+      // If status is being changed to archived, always set/update the archivedAt timestamp
+      if (status === 'archived') {
+        updateData.archivedAt = new Date();
+      } else {
+        // If status is changed to active or inactive, remove the archivedAt timestamp
+        updateData.archivedAt = null;
+      }
 
       // Update the listing status
       await updateDoc(listingRef, updateData);
