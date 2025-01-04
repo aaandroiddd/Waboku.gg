@@ -6,7 +6,7 @@ interface ListingTimerProps {
   expiresIn?: number; // in milliseconds, default 7 days
 }
 
-export function ListingTimer({ deactivatedAt, expiresIn = 7 * 24 * 60 * 60 * 1000 }: ListingTimerProps) {
+export function ListingTimer({ archivedAt, expiresIn = 7 * 24 * 60 * 60 * 1000 }: ListingTimerProps) {
   const [timeLeft, setTimeLeft] = useState<number>(0);
   const [progress, setProgress] = useState<number>(0);
 
