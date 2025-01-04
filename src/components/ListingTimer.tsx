@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Progress } from "@/components/ui/progress"
 
 interface ListingTimerProps {
-  deactivatedAt: Date | number;
+  archivedAt: Date | number;
   expiresIn?: number; // in milliseconds, default 7 days
 }
 
