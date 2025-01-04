@@ -2,6 +2,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useEffect, useState } from 'react';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 
 interface SellerBadgeProps {
   className?: string;
@@ -38,8 +40,12 @@ export function SellerBadge({ className, userId }: SellerBadgeProps) {
   
   if (verified) {
     return (
-      <div 
-        className={`inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 text-green-500 bg-green-500/10 hover:bg-green-500/20 border-green-500/20 ${className || ""}`}
+      <Badge 
+        variant="secondary"
+        className={cn(
+          "bg-green-500/10 hover:bg-green-500/15 text-green-700 border-green-500/20",
+          className
+        )}
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -57,13 +63,17 @@ export function SellerBadge({ className, userId }: SellerBadgeProps) {
           <path d="m9 12 2 2 4-4" />
         </svg>
         Verified
-      </div>
+      </Badge>
     );
   }
   
   return (
-    <div 
-      className={`inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 text-red-500 bg-red-500/10 hover:bg-red-500/20 border-red-500/20 ${className || ""}`}
+    <Badge 
+      variant="secondary"
+      className={cn(
+        "bg-red-500/10 hover:bg-red-500/15 text-red-700 border-red-500/20",
+        className
+      )}
     >
       <svg
         xmlns="http://www.w3.org/2000/svg"
@@ -82,6 +92,6 @@ export function SellerBadge({ className, userId }: SellerBadgeProps) {
         <path d="M9 9l6 6" />
       </svg>
       Unverified
-    </div>
+    </Badge>
   );
 }
