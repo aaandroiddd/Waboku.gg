@@ -382,6 +382,21 @@ const DashboardComponent = () => {
                         <Button
                           variant="outline"
                           size="sm"
+                          className="text-red-500 hover:text-red-600"
+                          onClick={() => {
+                            setDialogState({
+                              isOpen: true,
+                              listingId: listing.id,
+                              mode: 'permanent'
+                            });
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4 mr-1" />
+                          Delete Permanently
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
                           onClick={() => handleViewListing(listing.id)}
                         >
                           <ExternalLink className="h-4 w-4 mr-1" />
