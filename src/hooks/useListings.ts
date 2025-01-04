@@ -18,6 +18,43 @@ export function useListings({ userId, searchQuery }: UseListingsProps = {}) {
   const { user } = useAuth();
   const { favorites } = useFavorites();
 
+  const updateListingStatus = async (listingId: string, status: 'active' | 'inactive') => {
+    if (!user) throw new Error('Must be logged in to update a listing');
+
+    try {
+      const { db } = await getFirebaseServices();
+      const listingRef = doc(db, 'listings', listingId);
+      
+      // First verify the listing exists and belongs to the user
+      const listingSnap = await getDoc(listingRef);
+      if (!listingSnap.exists()) {
+        throw new Error('Listing not found');
+      }
+      
+      const listingData = listingSnap.data();
+      if (listingData.userId !== user.uid) {
+        throw new Error('You do not have permission to update this listing');
+      }
+
+      // Update the listing status
+      await updateDoc(listingRef, { status });
+      
+      // Update local state
+      setListings(prevListings => 
+        prevListings.map(listing => 
+          listing.id === listingId 
+            ? { ...listing, status } 
+            : listing
+        )
+      );
+
+      return true;
+    } catch (error: any) {
+      console.error('Error updating listing status:', error);
+      throw new Error(error.message || 'Error updating listing status');
+    }
+  };
+
   const fetchListing = async (listingId: string): Promise<Listing> => {
     try {
       const { db } = await getFirebaseServices();
