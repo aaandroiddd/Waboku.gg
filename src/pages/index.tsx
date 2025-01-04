@@ -161,14 +161,16 @@ export default function Home() {
         );
 
         const querySnapshot = await getDocs(q);
-        let fetchedListings = querySnapshot.docs.map(doc => {
-          const data = doc.data();
-          return {
-            id: doc.id,
-            ...data,
-            createdAt: data.createdAt?.toDate() || new Date()
-          };
-        }) as Listing[];
+        let fetchedListings = querySnapshot.docs
+          .map(doc => {
+            const data = doc.data();
+            return {
+              id: doc.id,
+              ...data,
+              createdAt: data.createdAt?.toDate() || new Date()
+            };
+          })
+          .filter(listing => listing.status === 'active') as Listing[];
 
         if (latitude && longitude) {
           fetchedListings = fetchedListings
