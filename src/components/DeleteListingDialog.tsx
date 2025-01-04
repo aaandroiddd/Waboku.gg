@@ -40,7 +40,7 @@ export function DeleteListingDialog({ isOpen, onClose, onConfirm, mode }: Delete
             }}
             className={mode === 'permanent' ? 'bg-destructive hover:bg-destructive/90' : ''}
           >
-            {mode === 'deactivate' ? 'Deactivate' : 'Delete'}
+            {mode === 'archive' ? 'Archive' : 'Delete'}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
