@@ -12,6 +12,9 @@ interface UseListingsProps {
 }
 
 export function useListings({ userId, searchQuery }: UseListingsProps = {}) {
+  const restoreListing = async (listingId: string) => {
+    return updateListingStatus(listingId, 'active');
+  };
   const [listings, setListings] = useState<Listing[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
