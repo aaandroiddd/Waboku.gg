@@ -5,6 +5,7 @@ import { useFavorites } from '@/hooks/useFavorites';
 import { ListingGrid } from '@/components/ListingGrid';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
+import Image from 'next/image';
 
 export default function FavoritesPage() {
   const { favorites, isLoading } = useFavorites();
