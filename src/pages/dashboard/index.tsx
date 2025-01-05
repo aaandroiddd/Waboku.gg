@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
 import { Star, Edit2, Trash2, MessageCircle, Share2, ExternalLink } from "lucide-react";
 import { ListingTimer } from "@/components/ListingTimer";
-import { ListingList } from "@/components/ListingList";
+import { ActiveListings } from "@/components/ActiveListings";
 import { DeleteListingDialog } from "@/components/DeleteListingDialog";
 import { useListings } from '@/hooks/useListings';
 import { useProfile } from '@/hooks/useProfile';
