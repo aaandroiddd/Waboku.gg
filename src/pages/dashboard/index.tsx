@@ -280,7 +280,7 @@ const DashboardComponent = () => {
         </TabsList>
 
         <TabsContent value="active" className="space-y-4">
-          <div className="flex items-center gap-4 mb-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-4">
             <div className="flex items-center gap-2">
               <Button
                 variant={viewMode === 'grid' ? 'default' : 'outline'}
@@ -297,23 +297,47 @@ const DashboardComponent = () => {
                 List
               </Button>
             </div>
-            <div className="h-6 w-px bg-border" /> {/* Separator */}
-            <select
-              className="border rounded-md px-2 py-1"
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as 'date' | 'price' | 'title')}
-            >
-              <option value="date">Date</option>
-              <option value="price">Price</option>
-              <option value="title">Title</option>
-            </select>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-            >
-              {sortOrder === 'asc' ? '↑' : '↓'}
-            </Button>
+            <div className="h-6 w-px bg-border hidden sm:block" /> {/* Separator */}
+            <div className="flex items-center gap-4 w-full sm:w-auto">
+              <Select value={gameFilter} onValueChange={setGameFilter}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="All Games" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">All Games</SelectItem>
+                  <SelectItem value="dbs">Dragon Ball Super Card Game</SelectItem>
+                  <SelectItem value="digimon">Digimon</SelectItem>
+                  <SelectItem value="lorcana">Disney Lorcana</SelectItem>
+                  <SelectItem value="flesh-and-blood">Flesh and Blood</SelectItem>
+                  <SelectItem value="mtg">Magic: The Gathering</SelectItem>
+                  <SelectItem value="onepiece">One Piece Card Game</SelectItem>
+                  <SelectItem value="pokemon">Pokemon</SelectItem>
+                  <SelectItem value="star-wars">Star Wars: Unlimited</SelectItem>
+                  <SelectItem value="union-arena">Union Arena</SelectItem>
+                  <SelectItem value="universus">Universus</SelectItem>
+                  <SelectItem value="vanguard">Vanguard</SelectItem>
+                  <SelectItem value="weiss">Weiss Schwarz</SelectItem>
+                  <SelectItem value="yugioh">Yu-Gi-Oh!</SelectItem>
+                  <SelectItem value="other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+              <select
+                className="border rounded-md px-2 py-1"
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as 'date' | 'price' | 'title')}
+              >
+                <option value="date">Date</option>
+                <option value="price">Price</option>
+                <option value="title">Title</option>
+              </select>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+              >
+                {sortOrder === 'asc' ? '↑' : '↓'}
+              </Button>
+            </div>
           </div>
           
           {viewMode === 'list' ? (
