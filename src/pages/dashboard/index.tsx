@@ -103,8 +103,15 @@ const DashboardComponent = () => {
     }
   });
   
-  const activeListings = sortedListings.filter(listing => listing.status === 'active');
-  const previousListings = sortedListings.filter(listing => listing.status !== 'active');
+  const filteredAndSortedListings = sortedListings.filter(listing => {
+    if (gameFilter && listing.game !== gameFilter) {
+      return false;
+    }
+    return true;
+  });
+
+  const activeListings = filteredAndSortedListings.filter(listing => listing.status === 'active');
+  const previousListings = filteredAndSortedListings.filter(listing => listing.status !== 'active');
 
   useEffect(() => {
     if (!loading && !user) {
