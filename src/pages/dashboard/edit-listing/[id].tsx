@@ -14,6 +14,8 @@ import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Listing } from '@/types/database';
 
+const MAX_DESCRIPTION_LENGTH = 1000;
+
 const EditListingPage = () => {
   const router = useRouter();
   const { id } = router.query;
