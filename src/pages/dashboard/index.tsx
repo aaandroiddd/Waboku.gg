@@ -105,10 +105,10 @@ const DashboardComponent = () => {
   });
   
   const filteredAndSortedListings = sortedListings.filter(listing => {
-    if (gameFilter && listing.game !== gameFilter) {
-      return false;
+    if (gameFilter === 'all') {
+      return true;
     }
-    return true;
+    return listing.game === gameFilter;
   });
 
   const activeListings = filteredAndSortedListings.filter(listing => listing.status === 'active');
