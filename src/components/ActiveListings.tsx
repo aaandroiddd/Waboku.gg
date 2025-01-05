@@ -29,6 +29,8 @@ export const ActiveListings = ({
   sortBy,
   sortOrder,
   gameFilter,
+  searchQuery,
+  onSearchChange,
   onViewModeChange,
   onSortByChange,
   onSortOrderChange,
