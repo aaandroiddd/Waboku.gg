@@ -309,26 +309,7 @@ const DashboardComponent = () => {
             </div>
           </div>
           
-          {viewMode === 'list' ? (
-            <ListingList
-              listings={activeListings}
-              onEdit={handleEditListing}
-              onDelete={handleDeleteListing}
-              onMessage={handleMessage}
-              onView={handleViewListing}
-              onShare={handleShare}
-            />
-          ) : (
-            <ListingGrid
-              listings={activeListings}
-              onEdit={handleEditListing}
-              onDelete={handleDeleteListing}
-              onMessage={handleMessage}
-              onView={handleViewListing}
-              onShare={handleShare}
-              getConditionColor={getConditionColor}
-            />
-          )}
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {activeListings.map((listing) => (
               <Card key={listing.id} className="relative group cursor-pointer hover:shadow-lg transition-shadow">
                 <div 
