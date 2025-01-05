@@ -85,28 +85,30 @@ export function ListingGrid({
                   </div>
 
                   {/* Favorite Button */}
-                  {user && (
-                    <div className="absolute top-2 left-2 z-20">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          toggleFavorite(listing);
-                        }}
-                        className={`
-                          bg-black/50 hover:bg-black/75 transition-colors duration-200 rounded-full
-                          ${isFavorite(listing.id) ? 'text-red-500 hover:text-red-600' : 'text-white hover:text-red-500'}
-                        `}
-                      >
-                        <Heart 
-                          className={`h-5 w-5 ${isFavorite(listing.id) ? 'fill-current' : ''}`}
-                          aria-label={isFavorite(listing.id) ? 'Remove from favorites' : 'Add to favorites'}
-                        />
-                      </Button>
-                    </div>
-                  )}
+                  <div className="absolute top-2 left-2 z-20">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        if (!user) {
+                          window.location.href = '/auth/sign-in';
+                          return;
+                        }
+                        toggleFavorite(listing);
+                      }}
+                      className={`
+                        bg-black/50 hover:bg-black/75 transition-colors duration-200 rounded-full
+                        ${user && isFavorite(listing.id) ? 'text-red-500 hover:text-red-600' : 'text-white hover:text-red-500'}
+                      `}
+                    >
+                      <Heart 
+                        className={`h-5 w-5 ${user && isFavorite(listing.id) ? 'fill-current' : ''}`}
+                        aria-label={user && isFavorite(listing.id) ? 'Remove from favorites' : 'Add to favorites'}
+                      />
+                    </Button>
+                  </div>
                   
                   {/* Graded Badge */}
                   {listing.isGraded && (
