@@ -83,10 +83,34 @@ export function ListingGrid({
                       {formatPrice(listing.price)}
                     </span>
                   </div>
+
+                  {/* Favorite Button */}
+                  {user && (
+                    <div className="absolute top-2 left-2 z-20">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          toggleFavorite(listing);
+                        }}
+                        className={`
+                          bg-black/50 hover:bg-black/75 transition-colors duration-200 rounded-full
+                          ${isFavorite(listing.id) ? 'text-red-500 hover:text-red-600' : 'text-white hover:text-red-500'}
+                        `}
+                      >
+                        <Heart 
+                          className={`h-5 w-5 ${isFavorite(listing.id) ? 'fill-current' : ''}`}
+                          aria-label={isFavorite(listing.id) ? 'Remove from favorites' : 'Add to favorites'}
+                        />
+                      </Button>
+                    </div>
+                  )}
                   
                   {/* Graded Badge */}
                   {listing.isGraded && (
-                    <div className="absolute top-2 left-2 z-10">
+                    <div className="absolute top-2 left-14 z-10">
                       <span className="px-3 py-1 bg-blue-500/90 text-white rounded-md font-semibold flex items-center gap-1">
                         <svg 
                           viewBox="0 0 24 24" 
