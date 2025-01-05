@@ -25,31 +25,14 @@ export default function FavoritesPage() {
                   <div className="h-4 bg-secondary rounded w-1/2" />
                 </div>
               ) : favorites.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {favorites.map((listing) => (
-                    <Link href={`/listings/${listing.id}`} key={listing.id}>
-                      <Card className="hover:shadow-lg transition-shadow">
-                        <CardContent className="p-4">
-                          <div className="aspect-square relative mb-2">
-                            {listing.imageUrls && listing.imageUrls[0] && (
-                              <div className="relative w-full h-full">
-                                <Image
-                                  src={listing.imageUrls[0]}
-                                  alt={listing.title}
-                                  fill
-                                  className="object-cover rounded-md"
-                                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                                  priority={false}
-                                />
-                              </div>
-                            )}
-                          </div>
-                          <h3 className="font-semibold text-lg mb-1">{listing.title}</h3>
-                          <p className="text-muted-foreground">${listing.price}</p>
-                        </CardContent>
-                      </Card>
-                    </Link>
-                  ))}
+                <div className="max-w-[1400px] mx-auto">
+                  <ListingGrid 
+                    listings={favorites}
+                    loading={isLoading}
+                    displayCount={8}
+                    hasMore={favorites.length > 8}
+                    onLoadMore={() => {}}
+                  />
                 </div>
               ) : (
                 <div className="text-center py-8">
