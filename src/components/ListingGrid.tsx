@@ -17,17 +17,38 @@ interface ListingGridProps {
   userId?: string;
 }
 
-const getConditionColor = (condition: string): string => {
-  const colors: Record<string, string> = {
-    'poor': 'bg-[#e51f1f]/10 text-[#e51f1f]',
-    'played': 'bg-[#e85f2a]/10 text-[#e85f2a]',
-    'light played': 'bg-[#f2a134]/10 text-[#f2a134]',
-    'good': 'bg-[#f2a134]/10 text-[#f2a134]',
-    'excellent': 'bg-[#f7e379]/10 text-[#f7e379]',
-    'near mint': 'bg-[#bbdb44]/10 text-[#bbdb44]',
-    'mint': 'bg-[#44ce1b]/10 text-[#44ce1b]'
+const getConditionColor = (condition: string): { base: string; hover: string } => {
+  const colors: Record<string, { base: string; hover: string }> = {
+    'poor': {
+      base: 'bg-[#e51f1f]/10 text-[#e51f1f]',
+      hover: 'hover:bg-[#e51f1f]/20'
+    },
+    'played': {
+      base: 'bg-[#e85f2a]/10 text-[#e85f2a]',
+      hover: 'hover:bg-[#e85f2a]/20'
+    },
+    'light played': {
+      base: 'bg-[#f2a134]/10 text-[#f2a134]',
+      hover: 'hover:bg-[#f2a134]/20'
+    },
+    'good': {
+      base: 'bg-[#f2a134]/10 text-[#f2a134]',
+      hover: 'hover:bg-[#f2a134]/20'
+    },
+    'excellent': {
+      base: 'bg-[#f7e379]/10 text-[#f7e379]',
+      hover: 'hover:bg-[#f7e379]/20'
+    },
+    'near mint': {
+      base: 'bg-[#bbdb44]/10 text-[#bbdb44]',
+      hover: 'hover:bg-[#bbdb44]/20'
+    },
+    'mint': {
+      base: 'bg-[#44ce1b]/10 text-[#44ce1b]',
+      hover: 'hover:bg-[#44ce1b]/20'
+    }
   };
-  return colors[condition?.toLowerCase()] || 'bg-gray-500/10 text-gray-500';
+  return colors[condition?.toLowerCase()] || { base: 'bg-gray-500/10 text-gray-500', hover: 'hover:bg-gray-500/20' };
 };
 
 export function ListingGrid({ 
