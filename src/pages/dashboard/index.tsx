@@ -124,7 +124,7 @@ const DashboardComponent = () => {
     router.push('/dashboard/edit-listing/' + listingId);
   };
 
-  const handleDeleteListing = async (listingId: string, mode: 'deactivate' | 'permanent') => {
+  const handleDeleteListing = async (listingId: string, mode: 'deactivate' | 'permanent' = 'deactivate') => {
     try {
       if (mode === 'permanent') {
         await permanentlyDeleteListing(listingId);
@@ -140,6 +140,10 @@ const DashboardComponent = () => {
           description: "The listing has been moved to your previous listings.",
           duration: 3000,
         });
+      }
+      // Refresh listings after successful deletion
+      if (refreshListings) {
+        refreshListings();
       }
     } catch (err: any) {
       console.error('Error with listing:', err);
