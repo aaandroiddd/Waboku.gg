@@ -44,34 +44,19 @@ export const ActiveListings = ({
   return (
     <div className="space-y-4">
       <div className="flex flex-col space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Button
-              variant={viewMode === 'grid' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => onViewModeChange('grid')}
-            >
-              Grid
-            </Button>
-            <Button
-              variant={viewMode === 'list' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => onViewModeChange('list')}
-            >
-              List
-            </Button>
-          </div>
+        {/* Search bar */}
+        <div className="w-full">
+          <ListingsSearchBar
+            value={searchQuery}
+            onChange={onSearchChange}
+            placeholder="Search your listings..."
+          />
         </div>
 
-        <ListingsSearchBar
-          value={searchQuery}
-          onChange={onSearchChange}
-          placeholder="Search your listings..."
-          className="w-full"
-        />
-
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-          <div className="flex items-center gap-4 w-full sm:w-auto">
+        {/* Controls row */}
+        <div className="flex flex-col sm:flex-row gap-4">
+          {/* Left side controls */}
+          <div className="flex items-center gap-2 order-2 sm:order-1">
             <Select value={gameFilter} onValueChange={onGameFilterChange}>
               <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="All Games" />
@@ -94,6 +79,7 @@ export const ActiveListings = ({
                 <SelectItem value="other">Other</SelectItem>
               </SelectContent>
             </Select>
+
             <select
               className="border rounded-md px-2 py-1"
               value={sortBy}
@@ -103,12 +89,31 @@ export const ActiveListings = ({
               <option value="price">Price</option>
               <option value="title">Title</option>
             </select>
+
             <Button
               variant="outline"
               size="sm"
               onClick={() => onSortOrderChange(sortOrder === 'asc' ? 'desc' : 'asc')}
             >
               {sortOrder === 'asc' ? '↑' : '↓'}
+            </Button>
+          </div>
+
+          {/* Right side view controls */}
+          <div className="flex items-center gap-2 ml-auto order-1 sm:order-2">
+            <Button
+              variant={viewMode === 'grid' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => onViewModeChange('grid')}
+            >
+              Grid
+            </Button>
+            <Button
+              variant={viewMode === 'list' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => onViewModeChange('list')}
+            >
+              List
             </Button>
           </div>
         </div>
