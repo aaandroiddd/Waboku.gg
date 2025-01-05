@@ -16,6 +16,7 @@ import { Star, Edit2, Trash2, MessageCircle, Share2, ExternalLink } from "lucide
 import { ListingTimer } from "@/components/ListingTimer";
 import { ListingList } from "@/components/ListingList";
 import { DeleteListingDialog } from "@/components/DeleteListingDialog";
+import { ListingsSearchBar } from "@/components/ListingsSearchBar";
 import { useListings } from '@/hooks/useListings';
 import { useProfile } from '@/hooks/useProfile';
 import { Listing } from '@/types/database';
