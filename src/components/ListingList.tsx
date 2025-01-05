@@ -27,9 +27,9 @@ export const ListingList = ({
         <Card key={listing.id} className="p-4">
           <div className="flex items-center gap-4">
             <div className="relative h-20 w-20 flex-shrink-0">
-              {listing.images?.[0] ? (
+              {listing.imageUrls?.[0] ? (
                 <Image
-                  src={listing.images[0]}
+                  src={listing.imageUrls[0]}
                   alt={listing.title}
                   fill
                   className="object-cover rounded-md"
