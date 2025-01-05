@@ -302,6 +302,12 @@ const DashboardComponent = () => {
             </div>
             <div className="h-6 w-px bg-border hidden sm:block" /> {/* Separator */}
             <div className="flex items-center gap-4 w-full sm:w-auto">
+              <ListingsSearchBar
+                value={searchQuery}
+                onChange={setSearchQuery}
+                placeholder="Search your listings..."
+              />
+              <div className="h-6 w-px bg-border hidden sm:block" />
               <Select value={gameFilter} onValueChange={setGameFilter}>
                 <SelectTrigger className="w-[180px]">
                   <SelectValue placeholder="All Games" />
