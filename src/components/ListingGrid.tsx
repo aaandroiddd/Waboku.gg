@@ -171,28 +171,7 @@ export function ListingGrid({
                 </div>
               </CardContent>
             </Link>
-            {user && (
-              <CardFooter className="p-4 pt-0 flex justify-end">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    toggleFavorite(listing);
-                  }}
-                  className={`
-                    transition-colors duration-200
-                    ${isFavorite(listing.id) ? 'text-red-500 hover:text-red-600' : 'text-muted-foreground hover:text-red-500'}
-                  `}
-                >
-                  <Heart 
-                    className={`h-5 w-5 ${isFavorite(listing.id) ? 'fill-current' : ''}`}
-                    aria-label={isFavorite(listing.id) ? 'Remove from favorites' : 'Add to favorites'}
-                  />
-                </Button>
-              </CardFooter>
-            )}
+
           </Card>
         ))}
       </div>
