@@ -32,6 +32,10 @@ const getConditionColor = (condition: string): { base: string; hover: string } =
       base: 'bg-[#f2a134]/10 text-[#f2a134]',
       hover: 'hover:bg-[#f2a134]/20'
     },
+    'light-played': {
+      base: 'bg-[#f2a134]/10 text-[#f2a134]',
+      hover: 'hover:bg-[#f2a134]/20'
+    },
     'good': {
       base: 'bg-[#f2a134]/10 text-[#f2a134]',
       hover: 'hover:bg-[#f2a134]/20'
@@ -41,6 +45,10 @@ const getConditionColor = (condition: string): { base: string; hover: string } =
       hover: 'hover:bg-[#f7e379]/20'
     },
     'near mint': {
+      base: 'bg-[#bbdb44]/10 text-[#bbdb44]',
+      hover: 'hover:bg-[#bbdb44]/20'
+    },
+    'near-mint': {
       base: 'bg-[#bbdb44]/10 text-[#bbdb44]',
       hover: 'hover:bg-[#bbdb44]/20'
     },
