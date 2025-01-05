@@ -156,8 +156,14 @@ const EditListingPage = () => {
               <Textarea
                 id="description"
                 value={formData.description}
+                maxLength={MAX_DESCRIPTION_LENGTH}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               />
+              <div className="flex justify-end">
+                <p className="text-sm text-muted-foreground">
+                  {formData.description.length}/{MAX_DESCRIPTION_LENGTH} characters
+                </p>
+              </div>
             </div>
 
             <div className="space-y-2">
