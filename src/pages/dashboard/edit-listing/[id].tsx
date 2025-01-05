@@ -192,12 +192,30 @@ const EditListingPage = () => {
 
             <div className="space-y-2">
               <Label htmlFor="game">Game</Label>
-              <Input
-                id="game"
+              <Select
                 value={formData.game}
-                onChange={(e) => setFormData({ ...formData, game: e.target.value })}
-                required
-              />
+                onValueChange={(value) => setFormData({ ...formData, game: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select game" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="dbs">Dragon Ball Super Card Game</SelectItem>
+                  <SelectItem value="digimon">Digimon</SelectItem>
+                  <SelectItem value="lorcana">Disney Lorcana</SelectItem>
+                  <SelectItem value="flesh-and-blood">Flesh and Blood</SelectItem>
+                  <SelectItem value="mtg">Magic: The Gathering</SelectItem>
+                  <SelectItem value="onepiece">One Piece Card Game</SelectItem>
+                  <SelectItem value="pokemon">Pokemon</SelectItem>
+                  <SelectItem value="star-wars">Star Wars: Unlimited</SelectItem>
+                  <SelectItem value="union-arena">Union Arena</SelectItem>
+                  <SelectItem value="universus">Universus</SelectItem>
+                  <SelectItem value="vanguard">Vanguard</SelectItem>
+                  <SelectItem value="weiss">Weiss Schwarz</SelectItem>
+                  <SelectItem value="yugioh">Yu-Gi-Oh!</SelectItem>
+                  <SelectItem value="other">Other</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="flex gap-4">
