@@ -24,7 +24,7 @@ const DashboardComponent = () => {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [sortBy, setSortBy] = useState<'date' | 'price' | 'title'>('date');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
-  const [gameFilter, setGameFilter] = useState<string>('');
+  const [gameFilter, setGameFilter] = useState<string>('all');
   const [dialogState, setDialogState] = useState<{
     isOpen: boolean;
     listingId: string;
