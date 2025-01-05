@@ -305,7 +305,7 @@ const DashboardComponent = () => {
                   <SelectValue placeholder="All Games" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Games</SelectItem>
+                  <SelectItem value="all">All Games</SelectItem>
                   <SelectItem value="dbs">Dragon Ball Super Card Game</SelectItem>
                   <SelectItem value="digimon">Digimon</SelectItem>
                   <SelectItem value="lorcana">Disney Lorcana</SelectItem>
