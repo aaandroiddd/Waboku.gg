@@ -1,4 +1,5 @@
 import dynamic from 'next/dynamic';
+import type { NextPage } from 'next';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { useAuth } from '@/contexts/AuthContext';
