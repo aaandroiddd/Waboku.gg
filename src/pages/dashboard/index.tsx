@@ -1,8 +1,6 @@
-import dynamic from 'next/dynamic';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { useAuth } from '@/contexts/AuthContext';
-import dynamic from 'next/dynamic';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { VerificationStatus } from '@/components/VerificationStatus';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
