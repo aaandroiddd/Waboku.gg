@@ -181,7 +181,7 @@ export function ListingGrid({
                   </p>
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-xs px-2 py-0.5 bg-secondary rounded-full">{listing.game}</span>
-                    <span className={`inline-flex items-center rounded-md border px-2.5 py-0.5 font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent shadow text-sm ${getConditionColor(listing.condition)} hover:bg-[#bbdb44]/20`}>
+                    <span className={`inline-flex items-center rounded-md border px-2.5 py-0.5 font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent shadow text-sm ${getConditionColor(listing.condition).base} ${getConditionColor(listing.condition).hover}`}>
                       {listing.condition}
                     </span>
                     {listing.isGraded && (
