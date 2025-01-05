@@ -35,33 +35,26 @@ export function ListingsSearchBar({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         className="pl-9 w-full"
+        autoFocus
       />
     </div>
   );
 
   return (
-    <>
-      {/* Desktop version */}
-      <div className={cn("relative w-full hidden md:block", className)}>
-        <SearchInput />
-      </div>
-
-      {/* Mobile version */}
-      <div className={cn("md:hidden", className)}>
-        <Sheet open={open} onOpenChange={setOpen}>
-          <SheetTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-9 w-9">
-              <Search className="h-4 w-4" />
-            </Button>
-          </SheetTrigger>
-          <SheetContent side="top" className="w-full p-4">
-            <SheetHeader className="mb-4">
-              <SheetTitle>Search Listings</SheetTitle>
-            </SheetHeader>
-            <SearchInput />
-          </SheetContent>
-        </Sheet>
-      </div>
-    </>
+    <div className={className}>
+      <Sheet open={open} onOpenChange={setOpen}>
+        <SheetTrigger asChild>
+          <Button variant="ghost" size="icon" className="h-9 w-9">
+            <Search className="h-4 w-4" />
+          </Button>
+        </SheetTrigger>
+        <SheetContent side="top" className="w-full p-4">
+          <SheetHeader className="mb-4">
+            <SheetTitle>Search Listings</SheetTitle>
+          </SheetHeader>
+          <SearchInput />
+        </SheetContent>
+      </Sheet>
+    </div>
   );
 }
