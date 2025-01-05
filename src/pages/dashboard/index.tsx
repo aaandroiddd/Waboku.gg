@@ -87,9 +87,17 @@ const DashboardComponent = () => {
   }, [listingsError, user, refreshListings]);
   
   const sortedListings = [...(listings || [])].sort((a, b) => {
-    const dateA = a.createdAt instanceof Date ? a.createdAt : new Date(a.createdAt);
-    const dateB = b.createdAt instanceof Date ? b.createdAt : new Date(b.createdAt);
-    return dateB.getTime() - dateA.getTime();
+    if (sortBy === 'date') {
+      const dateA = a.createdAt instanceof Date ? a.createdAt : new Date(a.createdAt);
+      const dateB = b.createdAt instanceof Date ? b.createdAt : new Date(b.createdAt);
+      return sortOrder === 'desc' ? dateB.getTime() - dateA.getTime() : dateA.getTime() - dateB.getTime();
+    } else if (sortBy === 'price') {
+      return sortOrder === 'desc' ? b.price - a.price : a.price - b.price;
+    } else {
+      return sortOrder === 'desc' 
+        ? b.title.localeCompare(a.title)
+        : a.title.localeCompare(b.title);
+    }
   });
   
   const activeListings = sortedListings.filter(listing => listing.status === 'active');
