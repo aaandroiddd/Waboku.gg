@@ -10,6 +10,7 @@ interface ActiveListingsProps {
   sortOrder: 'asc' | 'desc';
   gameFilter: string;
   searchQuery: string;
+  onSearchChange: (query: string) => void;
   onViewModeChange: (mode: 'grid' | 'list') => void;
   onSortByChange: (sortBy: 'date' | 'price' | 'title') => void;
   onSortOrderChange: (order: 'asc' | 'desc') => void;
