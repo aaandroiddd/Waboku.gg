@@ -13,7 +13,7 @@ interface DeleteListingDialogProps {
   isOpen: boolean;
   onClose: () => void;
   onConfirm: () => void;
-  mode: 'archive' | 'permanent';
+  mode: 'deactivate' | 'permanent';
 }
 
 export function DeleteListingDialog({ isOpen, onClose, onConfirm, mode }: DeleteListingDialogProps) {
