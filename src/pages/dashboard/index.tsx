@@ -18,6 +18,9 @@ import { useProfile } from '@/hooks/useProfile';
 import { Listing } from '@/types/database';
 
 const DashboardComponent = () => {
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [sortBy, setSortBy] = useState<'date' | 'price' | 'title'>('date');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [dialogState, setDialogState] = useState<{
     isOpen: boolean;
     listingId: string;
