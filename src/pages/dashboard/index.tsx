@@ -107,10 +107,12 @@ const DashboardComponent = () => {
   });
   
   const filteredAndSortedListings = sortedListings.filter(listing => {
-    if (gameFilter === 'all') {
-      return true;
-    }
-    return listing.game === gameFilter;
+    const matchesGameFilter = gameFilter === 'all' || listing.game === gameFilter;
+    const matchesSearch = searchQuery === '' || 
+      listing.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      listing.description?.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    return matchesGameFilter && matchesSearch;
   });
 
   const activeListings = filteredAndSortedListings.filter(listing => listing.status === 'active');
