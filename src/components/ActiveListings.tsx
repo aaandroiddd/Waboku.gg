@@ -43,67 +43,74 @@ export const ActiveListings = ({
 }: ActiveListingsProps) => {
   return (
     <div className="space-y-4">
-      <ListingsSearchBar
-        value={searchQuery}
-        onChange={onSearchChange}
-        placeholder="Search your listings..."
-      />
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div className="flex items-center gap-4">
-          <Button
-            variant={viewMode === 'grid' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => onViewModeChange('grid')}
-          >
-            Grid
-          </Button>
-          <Button
-            variant={viewMode === 'list' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => onViewModeChange('list')}
-          >
-            List
-          </Button>
+      <div className="flex flex-col space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Button
+              variant={viewMode === 'grid' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => onViewModeChange('grid')}
+            >
+              Grid
+            </Button>
+            <Button
+              variant={viewMode === 'list' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => onViewModeChange('list')}
+            >
+              List
+            </Button>
+          </div>
         </div>
-        <div className="flex items-center gap-4 w-full sm:w-auto">
-          <Select value={gameFilter} onValueChange={onGameFilterChange}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="All Games" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="">All Games</SelectItem>
-              <SelectItem value="dbs">Dragon Ball Super Card Game</SelectItem>
-              <SelectItem value="digimon">Digimon</SelectItem>
-              <SelectItem value="lorcana">Disney Lorcana</SelectItem>
-              <SelectItem value="flesh-and-blood">Flesh and Blood</SelectItem>
-              <SelectItem value="mtg">Magic: The Gathering</SelectItem>
-              <SelectItem value="onepiece">One Piece Card Game</SelectItem>
-              <SelectItem value="pokemon">Pokemon</SelectItem>
-              <SelectItem value="star-wars">Star Wars: Unlimited</SelectItem>
-              <SelectItem value="union-arena">Union Arena</SelectItem>
-              <SelectItem value="universus">Universus</SelectItem>
-              <SelectItem value="vanguard">Vanguard</SelectItem>
-              <SelectItem value="weiss">Weiss Schwarz</SelectItem>
-              <SelectItem value="yugioh">Yu-Gi-Oh!</SelectItem>
-              <SelectItem value="other">Other</SelectItem>
-            </SelectContent>
-          </Select>
-          <select
-            className="border rounded-md px-2 py-1"
-            value={sortBy}
-            onChange={(e) => onSortByChange(e.target.value as 'date' | 'price' | 'title')}
-          >
-            <option value="date">Date</option>
-            <option value="price">Price</option>
-            <option value="title">Title</option>
-          </select>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => onSortOrderChange(sortOrder === 'asc' ? 'desc' : 'asc')}
-          >
-            {sortOrder === 'asc' ? '↑' : '↓'}
-          </Button>
+
+        <ListingsSearchBar
+          value={searchQuery}
+          onChange={onSearchChange}
+          placeholder="Search your listings..."
+          className="w-full"
+        />
+
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+          <div className="flex items-center gap-4 w-full sm:w-auto">
+            <Select value={gameFilter} onValueChange={onGameFilterChange}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="All Games" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">All Games</SelectItem>
+                <SelectItem value="dbs">Dragon Ball Super Card Game</SelectItem>
+                <SelectItem value="digimon">Digimon</SelectItem>
+                <SelectItem value="lorcana">Disney Lorcana</SelectItem>
+                <SelectItem value="flesh-and-blood">Flesh and Blood</SelectItem>
+                <SelectItem value="mtg">Magic: The Gathering</SelectItem>
+                <SelectItem value="onepiece">One Piece Card Game</SelectItem>
+                <SelectItem value="pokemon">Pokemon</SelectItem>
+                <SelectItem value="star-wars">Star Wars: Unlimited</SelectItem>
+                <SelectItem value="union-arena">Union Arena</SelectItem>
+                <SelectItem value="universus">Universus</SelectItem>
+                <SelectItem value="vanguard">Vanguard</SelectItem>
+                <SelectItem value="weiss">Weiss Schwarz</SelectItem>
+                <SelectItem value="yugioh">Yu-Gi-Oh!</SelectItem>
+                <SelectItem value="other">Other</SelectItem>
+              </SelectContent>
+            </Select>
+            <select
+              className="border rounded-md px-2 py-1"
+              value={sortBy}
+              onChange={(e) => onSortByChange(e.target.value as 'date' | 'price' | 'title')}
+            >
+              <option value="date">Date</option>
+              <option value="price">Price</option>
+              <option value="title">Title</option>
+            </select>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onSortOrderChange(sortOrder === 'asc' ? 'desc' : 'asc')}
+            >
+              {sortOrder === 'asc' ? '↑' : '↓'}
+            </Button>
+          </div>
         </div>
       </div>
 
