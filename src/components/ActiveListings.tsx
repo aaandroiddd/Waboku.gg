@@ -1,15 +1,18 @@
 import { Button } from "@/components/ui/button";
 import { Listing } from "@/types/database";
 import { ListingList } from "./ListingList";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface ActiveListingsProps {
   listings: Listing[];
   viewMode: 'grid' | 'list';
   sortBy: 'date' | 'price' | 'title';
   sortOrder: 'asc' | 'desc';
+  gameFilter: string;
   onViewModeChange: (mode: 'grid' | 'list') => void;
   onSortByChange: (sortBy: 'date' | 'price' | 'title') => void;
   onSortOrderChange: (order: 'asc' | 'desc') => void;
+  onGameFilterChange: (game: string) => void;
   onEdit: (id: string) => void;
   onDelete: (id: string) => void;
   onMessage: (id: string) => void;
@@ -22,9 +25,11 @@ export const ActiveListings = ({
   viewMode,
   sortBy,
   sortOrder,
+  gameFilter,
   onViewModeChange,
   onSortByChange,
   onSortOrderChange,
+  onGameFilterChange,
   onEdit,
   onDelete,
   onMessage,
@@ -33,7 +38,7 @@ export const ActiveListings = ({
 }: ActiveListingsProps) => {
   return (
     <div className="space-y-4">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div className="flex items-center gap-4">
           <Button
             variant={viewMode === 'grid' ? 'default' : 'outline'}
@@ -50,7 +55,29 @@ export const ActiveListings = ({
             List
           </Button>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 w-full sm:w-auto">
+          <Select value={gameFilter} onValueChange={onGameFilterChange}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="All Games" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">All Games</SelectItem>
+              <SelectItem value="dbs">Dragon Ball Super Card Game</SelectItem>
+              <SelectItem value="digimon">Digimon</SelectItem>
+              <SelectItem value="lorcana">Disney Lorcana</SelectItem>
+              <SelectItem value="flesh-and-blood">Flesh and Blood</SelectItem>
+              <SelectItem value="mtg">Magic: The Gathering</SelectItem>
+              <SelectItem value="onepiece">One Piece Card Game</SelectItem>
+              <SelectItem value="pokemon">Pokemon</SelectItem>
+              <SelectItem value="star-wars">Star Wars: Unlimited</SelectItem>
+              <SelectItem value="union-arena">Union Arena</SelectItem>
+              <SelectItem value="universus">Universus</SelectItem>
+              <SelectItem value="vanguard">Vanguard</SelectItem>
+              <SelectItem value="weiss">Weiss Schwarz</SelectItem>
+              <SelectItem value="yugioh">Yu-Gi-Oh!</SelectItem>
+              <SelectItem value="other">Other</SelectItem>
+            </SelectContent>
+          </Select>
           <select
             className="border rounded-md px-2 py-1"
             value={sortBy}
