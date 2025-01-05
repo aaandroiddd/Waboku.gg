@@ -271,7 +271,63 @@ const DashboardComponent = () => {
         </TabsList>
 
         <TabsContent value="active" className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <div className="flex justify-between items-center mb-4">
+            <div className="flex items-center gap-4">
+              <Button
+                variant={viewMode === 'grid' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setViewMode('grid')}
+              >
+                Grid
+              </Button>
+              <Button
+                variant={viewMode === 'list' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setViewMode('list')}
+              >
+                List
+              </Button>
+            </div>
+            <div className="flex items-center gap-4">
+              <select
+                className="border rounded-md px-2 py-1"
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as 'date' | 'price' | 'title')}
+              >
+                <option value="date">Date</option>
+                <option value="price">Price</option>
+                <option value="title">Title</option>
+              </select>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+              >
+                {sortOrder === 'asc' ? '↑' : '↓'}
+              </Button>
+            </div>
+          </div>
+          
+          {viewMode === 'list' ? (
+            <ListingList
+              listings={activeListings}
+              onEdit={handleEditListing}
+              onDelete={handleDeleteListing}
+              onMessage={handleMessage}
+              onView={handleViewListing}
+              onShare={handleShare}
+            />
+          ) : (
+            <ListingGrid
+              listings={activeListings}
+              onEdit={handleEditListing}
+              onDelete={handleDeleteListing}
+              onMessage={handleMessage}
+              onView={handleViewListing}
+              onShare={handleShare}
+              getConditionColor={getConditionColor}
+            />
+          )}
             {activeListings.map((listing) => (
               <Card key={listing.id} className="relative group cursor-pointer hover:shadow-lg transition-shadow">
                 <div 
