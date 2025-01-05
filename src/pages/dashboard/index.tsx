@@ -272,8 +272,8 @@ const DashboardComponent = () => {
         </TabsList>
 
         <TabsContent value="active" className="space-y-4">
-          <div className="flex justify-between items-center mb-4">
-            <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 mb-4">
+            <div className="flex items-center gap-2">
               <Button
                 variant={viewMode === 'grid' ? 'default' : 'outline'}
                 size="sm"
@@ -289,24 +289,23 @@ const DashboardComponent = () => {
                 List
               </Button>
             </div>
-            <div className="flex items-center gap-4">
-              <select
-                className="border rounded-md px-2 py-1"
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as 'date' | 'price' | 'title')}
-              >
-                <option value="date">Date</option>
-                <option value="price">Price</option>
-                <option value="title">Title</option>
-              </select>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-              >
-                {sortOrder === 'asc' ? '↑' : '↓'}
-              </Button>
-            </div>
+            <div className="h-6 w-px bg-border" /> {/* Separator */}
+            <select
+              className="border rounded-md px-2 py-1"
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as 'date' | 'price' | 'title')}
+            >
+              <option value="date">Date</option>
+              <option value="price">Price</option>
+              <option value="title">Title</option>
+            </select>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+            >
+              {sortOrder === 'asc' ? '↑' : '↓'}
+            </Button>
           </div>
           
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
