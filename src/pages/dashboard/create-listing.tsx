@@ -364,7 +364,7 @@ const CreateListingPage = () => {
                           <SelectContent>
                             {[10, 9.5, 9, 8.5, 8, 7.5, 7, 6.5, 6, 5.5, 5].map((grade) => (
                               <SelectItem key={grade} value={grade.toString()}>
-                                {grade}
+                                {grade.toFixed(1)}
                               </SelectItem>
                             ))}
                           </SelectContent>
