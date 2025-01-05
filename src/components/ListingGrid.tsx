@@ -103,7 +103,7 @@ export function ListingGrid({
     <div className="space-y-8">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {displayedListings.map((listing) => (
-          <Card key={listing.id} className="relative overflow-hidden group">
+          <Card key={listing.id} className="relative overflow-hidden group transition-colors duration-200 hover:bg-accent/50">
             <Link href={`/listings/${listing.id}`}>
               <CardContent className="p-4">
                 <div className="aspect-square bg-muted rounded-lg mb-4 relative overflow-hidden">
