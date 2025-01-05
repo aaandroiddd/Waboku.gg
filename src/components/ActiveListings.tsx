@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Listing } from "@/types/database";
 import { ListingList } from "./ListingList";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ListingsSearchBar } from "./ListingsSearchBar";
 
 interface ActiveListingsProps {
   listings: Listing[];
