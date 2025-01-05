@@ -25,6 +25,7 @@ const DashboardComponent = () => {
   const [sortBy, setSortBy] = useState<'date' | 'price' | 'title'>('date');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [gameFilter, setGameFilter] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState<string>('');
   const [dialogState, setDialogState] = useState<{
     isOpen: boolean;
     listingId: string;
