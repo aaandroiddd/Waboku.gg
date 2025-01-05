@@ -43,6 +43,11 @@ export const ActiveListings = ({
 }: ActiveListingsProps) => {
   return (
     <div className="space-y-4">
+      <ListingsSearchBar
+        value={searchQuery}
+        onChange={onSearchChange}
+        placeholder="Search your listings..."
+      />
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div className="flex items-center gap-4">
           <Button
