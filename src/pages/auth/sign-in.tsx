@@ -96,6 +96,7 @@ function SignInComponent() {
       
       // Convert any error to a proper Error object with name property
       const error = new Error(err.message || "Failed to sign in");
+      // For Firebase Auth errors, the code is in err.code
       error.name = err.code || err.name || "auth/unknown";
       setAuthError(error);
     } finally {
