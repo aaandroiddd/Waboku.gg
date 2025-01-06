@@ -303,38 +303,20 @@ export default function Home() {
                 </div>
 
                 {/* Search Section */}
-                <div className="flex flex-col sm:flex-row gap-4 max-w-2xl mx-auto pt-4 sm:pt-6 pb-4 sm:pb-8">
-                  <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
-                    <Input
-                      type="text"
-                      placeholder="Search for cards..."
-                      className="pl-10 h-12 w-full"
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          handleSearch();
-                        }
-                      }}
-                    />
-                  </div>
-                  
-                  <div className="flex">
+                <div className="flex flex-col max-w-2xl mx-auto pt-4 sm:pt-6 pb-4 sm:pb-8 px-4 sm:px-0">
+                  {/* Mobile Search Controls */}
+                  <div className="flex sm:hidden justify-center gap-2 mb-4">
                     <Popover open={stateOpen} onOpenChange={setStateOpen}>
                       <PopoverTrigger asChild>
                         <Button
                           variant="outline"
-                          role="combobox"
-                          className="h-12 whitespace-nowrap"
+                          size="icon"
+                          className="h-12 w-12"
                         >
-                          <MapPin className="mr-2 h-4 w-4" />
-                          {selectedState === "all" 
-                            ? "All Locations"
-                            : usStates.find((state) => state.value === selectedState)?.label || "Select location"}
+                          <MapPin className="h-5 w-5" />
                         </Button>
                       </PopoverTrigger>
-                      <PopoverContent className="w-fit p-0">
+                      <PopoverContent className="w-[280px] p-0">
                         <Command>
                           <CommandInput placeholder="Search state..." className="h-9" />
                           <CommandEmpty>No state found.</CommandEmpty>
@@ -364,9 +346,102 @@ export default function Home() {
                       </PopoverContent>
                     </Popover>
 
-                    <Button className="h-12 w-12 ml-2" size="icon" onClick={handleSearch}>
-                      <Search className="h-5 w-5" />
-                    </Button>
+                    <Sheet>
+                      <SheetTrigger asChild>
+                        <Button variant="outline" size="icon" className="h-12 w-12">
+                          <Search className="h-5 w-5" />
+                        </Button>
+                      </SheetTrigger>
+                      <SheetContent side="top">
+                        <SheetHeader className="mb-4">
+                          <SheetTitle>Search Cards</SheetTitle>
+                        </SheetHeader>
+                        <div className="relative">
+                          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
+                          <Input
+                            type="text"
+                            placeholder="Search for cards..."
+                            className="pl-10 h-12"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                handleSearch();
+                              }
+                            }}
+                            autoFocus
+                          />
+                        </div>
+                      </SheetContent>
+                    </Sheet>
+                  </div>
+
+                  {/* Desktop Search Controls */}
+                  <div className="hidden sm:flex gap-4">
+                    <div className="relative flex-1">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
+                      <Input
+                        type="text"
+                        placeholder="Search for cards..."
+                        className="pl-10 h-12 w-full"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            handleSearch();
+                          }
+                        }}
+                      />
+                    </div>
+                    
+                    <div className="flex">
+                      <Popover open={stateOpen} onOpenChange={setStateOpen}>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            role="combobox"
+                            className="h-12 whitespace-nowrap"
+                          >
+                            <MapPin className="mr-2 h-4 w-4" />
+                            {selectedState === "all" 
+                              ? "All Locations"
+                              : usStates.find((state) => state.value === selectedState)?.label || "Select location"}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-fit p-0">
+                          <Command>
+                            <CommandInput placeholder="Search state..." className="h-9" />
+                            <CommandEmpty>No state found.</CommandEmpty>
+                            <CommandList>
+                              <CommandGroup>
+                                {usStates.map((state) => (
+                                  <CommandItem
+                                    key={state.value}
+                                    value={state.label}
+                                    onSelect={() => {
+                                      setSelectedState(state.value);
+                                      setStateOpen(false);
+                                    }}
+                                    className="cursor-pointer"
+                                  >
+                                    <Check
+                                      className={`mr-2 h-4 w-4 ${
+                                        selectedState === state.value ? "opacity-100" : "opacity-0"
+                                      }`}
+                                    />
+                                    {state.label}
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
+
+                      <Button className="h-12 w-12 ml-2" size="icon" onClick={handleSearch}>
+                        <Search className="h-5 w-5" />
+                      </Button>
+                    </div>
                   </div>
                 </div>
               </div>
