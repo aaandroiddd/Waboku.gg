@@ -66,13 +66,13 @@ export function useCardSearch() {
     }
 
     const data = await response.json();
-    return data.data.map((card: any) => ({
+    return (data.data || []).map((card: any) => ({
       id: card.id,
       name: card.name,
-      imageUrl: card.images.small,
+      imageUrl: card.images?.small || card.images?.large,
       game: 'Dragon Ball Fusion',
       set: {
-        name: card.set?.name,
+        name: card.set?.name || 'Unknown Set',
       },
     }));
   };
