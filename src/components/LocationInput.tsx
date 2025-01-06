@@ -1,10 +1,11 @@
-import { useEffect, useRef, useState } from 'react';
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Loader2 } from "lucide-react";
-import { Alert } from "@/components/ui/alert";
+import { useState } from 'react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
 interface LocationInputProps {
   onLocationSelect: (city: string, state: string) => void;
@@ -13,93 +14,84 @@ interface LocationInputProps {
   error?: string;
 }
 
-declare global {
-  interface Window {
-    google: any;
-  }
-}
+const US_STATES = [
+  { name: 'Alabama', abbreviation: 'AL' },
+  { name: 'Alaska', abbreviation: 'AK' },
+  { name: 'Arizona', abbreviation: 'AZ' },
+  { name: 'Arkansas', abbreviation: 'AR' },
+  { name: 'California', abbreviation: 'CA' },
+  { name: 'Colorado', abbreviation: 'CO' },
+  { name: 'Connecticut', abbreviation: 'CT' },
+  { name: 'Delaware', abbreviation: 'DE' },
+  { name: 'Florida', abbreviation: 'FL' },
+  { name: 'Georgia', abbreviation: 'GA' },
+  { name: 'Hawaii', abbreviation: 'HI' },
+  { name: 'Idaho', abbreviation: 'ID' },
+  { name: 'Illinois', abbreviation: 'IL' },
+  { name: 'Indiana', abbreviation: 'IN' },
+  { name: 'Iowa', abbreviation: 'IA' },
+  { name: 'Kansas', abbreviation: 'KS' },
+  { name: 'Kentucky', abbreviation: 'KY' },
+  { name: 'Louisiana', abbreviation: 'LA' },
+  { name: 'Maine', abbreviation: 'ME' },
+  { name: 'Maryland', abbreviation: 'MD' },
+  { name: 'Massachusetts', abbreviation: 'MA' },
+  { name: 'Michigan', abbreviation: 'MI' },
+  { name: 'Minnesota', abbreviation: 'MN' },
+  { name: 'Mississippi', abbreviation: 'MS' },
+  { name: 'Missouri', abbreviation: 'MO' },
+  { name: 'Montana', abbreviation: 'MT' },
+  { name: 'Nebraska', abbreviation: 'NE' },
+  { name: 'Nevada', abbreviation: 'NV' },
+  { name: 'New Hampshire', abbreviation: 'NH' },
+  { name: 'New Jersey', abbreviation: 'NJ' },
+  { name: 'New Mexico', abbreviation: 'NM' },
+  { name: 'New York', abbreviation: 'NY' },
+  { name: 'North Carolina', abbreviation: 'NC' },
+  { name: 'North Dakota', abbreviation: 'ND' },
+  { name: 'Ohio', abbreviation: 'OH' },
+  { name: 'Oklahoma', abbreviation: 'OK' },
+  { name: 'Oregon', abbreviation: 'OR' },
+  { name: 'Pennsylvania', abbreviation: 'PA' },
+  { name: 'Rhode Island', abbreviation: 'RI' },
+  { name: 'South Carolina', abbreviation: 'SC' },
+  { name: 'South Dakota', abbreviation: 'SD' },
+  { name: 'Tennessee', abbreviation: 'TN' },
+  { name: 'Texas', abbreviation: 'TX' },
+  { name: 'Utah', abbreviation: 'UT' },
+  { name: 'Vermont', abbreviation: 'VT' },
+  { name: 'Virginia', abbreviation: 'VA' },
+  { name: 'Washington', abbreviation: 'WA' },
+  { name: 'West Virginia', abbreviation: 'WV' },
+  { name: 'Wisconsin', abbreviation: 'WI' },
+  { name: 'Wyoming', abbreviation: 'WY' }
+];
 
-export function LocationInput({ onLocationSelect, initialCity = "", initialState = "", error }: LocationInputProps) {
-  const [inputValue, setInputValue] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const autocompleteRef = useRef<any>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+export function LocationInput({ onLocationSelect, initialState = "", error }: LocationInputProps) {
+  const [selectedState, setSelectedState] = useState(initialState);
 
-  useEffect(() => {
-    let autocomplete: any;
-    const initAutocomplete = () => {
-      if (!window.google || !inputRef.current) return;
-
-      autocomplete = new window.google.maps.places.Autocomplete(inputRef.current, {
-        types: ['(cities)'],
-        componentRestrictions: { country: 'us' },
-        fields: ['address_components']
-      });
-
-      autocomplete.addListener('place_changed', () => {
-        const place = autocomplete.getPlace();
-        let city = '';
-        let state = '';
-
-        place.address_components.forEach((component: any) => {
-          if (component.types.includes('locality')) {
-            city = component.long_name;
-          }
-          if (component.types.includes('administrative_area_level_1')) {
-            state = component.short_name;
-          }
-        });
-
-        if (city && state) {
-          setInputValue(`${city}, ${state}`);
-          onLocationSelect(city, state);
-        }
-      });
-
-      autocompleteRef.current = autocomplete;
-    };
-
-    if (window.google) {
-      initAutocomplete();
-    } else {
-      setIsLoading(true);
-      const script = document.createElement('script');
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&libraries=places`;
-      script.async = true;
-      script.onload = () => {
-        initAutocomplete();
-        setIsLoading(false);
-      };
-      document.head.appendChild(script);
+  const handleStateChange = (value: string) => {
+    setSelectedState(value);
+    const state = US_STATES.find(state => state.abbreviation === value);
+    if (state) {
+      onLocationSelect(state.name, state.abbreviation);
     }
-
-    if (initialCity && initialState) {
-      setInputValue(`${initialCity}, ${initialState}`);
-    }
-
-    return () => {
-      if (autocompleteRef.current) {
-        window.google.maps.event.clearInstanceListeners(autocompleteRef.current);
-      }
-    };
-  }, [onLocationSelect, initialCity, initialState]);
+  };
 
   return (
     <div className="relative">
-      <Input
-        ref={inputRef}
-        id="location"
-        value={inputValue}
-        onChange={(e) => setInputValue(e.target.value)}
-        placeholder="Enter location"
-        className={`h-12 ${error ? "border-red-500" : ""}`}
-        required
-      />
-      {isLoading && (
-        <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-          <Loader2 className="h-4 w-4 animate-spin" />
-        </div>
-      )}
+      <Select value={selectedState} onValueChange={handleStateChange}>
+        <SelectTrigger className="h-12">
+          <SelectValue placeholder="Select a state" />
+        </SelectTrigger>
+        <SelectContent>
+          {US_STATES.map((state) => (
+            <SelectItem key={state.abbreviation} value={state.abbreviation}>
+              {state.name}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
       {error && <p className="text-sm text-red-500 mt-1">{error}</p>}
     </div>
   );
