@@ -92,42 +92,40 @@ export default function SearchBar() {
   return (
     <div className="w-full relative">
       <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger asChild>
-          <div className="flex items-center w-full">
-            <div className="relative flex-1">
-              <Input
-                type="text"
-                placeholder="Search cards..."
-                value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  if (e.target.value) {
-                    setOpen(true);
-                  }
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    handleSearch();
-                  }
-                }}
-                className="pr-10"
-              />
-              <Button
-                variant="ghost"
-                size="icon"
-                className="absolute right-0 top-0 h-full"
-                onClick={() => handleSearch()}
-              >
-                {isLoading ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Search className="h-4 w-4" />
-                )}
-                <span className="sr-only">Search</span>
-              </Button>
-            </div>
+        <div className="flex items-center w-full">
+          <div className="relative flex-1">
+            <Input
+              type="text"
+              placeholder="Search cards..."
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                if (e.target.value) {
+                  setOpen(true);
+                }
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  handleSearch();
+                }
+              }}
+              className="pr-10"
+            />
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute right-0 top-0 h-full"
+              onClick={() => handleSearch()}
+            >
+              {isLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Search className="h-4 w-4" />
+              )}
+              <span className="sr-only">Search</span>
+            </Button>
           </div>
-        </PopoverTrigger>
+        </div>
         <PopoverContent 
           className="p-0 w-[var(--radix-popover-trigger-width)] max-h-[300px] overflow-auto" 
           align="start"
