@@ -31,6 +31,7 @@ const AuthError: React.FC<AuthErrorProps> = ({ error, errorCode, onClose }) => {
 
       case "auth/user-not-found":
       case "auth/invalid-login-credentials":  // Firebase sometimes returns this code instead
+      case "auth/invalid-credential":  // New Firebase error code
         return {
           title: "Account Not Found",
           description: (
