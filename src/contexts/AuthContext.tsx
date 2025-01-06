@@ -149,8 +149,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       await signInWithEmailAndPassword(auth, email, password);
     } catch (err: any) {
-      setError(err.message);
-      throw err;
+      // Ensure we preserve the Firebase error code
+      const error = new Error(err.message);
+      error.name = err.code || 'auth/unknown';
+      setError(error.message);
+      throw error;
     }
   };
 
