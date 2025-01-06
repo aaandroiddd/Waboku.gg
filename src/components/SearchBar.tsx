@@ -120,11 +120,11 @@ export default function SearchBar() {
       
       const data = await response.json();
       return (data.data || []).slice(0, 10).map((card: any) => ({
-        id: card.id,
+        id: card.id || card._id,
         name: card.name,
-        card_number: card.code,
-        set_name: card.set.name,
-        image_url: card.images.small,
+        card_number: card.code || card.card_number,
+        set_name: card.set?.name || card.set_name || 'Unknown Set',
+        image_url: card.image_url || card.images?.small || card.image,
         type: 'onepiece' as const
       }));
     } catch (error) {
