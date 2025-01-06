@@ -166,7 +166,7 @@ export default function SearchBar() {
                     {cards.map((card) => (
                       <CommandItem
                         key={card.id}
-                        onSelect={() => handleSearch(card.id)}
+                        onSelect={() => handleSearch(card)}
                         className="flex items-center gap-2 cursor-pointer p-2 hover:bg-accent"
                       >
                         {card.images?.small && (
