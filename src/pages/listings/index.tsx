@@ -239,11 +239,10 @@ export default function ListingsPage() {
             <div className="mb-8">
               <div className="flex flex-col sm:flex-row gap-4">
                 <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
                   <Input
                     type="text"
                     placeholder="Search for cards..."
-                    className="pl-10 h-12 w-full"
+                    className="pr-10 h-12 w-full"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     onKeyDown={(e) => {
@@ -252,9 +251,10 @@ export default function ListingsPage() {
                       }
                     }}
                   />
+                  <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
                 </div>
                 
-                <div className="flex gap-2">
+                <div className="flex gap-2 items-center">
                   <Popover open={stateOpen} onOpenChange={setStateOpen}>
                     <PopoverTrigger asChild>
                       <Button
@@ -417,6 +417,27 @@ export default function ListingsPage() {
                   <Button className="h-12 w-12" size="icon" onClick={handleSearch}>
                     <Search className="h-5 w-5" />
                   </Button>
+
+                  <div className="inline-flex rounded-lg border bg-card p-1 h-12">
+                    <Button
+                      variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
+                      size="sm"
+                      className="px-3"
+                      onClick={() => setViewMode('grid')}
+                    >
+                      <LayoutGrid className="h-4 w-4 mr-2" />
+                      Grid
+                    </Button>
+                    <Button
+                      variant={viewMode === 'list' ? 'secondary' : 'ghost'}
+                      size="sm"
+                      className="px-3"
+                      onClick={() => setViewMode('list')}
+                    >
+                      <List className="h-4 w-4 mr-2" />
+                      List
+                    </Button>
+                  </div>
                 </div>
               </div>
             </div>
