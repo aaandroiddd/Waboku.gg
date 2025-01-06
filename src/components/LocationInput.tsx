@@ -23,6 +23,7 @@ interface LocationInputProps {
 }
 
 const US_STATES = [
+  { name: 'All locations', abbreviation: 'ALL' },
   { name: 'Alabama', abbreviation: 'AL' },
   { name: 'Alaska', abbreviation: 'AK' },
   { name: 'Arizona', abbreviation: 'AZ' },
@@ -75,7 +76,7 @@ const US_STATES = [
   { name: 'Wyoming', abbreviation: 'WY' }
 ];
 
-export function LocationInput({ onLocationSelect, initialState = "", error }: LocationInputProps) {
+export function LocationInput({ onLocationSelect, initialState = "ALL", error }: LocationInputProps) {
   const [open, setOpen] = useState(false)
   const [selectedState, setSelectedState] = useState(initialState)
 
@@ -90,7 +91,7 @@ export function LocationInput({ onLocationSelect, initialState = "", error }: Lo
 
   const selectedStateName = US_STATES.find(
     state => state.abbreviation === selectedState
-  )?.name || "";
+  )?.name || "All locations";
 
   return (
     <div className="relative">
@@ -102,17 +103,17 @@ export function LocationInput({ onLocationSelect, initialState = "", error }: Lo
             aria-expanded={open}
             className="h-12 w-full justify-between text-center relative px-8"
           >
-            {selectedState ? selectedStateName : "Select a state..."}
+            {selectedStateName}
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-[180px] p-0" align="start">
           <Command>
             <CommandInput 
-              placeholder="Search states..."
+              placeholder="Search locations..."
               className="h-12"
             />
-            <CommandEmpty>No state found.</CommandEmpty>
+            <CommandEmpty>No location found.</CommandEmpty>
             <CommandGroup className="max-h-[300px] overflow-y-auto">
               {US_STATES.map((state) => (
                 <CommandItem
