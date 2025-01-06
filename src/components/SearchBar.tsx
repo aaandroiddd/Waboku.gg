@@ -107,18 +107,34 @@ export default function SearchBar() {
 
   const searchOnePieceCards = async (query: string) => {
     try {
-      const response = await fetch(`https://apitcg.com/api/one-piece/cards?property=name&value=${encodeURIComponent(query)}`, {
+      console.log('Fetching One Piece cards with query:', query);
+      const apiUrl = `https://apitcg.com/api/one-piece/cards?property=name&value=${encodeURIComponent(query)}`;
+      console.log('One Piece API URL:', apiUrl);
+      
+      const response = await fetch(apiUrl, {
         headers: {
           'x-api-key': process.env.NEXT_PUBLIC_APITCG_API_KEY || ''
         }
       });
       
       if (!response.ok) {
-        console.error('One Piece TCG API request failed');
+        const errorText = await response.text();
+        console.error('One Piece TCG API request failed:', {
+          status: response.status,
+          statusText: response.statusText,
+          error: errorText
+        });
         return [];
       }
       
       const data = await response.json();
+      console.log('One Piece API response:', data);
+      
+      if (!data.data || !Array.isArray(data.data)) {
+        console.error('Unexpected One Piece API response format:', data);
+        return [];
+      }
+      
       return (data.data || []).slice(0, 10).map((card: any) => ({
         id: card.id,
         name: card.name,
