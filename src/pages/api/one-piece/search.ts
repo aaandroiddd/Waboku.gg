@@ -16,14 +16,15 @@ export default async function handler(
       `https://apitcg.com/api/one-piece/cards?property=name&value=${encodeURIComponent(query)}`,
       {
         headers: {
-          "Authorization": `Bearer ${apiKey}`,
+          "x-api-key": apiKey || "",
           "Accept": "application/json",
         },
       }
     );
 
     if (!response.ok) {
-      throw new Error(`API responded with status: ${response.status}`);
+      const errorData = await response.json();
+      throw new Error(errorData.error || `API responded with status: ${response.status}`);
     }
 
     const data = await response.json();
