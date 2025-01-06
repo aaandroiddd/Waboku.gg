@@ -367,17 +367,10 @@ export default function Home() {
                   {/* Desktop Search Controls */}
                   <div className="hidden sm:flex gap-4">
                     <div className="relative flex-1">
-                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
-                      <Input
-                        type="text"
-                        placeholder="Search for cards..."
-                        className="pl-10 h-12 w-full"
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            handleSearch();
-                          }
+                      <SearchBar
+                        onSelect={(cardName) => {
+                          setSearchQuery(cardName);
+                          handleSearch();
                         }}
                       />
                     </div>
