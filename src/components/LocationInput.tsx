@@ -85,28 +85,22 @@ export function LocationInput({ onLocationSelect, initialCity = "", initialState
   }, [onLocationSelect, initialCity, initialState]);
 
   return (
-    <div className="space-y-2">
-      <Label htmlFor="location">Location *</Label>
-      <div className="relative">
-        <Input
-          ref={inputRef}
-          id="location"
-          value={inputValue}
-          onChange={(e) => setInputValue(e.target.value)}
-          placeholder="Enter city name"
-          className={error ? "border-red-500" : ""}
-          required
-        />
-        {isLoading && (
-          <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-            <Loader2 className="h-4 w-4 animate-spin" />
-          </div>
-        )}
-      </div>
-      {error && <p className="text-sm text-red-500">{error}</p>}
-      <p className="text-sm text-muted-foreground">
-        Start typing a city name and select from the dropdown
-      </p>
+    <div className="relative">
+      <Input
+        ref={inputRef}
+        id="location"
+        value={inputValue}
+        onChange={(e) => setInputValue(e.target.value)}
+        placeholder="Enter location"
+        className={`h-12 ${error ? "border-red-500" : ""}`}
+        required
+      />
+      {isLoading && (
+        <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+          <Loader2 className="h-4 w-4 animate-spin" />
+        </div>
+      )}
+      {error && <p className="text-sm text-red-500 mt-1">{error}</p>}
     </div>
   );
 }
