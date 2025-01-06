@@ -106,9 +106,9 @@ export function LocationInput({ onLocationSelect, initialState = "", error }: Lo
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-full p-0">
+        <PopoverContent className="w-[200px] p-0" align="start">
           <Command>
-            <CommandInput placeholder="Search states..." />
+            <CommandInput placeholder="Search states..." className="w-full" />
             <CommandEmpty>No state found.</CommandEmpty>
             <CommandGroup className="max-h-[300px] overflow-y-auto">
               {US_STATES.map((state) => (
