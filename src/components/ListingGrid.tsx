@@ -100,8 +100,8 @@ export function ListingGrid({
   const displayedListings = listings.slice(0, displayCount);
 
   return (
-    <div className="space-y-8">
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+    <div className="space-y-4 sm:space-y-8">
+      <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-4">
         {displayedListings.map((listing) => (
           <Card key={listing.id} className="relative overflow-hidden group transition-all duration-200 hover:bg-accent/50 hover:shadow-lg hover:-translate-y-1">
             <Link href={`/listings/${listing.id}`}>
