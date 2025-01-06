@@ -27,7 +27,15 @@ const MAX_TITLE_LENGTH = 100;
 const MAX_DESCRIPTION_LENGTH = 1000;
 const ALLOWED_FILE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
+const GAME_MAPPING: { [key: string]: string } = {
+  'Pokemon TCG': 'pokemon',
+  'One Piece TCG': 'onepiece',
+  'Dragon Ball Fusion': 'dbs',
+};
+
 const CreateListingPage = () => {
+  const { results, isLoading, searchCards } = useCardSearch();
+  const [searchOpen, setSearchOpen] = useState(false);
   const { user, loading } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
