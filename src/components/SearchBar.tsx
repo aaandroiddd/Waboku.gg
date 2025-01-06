@@ -108,14 +108,7 @@ export default function SearchBar() {
   const searchOnePieceCards = async (query: string) => {
     try {
       console.log('Fetching One Piece cards with query:', query);
-      const apiUrl = `https://apitcg.com/api/one-piece/cards?property=name&value=${encodeURIComponent(query)}`;
-      console.log('One Piece API URL:', apiUrl);
-      
-      const response = await fetch(apiUrl, {
-        headers: {
-          'x-api-key': process.env.NEXT_PUBLIC_APITCG_API_KEY || ''
-        }
-      });
+      const response = await fetch(`/api/one-piece/search?query=${encodeURIComponent(query)}`);
       
       if (!response.ok) {
         const errorText = await response.text();
