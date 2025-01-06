@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/router";
+import SearchBar from "@/components/SearchBar";
 import { useGeolocation, calculateDistance } from "@/hooks/useGeolocation";
 import { Footer } from "@/components/Footer";
 import { getFirestore, collection, query, orderBy, getDocs, limit } from 'firebase/firestore';
