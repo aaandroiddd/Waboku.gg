@@ -1,20 +1,22 @@
-import { useState, useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
-
-declare global {
-  interface Window {
-    google: any;
-  }
-}
+import { Alert } from "@/components/ui/alert";
 
 interface LocationInputProps {
   onLocationSelect: (city: string, state: string) => void;
   initialCity?: string;
   initialState?: string;
   error?: string;
+}
+
+declare global {
+  interface Window {
+    google: any;
+  }
 }
 
 export function LocationInput({ onLocationSelect, initialCity = "", initialState = "", error }: LocationInputProps) {
