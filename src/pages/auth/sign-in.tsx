@@ -60,77 +60,44 @@ function SignInComponent() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
+    setAuthError(null);
     setIsLoading(true);
 
     if (!email || !password) {
-      setError("Please enter both email and password");
+      const error = new Error("Please enter both email and password");
+      error.name = "auth/missing-fields";
+      setAuthError(error);
       setIsLoading(false);
       return;
     }
 
     try {
-      console.log('Checking network connectivity...');
       if (!navigator.onLine) {
-        throw new Error('No internet connection. Please check your network and try again.');
+        const error = new Error("No internet connection");
+        error.name = "auth/network-request-failed";
+        throw error;
       }
 
-      console.log('Checking Firebase configuration...');
-      const configStatus = {
-        apiKeyPresent: !!process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-        authDomainPresent: !!process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-        projectIdPresent: !!process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID
-      };
-      
-      console.log('Firebase Config Status:', configStatus);
-      
-      if (!configStatus.apiKeyPresent || !configStatus.authDomainPresent || !configStatus.projectIdPresent) {
-        throw new Error('Authentication service configuration is incomplete. Please contact support.');
-      }
-
-      console.log('Validating input...');
       // Basic email validation
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(email)) {
-        throw new Error('Please enter a valid email address.');
+        const error = new Error("Invalid email format");
+        error.name = "auth/invalid-email";
+        throw error;
       }
 
-      // Basic password validation
-      if (password.length < 6) {
-        throw new Error('Password must be at least 6 characters long.');
-      }
-
-      console.log('Attempting to sign in...');
       await signIn(email, password);
-      
-      console.log('Sign in successful');
     } catch (err: any) {
-      console.error('Sign in error:', {
-        errorCode: err.code || 'unknown',
-        errorName: err.name,
-        errorMessage: err.message,
+      console.error("Sign in error:", {
+        code: err.code || err.name,
+        message: err.message,
         timestamp: new Date().toISOString()
       });
       
-      let errorMessage = 'Failed to sign in. Please try again.';
-      
-      if (err.code === 'auth/invalid-email' || err.message.includes('valid email')) {
-        errorMessage = 'Please enter a valid email address.';
-      } else if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') {
-        errorMessage = 'No account found with this email address. Please check your email or sign up for a new account.';
-      } else if (err.code === 'auth/wrong-password') {
-        errorMessage = 'Incorrect password. Please try again.';
-      } else if (err.code === 'auth/too-many-requests') {
-        errorMessage = 'Too many failed attempts. Please try again later.';
-      } else if (err.code === 'auth/network-request-failed' || !navigator.onLine || err.message.includes('network')) {
-        errorMessage = 'Network error. Please check your internet connection and try again.';
-      } else if (err.message.includes('Firebase') || err.message.includes('configuration')) {
-        errorMessage = 'Authentication service configuration error. Please try again later.';
-      } else if (err.message) {
-        errorMessage = err.message;
-      }
-      
-      setError(errorMessage);
+      // Convert any error to a proper Error object with name property
+      const error = new Error(err.message || "Failed to sign in");
+      error.name = err.code || err.name || "auth/unknown";
+      setAuthError(error);
     } finally {
       setIsLoading(false);
     }
