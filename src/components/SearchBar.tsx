@@ -92,25 +92,26 @@ export default function SearchBar() {
   return (
     <div className="w-full relative">
       <Popover open={open} onOpenChange={setOpen}>
-        <div className="flex items-center w-full">
-          <div className="relative flex-1">
-            <Input
-              type="text"
-              placeholder="Search cards..."
-              value={searchQuery}
-              onChange={(e) => {
-                setSearchQuery(e.target.value);
-                if (e.target.value) {
-                  setOpen(true);
-                }
-              }}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  handleSearch();
-                }
-              }}
-              className="pr-10"
-            />
+        <PopoverTrigger asChild>
+          <div className="flex items-center w-full">
+            <div className="relative flex-1">
+              <Input
+                type="text"
+                placeholder="Search cards..."
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  if (e.target.value) {
+                    setOpen(true);
+                  }
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    handleSearch();
+                  }
+                }}
+                className="pr-10"
+              />
             <Button
               variant="ghost"
               size="icon"
