@@ -107,7 +107,7 @@ export default function SearchBar() {
 
   const searchOnePieceCards = async (query: string) => {
     try {
-      const response = await fetch(`https://apitcg.com/api/one-piece/cards?name=${encodeURIComponent(query)}`, {
+      const response = await fetch(`https://apitcg.com/api/one-piece/cards?property=name&value=${encodeURIComponent(query)}`, {
         headers: {
           'Authorization': `Bearer ${process.env.NEXT_PUBLIC_APITCG_API_KEY}`
         }
@@ -122,9 +122,9 @@ export default function SearchBar() {
       return (data.data || []).slice(0, 10).map((card: any) => ({
         id: card.id,
         name: card.name,
-        card_number: card.card_number,
-        set_name: card.set_name,
-        image_url: card.image_url,
+        card_number: card.code,
+        set_name: card.set.name,
+        image_url: card.images.small,
         type: 'onepiece' as const
       }));
     } catch (error) {
