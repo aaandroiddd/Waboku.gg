@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react';
 import { Listing } from '@/types/database';
 import { ListingGrid } from '@/components/ListingGrid';
+import { SearchListingList } from '@/components/SearchListingList';
 import Head from 'next/head';
 import Header from '@/components/Header';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useRouter } from 'next/router';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Search, MapPin, Filter, Check } from 'lucide-react';
+import { Search, MapPin, Filter, Check, LayoutGrid, List } from 'lucide-react';
 import { useListings } from '@/hooks/useListings';
 import {
   Select,
