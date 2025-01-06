@@ -36,23 +36,23 @@ export default async function handler(
       throw new Error(`API responded with status: ${response.status}`);
     }
 
-    const rawData = await response.json();
+    const data = await response.json();
     
-    // Transform the API response to match expected format
-    const transformedData = {
-      data: Array.isArray(rawData) ? rawData.map((card: any) => ({
-        id: card.id || `dbf-${Math.random().toString(36).substr(2, 9)}`,
-        name: card.name || "Unknown Card",
-        images: {
-          small: card.imageUrl || card.image || "",
-        },
-        set: {
-          name: card.setName || card.set?.name || "Unknown Set"
-        }
-      })) : []
-    };
-
-    res.status(200).json(transformedData);
+    // The API already returns the correct structure with data array
+    // We just need to ensure it matches our frontend expectations
+    if (data && Array.isArray(data.data)) {
+      res.status(200).json({
+        data: data.data.map((card: any) => ({
+          id: card.id,
+          name: card.name,
+          images: card.images,
+          game: 'Dragon Ball Fusion',
+          set: card.set
+        }))
+      });
+    } else {
+      res.status(200).json({ data: [] });
+    }
   } catch (error) {
     console.error("Dragon Ball Fusion API Error:", error);
     res.status(500).json({ error: "Failed to fetch Dragon Ball Fusion cards" });
