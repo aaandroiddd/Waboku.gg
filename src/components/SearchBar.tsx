@@ -67,7 +67,7 @@ export default function SearchBar() {
 
   // Debounce the search to prevent too many API calls
   const debouncedSearch = useCallback(
-    debounce((query: string) => searchCards(query), 500),
+    debounce((query: string) => searchCards(query), 3000),
     []
   );
 
