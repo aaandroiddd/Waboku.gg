@@ -42,7 +42,16 @@ interface MtgCard {
   type: 'mtg';
 }
 
-type Card = PokemonCard | MtgCard;
+interface OnePieceCard {
+  id: string;
+  name: string;
+  card_number: string;
+  set_name: string;
+  image_url: string;
+  type: 'onepiece';
+}
+
+type Card = PokemonCard | MtgCard | OnePieceCard;
 
 export default function SearchBar() {
   const router = useRouter();
@@ -96,6 +105,34 @@ export default function SearchBar() {
     }
   };
 
+  const searchOnePieceCards = async (query: string) => {
+    try {
+      const response = await fetch(`https://apitcg.com/api/one-piece/cards?name=${encodeURIComponent(query)}`, {
+        headers: {
+          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_APITCG_API_KEY}`
+        }
+      });
+      
+      if (!response.ok) {
+        console.error('One Piece TCG API request failed');
+        return [];
+      }
+      
+      const data = await response.json();
+      return (data.data || []).slice(0, 10).map((card: any) => ({
+        id: card.id,
+        name: card.name,
+        card_number: card.card_number,
+        set_name: card.set_name,
+        image_url: card.image_url,
+        type: 'onepiece' as const
+      }));
+    } catch (error) {
+      console.error('Error fetching One Piece cards:', error);
+      return [];
+    }
+  };
+
   const searchCards = async (query: string) => {
     if (!query) {
       setCards([]);
@@ -105,13 +142,14 @@ export default function SearchBar() {
 
     setIsLoading(true);
     try {
-      const [pokemonCards, mtgCards] = await Promise.all([
+      const [pokemonCards, mtgCards, onePieceCards] = await Promise.all([
         searchPokemonCards(query),
-        searchMtgCards(query)
+        searchMtgCards(query),
+        searchOnePieceCards(query)
       ]);
       
       // Combine and sort results by name
-      const combinedCards = [...pokemonCards, ...mtgCards]
+      const combinedCards = [...pokemonCards, ...mtgCards, ...onePieceCards]
         .sort((a, b) => a.name.localeCompare(b.name));
       
       setCards(combinedCards);
@@ -150,9 +188,18 @@ export default function SearchBar() {
 
   const handleSearch = (card?: Card) => {
     if (card) {
-      const searchTerm = card.type === 'pokemon'
-        ? `${card.name} ${card.number}`
-        : `${card.name} ${card.collector_number}`;
+      let searchTerm;
+      switch (card.type) {
+        case 'pokemon':
+          searchTerm = `${card.name} ${card.number}`;
+          break;
+        case 'mtg':
+          searchTerm = `${card.name} ${card.collector_number}`;
+          break;
+        case 'onepiece':
+          searchTerm = `${card.name} ${card.card_number}`;
+          break;
+      }
       
       router.push({
         pathname: '/listings',
@@ -176,8 +223,10 @@ export default function SearchBar() {
   const getCardImage = (card: Card) => {
     if (card.type === 'pokemon') {
       return card.images?.small;
-    } else {
+    } else if (card.type === 'mtg') {
       return card.image_uris?.small || card.card_faces?.[0]?.image_uris?.small;
+    } else {
+      return card.image_url;
     }
   };
 
@@ -190,13 +239,21 @@ export default function SearchBar() {
         number: card.number,
         game: 'Pokémon TCG'
       };
-    } else {
+    } else if (card.type === 'mtg') {
       return {
         name: card.name,
         set: card.set_name,
         series: '',
         number: card.collector_number,
         game: 'Magic: The Gathering'
+      };
+    } else {
+      return {
+        name: card.name,
+        set: card.set_name,
+        series: '',
+        number: card.card_number,
+        game: 'One Piece TCG'
       };
     }
   };
@@ -208,7 +265,7 @@ export default function SearchBar() {
           <div className="relative w-full">
             <Input
               type="text"
-              placeholder="Search for Pokémon or Magic cards..."
+              placeholder="Search for Pokémon, Magic, or One Piece cards..."
               value={searchQuery}
               onChange={(e) => {
                 const value = e.target.value;
