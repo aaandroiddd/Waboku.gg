@@ -344,7 +344,7 @@ export default function Home() {
                     </div>
                     
                     <div className="flex">
-                      <div className="w-[300px]">
+                      <div className="w-[180px]">
                         <LocationInput
                           onLocationSelect={(city, state) => {
                             setSelectedState(state.toLowerCase());
