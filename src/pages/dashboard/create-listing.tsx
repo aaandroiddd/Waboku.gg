@@ -216,6 +216,77 @@ const CreateListingPage = () => {
               <div className="space-y-6">
                 <div className="space-y-2">
                   <div className="flex items-center space-x-2">
+                    <Label>Search Card (Optional)</Label>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger>
+                          <HelpCircle className="h-4 w-4 text-muted-foreground" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p className="max-w-xs">Search for your card to auto-fill details</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
+                  <Popover open={searchOpen} onOpenChange={setSearchOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={searchOpen}
+                        className="w-full justify-start text-left font-normal"
+                      >
+                        <span className="text-muted-foreground">Search for a card...</span>
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-full p-0" align="start">
+                      <Command>
+                        <CommandInput
+                          placeholder="Type card name..."
+                          onValueChange={(search) => {
+                            if (search.length >= 2) {
+                              searchCards(search);
+                            }
+                          }}
+                        />
+                        <CommandEmpty>No cards found.</CommandEmpty>
+                        <CommandGroup className="max-h-[300px] overflow-auto">
+                          {results.map((card) => (
+                            <CommandItem
+                              key={card.id}
+                              value={card.name}
+                              onSelect={() => {
+                                setFormData(prev => ({
+                                  ...prev,
+                                  title: `${card.name} - ${card.set?.name || 'Unknown Set'}`,
+                                  game: GAME_MAPPING[card.game] || 'other'
+                                }));
+                                setSearchOpen(false);
+                              }}
+                              className="flex items-center gap-2"
+                            >
+                              {card.imageUrl && (
+                                <img
+                                  src={card.imageUrl}
+                                  alt={card.name}
+                                  className="w-8 h-8 object-cover rounded"
+                                />
+                              )}
+                              <div>
+                                <div>{card.name}</div>
+                                <div className="text-sm text-muted-foreground">
+                                  {card.game} - {card.set?.name || 'Unknown Set'}
+                                </div>
+                              </div>
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex items-center space-x-2">
                     <Label htmlFor="title">Listing Title *</Label>
                     <TooltipProvider>
                       <Tooltip>
