@@ -30,8 +30,8 @@ export default function SearchBar() {
   const [open, setOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [isTyping, setIsTyping] = useState(false);
   const [cards, setCards] = useState<Card[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
 
   const searchCards = async (query: string) => {
     if (!query) {
@@ -61,24 +61,25 @@ export default function SearchBar() {
       setOpen(false);
     } finally {
       setIsLoading(false);
-      setIsTyping(false);
     }
   };
 
   // Debounce the search to prevent too many API calls
   const debouncedSearch = useCallback(
-    debounce((query: string) => searchCards(query), 200),
+    debounce((query: string) => {
+      setShowSuggestions(true);
+      searchCards(query);
+    }, 500),
     []
   );
 
   useEffect(() => {
+    setShowSuggestions(false);
     if (searchQuery) {
-      setIsTyping(true);
       debouncedSearch(searchQuery);
     } else {
       setCards([]);
       setOpen(false);
-      setIsTyping(false);
     }
 
     return () => {
@@ -94,6 +95,7 @@ export default function SearchBar() {
         query: { query: queryToUse.trim() }
       });
       setOpen(false);
+      setShowSuggestions(false);
     }
   };
 
@@ -105,7 +107,7 @@ export default function SearchBar() {
             <div className="relative flex-1">
               <Input
                 type="text"
-                placeholder="Search cards..."
+                placeholder="Search cards... (type and wait for suggestions)"
                 value={searchQuery}
                 onChange={(e) => {
                   const value = e.target.value;
@@ -124,7 +126,7 @@ export default function SearchBar() {
                 className="absolute right-0 top-0 h-full"
                 onClick={() => handleSearch()}
               >
-                {(isLoading || isTyping) ? (
+                {isLoading ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
                   <Search className="h-4 w-4" />
@@ -134,7 +136,7 @@ export default function SearchBar() {
             </div>
           </div>
         </PopoverTrigger>
-        {searchQuery && (
+        {searchQuery && showSuggestions && (
           <PopoverContent 
             className="p-0 w-[var(--radix-popover-trigger-width)] max-h-[300px] overflow-auto" 
             align="start"
@@ -142,15 +144,10 @@ export default function SearchBar() {
           >
             <Command>
               <CommandList>
-                {isTyping ? (
+                {isLoading ? (
                   <div className="flex items-center justify-center p-4">
                     <Loader2 className="h-4 w-4 animate-spin" />
                     <span className="ml-2">Loading suggestions...</span>
-                  </div>
-                ) : isLoading ? (
-                  <div className="flex items-center justify-center p-4">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    <span className="ml-2">Searching...</span>
                   </div>
                 ) : cards.length === 0 ? (
                   <CommandEmpty>No results found.</CommandEmpty>
