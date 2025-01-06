@@ -34,7 +34,7 @@ export function ListingsSearchBar({
         placeholder={placeholder}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="pl-9 w-full"
+        className="pl-9 w-full h-10"
         autoFocus
       />
     </div>
