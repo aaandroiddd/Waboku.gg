@@ -142,11 +142,10 @@ function SignInComponent() {
         </CardHeader>
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-4">
-            {error && (
-              <Alert variant="destructive">
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            )}
+            <AuthError 
+              error={authError}
+              onClose={() => setAuthError(null)}
+            />
             <div className="space-y-2">
               <label htmlFor="email" className="text-sm font-medium">
                 Email
