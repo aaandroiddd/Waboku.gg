@@ -90,7 +90,7 @@ export default function SearchBar() {
   };
 
   return (
-    <div className="w-full max-w-md relative">
+    <div className="w-full relative">
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <div className="flex items-center w-full">
