@@ -34,7 +34,7 @@ export default function SearchBar() {
   const [cards, setCards] = useState<Card[]>([]);
 
   const searchCards = async (query: string) => {
-    if (!query || query.length < 2) {
+    if (!query || query.length < 4) {
       setCards([]);
       setOpen(false);
       return;
@@ -54,10 +54,12 @@ export default function SearchBar() {
       
       const data = await response.json();
       setCards(data.data || []);
-      setOpen(true);
+      // Only open if we have results
+      setOpen(data.data && data.data.length > 0);
     } catch (error) {
       console.error('Error fetching cards:', error);
       setCards([]);
+      setOpen(false);
     } finally {
       setIsLoading(false);
     }
@@ -65,7 +67,7 @@ export default function SearchBar() {
 
   // Debounce the search to prevent too many API calls
   const debouncedSearch = useCallback(
-    debounce((query: string) => searchCards(query), 300),
+    debounce((query: string) => searchCards(query), 500),
     []
   );
 
@@ -102,12 +104,6 @@ export default function SearchBar() {
                 onChange={(e) => {
                   const value = e.target.value;
                   setSearchQuery(value);
-                  // Only show popover if there's actual input
-                  if (value.length >= 2) {
-                    setOpen(true);
-                  } else {
-                    setOpen(false);
-                  }
                 }}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
@@ -132,7 +128,7 @@ export default function SearchBar() {
             </div>
           </div>
         </PopoverTrigger>
-        {searchQuery.length >= 2 && (
+        {searchQuery.length >= 4 && (
           <PopoverContent 
             className="p-0 w-[var(--radix-popover-trigger-width)] max-h-[300px] overflow-auto" 
             align="start"
