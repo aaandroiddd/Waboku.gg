@@ -414,7 +414,12 @@ export default function ListingsPage() {
                     </SheetContent>
                   </Sheet>
 
-                  <Button className="h-12 w-12" size="icon" onClick={handleSearch}>
+                  <Button 
+                    variant="outline"
+                    className="h-12 w-12" 
+                    size="icon" 
+                    onClick={handleSearch}
+                  >
                     <Search className="h-5 w-5" />
                   </Button>
 
