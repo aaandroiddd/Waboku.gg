@@ -317,47 +317,13 @@ export default function Home() {
                     </div>
                     
                     <div className="flex gap-2">
-                      <Popover open={stateOpen} onOpenChange={setStateOpen}>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="outline"
-                            className="h-12 flex-1 justify-start"
-                          >
-                            <MapPin className="h-5 w-5 mr-2" />
-                            {selectedState === "all" 
-                              ? "All Locations" 
-                              : usStates.find((state) => state.value === selectedState)?.label || "Select location"}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-[280px] p-0">
-                          <Command>
-                            <CommandInput placeholder="Search state..." className="h-9" />
-                            <CommandEmpty>No state found.</CommandEmpty>
-                            <CommandList>
-                              <CommandGroup>
-                                {usStates.map((state) => (
-                                  <CommandItem
-                                    key={state.value}
-                                    value={state.label}
-                                    onSelect={() => {
-                                      setSelectedState(state.value);
-                                      setStateOpen(false);
-                                    }}
-                                    className="cursor-pointer"
-                                  >
-                                    <Check
-                                      className={`mr-2 h-4 w-4 ${
-                                        selectedState === state.value ? "opacity-100" : "opacity-0"
-                                      }`}
-                                    />
-                                    {state.label}
-                                  </CommandItem>
-                                ))}
-                              </CommandGroup>
-                            </CommandList>
-                          </Command>
-                        </PopoverContent>
-                      </Popover>
+                      <div className="flex-1">
+                      <LocationInput
+                        onLocationSelect={(city, state) => {
+                          setSelectedState(state.toLowerCase());
+                        }}
+                      />
+                    </div>
 
                       <Button className="h-12 px-8" onClick={handleSearch}>
                         <Search className="h-5 w-5" />
