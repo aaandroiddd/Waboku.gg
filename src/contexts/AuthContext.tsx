@@ -147,7 +147,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signIn = async (email: string, password: string) => {
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      // First, try to fetch user data by email from Firestore
+      const usersRef = collection(db, 'users');
+      const q = query(usersRef, where('email', '==', email));
+      const querySnapshot = await getDocs(q);
+      
+      if (querySnapshot.empty) {
+        // If no user found with this email
+        const error = new Error('No account found with this email address');
+        error.name = 'auth/user-not-found';
+        throw error;
+      }
+
+      // If user exists, try to sign in
+      try {
+        await signInWithEmailAndPassword(auth, email, password);
+      } catch (err: any) {
+        // If sign in fails after we found the email, it means password is wrong
+        const error = new Error('Incorrect password');
+        error.name = 'auth/wrong-password';
+        throw error;
+      }
     } catch (err: any) {
       // Ensure we preserve the Firebase error code
       const error = new Error(err.message);
