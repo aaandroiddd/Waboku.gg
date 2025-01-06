@@ -11,9 +11,10 @@ import {
 } from "@/components/ui/command"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Search, Loader2 } from "lucide-react";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import debounce from 'lodash/debounce';
 
-interface Card {
+interface PokemonCard {
   id: string;
   name: string;
   number: string;
@@ -24,7 +25,28 @@ interface Card {
   images: {
     small: string;
   };
+  type: 'pokemon';
 }
+
+interface MtgCard {
+  id: string;
+  name: string;
+  collector_number: string;
+  set_name: string;
+  image_uris?: {
+    small: string;
+  };
+  card_faces?: Array<{
+    image_uris?: {
+      small: string;
+    };
+  }>;
+  type: 'mtg';
+}
+
+type Card = PokemonCard | MtgCard;
+
+type GameType = 'pokemon' | 'mtg';
 
 export default function SearchBar() {
   const router = useRouter();
@@ -33,6 +55,39 @@ export default function SearchBar() {
   const [isLoading, setIsLoading] = useState(false);
   const [cards, setCards] = useState<Card[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [selectedGame, setSelectedGame] = useState<GameType>('pokemon');
+
+  const searchPokemonCards = async (query: string) => {
+    const response = await fetch(`https://api.pokemontcg.io/v2/cards?q=name:"${query}*"&orderBy=name&pageSize=20`, {
+      headers: {
+        'X-Api-Key': process.env.NEXT_PUBLIC_POKEMON_TCG_API_KEY || ''
+      }
+    });
+    
+    if (!response.ok) {
+      throw new Error('Pokemon API request failed');
+    }
+    
+    const data = await response.json();
+    return (data.data || []).map((card: any) => ({
+      ...card,
+      type: 'pokemon' as const
+    }));
+  };
+
+  const searchMtgCards = async (query: string) => {
+    const response = await fetch(`https://api.scryfall.com/cards/search?q=${encodeURIComponent(query)}&order=name&unique=prints`);
+    
+    if (!response.ok) {
+      throw new Error('MTG API request failed');
+    }
+    
+    const data = await response.json();
+    return (data.data || []).map((card: any) => ({
+      ...card,
+      type: 'mtg' as const
+    }));
+  };
 
   const searchCards = async (query: string) => {
     if (!query) {
@@ -43,18 +98,11 @@ export default function SearchBar() {
 
     setIsLoading(true);
     try {
-      const response = await fetch(`https://api.pokemontcg.io/v2/cards?q=name:"${query}*"&orderBy=name&pageSize=20`, {
-        headers: {
-          'X-Api-Key': process.env.NEXT_PUBLIC_POKEMON_TCG_API_KEY || ''
-        }
-      });
+      const cards = selectedGame === 'pokemon' 
+        ? await searchPokemonCards(query)
+        : await searchMtgCards(query);
       
-      if (!response.ok) {
-        throw new Error('API request failed');
-      }
-      
-      const data = await response.json();
-      setCards(data.data || []);
+      setCards(cards.slice(0, 20));
       setOpen(true);
     } catch (error) {
       console.error('Error fetching cards:', error);
@@ -71,7 +119,7 @@ export default function SearchBar() {
       setShowSuggestions(true);
       searchCards(query);
     }, 500),
-    []
+    [selectedGame]
   );
 
   useEffect(() => {
@@ -90,33 +138,84 @@ export default function SearchBar() {
 
   const handleSearch = (card?: Card) => {
     if (card) {
-      const searchTerm = `${card.name} ${card.number}`.trim();
+      const searchTerm = card.type === 'pokemon'
+        ? `${card.name} ${card.number}`
+        : `${card.name} ${card.collector_number}`;
+      
       router.push({
         pathname: '/listings',
-        query: { query: searchTerm }
+        query: { 
+          query: searchTerm.trim(),
+          game: card.type
+        }
       });
     } else if (searchQuery.trim()) {
       router.push({
         pathname: '/listings',
-        query: { query: searchQuery.trim() }
+        query: { 
+          query: searchQuery.trim(),
+          game: selectedGame
+        }
       });
     }
     setOpen(false);
     setShowSuggestions(false);
   };
 
-  const getCardDisplayName = (card: Card) => {
-    return `${card.name} - ${card.number}`;
+  const getCardImage = (card: Card) => {
+    if (card.type === 'pokemon') {
+      return card.images?.small;
+    } else {
+      return card.image_uris?.small || card.card_faces?.[0]?.image_uris?.small;
+    }
+  };
+
+  const getCardDetails = (card: Card) => {
+    if (card.type === 'pokemon') {
+      return {
+        name: card.name,
+        set: card.set.name,
+        series: card.set.series,
+        number: card.number
+      };
+    } else {
+      return {
+        name: card.name,
+        set: card.set_name,
+        series: '',
+        number: card.collector_number
+      };
+    }
   };
 
   return (
-    <div className="w-full relative">
+    <div className="w-full space-y-2">
+      <ToggleGroup 
+        type="single" 
+        value={selectedGame}
+        onValueChange={(value: GameType) => {
+          if (value) {
+            setSelectedGame(value);
+            setSearchQuery('');
+            setCards([]);
+          }
+        }}
+        className="justify-start"
+      >
+        <ToggleGroupItem value="pokemon" aria-label="Pokemon TCG">
+          Pokémon
+        </ToggleGroupItem>
+        <ToggleGroupItem value="mtg" aria-label="Magic: The Gathering">
+          Magic
+        </ToggleGroupItem>
+      </ToggleGroup>
+
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <div className="relative w-full">
             <Input
               type="text"
-              placeholder="Search for cards..."
+              placeholder={`Search for ${selectedGame === 'pokemon' ? 'Pokémon' : 'Magic'} cards...`}
               value={searchQuery}
               onChange={(e) => {
                 const value = e.target.value;
@@ -155,30 +254,35 @@ export default function SearchBar() {
                   <CommandEmpty>No results found.</CommandEmpty>
                 ) : (
                   <CommandGroup heading="Suggestions">
-                    {cards.map((card) => (
-                      <CommandItem
-                        key={card.id}
-                        onSelect={() => handleSearch(card)}
-                        className="flex items-center gap-2 cursor-pointer p-2 hover:bg-accent"
-                      >
-                        {card.images?.small && (
-                          <img
-                            src={card.images.small}
-                            alt={card.name}
-                            className="w-10 h-14 object-contain"
-                          />
-                        )}
-                        <div className="flex flex-col">
-                          <div className="font-medium">{card.name}</div>
-                          <div className="text-xs text-muted-foreground">
-                            Set: {card.set.name} ({card.set.series})
+                    {cards.map((card) => {
+                      const details = getCardDetails(card);
+                      const imageUrl = getCardImage(card);
+                      
+                      return (
+                        <CommandItem
+                          key={card.id}
+                          onSelect={() => handleSearch(card)}
+                          className="flex items-center gap-2 cursor-pointer p-2 hover:bg-accent"
+                        >
+                          {imageUrl && (
+                            <img
+                              src={imageUrl}
+                              alt={details.name}
+                              className="w-10 h-14 object-contain"
+                            />
+                          )}
+                          <div className="flex flex-col">
+                            <div className="font-medium">{details.name}</div>
+                            <div className="text-xs text-muted-foreground">
+                              Set: {details.set} {details.series && `(${details.series})`}
+                            </div>
+                            <div className="text-xs font-semibold text-primary">
+                              Card #: {details.number}
+                            </div>
                           </div>
-                          <div className="text-xs font-semibold text-primary">
-                            Card #: {card.number}
-                          </div>
-                        </div>
-                      </CommandItem>
-                    ))}
+                        </CommandItem>
+                      );
+                    })}
                   </CommandGroup>
                 )}
               </CommandList>
