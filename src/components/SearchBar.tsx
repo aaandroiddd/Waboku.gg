@@ -52,7 +52,6 @@ export default function SearchBar() {
       }
       
       const data = await response.json();
-      console.log('API Response:', data); // Debug log
       setCards(data.data || []);
       setOpen(true);
     } catch (error) {
@@ -112,21 +111,22 @@ export default function SearchBar() {
                 }}
                 className="pr-10"
               />
-            <Button
-              variant="ghost"
-              size="icon"
-              className="absolute right-0 top-0 h-full"
-              onClick={() => handleSearch()}
-            >
-              {isLoading ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Search className="h-4 w-4" />
-              )}
-              <span className="sr-only">Search</span>
-            </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="absolute right-0 top-0 h-full"
+                onClick={() => handleSearch()}
+              >
+                {isLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Search className="h-4 w-4" />
+                )}
+                <span className="sr-only">Search</span>
+              </Button>
+            </div>
           </div>
-        </div>
+        </PopoverTrigger>
         <PopoverContent 
           className="p-0 w-[var(--radix-popover-trigger-width)] max-h-[300px] overflow-auto" 
           align="start"
