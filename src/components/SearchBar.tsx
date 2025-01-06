@@ -113,27 +113,27 @@ export default function SearchBar() {
     <div className="w-full relative">
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
-          <div className="flex items-center w-full">
-            <div className="relative flex-1">
-              <Input
-                type="text"
-                placeholder="Search cards... (e.g., 'Pikachu', 'Ash's Pikachu SM108')"
-                value={searchQuery}
-                onChange={(e) => {
-                  const value = e.target.value;
-                  setSearchQuery(value);
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    handleSearch();
-                  }
-                }}
-                className="pr-10"
-              />
+          <div className="relative w-full">
+            <Input
+              type="text"
+              placeholder="Search cards... (e.g., 'Pikachu', 'Ash's Pikachu SM108')"
+              value={searchQuery}
+              onChange={(e) => {
+                const value = e.target.value;
+                setSearchQuery(value);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  handleSearch();
+                }
+              }}
+              className="w-full pr-10"
+            />
+            <div className="absolute inset-y-0 right-0 flex items-center">
               <Button
                 variant="ghost"
                 size="icon"
-                className="absolute right-0 top-0 h-full"
+                className="h-full aspect-square"
                 onClick={() => handleSearch()}
               >
                 {isLoading ? (
