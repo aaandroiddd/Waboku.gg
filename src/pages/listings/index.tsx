@@ -126,6 +126,7 @@ const usStates = [
 ];
 
 export default function ListingsPage() {
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const router = useRouter();
   const [stateOpen, setStateOpen] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
