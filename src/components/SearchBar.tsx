@@ -6,7 +6,6 @@ import {
   Command,
   CommandEmpty,
   CommandGroup,
-  CommandInput,
   CommandItem,
   CommandList,
 } from "@/components/ui/command"
@@ -31,6 +30,7 @@ export default function SearchBar() {
   const [open, setOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isTyping, setIsTyping] = useState(false);
   const [cards, setCards] = useState<Card[]>([]);
 
   const searchCards = async (query: string) => {
@@ -54,30 +54,36 @@ export default function SearchBar() {
       
       const data = await response.json();
       setCards(data.data || []);
-      // Only open if we have results
-      setOpen(data.data && data.data.length > 0);
+      setOpen(true);
     } catch (error) {
       console.error('Error fetching cards:', error);
       setCards([]);
       setOpen(false);
     } finally {
       setIsLoading(false);
+      setIsTyping(false);
     }
   };
 
   // Debounce the search to prevent too many API calls
   const debouncedSearch = useCallback(
-    debounce((query: string) => searchCards(query), 3000),
+    debounce((query: string) => searchCards(query), 200),
     []
   );
 
   useEffect(() => {
     if (searchQuery) {
+      setIsTyping(true);
       debouncedSearch(searchQuery);
     } else {
       setCards([]);
       setOpen(false);
+      setIsTyping(false);
     }
+
+    return () => {
+      debouncedSearch.cancel();
+    };
   }, [searchQuery, debouncedSearch]);
 
   const handleSearch = (cardName?: string) => {
@@ -118,7 +124,7 @@ export default function SearchBar() {
                 className="absolute right-0 top-0 h-full"
                 onClick={() => handleSearch()}
               >
-                {isLoading ? (
+                {(isLoading || isTyping) ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
                   <Search className="h-4 w-4" />
@@ -136,7 +142,12 @@ export default function SearchBar() {
           >
             <Command>
               <CommandList>
-                {isLoading ? (
+                {isTyping ? (
+                  <div className="flex items-center justify-center p-4">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span className="ml-2">Loading suggestions...</span>
+                  </div>
+                ) : isLoading ? (
                   <div className="flex items-center justify-center p-4">
                     <Loader2 className="h-4 w-4 animate-spin" />
                     <span className="ml-2">Searching...</span>
