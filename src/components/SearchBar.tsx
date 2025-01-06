@@ -34,7 +34,7 @@ export default function SearchBar() {
   const [cards, setCards] = useState<Card[]>([]);
 
   const searchCards = async (query: string) => {
-    if (!query || query.length < 4) {
+    if (!query) {
       setCards([]);
       setOpen(false);
       return;
