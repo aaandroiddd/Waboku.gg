@@ -34,7 +34,7 @@ export default function SearchBar() {
   const [cards, setCards] = useState<Card[]>([]);
 
   const searchCards = async (query: string) => {
-    if (!query) {
+    if (!query || query.length < 2) {
       setCards([]);
       return;
     }
@@ -46,8 +46,15 @@ export default function SearchBar() {
           'X-Api-Key': process.env.NEXT_PUBLIC_POKEMON_TCG_API_KEY || ''
         }
       });
+      
+      if (!response.ok) {
+        throw new Error('API request failed');
+      }
+      
       const data = await response.json();
+      console.log('API Response:', data); // Debug log
       setCards(data.data || []);
+      setOpen(true);
     } catch (error) {
       console.error('Error fetching cards:', error);
       setCards([]);
@@ -67,6 +74,7 @@ export default function SearchBar() {
       debouncedSearch(searchQuery);
     } else {
       setCards([]);
+      setOpen(false);
     }
   }, [searchQuery, debouncedSearch]);
 
@@ -82,7 +90,7 @@ export default function SearchBar() {
   };
 
   return (
-    <div className="w-full max-w-md">
+    <div className="w-full max-w-md relative">
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <div className="flex items-center w-full">
@@ -91,7 +99,12 @@ export default function SearchBar() {
                 type="text"
                 placeholder="Search cards..."
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  if (e.target.value) {
+                    setOpen(true);
+                  }
+                }}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
                     handleSearch();
@@ -115,33 +128,45 @@ export default function SearchBar() {
             </div>
           </div>
         </PopoverTrigger>
-        <PopoverContent className="p-0 w-full" align="start">
+        <PopoverContent 
+          className="p-0 w-[var(--radix-popover-trigger-width)] max-h-[300px] overflow-auto" 
+          align="start"
+          sideOffset={5}
+        >
           <Command>
             <CommandList>
-              <CommandEmpty>No results found.</CommandEmpty>
-              <CommandGroup heading="Suggestions">
-                {cards.map((card) => (
-                  <CommandItem
-                    key={card.id}
-                    onSelect={() => handleSearch(card.name)}
-                    className="flex items-center gap-2 cursor-pointer"
-                  >
-                    {card.images?.small && (
-                      <img
-                        src={card.images.small}
-                        alt={card.name}
-                        className="w-8 h-8 object-contain"
-                      />
-                    )}
-                    <div>
-                      <div className="font-medium">{card.name}</div>
-                      <div className="text-xs text-muted-foreground">
-                        {card.set.name} ({card.set.series})
+              {isLoading ? (
+                <div className="flex items-center justify-center p-4">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span className="ml-2">Searching...</span>
+                </div>
+              ) : cards.length === 0 ? (
+                <CommandEmpty>No results found.</CommandEmpty>
+              ) : (
+                <CommandGroup heading="Suggestions">
+                  {cards.map((card) => (
+                    <CommandItem
+                      key={card.id}
+                      onSelect={() => handleSearch(card.name)}
+                      className="flex items-center gap-2 cursor-pointer p-2 hover:bg-accent"
+                    >
+                      {card.images?.small && (
+                        <img
+                          src={card.images.small}
+                          alt={card.name}
+                          className="w-10 h-14 object-contain"
+                        />
+                      )}
+                      <div className="flex flex-col">
+                        <div className="font-medium">{card.name}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {card.set.name} ({card.set.series})
+                        </div>
                       </div>
-                    </div>
-                  </CommandItem>
-                ))}
-              </CommandGroup>
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              )}
             </CommandList>
           </Command>
         </PopoverContent>
