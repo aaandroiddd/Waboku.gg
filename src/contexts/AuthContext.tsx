@@ -11,7 +11,7 @@ import {
   applyActionCode,
   sendPasswordResetEmail
 } from 'firebase/auth';
-import { doc, setDoc, getDoc, deleteDoc, collection } from 'firebase/firestore';
+import { doc, setDoc, getDoc, deleteDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { UserProfile } from '@/types/database';
 
