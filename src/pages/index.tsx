@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/router";
+import { LocationInput } from "@/components/LocationInput";
 import SearchBar from "@/components/SearchBar";
 import { useGeolocation, calculateDistance } from "@/hooks/useGeolocation";
 import { Footer } from "@/components/Footer";
