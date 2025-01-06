@@ -116,7 +116,7 @@ export default function SearchBar() {
           <div className="relative w-full">
             <Input
               type="text"
-              placeholder="Search cards... (e.g., 'Pikachu', 'Ash's Pikachu SM108')"
+              placeholder="Search for cards..."
               value={searchQuery}
               onChange={(e) => {
                 const value = e.target.value;
@@ -127,22 +127,14 @@ export default function SearchBar() {
                   handleSearch();
                 }
               }}
-              className="w-full pr-10"
+              className="pl-10 h-12 w-full"
             />
-            <div className="absolute inset-y-0 right-0 flex items-center">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-full aspect-square"
-                onClick={() => handleSearch()}
-              >
-                {isLoading ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Search className="h-4 w-4" />
-                )}
-                <span className="sr-only">Search</span>
-              </Button>
+            <div className="absolute inset-y-0 left-0 flex items-center pl-3">
+              {isLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Search className="h-4 w-4" />
+              )}
             </div>
           </div>
         </PopoverTrigger>
