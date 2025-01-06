@@ -100,7 +100,7 @@ export function LocationInput({ onLocationSelect, initialState = "", error }: Lo
             variant="outline"
             role="combobox"
             aria-expanded={open}
-            className="h-12 w-full justify-between"
+            className="h-12 w-full justify-between text-center relative px-8"
           >
             {selectedState ? selectedStateName : "Select a state..."}
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
