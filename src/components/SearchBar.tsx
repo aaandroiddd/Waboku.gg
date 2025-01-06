@@ -128,7 +128,7 @@ export default function SearchBar() {
             </div>
           </div>
         </PopoverTrigger>
-        {searchQuery.length >= 4 && (
+        {searchQuery && (
           <PopoverContent 
             className="p-0 w-[var(--radix-popover-trigger-width)] max-h-[300px] overflow-auto" 
             align="start"
