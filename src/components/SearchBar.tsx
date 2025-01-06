@@ -16,6 +16,7 @@ import debounce from 'lodash/debounce';
 interface Card {
   id: string;
   name: string;
+  number: string;
   set: {
     name: string;
     series: string;
@@ -42,7 +43,7 @@ export default function SearchBar() {
 
     setIsLoading(true);
     try {
-      const response = await fetch(`https://api.pokemontcg.io/v2/cards?q=name:"${query}*"&orderBy=name&pageSize=10`, {
+      const response = await fetch(`https://api.pokemontcg.io/v2/cards?q=name:"${query}*"&orderBy=name&pageSize=20`, {
         headers: {
           'X-Api-Key': process.env.NEXT_PUBLIC_POKEMON_TCG_API_KEY || ''
         }
@@ -87,16 +88,24 @@ export default function SearchBar() {
     };
   }, [searchQuery, debouncedSearch]);
 
-  const handleSearch = (cardName?: string) => {
-    const queryToUse = cardName || searchQuery;
-    if (queryToUse.trim()) {
+  const handleSearch = (cardId?: string) => {
+    if (cardId) {
       router.push({
         pathname: '/listings',
-        query: { query: queryToUse.trim() }
+        query: { cardId }
       });
-      setOpen(false);
-      setShowSuggestions(false);
+    } else if (searchQuery.trim()) {
+      router.push({
+        pathname: '/listings',
+        query: { query: searchQuery.trim() }
+      });
     }
+    setOpen(false);
+    setShowSuggestions(false);
+  };
+
+  const getCardDisplayName = (card: Card) => {
+    return `${card.name} - ${card.number}`;
   };
 
   return (
@@ -107,7 +116,7 @@ export default function SearchBar() {
             <div className="relative flex-1">
               <Input
                 type="text"
-                placeholder="Search cards... (type and wait for suggestions)"
+                placeholder="Search cards... (e.g., 'Pikachu', 'Ash's Pikachu SM108')"
                 value={searchQuery}
                 onChange={(e) => {
                   const value = e.target.value;
@@ -138,7 +147,7 @@ export default function SearchBar() {
         </PopoverTrigger>
         {searchQuery && showSuggestions && (
           <PopoverContent 
-            className="p-0 w-[var(--radix-popover-trigger-width)] max-h-[300px] overflow-auto" 
+            className="p-0 w-[var(--radix-popover-trigger-width)] max-h-[400px] overflow-auto" 
             align="start"
             sideOffset={5}
           >
@@ -156,7 +165,7 @@ export default function SearchBar() {
                     {cards.map((card) => (
                       <CommandItem
                         key={card.id}
-                        onSelect={() => handleSearch(card.name)}
+                        onSelect={() => handleSearch(card.id)}
                         className="flex items-center gap-2 cursor-pointer p-2 hover:bg-accent"
                       >
                         {card.images?.small && (
@@ -169,7 +178,10 @@ export default function SearchBar() {
                         <div className="flex flex-col">
                           <div className="font-medium">{card.name}</div>
                           <div className="text-xs text-muted-foreground">
-                            {card.set.name} ({card.set.series})
+                            Set: {card.set.name} ({card.set.series})
+                          </div>
+                          <div className="text-xs font-semibold text-primary">
+                            Card #: {card.number}
                           </div>
                         </div>
                       </CommandItem>
