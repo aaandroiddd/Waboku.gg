@@ -36,6 +36,7 @@ export default function SearchBar() {
   const searchCards = async (query: string) => {
     if (!query || query.length < 2) {
       setCards([]);
+      setOpen(false);
       return;
     }
 
@@ -99,9 +100,13 @@ export default function SearchBar() {
                 placeholder="Search cards..."
                 value={searchQuery}
                 onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  if (e.target.value) {
+                  const value = e.target.value;
+                  setSearchQuery(value);
+                  // Only show popover if there's actual input
+                  if (value.length >= 2) {
                     setOpen(true);
+                  } else {
+                    setOpen(false);
                   }
                 }}
                 onKeyDown={(e) => {
@@ -127,48 +132,50 @@ export default function SearchBar() {
             </div>
           </div>
         </PopoverTrigger>
-        <PopoverContent 
-          className="p-0 w-[var(--radix-popover-trigger-width)] max-h-[300px] overflow-auto" 
-          align="start"
-          sideOffset={5}
-        >
-          <Command>
-            <CommandList>
-              {isLoading ? (
-                <div className="flex items-center justify-center p-4">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  <span className="ml-2">Searching...</span>
-                </div>
-              ) : cards.length === 0 ? (
-                <CommandEmpty>No results found.</CommandEmpty>
-              ) : (
-                <CommandGroup heading="Suggestions">
-                  {cards.map((card) => (
-                    <CommandItem
-                      key={card.id}
-                      onSelect={() => handleSearch(card.name)}
-                      className="flex items-center gap-2 cursor-pointer p-2 hover:bg-accent"
-                    >
-                      {card.images?.small && (
-                        <img
-                          src={card.images.small}
-                          alt={card.name}
-                          className="w-10 h-14 object-contain"
-                        />
-                      )}
-                      <div className="flex flex-col">
-                        <div className="font-medium">{card.name}</div>
-                        <div className="text-xs text-muted-foreground">
-                          {card.set.name} ({card.set.series})
+        {searchQuery.length >= 2 && (
+          <PopoverContent 
+            className="p-0 w-[var(--radix-popover-trigger-width)] max-h-[300px] overflow-auto" 
+            align="start"
+            sideOffset={5}
+          >
+            <Command>
+              <CommandList>
+                {isLoading ? (
+                  <div className="flex items-center justify-center p-4">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span className="ml-2">Searching...</span>
+                  </div>
+                ) : cards.length === 0 ? (
+                  <CommandEmpty>No results found.</CommandEmpty>
+                ) : (
+                  <CommandGroup heading="Suggestions">
+                    {cards.map((card) => (
+                      <CommandItem
+                        key={card.id}
+                        onSelect={() => handleSearch(card.name)}
+                        className="flex items-center gap-2 cursor-pointer p-2 hover:bg-accent"
+                      >
+                        {card.images?.small && (
+                          <img
+                            src={card.images.small}
+                            alt={card.name}
+                            className="w-10 h-14 object-contain"
+                          />
+                        )}
+                        <div className="flex flex-col">
+                          <div className="font-medium">{card.name}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {card.set.name} ({card.set.series})
+                          </div>
                         </div>
-                      </div>
-                    </CommandItem>
-                  ))}
-                </CommandGroup>
-              )}
-            </CommandList>
-          </Command>
-        </PopoverContent>
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                )}
+              </CommandList>
+            </Command>
+          </PopoverContent>
+        )}
       </Popover>
     </div>
   );
