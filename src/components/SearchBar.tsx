@@ -1,7 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import {
   Command,
   CommandEmpty,
@@ -11,7 +10,6 @@ import {
 } from "@/components/ui/command"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Search, Loader2 } from "lucide-react";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import debounce from 'lodash/debounce';
 
 interface PokemonCard {
@@ -46,8 +44,6 @@ interface MtgCard {
 
 type Card = PokemonCard | MtgCard;
 
-type GameType = 'pokemon' | 'mtg';
-
 export default function SearchBar() {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -55,38 +51,49 @@ export default function SearchBar() {
   const [isLoading, setIsLoading] = useState(false);
   const [cards, setCards] = useState<Card[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const [selectedGame, setSelectedGame] = useState<GameType>('pokemon');
 
   const searchPokemonCards = async (query: string) => {
-    const response = await fetch(`https://api.pokemontcg.io/v2/cards?q=name:"${query}*"&orderBy=name&pageSize=20`, {
-      headers: {
-        'X-Api-Key': process.env.NEXT_PUBLIC_POKEMON_TCG_API_KEY || ''
+    try {
+      const response = await fetch(`https://api.pokemontcg.io/v2/cards?q=name:"${query}*"&orderBy=name&pageSize=10`, {
+        headers: {
+          'X-Api-Key': process.env.NEXT_PUBLIC_POKEMON_TCG_API_KEY || ''
+        }
+      });
+      
+      if (!response.ok) {
+        console.error('Pokemon API request failed');
+        return [];
       }
-    });
-    
-    if (!response.ok) {
-      throw new Error('Pokemon API request failed');
+      
+      const data = await response.json();
+      return (data.data || []).map((card: any) => ({
+        ...card,
+        type: 'pokemon' as const
+      }));
+    } catch (error) {
+      console.error('Error fetching Pokemon cards:', error);
+      return [];
     }
-    
-    const data = await response.json();
-    return (data.data || []).map((card: any) => ({
-      ...card,
-      type: 'pokemon' as const
-    }));
   };
 
   const searchMtgCards = async (query: string) => {
-    const response = await fetch(`https://api.scryfall.com/cards/search?q=${encodeURIComponent(query)}&order=name&unique=prints`);
-    
-    if (!response.ok) {
-      throw new Error('MTG API request failed');
+    try {
+      const response = await fetch(`https://api.scryfall.com/cards/search?q=${encodeURIComponent(query)}&order=name&unique=prints`);
+      
+      if (!response.ok) {
+        console.error('MTG API request failed');
+        return [];
+      }
+      
+      const data = await response.json();
+      return (data.data || []).slice(0, 10).map((card: any) => ({
+        ...card,
+        type: 'mtg' as const
+      }));
+    } catch (error) {
+      console.error('Error fetching MTG cards:', error);
+      return [];
     }
-    
-    const data = await response.json();
-    return (data.data || []).map((card: any) => ({
-      ...card,
-      type: 'mtg' as const
-    }));
   };
 
   const searchCards = async (query: string) => {
@@ -98,11 +105,16 @@ export default function SearchBar() {
 
     setIsLoading(true);
     try {
-      const cards = selectedGame === 'pokemon' 
-        ? await searchPokemonCards(query)
-        : await searchMtgCards(query);
+      const [pokemonCards, mtgCards] = await Promise.all([
+        searchPokemonCards(query),
+        searchMtgCards(query)
+      ]);
       
-      setCards(cards.slice(0, 20));
+      // Combine and sort results by name
+      const combinedCards = [...pokemonCards, ...mtgCards]
+        .sort((a, b) => a.name.localeCompare(b.name));
+      
+      setCards(combinedCards);
       setOpen(true);
     } catch (error) {
       console.error('Error fetching cards:', error);
@@ -119,7 +131,7 @@ export default function SearchBar() {
       setShowSuggestions(true);
       searchCards(query);
     }, 500),
-    [selectedGame]
+    []
   );
 
   useEffect(() => {
@@ -153,8 +165,7 @@ export default function SearchBar() {
       router.push({
         pathname: '/listings',
         query: { 
-          query: searchQuery.trim(),
-          game: selectedGame
+          query: searchQuery.trim()
         }
       });
     }
@@ -176,46 +187,28 @@ export default function SearchBar() {
         name: card.name,
         set: card.set.name,
         series: card.set.series,
-        number: card.number
+        number: card.number,
+        game: 'Pokémon TCG'
       };
     } else {
       return {
         name: card.name,
         set: card.set_name,
         series: '',
-        number: card.collector_number
+        number: card.collector_number,
+        game: 'Magic: The Gathering'
       };
     }
   };
 
   return (
-    <div className="w-full space-y-2">
-      <ToggleGroup 
-        type="single" 
-        value={selectedGame}
-        onValueChange={(value: GameType) => {
-          if (value) {
-            setSelectedGame(value);
-            setSearchQuery('');
-            setCards([]);
-          }
-        }}
-        className="justify-start"
-      >
-        <ToggleGroupItem value="pokemon" aria-label="Pokemon TCG">
-          Pokémon
-        </ToggleGroupItem>
-        <ToggleGroupItem value="mtg" aria-label="Magic: The Gathering">
-          Magic
-        </ToggleGroupItem>
-      </ToggleGroup>
-
+    <div className="w-full">
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <div className="relative w-full">
             <Input
               type="text"
-              placeholder={`Search for ${selectedGame === 'pokemon' ? 'Pokémon' : 'Magic'} cards...`}
+              placeholder="Search for Pokémon or Magic cards..."
               value={searchQuery}
               onChange={(e) => {
                 const value = e.target.value;
@@ -274,7 +267,7 @@ export default function SearchBar() {
                           <div className="flex flex-col">
                             <div className="font-medium">{details.name}</div>
                             <div className="text-xs text-muted-foreground">
-                              Set: {details.set} {details.series && `(${details.series})`}
+                              {details.game} • Set: {details.set} {details.series && `(${details.series})`}
                             </div>
                             <div className="text-xs font-semibold text-primary">
                               Card #: {details.number}
