@@ -30,6 +30,7 @@ const AuthError: React.FC<AuthErrorProps> = ({ error, errorCode, onClose }) => {
         };
 
       case "auth/user-not-found":
+      case "auth/invalid-login-credentials":  // Firebase sometimes returns this code instead
         return {
           title: "Account Not Found",
           description: (
@@ -75,11 +76,17 @@ const AuthError: React.FC<AuthErrorProps> = ({ error, errorCode, onClose }) => {
           ),
         };
 
+      case "auth/missing-fields":
+        return {
+          title: "Missing Information",
+          description: "Please enter both email and password.",
+        };
+
       default:
+        console.error("Unhandled auth error code:", code);
         return {
           title: "Authentication Error",
-          description:
-            "An unexpected error occurred. Please try again later.",
+          description: error.message || "An unexpected error occurred. Please try again.",
         };
     }
   };
