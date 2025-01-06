@@ -1,11 +1,19 @@
 import { useState } from 'react';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+} from "@/components/ui/command"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
+import { Button } from "@/components/ui/button"
+import { Check, ChevronsUpDown } from "lucide-react"
+import { cn } from "@/lib/utils"
 
 interface LocationInputProps {
   onLocationSelect: (city: string, state: string) => void;
@@ -68,30 +76,60 @@ const US_STATES = [
 ];
 
 export function LocationInput({ onLocationSelect, initialState = "", error }: LocationInputProps) {
-  const [selectedState, setSelectedState] = useState(initialState);
+  const [open, setOpen] = useState(false)
+  const [selectedState, setSelectedState] = useState(initialState)
 
-  const handleStateChange = (value: string) => {
+  const handleStateSelect = (value: string) => {
     setSelectedState(value);
+    setOpen(false);
     const state = US_STATES.find(state => state.abbreviation === value);
     if (state) {
       onLocationSelect(state.name, state.abbreviation);
     }
   };
 
+  const selectedStateName = US_STATES.find(
+    state => state.abbreviation === selectedState
+  )?.name || "";
+
   return (
     <div className="relative">
-      <Select value={selectedState} onValueChange={handleStateChange}>
-        <SelectTrigger className="h-12">
-          <SelectValue placeholder="Select a state" />
-        </SelectTrigger>
-        <SelectContent>
-          {US_STATES.map((state) => (
-            <SelectItem key={state.abbreviation} value={state.abbreviation}>
-              {state.name}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            variant="outline"
+            role="combobox"
+            aria-expanded={open}
+            className="h-12 w-full justify-between"
+          >
+            {selectedState ? selectedStateName : "Select a state..."}
+            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-full p-0">
+          <Command>
+            <CommandInput placeholder="Search states..." />
+            <CommandEmpty>No state found.</CommandEmpty>
+            <CommandGroup className="max-h-[300px] overflow-y-auto">
+              {US_STATES.map((state) => (
+                <CommandItem
+                  key={state.abbreviation}
+                  value={state.name}
+                  onSelect={() => handleStateSelect(state.abbreviation)}
+                >
+                  <Check
+                    className={cn(
+                      "mr-2 h-4 w-4",
+                      selectedState === state.abbreviation ? "opacity-100" : "opacity-0"
+                    )}
+                  />
+                  {state.name}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </Command>
+        </PopoverContent>
+      </Popover>
       {error && <p className="text-sm text-red-500 mt-1">{error}</p>}
     </div>
   );
