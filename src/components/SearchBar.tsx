@@ -88,11 +88,12 @@ export default function SearchBar() {
     };
   }, [searchQuery, debouncedSearch]);
 
-  const handleSearch = (cardId?: string) => {
-    if (cardId) {
+  const handleSearch = (card?: Card) => {
+    if (card) {
+      const searchTerm = `${card.name} ${card.number}`.trim();
       router.push({
         pathname: '/listings',
-        query: { cardId }
+        query: { query: searchTerm }
       });
     } else if (searchQuery.trim()) {
       router.push({
