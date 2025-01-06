@@ -116,14 +116,15 @@ export function LocationInput({ onLocationSelect, initialState = "", error }: Lo
                   key={state.abbreviation}
                   value={state.name}
                   onSelect={() => handleStateSelect(state.abbreviation)}
+                  className="flex justify-center items-center relative"
                 >
                   <Check
                     className={cn(
-                      "mr-2 h-4 w-4",
+                      "absolute left-2 h-4 w-4",
                       selectedState === state.abbreviation ? "opacity-100" : "opacity-0"
                     )}
                   />
-                  {state.name}
+                  <span className="flex-grow text-center">{state.name}</span>
                 </CommandItem>
               ))}
             </CommandGroup>
