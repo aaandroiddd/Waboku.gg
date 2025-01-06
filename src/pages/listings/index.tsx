@@ -442,29 +442,6 @@ export default function ListingsPage() {
               </div>
             </div>
 
-            {/* View Toggle */}
-            <div className="flex justify-end mb-4">
-              <div className="inline-flex rounded-lg border bg-card p-1">
-                <Button
-                  variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
-                  size="sm"
-                  className="px-3"
-                  onClick={() => setViewMode('grid')}
-                >
-                  <LayoutGrid className="h-4 w-4 mr-2" />
-                  Grid
-                </Button>
-                <Button
-                  variant={viewMode === 'list' ? 'secondary' : 'ghost'}
-                  size="sm"
-                  className="px-3"
-                  onClick={() => setViewMode('list')}
-                >
-                  <List className="h-4 w-4 mr-2" />
-                  List
-                </Button>
-              </div>
-            </div>
 
             {error ? (
               <Alert variant="destructive" className="mb-8">
