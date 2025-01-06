@@ -295,8 +295,7 @@ export function useListings({ userId, searchQuery }: UseListingsProps = {}) {
         if (searchQuery) {
           const searchLower = searchQuery.toLowerCase();
           fetchedListings = fetchedListings.filter(listing => 
-            listing.title?.toLowerCase().includes(searchLower) ||
-            listing.description?.toLowerCase().includes(searchLower)
+            listing.title?.toLowerCase().includes(searchLower)
           );
           console.log(`After search filter: ${fetchedListings.length} listings`);
         }
