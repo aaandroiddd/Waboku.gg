@@ -307,17 +307,10 @@ export default function Home() {
                   {/* Mobile Search Controls */}
                   <div className="flex sm:hidden flex-col gap-4 mb-4 px-2">
                     <div className="relative w-full">
-                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
-                      <Input
-                        type="text"
-                        placeholder="Search for cards..."
-                        className="pl-10 h-12 w-full"
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            handleSearch();
-                          }
+                      <SearchBar
+                        onSelect={(cardName) => {
+                          setSearchQuery(cardName);
+                          handleSearch();
                         }}
                       />
                     </div>
