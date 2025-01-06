@@ -356,7 +356,7 @@ const CreateListingPage = () => {
                         <Label htmlFor="gradeLevel">Grade Level</Label>
                         <Select
                           value={formData.gradeLevel?.toString()}
-                          onValueChange={(value) => setFormData({ ...formData, gradeLevel: parseInt(value) })}
+                          onValueChange={(value) => setFormData({ ...formData, gradeLevel: parseFloat(value) })}
                         >
                           <SelectTrigger>
                             <SelectValue placeholder="Select grade" />
