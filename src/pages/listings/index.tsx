@@ -237,12 +237,13 @@ export default function ListingsPage() {
           <div className="max-w-[1400px] mx-auto">
             {/* Search Section */}
             <div className="mb-8">
-              <div className="flex flex-col sm:flex-row gap-4">
+              <div className="space-y-4">
+                {/* Search bar with integrated button */}
                 <div className="relative flex-1">
                   <Input
                     type="text"
                     placeholder="Search for cards..."
-                    className="pr-10 h-12 w-full"
+                    className="pr-[88px] h-12 w-full"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     onKeyDown={(e) => {
@@ -251,177 +252,180 @@ export default function ListingsPage() {
                       }
                     }}
                   />
-                  <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
-                </div>
-                
-                <div className="flex gap-2 items-center">
-                  <Popover open={stateOpen} onOpenChange={setStateOpen}>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        role="combobox"
-                        className="h-12 whitespace-nowrap"
-                      >
-                        <MapPin className="mr-2 h-4 w-4" />
-                        {selectedState === "all" 
-                          ? "All Locations"
-                          : usStates.find((state) => state.value === selectedState)?.label || "Select location"}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-fit p-0">
-                      <Command>
-                        <CommandInput placeholder="Search state..." className="h-9" />
-                        <CommandEmpty>No state found.</CommandEmpty>
-                        <CommandList>
-                          <CommandGroup>
-                            {usStates.map((state) => (
-                              <CommandItem
-                                key={state.value}
-                                value={state.label}
-                                onSelect={() => {
-                                  setSelectedState(state.value);
-                                  setStateOpen(false);
-                                }}
-                                className="cursor-pointer"
-                              >
-                                <Check
-                                  className={`mr-2 h-4 w-4 ${
-                                    selectedState === state.value ? "opacity-100" : "opacity-0"
-                                  }`}
-                                />
-                                {state.label}
-                              </CommandItem>
-                            ))}
-                          </CommandGroup>
-                        </CommandList>
-                      </Command>
-                    </PopoverContent>
-                  </Popover>
-
-                  <Sheet open={filterOpen} onOpenChange={setFilterOpen}>
-                    <SheetTrigger asChild>
-                      <Button variant="outline" className="h-12">
-                        <Filter className="mr-2 h-4 w-4" />
-                        Filters
-                      </Button>
-                    </SheetTrigger>
-                    <SheetContent>
-                      <SheetHeader>
-                        <SheetTitle>Filters</SheetTitle>
-                        <SheetDescription>
-                          Refine your search with additional filters
-                        </SheetDescription>
-                      </SheetHeader>
-                      <div className="py-4 space-y-4">
-                        <div className="space-y-2">
-                          <label className="text-sm font-medium">Game</label>
-                          <Select value={selectedGame} onValueChange={setSelectedGame}>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select game" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {games.map((game) => (
-                                <SelectItem key={game.value} value={game.value}>
-                                  {game.label}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="space-y-2">
-                          <label className="text-sm font-medium">Condition</label>
-                          <Select value={selectedCondition} onValueChange={setSelectedCondition}>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select condition" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {conditions.map((condition) => (
-                                <SelectItem key={condition.value} value={condition.value}>
-                                  {condition.label}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="space-y-2">
-                          <label className="text-sm font-medium">Price Range</label>
-                          <div className="pt-4">
-                            <Slider
-                              value={priceRange}
-                              min={0}
-                              max={1000}
-                              step={1}
-                              onValueChange={setPriceRange}
-                            />
-                            <div className="flex items-center gap-2 mt-2">
-                              <div className="flex items-center">
-                                <span className="text-sm mr-2">$</span>
-                                <Input
-                                  type="number"
-                                  value={priceRange[0]}
-                                  onChange={(e) => {
-                                    const value = Number(e.target.value);
-                                    if (value >= 0 && value <= priceRange[1]) {
-                                      setPriceRange([value, priceRange[1]]);
-                                    }
-                                  }}
-                                  className="w-24 h-8"
-                                  min={0}
-                                  max={priceRange[1]}
-                                />
-                              </div>
-                              <span className="text-sm">to</span>
-                              <div className="flex items-center">
-                                <span className="text-sm mr-2">$</span>
-                                <Input
-                                  type="number"
-                                  value={priceRange[1]}
-                                  onChange={(e) => {
-                                    const value = Number(e.target.value);
-                                    if (value >= priceRange[0] && value <= 1000) {
-                                      setPriceRange([priceRange[0], value]);
-                                    }
-                                  }}
-                                  className="w-24 h-8"
-                                  min={priceRange[0]}
-                                  max={1000}
-                                />
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <Checkbox
-                            id="graded"
-                            checked={showGradedOnly}
-                            onCheckedChange={(checked) => setShowGradedOnly(checked as boolean)}
-                          />
-                          <label
-                            htmlFor="graded"
-                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                          >
-                            Show Graded Cards Only
-                          </label>
-                        </div>
-                      </div>
-                      <SheetFooter>
-                        <Button variant="outline" onClick={resetFilters}>Reset</Button>
-                        <Button onClick={() => {
-                          handleSearch();
-                          setFilterOpen(false);
-                        }}>Apply Filters</Button>
-                      </SheetFooter>
-                    </SheetContent>
-                  </Sheet>
-
                   <Button 
-                    variant="outline"
-                    className="h-12 w-12" 
-                    size="icon" 
+                    variant="default"
+                    className="absolute right-1 top-1 h-10" 
                     onClick={handleSearch}
                   >
                     <Search className="h-5 w-5" />
                   </Button>
+                </div>
+
+                {/* Controls row */}
+                <div className="flex flex-wrap gap-2 items-center justify-between">
+                  <div className="flex gap-2 items-center flex-wrap">
+                    <Popover open={stateOpen} onOpenChange={setStateOpen}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          className="h-12"
+                        >
+                          <MapPin className="mr-2 h-4 w-4" />
+                          <span className="hidden sm:inline">
+                            {selectedState === "all" 
+                              ? "All Locations"
+                              : usStates.find((state) => state.value === selectedState)?.label || "Select location"}
+                          </span>
+                          <span className="sm:hidden">Location</span>
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-fit p-0">
+                        <Command>
+                          <CommandInput placeholder="Search state..." className="h-9" />
+                          <CommandEmpty>No state found.</CommandEmpty>
+                          <CommandList>
+                            <CommandGroup>
+                              {usStates.map((state) => (
+                                <CommandItem
+                                  key={state.value}
+                                  value={state.label}
+                                  onSelect={() => {
+                                    setSelectedState(state.value);
+                                    setStateOpen(false);
+                                  }}
+                                  className="cursor-pointer"
+                                >
+                                  <Check
+                                    className={`mr-2 h-4 w-4 ${
+                                      selectedState === state.value ? "opacity-100" : "opacity-0"
+                                    }`}
+                                  />
+                                  {state.label}
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+
+                    <Sheet open={filterOpen} onOpenChange={setFilterOpen}>
+                      <SheetTrigger asChild>
+                        <Button variant="outline" className="h-12">
+                          <Filter className="mr-2 h-4 w-4" />
+                          <span className="hidden sm:inline">Filters</span>
+                        </Button>
+                      </SheetTrigger>
+                      <SheetContent>
+                        <SheetHeader>
+                          <SheetTitle>Filters</SheetTitle>
+                          <SheetDescription>
+                            Refine your search with additional filters
+                          </SheetDescription>
+                        </SheetHeader>
+                        <div className="py-4 space-y-4">
+                          <div className="space-y-2">
+                            <label className="text-sm font-medium">Game</label>
+                            <Select value={selectedGame} onValueChange={setSelectedGame}>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select game" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {games.map((game) => (
+                                  <SelectItem key={game.value} value={game.value}>
+                                    {game.label}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-2">
+                            <label className="text-sm font-medium">Condition</label>
+                            <Select value={selectedCondition} onValueChange={setSelectedCondition}>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select condition" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {conditions.map((condition) => (
+                                  <SelectItem key={condition.value} value={condition.value}>
+                                    {condition.label}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-2">
+                            <label className="text-sm font-medium">Price Range</label>
+                            <div className="pt-4">
+                              <Slider
+                                value={priceRange}
+                                min={0}
+                                max={1000}
+                                step={1}
+                                onValueChange={setPriceRange}
+                              />
+                              <div className="flex items-center gap-2 mt-2">
+                                <div className="flex items-center">
+                                  <span className="text-sm mr-2">$</span>
+                                  <Input
+                                    type="number"
+                                    value={priceRange[0]}
+                                    onChange={(e) => {
+                                      const value = Number(e.target.value);
+                                      if (value >= 0 && value <= priceRange[1]) {
+                                        setPriceRange([value, priceRange[1]]);
+                                      }
+                                    }}
+                                    className="w-24 h-8"
+                                    min={0}
+                                    max={priceRange[1]}
+                                  />
+                                </div>
+                                <span className="text-sm">to</span>
+                                <div className="flex items-center">
+                                  <span className="text-sm mr-2">$</span>
+                                  <Input
+                                    type="number"
+                                    value={priceRange[1]}
+                                    onChange={(e) => {
+                                      const value = Number(e.target.value);
+                                      if (value >= priceRange[0] && value <= 1000) {
+                                        setPriceRange([priceRange[0], value]);
+                                      }
+                                    }}
+                                    className="w-24 h-8"
+                                    min={priceRange[0]}
+                                    max={1000}
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <Checkbox
+                              id="graded"
+                              checked={showGradedOnly}
+                              onCheckedChange={(checked) => setShowGradedOnly(checked as boolean)}
+                            />
+                            <label
+                              htmlFor="graded"
+                              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                            >
+                              Show Graded Cards Only
+                            </label>
+                          </div>
+                        </div>
+                        <SheetFooter>
+                          <Button variant="outline" onClick={resetFilters}>Reset</Button>
+                          <Button onClick={() => {
+                            handleSearch();
+                            setFilterOpen(false);
+                          }}>Apply Filters</Button>
+                        </SheetFooter>
+                      </SheetContent>
+                    </Sheet>
+                  </div>
 
                   <div className="inline-flex rounded-lg border bg-card p-1 h-12">
                     <Button
@@ -430,8 +434,8 @@ export default function ListingsPage() {
                       className="px-3"
                       onClick={() => setViewMode('grid')}
                     >
-                      <LayoutGrid className="h-4 w-4 mr-2" />
-                      Grid
+                      <LayoutGrid className="h-4 w-4 sm:mr-2" />
+                      <span className="hidden sm:inline">Grid</span>
                     </Button>
                     <Button
                       variant={viewMode === 'list' ? 'secondary' : 'ghost'}
@@ -439,8 +443,8 @@ export default function ListingsPage() {
                       className="px-3"
                       onClick={() => setViewMode('list')}
                     >
-                      <List className="h-4 w-4 mr-2" />
-                      List
+                      <List className="h-4 w-4 sm:mr-2" />
+                      <span className="hidden sm:inline">List</span>
                     </Button>
                   </div>
                 </div>
