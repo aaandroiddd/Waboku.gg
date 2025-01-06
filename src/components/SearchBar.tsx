@@ -109,7 +109,7 @@ export default function SearchBar() {
     try {
       const response = await fetch(`https://apitcg.com/api/one-piece/cards?property=name&value=${encodeURIComponent(query)}`, {
         headers: {
-          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_APITCG_API_KEY}`
+          'x-api-key': process.env.NEXT_PUBLIC_APITCG_API_KEY || ''
         }
       });
       
