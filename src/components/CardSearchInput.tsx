@@ -207,6 +207,12 @@ export default function CardSearchInput({
     if (onCardSelect) {
       onCardSelect(card);
     }
+    
+    // Set the search query to include card name and set ID
+    const details = getCardDetails(card);
+    const displayValue = `${details.name} (${details.number})`;
+    setSearchQuery(displayValue);
+    
     setOpen(false);
     setShowSuggestions(false);
   };
