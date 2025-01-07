@@ -50,6 +50,7 @@ const CreateListingPage = () => {
     game: "",
     condition: "",
     images: [] as File[],
+    coverImageIndex: 0,
     city: "",
     state: "",
     isGraded: false,
