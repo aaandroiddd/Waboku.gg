@@ -240,10 +240,9 @@ const CreateListingPage = () => {
                           onChange={(e) => {
                             const value = e.target.value;
                             setSearchQuery(value);
-                            setSearchOpen(true);
+                            setSearchOpen(!!value);
                             if (!value) {
                               setFormData(prev => ({ ...prev, cardReference: undefined }));
-                              setSearchOpen(false);
                             }
                             if (value.length >= 2) {
                               searchCards(value);
@@ -320,65 +319,6 @@ const CreateListingPage = () => {
                       </PopoverContent>
                     )}
                   </Popover>
-                  {searchQuery && (
-                    <PopoverContent 
-                      className="p-0 w-[var(--radix-popover-trigger-width)] max-h-[400px] overflow-auto"
-                      align="start"
-                      sideOffset={5}
-                    >
-                      <Command>
-                        <CommandList>
-                          {isLoading ? (
-                            <div className="flex items-center justify-center p-4">
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                              <span className="ml-2">Loading suggestions...</span>
-                            </div>
-                          ) : results.length === 0 ? (
-                            <CommandEmpty>No results found.</CommandEmpty>
-                          ) : (
-                            <CommandGroup heading="Suggestions">
-                              {results.map((card) => (
-                                <CommandItem
-                                  key={card.id}
-                                  onSelect={() => {
-                                    setFormData(prev => ({
-                                      ...prev,
-                                      cardReference: {
-                                        id: card.id,
-                                        name: card.name,
-                                        set: card.set?.name,
-                                        game: card.game
-                                      },
-                                      game: GAME_MAPPING[card.game] || 'other'
-                                    }));
-                                    setSearchQuery(`${card.name} (${card.set?.name || 'Unknown Set'})`);
-                                    setSearchOpen(false);
-                                  }}
-                                  className="flex items-start gap-2 cursor-pointer p-2 hover:bg-accent"
-                                >
-                                  {card.imageUrl && (
-                                    <img
-                                      src={card.imageUrl}
-                                      alt={card.name}
-                                      className="w-10 h-14 object-contain flex-shrink-0"
-                                    />
-                                  )}
-                                  <div className="flex flex-col min-w-0 flex-1">
-                                    <div className="font-medium text-sm truncate">{card.name}</div>
-                                    <div className="text-xs text-muted-foreground flex items-center gap-1">
-                                      <span className="truncate">{card.game}</span>
-                                      <span>•</span>
-                                      <span className="truncate">{card.set?.name || 'Unknown Set'}</span>
-                                    </div>
-                                  </div>
-                                </CommandItem>
-                              ))}
-                            </CommandGroup>
-                          )}
-                        </CommandList>
-                      </Command>
-                    </PopoverContent>
-                  )}
                 </div>
                 <div className="space-y-2">
                   <div className="flex items-center space-x-2">
