@@ -51,14 +51,9 @@ export default function CardSearchInput({
     };
   };
 
-  // Only search when there's at least 3 characters
   useEffect(() => {
-    if (searchQuery.trim().length >= 3) {
-      searchCards(searchQuery);
-    } else {
-      // Clear results if query is too short
-      setOpen(false);
-    }
+    searchCards(searchQuery);
+    setOpen(!!searchQuery.trim());
   }, [searchQuery, searchCards]);
 
   return (
