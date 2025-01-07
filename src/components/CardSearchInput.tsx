@@ -9,10 +9,15 @@ import {
 } from "@/components/ui/command"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Search, Loader2 } from "lucide-react";
-import debounce from 'lodash/debounce';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useCardSearch } from '@/hooks/useCardSearch';
 
-// ... (keep all the interfaces and type definitions)
+interface CardSearchInputProps {
+  onCardSelect?: (card: any) => void;
+  onSearch?: (query: string) => void;
+  placeholder?: string;
+  className?: string;
+}
 
 export default function CardSearchInput({ 
   onCardSelect, 
@@ -22,70 +27,31 @@ export default function CardSearchInput({
 }: CardSearchInputProps) {
   const [open, setOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [cards, setCards] = useState<any[]>([]);
-  const [showSuggestions, setShowSuggestions] = useState(true);
+  const { results: cards, isLoading, searchCards } = useCardSearch();
 
   const handleSelect = (card: any) => {
     if (onCardSelect) {
       onCardSelect(card);
     }
+    setSearchQuery(card.name);
     setOpen(false);
   };
 
   const getCardDetails = (card: any) => {
-    // Default structure for card details
     return {
       name: card.name || 'Unknown Card',
-      number: card.number || card.collector_number || '???',
-      set: card.set?.name || card.set || 'Unknown Set',
+      number: card.number || '???',
+      set: card.set?.name || 'Unknown Set',
       series: card.series || null,
       game: card.game || 'Trading Card Game'
     };
   };
 
-  const getCardImage = (card: any) => {
-    if (card.images?.small || card.images?.normal) {
-      return card.images.small || card.images.normal;
-    }
-    if (card.image_uris?.small || card.image_uris?.normal) {
-      return card.image_uris.small || card.image_uris.normal;
-    }
-    return null;
-  };
-
-  const searchCards = async (query: string) => {
-    if (!query.trim()) {
-      setCards([]);
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      // You can implement the actual API calls here
-      // For now, we'll just simulate a delay
-      await new Promise(resolve => setTimeout(resolve, 500));
-      setCards([]);
-    } catch (error) {
-      console.error('Error searching cards:', error);
-      setCards([]);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const debouncedSearch = useCallback(
-    debounce((query: string) => searchCards(query), 300),
-    []
-  );
-
   useEffect(() => {
     if (searchQuery) {
-      debouncedSearch(searchQuery);
-    } else {
-      setCards([]);
+      searchCards(searchQuery);
     }
-  }, [searchQuery]);
+  }, [searchQuery, searchCards]);
 
   return (
     <motion.div 
@@ -106,9 +72,11 @@ export default function CardSearchInput({
               type="text"
               placeholder={placeholder}
               value={searchQuery}
+              onClick={() => setOpen(true)}
               onChange={(e) => {
                 const value = e.target.value;
                 setSearchQuery(value);
+                setOpen(true);
               }}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && onSearch) {
@@ -133,7 +101,7 @@ export default function CardSearchInput({
           </motion.div>
         </PopoverTrigger>
         <AnimatePresence>
-          {searchQuery && showSuggestions && (
+          {open && (
             <PopoverContent 
               className="p-0 w-[var(--radix-popover-trigger-width)] max-h-[400px] overflow-auto"
               align="start"
@@ -164,7 +132,6 @@ export default function CardSearchInput({
                       <CommandGroup heading="Suggestions">
                         {cards.map((card, index) => {
                           const details = getCardDetails(card);
-                          const imageUrl = getCardImage(card);
                           
                           return (
                             <motion.div
@@ -181,9 +148,9 @@ export default function CardSearchInput({
                                 onSelect={() => handleSelect(card)}
                                 className="flex items-start gap-2 cursor-pointer p-2 hover:bg-accent transition-colors duration-200"
                               >
-                                {imageUrl && (
+                                {card.imageUrl && (
                                   <motion.img
-                                    src={imageUrl}
+                                    src={card.imageUrl}
                                     alt={details.name}
                                     className="w-10 h-14 object-contain flex-shrink-0"
                                     whileHover={{ scale: 1.05 }}
