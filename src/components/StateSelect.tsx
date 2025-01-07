@@ -14,6 +14,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 const US_STATES = [
   { code: "all", name: "All locations" },
@@ -91,26 +92,29 @@ export function StateSelect({ value = "all", onValueChange }: StateSelectProps) 
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[300px] p-0">
+      <PopoverContent className="w-[200px] p-0">
         <Command>
-          <CommandInput placeholder="Search state..." />
+          <CommandInput placeholder="Search state..." className="h-9" />
           <CommandEmpty>No state found.</CommandEmpty>
-          <CommandGroup>
-            {US_STATES.map((state) => (
-              <CommandItem
-                key={state.code}
-                value={state.code}
-                onSelect={(currentValue) => {
-                  onValueChange?.(currentValue);
-                  setOpen(false);
-                }}
-              >
-                <span className={cn("flex w-full", value === state.code && "font-bold")}>
-                  {state.name}
-                </span>
-              </CommandItem>
-            ))}
-          </CommandGroup>
+          <ScrollArea className="h-[300px]">
+            <CommandGroup>
+              {US_STATES.map((state) => (
+                <CommandItem
+                  key={state.code}
+                  value={state.code}
+                  onSelect={(currentValue) => {
+                    onValueChange?.(currentValue);
+                    setOpen(false);
+                  }}
+                  className="cursor-pointer"
+                >
+                  <span className={cn("flex w-full", value === state.code && "font-bold")}>
+                    {state.name}
+                  </span>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </ScrollArea>
         </Command>
       </PopoverContent>
     </Popover>
