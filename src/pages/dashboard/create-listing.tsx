@@ -238,11 +238,13 @@ const CreateListingPage = () => {
                         className="w-full justify-start text-left font-normal"
                       >
                         {formData.cardReference ? (
-                          <div className="flex items-center gap-2">
-                            <span>{formData.cardReference.name}</span>
-                            <span className="text-sm text-muted-foreground">
-                              ({formData.cardReference.set || 'Unknown Set'})
-                            </span>
+                          <div className="flex items-center gap-2 w-full">
+                            <div className="truncate flex-1">
+                              <span className="mr-1">{formData.cardReference.name}</span>
+                              <span className="text-sm text-muted-foreground">
+                                ({formData.cardReference.set || 'Unknown Set'})
+                              </span>
+                            </div>
                           </div>
                         ) : (
                           <span className="text-muted-foreground">Search for a card...</span>
