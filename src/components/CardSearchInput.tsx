@@ -25,7 +25,67 @@ export default function CardSearchInput({
   const [isLoading, setIsLoading] = useState(false);
   const [cards, setCards] = useState<any[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(true);
-  // ... (keep all the state definitions and functions until the return statement)
+
+  const handleSelect = (card: any) => {
+    if (onCardSelect) {
+      onCardSelect(card);
+    }
+    setOpen(false);
+  };
+
+  const getCardDetails = (card: any) => {
+    // Default structure for card details
+    return {
+      name: card.name || 'Unknown Card',
+      number: card.number || card.collector_number || '???',
+      set: card.set?.name || card.set || 'Unknown Set',
+      series: card.series || null,
+      game: card.game || 'Trading Card Game'
+    };
+  };
+
+  const getCardImage = (card: any) => {
+    if (card.images?.small || card.images?.normal) {
+      return card.images.small || card.images.normal;
+    }
+    if (card.image_uris?.small || card.image_uris?.normal) {
+      return card.image_uris.small || card.image_uris.normal;
+    }
+    return null;
+  };
+
+  const searchCards = async (query: string) => {
+    if (!query.trim()) {
+      setCards([]);
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      // You can implement the actual API calls here
+      // For now, we'll just simulate a delay
+      await new Promise(resolve => setTimeout(resolve, 500));
+      setCards([]);
+    } catch (error) {
+      console.error('Error searching cards:', error);
+      setCards([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const debouncedSearch = useCallback(
+    debounce((query: string) => searchCards(query), 300),
+    []
+  );
+
+  useEffect(() => {
+    if (searchQuery) {
+      debouncedSearch(searchQuery);
+    } else {
+      setCards([]);
+    }
+  }, [searchQuery]);
 
   return (
     <motion.div 
