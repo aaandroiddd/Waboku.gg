@@ -491,9 +491,32 @@ const CreateListingPage = () => {
                   </div>
                   {errors.images && <p className="text-sm text-red-500">{errors.images}</p>}
                   {formData.images.length > 0 && (
-                    <p className="text-sm text-green-600">
-                      {formData.images.length} image(s) selected
-                    </p>
+                    <div className="space-y-4">
+                      <p className="text-sm text-green-600">
+                        {formData.images.length} image(s) selected
+                      </p>
+                      <div className="grid grid-cols-4 gap-4">
+                        {Array.from(formData.images).map((file, index) => (
+                          <div 
+                            key={index}
+                            className={`relative aspect-square rounded-lg overflow-hidden border-2 cursor-pointer transition-all
+                              ${index === formData.coverImageIndex ? 'border-primary' : 'border-gray-200 hover:border-gray-300'}`}
+                            onClick={() => setFormData(prev => ({ ...prev, coverImageIndex: index }))}
+                          >
+                            <img
+                              src={URL.createObjectURL(file)}
+                              alt={`Preview ${index + 1}`}
+                              className="w-full h-full object-cover"
+                            />
+                            {index === formData.coverImageIndex && (
+                              <div className="absolute top-2 right-2 bg-primary text-primary-foreground text-xs px-2 py-1 rounded">
+                                Cover
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
                   )}
                 </div>
 
