@@ -21,6 +21,10 @@ export default function CardSearchInput({
   className = ""
 }: CardSearchInputProps) {
   const [open, setOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [cards, setCards] = useState<any[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(true);
   // ... (keep all the state definitions and functions until the return statement)
 
   return (
