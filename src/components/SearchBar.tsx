@@ -298,7 +298,7 @@ export default function SearchBar() {
         </PopoverTrigger>
         {searchQuery && showSuggestions && (
           <PopoverContent 
-            className="p-0 w-[var(--radix-popover-trigger-width)] max-h-[400px] overflow-auto max-w-[320px]" 
+            className="p-0 w-[var(--radix-popover-trigger-width)] max-h-[400px] overflow-auto"
             align="start"
             sideOffset={5}
           >
