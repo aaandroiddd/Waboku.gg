@@ -236,13 +236,21 @@ const CreateListingPage = () => {
                         <Input
                           type="text"
                           placeholder="Search for Pokémon, Magic, or One Piece cards..."
-                          value={formData.cardReference ? `${formData.cardReference.name} (${formData.cardReference.set || 'Unknown Set'})` : ''}
+                          value={formData.cardReference ? `${formData.cardReference.name} (${formData.cardReference.set || 'Unknown Set'})` : searchQuery}
                           onChange={(e) => {
-                            if (!e.target.value) {
+                            const value = e.target.value;
+                            setSearchQuery(value);
+                            if (!value) {
                               setFormData(prev => ({ ...prev, cardReference: undefined }));
                             }
-                            if (e.target.value.length >= 2) {
-                              searchCards(e.target.value);
+                            if (value.length >= 2) {
+                              searchCards(value);
+                              setSearchOpen(true);
+                            }
+                          }}
+                          onFocus={() => {
+                            if (searchQuery.length >= 2) {
+                              setSearchOpen(true);
                             }
                           }}
                           className="pl-10 h-12 w-full"
