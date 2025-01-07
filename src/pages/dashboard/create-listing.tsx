@@ -256,7 +256,7 @@ const CreateListingPage = () => {
                     </div>
                   </div>
                   {searchQuery && results.length > 0 && (
-                    <div className="absolute z-50 w-[calc(100%)] mt-1 bg-background border rounded-md shadow-lg max-w-full">
+                    <div className="absolute z-50 w-full mt-1 bg-background border rounded-md shadow-lg">
                       <div className="p-2">
                         {results.map((card) => (
                           <div
