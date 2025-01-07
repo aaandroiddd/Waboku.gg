@@ -1,6 +1,5 @@
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
-import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -10,6 +9,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { useState } from "react";
+import { StateSelect } from "./StateSelect";
 
 interface ListingsSearchBarProps {
   value: string;
