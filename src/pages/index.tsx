@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { motion } from "framer-motion";
 import { useRouter } from "next/router";
 import { StateSelect } from "@/components/StateSelect";
 import SearchBar from "@/components/SearchBar";
