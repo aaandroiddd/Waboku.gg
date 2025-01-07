@@ -47,8 +47,9 @@ export default function CardSearchInput({
     };
   };
 
+  // Only search when there's actual input and not just on focus
   useEffect(() => {
-    if (searchQuery) {
+    if (searchQuery.trim()) {
       searchCards(searchQuery);
     }
   }, [searchQuery, searchCards]);
@@ -72,11 +73,11 @@ export default function CardSearchInput({
               type="text"
               placeholder={placeholder}
               value={searchQuery}
-              onClick={() => setOpen(true)}
               onChange={(e) => {
                 const value = e.target.value;
                 setSearchQuery(value);
-                setOpen(true);
+                // Only open popover if there's text
+                setOpen(!!value.trim());
               }}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && onSearch) {
@@ -92,7 +93,7 @@ export default function CardSearchInput({
               animate={{ opacity: 1 }}
               transition={{ duration: 0.2 }}
             >
-              {isLoading ? (
+              {isLoading && searchQuery.trim() ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
                 <Search className="h-4 w-4" />
@@ -101,7 +102,7 @@ export default function CardSearchInput({
           </motion.div>
         </PopoverTrigger>
         <AnimatePresence>
-          {open && (
+          {open && searchQuery.trim() && (
             <PopoverContent 
               className="p-0 w-[var(--radix-popover-trigger-width)] max-h-[400px] overflow-auto"
               align="start"
