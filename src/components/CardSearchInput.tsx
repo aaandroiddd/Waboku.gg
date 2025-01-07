@@ -20,6 +20,7 @@ export default function CardSearchInput({
   placeholder = "Search for Pokémon, Magic, or One Piece cards...",
   className = ""
 }: CardSearchInputProps) {
+  const [open, setOpen] = useState(false);
   // ... (keep all the state definitions and functions until the return statement)
 
   return (
