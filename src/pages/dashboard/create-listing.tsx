@@ -259,7 +259,12 @@ const CreateListingPage = () => {
                               onSelect={() => {
                                 setFormData(prev => ({
                                   ...prev,
-                                  title: `${card.name} - ${card.set?.name || 'Unknown Set'}`,
+                                  cardReference: {
+                                    id: card.id,
+                                    name: card.name,
+                                    set: card.set?.name,
+                                    game: card.game
+                                  },
                                   game: GAME_MAPPING[card.game] || 'other'
                                 }));
                                 setSearchOpen(false);
