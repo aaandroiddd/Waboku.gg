@@ -22,12 +22,8 @@ const CardSearchInput: React.FC<CardSearchInputProps> = ({
 
   const handleInputChange = useCallback((value: string) => {
     setSearchQuery(value);
-    if (value.trim()) {
-      setIsPopoverOpen(true);
-      searchCards(value);
-    } else {
-      setIsPopoverOpen(false);
-    }
+    searchCards(value);
+    setIsPopoverOpen(true);
   }, [searchCards]);
 
   const handleSelect = useCallback((cardName: string) => {
@@ -60,6 +56,7 @@ const CardSearchInput: React.FC<CardSearchInputProps> = ({
             onChange={(e) => handleInputChange(e.target.value)}
             onKeyDown={handleKeyDown}
             className="pl-10 h-12 w-full transition-shadow duration-200 ease-in-out focus-within:shadow-lg"
+            autoComplete="off"
           />
           <div className="absolute inset-y-0 left-0 flex items-center pl-3">
             {isLoading && searchQuery.trim() ? (
@@ -81,21 +78,21 @@ const CardSearchInput: React.FC<CardSearchInputProps> = ({
             <div className="py-2">
               {results.map((card, index) => (
                 <button
-                  key={`${card.id}-${index}`}
+                  key={`${card.identifier}-${index}`}
                   className="w-full px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-800 focus:outline-none focus:bg-gray-100 dark:focus:bg-gray-800"
                   onClick={() => handleSelect(card.name)}
                 >
                   <div className="flex items-center gap-2">
-                    {card.imageUrl && (
+                    {card.images.small && (
                       <img 
-                        src={card.imageUrl} 
+                        src={card.images.small} 
                         alt={card.name} 
                         className="w-8 h-8 object-cover rounded"
                       />
                     )}
                     <div>
                       <p className="font-medium">{card.name}</p>
-                      <p className="text-sm text-gray-500">{card.setName}</p>
+                      <p className="text-sm text-gray-500">{card.set.name}</p>
                     </div>
                   </div>
                 </button>
