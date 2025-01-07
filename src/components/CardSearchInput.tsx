@@ -51,10 +51,13 @@ export default function CardSearchInput({
     };
   };
 
-  // Only search when there's actual input and not just on focus
+  // Only search when there's at least 3 characters
   useEffect(() => {
-    if (searchQuery.trim()) {
+    if (searchQuery.trim().length >= 3) {
       searchCards(searchQuery);
+    } else {
+      // Clear results if query is too short
+      setOpen(false);
     }
   }, [searchQuery, searchCards]);
 
