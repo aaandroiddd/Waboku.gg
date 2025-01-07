@@ -58,6 +58,7 @@ const CreateListingPage = () => {
     gradingCompany: undefined as string | undefined,
     cardReference: undefined as { id: string; name: string; set?: string; game: string } | undefined,
   });
+  const [searchQuery, setSearchQuery] = useState("");
 
   const [errors, setErrors] = useState<{
     title?: string;
