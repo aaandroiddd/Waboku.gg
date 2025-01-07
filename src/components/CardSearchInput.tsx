@@ -78,8 +78,6 @@ export default function CardSearchInput({
               onChange={(e) => {
                 const value = e.target.value;
                 setSearchQuery(value);
-                // Only open popover if there's enough text
-                setOpen(value.trim().length >= 3);
               }}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && onSearch) {
