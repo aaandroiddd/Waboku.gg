@@ -505,18 +505,42 @@ const CreateListingPage = () => {
                             key={index}
                             className={`relative aspect-square rounded-lg overflow-hidden border-2 cursor-pointer transition-all
                               ${index === formData.coverImageIndex ? 'border-primary' : 'border-gray-200 hover:border-gray-300'}`}
-                            onClick={() => setFormData(prev => ({ ...prev, coverImageIndex: index }))}
                           >
                             <img
                               src={URL.createObjectURL(file)}
                               alt={`Preview ${index + 1}`}
                               className="w-full h-full object-cover"
+                              onClick={() => setFormData(prev => ({ ...prev, coverImageIndex: index }))}
                             />
                             {index === formData.coverImageIndex && (
                               <div className="absolute top-2 right-2 bg-primary text-primary-foreground text-xs px-2 py-1 rounded">
                                 Cover
                               </div>
                             )}
+                            <button
+                              type="button"
+                              className="absolute top-2 left-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const newImages = [...formData.images];
+                                newImages.splice(index, 1);
+                                let newCoverIndex = formData.coverImageIndex;
+                                if (index === formData.coverImageIndex) {
+                                  newCoverIndex = Math.min(newImages.length - 1, 0);
+                                } else if (index < formData.coverImageIndex) {
+                                  newCoverIndex = Math.max(0, formData.coverImageIndex - 1);
+                                }
+                                setFormData(prev => ({
+                                  ...prev,
+                                  images: newImages,
+                                  coverImageIndex: newCoverIndex
+                                }));
+                              }}
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                              </svg>
+                            </button>
                           </div>
                         ))}
                       </div>
