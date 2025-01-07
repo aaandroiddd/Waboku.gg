@@ -1,13 +1,22 @@
 import React from "react";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Button } from "@/components/ui/button";
+import { ChevronsUpDown } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 const US_STATES = [
+  { code: "all", name: "All locations" },
   { code: "AL", name: "Alabama" },
   { code: "AK", name: "Alaska" },
   { code: "AZ", name: "Arizona" },
@@ -65,19 +74,45 @@ interface StateSelectProps {
   onValueChange?: (value: string) => void;
 }
 
-export function StateSelect({ value, onValueChange }: StateSelectProps) {
+export function StateSelect({ value = "all", onValueChange }: StateSelectProps) {
+  const [open, setOpen] = React.useState(false);
+  const selectedState = US_STATES.find((state) => state.code === value);
+
   return (
-    <Select value={value} onValueChange={onValueChange}>
-      <SelectTrigger className="w-full">
-        <SelectValue placeholder="Select a state" />
-      </SelectTrigger>
-      <SelectContent>
-        {US_STATES.map((state) => (
-          <SelectItem key={state.code} value={state.code}>
-            {state.name}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          className="h-12 w-full justify-between text-center relative px-8"
+        >
+          {selectedState?.name || "All locations"}
+          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[300px] p-0">
+        <Command>
+          <CommandInput placeholder="Search state..." />
+          <CommandEmpty>No state found.</CommandEmpty>
+          <CommandGroup>
+            {US_STATES.map((state) => (
+              <CommandItem
+                key={state.code}
+                value={state.code}
+                onSelect={(currentValue) => {
+                  onValueChange?.(currentValue);
+                  setOpen(false);
+                }}
+              >
+                <span className={cn("flex w-full", value === state.code && "font-bold")}>
+                  {state.name}
+                </span>
+              </CommandItem>
+            ))}
+          </CommandGroup>
+        </Command>
+      </PopoverContent>
+    </Popover>
   );
 }
