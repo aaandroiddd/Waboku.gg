@@ -295,14 +295,57 @@ export default function Home() {
             
             <div className="relative container mx-auto px-4 py-16 sm:py-20 md:py-24 lg:py-32">
               <div className="text-center max-w-3xl mx-auto space-y-6 sm:space-y-8">
-                <div className="space-y-4 sm:space-y-6 pt-8 sm:pt-12 md:pt-16">
-                  <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight glow-text">
+                <motion.div 
+                  initial="hidden"
+                  animate="visible"
+                  variants={{
+                    hidden: { opacity: 0, y: 20 },
+                    visible: {
+                      opacity: 1,
+                      y: 0,
+                      transition: {
+                        duration: 0.8,
+                        staggerChildren: 0.3
+                      }
+                    }
+                  }}
+                  className="space-y-4 sm:space-y-6 pt-8 sm:pt-12 md:pt-16"
+                >
+                  <motion.h1 
+                    variants={{
+                      hidden: { opacity: 0, y: 20 },
+                      visible: { 
+                        opacity: 1, 
+                        y: 0,
+                        transition: {
+                          type: "spring",
+                          damping: 12,
+                          stiffness: 100
+                        }
+                      }
+                    }}
+                    className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight glow-text"
+                  >
                     Your Local TCG Marketplace
-                  </h1>
-                  <p className="text-base sm:text-lg md:text-xl glow-text-subtle">
+                  </motion.h1>
+                  <motion.p 
+                    variants={{
+                      hidden: { opacity: 0, y: 20 },
+                      visible: { 
+                        opacity: 1, 
+                        y: 0,
+                        transition: {
+                          type: "spring",
+                          damping: 12,
+                          stiffness: 100
+                        }
+                      }
+                    }}
+                    className="text-base sm:text-lg md:text-xl glow-text-subtle"
+                  >
                     {randomSubtitle}
-                  </p>
-                </div>
+                  </motion.p>
+                </motion.div>
 
                 {/* Search Section */}
                 <div className="flex flex-col max-w-2xl mx-auto pt-4 sm:pt-6 pb-4 sm:pb-8 px-4 sm:px-0">
