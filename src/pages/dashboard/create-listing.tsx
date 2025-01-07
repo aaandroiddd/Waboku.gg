@@ -18,7 +18,7 @@ import { useListings } from "@/hooks/useListings";
 import { useProfile } from "@/hooks/useProfile";
 import { Progress } from "@/components/ui/progress";
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
-import { HelpCircle } from "lucide-react";
+import { HelpCircle, Search, Loader2 } from "lucide-react";
 import { LocationInput } from "@/components/LocationInput";
 import { validateTextContent } from "@/util/string";
 
