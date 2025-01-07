@@ -29,16 +29,21 @@ export function ListingsSearchBar({
   const [open, setOpen] = useState(false);
 
   const SearchInput = () => (
-    <div className="relative w-full">
-      <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-      <Input
-        type="text"
-        placeholder={placeholder}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="pl-9 w-full h-10"
-        autoFocus
-      />
+    <div className="flex gap-4 w-full">
+      <div className="relative flex-1">
+        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          type="text"
+          placeholder={placeholder}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className="pl-9 w-full h-10"
+          autoFocus
+        />
+      </div>
+      <div className="w-[200px]">
+        <StateSelect value={state} onValueChange={onStateChange} />
+      </div>
     </div>
   );
 
