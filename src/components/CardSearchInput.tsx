@@ -19,6 +19,10 @@ interface CardSearchInputProps {
   className?: string;
 }
 
+interface GroupedCards {
+  [key: string]: any[];
+}
+
 export default function CardSearchInput({ 
   onCardSelect, 
   onSearch,
