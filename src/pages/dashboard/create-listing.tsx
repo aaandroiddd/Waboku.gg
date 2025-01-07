@@ -109,8 +109,8 @@ const CreateListingPage = () => {
   };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    const invalidFiles = files.filter(
+    const newFiles = Array.from(e.target.files || []);
+    const invalidFiles = newFiles.filter(
       file => !ALLOWED_FILE_TYPES.includes(file.type) || file.size > MAX_FILE_SIZE
     );
 
@@ -122,7 +122,11 @@ const CreateListingPage = () => {
       return;
     }
 
-    setFormData({ ...formData, images: files });
+    // Append new files to existing ones
+    setFormData(prev => ({
+      ...prev,
+      images: [...prev.images, ...newFiles]
+    }));
     setErrors(prev => ({ ...prev, images: undefined }));
   };
 
