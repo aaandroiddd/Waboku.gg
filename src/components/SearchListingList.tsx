@@ -111,20 +111,24 @@ export function SearchListingList({ listings, loading }: SearchListingListProps)
 
               {/* Content Section */}
               <div className="flex-1 min-w-0">
-                <div className="flex justify-between items-start gap-2">
+                <div className="flex justify-between items-start gap-2 w-full">
                   <div className="space-y-1 flex-1 min-w-0">
-                    <h3 className="font-medium text-base sm:text-lg break-words">{listing.title}</h3>
-                    <p className="text-base sm:text-lg font-bold">{formatPrice(listing.price)}</p>
-                    <p className="text-sm text-muted-foreground truncate">
-                      by{" "}
-                      <Link
-                        href={`/profile/${listing.userId}`}
-                        className="hover:text-primary hover:underline inline-block max-w-[150px] truncate align-bottom"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        {listing.username}
-                      </Link>
-                    </p>
+                    <h3 className="font-medium text-base sm:text-lg line-clamp-2">{listing.title}</h3>
+                    <div className="flex items-center gap-2">
+                      <p className="text-base sm:text-lg font-bold flex-shrink-0">{formatPrice(listing.price)}</p>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-muted-foreground truncate">
+                          by{" "}
+                          <Link
+                            href={`/profile/${listing.userId}`}
+                            className="hover:text-primary hover:underline inline-block max-w-[150px] truncate align-bottom"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            {listing.username}
+                          </Link>
+                        </p>
+                      </div>
+                    </div>
                   </div>
 
                   {/* Favorite Button */}
@@ -141,7 +145,7 @@ export function SearchListingList({ listings, loading }: SearchListingListProps)
                       toggleFavorite(listing);
                     }}
                     className={`
-                      rounded-full flex-shrink-0
+                      rounded-full flex-shrink-0 ml-2
                       ${user && isFavorite(listing.id) ? 'text-red-500 hover:text-red-600' : 'text-muted-foreground hover:text-red-500'}
                     `}
                   >
@@ -152,13 +156,15 @@ export function SearchListingList({ listings, loading }: SearchListingListProps)
                   </Button>
                 </div>
 
-                <div className="flex items-center gap-1.5 flex-wrap mt-2">
-                  <span className="text-xs px-2 py-0.5 bg-secondary rounded-full truncate max-w-full">{listing.game}</span>
-                  <Badge className={`${getConditionColor(listing.condition).base} ${getConditionColor(listing.condition).hover} truncate max-w-full`}>
+                <div className="flex items-center gap-2 flex-wrap mt-3">
+                  <span className="text-xs px-2 py-0.5 bg-secondary rounded-full truncate max-w-[150px]">{listing.game}</span>
+                  <Badge 
+                    className={`${getConditionColor(listing.condition).base} ${getConditionColor(listing.condition).hover} truncate max-w-[150px]`}
+                  >
                     {listing.condition}
                   </Badge>
                   {listing.isGraded && (
-                    <span className="text-xs px-2 py-0.5 bg-primary/10 text-primary rounded-full truncate max-w-full">
+                    <span className="text-xs px-2 py-0.5 bg-primary/10 text-primary rounded-full truncate max-w-[150px]">
                       {listing.gradingCompany} {listing.gradeLevel}
                     </span>
                   )}
