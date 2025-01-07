@@ -343,14 +343,12 @@ export default function Home() {
                     
                     <div className="flex">
                       <div className="w-[180px]">
-                        <LocationInput
-                          onLocationSelect={(city, state) => {
-                            setSelectedState(state.toLowerCase());
-                          }}
+                        <StateSelect
+                          value={selectedState}
+                          onValueChange={(state) => setSelectedState(state.toLowerCase())}
                         />
                       </div>
-
-                      <Button className="h-12 w-12 ml-2" size="icon" onClick={handleSearch}>
+                      <Button className="h-10 w-10 ml-2" size="icon" onClick={handleSearch}>
                         <Search className="h-5 w-5" />
                       </Button>
                     </div>
