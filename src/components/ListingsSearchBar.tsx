@@ -22,7 +22,9 @@ interface ListingsSearchBarProps {
 
 export function ListingsSearchBar({ 
   value, 
-  onChange, 
+  onChange,
+  state,
+  onStateChange, 
   placeholder = "Search your listings...",
   className 
 }: ListingsSearchBarProps) {
