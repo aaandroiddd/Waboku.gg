@@ -230,31 +230,35 @@ const CreateListingPage = () => {
                       </Tooltip>
                     </TooltipProvider>
                   </div>
-                  <div className="relative w-full">
-                    <Input
-                      type="text"
-                      placeholder="Search for Pokémon, Magic, or One Piece cards..."
-                      value={searchQuery}
-                      onChange={(e) => {
-                        const value = e.target.value;
-                        setSearchQuery(value);
-                        if (!value) {
-                          setFormData(prev => ({ ...prev, cardReference: undefined }));
-                        }
-                        if (value.length >= 2) {
-                          searchCards(value);
-                        }
-                      }}
-                      className="pl-10 h-12 w-full"
-                    />
-                    <div className="absolute inset-y-0 left-0 flex items-center pl-3">
-                      {isLoading ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <Search className="h-4 w-4" />
-                      )}
-                    </div>
-                  </div>
+                  <Popover open={searchOpen} onOpenChange={setSearchOpen}>
+                    <PopoverTrigger asChild>
+                      <div className="relative w-full">
+                        <Input
+                          type="text"
+                          placeholder="Search for Pokémon, Magic, or One Piece cards..."
+                          value={searchQuery}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            setSearchQuery(value);
+                            setSearchOpen(true);
+                            if (!value) {
+                              setFormData(prev => ({ ...prev, cardReference: undefined }));
+                            }
+                            if (value.length >= 2) {
+                              searchCards(value);
+                            }
+                          }}
+                          className="pl-10 h-12 w-full"
+                        />
+                        <div className="absolute inset-y-0 left-0 flex items-center pl-3">
+                          {isLoading ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Search className="h-4 w-4" />
+                          )}
+                        </div>
+                      </div>
+                    </PopoverTrigger>
                   {searchQuery && (
                     <PopoverContent 
                       className="p-0 w-[var(--radix-popover-trigger-width)] max-h-[400px] overflow-auto"
