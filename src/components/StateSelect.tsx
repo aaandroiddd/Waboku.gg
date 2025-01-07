@@ -77,7 +77,10 @@ interface StateSelectProps {
 
 export function StateSelect({ value = "all", onValueChange }: StateSelectProps) {
   const [open, setOpen] = React.useState(false);
-  const selectedState = US_STATES.find((state) => state.code === value);
+  const [searchValue, setSearchValue] = React.useState("");
+  
+  // Find the selected state object
+  const selectedState = US_STATES.find((state) => state.code.toLowerCase() === value.toLowerCase());
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -93,7 +96,7 @@ export function StateSelect({ value = "all", onValueChange }: StateSelectProps) 
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-[200px] p-0">
-        <Command>
+        <Command value={searchValue} onValueChange={setSearchValue}>
           <CommandInput placeholder="Search state..." className="h-9" />
           <CommandEmpty>No state found.</CommandEmpty>
           <ScrollArea className="h-[300px]">
@@ -103,12 +106,16 @@ export function StateSelect({ value = "all", onValueChange }: StateSelectProps) 
                   key={state.code}
                   value={state.name}
                   onSelect={() => {
-                    onValueChange?.(state.code);
+                    onValueChange?.(state.code.toLowerCase());
                     setOpen(false);
+                    setSearchValue("");
                   }}
                   className="cursor-pointer"
                 >
-                  <span className={cn("flex w-full", value === state.code && "font-bold")}>
+                  <span className={cn(
+                    "flex w-full",
+                    value.toLowerCase() === state.code.toLowerCase() && "font-bold"
+                  )}>
                     {state.name}
                   </span>
                 </CommandItem>
