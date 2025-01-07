@@ -1,9 +1,6 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import dynamic from 'next/dynamic';
-import { useCardSearch } from "@/hooks/useCardSearch";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -18,9 +15,10 @@ import { useListings } from "@/hooks/useListings";
 import { useProfile } from "@/hooks/useProfile";
 import { Progress } from "@/components/ui/progress";
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
-import { HelpCircle, Search, Loader2 } from "lucide-react";
+import { HelpCircle } from "lucide-react";
 import { LocationInput } from "@/components/LocationInput";
 import { validateTextContent } from "@/util/string";
+import CardSearchInput from "@/components/CardSearchInput";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const MAX_TITLE_LENGTH = 100;
