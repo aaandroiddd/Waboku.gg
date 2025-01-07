@@ -53,7 +53,7 @@ export function useCardSearch() {
     const data = await response.json();
     return data.data.map((card: any) => ({
       id: card.id,
-      name: `${card.name} (${card.number || 'N/A'}) - ${card.id}`,
+      name: `${card.name} - ${card.id}`,
       imageUrl: card.images.small,
       game: 'One Piece TCG',
       set: {
@@ -74,7 +74,7 @@ export function useCardSearch() {
     const data = await response.json();
     return (data.data || []).map((card: any) => ({
       id: card.id,
-      name: `${card.name} (${card.number || 'N/A'}) - ${card.id}`,
+      name: `${card.name} - ${card.id}`,
       imageUrl: card.images?.small || card.images?.large,
       game: 'Dragon Ball Fusion',
       set: {
