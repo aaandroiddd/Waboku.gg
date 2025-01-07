@@ -187,6 +187,44 @@ export function useCardSearch() {
       setError(null);
 
       try {
+        const [pokemonCards, onePieceCards, dragonBallCards, mtgCards] = await Promise.all([
+          searchPokemonCards(query).catch(error => {
+            console.error('Error fetching Pokemon cards:', error);
+            return [];
+          }),
+          searchOnePieceCards(query).catch(error => {
+            console.error('Error fetching One Piece cards:', error);
+            return [];
+          }),
+          searchDragonBallCards(query).catch(error => {
+            console.error('Error fetching Dragon Ball Fusion cards:', error);
+            return [];
+          }),
+          searchMTGCards(query).catch(error => {
+            console.error('Error fetching MTG cards:', error);
+            return [];
+          }),
+        ]);
+
+        const allResults = [...pokemonCards, ...onePieceCards, ...dragonBallCards, ...mtgCards];
+        setResults(allResults);
+      } catch (error) {
+        console.error('Error searching cards:', error);
+        setError('Failed to search cards');
+      } finally {
+        setIsLoading(false);
+      }
+    }, 300),
+    debounce(async (query: string) => {
+      if (!query.trim()) {
+        setResults([]);
+        return;
+      }
+
+      setIsLoading(true);
+      setError(null);
+
+      try {
         const [pokemonCards, onePieceCards, dragonBallCards] = await Promise.all([
           searchPokemonCards(query).catch(error => {
             console.error('Error fetching Pokemon cards:', error);
