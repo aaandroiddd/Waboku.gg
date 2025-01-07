@@ -111,15 +111,15 @@ export function SearchListingList({ listings, loading }: SearchListingListProps)
 
               {/* Content Section */}
               <div className="flex-1 min-w-0">
-                <div className="flex justify-between items-start gap-4">
+                <div className="flex justify-between items-start gap-2">
                   <div className="space-y-1 flex-1 min-w-0">
-                    <h3 className="font-medium text-base sm:text-lg line-clamp-1">{listing.title}</h3>
+                    <h3 className="font-medium text-base sm:text-lg break-words">{listing.title}</h3>
                     <p className="text-base sm:text-lg font-bold">{formatPrice(listing.price)}</p>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-sm text-muted-foreground truncate">
                       by{" "}
                       <Link
                         href={`/profile/${listing.userId}`}
-                        className="hover:text-primary hover:underline"
+                        className="hover:text-primary hover:underline inline-block max-w-[150px] truncate align-bottom"
                         onClick={(e) => e.stopPropagation()}
                       >
                         {listing.username}
@@ -141,7 +141,7 @@ export function SearchListingList({ listings, loading }: SearchListingListProps)
                       toggleFavorite(listing);
                     }}
                     className={`
-                      rounded-full
+                      rounded-full flex-shrink-0
                       ${user && isFavorite(listing.id) ? 'text-red-500 hover:text-red-600' : 'text-muted-foreground hover:text-red-500'}
                     `}
                   >
@@ -152,18 +152,18 @@ export function SearchListingList({ listings, loading }: SearchListingListProps)
                   </Button>
                 </div>
 
-                <div className="flex items-center gap-2 flex-wrap mt-2">
-                  <span className="text-xs px-2 py-0.5 bg-secondary rounded-full">{listing.game}</span>
-                  <Badge className={`${getConditionColor(listing.condition).base} ${getConditionColor(listing.condition).hover}`}>
+                <div className="flex items-center gap-1.5 flex-wrap mt-2">
+                  <span className="text-xs px-2 py-0.5 bg-secondary rounded-full truncate max-w-full">{listing.game}</span>
+                  <Badge className={`${getConditionColor(listing.condition).base} ${getConditionColor(listing.condition).hover} truncate max-w-full`}>
                     {listing.condition}
                   </Badge>
                   {listing.isGraded && (
-                    <span className="text-xs px-2 py-0.5 bg-primary/10 text-primary rounded-full">
+                    <span className="text-xs px-2 py-0.5 bg-primary/10 text-primary rounded-full truncate max-w-full">
                       {listing.gradingCompany} {listing.gradeLevel}
                     </span>
                   )}
                 </div>
-                <p className="text-xs text-muted-foreground mt-2">{listing.city}, {listing.state}</p>
+                <p className="text-xs text-muted-foreground mt-2 truncate">{listing.city}, {listing.state}</p>
               </div>
             </div>
           </Link>
