@@ -319,14 +319,12 @@ export default function Home() {
                     
                     <div className="flex gap-2">
                       <div className="flex-1">
-                      <LocationInput
-                        onLocationSelect={(city, state) => {
-                          setSelectedState(state.toLowerCase());
-                        }}
-                      />
-                    </div>
-
-                      <Button className="h-12 px-8" onClick={handleSearch}>
+                        <StateSelect
+                          value={selectedState}
+                          onValueChange={(state) => setSelectedState(state.toLowerCase())}
+                        />
+                      </div>
+                      <Button className="h-10 px-8" onClick={handleSearch}>
                         <Search className="h-5 w-5" />
                       </Button>
                     </div>
