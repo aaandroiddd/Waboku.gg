@@ -330,14 +330,14 @@ export default function SearchBar() {
                               className="w-10 h-14 object-contain flex-shrink-0"
                             />
                           )}
-                          <div className="flex flex-col min-w-0 flex-1 overflow-hidden">
-                            <div className="font-medium text-sm whitespace-normal break-words">{details.name}</div>
-                            <div className="text-xs text-muted-foreground whitespace-normal">
-                              <span>{details.game}</span>
-                              <span> • </span>
-                              <span className="whitespace-normal break-words">{details.set}</span>
+                          <div className="flex flex-col min-w-0 flex-1">
+                            <div className="font-medium text-sm truncate">{details.name}</div>
+                            <div className="text-xs text-muted-foreground flex items-center gap-1">
+                              <span className="truncate">{details.game}</span>
+                              <span>•</span>
+                              <span className="truncate">{details.set}</span>
                               {details.series && (
-                                <span className="whitespace-normal break-words"> ({details.series})</span>
+                                <span className="truncate">({details.series})</span>
                               )}
                             </div>
                             <div className="text-xs font-semibold text-primary mt-0.5">
