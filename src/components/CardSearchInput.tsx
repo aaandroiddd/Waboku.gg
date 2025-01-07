@@ -117,9 +117,7 @@ export default function CardSearchInput({
               >
                 <Command>
                   <CommandList>
-                    {searchQuery.trim().length > 0 && searchQuery.trim().length < 3 ? (
-                      <CommandEmpty>Please type at least 3 characters to search</CommandEmpty>
-                    ) : isLoading ? (
+                    {isLoading ? (
                       <motion.div 
                         className="flex items-center justify-center p-4"
                         initial={{ opacity: 0 }}
