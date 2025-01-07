@@ -1,19 +1,6 @@
-import { useState } from 'react';
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-} from "@/components/ui/command"
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover"
-import { Button } from "@/components/ui/button"
-import { Check, ChevronsUpDown } from "lucide-react"
-import { cn } from "@/lib/utils"
+import { useState, useEffect, useRef } from 'react';
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 interface LocationInputProps {
   onLocationSelect: (city: string, state: string) => void;
@@ -22,120 +9,66 @@ interface LocationInputProps {
   error?: string;
 }
 
-const US_STATES = [
-  { name: 'All locations', abbreviation: 'ALL' },
-  { name: 'Alabama', abbreviation: 'AL' },
-  { name: 'Alaska', abbreviation: 'AK' },
-  { name: 'Arizona', abbreviation: 'AZ' },
-  { name: 'Arkansas', abbreviation: 'AR' },
-  { name: 'California', abbreviation: 'CA' },
-  { name: 'Colorado', abbreviation: 'CO' },
-  { name: 'Connecticut', abbreviation: 'CT' },
-  { name: 'Delaware', abbreviation: 'DE' },
-  { name: 'Florida', abbreviation: 'FL' },
-  { name: 'Georgia', abbreviation: 'GA' },
-  { name: 'Hawaii', abbreviation: 'HI' },
-  { name: 'Idaho', abbreviation: 'ID' },
-  { name: 'Illinois', abbreviation: 'IL' },
-  { name: 'Indiana', abbreviation: 'IN' },
-  { name: 'Iowa', abbreviation: 'IA' },
-  { name: 'Kansas', abbreviation: 'KS' },
-  { name: 'Kentucky', abbreviation: 'KY' },
-  { name: 'Louisiana', abbreviation: 'LA' },
-  { name: 'Maine', abbreviation: 'ME' },
-  { name: 'Maryland', abbreviation: 'MD' },
-  { name: 'Massachusetts', abbreviation: 'MA' },
-  { name: 'Michigan', abbreviation: 'MI' },
-  { name: 'Minnesota', abbreviation: 'MN' },
-  { name: 'Mississippi', abbreviation: 'MS' },
-  { name: 'Missouri', abbreviation: 'MO' },
-  { name: 'Montana', abbreviation: 'MT' },
-  { name: 'Nebraska', abbreviation: 'NE' },
-  { name: 'Nevada', abbreviation: 'NV' },
-  { name: 'New Hampshire', abbreviation: 'NH' },
-  { name: 'New Jersey', abbreviation: 'NJ' },
-  { name: 'New Mexico', abbreviation: 'NM' },
-  { name: 'New York', abbreviation: 'NY' },
-  { name: 'North Carolina', abbreviation: 'NC' },
-  { name: 'North Dakota', abbreviation: 'ND' },
-  { name: 'Ohio', abbreviation: 'OH' },
-  { name: 'Oklahoma', abbreviation: 'OK' },
-  { name: 'Oregon', abbreviation: 'OR' },
-  { name: 'Pennsylvania', abbreviation: 'PA' },
-  { name: 'Rhode Island', abbreviation: 'RI' },
-  { name: 'South Carolina', abbreviation: 'SC' },
-  { name: 'South Dakota', abbreviation: 'SD' },
-  { name: 'Tennessee', abbreviation: 'TN' },
-  { name: 'Texas', abbreviation: 'TX' },
-  { name: 'Utah', abbreviation: 'UT' },
-  { name: 'Vermont', abbreviation: 'VT' },
-  { name: 'Virginia', abbreviation: 'VA' },
-  { name: 'Washington', abbreviation: 'WA' },
-  { name: 'West Virginia', abbreviation: 'WV' },
-  { name: 'Wisconsin', abbreviation: 'WI' },
-  { name: 'Wyoming', abbreviation: 'WY' }
-];
+declare global {
+  interface Window {
+    google: any;
+  }
+}
 
-export function LocationInput({ onLocationSelect, initialState = "ALL", error }: LocationInputProps) {
-  const [open, setOpen] = useState(false)
-  const [selectedState, setSelectedState] = useState(initialState)
+export function LocationInput({ onLocationSelect, initialCity, initialState, error }: LocationInputProps) {
+  const [searchValue, setSearchValue] = useState(initialCity ? `${initialCity}, ${initialState}` : '');
+  const autocompleteRef = useRef<any>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
-  const handleStateSelect = (value: string) => {
-    setSelectedState(value);
-    setOpen(false);
-    const state = US_STATES.find(state => state.abbreviation === value);
-    if (state) {
-      onLocationSelect(state.name, state.abbreviation);
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.google && inputRef.current) {
+      const options = {
+        types: ['(cities)'],
+        componentRestrictions: { country: 'us' },
+      };
+
+      autocompleteRef.current = new window.google.maps.places.Autocomplete(
+        inputRef.current,
+        options
+      );
+
+      autocompleteRef.current.addListener('place_changed', () => {
+        const place = autocompleteRef.current.getPlace();
+        
+        if (place.address_components) {
+          let city = '';
+          let state = '';
+          
+          for (const component of place.address_components) {
+            if (component.types.includes('locality')) {
+              city = component.long_name;
+            }
+            if (component.types.includes('administrative_area_level_1')) {
+              state = component.short_name;
+            }
+          }
+
+          if (city && state) {
+            setSearchValue(`${city}, ${state}`);
+            onLocationSelect(city, state);
+          }
+        }
+      });
     }
-  };
-
-  const selectedStateName = US_STATES.find(
-    state => state.abbreviation === selectedState
-  )?.name || "All locations";
+  }, [onLocationSelect]);
 
   return (
-    <div className="relative">
-      <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger asChild>
-          <Button
-            variant="outline"
-            role="combobox"
-            aria-expanded={open}
-            className="h-12 w-full justify-between text-center relative px-8"
-          >
-            {selectedStateName}
-            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-[180px] p-0" align="start">
-          <Command>
-            <CommandInput 
-              placeholder="Search locations..."
-              className="h-12"
-            />
-            <CommandEmpty>No location found.</CommandEmpty>
-            <CommandGroup className="max-h-[300px] overflow-y-auto">
-              {US_STATES.map((state) => (
-                <CommandItem
-                  key={state.abbreviation}
-                  value={state.name}
-                  onSelect={() => handleStateSelect(state.abbreviation)}
-                  className="flex justify-center items-center relative"
-                >
-                  <Check
-                    className={cn(
-                      "absolute left-2 h-4 w-4",
-                      selectedState === state.abbreviation ? "opacity-100" : "opacity-0"
-                    )}
-                  />
-                  <span className="flex-grow text-center">{state.name}</span>
-                </CommandItem>
-              ))}
-            </CommandGroup>
-          </Command>
-        </PopoverContent>
-      </Popover>
-      {error && <p className="text-sm text-red-500 mt-1">{error}</p>}
+    <div className="space-y-2">
+      <Label>Location *</Label>
+      <Input
+        ref={inputRef}
+        type="text"
+        value={searchValue}
+        onChange={(e) => setSearchValue(e.target.value)}
+        placeholder="Search for your city..."
+        className={error ? "border-red-500" : ""}
+      />
+      {error && <p className="text-sm text-red-500">{error}</p>}
     </div>
   );
 }
