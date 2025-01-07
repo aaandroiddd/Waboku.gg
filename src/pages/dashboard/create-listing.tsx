@@ -237,7 +237,16 @@ const CreateListingPage = () => {
                         aria-expanded={searchOpen}
                         className="w-full justify-start text-left font-normal"
                       >
-                        <span className="text-muted-foreground">Search for a card...</span>
+                        {formData.cardReference ? (
+                          <div className="flex items-center gap-2">
+                            <span>{formData.cardReference.name}</span>
+                            <span className="text-sm text-muted-foreground">
+                              ({formData.cardReference.set || 'Unknown Set'})
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground">Search for a card...</span>
+                        )}
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-full p-0" align="start">
