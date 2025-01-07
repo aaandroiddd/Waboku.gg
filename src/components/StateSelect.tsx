@@ -101,9 +101,9 @@ export function StateSelect({ value = "all", onValueChange }: StateSelectProps) 
               {US_STATES.map((state) => (
                 <CommandItem
                   key={state.code}
-                  value={state.code}
-                  onSelect={(currentValue) => {
-                    onValueChange?.(currentValue);
+                  value={state.name}
+                  onSelect={() => {
+                    onValueChange?.(state.code);
                     setOpen(false);
                   }}
                   className="cursor-pointer"
