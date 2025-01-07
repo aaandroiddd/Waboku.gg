@@ -161,6 +161,9 @@ export function ListingGrid({
                         </div>
                       )}
                   
+                    </div>
+                  </div>
+                  
                   {listing.imageUrls && listing.imageUrls.length > 0 ? (
                     <div className="relative w-full h-full">
                       <img
