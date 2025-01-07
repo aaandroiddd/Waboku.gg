@@ -108,58 +108,58 @@ export function ListingGrid({
               <CardContent className="p-4">
                 <div className="aspect-square bg-muted rounded-lg mb-4 relative overflow-hidden">
                   {/* Price Badge */}
-                  <div className="absolute top-2 right-2 z-10">
-                    <span className="px-3 py-1 bg-black/75 text-white rounded-md font-semibold">
+                  <div className="absolute bottom-2 right-2 z-10">
+                    <span className="px-3 py-1 bg-black/75 text-white rounded-md font-semibold text-sm sm:text-base">
                       {formatPrice(listing.price)}
                     </span>
                   </div>
 
-                  {/* Favorite Button */}
-                  <div className="absolute top-2 left-2 z-20">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        if (!user) {
-                          window.location.href = '/auth/sign-in';
-                          return;
-                        }
-                        toggleFavorite(listing);
-                      }}
-                      className={`
-                        bg-black/50 hover:bg-black/75 transition-colors duration-200 rounded-full
-                        ${user && isFavorite(listing.id) ? 'text-red-500 hover:text-red-600' : 'text-white hover:text-red-500'}
-                      `}
-                    >
-                      <Heart 
-                        className={`h-5 w-5 ${user && isFavorite(listing.id) ? 'fill-current' : ''}`}
-                        aria-label={user && isFavorite(listing.id) ? 'Remove from favorites' : 'Add to favorites'}
-                      />
-                    </Button>
-                  </div>
-                  
-                  {/* Graded Badge */}
-                  {listing.isGraded && (
-                    <div className="absolute top-2 left-14 z-10">
-                      <span className="px-3 py-1 bg-blue-500/90 text-white rounded-md font-semibold flex items-center gap-1">
-                        <svg 
-                          viewBox="0 0 24 24" 
-                          className="w-4 h-4 mr-1" 
-                          fill="none" 
-                          stroke="currentColor" 
-                          strokeWidth="2"
-                        >
-                          <path d="M12 2L2 7L12 12L22 7L12 2Z" />
-                          <path d="M2 17L12 22L22 17" />
-                          <path d="M2 12L12 17L22 12" />
-                        </svg>
-                        <span className="text-xs">{listing.gradingCompany}</span>
-                        <span className="font-bold">{listing.gradeLevel}</span>
-                      </span>
-                    </div>
-                  )}
+                  {/* Top Bar with Favorite and Graded Badge */}
+                  <div className="absolute top-0 left-0 right-0 p-2 flex items-start justify-between gap-2 z-20">
+                    <div className="flex items-start gap-2">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          if (!user) {
+                            window.location.href = '/auth/sign-in';
+                            return;
+                          }
+                          toggleFavorite(listing);
+                        }}
+                        className={`
+                          bg-black/50 hover:bg-black/75 transition-colors duration-200 rounded-full
+                          ${user && isFavorite(listing.id) ? 'text-red-500 hover:text-red-600' : 'text-white hover:text-red-500'}
+                        `}
+                      >
+                        <Heart 
+                          className={`h-5 w-5 ${user && isFavorite(listing.id) ? 'fill-current' : ''}`}
+                          aria-label={user && isFavorite(listing.id) ? 'Remove from favorites' : 'Add to favorites'}
+                        />
+                      </Button>
+                      
+                      {/* Graded Badge */}
+                      {listing.isGraded && (
+                        <div className="flex-shrink-0">
+                          <span className="px-2 py-1 bg-blue-500/90 text-white rounded-md font-semibold flex items-center gap-1 text-xs sm:text-sm">
+                            <svg 
+                              viewBox="0 0 24 24" 
+                              className="w-3 h-3 sm:w-4 sm:h-4" 
+                              fill="none" 
+                              stroke="currentColor" 
+                              strokeWidth="2"
+                            >
+                              <path d="M12 2L2 7L12 12L22 7L12 2Z" />
+                              <path d="M2 17L12 22L22 17" />
+                              <path d="M2 12L12 17L22 12" />
+                            </svg>
+                            <span className="hidden sm:inline">{listing.gradingCompany}</span>
+                            <span className="font-bold">{listing.gradeLevel}</span>
+                          </span>
+                        </div>
+                      )}
                   
                   {listing.imageUrls && listing.imageUrls.length > 0 ? (
                     <div className="relative w-full h-full">
