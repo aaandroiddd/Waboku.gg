@@ -231,73 +231,80 @@ const CreateListingPage = () => {
                   </div>
                   <Popover open={searchOpen} onOpenChange={setSearchOpen}>
                     <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        role="combobox"
-                        aria-expanded={searchOpen}
-                        className="w-full justify-start text-left font-normal"
-                      >
-                        {formData.cardReference ? (
-                          <div className="flex items-center gap-2 w-full">
-                            <div className="truncate flex-1">
-                              <span className="mr-1">{formData.cardReference.name}</span>
-                              <span className="text-sm text-muted-foreground">
-                                ({formData.cardReference.set || 'Unknown Set'})
-                              </span>
-                            </div>
-                          </div>
-                        ) : (
-                          <span className="text-muted-foreground">Search for a card...</span>
-                        )}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-full p-0" align="start">
-                      <Command>
-                        <CommandInput
-                          placeholder="Type card name..."
-                          onValueChange={(search) => {
-                            if (search.length >= 2) {
-                              searchCards(search);
+                      <div className="relative w-full">
+                        <Input
+                          type="text"
+                          placeholder="Search for Pokémon, Magic, or One Piece cards..."
+                          value={formData.cardReference ? `${formData.cardReference.name} (${formData.cardReference.set || 'Unknown Set'})` : ''}
+                          onChange={(e) => {
+                            if (!e.target.value) {
+                              setFormData(prev => ({ ...prev, cardReference: undefined }));
+                            }
+                            if (e.target.value.length >= 2) {
+                              searchCards(e.target.value);
                             }
                           }}
+                          className="pl-10 h-12 w-full"
                         />
-                        <CommandEmpty>No cards found.</CommandEmpty>
-                        <CommandGroup className="max-h-[300px] overflow-auto">
-                          {results.map((card) => (
-                            <CommandItem
-                              key={card.id}
-                              value={card.name}
-                              onSelect={() => {
-                                setFormData(prev => ({
-                                  ...prev,
-                                  cardReference: {
-                                    id: card.id,
-                                    name: card.name,
-                                    set: card.set?.name,
-                                    game: card.game
-                                  },
-                                  game: GAME_MAPPING[card.game] || 'other'
-                                }));
-                                setSearchOpen(false);
-                              }}
-                              className="flex items-center gap-2"
-                            >
-                              {card.imageUrl && (
-                                <img
-                                  src={card.imageUrl}
-                                  alt={card.name}
-                                  className="w-8 h-8 object-cover rounded"
-                                />
-                              )}
-                              <div>
-                                <div>{card.name}</div>
-                                <div className="text-sm text-muted-foreground">
-                                  {card.game} - {card.set?.name || 'Unknown Set'}
-                                </div>
-                              </div>
-                            </CommandItem>
-                          ))}
-                        </CommandGroup>
+                        <div className="absolute inset-y-0 left-0 flex items-center pl-3">
+                          {isLoading ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Search className="h-4 w-4" />
+                          )}
+                        </div>
+                      </div>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+                      <Command>
+                        <CommandList>
+                          {isLoading ? (
+                            <div className="flex items-center justify-center p-4">
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                              <span className="ml-2">Loading suggestions...</span>
+                            </div>
+                          ) : results.length === 0 ? (
+                            <CommandEmpty>No results found.</CommandEmpty>
+                          ) : (
+                            <CommandGroup heading="Suggestions">
+                              {results.map((card) => (
+                                <CommandItem
+                                  key={card.id}
+                                  onSelect={() => {
+                                    setFormData(prev => ({
+                                      ...prev,
+                                      cardReference: {
+                                        id: card.id,
+                                        name: card.name,
+                                        set: card.set?.name,
+                                        game: card.game
+                                      },
+                                      game: GAME_MAPPING[card.game] || 'other'
+                                    }));
+                                    setSearchOpen(false);
+                                  }}
+                                  className="flex items-start gap-2 p-2 hover:bg-accent"
+                                >
+                                  {card.imageUrl && (
+                                    <img
+                                      src={card.imageUrl}
+                                      alt={card.name}
+                                      className="w-10 h-14 object-contain flex-shrink-0"
+                                    />
+                                  )}
+                                  <div className="flex flex-col min-w-0 flex-1">
+                                    <div className="font-medium text-sm truncate">{card.name}</div>
+                                    <div className="text-xs text-muted-foreground flex items-center gap-1">
+                                      <span className="truncate">{card.game}</span>
+                                      <span>•</span>
+                                      <span className="truncate">{card.set?.name || 'Unknown Set'}</span>
+                                    </div>
+                                  </div>
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          )}
+                        </CommandList>
                       </Command>
                     </PopoverContent>
                   </Popover>
