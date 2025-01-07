@@ -1,16 +1,5 @@
-import { useState, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/router';
-import { Input } from "@/components/ui/input";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Search, Loader2 } from "lucide-react";
-import debounce from 'lodash/debounce';
+import CardSearchInput from '@/components/CardSearchInput';
 
 interface PokemonCard {
   id: string;
