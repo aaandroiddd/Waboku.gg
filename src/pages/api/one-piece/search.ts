@@ -28,7 +28,23 @@ export default async function handler(
     }
 
     const data = await response.json();
-    res.status(200).json(data);
+    
+    // Transform the data to match our standard format
+    const transformedData = data.data.map((card: any) => ({
+      id: card.id,
+      name: card.name,
+      set: {
+        name: card.set_name || card.setName,
+      },
+      number: card.card_number || card.number,
+      identifier: card.id,
+      images: {
+        small: card.image_url || card.imageUrl,
+        large: card.image_url || card.imageUrl,
+      }
+    }));
+
+    res.status(200).json({ data: transformedData });
   } catch (error) {
     console.error("One Piece API Error:", error);
     res.status(500).json({ error: "Failed to fetch One Piece cards" });
