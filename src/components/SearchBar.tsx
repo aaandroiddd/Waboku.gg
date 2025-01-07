@@ -321,19 +321,22 @@ export default function SearchBar() {
                         <CommandItem
                           key={card.id}
                           onSelect={() => handleSearch(card)}
-                          className="flex items-center gap-2 cursor-pointer p-2 hover:bg-accent"
+                          className="flex items-start gap-2 cursor-pointer p-2 hover:bg-accent"
                         >
                           {imageUrl && (
                             <img
                               src={imageUrl}
                               alt={details.name}
-                              className="w-10 h-14 object-contain"
+                              className="w-10 h-14 object-contain flex-shrink-0"
                             />
                           )}
-                          <div className="flex flex-col">
-                            <div className="font-medium">{details.name}</div>
-                            <div className="text-xs text-muted-foreground">
-                              {details.game} • Set: {details.set} {details.series && `(${details.series})`}
+                          <div className="flex flex-col min-w-0 flex-1">
+                            <div className="font-medium break-words line-clamp-2">{details.name}</div>
+                            <div className="text-xs text-muted-foreground break-words">
+                              <span className="inline-block">{details.game}</span>
+                              <span className="inline-block"> • Set: </span>
+                              <span className="inline-block break-all">{details.set}</span>
+                              {details.series && <span className="inline-block break-all"> ({details.series})</span>}
                             </div>
                             <div className="text-xs font-semibold text-primary">
                               Card #: {details.number}
