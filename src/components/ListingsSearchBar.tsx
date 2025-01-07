@@ -14,6 +14,8 @@ import { StateSelect } from "./StateSelect";
 interface ListingsSearchBarProps {
   value: string;
   onChange: (value: string) => void;
+  state?: string;
+  onStateChange?: (state: string) => void;
   placeholder?: string;
   className?: string;
 }
