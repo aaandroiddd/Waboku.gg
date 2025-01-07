@@ -56,6 +56,7 @@ const CreateListingPage = () => {
     isGraded: false,
     gradeLevel: undefined as number | undefined,
     gradingCompany: undefined as string | undefined,
+    cardReference: undefined as { id: string; name: string; set?: string; game: string } | undefined,
   });
 
   const [errors, setErrors] = useState<{
