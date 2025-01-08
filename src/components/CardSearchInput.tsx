@@ -37,18 +37,13 @@ const CardSearchInput: React.FC<CardSearchInputProps> = ({
 
   return (
     <Command className="bg-background">
-      <div className="flex items-center border-b px-3">
-        {isLoading && searchQuery.trim() ? (
-          <Loader2 className="h-4 w-4 shrink-0 opacity-50 animate-spin" />
-        ) : (
-          <Search className="h-4 w-4 shrink-0 opacity-50" />
-        )}
+      <div className="border-b">
         <CommandInput
           value={searchQuery}
           onValueChange={handleInputChange}
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
-          className="h-11 flex-1 bg-transparent px-3 py-3 outline-none placeholder:text-muted-foreground"
+          className="h-11"
         />
       </div>
       {searchQuery && (
