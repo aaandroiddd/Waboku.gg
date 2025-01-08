@@ -117,19 +117,24 @@ const buttonVariants = {
 };
 
 export function ListingGrid({ 
-  listings, 
-  loading, 
-  displayCount = listings?.length, 
-  hasMore, 
-  onLoadMore,
   userId,
-  showOnlyActive = false
+  showOnlyActive = false,
+  displayCount,
+  hasMore,
+  onLoadMore
 }: ListingGridProps) {
-
-  // Filter active listings if showOnlyActive is true
-  const filteredListings = showOnlyActive 
-    ? listings?.filter(listing => listing.status === 'active')
-    : listings;
+  const { listings, isLoading: loading, error } = useListings({ userId, showOnlyActive });
+  
+  // If there's an error, display it
+  if (error) {
+    return (
+      <Card>
+        <CardContent className="p-4">
+          <p className="text-destructive">Error: {error}</p>
+        </CardContent>
+      </Card>
+    );
+  }
   const { toggleFavorite, isFavorite } = useFavorites();
   const { user } = useAuth();
 
