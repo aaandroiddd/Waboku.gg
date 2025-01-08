@@ -318,7 +318,7 @@ export function useListings({ userId, searchQuery, showOnlyActive = false }: Use
     };
 
     fetchListings();
-  }, [userId, searchQuery, favorites]);
+  }, [userId, searchQuery]);
 
   return { 
     listings, 
