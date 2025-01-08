@@ -63,6 +63,12 @@ const useCardSearch = () => {
           allResults.push(...data.data);
         }
 
+        // Process Dragon Ball Fusion results
+        if (dragonBallResponse.status === 'fulfilled' && dragonBallResponse.value.ok) {
+          const data: SearchResponse = await dragonBallResponse.value.json();
+          allResults.push(...data.data);
+        }
+
         setResults(allResults);
       } catch (error) {
         console.error('Error searching cards:', error);
