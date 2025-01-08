@@ -66,6 +66,8 @@ export function useFavorites() {
           return newSet;
         });
         setFavorites(prev => prev.filter(f => f.id !== listing.id));
+        // Trigger a refresh to ensure the UI is in sync
+        await fetchFavorites();
       } else {
         await setDoc(favoriteRef, {
           listingRef,
@@ -76,6 +78,8 @@ export function useFavorites() {
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to update favorite');
+      // Re-fetch favorites to ensure UI is in sync even if there was an error
+      await fetchFavorites();
     }
   };
 
