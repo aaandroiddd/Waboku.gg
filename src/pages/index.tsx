@@ -355,9 +355,14 @@ export default function Home() {
         <Header />
         <main className="flex-1">
           {/* Hero Section */}
-          <div className="relative">
+          <div className="relative overflow-hidden">
             {/* Animated Background */}
-            <div className="hero-background" />
+            <motion.div 
+              className="hero-background"
+              initial="hidden"
+              animate="visible"
+              variants={heroBackgroundVariants}
+            />
             
             <div className="relative container mx-auto px-4 py-16 sm:py-20 md:py-24 lg:py-32">
               <div className="text-center max-w-3xl mx-auto space-y-6 sm:space-y-8">
