@@ -41,7 +41,7 @@ export function GameCategories() {
   const currentCategory = router.query.category as GameCategory | undefined
 
   const handleCategoryClick = (category?: GameCategory) => {
-    const query = category ? { category } : {}
+    const query = category ? { game: category.toLowerCase().replace(/: /g, '-').replace(/ /g, '-') } : {}
     router.push({
       pathname: "/listings",
       query,
