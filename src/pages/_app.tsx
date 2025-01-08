@@ -7,6 +7,8 @@ import { RouteGuard } from '@/components/RouteGuard';
 import { LoadingScreen } from '@/components/LoadingScreen';
 import { useRouter } from 'next/router';
 import { useEffect, useState } from 'react';
+import { AnimatePresence } from 'framer-motion';
+import { PageTransition } from '@/components/PageTransition';
 
 const protectedPaths = [
   '/dashboard',
