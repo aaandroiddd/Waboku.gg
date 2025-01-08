@@ -66,8 +66,6 @@ export function useFavorites() {
           return newSet;
         });
         setFavorites(prev => prev.filter(f => f.id !== listing.id));
-        // Trigger a refresh to ensure the UI is in sync
-        await fetchFavorites();
       } else {
         await setDoc(favoriteRef, {
           listingRef,
