@@ -12,17 +12,17 @@
   overflow: hidden;
   @apply bg-background;
   background: hsl(var(--background));
-  
-  &::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background-image: url('/images/tcg-bg.svg');
-    background-size: cover;
-    background-position: center;
-    opacity: 0.1;
-    animation: pulse 8s ease-in-out infinite;
-  }
+}
+
+.hero-background::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: url('/images/tcg-bg.svg');
+  background-size: cover;
+  background-position: center;
+  opacity: 0.1;
+  animation: pulse 8s ease-in-out infinite;
 }
 
 @keyframes pulse {
@@ -34,7 +34,6 @@
     opacity: 0.15;
     transform: scale(1.02);
   }
-}
 }
 
 .dark .hero-background {
