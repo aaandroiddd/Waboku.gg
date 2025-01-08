@@ -80,7 +80,6 @@ export function useListings({ userId, searchQuery, showOnlyActive = false }: Use
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { user } = useAuth();
-  const { favorites } = useFavorites();
 
   const updateListingStatus = async (listingId: string, status: 'active' | 'inactive' | 'archived') => {
     if (!user) throw new Error('Must be logged in to update a listing');
