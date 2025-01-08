@@ -36,10 +36,11 @@ const useCardSearch = () => {
 
       try {
         // Make parallel requests to all card game APIs
-        const [mtgResponse, pokemonResponse, onePieceResponse] = await Promise.allSettled([
+        const [mtgResponse, pokemonResponse, onePieceResponse, dragonBallResponse] = await Promise.allSettled([
           fetch(`/api/mtg/search?query=${encodeURIComponent(query)}`),
           fetch(`/api/pokemon/search?query=${encodeURIComponent(query)}`),
           fetch(`/api/one-piece/search?query=${encodeURIComponent(query)}`),
+          fetch(`/api/dragon-ball-fusion/search?query=${encodeURIComponent(query)}`),
         ]);
 
         const allResults: CardResult[] = [];
