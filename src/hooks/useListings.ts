@@ -256,16 +256,18 @@ export function useListings({ userId, searchQuery, showOnlyActive = false }: Use
         const listingsRef = collection(db, 'listings');
         const constraints: QueryConstraint[] = [];
 
-        // Match the existing index order
+        // Add userId constraint if provided
         if (userId) {
-          // This will use index #2
           constraints.push(where('userId', '==', userId));
-          constraints.push(orderBy('createdAt', 'desc'));
-        } else {
-          // This will use index #3
-          constraints.push(where('status', '==', 'active'));
-          constraints.push(orderBy('createdAt', 'desc'));
         }
+
+        // Add status constraint
+        if (showOnlyActive || !userId) {
+          constraints.push(where('status', '==', 'active'));
+        }
+
+        // Always order by creation date
+        constraints.push(orderBy('createdAt', 'desc'));
 
         console.log('Executing query with constraints:', constraints);
         const q = query(listingsRef, ...constraints);
