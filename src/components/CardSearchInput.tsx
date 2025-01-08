@@ -22,14 +22,15 @@ const CardSearchInput: React.FC<CardSearchInputProps> = ({
     searchCards(value);
   }, [searchCards]);
 
-  const handleSelect = useCallback((cardName: string) => {
-    setSearchQuery(cardName);
+  const handleSelect = useCallback((card: { name: string, number?: string }) => {
+    const displayName = card.number ? `${card.name} - ${card.number}` : card.name;
+    setSearchQuery(displayName);
     if (onSelect) {
-      onSelect(cardName);
+      onSelect(displayName);
     }
     // Also trigger search when suggestion is selected
     if (onSearch) {
-      onSearch(cardName);
+      onSearch(displayName);
     }
   }, [onSelect, onSearch]);
 
@@ -62,7 +63,7 @@ const CardSearchInput: React.FC<CardSearchInputProps> = ({
                   <CommandItem
                     key={`${card.identifier}-${index}`}
                     value={card.name}
-                    onSelect={() => handleSelect(card.name)}
+                    onSelect={() => handleSelect(card)}
                     className="px-4 py-2"
                   >
                     <div className="flex items-center gap-2">
@@ -74,7 +75,10 @@ const CardSearchInput: React.FC<CardSearchInputProps> = ({
                         />
                       )}
                       <div>
-                        <p className="font-medium">{card.name}</p>
+                        <p className="font-medium">
+                          {card.name}
+                          {card.number && <span className="text-muted-foreground ml-1">- {card.number}</span>}
+                        </p>
                         <p className="text-sm text-muted-foreground">{card.set.name}</p>
                       </div>
                     </div>
