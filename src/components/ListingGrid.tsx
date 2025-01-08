@@ -124,8 +124,14 @@ export function ListingGrid({
   displayCount = listings?.length, 
   hasMore, 
   onLoadMore,
-  userId 
+  userId,
+  showOnlyActive = false
 }: ListingGridProps) {
+
+  // Filter active listings if showOnlyActive is true
+  const filteredListings = showOnlyActive 
+    ? listings?.filter(listing => listing.status === 'active')
+    : listings;
   const { toggleFavorite, isFavorite } = useFavorites();
   const { user } = useAuth();
 
