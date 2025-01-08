@@ -408,6 +408,9 @@ export default function Home() {
       <div className="bg-background min-h-screen flex flex-col">
         <Header />
         <main className="flex-1">
+          {/* Game Categories */}
+          <GameCategories />
+
           {/* Hero Section */}
           <div className="relative overflow-hidden">
             {/* Animated Background */}
