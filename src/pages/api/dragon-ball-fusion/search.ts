@@ -45,9 +45,15 @@ export default async function handler(
         data: data.data.map((card: any) => ({
           id: card.id,
           name: card.name,
-          images: card.images,
-          game: 'Dragon Ball Fusion',
-          set: card.set
+          set: {
+            name: card.set?.name || 'Dragon Ball Fusion'
+          },
+          number: card.number || '',
+          identifier: card.id || `dbf-${card.name.toLowerCase().replace(/\s+/g, '-')}`,
+          images: {
+            small: card.images?.small || card.image_url || '',
+            large: card.images?.large || card.image_url || ''
+          }
         }))
       });
     } else {
