@@ -36,14 +36,14 @@ const CardSearchInput: React.FC<CardSearchInputProps> = ({
   }, [searchQuery, onSearch]);
 
   return (
-    <Command className="bg-background">
-      <div className="border-b">
+    <Command className="relative">
+      <div className="rounded-md border border-input bg-background shadow-sm">
         <CommandInput
           value={searchQuery}
           onValueChange={handleInputChange}
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
-          className="h-11"
+          className="h-12 px-8 rounded-md"
         />
       </div>
       {searchQuery && (
