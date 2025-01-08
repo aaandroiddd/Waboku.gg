@@ -64,11 +64,13 @@ const getConditionColor = (condition: string): { base: string; hover: string } =
 const cardVariants = {
   hidden: { 
     opacity: 0,
-    y: 20
+    y: 20,
+    scale: 0.95
   },
   visible: { 
     opacity: 1,
     y: 0,
+    scale: 1,
     transition: {
       duration: 0.5,
       ease: [0.23, 1, 0.32, 1]
@@ -76,6 +78,15 @@ const cardVariants = {
   },
   hover: {
     y: -8,
+    scale: 1.02,
+    transition: {
+      duration: 0.2,
+      ease: "easeInOut"
+    }
+  },
+  exit: {
+    opacity: 0,
+    scale: 0.95,
     transition: {
       duration: 0.2,
       ease: "easeInOut"
