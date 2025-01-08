@@ -2,7 +2,7 @@ import React, { useState, useRef, useCallback } from 'react';
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Search, Loader2 } from "lucide-react";
-import useCardSearch from '@/hooks/useCardSearch';
+import { useCardSearch } from '@/hooks/useCardSearch';
 
 interface CardSearchInputProps {
   placeholder?: string;
