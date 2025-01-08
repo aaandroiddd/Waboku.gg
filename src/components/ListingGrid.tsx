@@ -9,6 +9,7 @@ import { Listing } from '@/types/database';
 import Image from 'next/image';
 import { formatPrice } from '@/lib/price';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useListings } from '@/hooks/useListings';
 
 interface ListingGridProps {
   userId?: string;
