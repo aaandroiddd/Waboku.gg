@@ -53,7 +53,7 @@ export function ListingsSearchBar({
     <div className={className}>
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetTrigger asChild>
-          <Button variant="ghost" size="icon" className="h-9 w-9">
+          <Button variant="ghost" size="icon" className="h-12 w-12">
             <Search className="h-4 w-4" />
           </Button>
         </SheetTrigger>
