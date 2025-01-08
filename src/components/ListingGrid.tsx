@@ -172,9 +172,14 @@ export function ListingGrid({
       await toggleFavorite(selectedListing);
       setIsDialogOpen(false);
       setSelectedListing(null);
-      // Force a re-render of the grid
-      if (onLoadMore) {
-        onLoadMore();
+      
+      // Immediately remove the listing from the displayed list
+      const updatedListings = displayedListings.filter(l => l.id !== selectedListing.id);
+      if (propListings) {
+        // If we're using prop-based listings (like in favorites page)
+        if (onLoadMore) {
+          onLoadMore(); // Trigger parent update
+        }
       }
     }
   };
