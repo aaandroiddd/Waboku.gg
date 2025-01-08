@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/sheet";
 import { Menu } from "lucide-react";
 import { useState } from "react";
+import { motion } from "framer-motion";
 
 // Dynamically import the auth-dependent navigation component
 const AuthNav = dynamic(() => import("./AuthNav"), {
@@ -23,16 +24,40 @@ export default function Header() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container mx-auto px-4 h-16 flex items-center justify-between gap-4">
-        <Link href="/" className="flex items-center">
-          <Logo />
-        </Link>
+    <motion.header 
+      initial={{ y: -100 }}
+      animate={{ y: 0 }}
+      transition={{ type: "spring", stiffness: 100, damping: 20 }}
+      className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60"
+    >
+      <div className="container mx-auto px-4 h-12 flex items-center justify-between gap-4">
+        <motion.div
+          whileHover={{ scale: 1.05 }}
+          transition={{ type: "spring", stiffness: 400, damping: 10 }}
+        >
+          <Link href="/" className="flex items-center">
+            <Logo />
+          </Link>
+        </motion.div>
 
         {/* Desktop Navigation */}
         <nav className="hidden md:flex items-center gap-4">
-          <ThemeToggle />
-          {!isAuthPage && <AuthNav />}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.2 }}
+          >
+            <ThemeToggle />
+          </motion.div>
+          {!isAuthPage && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.3 }}
+            >
+              <AuthNav />
+            </motion.div>
+          )}
         </nav>
 
         {/* Mobile Navigation */}
@@ -49,14 +74,14 @@ export default function Header() {
               <nav className="flex flex-col gap-6 mt-4">
                 <Link 
                   href="/" 
-                  className="flex items-center gap-2 px-2 py-1 hover:bg-accent rounded-md"
+                  className="flex items-center gap-2 px-2 py-1 hover:bg-accent rounded-md transition-colors"
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
                   Home
                 </Link>
                 <Link 
                   href="/listings" 
-                  className="flex items-center gap-2 px-2 py-1 hover:bg-accent rounded-md"
+                  className="flex items-center gap-2 px-2 py-1 hover:bg-accent rounded-md transition-colors"
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
                   Browse Listings
@@ -71,6 +96,6 @@ export default function Header() {
           </Sheet>
         </div>
       </div>
-    </header>
+    </motion.header>
   );
 }
