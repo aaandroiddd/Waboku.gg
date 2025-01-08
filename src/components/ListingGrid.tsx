@@ -12,11 +12,13 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useListings } from '@/hooks/useListings';
 
 interface ListingGridProps {
+  listings?: Listing[];
   userId?: string;
   showOnlyActive?: boolean;
   displayCount?: number;
   hasMore?: boolean;
   onLoadMore?: () => void;
+  loading?: boolean;
 }
 
 const getConditionColor = (condition: string): { base: string; hover: string } => {
