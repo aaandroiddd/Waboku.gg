@@ -18,26 +18,27 @@ const container = {
   show: {
     opacity: 1,
     transition: {
-      staggerChildren: 0.1
+      staggerChildren: 0.05
     }
   }
 }
 
 const item = {
-  hidden: { opacity: 0, y: 20 },
+  hidden: { opacity: 0, y: 10 },
   show: { 
     opacity: 1, 
     y: 0,
     transition: {
       type: "spring",
-      stiffness: 300,
-      damping: 24
+      stiffness: 400,
+      damping: 30
     }
   }
 }
 
 export function GameCategories() {
   const router = useRouter()
+  const currentCategory = router.query.category as GameCategory | undefined
 
   const handleCategoryClick = (category?: GameCategory) => {
     const query = category ? { category } : {}
@@ -49,16 +50,17 @@ export function GameCategories() {
 
   return (
     <motion.div 
-      className="w-full max-w-7xl mx-auto px-4 py-4"
+      className="w-full max-w-7xl mx-auto px-4 py-2"
       initial="hidden"
       animate="show"
       variants={container}
     >
-      <motion.div className="flex flex-wrap gap-3 justify-center">
+      <motion.div className="flex flex-wrap gap-2 justify-center">
         <motion.div variants={item}>
           <Button
             variant="outline"
-            className="min-w-[150px]"
+            size="sm"
+            className={`min-w-[120px] h-7 text-xs font-medium ${!currentCategory ? 'bg-primary text-primary-foreground hover:bg-primary/90' : ''}`}
             onClick={() => handleCategoryClick()}
           >
             All Games
@@ -68,7 +70,8 @@ export function GameCategories() {
           <motion.div key={category} variants={item}>
             <Button
               variant="outline"
-              className="min-w-[150px]"
+              size="sm"
+              className={`min-w-[120px] h-7 text-xs font-medium ${currentCategory === category ? 'bg-primary text-primary-foreground hover:bg-primary/90' : ''}`}
               onClick={() => handleCategoryClick(category)}
             >
               {category}
