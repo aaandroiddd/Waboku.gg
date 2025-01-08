@@ -47,7 +47,11 @@ export default function App({ Component, pageProps, router }: AppProps) {
       <AuthProvider>
         <RouteGuard requireAuth={requireAuth}>
           <LoadingScreen isLoading={isLoading} />
-          <Component {...pageProps} />
+          <AnimatePresence mode="wait">
+            <PageTransition key={router.pathname}>
+              <Component {...pageProps} />
+            </PageTransition>
+          </AnimatePresence>
           <Toaster />
         </RouteGuard>
       </AuthProvider>
