@@ -41,47 +41,51 @@ const CardSearchInput: React.FC<CardSearchInputProps> = ({
 
   return (
     <div className="relative w-full">
-      <Command className="rounded-md border border-input">
-        <CommandInput
-          value={searchQuery}
-          onValueChange={handleInputChange}
-          onKeyDown={handleKeyDown}
-          placeholder={placeholder}
-          isLoading={isLoading}
-        />
-      </Command>
-      {searchQuery && (
-        <div className="absolute w-full z-50 bg-background border rounded-md mt-1 shadow-lg">
-          <CommandGroup className="max-h-[300px] overflow-y-auto">
-            {results.length === 0 && !isLoading && (
-              <CommandEmpty>No results found</CommandEmpty>
-            )}
-            {results.map((card, index) => (
-              <CommandItem
-                key={`${card.identifier}-${index}`}
-                value={card.name}
-                onSelect={() => handleSelect(card.name)}
-                className="px-4 py-2"
-              >
-                <div className="flex items-center gap-2">
-                  {card.images.small && (
-                    <img 
-                      src={card.images.small} 
-                      alt={card.name} 
-                      className="w-8 h-8 object-cover rounded"
-                    />
-                  )}
-                  <div>
-                    <p className="font-medium">{card.name}</p>
-                    <p className="text-sm text-muted-foreground">{card.set.name}</p>
-                  </div>
-                </div>
-              </CommandItem>
-            ))}
-          </CommandGroup>
-        </div>
-      )}
-    </Command>
+      <div className="relative">
+        <Command className="rounded-md border border-input">
+          <CommandInput
+            value={searchQuery}
+            onValueChange={handleInputChange}
+            onKeyDown={handleKeyDown}
+            placeholder={placeholder}
+            isLoading={isLoading}
+          />
+        </Command>
+        {searchQuery && (
+          <div className="absolute w-full z-50 bg-background border rounded-md mt-1 shadow-lg">
+            <Command>
+              <CommandGroup className="max-h-[300px] overflow-y-auto">
+                {results.length === 0 && !isLoading && (
+                  <CommandEmpty>No results found</CommandEmpty>
+                )}
+                {results.map((card, index) => (
+                  <CommandItem
+                    key={`${card.identifier}-${index}`}
+                    value={card.name}
+                    onSelect={() => handleSelect(card.name)}
+                    className="px-4 py-2"
+                  >
+                    <div className="flex items-center gap-2">
+                      {card.images.small && (
+                        <img 
+                          src={card.images.small} 
+                          alt={card.name} 
+                          className="w-8 h-8 object-cover rounded"
+                        />
+                      )}
+                      <div>
+                        <p className="font-medium">{card.name}</p>
+                        <p className="text-sm text-muted-foreground">{card.set.name}</p>
+                      </div>
+                    </div>
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            </Command>
+          </div>
+        )}
+      </div>
+    </div>
   );
 };
 
