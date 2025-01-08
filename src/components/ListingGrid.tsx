@@ -218,6 +218,15 @@ export function ListingGrid({
 
   return (
     <div className="space-y-4 sm:space-y-8">
+      <RemoveFavoriteDialog
+        isOpen={isDialogOpen}
+        onClose={() => {
+          setIsDialogOpen(false);
+          setSelectedListing(null);
+        }}
+        onConfirm={handleRemoveFavorite}
+        title={selectedListing?.title || ''}
+      />
       <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-4">
         <AnimatePresence>
           {displayedListings.map((listing, index) => (
