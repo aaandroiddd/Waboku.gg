@@ -16,10 +16,12 @@ const SearchInterface = () => {
     <div className="flex flex-col max-w-2xl mx-auto pt-4 sm:pt-6 pb-4 sm:pb-8 px-4 sm:px-0">
       {/* Mobile Search Controls */}
       <div className="flex sm:hidden flex-col gap-4 mb-4">
-        <CardSearchInput
-          onSelect={setSearchQuery}
-          onSearch={handleSearch}
-        />
+        <div className="w-full">
+          <CardSearchInput
+            onSelect={setSearchQuery}
+            onSearch={handleSearch}
+          />
+        </div>
         
         <div className="flex gap-2">
           <div className="flex-1">
@@ -44,7 +46,7 @@ const SearchInterface = () => {
 
       {/* Desktop Search Controls */}
       <div className="hidden sm:flex gap-4">
-        <div className="relative flex-1">
+        <div className="flex-1">
           <CardSearchInput
             onSelect={setSearchQuery}
             onSearch={handleSearch}
