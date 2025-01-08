@@ -18,7 +18,7 @@ const containerVariants = {
 };
 
 export default function FavoritesPage() {
-  const { favorites, isLoading } = useFavorites();
+  const { favorites, isLoading, refresh } = useFavorites();
 
   return (
     <RouteGuard requireAuth>
