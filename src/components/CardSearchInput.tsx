@@ -42,6 +42,7 @@ const CardSearchInput: React.FC<CardSearchInputProps> = ({
           onValueChange={handleInputChange}
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
+          isLoading={isLoading}
         />
       {searchQuery && (
         <CommandGroup className="max-h-[300px] overflow-y-auto">
