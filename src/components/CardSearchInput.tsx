@@ -27,7 +27,11 @@ const CardSearchInput: React.FC<CardSearchInputProps> = ({
     if (onSelect) {
       onSelect(cardName);
     }
-  }, [onSelect]);
+    // Also trigger search when suggestion is selected
+    if (onSearch) {
+      onSearch(cardName);
+    }
+  }, [onSelect, onSearch]);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && onSearch) {
