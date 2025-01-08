@@ -28,7 +28,7 @@ export function RemoveFavoriteDialog({
         <AlertDialogHeader>
           <AlertDialogTitle>Remove from Favorites</AlertDialogTitle>
           <AlertDialogDescription>
-            Are you sure you want to remove &quot;{title}&quot; from your favorites? This action cannot be undone.
+            Are you sure you want to remove &quot;{title}&quot; from your favorites?
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
