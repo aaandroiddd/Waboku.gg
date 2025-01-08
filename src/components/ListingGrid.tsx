@@ -167,11 +167,15 @@ export function ListingGrid({
     }
   };
 
-  const handleRemoveFavorite = () => {
+  const handleRemoveFavorite = async () => {
     if (selectedListing) {
-      toggleFavorite(selectedListing);
+      await toggleFavorite(selectedListing);
       setIsDialogOpen(false);
       setSelectedListing(null);
+      // Force a re-render of the grid
+      if (onLoadMore) {
+        onLoadMore();
+      }
     }
   };
 
