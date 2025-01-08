@@ -145,6 +145,33 @@ export function ListingGrid({
   }
   const { toggleFavorite, isFavorite } = useFavorites();
   const { user } = useAuth();
+  const [selectedListing, setSelectedListing] = useState<Listing | null>(null);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+
+  const handleFavoriteClick = (e: React.MouseEvent, listing: Listing) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (!user) {
+      window.location.href = '/auth/sign-in';
+      return;
+    }
+
+    if (isFavorite(listing.id)) {
+      setSelectedListing(listing);
+      setIsDialogOpen(true);
+    } else {
+      toggleFavorite(listing);
+    }
+  };
+
+  const handleRemoveFavorite = () => {
+    if (selectedListing) {
+      toggleFavorite(selectedListing);
+      setIsDialogOpen(false);
+      setSelectedListing(null);
+    }
+  };
 
   if (loading) {
     return (
