@@ -34,13 +34,13 @@ export default async function handler(
       id: card.id,
       name: card.name,
       set: {
-        name: card.set_name || card.setName,
+        name: card.set_name || card.setName || 'One Piece',
       },
-      number: card.card_number || card.number,
-      identifier: card.id,
+      number: card.card_number || card.number || '',
+      identifier: card.id || `op-${card.name.toLowerCase().replace(/\s+/g, '-')}`,
       images: {
-        small: card.image_url || card.imageUrl,
-        large: card.image_url || card.imageUrl,
+        small: card.image_url || card.imageUrl || '',
+        large: card.image_url || card.imageUrl || '',
       }
     }));
 
