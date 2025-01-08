@@ -9,6 +9,7 @@ import { useFavorites } from './useFavorites';
 interface UseListingsProps {
   userId?: string;
   searchQuery?: string;
+  showOnlyActive?: boolean;
 }
 
 export function useListings({ userId, searchQuery }: UseListingsProps = {}) {
