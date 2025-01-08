@@ -120,13 +120,18 @@ const buttonVariants = {
 };
 
 export function ListingGrid({ 
+  listings: propListings,
   userId,
   showOnlyActive = false,
   displayCount,
   hasMore,
-  onLoadMore
+  onLoadMore,
+  loading: propLoading
 }: ListingGridProps) {
-  const { listings, isLoading: loading, error } = useListings({ userId, showOnlyActive });
+  const { listings: fetchedListings, isLoading: fetchLoading, error } = useListings({ userId, showOnlyActive });
+  
+  const listings = propListings || fetchedListings;
+  const loading = propLoading ?? fetchLoading;
   
   // If there's an error, display it
   if (error) {
