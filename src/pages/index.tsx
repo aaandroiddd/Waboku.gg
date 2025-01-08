@@ -11,6 +11,7 @@ import { Listing } from '@/types/database';
 import { ListingGrid } from '@/components/ListingGrid';
 import Head from "next/head";
 import Header from "@/components/Header";
+import { GameCategories } from "@/components/GameCategories";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
