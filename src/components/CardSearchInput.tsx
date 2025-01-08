@@ -40,7 +40,8 @@ const CardSearchInput: React.FC<CardSearchInputProps> = ({
   }, [searchQuery, onSearch]);
 
   return (
-    <Command className="relative rounded-md border border-input">
+    <div className="relative w-full">
+      <Command className="rounded-md border border-input">
         <CommandInput
           value={searchQuery}
           onValueChange={handleInputChange}
@@ -48,34 +49,37 @@ const CardSearchInput: React.FC<CardSearchInputProps> = ({
           placeholder={placeholder}
           isLoading={isLoading}
         />
+      </Command>
       {searchQuery && (
-        <CommandGroup className="max-h-[300px] overflow-y-auto">
-          {results.length === 0 && !isLoading && (
-            <CommandEmpty>No results found</CommandEmpty>
-          )}
-          {results.map((card, index) => (
-            <CommandItem
-              key={`${card.identifier}-${index}`}
-              value={card.name}
-              onSelect={() => handleSelect(card.name)}
-              className="px-4 py-2"
-            >
-              <div className="flex items-center gap-2">
-                {card.images.small && (
-                  <img 
-                    src={card.images.small} 
-                    alt={card.name} 
-                    className="w-8 h-8 object-cover rounded"
-                  />
-                )}
-                <div>
-                  <p className="font-medium">{card.name}</p>
-                  <p className="text-sm text-muted-foreground">{card.set.name}</p>
+        <div className="absolute w-full z-50 bg-background border rounded-md mt-1 shadow-lg">
+          <CommandGroup className="max-h-[300px] overflow-y-auto">
+            {results.length === 0 && !isLoading && (
+              <CommandEmpty>No results found</CommandEmpty>
+            )}
+            {results.map((card, index) => (
+              <CommandItem
+                key={`${card.identifier}-${index}`}
+                value={card.name}
+                onSelect={() => handleSelect(card.name)}
+                className="px-4 py-2"
+              >
+                <div className="flex items-center gap-2">
+                  {card.images.small && (
+                    <img 
+                      src={card.images.small} 
+                      alt={card.name} 
+                      className="w-8 h-8 object-cover rounded"
+                    />
+                  )}
+                  <div>
+                    <p className="font-medium">{card.name}</p>
+                    <p className="text-sm text-muted-foreground">{card.set.name}</p>
+                  </div>
                 </div>
-              </div>
-            </CommandItem>
-          ))}
-        </CommandGroup>
+              </CommandItem>
+            ))}
+          </CommandGroup>
+        </div>
       )}
     </Command>
   );
