@@ -43,7 +43,6 @@ const CardSearchInput: React.FC<CardSearchInputProps> = ({
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
         />
-      </div>
       {searchQuery && (
         <CommandGroup className="max-h-[300px] overflow-y-auto">
           {results.length === 0 && !isLoading && (
