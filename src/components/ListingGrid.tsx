@@ -266,15 +266,7 @@ export function ListingGrid({
                             <Button
                               variant="ghost"
                               size="icon"
-                              onClick={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                if (!user) {
-                                  window.location.href = '/auth/sign-in';
-                                  return;
-                                }
-                                toggleFavorite(listing);
-                              }}
+                              onClick={(e) => handleFavoriteClick(e, listing)}
                               className={`
                                 bg-black/50 hover:bg-black/75 transition-colors duration-200 rounded-full
                                 ${user && isFavorite(listing.id) ? 'text-red-500 hover:text-red-600' : 'text-white hover:text-red-500'}
