@@ -10,6 +10,8 @@ import Image from 'next/image';
 import { formatPrice } from '@/lib/price';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useListings } from '@/hooks/useListings';
+import { useState } from 'react';
+import { RemoveFavoriteDialog } from './RemoveFavoriteDialog';
 
 interface ListingGridProps {
   listings?: Listing[];
