@@ -12,7 +12,7 @@ interface UseListingsProps {
   showOnlyActive?: boolean;
 }
 
-export function useListings({ userId, searchQuery }: UseListingsProps = {}) {
+export function useListings({ userId, searchQuery, showOnlyActive = false }: UseListingsProps = {}) {
   const permanentlyDeleteListing = async (listingId: string) => {
     if (!user) throw new Error('Must be logged in to delete a listing');
 
