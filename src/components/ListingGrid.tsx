@@ -11,12 +11,13 @@ import { formatPrice } from '@/lib/price';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface ListingGridProps {
-  listings: Listing[];
+  listings?: Listing[];
   loading?: boolean;
   displayCount?: number;
   hasMore?: boolean;
   onLoadMore?: () => void;
   userId?: string;
+  showOnlyActive?: boolean;
 }
 
 const getConditionColor = (condition: string): { base: string; hover: string } => {
