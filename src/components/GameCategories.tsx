@@ -5,10 +5,17 @@ import { motion } from "framer-motion"
 export const GAME_CATEGORIES = [
   "Pokemon",
   "Magic: The Gathering",
-  "Yu-Gi-Oh",
+  "Yu-Gi-Oh!",
   "One Piece Card Game",
   "Disney Lorcana",
   "Digimon",
+  "Dragon Ball Super Card Game",
+  "Flesh and Blood",
+  "Star Wars: Unlimited",
+  "Union Arena",
+  "Universus",
+  "Vanguard",
+  "Weiss Schwarz"
 ] as const
 
 export type GameCategory = (typeof GAME_CATEGORIES)[number]
