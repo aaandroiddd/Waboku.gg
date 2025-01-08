@@ -50,7 +50,7 @@ export function GameCategories() {
 
   return (
     <motion.div 
-      className="w-full max-w-7xl mx-auto px-4 py-2"
+      className="hidden md:block w-full max-w-7xl mx-auto px-4 py-2"
       initial="hidden"
       animate="show"
       variants={container}
