@@ -76,4 +76,4 @@ const useCardSearch = () => {
   return { results, isLoading, error, searchCards };
 };
 
-export default useCardSearch;
+export { useCardSearch };
