@@ -256,23 +256,13 @@ const ProfileContent = ({ userId }: { userId: string | null }) => {
         <Tabs defaultValue="listings" className="w-full">
           <TabsList>
             <TabsTrigger value="listings">Active Listings</TabsTrigger>
-            <TabsTrigger value="sold">Sold Items</TabsTrigger>
             <TabsTrigger value="reviews">Reviews</TabsTrigger>
           </TabsList>
           
           <TabsContent value="listings">
             <div className="mt-6">
-              <ListingGrid userId={userId} />
+              <ListingGrid userId={userId} showOnlyActive={true} />
             </div>
-          </TabsContent>
-          
-          <TabsContent value="sold">
-            <Card className="mt-6">
-              <CardContent className="p-6">
-                <h3 className="text-xl font-semibold mb-4">Sold Items History</h3>
-                <p className="text-muted-foreground">No sold items to display.</p>
-              </CardContent>
-            </Card>
           </TabsContent>
           
           <TabsContent value="reviews">
