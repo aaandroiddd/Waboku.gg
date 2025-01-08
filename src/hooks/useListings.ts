@@ -4,8 +4,6 @@ import { getStorage, ref, uploadBytesResumable, getDownloadURL } from 'firebase/
 import { getFirebaseServices } from '@/lib/firebase';
 import { Listing } from '@/types/database';
 import { useAuth } from '@/contexts/AuthContext';
-import { useFavorites } from './useFavorites';
-
 interface UseListingsProps {
   userId?: string;
   searchQuery?: string;
