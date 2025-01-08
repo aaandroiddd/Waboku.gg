@@ -7,7 +7,7 @@
   top: 0;
   left: 0;
   right: 0;
-  height: 600px;
+  height: 100%;
   z-index: 0;
   overflow: hidden;
   @apply bg-background;
@@ -23,6 +23,7 @@
   background-position: center;
   opacity: 0.1;
   animation: pulse 8s ease-in-out infinite;
+  pointer-events: none;
 }
 
 @keyframes pulse {
