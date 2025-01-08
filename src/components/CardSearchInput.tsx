@@ -1,5 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
-import { Input } from "@/components/ui/input";
+import React, { useState, useCallback } from 'react';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command"
 import { Search, Loader2 } from "lucide-react";
 import { useCardSearch } from '@/hooks/useCardSearch';
@@ -37,21 +36,19 @@ const CardSearchInput: React.FC<CardSearchInputProps> = ({
   }, [searchQuery, onSearch]);
 
   return (
-    <Command className="relative rounded-lg border shadow-md">
-      <div className="relative flex items-center">
-        <div className="absolute left-2">
-          {isLoading && searchQuery.trim() ? (
-            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-          ) : (
-            <Search className="h-4 w-4 text-muted-foreground" />
-          )}
-        </div>
+    <Command className="bg-background">
+      <div className="flex items-center border-b px-3">
+        {isLoading && searchQuery.trim() ? (
+          <Loader2 className="h-4 w-4 shrink-0 opacity-50 animate-spin" />
+        ) : (
+          <Search className="h-4 w-4 shrink-0 opacity-50" />
+        )}
         <CommandInput
           value={searchQuery}
           onValueChange={handleInputChange}
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
-          className="pl-8 h-12"
+          className="h-11 flex-1 bg-transparent px-3 py-3 outline-none placeholder:text-muted-foreground"
         />
       </div>
       {searchQuery && (
