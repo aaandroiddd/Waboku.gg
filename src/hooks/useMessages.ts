@@ -69,12 +69,12 @@ export const useMessages = (chatId?: string) => {
     
     if (!chats) return null;
 
+    // Find chat with exact listing match only
     const existingChatId = Object.entries(chats).find(([_, chat]: [string, any]) => {
       const participants = chat.participants || {};
-      // Only match if both users are participants and it's for the same listing
       return participants[userId] && 
              participants[receiverId] && 
-             (!listingId || chat.listingId === listingId);
+             chat.listingId === listingId; // Strict equality check for listingId
     })?.[0];
 
     return existingChatId;
