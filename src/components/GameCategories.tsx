@@ -19,6 +19,23 @@ export const GAME_MAPPING = {
   "Digimon": "digimon",
 } as const
 
+// Mapping for game name variations to handle different formats and cases
+export const GAME_NAME_MAPPING = {
+  "pokemon": ["pokemon", "Pokemon", "POKEMON", "Pokemon TCG"],
+  "mtg": ["mtg", "Magic: The Gathering", "MTG", "Magic", "magic the gathering"],
+  "yugioh": ["yugioh", "Yu-Gi-Oh!", "Yu-Gi-Oh", "YuGiOh"],
+  "onepiece": ["onepiece", "One Piece", "One Piece Card Game", "ONEPIECE"],
+  "lorcana": ["lorcana", "Disney Lorcana", "Lorcana"],
+  "digimon": ["digimon", "Digimon Card Game", "DIGIMON"],
+  "dbs": ["dbs", "Dragon Ball Super", "Dragon Ball Super Card Game"],
+  "flesh-and-blood": ["flesh-and-blood", "Flesh and Blood", "FAB"],
+  "star-wars": ["star-wars", "Star Wars: Unlimited", "Star Wars"],
+  "union-arena": ["union-arena", "Union Arena"],
+  "universus": ["universus", "Universus"],
+  "vanguard": ["vanguard", "Cardfight Vanguard", "Vanguard"],
+  "weiss": ["weiss", "Weiss Schwarz", "Weiss"]
+}
+
 export const OTHER_GAME_MAPPING = {
   "Dragon Ball Super Card Game": "dbs",
   "Flesh and Blood": "flesh-and-blood",
