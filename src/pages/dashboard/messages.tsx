@@ -22,7 +22,7 @@ const DashboardLayout = dynamic(
 
 interface ChatPreview {
   id: string;
-  participants: string[];
+  participants: Record<string, boolean>;
   lastMessage?: {
     content: string;
     senderId: string;
