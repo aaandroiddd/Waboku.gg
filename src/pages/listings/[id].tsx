@@ -445,6 +445,7 @@ export default function ListingPage() {
       {/* Chat Dialog */}
       <Dialog open={isChatOpen} onOpenChange={setIsChatOpen}>
         <DialogContent className="max-w-md p-0">
+          <DialogTitle className="sr-only">Chat with {listing?.username}</DialogTitle>
           {listing && (
             <Chat
               receiverId={listing.userId}
