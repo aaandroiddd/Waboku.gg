@@ -61,7 +61,7 @@ export default function MessagesPage() {
         // Fetch participant names
         const uniqueParticipants = new Set<string>();
         chatList.forEach(chat => {
-          chat.participants.forEach(participantId => {
+          Object.keys(chat.participants).forEach(participantId => {
             if (participantId !== user.uid) {
               uniqueParticipants.add(participantId);
             }
