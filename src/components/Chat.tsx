@@ -305,7 +305,7 @@ export function Chat({
             </div>
           )}
           
-          <div className="space-y-4">
+          <div className="space-y-2">
             {messages.length === 0 && !chatId && (
               <div className="text-center text-sm text-muted-foreground p-4">
                 Start the conversation by introducing yourself and asking about the listing.
@@ -319,15 +319,15 @@ export function Chat({
               return (
                 <React.Fragment key={message.id}>
                   {showDate && (
-                    <div className="flex justify-center my-4">
+                    <div className="flex justify-center my-2">
                       <div className="bg-muted px-3 py-1 rounded-full text-xs text-muted-foreground">
                         {new Date(message.timestamp).toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' })}
                       </div>
                     </div>
                   )}
-                  <div className={`flex ${isUserMessage ? 'justify-end' : 'justify-start'}`}>
+                  <div className={`flex ${isUserMessage ? 'justify-end' : 'justify-start'} mb-1`}>
                     <div
-                      className={`max-w-[70%] rounded-lg p-3 ${
+                      className={`max-w-[70%] rounded-lg p-2.5 ${
                         isUserMessage
                           ? 'bg-primary text-primary-foreground'
                           : 'bg-muted'
