@@ -25,24 +25,40 @@ export const useMessages = (chatId?: string) => {
   const database = getDatabase();
 
   useEffect(() => {
-    if (!chatId || !user) return;
+    if (!chatId || !user) {
+      console.log('No chat ID or user, skipping message subscription');
+      return;
+    }
 
+    console.log('Setting up message subscription for chat:', chatId);
     const messagesRef = ref(database, `messages/${chatId}`);
+    
     const unsubscribe = onValue(messagesRef, (snapshot) => {
       const data = snapshot.val();
+      console.log('Received messages data:', data);
+      
       if (data) {
         const messageList = Object.entries(data).map(([id, message]: [string, any]) => ({
           id,
           ...message,
         }));
-        setMessages(messageList.sort((a, b) => a.timestamp - b.timestamp));
+        const sortedMessages = messageList.sort((a, b) => a.timestamp - b.timestamp);
+        console.log('Processed messages:', sortedMessages);
+        setMessages(sortedMessages);
       } else {
+        console.log('No messages found for chat:', chatId);
         setMessages([]);
       }
       setLoading(false);
+    }, (error) => {
+      console.error('Error in message subscription:', error);
+      setLoading(false);
     });
 
-    return () => unsubscribe();
+    return () => {
+      console.log('Cleaning up message subscription for chat:', chatId);
+      unsubscribe();
+    };
   }, [chatId, user]);
 
   const findExistingChat = async (userId: string, receiverId: string) => {
