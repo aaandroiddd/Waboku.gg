@@ -102,98 +102,102 @@ export function Chat({
   if (!user) return null;
 
   return (
-    <Card className={`flex flex-col h-[500px] w-full max-w-md ${className}`}>
-      {/* Chat Header */}
-      <div className="flex items-center justify-between p-4 border-b">
-        <div className="flex items-center gap-2">
-          <Avatar>
-            <MessageCircle className="w-5 h-5" />
-          </Avatar>
-          <span className="font-medium">{receiverName}</span>
-        </div>
-        {onClose && (
-          <Button variant="ghost" size="sm" onClick={onClose}>
-            Close
-          </Button>
-        )}
-      </div>
-
-      {/* Messages Area */}
-      <ScrollArea ref={scrollRef} className="flex-1 p-4">
-        {error && (
-          <div className="bg-destructive/10 border border-destructive text-destructive px-4 py-3 rounded mb-4">
-            {error}
+    <>
+      <Card className={`flex flex-col h-[500px] w-full max-w-md ${className}`}>
+        {/* Chat Header */}
+        <div className="flex items-center justify-between p-4 border-b">
+          <div className="flex items-center gap-2">
+            <Avatar>
+              <MessageCircle className="w-5 h-5" />
+            </Avatar>
+            <span className="font-medium">{receiverName}</span>
           </div>
-        )}
-        
-        <div className="space-y-4">
-          {messages.map((message) => (
-            <div
-              key={message.id}
-              className={`flex ${
-                message.senderId === user.uid ? 'justify-end' : 'justify-start'
-              }`}
-            >
+          {onClose && (
+            <Button variant="ghost" size="sm" onClick={onClose}>
+              Close
+            </Button>
+          )}
+        </div>
+
+        {/* Messages Area */}
+        <ScrollArea ref={scrollRef} className="flex-1 p-4">
+          {error && (
+            <div className="bg-destructive/10 border border-destructive text-destructive px-4 py-3 rounded mb-4">
+              {error}
+            </div>
+          )}
+          
+          <div className="space-y-4">
+            {messages.map((message) => (
               <div
-                className={`max-w-[70%] rounded-lg p-3 ${
-                  message.senderId === user.uid
-                    ? 'bg-primary text-primary-foreground'
-                    : 'bg-muted'
+                key={message.id}
+                className={`flex ${
+                  message.senderId === user.uid ? 'justify-end' : 'justify-start'
                 }`}
               >
-                <div>{message.content}</div>
-                <div className="text-xs mt-1 opacity-75">
-                  {new Date(message.timestamp).toLocaleTimeString()}
+                <div
+                  className={`max-w-[70%] rounded-lg p-3 ${
+                    message.senderId === user.uid
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-muted'
+                  }`}
+                >
+                  <div>{message.content}</div>
+                  <div className="text-xs mt-1 opacity-75">
+                    {new Date(message.timestamp).toLocaleTimeString()}
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
-      </ScrollArea>
+            ))}
+          </div>
+        </ScrollArea>
 
-      {/* Message Input */}
-      <form onSubmit={handleSend} className="p-4 border-t">
-        <div className="flex gap-2">
-          <Input
-            value={newMessage}
-            onChange={(e) => {
-              setNewMessage(e.target.value);
-              handleTyping();
-            }}
-            placeholder="Type your message..."
-          />
-          <Button 
-            type="submit"
-            disabled={!newMessage.trim()}
-          >
-            Send
-          </Button>
-        </div>
-      </form>
-    </Card>
+        {/* Message Input */}
+        <form onSubmit={handleSend} className="p-4 border-t">
+          <div className="flex gap-2">
+            <Input
+              value={newMessage}
+              onChange={(e) => {
+                setNewMessage(e.target.value);
+                handleTyping();
+              }}
+              placeholder="Type your message..."
+            />
+            <Button 
+              type="submit"
+              disabled={!newMessage.trim()}
+            >
+              Send
+            </Button>
+          </div>
+        </form>
+      </Card>
 
-    <AlertDialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog}>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>Message Sent Successfully!</AlertDialogTitle>
-          <AlertDialogDescription>
-            Your message has been sent to {receiverName}. Would you like to view your messages dashboard?
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter className="flex gap-2">
-          <AlertDialogAction onClick={() => {
-            setShowSuccessDialog(false);
-            if (onClose) onClose();
-          }}>
-            Stay Here
-          </AlertDialogAction>
-          <AlertDialogAction onClick={() => {
-            router.push('/dashboard/messages');
-          }}>
-            Go to Messages
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+      {showSuccessDialog && (
+        <AlertDialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Message Sent Successfully!</AlertDialogTitle>
+              <AlertDialogDescription>
+                Your message has been sent to {receiverName}. Would you like to view your messages dashboard?
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter className="flex gap-2">
+              <AlertDialogAction onClick={() => {
+                setShowSuccessDialog(false);
+                if (onClose) onClose();
+              }}>
+                Stay Here
+              </AlertDialogAction>
+              <AlertDialogAction onClick={() => {
+                router.push('/dashboard/messages');
+              }}>
+                Go to Messages
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
+    </>
   );
 }
