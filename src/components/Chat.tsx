@@ -162,18 +162,22 @@ export function Chat({
               </Avatar>
               <div className="flex flex-col">
                 <span className="font-medium">{receiverName}</span>
-                {listingTitle && listingId && (
-                  <a 
-                    href={`/listings/${listingId}`}
-                    className="text-sm text-primary hover:underline hover:text-primary/90 transition-colors"
-                  >
-                    Subject: {listingTitle}
-                  </a>
-                )}
-                {listingTitle && !listingId && (
-                  <span className="text-sm text-muted-foreground">
-                    Subject: {listingTitle}
-                  </span>
+                {listingTitle && (
+                  <div className="flex items-center gap-2 mt-1">
+                    <div className="h-4 w-1 bg-primary rounded-full"></div>
+                    {listingId ? (
+                      <a 
+                        href={`/listings/${listingId}`}
+                        className="text-sm font-medium hover:underline hover:text-primary transition-colors"
+                      >
+                        {listingTitle}
+                      </a>
+                    ) : (
+                      <span className="text-sm font-medium">
+                        {listingTitle}
+                      </span>
+                    )}
+                  </div>
                 )}
               </div>
             </div>
