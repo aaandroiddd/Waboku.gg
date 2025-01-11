@@ -156,6 +156,11 @@ export default function MessagesPage() {
                           >
                             <div className="text-left">
                               <div className="font-medium">{otherParticipant.name}</div>
+                              {chat.listingTitle && (
+                                <div className="text-xs text-primary truncate">
+                                  Re: {chat.listingTitle}
+                                </div>
+                              )}
                               {chat.lastMessage && (
                                 <div className="text-sm text-muted-foreground truncate">
                                   {chat.lastMessage.content}
