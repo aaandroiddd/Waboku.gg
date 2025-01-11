@@ -177,7 +177,7 @@ export function Chat({
                 <MessageCircle className="w-5 h-5" />
               </Avatar>
               <div className="flex flex-col">
-                <span className="font-medium">{receiverName}</span>
+                <span className="font-medium">{displayName}</span>
                 {listingTitle && (
                   <div className="flex items-center gap-2 mt-1">
                     <div className="h-4 w-1 bg-primary rounded-full"></div>
