@@ -43,7 +43,7 @@ import { Slider } from "@/components/ui/slider";
 import { Checkbox } from "@/components/ui/checkbox";
 
 // Import game mappings from GameCategories
-import { GAME_MAPPING, OTHER_GAME_MAPPING } from '@/components/GameCategories';
+import { GAME_MAPPING, OTHER_GAME_MAPPING, GAME_NAME_MAPPING } from '@/components/GameCategories';
 
 const games = [
   { value: "all", label: "All Games" },
