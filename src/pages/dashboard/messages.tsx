@@ -82,7 +82,7 @@ export default function MessagesPage() {
   }, [user]);
 
   const getOtherParticipant = (chat: ChatPreview) => {
-    const otherParticipantId = chat.participants.find(p => p !== user?.uid) || '';
+    const otherParticipantId = Object.keys(chat.participants).find(id => id !== user?.uid) || '';
     return {
       id: otherParticipantId,
       name: participantNames[otherParticipantId] || 'Unknown User'
