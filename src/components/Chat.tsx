@@ -190,10 +190,10 @@ export function Chat({
 
       {showSuccessDialog && (
         <AlertDialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog}>
-          <AlertDialogContent>
+          <AlertDialogContent aria-describedby="message-sent-description">
             <AlertDialogHeader>
               <AlertDialogTitle>Message Sent Successfully!</AlertDialogTitle>
-              <AlertDialogDescription>
+              <AlertDialogDescription id="message-sent-description">
                 Your message has been sent to {receiverName}. Would you like to view your messages dashboard?
               </AlertDialogDescription>
             </AlertDialogHeader>
