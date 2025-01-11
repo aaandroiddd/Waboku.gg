@@ -52,7 +52,7 @@ export default function MessagesPage() {
             id,
             ...chat,
           }))
-          .filter((chat) => chat.participants.includes(user.uid))
+          .filter((chat) => chat.participants && chat.participants[user.uid])
           .sort((a, b) => {
             return (b.lastMessage?.timestamp || 0) - (a.lastMessage?.timestamp || 0);
           });
