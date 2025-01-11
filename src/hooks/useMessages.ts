@@ -16,6 +16,7 @@ export interface Chat {
   participants: Record<string, boolean>;
   lastMessage?: Message;
   listingId?: string;
+  listingTitle?: string;
 }
 
 export const useMessages = (chatId?: string) => {
@@ -61,7 +62,7 @@ export const useMessages = (chatId?: string) => {
     };
   }, [chatId, user]);
 
-  const findExistingChat = async (userId: string, receiverId: string) => {
+  const findExistingChat = async (userId: string, receiverId: string, listingId?: string) => {
     const chatsRef = ref(database, 'chats');
     const snapshot = await get(chatsRef);
     const chats = snapshot.val();
@@ -70,20 +71,23 @@ export const useMessages = (chatId?: string) => {
 
     const existingChatId = Object.entries(chats).find(([_, chat]: [string, any]) => {
       const participants = chat.participants || {};
-      return participants[userId] && participants[receiverId];
+      // Only match if both users are participants and it's for the same listing
+      return participants[userId] && 
+             participants[receiverId] && 
+             (!listingId || chat.listingId === listingId);
     })?.[0];
 
     return existingChatId;
   };
 
-  const sendMessage = async (content: string, receiverId: string, listingId?: string) => {
+  const sendMessage = async (content: string, receiverId: string, listingId?: string, listingTitle?: string) => {
     if (!user) throw new Error('User not authenticated');
 
     let chatReference = chatId;
     
     if (!chatReference) {
-      // Try to find existing chat first
-      chatReference = await findExistingChat(user.uid, receiverId);
+      // Try to find existing chat first for this specific listing
+      chatReference = await findExistingChat(user.uid, receiverId, listingId);
 
       if (!chatReference) {
         // Create new chat if it doesn't exist
@@ -100,6 +104,7 @@ export const useMessages = (chatId?: string) => {
         await set(newChatRef, {
           participants,
           listingId,
+          listingTitle,
           createdAt: Date.now(),
         });
       }
