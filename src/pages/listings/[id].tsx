@@ -441,6 +441,20 @@ export default function ListingPage() {
         </Dialog>
       </div>
       <Footer />
+
+      {/* Chat Dialog */}
+      <Dialog open={isChatOpen} onOpenChange={setIsChatOpen}>
+        <DialogContent className="max-w-md p-0">
+          {listing && (
+            <Chat
+              receiverId={listing.userId}
+              receiverName={listing.username}
+              listingId={listing.id}
+              onClose={() => setIsChatOpen(false)}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
