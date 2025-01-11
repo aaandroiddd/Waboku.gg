@@ -46,9 +46,16 @@ export function Chat({
   const [error, setError] = useState('');
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
   const [isAtBottom, setIsAtBottom] = useState(true);
+  const [displayedListingTitle, setDisplayedListingTitle] = useState(listingTitle);
   const scrollRef = useRef<HTMLDivElement>(null);
   const observerRef = useRef<IntersectionObserver | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (listingTitle) {
+      setDisplayedListingTitle(listingTitle);
+    }
+  }, [listingTitle]);
 
   const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
     if (scrollRef.current) {
