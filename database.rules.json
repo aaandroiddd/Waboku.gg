@@ -5,12 +5,24 @@
     
     "messages": {
       "$chatId": {
-        ".read": "auth != null && ((root.child('chats').child($chatId).child('participants').val().contains(auth.uid)) || !root.child('chats').child($chatId).exists())",
-        ".write": "auth != null && ((root.child('chats').child($chatId).child('participants').val().contains(auth.uid)) || !root.child('chats').child($chatId).exists())",
+        ".read": "auth != null && ((root.child('chats').child($chatId).child('participants').child(auth.uid).exists()) || !root.child('chats').child($chatId).exists())",
+        ".write": "auth != null && ((root.child('chats').child($chatId).child('participants').child(auth.uid).exists()) || !root.child('chats').child($chatId).exists())",
         "$messageId": {
           ".validate": "newData.hasChildren(['senderId', 'receiverId', 'content', 'timestamp'])",
           "senderId": {
             ".validate": "newData.val() === auth.uid"
+          },
+          "receiverId": {
+            ".validate": "newData.isString()"
+          },
+          "content": {
+            ".validate": "newData.isString()"
+          },
+          "timestamp": {
+            ".validate": "newData.isNumber()"
+          },
+          "listingId": {
+            ".validate": "!newData.exists() || newData.isString()"
           }
         }
       }
@@ -19,13 +31,18 @@
     "chats": {
       ".read": "auth != null",
       "$chatId": {
-        ".write": "auth != null",
-        ".validate": "!data.exists() || data.child('participants').val().contains(auth.uid)",
+        ".write": "auth != null && (!data.exists() || data.child('participants').child(auth.uid).exists())",
         "participants": {
-          ".validate": "newData.val() != null && newData.val().contains(auth.uid)"
+          ".validate": "newData.hasChildren() && newData.child(auth.uid).exists()"
         },
         "lastMessage": {
           ".validate": "newData.hasChildren(['senderId', 'receiverId', 'content', 'timestamp'])"
+        },
+        "listingId": {
+          ".validate": "!newData.exists() || newData.isString()"
+        },
+        "createdAt": {
+          ".validate": "newData.isNumber() && (!data.exists() || data.val() === newData.val())"
         }
       }
     },
@@ -47,7 +64,7 @@
     "typing": {
       "$chatId": {
         "$uid": {
-          ".read": "auth != null && root.child('chats').child($chatId).child('participants').val().contains(auth.uid)",
+          ".read": "auth != null && root.child('chats').child($chatId).child('participants').child(auth.uid).exists()",
           ".write": "auth != null && auth.uid == $uid",
           ".validate": "newData.isBoolean()"
         }
