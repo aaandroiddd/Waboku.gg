@@ -18,6 +18,7 @@ import {
   AlertDialogTitle,
 } from "./ui/alert-dialog";
 import { useRouter } from 'next/router';
+import { useProfile } from '@/hooks/useProfile';
 
 interface ChatProps {
   chatId?: string;
