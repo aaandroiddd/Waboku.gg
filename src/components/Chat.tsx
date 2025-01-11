@@ -307,7 +307,7 @@ export function Chat({
             <AlertDialogHeader>
               <AlertDialogTitle>Message Sent Successfully!</AlertDialogTitle>
               <AlertDialogDescription id="message-sent-description">
-                Your message has been sent to {receiverName}. Would you like to view your messages dashboard?
+                Your message has been sent to {displayName}. Would you like to view your messages dashboard?
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter className="flex gap-2">
