@@ -22,7 +22,7 @@ import { useRouter } from 'next/router';
 interface ChatProps {
   chatId?: string;
   receiverId: string;
-  receiverName: string;
+  receiverName?: string;
   listingId?: string;
   listingTitle?: string;
   onClose?: () => void;
