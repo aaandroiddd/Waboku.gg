@@ -325,7 +325,7 @@ export function Chat({
                       </div>
                     </div>
                   )}
-                  <div className={`flex ${isUserMessage ? 'justify-end' : 'justify-start'} mb-1`}>
+                  <div className={`flex ${isUserMessage ? 'justify-end' : 'justify-start'} mb-2`}>
                     <div
                       className={`max-w-[70%] rounded-lg p-2.5 ${
                         isUserMessage
