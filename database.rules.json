@@ -1,0 +1,28 @@
+{
+  "rules": {
+    "messages": {
+      "$chatId": {
+        ".read": "auth != null && root.child('chats').child($chatId).child('participants').val().contains(auth.uid)",
+        ".write": "auth != null && root.child('chats').child($chatId).child('participants').val().contains(auth.uid)",
+        "$messageId": {
+          ".validate": "newData.hasChildren(['senderId', 'receiverId', 'content', 'timestamp'])",
+          "senderId": {
+            ".validate": "newData.val() === auth.uid"
+          }
+        }
+      }
+    },
+    "chats": {
+      ".read": "auth != null",
+      "$chatId": {
+        ".write": "auth != null && (!data.exists() || data.child('participants').val().contains(auth.uid))",
+        "participants": {
+          ".validate": "newData.isArray() && newData.val().contains(auth.uid)"
+        },
+        "lastMessage": {
+          ".validate": "newData.hasChildren(['senderId', 'receiverId', 'content', 'timestamp'])"
+        }
+      }
+    }
+  }
+}
