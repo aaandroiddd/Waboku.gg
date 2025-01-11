@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { getDatabase, ref, onValue, push, set, get, update } from 'firebase/database';
+import { getDatabase, ref, onValue, push, set, get, update, remove } from 'firebase/database';
 import { useAuth } from '@/contexts/AuthContext';
 
 export interface Message {
@@ -18,6 +18,7 @@ export interface Chat {
   lastMessage?: Message;
   listingId?: string;
   listingTitle?: string;
+  deletedBy?: Record<string, boolean>;
 }
 
 export const useMessages = (chatId?: string) => {
@@ -34,33 +35,44 @@ export const useMessages = (chatId?: string) => {
 
     console.log('Setting up message subscription for chat:', chatId);
     const messagesRef = ref(database, `messages/${chatId}`);
+    const chatRef = ref(database, `chats/${chatId}`);
     
-    const unsubscribe = onValue(messagesRef, (snapshot) => {
-      const data = snapshot.val();
-      console.log('Received messages data:', data);
-      
-      if (data) {
-        const messageList = Object.entries(data).map(([id, message]: [string, any]) => ({
-          id,
-          ...message,
-        }));
-        const sortedMessages = messageList.sort((a, b) => a.timestamp - b.timestamp);
-        console.log('Processed messages:', sortedMessages);
-        setMessages(sortedMessages);
-      } else {
-        console.log('No messages found for chat:', chatId);
+    // First check if the chat is deleted for the current user
+    get(chatRef).then((snapshot) => {
+      const chatData = snapshot.val();
+      if (chatData?.deletedBy?.[user.uid]) {
         setMessages([]);
+        setLoading(false);
+        return;
       }
-      setLoading(false);
-    }, (error) => {
-      console.error('Error in message subscription:', error);
-      setLoading(false);
-    });
 
-    return () => {
-      console.log('Cleaning up message subscription for chat:', chatId);
-      unsubscribe();
-    };
+      const unsubscribe = onValue(messagesRef, (snapshot) => {
+        const data = snapshot.val();
+        console.log('Received messages data:', data);
+        
+        if (data) {
+          const messageList = Object.entries(data).map(([id, message]: [string, any]) => ({
+            id,
+            ...message,
+          }));
+          const sortedMessages = messageList.sort((a, b) => a.timestamp - b.timestamp);
+          console.log('Processed messages:', sortedMessages);
+          setMessages(sortedMessages);
+        } else {
+          console.log('No messages found for chat:', chatId);
+          setMessages([]);
+        }
+        setLoading(false);
+      }, (error) => {
+        console.error('Error in message subscription:', error);
+        setLoading(false);
+      });
+
+      return () => {
+        console.log('Cleaning up message subscription for chat:', chatId);
+        unsubscribe();
+      };
+    });
   }, [chatId, user]);
 
   const findExistingChat = async (userId: string, receiverId: string, listingId?: string) => {
@@ -73,9 +85,11 @@ export const useMessages = (chatId?: string) => {
     // Find chat with exact listing match only
     const existingChatId = Object.entries(chats).find(([_, chat]: [string, any]) => {
       const participants = chat.participants || {};
+      const notDeleted = !chat.deletedBy?.[userId];
       return participants[userId] && 
              participants[receiverId] && 
-             chat.listingId === listingId; // Strict equality check for listingId
+             chat.listingId === listingId && // Strict equality check for listingId
+             notDeleted;
     })?.[0];
 
     return existingChatId;
@@ -93,6 +107,37 @@ export const useMessages = (chatId?: string) => {
       await update(ref(database), updates);
     } catch (error) {
       console.error('Error marking messages as read:', error);
+    }
+  };
+
+  const deleteChat = async (chatId: string) => {
+    if (!user) throw new Error('User not authenticated');
+
+    const chatRef = ref(database, `chats/${chatId}`);
+    const chatSnapshot = await get(chatRef);
+    const chatData = chatSnapshot.val();
+
+    if (!chatData) throw new Error('Chat not found');
+
+    // Mark chat as deleted for the current user
+    const updates: Record<string, any> = {
+      [`chats/${chatId}/deletedBy/${user.uid}`]: true
+    };
+
+    // If all participants have deleted the chat, remove it completely
+    const allParticipantsDeleted = Object.keys(chatData.participants).every(
+      participantId => 
+        (chatData.deletedBy?.[participantId] && participantId !== user.uid) || 
+        participantId === user.uid
+    );
+
+    if (allParticipantsDeleted) {
+      // Remove the entire chat and its messages
+      await remove(ref(database, `chats/${chatId}`));
+      await remove(ref(database, `messages/${chatId}`));
+    } else {
+      // Just mark as deleted for current user
+      await update(ref(database), updates);
     }
   };
 
@@ -170,5 +215,6 @@ export const useMessages = (chatId?: string) => {
     loading,
     sendMessage,
     markAsRead,
+    deleteChat,
   };
 };
