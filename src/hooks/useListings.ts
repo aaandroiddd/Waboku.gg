@@ -4,6 +4,24 @@ import { getStorage, ref, uploadBytesResumable, getDownloadURL } from 'firebase/
 import { getFirebaseServices } from '@/lib/firebase';
 import { Listing } from '@/types/database';
 import { useAuth } from '@/contexts/AuthContext';
+
+// Game name mappings for consistent filtering
+const GAME_NAME_MAPPING: { [key: string]: string[] } = {
+  'pokemon': ['pokemon'],
+  'mtg': ['magic: the gathering', 'mtg'],
+  'yugioh': ['yu-gi-oh!', 'yugioh'],
+  'onepiece': ['one piece card game', 'onepiece'],
+  'lorcana': ['disney lorcana', 'lorcana'],
+  'digimon': ['digimon'],
+  'dbs': ['dragon ball super card game', 'dbs'],
+  'flesh-and-blood': ['flesh and blood'],
+  'star-wars': ['star wars: unlimited'],
+  'union-arena': ['union arena'],
+  'universus': ['universus'],
+  'vanguard': ['vanguard'],
+  'weiss': ['weiss schwarz']
+};
+
 interface UseListingsProps {
   userId?: string;
   searchQuery?: string;
