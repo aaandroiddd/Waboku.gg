@@ -38,8 +38,11 @@ export function Chat({
 }: ChatProps) {
   const { messages, sendMessage } = useMessages(chatId);
   const { user } = useAuth();
+  const { toast } = useToast();
+  const router = useRouter();
   const [newMessage, setNewMessage] = useState('');
   const [error, setError] = useState('');
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
