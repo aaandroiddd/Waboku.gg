@@ -79,15 +79,25 @@ export default function MessagesPage() {
           });
         });
 
-        // Fetch profiles for each participant
-        const profilesRef = ref(database, 'profiles');
-        const profilesSnapshot = await get(profilesRef);
-        const profilesData = profilesSnapshot.val() || {};
-        
+        // Fetch profiles from Firestore
         const profiles: Record<string, any> = {};
-        uniqueParticipants.forEach(id => {
-          profiles[id] = profilesData[id] || { username: 'Unknown User' };
-        });
+        await Promise.all(Array.from(uniqueParticipants).map(async (id) => {
+          try {
+            const userDoc = await getDoc(doc(db, 'users', id));
+            if (userDoc.exists()) {
+              const userData = userDoc.data();
+              profiles[id] = {
+                username: userData.displayName || userData.username || 'Unknown User',
+                avatarUrl: userData.avatarUrl || userData.photoURL || null
+              };
+            } else {
+              profiles[id] = { username: 'Unknown User' };
+            }
+          } catch (err) {
+            console.error(`Error fetching profile for ${id}:`, err);
+            profiles[id] = { username: 'Unknown User' };
+          }
+        }));
         
         setParticipantProfiles(profiles);
         setChats(chatList);
