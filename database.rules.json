@@ -2,8 +2,8 @@
   "rules": {
     "messages": {
       "$chatId": {
-        ".read": "auth != null && root.child('chats').child($chatId).child('participants').val().contains(auth.uid)",
-        ".write": "auth != null && root.child('chats').child($chatId).child('participants').val().contains(auth.uid)",
+        ".read": "auth != null && (root.child('chats').child($chatId).child('participants').val().contains(auth.uid) || !root.child('chats').child($chatId).exists())",
+        ".write": "auth != null && (root.child('chats').child($chatId).child('participants').val().contains(auth.uid) || !root.child('chats').child($chatId).exists())",
         "$messageId": {
           ".validate": "newData.hasChildren(['senderId', 'receiverId', 'content', 'timestamp'])",
           "senderId": {
