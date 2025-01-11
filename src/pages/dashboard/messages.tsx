@@ -29,6 +29,7 @@ interface ChatPreview {
     timestamp: number;
   };
   listingId?: string;
+  listingTitle?: string;
 }
 
 export default function MessagesPage() {
