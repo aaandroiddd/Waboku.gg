@@ -101,12 +101,20 @@ export const useMessages = (chatId?: string) => {
           [receiverId]: true
         };
 
-        await set(newChatRef, {
+        const chatData: any = {
           participants,
-          listingId,
-          listingTitle,
           createdAt: Date.now(),
-        });
+        };
+
+        if (listingId) {
+          chatData.listingId = listingId;
+        }
+        
+        if (listingTitle) {
+          chatData.listingTitle = listingTitle;
+        }
+
+        await set(newChatRef, chatData);
       }
     }
 
