@@ -155,9 +155,12 @@ export default function ListingsPage() {
 
     // Apply game filter
     if (selectedGame !== "all") {
-      filtered = filtered.filter(listing => 
-        listing.game?.toLowerCase() === selectedGame.toLowerCase()
-      );
+      filtered = filtered.filter(listing => {
+        const listingGameLower = listing.game?.toLowerCase() || '';
+        return GAME_NAME_MAPPING[selectedGame]?.some(name => 
+          listingGameLower === name.toLowerCase()
+        ) || false;
+      });
     }
 
     // Apply condition filter
