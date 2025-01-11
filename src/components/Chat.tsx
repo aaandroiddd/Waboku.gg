@@ -65,7 +65,15 @@ export function Chat({
     if (!newMessage.trim()) return;
 
     try {
-      await sendMessage(newMessage.trim(), receiverId, listingId);
+      console.log('Sending message:', {
+        content: newMessage.trim(),
+        receiverId,
+        listingId
+      });
+      
+      const chatId = await sendMessage(newMessage.trim(), receiverId, listingId);
+      console.log('Message sent successfully, chat ID:', chatId);
+      
       setNewMessage('');
       setError('');
     } catch (error) {
