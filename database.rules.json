@@ -21,7 +21,7 @@
       "$chatId": {
         ".write": "auth != null && (!data.exists() || data.child('participants').val().contains(auth.uid))",
         "participants": {
-          ".validate": "newData.isArray() && newData.val().contains(auth.uid)"
+          ".validate": "newData.val() != null && newData.val().contains(auth.uid)"
         },
         "lastMessage": {
           ".validate": "newData.hasChildren(['senderId', 'receiverId', 'content', 'timestamp'])"
