@@ -40,6 +40,7 @@ export default function ListingPage() {
   const [isZoomDialogOpen, setIsZoomDialogOpen] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isFavorited, setIsFavorited] = useState(false);
+  const [isChatOpen, setIsChatOpen] = useState(false);
   const { user } = useAuth();
 
   useEffect(() => {
