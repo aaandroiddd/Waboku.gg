@@ -1,9 +1,12 @@
 {
   "rules": {
+    ".read": false,
+    ".write": false,
+    
     "messages": {
       "$chatId": {
-        ".read": "auth != null && (root.child('chats').child($chatId).child('participants').val().contains(auth.uid) || !root.child('chats').child($chatId).exists())",
-        ".write": "auth != null && (root.child('chats').child($chatId).child('participants').val().contains(auth.uid) || !root.child('chats').child($chatId).exists())",
+        ".read": "auth != null && ((root.child('chats').child($chatId).child('participants').val().contains(auth.uid)) || !root.child('chats').child($chatId).exists())",
+        ".write": "auth != null && ((root.child('chats').child($chatId).child('participants').val().contains(auth.uid)) || !root.child('chats').child($chatId).exists())",
         "$messageId": {
           ".validate": "newData.hasChildren(['senderId', 'receiverId', 'content', 'timestamp'])",
           "senderId": {
@@ -12,6 +15,7 @@
         }
       }
     },
+
     "chats": {
       ".read": "auth != null",
       "$chatId": {
@@ -22,6 +26,38 @@
         "lastMessage": {
           ".validate": "newData.hasChildren(['senderId', 'receiverId', 'content', 'timestamp'])"
         }
+      }
+    },
+
+    "userStatus": {
+      "$uid": {
+        ".read": "auth != null",
+        ".write": "auth != null && auth.uid == $uid",
+        ".validate": "newData.hasChildren(['status', 'lastSeen'])",
+        "status": {
+          ".validate": "newData.isString() && newData.val().length <= 100"
+        },
+        "lastSeen": {
+          ".validate": "newData.isNumber() && newData.val() <= now"
+        }
+      }
+    },
+
+    "typing": {
+      "$chatId": {
+        "$uid": {
+          ".read": "auth != null && root.child('chats').child($chatId).child('participants').val().contains(auth.uid)",
+          ".write": "auth != null && auth.uid == $uid",
+          ".validate": "newData.isBoolean()"
+        }
+      }
+    },
+
+    "lastActive": {
+      "$uid": {
+        ".read": true,
+        ".write": "auth != null && auth.uid == $uid",
+        ".validate": "newData.isNumber() && newData.val() <= now"
       }
     }
   }
