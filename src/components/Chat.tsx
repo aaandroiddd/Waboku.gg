@@ -33,12 +33,20 @@ interface ChatProps {
 export function Chat({ 
   chatId, 
   receiverId, 
-  receiverName, 
+  receiverName: initialReceiverName, 
   listingId,
   listingTitle,
   onClose,
   className = ''
 }: ChatProps) {
+  const { profile: receiverProfile } = useProfile(receiverId);
+  const [displayName, setDisplayName] = useState(initialReceiverName);
+
+  useEffect(() => {
+    if (receiverProfile?.username) {
+      setDisplayName(receiverProfile.username);
+    }
+  }, [receiverProfile]);
   const { messages, sendMessage, markAsRead } = useMessages(chatId);
   const { user } = useAuth();
   const { toast } = useToast();
