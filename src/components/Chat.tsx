@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { MessageCircle, Check, CheckCheck } from 'lucide-react';
+import { MessageCircle, Check, CheckCheck, Image, Smile, Trash2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useMessages } from '@/hooks/useMessages';
 import { Card } from './ui/card';
@@ -8,17 +8,28 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Avatar } from './ui/avatar';
 import { useToast } from './ui/use-toast';
+import { MessageContent } from './MessageContent';
+import data from '@emoji-mart/data';
+import Picker from '@emoji-mart/react';
 import {
   AlertDialog,
   AlertDialogAction,
+  AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
 } from "./ui/alert-dialog";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "./ui/popover";
 import { useRouter } from 'next/router';
 import { useProfile } from '@/hooks/useProfile';
+import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { getDatabase, ref as dbRef, remove } from 'firebase/database';
 
 interface ChatProps {
   chatId?: string;
@@ -28,6 +39,7 @@ interface ChatProps {
   listingTitle?: string;
   onClose?: () => void;
   className?: string;
+  onDelete?: () => void;
 }
 
 export function Chat({ 
@@ -37,17 +49,22 @@ export function Chat({
   listingId,
   listingTitle,
   onClose,
+  onDelete,
   className = ''
 }: ChatProps) {
   const { profile: receiverProfile } = useProfile(receiverId);
   const [displayName, setDisplayName] = useState(initialReceiverName);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (receiverProfile?.username) {
       setDisplayName(receiverProfile.username);
     }
   }, [receiverProfile]);
-  const { messages, sendMessage, markAsRead } = useMessages(chatId);
+
+  const { messages, sendMessage, markAsRead, deleteChat } = useMessages(chatId);
   const { user } = useAuth();
   const { toast } = useToast();
   const router = useRouter();
@@ -56,6 +73,7 @@ export function Chat({
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
   const [isAtBottom, setIsAtBottom] = useState(true);
   const [displayedListingTitle, setDisplayedListingTitle] = useState(listingTitle);
+  const [isUploading, setIsUploading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const observerRef = useRef<IntersectionObserver | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -115,6 +133,38 @@ export function Chat({
     }
   }, [messages, chatId, user?.uid, markAsRead]);
 
+  const handleImageUpload = async (file: File) => {
+    if (!user) return;
+
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    if (file.size > maxSize) {
+      toast({
+        title: "Error",
+        description: "Image size should be less than 5MB",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsUploading(true);
+    try {
+      const storage = getStorage();
+      const imageRef = storageRef(storage, `chat-images/${chatId}/${Date.now()}_${file.name}`);
+      await uploadBytes(imageRef, file);
+      const imageUrl = await getDownloadURL(imageRef);
+      await sendMessage(`![Image](${imageUrl})`, receiverId, listingId, listingTitle);
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      toast({
+        title: "Error",
+        description: "Failed to upload image. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   const handleSend = async (e?: React.FormEvent) => {
     if (e) {
       e.preventDefault();
@@ -146,6 +196,29 @@ export function Chat({
     } catch (error) {
       console.error('Error sending message:', error);
       setError('Failed to send message. Please try again.');
+    }
+  };
+
+  const handleDeleteChat = async () => {
+    if (!chatId || !user) return;
+    
+    try {
+      await deleteChat(chatId);
+      toast({
+        title: "Chat deleted",
+        description: "The conversation has been deleted from your messages.",
+      });
+      if (onDelete) {
+        onDelete();
+      }
+      setShowDeleteDialog(false);
+    } catch (error) {
+      console.error('Error deleting chat:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete the conversation. Please try again.",
+        variant: "destructive"
+      });
     }
   };
 
@@ -197,11 +270,22 @@ export function Chat({
                 )}
               </div>
             </div>
-            {onClose && (
-              <Button variant="ghost" size="sm" onClick={onClose}>
-                Close
-              </Button>
-            )}
+            <div className="flex items-center gap-2">
+              {chatId && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setShowDeleteDialog(true)}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              )}
+              {onClose && (
+                <Button variant="ghost" size="sm" onClick={onClose}>
+                  Close
+                </Button>
+              )}
+            </div>
           </div>
         </div>
 
@@ -249,7 +333,10 @@ export function Chat({
                           : 'bg-muted'
                       }`}
                     >
-                      <div>{message.content}</div>
+                      <MessageContent 
+                        content={message.content}
+                        className={isUserMessage ? 'text-primary-foreground' : ''}
+                      />
                       <div className="flex items-center justify-end gap-1 text-xs mt-1 opacity-75">
                         <span>{formatMessageTime(message.timestamp)}</span>
                         {isUserMessage && (
@@ -285,15 +372,61 @@ export function Chat({
         {/* Message Input */}
         <form onSubmit={handleSend} className="p-4 border-t bg-card">
           <div className="flex gap-2">
-            <Input
-              value={newMessage}
-              onChange={(e) => setNewMessage(e.target.value)}
-              placeholder="Type your message about the listing..."
-              className="text-sm"
-            />
+            <div className="flex-1 flex gap-2">
+              <Input
+                value={newMessage}
+                onChange={(e) => setNewMessage(e.target.value)}
+                placeholder="Type your message..."
+                className="text-sm"
+                disabled={isUploading}
+              />
+              <input
+                type="file"
+                ref={fileInputRef}
+                className="hidden"
+                accept="image/*"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    handleImageUpload(file);
+                  }
+                  e.target.value = '';
+                }}
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                disabled={isUploading}
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <Image className="h-4 w-4" />
+              </Button>
+              <Popover open={showEmojiPicker} onOpenChange={setShowEmojiPicker}>
+                <PopoverTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    disabled={isUploading}
+                  >
+                    <Smile className="h-4 w-4" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-full p-0" align="end">
+                  <Picker
+                    data={data}
+                    onEmojiSelect={(emoji: any) => {
+                      setNewMessage((prev) => prev + emoji.native);
+                      setShowEmojiPicker(false);
+                    }}
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
             <Button 
               type="submit"
-              disabled={!newMessage.trim()}
+              disabled={!newMessage.trim() || isUploading}
             >
               Send
             </Button>
@@ -301,12 +434,13 @@ export function Chat({
         </form>
       </Card>
 
+      {/* Success Dialog */}
       {showSuccessDialog && (
         <AlertDialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog}>
-          <AlertDialogContent aria-describedby="message-sent-description">
+          <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>Message Sent Successfully!</AlertDialogTitle>
-              <AlertDialogDescription id="message-sent-description">
+              <AlertDialogDescription>
                 Your message has been sent to {displayName}. Would you like to view your messages dashboard?
               </AlertDialogDescription>
             </AlertDialogHeader>
@@ -326,6 +460,27 @@ export function Chat({
           </AlertDialogContent>
         </AlertDialog>
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Conversation</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this conversation? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteChat}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
