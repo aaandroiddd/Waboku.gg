@@ -4,7 +4,7 @@
     ".write": false,
     
     "messages": {
-      ".read": "auth != null",
+      ".read": false,
       "$chatId": {
         ".read": "auth != null && root.child('chats').child($chatId).child('participants').child(auth.uid).val() === true",
         ".write": "auth != null && root.child('chats').child($chatId).child('participants').child(auth.uid).val() === true",
@@ -17,24 +17,28 @@
             ".validate": "newData.isString()"
           },
           "content": {
-            ".validate": "newData.isString()"
+            ".validate": "newData.isString() && newData.val().length <= 2000"
           },
           "timestamp": {
-            ".validate": "newData.isNumber()"
+            ".validate": "newData.isNumber() && newData.val() <= now"
           },
           "listingId": {
             ".validate": "!newData.exists() || newData.isString()"
+          },
+          "read": {
+            ".validate": "newData.isBoolean()"
           }
         }
       }
     },
 
     "chats": {
-      ".read": "auth != null",
+      ".read": false,
       "$chatId": {
+        ".read": "auth != null && data.child('participants').child(auth.uid).val() === true",
         ".write": "auth != null && (!data.exists() || data.child('participants').child(auth.uid).val() === true)",
         "participants": {
-          ".validate": "newData.hasChildren()"
+          ".validate": "newData.hasChildren() && newData.val().keys().length >= 2"
         },
         "lastMessage": {
           ".validate": "newData.hasChildren(['senderId', 'receiverId', 'content', 'timestamp'])"
@@ -42,8 +46,11 @@
         "listingId": {
           ".validate": "!newData.exists() || newData.isString()"
         },
+        "listingTitle": {
+          ".validate": "!newData.exists() || newData.isString()"
+        },
         "createdAt": {
-          ".validate": "newData.isNumber() && (!data.exists() || data.val() === newData.val())"
+          ".validate": "newData.isNumber() && (!data.exists() || data.val() === newData.val()) && newData.val() <= now"
         }
       }
     },
@@ -74,7 +81,7 @@
 
     "lastActive": {
       "$uid": {
-        ".read": true,
+        ".read": "auth != null",
         ".write": "auth != null && auth.uid == $uid",
         ".validate": "newData.isNumber() && newData.val() <= now"
       }
