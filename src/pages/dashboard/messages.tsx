@@ -180,6 +180,8 @@ export default function MessagesPage() {
                       chatId={selectedChat}
                       receiverId={getOtherParticipant(chats.find(c => c.id === selectedChat)!).id}
                       receiverName={getOtherParticipant(chats.find(c => c.id === selectedChat)!).name}
+                      listingId={chats.find(c => c.id === selectedChat)?.listingId}
+                      listingTitle={chats.find(c => c.id === selectedChat)?.listingTitle}
                     />
                   ) : (
                     <Card className="h-full flex items-center justify-center">
