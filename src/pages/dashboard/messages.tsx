@@ -40,14 +40,23 @@ export default function MessagesPage() {
   const [participantProfiles, setParticipantProfiles] = useState<Record<string, any>>({});
 
   useEffect(() => {
-    if (!user) return;
+    if (!user) {
+      setLoading(false);
+      return;
+    }
 
     const database = getDatabase();
     const chatsRef = ref(database, 'chats');
 
     const unsubscribe = onValue(chatsRef, async (snapshot) => {
-      const data = snapshot.val();
-      if (data) {
+      try {
+        const data = snapshot.val();
+        if (!data) {
+          setChats([]);
+          setLoading(false);
+          return;
+        }
+
         const chatList = Object.entries(data)
           .map(([id, chat]: [string, any]) => ({
             id,
@@ -55,14 +64,15 @@ export default function MessagesPage() {
           }))
           .filter((chat) => chat.participants && chat.participants[user.uid])
           .sort((a, b) => {
-            return (b.lastMessage?.timestamp || 0) - (a.lastMessage?.timestamp || 0);
+            const timestampA = a.lastMessage?.timestamp || 0;
+            const timestampB = b.lastMessage?.timestamp || 0;
+            return timestampB - timestampA;
           });
-        setChats(chatList);
 
         // Get unique participants
         const uniqueParticipants = new Set<string>();
         chatList.forEach(chat => {
-          Object.keys(chat.participants).forEach(participantId => {
+          Object.keys(chat.participants || {}).forEach(participantId => {
             if (participantId !== user.uid) {
               uniqueParticipants.add(participantId);
             }
@@ -80,15 +90,23 @@ export default function MessagesPage() {
         });
         
         setParticipantProfiles(profiles);
+        setChats(chatList);
+      } catch (error) {
+        console.error('Error loading chats:', error);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     });
 
     return () => unsubscribe();
   }, [user]);
 
   const getOtherParticipant = (chat: ChatPreview) => {
-    const otherParticipantId = Object.keys(chat.participants).find(id => id !== user?.uid) || '';
+    if (!chat.participants) return { id: '', name: 'Unknown User' };
+    
+    const otherParticipantId = Object.keys(chat.participants).find(id => id !== user?.uid);
+    if (!otherParticipantId) return { id: '', name: 'Unknown User' };
+
     const profile = participantProfiles[otherParticipantId];
     return {
       id: otherParticipantId,
