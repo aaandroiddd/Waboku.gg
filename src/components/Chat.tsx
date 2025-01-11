@@ -113,7 +113,14 @@ export function Chat({
               <Avatar>
                 <MessageCircle className="w-5 h-5" />
               </Avatar>
-              <span className="font-medium">{receiverName}</span>
+              <div className="flex flex-col">
+                <span className="font-medium">{receiverName}</span>
+                {listingTitle && (
+                  <span className="text-sm text-muted-foreground">
+                    Subject: {listingTitle}
+                  </span>
+                )}
+              </div>
             </div>
             {onClose && (
               <Button variant="ghost" size="sm" onClick={onClose}>
@@ -121,11 +128,6 @@ export function Chat({
               </Button>
             )}
           </div>
-          {listingTitle && (
-            <div className="mt-2 text-sm text-muted-foreground">
-              Re: {listingTitle}
-            </div>
-          )}
         </div>
 
         {/* Messages Area */}
