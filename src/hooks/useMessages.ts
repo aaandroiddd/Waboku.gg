@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { getDatabase, ref, onValue, push, set } from 'firebase/database';
+import { getDatabase, ref, onValue, push, set, get } from 'firebase/database';
 import { useAuth } from '@/contexts/AuthContext';
 
 export interface Message {
@@ -13,7 +13,7 @@ export interface Message {
 
 export interface Chat {
   id: string;
-  participants: string[];
+  participants: Record<string, boolean>;
   lastMessage?: Message;
   listingId?: string;
 }
@@ -45,31 +45,57 @@ export const useMessages = (chatId?: string) => {
     return () => unsubscribe();
   }, [chatId, user]);
 
+  const findExistingChat = async (userId: string, receiverId: string) => {
+    const chatsRef = ref(database, 'chats');
+    const snapshot = await get(chatsRef);
+    const chats = snapshot.val();
+    
+    if (!chats) return null;
+
+    const existingChatId = Object.entries(chats).find(([_, chat]: [string, any]) => {
+      const participants = chat.participants || {};
+      return participants[userId] && participants[receiverId];
+    })?.[0];
+
+    return existingChatId;
+  };
+
   const sendMessage = async (content: string, receiverId: string, listingId?: string) => {
-    if (!user) return;
+    if (!user) throw new Error('User not authenticated');
+
+    let chatReference = chatId;
+    
+    if (!chatReference) {
+      // Try to find existing chat first
+      chatReference = await findExistingChat(user.uid, receiverId);
+
+      if (!chatReference) {
+        // Create new chat if it doesn't exist
+        const chatsRef = ref(database, 'chats');
+        const newChatRef = push(chatsRef);
+        chatReference = newChatRef.key as string;
+        
+        // Create participants object with both users
+        const participants: Record<string, boolean> = {
+          [user.uid]: true,
+          [receiverId]: true
+        };
+
+        await set(newChatRef, {
+          participants,
+          listingId,
+          createdAt: Date.now(),
+        });
+      }
+    }
 
     const newMessage: Omit<Message, 'id'> = {
       senderId: user.uid,
       receiverId,
       content,
       timestamp: Date.now(),
-      listingId,
+      ...(listingId ? { listingId } : {})
     };
-
-    let chatReference = chatId;
-    
-    if (!chatReference) {
-      // Create new chat if it doesn't exist
-      const chatsRef = ref(database, 'chats');
-      const newChatRef = push(chatsRef);
-      chatReference = newChatRef.key as string;
-      
-      await set(newChatRef, {
-        participants: [user.uid, receiverId],
-        listingId,
-        createdAt: Date.now(),
-      });
-    }
 
     const messageRef = push(ref(database, `messages/${chatReference}`));
     await set(messageRef, newMessage);
