@@ -79,17 +79,20 @@ export function Chat({
     if (!newMessage.trim()) return;
 
     try {
-      console.log('Sending message:', {
-        content: newMessage.trim(),
-        receiverId,
-        listingId
-      });
-      
       const chatId = await sendMessage(newMessage.trim(), receiverId, listingId);
-      console.log('Message sent successfully, chat ID:', chatId);
       
       setNewMessage('');
       setError('');
+      
+      toast({
+        title: "Message sent",
+        description: "Your message has been sent successfully.",
+      });
+
+      // If this is a new chat (no chatId prop), show the success dialog
+      if (!chatId) {
+        setShowSuccessDialog(true);
+      }
     } catch (error) {
       console.error('Error sending message:', error);
       setError('Failed to send message. Please try again.');
