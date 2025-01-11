@@ -146,11 +146,21 @@ export const useMessages = (chatId?: string) => {
     const messageRef = push(ref(database, `messages/${chatReference}`));
     await set(messageRef, newMessage);
 
-    // Update last message in chat
-    await set(ref(database, `chats/${chatReference}/lastMessage`), {
-      ...newMessage,
-      id: messageRef.key,
-    });
+    // Update last message and listing info in chat
+    const chatUpdates: any = {
+      [`chats/${chatReference}/lastMessage`]: {
+        ...newMessage,
+        id: messageRef.key,
+      }
+    };
+
+    // Update listing info if provided
+    if (listingId && listingTitle) {
+      chatUpdates[`chats/${chatReference}/listingId`] = listingId;
+      chatUpdates[`chats/${chatReference}/listingTitle`] = listingTitle;
+    }
+
+    await update(ref(database), chatUpdates);
 
     return chatReference;
   };
