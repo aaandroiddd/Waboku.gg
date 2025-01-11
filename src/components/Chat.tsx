@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { MessageCircle } from 'lucide-react';
+import { MessageCircle, Check, CheckCheck } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useMessages } from '@/hooks/useMessages';
 import { Card } from './ui/card';
@@ -38,35 +38,66 @@ export function Chat({
   onClose,
   className = ''
 }: ChatProps) {
-  const { messages, sendMessage } = useMessages(chatId);
+  const { messages, sendMessage, markAsRead } = useMessages(chatId);
   const { user } = useAuth();
   const { toast } = useToast();
   const router = useRouter();
   const [newMessage, setNewMessage] = useState('');
   const [error, setError] = useState('');
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
+  const [isAtBottom, setIsAtBottom] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const observerRef = useRef<IntersectionObserver | null>(null);
+  const bottomRef = useRef<HTMLDivElement>(null);
 
-  const scrollToBottom = () => {
+  const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
     if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      scrollRef.current.scrollTo({
+        top: scrollRef.current.scrollHeight,
+        behavior
+      });
     }
   };
 
+  // Handle scroll position detection
   useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
+    if (!bottomRef.current) return;
 
-  const handleTyping = () => {
-    if (typingTimeoutRef.current) {
-      clearTimeout(typingTimeoutRef.current);
+    observerRef.current = new IntersectionObserver(
+      ([entry]) => {
+        setIsAtBottom(entry.isIntersecting);
+      },
+      { threshold: 0.5 }
+    );
+
+    observerRef.current.observe(bottomRef.current);
+
+    return () => {
+      if (observerRef.current) {
+        observerRef.current.disconnect();
+      }
+    };
+  }, []);
+
+  // Auto-scroll to bottom for new messages
+  useEffect(() => {
+    if (isAtBottom) {
+      scrollToBottom();
     }
+  }, [messages, isAtBottom]);
 
-    typingTimeoutRef.current = setTimeout(() => {
-      // Future typing indicator implementation
-    }, 2000);
-  };
+  // Mark messages as read when they become visible
+  useEffect(() => {
+    if (chatId && messages.length > 0) {
+      const unreadMessages = messages.filter(
+        msg => msg.senderId !== user?.uid && !msg.read
+      );
+      
+      if (unreadMessages.length > 0) {
+        markAsRead(unreadMessages.map(msg => msg.id));
+      }
+    }
+  }, [messages, chatId, user?.uid, markAsRead]);
 
   const handleSend = async (e?: React.FormEvent) => {
     if (e) {
@@ -85,13 +116,14 @@ export function Chat({
       
       setNewMessage('');
       setError('');
+      setIsAtBottom(true);
+      scrollToBottom();
       
       toast({
         title: "Message sent",
         description: "Your message has been sent successfully.",
       });
 
-      // If this is a new chat (no chatId prop), show the success dialog
       if (!chatId) {
         setShowSuccessDialog(true);
       }
@@ -101,13 +133,28 @@ export function Chat({
     }
   };
 
+  const formatMessageTime = (timestamp: number) => {
+    const date = new Date(timestamp);
+    const now = new Date();
+    const isToday = date.toDateString() === now.toDateString();
+    const isThisYear = date.getFullYear() === now.getFullYear();
+
+    if (isToday) {
+      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    } else if (isThisYear) {
+      return date.toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+    } else {
+      return date.toLocaleDateString([], { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+    }
+  };
+
   if (!user) return null;
 
   return (
     <>
       <Card className={`flex flex-col h-[400px] w-full max-w-md ${className}`}>
         {/* Chat Header */}
-        <div className="flex flex-col p-4 border-b">
+        <div className="flex flex-col p-4 border-b bg-card">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Avatar>
@@ -139,7 +186,15 @@ export function Chat({
         </div>
 
         {/* Messages Area */}
-        <ScrollArea ref={scrollRef} className="flex-1 p-4">
+        <ScrollArea 
+          ref={scrollRef} 
+          className="flex-1 p-4"
+          onScroll={(e) => {
+            const target = e.target as HTMLDivElement;
+            const isBottom = Math.abs(target.scrollHeight - target.clientHeight - target.scrollTop) < 1;
+            setIsAtBottom(isBottom);
+          }}
+        >
           {error && (
             <div className="bg-destructive/10 border border-destructive text-destructive px-4 py-3 rounded mb-4">
               {error}
@@ -152,39 +207,67 @@ export function Chat({
                 Start the conversation by introducing yourself and asking about the listing.
               </div>
             )}
-            {messages.map((message) => (
-              <div
-                key={message.id}
-                className={`flex ${
-                  message.senderId === user.uid ? 'justify-end' : 'justify-start'
-                }`}
-              >
-                <div
-                  className={`max-w-[70%] rounded-lg p-3 ${
-                    message.senderId === user.uid
-                      ? 'bg-primary text-primary-foreground'
-                      : 'bg-muted'
-                  }`}
-                >
-                  <div>{message.content}</div>
-                  <div className="text-xs mt-1 opacity-75">
-                    {new Date(message.timestamp).toLocaleTimeString()}
+            {messages.map((message, index) => {
+              const isUserMessage = message.senderId === user.uid;
+              const showDate = index === 0 || 
+                new Date(message.timestamp).toDateString() !== new Date(messages[index - 1].timestamp).toDateString();
+
+              return (
+                <React.Fragment key={message.id}>
+                  {showDate && (
+                    <div className="flex justify-center my-4">
+                      <div className="bg-muted px-3 py-1 rounded-full text-xs text-muted-foreground">
+                        {new Date(message.timestamp).toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' })}
+                      </div>
+                    </div>
+                  )}
+                  <div className={`flex ${isUserMessage ? 'justify-end' : 'justify-start'}`}>
+                    <div
+                      className={`max-w-[70%] rounded-lg p-3 ${
+                        isUserMessage
+                          ? 'bg-primary text-primary-foreground'
+                          : 'bg-muted'
+                      }`}
+                    >
+                      <div>{message.content}</div>
+                      <div className="flex items-center justify-end gap-1 text-xs mt-1 opacity-75">
+                        <span>{formatMessageTime(message.timestamp)}</span>
+                        {isUserMessage && (
+                          message.read 
+                            ? <CheckCheck className="w-3 h-3" />
+                            : <Check className="w-3 h-3" />
+                        )}
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </div>
-            ))}
+                </React.Fragment>
+              );
+            })}
+            <div ref={bottomRef} style={{ height: '1px' }} />
           </div>
         </ScrollArea>
 
+        {/* Scroll to bottom button */}
+        {!isAtBottom && messages.length > 0 && (
+          <Button
+            variant="secondary"
+            size="sm"
+            className="absolute bottom-20 right-6 rounded-full opacity-90 hover:opacity-100"
+            onClick={() => {
+              setIsAtBottom(true);
+              scrollToBottom();
+            }}
+          >
+            ↓
+          </Button>
+        )}
+
         {/* Message Input */}
-        <form onSubmit={handleSend} className="p-4 border-t">
+        <form onSubmit={handleSend} className="p-4 border-t bg-card">
           <div className="flex gap-2">
             <Input
               value={newMessage}
-              onChange={(e) => {
-                setNewMessage(e.target.value);
-                handleTyping();
-              }}
+              onChange={(e) => setNewMessage(e.target.value)}
               placeholder="Type your message about the listing..."
               className="text-sm"
             />
