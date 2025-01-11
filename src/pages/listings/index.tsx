@@ -42,22 +42,13 @@ import {
 import { Slider } from "@/components/ui/slider";
 import { Checkbox } from "@/components/ui/checkbox";
 
+// Import game mappings from GameCategories
+import { GAME_MAPPING, OTHER_GAME_MAPPING } from '@/components/GameCategories';
+
 const games = [
   { value: "all", label: "All Games" },
-  { value: "dbs", label: "Dragon Ball Super Card Game" },
-  { value: "digimon", label: "Digimon" },
-  { value: "lorcana", label: "Disney Lorcana" },
-  { value: "flesh-and-blood", label: "Flesh and Blood" },
-  { value: "mtg", label: "Magic: The Gathering" },
-  { value: "onepiece", label: "One Piece Card Game" },
-  { value: "pokemon", label: "Pokemon" },
-  { value: "star-wars", label: "Star Wars: Unlimited" },
-  { value: "union-arena", label: "Union Arena" },
-  { value: "universus", label: "Universus" },
-  { value: "vanguard", label: "Vanguard" },
-  { value: "weiss", label: "Weiss Schwarz" },
-  { value: "yugioh", label: "Yu-Gi-Oh!" },
-  { value: "other", label: "Other" }
+  ...Object.entries(GAME_MAPPING).map(([label, value]) => ({ value, label })),
+  ...Object.entries(OTHER_GAME_MAPPING).map(([label, value]) => ({ value, label })),
 ];
 
 const conditions = [
