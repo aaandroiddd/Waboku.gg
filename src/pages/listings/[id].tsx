@@ -451,6 +451,7 @@ export default function ListingPage() {
               receiverId={listing.userId}
               receiverName={listing.username}
               listingId={listing.id}
+              listingTitle={listing.title}
               onClose={() => setIsChatOpen(false)}
             />
           )}
