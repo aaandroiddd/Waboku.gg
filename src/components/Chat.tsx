@@ -24,6 +24,7 @@ interface ChatProps {
   receiverId: string;
   receiverName: string;
   listingId?: string;
+  listingTitle?: string;
   onClose?: () => void;
   className?: string;
 }
@@ -32,7 +33,8 @@ export function Chat({
   chatId, 
   receiverId, 
   receiverName, 
-  listingId, 
+  listingId,
+  listingTitle,
   onClose,
   className = ''
 }: ChatProps) {
@@ -79,7 +81,7 @@ export function Chat({
     if (!newMessage.trim()) return;
 
     try {
-      const chatId = await sendMessage(newMessage.trim(), receiverId, listingId);
+      const chatId = await sendMessage(newMessage.trim(), receiverId, listingId, listingTitle);
       
       setNewMessage('');
       setError('');
@@ -103,19 +105,26 @@ export function Chat({
 
   return (
     <>
-      <Card className={`flex flex-col h-[500px] w-full max-w-md ${className}`}>
+      <Card className={`flex flex-col h-[400px] w-full max-w-md ${className}`}>
         {/* Chat Header */}
-        <div className="flex items-center justify-between p-4 border-b">
-          <div className="flex items-center gap-2">
-            <Avatar>
-              <MessageCircle className="w-5 h-5" />
-            </Avatar>
-            <span className="font-medium">{receiverName}</span>
+        <div className="flex flex-col p-4 border-b">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Avatar>
+                <MessageCircle className="w-5 h-5" />
+              </Avatar>
+              <span className="font-medium">{receiverName}</span>
+            </div>
+            {onClose && (
+              <Button variant="ghost" size="sm" onClick={onClose}>
+                Close
+              </Button>
+            )}
           </div>
-          {onClose && (
-            <Button variant="ghost" size="sm" onClick={onClose}>
-              Close
-            </Button>
+          {listingTitle && (
+            <div className="mt-2 text-sm text-muted-foreground">
+              Re: {listingTitle}
+            </div>
           )}
         </div>
 
@@ -128,6 +137,11 @@ export function Chat({
           )}
           
           <div className="space-y-4">
+            {messages.length === 0 && !chatId && (
+              <div className="text-center text-sm text-muted-foreground p-4">
+                Start the conversation by introducing yourself and asking about the listing.
+              </div>
+            )}
             {messages.map((message) => (
               <div
                 key={message.id}
@@ -161,7 +175,8 @@ export function Chat({
                 setNewMessage(e.target.value);
                 handleTyping();
               }}
-              placeholder="Type your message..."
+              placeholder="Type your message about the listing..."
+              className="text-sm"
             />
             <Button 
               type="submit"
