@@ -115,7 +115,15 @@ export function Chat({
               </Avatar>
               <div className="flex flex-col">
                 <span className="font-medium">{receiverName}</span>
-                {listingTitle && (
+                {listingTitle && listingId && (
+                  <a 
+                    href={`/listings/${listingId}`}
+                    className="text-sm text-primary hover:underline hover:text-primary/90 transition-colors"
+                  >
+                    Subject: {listingTitle}
+                  </a>
+                )}
+                {listingTitle && !listingId && (
                   <span className="text-sm text-muted-foreground">
                     Subject: {listingTitle}
                   </span>
