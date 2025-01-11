@@ -177,7 +177,7 @@ export default function ListingPage() {
       return;
     }
 
-    router.push(`/dashboard/messages?listingId=${listing?.id}`);
+    setIsChatOpen(true);
   };
 
   if (loading) {
