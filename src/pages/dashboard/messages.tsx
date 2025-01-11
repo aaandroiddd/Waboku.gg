@@ -154,11 +154,11 @@ export default function MessagesPage() {
                             className="w-full justify-start"
                             onClick={() => setSelectedChat(chat.id)}
                           >
-                            <div className="text-left">
+                            <div className="text-left w-full">
                               <div className="font-medium">{otherParticipant.name}</div>
                               {chat.listingTitle && (
-                                <div className="text-xs text-primary truncate">
-                                  Re: {chat.listingTitle}
+                                <div className="text-sm font-medium text-muted-foreground truncate mb-1 border-l-2 border-primary pl-2">
+                                  {chat.listingTitle}
                                 </div>
                               )}
                               {chat.lastMessage && (
