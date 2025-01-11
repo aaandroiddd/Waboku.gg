@@ -9,26 +9,30 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { ChevronDown } from "lucide-react"
 
-export const MAIN_GAME_CATEGORIES = [
-  "Pokemon",
-  "Magic: The Gathering",
-  "Yu-Gi-Oh!",
-  "One Piece Card Game",
-  "Disney Lorcana",
-  "Digimon"
-] as const
+// Game categories mapping to ensure consistent values
+export const GAME_MAPPING = {
+  "Pokemon": "pokemon",
+  "Magic: The Gathering": "mtg",
+  "Yu-Gi-Oh!": "yugioh",
+  "One Piece Card Game": "onepiece",
+  "Disney Lorcana": "lorcana",
+  "Digimon": "digimon",
+} as const
 
-export const OTHER_GAME_CATEGORIES = [
-  "Dragon Ball Super Card Game",
-  "Flesh and Blood",
-  "Star Wars: Unlimited",
-  "Union Arena",
-  "Universus",
-  "Vanguard",
-  "Weiss Schwarz"
-] as const
+export const OTHER_GAME_MAPPING = {
+  "Dragon Ball Super Card Game": "dbs",
+  "Flesh and Blood": "flesh-and-blood",
+  "Star Wars: Unlimited": "star-wars",
+  "Union Arena": "union-arena",
+  "Universus": "universus",
+  "Vanguard": "vanguard",
+  "Weiss Schwarz": "weiss",
+} as const
 
-export type GameCategory = (typeof MAIN_GAME_CATEGORIES)[number] | (typeof OTHER_GAME_CATEGORIES)[number]
+export const MAIN_GAME_CATEGORIES = Object.keys(GAME_MAPPING) as (keyof typeof GAME_MAPPING)[]
+export const OTHER_GAME_CATEGORIES = Object.keys(OTHER_GAME_MAPPING) as (keyof typeof OTHER_GAME_MAPPING)[]
+
+export type GameCategory = keyof typeof GAME_MAPPING | keyof typeof OTHER_GAME_MAPPING
 
 const container = {
   hidden: { opacity: 0 },
@@ -55,10 +59,16 @@ const item = {
 
 export function GameCategories() {
   const router = useRouter()
-  const currentCategory = router.query.game as GameCategory | undefined
+  const currentGame = router.query.game as string | undefined
 
   const handleCategoryClick = (category?: GameCategory) => {
-    const query = category ? { game: category.toLowerCase().replace(/: /g, '-').replace(/ /g, '-') } : {}
+    const query = category 
+      ? { game: category === "Magic: The Gathering" 
+          ? "mtg" 
+          : GAME_MAPPING[category as keyof typeof GAME_MAPPING] || 
+            OTHER_GAME_MAPPING[category as keyof typeof OTHER_GAME_MAPPING] } 
+      : {}
+    
     router.push({
       pathname: "/listings",
       query,
@@ -77,7 +87,7 @@ export function GameCategories() {
           <Button
             variant="outline"
             size="sm"
-            className={`min-w-[120px] h-7 text-xs font-medium ${!currentCategory ? 'bg-primary text-primary-foreground hover:bg-primary/90' : ''}`}
+            className={`min-w-[120px] h-7 text-xs font-medium ${!currentGame ? 'bg-primary text-primary-foreground hover:bg-primary/90' : ''}`}
             onClick={() => handleCategoryClick()}
           >
             All Games
@@ -88,7 +98,9 @@ export function GameCategories() {
             <Button
               variant="outline"
               size="sm"
-              className={`min-w-[120px] h-7 text-xs font-medium ${currentCategory === category.toLowerCase().replace(/: /g, '-').replace(/ /g, '-') ? 'bg-primary text-primary-foreground hover:bg-primary/90' : ''}`}
+              className={`min-w-[120px] h-7 text-xs font-medium ${
+                currentGame === GAME_MAPPING[category] ? 'bg-primary text-primary-foreground hover:bg-primary/90' : ''
+              }`}
               onClick={() => handleCategoryClick(category)}
             >
               {category}
@@ -110,7 +122,9 @@ export function GameCategories() {
               {OTHER_GAME_CATEGORIES.map((category) => (
                 <DropdownMenuItem
                   key={category}
-                  className={`text-xs ${currentCategory === category.toLowerCase().replace(/: /g, '-').replace(/ /g, '-') ? 'bg-primary text-primary-foreground' : ''}`}
+                  className={`text-xs ${
+                    currentGame === OTHER_GAME_MAPPING[category] ? 'bg-primary text-primary-foreground' : ''
+                  }`}
                   onClick={() => handleCategoryClick(category)}
                 >
                   {category}
