@@ -171,5 +171,29 @@ export function Chat({
         </div>
       </form>
     </Card>
+
+    <AlertDialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Message Sent Successfully!</AlertDialogTitle>
+          <AlertDialogDescription>
+            Your message has been sent to {receiverName}. Would you like to view your messages dashboard?
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter className="flex gap-2">
+          <AlertDialogAction onClick={() => {
+            setShowSuccessDialog(false);
+            if (onClose) onClose();
+          }}>
+            Stay Here
+          </AlertDialogAction>
+          <AlertDialogAction onClick={() => {
+            router.push('/dashboard/messages');
+          }}>
+            Go to Messages
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }
