@@ -37,7 +37,7 @@ export default function MessagesPage() {
   const [chats, setChats] = useState<ChatPreview[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedChat, setSelectedChat] = useState<string | null>(null);
-  const [participantNames, setParticipantNames] = useState<Record<string, string>>({});
+  const [participantProfiles, setParticipantProfiles] = useState<Record<string, any>>({});
 
   useEffect(() => {
     if (!user) return;
@@ -45,7 +45,7 @@ export default function MessagesPage() {
     const database = getDatabase();
     const chatsRef = ref(database, 'chats');
 
-    const unsubscribe = onValue(chatsRef, (snapshot) => {
+    const unsubscribe = onValue(chatsRef, async (snapshot) => {
       const data = snapshot.val();
       if (data) {
         const chatList = Object.entries(data)
@@ -59,7 +59,7 @@ export default function MessagesPage() {
           });
         setChats(chatList);
 
-        // Fetch participant names
+        // Get unique participants
         const uniqueParticipants = new Set<string>();
         chatList.forEach(chat => {
           Object.keys(chat.participants).forEach(participantId => {
@@ -69,12 +69,17 @@ export default function MessagesPage() {
           });
         });
 
-        // For now, we'll just use placeholder names
-        const names: Record<string, string> = {};
+        // Fetch profiles for each participant
+        const profilesRef = ref(database, 'profiles');
+        const profilesSnapshot = await get(profilesRef);
+        const profilesData = profilesSnapshot.val() || {};
+        
+        const profiles: Record<string, any> = {};
         uniqueParticipants.forEach(id => {
-          names[id] = `User ${id.slice(0, 4)}`;
+          profiles[id] = profilesData[id] || { username: 'Unknown User' };
         });
-        setParticipantNames(names);
+        
+        setParticipantProfiles(profiles);
       }
       setLoading(false);
     });
