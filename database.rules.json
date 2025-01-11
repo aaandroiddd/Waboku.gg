@@ -19,7 +19,8 @@
     "chats": {
       ".read": "auth != null",
       "$chatId": {
-        ".write": "auth != null && (!data.exists() || data.child('participants').val().contains(auth.uid))",
+        ".write": "auth != null",
+        ".validate": "!data.exists() || data.child('participants').val().contains(auth.uid)",
         "participants": {
           ".validate": "newData.val() != null && newData.val().contains(auth.uid)"
         },
