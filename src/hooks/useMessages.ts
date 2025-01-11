@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { getDatabase, ref, onValue, push, set, get } from 'firebase/database';
+import { getDatabase, ref, onValue, push, set, get, update } from 'firebase/database';
 import { useAuth } from '@/contexts/AuthContext';
 
 export interface Message {
@@ -9,6 +9,7 @@ export interface Message {
   content: string;
   timestamp: number;
   listingId?: string;
+  read?: boolean;
 }
 
 export interface Chat {
@@ -80,6 +81,21 @@ export const useMessages = (chatId?: string) => {
     return existingChatId;
   };
 
+  const markAsRead = async (messageIds: string[]) => {
+    if (!chatId || !user) return;
+
+    const updates: Record<string, boolean> = {};
+    messageIds.forEach(messageId => {
+      updates[`messages/${chatId}/${messageId}/read`] = true;
+    });
+
+    try {
+      await update(ref(database), updates);
+    } catch (error) {
+      console.error('Error marking messages as read:', error);
+    }
+  };
+
   const sendMessage = async (content: string, receiverId: string, listingId?: string, listingTitle?: string) => {
     if (!user) throw new Error('User not authenticated');
 
@@ -123,6 +139,7 @@ export const useMessages = (chatId?: string) => {
       receiverId,
       content,
       timestamp: Date.now(),
+      read: false,
       ...(listingId ? { listingId } : {})
     };
 
@@ -142,5 +159,6 @@ export const useMessages = (chatId?: string) => {
     messages,
     loading,
     sendMessage,
+    markAsRead,
   };
 };
