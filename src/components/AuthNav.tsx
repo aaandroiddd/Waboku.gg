@@ -19,6 +19,11 @@ export default function AuthNav() {
   if (user) {
     return (
       <>
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-muted-foreground">
+            Welcome, {profile?.username || 'User'}!
+          </span>
+        </div>
         <Link href="/dashboard">
           <Button variant="ghost" className="gap-2">
             <LayoutDashboard className="h-4 w-4" />
