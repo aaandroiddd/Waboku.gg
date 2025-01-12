@@ -185,9 +185,7 @@ export function Chat({
       setIsAtBottom(true);
       scrollToBottom();
       
-      toast({
-        title: "Message sent",
-        description: "Your message has been sent successfully.",
+      toast.success("Message sent successfully", {
         action: {
           label: "View Messages",
           onClick: () => router.push('/dashboard/messages')
