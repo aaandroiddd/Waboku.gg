@@ -29,7 +29,7 @@ import {
 import { useRouter } from 'next/router';
 import { useProfile } from '@/hooks/useProfile';
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { getDatabase, ref as dbRef, remove } from 'firebase/database';
+import { getDatabase, ref as dbRef, remove, set } from 'firebase/database';
 
 interface ChatProps {
   chatId?: string;
