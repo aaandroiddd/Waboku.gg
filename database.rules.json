@@ -40,6 +40,11 @@
         "participants": {
           ".validate": "newData.hasChildren() && newData.val().keys().length >= 2"
         },
+        "deletedBy": {
+          "$uid": {
+            ".validate": "auth != null && $uid === auth.uid"
+          }
+        },
         "lastMessage": {
           ".validate": "newData.hasChildren(['senderId', 'receiverId', 'content', 'timestamp'])"
         },
