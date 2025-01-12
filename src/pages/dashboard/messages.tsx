@@ -138,10 +138,11 @@ export default function MessagesPage() {
   const showChat = !isMobileView || selectedChat;
 
   return (
-    <DashboardLayout>
-      <div className="flex h-[calc(100vh-4rem)] overflow-hidden">
-        {showChatList && (
-          <div className={`${isMobileView ? 'w-full' : 'w-80'} border-r bg-background flex flex-col`}>
+    <div className="min-h-screen flex">
+      <div className="flex-1 flex flex-col">
+        <div className="flex-1 flex overflow-hidden">
+          {showChatList && (
+            <div className={`${isMobileView ? 'w-full' : 'w-80'} border-r bg-background flex flex-col`}>
             <div className="p-4 border-b shrink-0">
               <h2 className="text-lg font-semibold">Messages</h2>
               <p className="text-sm text-muted-foreground">Your conversations</p>
