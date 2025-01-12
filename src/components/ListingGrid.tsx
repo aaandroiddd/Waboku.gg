@@ -344,13 +344,7 @@ export function ListingGrid({
                       <h3 className="font-medium text-base line-clamp-1">{listing.title}</h3>
                       <p className="text-sm text-muted-foreground">
                         by{" "}
-                        <Link
-                          href={`/profile/${listing.userId}`}
-                          className="hover:text-primary hover:underline"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          {listing.username}
-                        </Link>
+                        <UserNameLink userId={listing.userId} initialUsername={listing.username} />
                       </p>
                       <div className="flex items-center gap-2 flex-wrap">
                         <motion.span 
