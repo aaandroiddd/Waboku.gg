@@ -178,28 +178,28 @@ export function Chat({
     if (!newMessage.trim()) return;
 
     try {
-      const chatId = await sendMessage(newMessage.trim(), receiverId, listingId, listingTitle);
+      const newChatId = await sendMessage(newMessage.trim(), receiverId, listingId, listingTitle);
       
       setNewMessage('');
       setError('');
       setIsAtBottom(true);
       scrollToBottom();
       
-      toast({
-        title: "Success",
-        description: "Message sent successfully",
-        action: (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => router.push('/dashboard/messages')}
-          >
-            View Messages
-          </Button>
-        )
-      });
-
+      // Only show toast for initial messages (when there's no existing chatId)
       if (!chatId) {
+        toast({
+          title: "Success",
+          description: "Message sent successfully",
+          action: (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => router.push('/dashboard/messages')}
+            >
+              View Messages
+            </Button>
+          )
+        });
         setShowSuccessDialog(true);
       }
     } catch (error) {
