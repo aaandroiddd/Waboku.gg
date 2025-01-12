@@ -12,6 +12,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useListings } from '@/hooks/useListings';
 import { useState } from 'react';
 import { RemoveFavoriteDialog } from './RemoveFavoriteDialog';
+import { UserNameLink } from './UserNameLink';
 
 interface ListingGridProps {
   listings?: Listing[];
