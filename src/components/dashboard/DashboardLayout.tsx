@@ -35,13 +35,15 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
 
         {/* Main Content */}
         <div className="flex-1 flex flex-col min-w-0">
-          <div className="p-4 md:p-8 pt-16 md:pt-8 flex flex-col gap-4">
-            <VerificationStatus />
-            <main className="flex-1">
+          <div className="flex-1 flex flex-col min-h-0">
+            <div className="p-4 md:p-8 pt-16 md:pt-8">
+              <VerificationStatus />
+            </div>
+            <main className="flex-1 min-h-0">
               {children}
             </main>
+            <Footer />
           </div>
-          <Footer />
         </div>
       </div>
     </div>
