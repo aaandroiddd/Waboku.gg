@@ -11,17 +11,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft } from 'lucide-react';
 
-const DashboardLayout = dynamic(
-  () => import('@/components/dashboard/DashboardLayout').then(mod => mod.DashboardLayout),
-  {
-    loading: () => (
-      <div className="p-8">
-        <Skeleton className="w-full h-[200px]" />
-      </div>
-    ),
-    ssr: false
-  }
-);
+import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 
 interface ChatPreview {
   id: string;
