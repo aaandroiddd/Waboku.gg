@@ -125,8 +125,8 @@ export default function MessagesPage() {
     return () => unsubscribe();
   }, [user]);
 
-  const getOtherParticipant = (chat: ChatPreview) => {
-    if (!chat.participants) return { id: '', name: 'Unknown User' };
+  const getOtherParticipant = (chat?: ChatPreview | null) => {
+    if (!chat?.participants) return { id: '', name: 'Unknown User' };
     
     const otherParticipantId = Object.keys(chat.participants).find(id => id !== user?.uid);
     if (!otherParticipantId) return { id: '', name: 'Unknown User' };
