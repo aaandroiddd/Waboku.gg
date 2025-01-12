@@ -6,7 +6,7 @@ import { Footer } from '../Footer';
 import { VerificationStatus } from '../VerificationStatus';
 import { SellerBadge } from '../SellerBadge';
 
-const DashboardLayout = ({ children }: { children: ReactNode }) => {
+export const DashboardLayout = ({ children }: { children: ReactNode }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   return (
