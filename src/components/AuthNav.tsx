@@ -19,25 +19,28 @@ export default function AuthNav() {
   if (user) {
     return (
       <>
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">
+        <div className="flex items-center space-x-4">
+          <span className="text-sm font-medium">
             Welcome, {profile?.username || 'User'}!
           </span>
+          <div className="flex items-center space-x-2">
+            <Link href="/dashboard">
+              <Button variant="ghost" size="sm" className="gap-2">
+                <LayoutDashboard className="h-4 w-4" />
+                Dashboard
+              </Button>
+            </Link>
+            <Button 
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowSignOutDialog(true)}
+              className="text-red-500 hover:text-red-600 hover:bg-red-50 gap-2"
+            >
+              <LogOut className="h-4 w-4" />
+              Sign Out
+            </Button>
+          </div>
         </div>
-        <Link href="/dashboard">
-          <Button variant="ghost" className="gap-2">
-            <LayoutDashboard className="h-4 w-4" />
-            Dashboard
-          </Button>
-        </Link>
-        <Button 
-          variant="ghost" 
-          onClick={() => setShowSignOutDialog(true)}
-          className="text-red-500 hover:text-red-600 hover:bg-red-50 gap-2"
-        >
-          <LogOut className="h-4 w-4" />
-          Sign Out
-        </Button>
         <SignOutDialog
           isOpen={showSignOutDialog}
           onConfirm={handleSignOut}
