@@ -152,8 +152,8 @@ export default function MessagesPage() {
       <div className="h-[calc(100vh-4rem)] flex flex-col">
         <div className="flex-1 flex">
           {showChatList && (
-            <div className={`${isMobileView ? 'w-full' : 'w-80'} border-r bg-background flex flex-col`}>
-              <div className="p-4 border-b">
+            <div className={`${isMobileView ? 'w-full' : 'w-80'} border-r bg-background flex flex-col h-full overflow-hidden`}>
+              <div className="p-4 border-b shrink-0">
                 <h2 className="text-lg font-semibold">Messages</h2>
                 <p className="text-sm text-muted-foreground">Your conversations</p>
               </div>
