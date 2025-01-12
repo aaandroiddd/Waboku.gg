@@ -466,8 +466,14 @@ export function Chat({
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Conversation</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete this conversation? This action cannot be undone.
+            <AlertDialogDescription className="space-y-2">
+              <p>Are you sure you want to delete this conversation? This will:</p>
+              <ul className="list-disc list-inside space-y-1">
+                <li>Remove the messages from your view</li>
+                <li>Keep the conversation visible for {displayName}</li>
+                <li>Not affect the other person&apos;s access to the messages</li>
+              </ul>
+              <p className="text-sm text-muted-foreground mt-2">This action cannot be undone.</p>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
