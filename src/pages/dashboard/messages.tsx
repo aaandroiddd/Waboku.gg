@@ -76,7 +76,11 @@ export default function MessagesPage() {
             id,
             ...chat,
           }))
-          .filter((chat) => chat.participants && chat.participants[user.uid])
+          .filter((chat) => 
+            chat.participants && 
+            chat.participants[user.uid] && 
+            (!chat.deletedBy || !chat.deletedBy[user.uid])
+          )
           .sort((a, b) => {
             const timestampA = a.lastMessage?.timestamp || 0;
             const timestampB = b.lastMessage?.timestamp || 0;
