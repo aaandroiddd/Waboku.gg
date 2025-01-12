@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { UserNameLink } from '@/components/UserNameLink';
 import { useRouter } from 'next/router';
 import { formatPrice } from '@/lib/price';
 import { doc, getDoc, deleteDoc, setDoc } from 'firebase/firestore';
