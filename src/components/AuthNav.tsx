@@ -7,7 +7,7 @@ import { useState } from "react";
 import { SignOutDialog } from "./SignOutDialog";
 
 export default function AuthNav() {
-  const { user, signOut } = useAuth();
+  const { user, profile, signOut } = useAuth();
   const router = useRouter();
   const [showSignOutDialog, setShowSignOutDialog] = useState(false);
 
