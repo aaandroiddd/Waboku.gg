@@ -195,25 +195,25 @@ export default function MessagesPage() {
                 </div>
               ) : (
                 <ScrollArea className="flex-1">
-                  <div className="space-y-2 p-4">
+                  <div className="space-y-3 p-4">
                     {chats.map((chat) => {
                       const otherParticipant = getOtherParticipant(chat);
                       return (
                         <Button
                           key={chat.id}
                           variant={selectedChat === chat.id ? "secondary" : "ghost"}
-                          className="w-full justify-start"
+                          className="w-full justify-start h-auto py-3"
                           onClick={() => setSelectedChat(chat.id)}
                         >
-                          <div className="text-left w-full">
+                          <div className="text-left w-full space-y-1.5">
                             <div className="font-medium">{otherParticipant.name}</div>
                             {chat.listingTitle && (
-                              <div className="text-sm font-medium text-muted-foreground truncate mb-1 border-l-2 border-primary pl-2">
+                              <div className="text-sm font-medium text-muted-foreground truncate border-l-2 border-primary pl-2">
                                 {chat.listingTitle}
                               </div>
                             )}
                             {chat.lastMessage && (
-                              <div className="text-sm text-muted-foreground truncate">
+                              <div className="text-sm text-muted-foreground truncate mt-1">
                                 {chat.lastMessage.content}
                               </div>
                             )}
