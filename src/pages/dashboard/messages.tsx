@@ -149,22 +149,21 @@ export default function MessagesPage() {
 
   return (
     <DashboardLayout>
-      <div className="h-[calc(100vh-4rem)] flex flex-col">
-        <div className="flex-1 flex">
-          {showChatList && (
-            <div className={`${isMobileView ? 'w-full' : 'w-80'} border-r bg-background flex flex-col h-full overflow-hidden`}>
-              <div className="p-4 border-b shrink-0">
-                <h2 className="text-lg font-semibold">Messages</h2>
-                <p className="text-sm text-muted-foreground">Your conversations</p>
+      <div className="flex h-[calc(100vh-4rem)] overflow-hidden">
+        {showChatList && (
+          <div className={`${isMobileView ? 'w-full' : 'w-80'} border-r bg-background flex flex-col`}>
+            <div className="p-4 border-b shrink-0">
+              <h2 className="text-lg font-semibold">Messages</h2>
+              <p className="text-sm text-muted-foreground">Your conversations</p>
+            </div>
+            
+            {loading ? (
+              <div className="p-4 space-y-4">
+                <Skeleton className="w-full h-20" />
+                <Skeleton className="w-full h-20" />
+                <Skeleton className="w-full h-20" />
               </div>
-              
-              {loading ? (
-                <div className="p-4 space-y-4">
-                  <Skeleton className="w-full h-20" />
-                  <Skeleton className="w-full h-20" />
-                  <Skeleton className="w-full h-20" />
-                </div>
-              ) : chats.length === 0 ? (
+            ) : chats.length === 0 ? (
                 <div className="flex flex-col items-center justify-center flex-1 p-4 text-center">
                   <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-4">
                     <svg
