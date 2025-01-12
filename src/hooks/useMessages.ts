@@ -30,6 +30,8 @@ export const useMessages = (chatId?: string) => {
   useEffect(() => {
     if (!chatId || !user) {
       console.log('No chat ID or user, skipping message subscription');
+      setMessages([]);
+      setLoading(false);
       return;
     }
 
@@ -37,16 +39,19 @@ export const useMessages = (chatId?: string) => {
     const messagesRef = ref(database, `messages/${chatId}`);
     const chatRef = ref(database, `chats/${chatId}`);
     
-    // First check if the chat is deleted for the current user
-    get(chatRef).then((snapshot) => {
-      const chatData = snapshot.val();
+    // Subscribe to both chat and messages
+    const unsubscribeChat = onValue(chatRef, (chatSnapshot) => {
+      const chatData = chatSnapshot.val();
+      
+      // If chat is deleted for current user, clear messages and stop
       if (chatData?.deletedBy?.[user.uid]) {
         setMessages([]);
         setLoading(false);
         return;
       }
 
-      const unsubscribe = onValue(messagesRef, (snapshot) => {
+      // If chat exists and is not deleted, subscribe to messages
+      const unsubscribeMessages = onValue(messagesRef, (snapshot) => {
         const data = snapshot.val();
         console.log('Received messages data:', data);
         
@@ -69,10 +74,14 @@ export const useMessages = (chatId?: string) => {
       });
 
       return () => {
-        console.log('Cleaning up message subscription for chat:', chatId);
-        unsubscribe();
+        unsubscribeMessages();
       };
     });
+
+    return () => {
+      console.log('Cleaning up message subscription for chat:', chatId);
+      unsubscribeChat();
+    };
   }, [chatId, user]);
 
   const findExistingChat = async (userId: string, receiverId: string, listingId?: string) => {
