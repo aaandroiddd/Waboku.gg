@@ -188,10 +188,15 @@ export function Chat({
       toast({
         title: "Success",
         description: "Message sent successfully",
-        action: {
-          label: "View Messages",
-          onClick: () => router.push('/dashboard/messages')
-        }
+        action: (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => router.push('/dashboard/messages')}
+          >
+            View Messages
+          </Button>
+        )
       });
 
       if (!chatId) {
