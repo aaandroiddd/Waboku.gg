@@ -209,10 +209,7 @@ export function Chat({
       const chatRef = dbRef(database, `chats/${chatId}/deletedBy/${user.uid}`);
       await set(chatRef, true);
       
-      toast({
-        title: "Chat deleted",
-        description: "The conversation has been deleted from your messages.",
-      });
+      toast.success("The conversation has been deleted from your messages.");
       if (onDelete) {
         onDelete();
       }
