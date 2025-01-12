@@ -1,4 +1,4 @@
-import dynamic from 'next/dynamic'
+import { useRouter } from 'next/router';
 import { useEffect, useState } from 'react';
 import { getDatabase, ref, onValue } from 'firebase/database';
 import { doc, getDoc } from 'firebase/firestore';
