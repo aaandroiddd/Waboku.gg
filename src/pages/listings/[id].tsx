@@ -157,7 +157,12 @@ export default function ListingPage() {
           createdAt: new Date()
         });
         setIsFavorited(true);
-        toast.success('Added to favorites');
+        toast.success('Added to favorites', {
+        action: {
+          label: "View Messages",
+          onClick: () => router.push('/dashboard/messages')
+        }
+      });
       }
     } catch (error) {
       console.error('Error toggling favorite:', error);
