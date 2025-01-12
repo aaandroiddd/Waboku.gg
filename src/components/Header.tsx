@@ -41,11 +41,12 @@ export default function Header() {
         </motion.div>
 
         {/* Desktop Navigation */}
-        <nav className="hidden md:flex items-center gap-4">
+        <nav className="hidden md:flex items-center space-x-4">
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.2 }}
+            className="flex items-center"
           >
             <ThemeToggle />
           </motion.div>
@@ -54,6 +55,7 @@ export default function Header() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.3 }}
+              className="flex items-center"
             >
               <AuthNav />
             </motion.div>
