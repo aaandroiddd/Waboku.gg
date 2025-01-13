@@ -145,20 +145,34 @@ export const ListingCard = memo(({ listing, isFavorite, onFavoriteClick, getCond
               
               {listing.imageUrls && listing.imageUrls.length > 0 ? (
                 <motion.div 
-                  className="relative w-full h-full"
+                  className="relative w-full h-full bg-muted/50"
                   variants={imageVariants}
                 >
+                  <div className="absolute inset-0 bg-gradient-to-br from-background/10 to-muted/20 backdrop-blur-xl" />
                   <Image
                     src={listing.imageUrls[0]}
                     alt={listing.title}
-                    className="rounded-lg"
+                    className="rounded-lg transition-all duration-500 ease-in-out"
                     fill
                     sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                     priority={false}
-                    quality={75}
+                    quality={85}
                     placeholder="blur"
-                    blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/4gHYSUNDX1BST0ZJTEUAAQEAAAHIAAAAAAQwAABtbnRyUkdCIFhZWiAH4AABAAEAAAAAAABhY3NwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAA9tYAAQAAAADTLQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAlkZXNjAAAA8AAAACRyWFlaAAABFAAAABRnWFlaAAABKAAAABRiWFlaAAABPAAAABR3dHB0AAABUAAAABRyVFJDAAABZAAAAChnVFJDAAABZAAAAChiVFJDAAABZAAAAChjcHJ0AAABjAAAADxtbHVjAAAAAAAAAAEAAAAMZW5VUwAAAAgAAAAcAHMAUgBHAEJYWVogAAAAAAAAb6IAADj1AAADkFhZWiAAAAAAAABimQAAt4UAABjaWFlaIAAAAAAAACSgAAAPhAAAts9YWVogAAAAAAAA9tYAAQAAAADTLXBhcmEAAAAAAAQAAAACZmYAAPKnAAANWQAAE9AAAApbAAAAAAAAAABtbHVjAAAAAAAAAAEAAAAMZW5VUwAAACAAAAAcAEcAbwBvAGcAbABlACAASQBuAGMALgAgADIAMAAxADb/2wBDABQODxIPDRQSEBIXFRQdHx4dHRsdHR4dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR3/2wBDAR0XFyAeIRshIRshHRsdIR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR3/wAARCAAIAAoDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAb/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAb/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCdABmX/9k="
-                    style={{ objectFit: 'cover' }}
+                    blurDataURL={`/_next/image?url=${encodeURIComponent(listing.imageUrls[0])}&w=16&q=1`}
+                    style={{ 
+                      objectFit: 'cover',
+                      filter: 'none',
+                      opacity: 1,
+                    }}
+                    onLoadingComplete={(image) => {
+                      image.style.filter = 'none';
+                      image.style.opacity = '1';
+                    }}
+                    onLoad={(event) => {
+                      const img = event.target as HTMLImageElement;
+                      img.style.filter = 'none';
+                      img.style.opacity = '1';
+                    }}
                   />
                 </motion.div>
               ) : (
