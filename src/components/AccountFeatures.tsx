@@ -10,13 +10,13 @@ export function AccountFeatures() {
   const features = [
     {
       name: 'Active Listings',
-      free: '2 listings',
-      premium: 'Unlimited',
+      free: '2 Active Listings Limitation',
+      premium: 'Unlimited Active Listings',
     },
     {
       name: 'Listing Duration',
-      free: '48 hours',
-      premium: '30 days',
+      free: 'Listings are deleted after 48 hours',
+      premium: 'Listings Active for 30 days',
     },
     {
       name: 'Advanced Search',
@@ -89,7 +89,9 @@ export function AccountFeatures() {
                   ) : (
                     <XIcon className="h-5 w-5 text-red-500 mr-3 flex-shrink-0" />
                   )}
-                  <span className="text-foreground">{feature.name}</span>
+                  {!['Active Listings', 'Listing Duration'].includes(feature.name) && (
+                    <span className="text-foreground">{feature.name}</span>
+                  )}
                 </li>
               ))}
             </ul>
