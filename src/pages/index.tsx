@@ -210,6 +210,7 @@ export default function Home() {
     subtitles[Math.floor(Math.random() * subtitles.length)]
   );
   const [listings, setListings] = useState<Listing[]>([]);
+  const [filteredListings, setFilteredListings] = useState<Listing[]>([]);
   const [loading, setLoading] = useState(true);
   const [displayCount, setDisplayCount] = useState(8);
 
