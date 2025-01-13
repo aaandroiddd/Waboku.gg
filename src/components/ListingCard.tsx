@@ -148,30 +148,28 @@ export const ListingCard = memo(({ listing, isFavorite, onFavoriteClick, getCond
                   className="relative w-full h-full bg-muted/50"
                   variants={imageVariants}
                 >
-                  <div className="absolute inset-0 bg-gradient-to-br from-background/10 to-muted/20 backdrop-blur-xl" />
+                  <motion.div 
+                    className="absolute inset-0 bg-gradient-to-br from-muted/80 to-muted animate-pulse" 
+                    initial={{ opacity: 1 }}
+                    animate={{ opacity: [1, 0.5, 1] }}
+                    transition={{ 
+                      repeat: Infinity, 
+                      duration: 1.5,
+                      ease: "easeInOut"
+                    }}
+                  />
                   <Image
                     src={listing.imageUrls[0]}
                     alt={listing.title}
-                    className="rounded-lg transition-all duration-500 ease-in-out"
+                    className="rounded-lg transition-opacity duration-300 opacity-0"
                     fill
                     sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                     priority={false}
                     quality={85}
-                    placeholder="blur"
-                    blurDataURL={`/_next/image?url=${encodeURIComponent(listing.imageUrls[0])}&w=16&q=1`}
-                    style={{ 
-                      objectFit: 'cover',
-                      filter: 'none',
-                      opacity: 1,
-                    }}
+                    style={{ objectFit: 'cover' }}
                     onLoadingComplete={(image) => {
-                      image.style.filter = 'none';
-                      image.style.opacity = '1';
-                    }}
-                    onLoad={(event) => {
-                      const img = event.target as HTMLImageElement;
-                      img.style.filter = 'none';
-                      img.style.opacity = '1';
+                      image.classList.remove('opacity-0');
+                      image.classList.add('opacity-100');
                     }}
                   />
                 </motion.div>
