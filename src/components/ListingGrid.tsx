@@ -18,47 +18,93 @@ interface ListingGridProps {
   loading?: boolean;
 }
 
-const getConditionColor = (condition: string): { base: string; hover: string } => {
-  const colors: Record<string, { base: string; hover: string }> = {
-    'poor': {
-      base: 'bg-[#e51f1f]/10 text-[#e51f1f]',
-      hover: 'hover:bg-[#e51f1f]/20'
-    },
-    'played': {
-      base: 'bg-[#e85f2a]/10 text-[#e85f2a]',
-      hover: 'hover:bg-[#e85f2a]/20'
-    },
-    'light played': {
-      base: 'bg-[#f2a134]/10 text-[#f2a134]',
-      hover: 'hover:bg-[#f2a134]/20'
-    },
-    'light-played': {
-      base: 'bg-[#f2a134]/10 text-[#f2a134]',
-      hover: 'hover:bg-[#f2a134]/20'
-    },
-    'good': {
-      base: 'bg-[#f2a134]/10 text-[#f2a134]',
-      hover: 'hover:bg-[#f2a134]/20'
-    },
-    'excellent': {
-      base: 'bg-[#f7e379]/10 text-[#f7e379]',
-      hover: 'hover:bg-[#f7e379]/20'
-    },
-    'near mint': {
-      base: 'bg-[#bbdb44]/10 text-[#bbdb44]',
-      hover: 'hover:bg-[#bbdb44]/20'
-    },
-    'near-mint': {
-      base: 'bg-[#bbdb44]/10 text-[#bbdb44]',
-      hover: 'hover:bg-[#bbdb44]/20'
-    },
-    'mint': {
-      base: 'bg-[#44ce1b]/10 text-[#44ce1b]',
-      hover: 'hover:bg-[#44ce1b]/20'
-    }
-  };
-  return colors[condition?.toLowerCase()] || { base: 'bg-gray-500/10 text-gray-500', hover: 'hover:bg-gray-500/20' };
+// Memoize the condition color mapping
+const conditionColors: Record<string, { base: string; hover: string }> = {
+  'poor': {
+    base: 'bg-[#e51f1f]/10 text-[#e51f1f]',
+    hover: 'hover:bg-[#e51f1f]/20'
+  },
+  'played': {
+    base: 'bg-[#e85f2a]/10 text-[#e85f2a]',
+    hover: 'hover:bg-[#e85f2a]/20'
+  },
+  'light played': {
+    base: 'bg-[#f2a134]/10 text-[#f2a134]',
+    hover: 'hover:bg-[#f2a134]/20'
+  },
+  'light-played': {
+    base: 'bg-[#f2a134]/10 text-[#f2a134]',
+    hover: 'hover:bg-[#f2a134]/20'
+  },
+  'good': {
+    base: 'bg-[#f2a134]/10 text-[#f2a134]',
+    hover: 'hover:bg-[#f2a134]/20'
+  },
+  'excellent': {
+    base: 'bg-[#f7e379]/10 text-[#f7e379]',
+    hover: 'hover:bg-[#f7e379]/20'
+  },
+  'near mint': {
+    base: 'bg-[#bbdb44]/10 text-[#bbdb44]',
+    hover: 'hover:bg-[#bbdb44]/20'
+  },
+  'near-mint': {
+    base: 'bg-[#bbdb44]/10 text-[#bbdb44]',
+    hover: 'hover:bg-[#bbdb44]/20'
+  },
+  'mint': {
+    base: 'bg-[#44ce1b]/10 text-[#44ce1b]',
+    hover: 'hover:bg-[#44ce1b]/20'
+  }
 };
+
+const defaultColor = { base: 'bg-gray-500/10 text-gray-500', hover: 'hover:bg-gray-500/20' };
+
+// Memoize the condition color function
+const getConditionColor = (condition: string): { base: string; hover: string } => {
+  return conditionColors[condition?.toLowerCase()] || defaultColor;
+};
+
+// Memoize the loading skeleton
+const LoadingSkeleton = memo(() => (
+  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+    {[1, 2, 3, 4].map((i) => (
+      <motion.div
+        key={i}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.5, delay: i * 0.1 }}
+      >
+        <Card className="animate-pulse">
+          <CardContent className="p-4">
+            <div className="aspect-square bg-secondary rounded-lg mb-2" />
+            <div className="h-4 bg-secondary rounded w-3/4 mb-2" />
+            <div className="h-4 bg-secondary rounded w-1/2" />
+          </CardContent>
+        </Card>
+      </motion.div>
+    ))}
+  </div>
+));
+
+LoadingSkeleton.displayName = 'LoadingSkeleton';
+
+// Memoize the empty state
+const EmptyState = memo(() => (
+  <motion.div
+    initial={{ opacity: 0, y: 20 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ duration: 0.5 }}
+  >
+    <Card>
+      <CardContent className="p-4">
+        <p className="text-muted-foreground">No listings found.</p>
+      </CardContent>
+    </Card>
+  </motion.div>
+));
+
+EmptyState.displayName = 'EmptyState';
 
 export function ListingGrid({ 
   listings: propListings,
@@ -110,43 +156,14 @@ export function ListingGrid({
     return listings.slice(0, displayCount);
   }, [listings, displayCount]);
 
+  const memoizedGetConditionColor = useCallback(getConditionColor, []);
+
   if (loading) {
-    return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-        {[1, 2, 3, 4].map((i) => (
-          <motion.div
-            key={i}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.5, delay: i * 0.1 }}
-          >
-            <Card className="animate-pulse">
-              <CardContent className="p-4">
-                <div className="aspect-square bg-secondary rounded-lg mb-2" />
-                <div className="h-4 bg-secondary rounded w-3/4 mb-2" />
-                <div className="h-4 bg-secondary rounded w-1/2" />
-              </CardContent>
-            </Card>
-          </motion.div>
-        ))}
-      </div>
-    );
+    return <LoadingSkeleton />;
   }
 
   if (!listings?.length) {
-    return (
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-      >
-        <Card>
-          <CardContent className="p-4">
-            <p className="text-muted-foreground">No listings found.</p>
-          </CardContent>
-        </Card>
-      </motion.div>
-    );
+    return <EmptyState />;
   }
 
   return (
@@ -168,7 +185,7 @@ export function ListingGrid({
               listing={listing}
               isFavorite={user ? isFavorite(listing.id) : false}
               onFavoriteClick={handleFavoriteClick}
-              getConditionColor={getConditionColor}
+              getConditionColor={memoizedGetConditionColor}
             />
           ))}
         </AnimatePresence>
