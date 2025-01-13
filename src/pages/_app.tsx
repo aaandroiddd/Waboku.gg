@@ -2,6 +2,7 @@ import '@/styles/globals.css';
 import type { AppProps } from 'next/app';
 import { ThemeProvider } from '@/components/ThemeProvider';
 import { AuthProvider } from '@/contexts/AuthContext';
+import { AccountProvider } from '@/contexts/AccountContext';
 import { Toaster } from '@/components/ui/toaster';
 import { RouteGuard } from '@/components/RouteGuard';
 import { LoadingScreen } from '@/components/LoadingScreen';
