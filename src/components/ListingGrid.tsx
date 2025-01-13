@@ -131,10 +131,8 @@ export function ListingGrid({
   onLoadMore,
   loading: propLoading
 }: ListingGridProps) {
-  const { listings: fetchedListings, isLoading: fetchLoading, error } = useListings({ userId, showOnlyActive });
-  
-  const listings = propListings || fetchedListings;
-  const loading = propLoading ?? fetchLoading;
+  const listings = propListings || [];
+  const loading = propLoading;
   
   // If there's an error, display it
   if (error) {
