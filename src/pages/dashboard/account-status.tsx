@@ -13,22 +13,23 @@ export default function AccountStatus() {
   return (
     <div className="min-h-screen flex flex-col">
       <div className="container max-w-7xl mx-auto p-6 flex-grow">
-        <Button
-          variant="ghost"
-          className="mb-4"
-          onClick={() => router.back()}
-        >
-          <ChevronLeft className="h-4 w-4 mr-2" />
-          Back
-        </Button>
+        <div className="flex justify-between items-start mb-8">
+          <Button
+            variant="ghost"
+            onClick={() => router.back()}
+          >
+            <ChevronLeft className="h-4 w-4 mr-2" />
+            Back
+          </Button>
 
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-foreground mb-2">Account Status</h1>
-          <div className="flex items-center gap-2">
-            <p className="text-muted-foreground">Current Plan:</p>
-            <Badge variant={accountTier === 'premium' ? 'default' : 'secondary'} className={accountTier === 'premium' ? 'bg-gradient-to-r from-blue-500 to-purple-500' : ''}>
-              {accountTier === 'premium' ? 'Premium' : 'Free'}
-            </Badge>
+          <div className="text-right">
+            <h1 className="text-3xl font-bold text-foreground mb-2">Account Status</h1>
+            <div className="flex items-center gap-2 justify-end">
+              <p className="text-muted-foreground">Current Plan:</p>
+              <Badge variant={accountTier === 'premium' ? 'default' : 'secondary'} className={accountTier === 'premium' ? 'bg-gradient-to-r from-blue-500 to-purple-500' : ''}>
+                {accountTier === 'premium' ? 'Premium' : 'Free'}
+              </Badge>
+            </div>
           </div>
         </div>
         
