@@ -23,8 +23,9 @@ const nextConfig = {
   poweredByHeader: false,
   compress: true,
   swcMinify: true,
+  output: 'standalone',
   experimental: {
-    optimizeCss: true,
+    optimizeCss: false, // Disable this as it's causing issues
     optimizePackageImports: [
       'lucide-react',
       '@radix-ui/react-icons',
