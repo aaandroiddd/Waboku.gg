@@ -1,3 +1,9 @@
+import withBundleAnalyzer from '@next/bundle-analyzer';
+
+const bundleAnalyzer = withBundleAnalyzer({
+  enabled: process.env.ANALYZE === 'true',
+});
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
@@ -9,11 +15,22 @@ const nextConfig = {
       "assets.co.dev",
       "firebasestorage.googleapis.com"
     ],
+    formats: ['image/avif', 'image/webp'],
   },
-  webpack: (config, context) => {
-    config.optimization.minimize = false;
-    return config;
-  }
+  compiler: {
+    removeConsole: process.env.NODE_ENV === 'production',
+  },
+  poweredByHeader: false,
+  compress: true,
+  swcMinify: true,
+  experimental: {
+    optimizeCss: true,
+    optimizePackageImports: [
+      'lucide-react',
+      '@radix-ui/react-icons',
+      'date-fns',
+    ],
+  },
 };
 
-export default nextConfig;
+export default bundleAnalyzer(nextConfig);
