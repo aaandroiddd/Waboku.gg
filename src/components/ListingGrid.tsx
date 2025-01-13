@@ -134,16 +134,7 @@ export function ListingGrid({
   const listings = propListings || [];
   const loading = propLoading;
   
-  // If there's an error, display it
-  if (error) {
-    return (
-      <Card>
-        <CardContent className="p-4">
-          <p className="text-destructive">Error: {error}</p>
-        </CardContent>
-      </Card>
-    );
-  }
+
   const { toggleFavorite, isFavorite } = useFavorites();
   const { user } = useAuth();
   const [selectedListing, setSelectedListing] = useState<Listing | null>(null);
