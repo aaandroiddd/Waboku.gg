@@ -48,15 +48,17 @@ export default function App({ Component, pageProps, router }: AppProps) {
       disableTransitionOnChange
     >
       <AuthProvider>
-        <RouteGuard requireAuth={requireAuth}>
-          <LoadingScreen isLoading={isLoading} />
-          <AnimatePresence mode="wait">
-            <PageTransition key={router.pathname}>
-              <Component {...pageProps} />
-            </PageTransition>
-          </AnimatePresence>
-          <Toaster />
-        </RouteGuard>
+        <AccountProvider>
+          <RouteGuard requireAuth={requireAuth}>
+            <LoadingScreen isLoading={isLoading} />
+            <AnimatePresence mode="wait">
+              <PageTransition key={router.pathname}>
+                <Component {...pageProps} />
+              </PageTransition>
+            </AnimatePresence>
+            <Toaster />
+          </RouteGuard>
+        </AccountProvider>
       </AuthProvider>
     </ThemeProvider>
   );
