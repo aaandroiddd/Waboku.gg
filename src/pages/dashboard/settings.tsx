@@ -253,6 +253,21 @@ const SettingsPageContent = () => {
 
   return (
     <DashboardLayout>
+      {/* Account Features Section */}
+      <div className="container mx-auto p-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Account Features</CardTitle>
+            <CardDescription>
+              View your current account features and upgrade options
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <AccountFeatures />
+          </CardContent>
+        </Card>
+      </div>
+
       <div className="container mx-auto p-6">
         <Card>
           <CardHeader>
