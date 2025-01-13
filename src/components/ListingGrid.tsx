@@ -3,7 +3,7 @@ import { useFavorites } from '@/hooks/useFavorites';
 import { useAuth } from '@/contexts/AuthContext';
 import { Listing } from '@/types/database';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, memo } from 'react';
 import { RemoveFavoriteDialog } from './RemoveFavoriteDialog';
 import { Button } from '@/components/ui/button';
 import { ListingCard } from './ListingCard';
@@ -66,45 +66,45 @@ const getConditionColor = (condition: string): { base: string; hover: string } =
 };
 
 // Memoize the loading skeleton
-const LoadingSkeleton = memo(() => (
-  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-    {[1, 2, 3, 4].map((i) => (
-      <motion.div
-        key={i}
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.5, delay: i * 0.1 }}
-      >
-        <Card className="animate-pulse">
-          <CardContent className="p-4">
-            <div className="aspect-square bg-secondary rounded-lg mb-2" />
-            <div className="h-4 bg-secondary rounded w-3/4 mb-2" />
-            <div className="h-4 bg-secondary rounded w-1/2" />
-          </CardContent>
-        </Card>
-      </motion.div>
-    ))}
-  </div>
-));
-
-LoadingSkeleton.displayName = 'LoadingSkeleton';
+const LoadingSkeleton = memo(function LoadingSkeleton() {
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+      {[1, 2, 3, 4].map((i) => (
+        <motion.div
+          key={i}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.5, delay: i * 0.1 }}
+        >
+          <Card className="animate-pulse">
+            <CardContent className="p-4">
+              <div className="aspect-square bg-secondary rounded-lg mb-2" />
+              <div className="h-4 bg-secondary rounded w-3/4 mb-2" />
+              <div className="h-4 bg-secondary rounded w-1/2" />
+            </CardContent>
+          </Card>
+        </motion.div>
+      ))}
+    </div>
+  );
+});
 
 // Memoize the empty state
-const EmptyState = memo(() => (
-  <motion.div
-    initial={{ opacity: 0, y: 20 }}
-    animate={{ opacity: 1, y: 0 }}
-    transition={{ duration: 0.5 }}
-  >
-    <Card>
-      <CardContent className="p-4">
-        <p className="text-muted-foreground">No listings found.</p>
-      </CardContent>
-    </Card>
-  </motion.div>
-));
-
-EmptyState.displayName = 'EmptyState';
+const EmptyState = memo(function EmptyState() {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+    >
+      <Card>
+        <CardContent className="p-4">
+          <p className="text-muted-foreground">No listings found.</p>
+        </CardContent>
+      </Card>
+    </motion.div>
+  );
+});
 
 export function ListingGrid({ 
   listings: propListings,
