@@ -390,7 +390,16 @@ export default function ListingPage() {
         <Dialog open={isZoomDialogOpen} onOpenChange={setIsZoomDialogOpen}>
           <DialogContent className="max-w-[95vw] max-h-[95vh] w-full h-full p-0 overflow-hidden">
             <div className="relative w-full h-[90vh] flex items-center justify-center">
-              <Carousel className="w-full h-full">
+              <Carousel 
+                className="w-full h-full"
+                onSelect={(index) => setCurrentImageIndex(index)}
+              >
+                {/* Image Counter Badge */}
+                <div className="absolute top-4 right-4 z-20">
+                  <Badge variant="secondary" className="bg-background/80 backdrop-blur-sm">
+                    {currentImageIndex + 1} of {listing.imageUrls.length}
+                  </Badge>
+                </div>
                 <CarouselContent className="h-full">
                   {listing.imageUrls.map((url, index) => (
                     <CarouselItem key={index} className="h-full flex items-center justify-center">
