@@ -377,6 +377,14 @@ export default function ListingPage() {
 
         <Dialog open={isZoomDialogOpen} onOpenChange={setIsZoomDialogOpen}>
           <DialogContent className="max-w-[95vw] max-h-[95vh] w-full h-full p-0 overflow-hidden">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute top-4 left-4 z-20 bg-background/80 backdrop-blur-sm hover:bg-background/90"
+              onClick={() => setIsZoomDialogOpen(false)}
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
             <div className="relative w-full h-[90vh] flex items-center justify-center">
               <Carousel 
                 className="w-full h-full"
