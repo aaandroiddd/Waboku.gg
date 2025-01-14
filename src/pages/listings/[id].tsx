@@ -13,7 +13,7 @@ import { Separator } from '@/components/ui/separator';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Chat } from '@/components/Chat';
 import Image from 'next/image';
-import { ArrowLeft, Calendar, Heart, MapPin, MessageCircle, User, ZoomIn, Minus, Plus, RotateCw } from 'lucide-react';
+import { ArrowLeft, Calendar, Heart, MapPin, MessageCircle, User, ZoomIn, Minus, Plus, RotateCw, X } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
