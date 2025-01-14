@@ -13,7 +13,7 @@ import { Separator } from '@/components/ui/separator';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Chat } from '@/components/Chat';
 import Image from 'next/image';
-import { ArrowLeft, Calendar, Heart, MapPin, MessageCircle, User, ZoomIn, ZoomOut, Minus, Plus, RotateCw } from 'lucide-react';
+import { ArrowLeft, Calendar, Heart, MapPin, MessageCircle, User, ZoomIn, Minus, Plus, RotateCw } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
@@ -64,7 +64,6 @@ export default function ListingPage() {
           throw new Error('Database not initialized');
         }
 
-        // First check if the listing exists
         const listingRef = doc(db, 'listings', id);
         const listingDoc = await getDoc(listingRef);
 
@@ -74,7 +73,6 @@ export default function ListingPage() {
 
         const data = listingDoc.data();
         
-        // Ensure all required fields are present with default values
         const listingData: Listing = {
           id: listingDoc.id,
           title: data.title || 'Untitled Listing',
@@ -100,9 +98,8 @@ export default function ListingPage() {
           setLoading(false);
         }
 
-        // Check if the listing is favorited by the current user
         if (user && isMounted) {
-          const favoriteRef = doc(db, 'users', user.uid, 'favorites', id as string);
+          const favoriteRef = doc(db, 'users', user.uid, 'favorites', id);
           const favoriteDoc = await getDoc(favoriteRef);
           if (isMounted) {
             setIsFavorited(favoriteDoc.exists());
@@ -158,12 +155,7 @@ export default function ListingPage() {
           createdAt: new Date()
         });
         setIsFavorited(true);
-        toast.success('Added to favorites', {
-        action: {
-          label: "View Messages",
-          onClick: () => router.push('/dashboard/messages')
-        }
-      });
+        toast.success('Added to favorites');
       }
     } catch (error) {
       console.error('Error toggling favorite:', error);
@@ -239,14 +231,12 @@ export default function ListingPage() {
         <Card className="max-w-6xl mx-auto bg-black/[0.2] dark:bg-black/40 backdrop-blur-md border-muted">
           <CardContent className="p-4 md:p-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8">
-              {/* Images and Price - Moved to top for mobile */}
               <div className="space-y-4 md:space-y-6 order-1 md:order-2">
                 <div className="relative">
                   <Carousel 
                     className="w-full h-[300px] md:h-[400px] touch-pan-y"
                     onSelect={(index) => setCurrentImageIndex(index)}
                   >
-                    {/* Image Counter Badge */}
                     <div className="absolute top-4 right-4 z-10">
                       <Badge variant="secondary" className="bg-background/80 backdrop-blur-sm">
                         {currentImageIndex + 1} of {listing.imageUrls.length}
@@ -254,47 +244,48 @@ export default function ListingPage() {
                     </div>
                     <CarouselContent>
                       {listing.imageUrls.map((url, index) => (
-                      <CarouselItem key={index} className="flex items-center justify-center h-full">
-                        <div 
-                          className="relative w-full h-full group cursor-pointer flex items-center justify-center p-4" 
-                          onClick={() => handleImageClick(index)}
-                        >
-                          <div className="relative w-full h-full flex items-center justify-center">
-                            <div className="relative w-full h-full">
+                        <CarouselItem key={index} className="flex items-center justify-center h-full">
+                          <div 
+                            className="relative w-full h-full group cursor-pointer flex items-center justify-center p-4" 
+                            onClick={() => handleImageClick(index)}
+                          >
+                            <div className="relative w-full h-full flex items-center justify-center">
                               <div className="relative w-full h-full">
-                                <div className="absolute inset-0 rounded-lg animate-pulse bg-gradient-to-r from-gray-200/20 via-gray-100/20 to-gray-200/20 dark:from-gray-800/20 dark:via-gray-700/20 dark:to-gray-800/20 bg-[length:200%_100%]" />
-                                <Image
-                                  src={url}
-                                  alt={`${listing.title} - Image ${index + 1}`}
-                                  fill
-                                  className="object-contain rounded-lg opacity-0 transition-opacity duration-300 data-[loaded=true]:opacity-100"
-                                  data-loaded="false"
-                                  sizes="(max-width: 768px) 90vw, (max-width: 1200px) 50vw, 33vw"
-                                  priority={index === 0}
-                                  loading={index === 0 ? "eager" : "lazy"}
-                                  quality={100}
-                                  onLoad={(e) => {
-                                    const target = e.target as HTMLImageElement;
-                                    target.dataset.loaded = "true";
-                                  }}
-                                  onError={(e) => {
-                                    const target = e.target as HTMLImageElement;
-                                    target.src = '/images/rect.png';
-                                  }}
-                                />
+                                <div className="relative w-full h-full">
+                                  <div className="absolute inset-0 rounded-lg animate-pulse bg-gradient-to-r from-gray-200/20 via-gray-100/20 to-gray-200/20 dark:from-gray-800/20 dark:via-gray-700/20 dark:to-gray-800/20 bg-[length:200%_100%]" />
+                                  <Image
+                                    src={url}
+                                    alt={`${listing.title} - Image ${index + 1}`}
+                                    fill
+                                    className="object-contain rounded-lg opacity-0 transition-opacity duration-300 data-[loaded=true]:opacity-100"
+                                    data-loaded="false"
+                                    sizes="(max-width: 768px) 90vw, (max-width: 1200px) 50vw, 33vw"
+                                    priority={index === 0}
+                                    loading={index === 0 ? "eager" : "lazy"}
+                                    quality={100}
+                                    onLoad={(e) => {
+                                      const target = e.target as HTMLImageElement;
+                                      target.dataset.loaded = "true";
+                                    }}
+                                    onError={(e) => {
+                                      const target = e.target as HTMLImageElement;
+                                      target.src = '/images/rect.png';
+                                    }}
+                                  />
+                                </div>
+                              </div>
+                              <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/20 rounded-lg">
+                                <ZoomIn className="w-8 h-8 text-white" />
                               </div>
                             </div>
-                            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/20 rounded-lg">
-                              <ZoomIn className="w-8 h-8 text-white" />
-                            </div>
                           </div>
-                        </div>
-                      </CarouselItem>
-                    ))}
-                  </CarouselContent>
-                  <CarouselPrevious className="hidden md:flex -left-4" />
-                  <CarouselNext className="hidden md:flex -right-4" />
-                </Carousel>
+                        </CarouselItem>
+                      ))}
+                    </CarouselContent>
+                    <CarouselPrevious className="hidden md:flex -left-4" />
+                    <CarouselNext className="hidden md:flex -right-4" />
+                  </Carousel>
+                </div>
 
                 <div className="text-center">
                   <div className="text-3xl md:text-4xl font-bold">
@@ -303,7 +294,6 @@ export default function ListingPage() {
                 </div>
               </div>
 
-              {/* Details */}
               <div className="space-y-4 md:space-y-6 order-2 md:order-1">
                 <div>
                   <h1 className="text-2xl md:text-3xl font-bold mb-3">{listing.title}</h1>
@@ -333,7 +323,6 @@ export default function ListingPage() {
 
                 <Separator />
 
-                {/* Seller Info */}
                 <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
                   <Button
                     variant="ghost"
@@ -386,15 +375,14 @@ export default function ListingPage() {
           </CardContent>
         </Card>
 
-        {/* Enhanced Zoom Dialog */}
         <Dialog open={isZoomDialogOpen} onOpenChange={setIsZoomDialogOpen}>
           <DialogContent className="max-w-[95vw] max-h-[95vh] w-full h-full p-0 overflow-hidden">
             <div className="relative w-full h-[90vh] flex items-center justify-center">
               <Carousel 
                 className="w-full h-full"
                 onSelect={(index) => setCurrentImageIndex(index)}
+                defaultIndex={currentImageIndex}
               >
-                {/* Image Counter Badge */}
                 <div className="absolute top-4 right-4 z-20">
                   <Badge variant="secondary" className="bg-background/80 backdrop-blur-sm">
                     {currentImageIndex + 1} of {listing.imageUrls.length}
@@ -476,7 +464,6 @@ export default function ListingPage() {
       </div>
       <Footer />
 
-      {/* Chat Dialog */}
       <Dialog open={isChatOpen} onOpenChange={setIsChatOpen}>
         <DialogContent className="max-w-md p-0">
           <DialogTitle className="sr-only">Chat with {listing?.username}</DialogTitle>
