@@ -241,9 +241,10 @@ export default function ListingPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8">
               {/* Images and Price - Moved to top for mobile */}
               <div className="space-y-4 md:space-y-6 order-1 md:order-2">
-                <Carousel className="w-full h-[300px] md:h-[400px] touch-pan-y">
-                  <CarouselContent>
-                    {listing.imageUrls.map((url, index) => (
+                <div className="relative">
+                  <Carousel className="w-full h-[300px] md:h-[400px] touch-pan-y">
+                    <CarouselContent>
+                      {listing.imageUrls.map((url, index) => (
                       <CarouselItem key={index} className="flex items-center justify-center h-full">
                         <div 
                           className="relative w-full h-full group cursor-pointer flex items-center justify-center p-4" 
