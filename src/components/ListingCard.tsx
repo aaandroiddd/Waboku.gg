@@ -91,55 +91,56 @@ export const ListingCard = memo(({ listing, isFavorite, onFavoriteClick, getCond
               </motion.div>
 
               {/* Top Bar with Favorite and Graded Badge */}
-              <div className="absolute top-0 left-0 right-0 p-2 flex items-start justify-between gap-2 z-20">
-                <div className="flex items-start gap-2">
-                  <motion.div
-                    variants={buttonVariants}
-                    whileHover="hover"
-                    whileTap="tap"
-                  >
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={(e) => onFavoriteClick(e, listing)}
-                      className={`
-                        bg-black/50 hover:bg-black/75 transition-colors duration-200 rounded-full
-                        ${isFavorite ? 'text-red-500 hover:text-red-600' : 'text-white hover:text-red-500'}
-                      `}
+              <div className="absolute top-0 left-0 right-0 p-2 z-20">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-start gap-2 flex-wrap">
+                    <motion.div
+                      variants={buttonVariants}
+                      whileHover="hover"
+                      whileTap="tap"
                     >
-                      <Heart 
-                        className={`h-5 w-5 ${isFavorite ? 'fill-current' : ''}`}
-                        aria-label={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
-                      />
-                    </Button>
-                  </motion.div>
-                  
-                  {/* Graded Badge */}
-                  {listing.isGraded && (
-                    <motion.div 
-                      className="flex-shrink-0"
-                      initial={{ opacity: 0, x: -10 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: 0.3 }}
-                    >
-                      <span className="px-2 py-1 bg-blue-500/90 text-white rounded-md font-semibold flex items-center gap-1 text-xs sm:text-sm">
-                        <svg 
-                          viewBox="0 0 24 24" 
-                          className="w-3 h-3 sm:w-4 sm:h-4" 
-                          fill="none" 
-                          stroke="currentColor" 
-                          strokeWidth="2"
-                        >
-                          <path d="M12 2L2 7L12 12L22 7L12 2Z" />
-                          <path d="M2 17L12 22L22 17" />
-                          <path d="M2 12L12 17L22 12" />
-                        </svg>
-                        <span className="hidden sm:inline">{listing.gradingCompany}</span>
-                        <span className="font-bold">{listing.gradeLevel}</span>
-                      </span>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={(e) => onFavoriteClick(e, listing)}
+                        className={`
+                          bg-black/50 hover:bg-black/75 transition-colors duration-200 rounded-full
+                          ${isFavorite ? 'text-red-500 hover:text-red-600' : 'text-white hover:text-red-500'}
+                        `}
+                      >
+                        <Heart 
+                          className={`h-5 w-5 ${isFavorite ? 'fill-current' : ''}`}
+                          aria-label={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+                        />
+                      </Button>
                     </motion.div>
-                  )}
-              
+                    
+                    {/* Graded Badge */}
+                    {listing.isGraded && (
+                      <motion.div 
+                        className="flex-shrink-0"
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: 0.3 }}
+                      >
+                        <span className="px-2 py-1 bg-blue-500/90 text-white rounded-md font-semibold flex items-center gap-1 text-xs sm:text-sm whitespace-nowrap">
+                          <svg 
+                            viewBox="0 0 24 24" 
+                            className="w-3 h-3 sm:w-4 sm:h-4" 
+                            fill="none" 
+                            stroke="currentColor" 
+                            strokeWidth="2"
+                          >
+                            <path d="M12 2L2 7L12 12L22 7L12 2Z" />
+                            <path d="M2 17L12 22L22 17" />
+                            <path d="M2 12L12 17L22 12" />
+                          </svg>
+                          <span className="hidden sm:inline">{listing.gradingCompany}</span>
+                          <span className="font-bold">{listing.gradeLevel}</span>
+                        </span>
+                      </motion.div>
+                    )}
+                  </div>
                 </div>
               </div>
               
