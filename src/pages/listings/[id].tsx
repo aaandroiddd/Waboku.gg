@@ -380,10 +380,10 @@ export default function ListingPage() {
             <Button
               variant="ghost"
               size="icon"
-              className="absolute top-4 left-4 z-20 bg-background/80 backdrop-blur-sm hover:bg-background/90"
+              className="absolute top-4 right-4 z-20 bg-background/80 backdrop-blur-sm hover:bg-background/90"
               onClick={() => setIsZoomDialogOpen(false)}
             >
-              <ArrowLeft className="h-4 w-4" />
+              <X className="h-4 w-4" />
             </Button>
             <div className="relative w-full h-[90vh] flex items-center justify-center">
               <Carousel 
@@ -391,7 +391,7 @@ export default function ListingPage() {
                 onSelect={(index) => setCurrentImageIndex(index)}
                 defaultIndex={currentImageIndex}
               >
-                <div className="absolute top-4 right-4 z-20">
+                <div className="absolute top-4 left-4 z-20">
                   <Badge variant="secondary" className="bg-background/80 backdrop-blur-sm">
                     {currentImageIndex + 1} of {listing.imageUrls.length}
                   </Badge>
