@@ -246,6 +246,12 @@ export default function ListingPage() {
                     className="w-full h-[300px] md:h-[400px] touch-pan-y"
                     onSelect={(index) => setCurrentImageIndex(index)}
                   >
+                    {/* Image Counter Badge */}
+                    <div className="absolute top-4 right-4 z-10">
+                      <Badge variant="secondary" className="bg-background/80 backdrop-blur-sm">
+                        {currentImageIndex + 1} of {listing.imageUrls.length}
+                      </Badge>
+                    </div>
                     <CarouselContent>
                       {listing.imageUrls.map((url, index) => (
                       <CarouselItem key={index} className="flex items-center justify-center h-full">
