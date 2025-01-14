@@ -251,6 +251,19 @@
   }
 }
 
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+.animate-pulse {
+  animation: shimmer 2s linear infinite;
+}
+
 @layer components {
   .glow-text {
     @apply dark:text-white text-foreground;
