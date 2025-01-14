@@ -76,7 +76,7 @@ export const ListingCard = memo(({ listing, isFavorite, onFavoriteClick, getCond
     >
       <Card className="relative overflow-hidden group">
         <Link href={`/listings/${listing.id}`}>
-          <CardContent className="p-4 h-full flex flex-col">
+          <CardContent className="p-3 h-full flex flex-col">
             <div className="aspect-square bg-muted rounded-lg mb-4 relative overflow-hidden flex-shrink-0">
               {/* Price Badge */}
               <motion.div 
