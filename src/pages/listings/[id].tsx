@@ -242,7 +242,10 @@ export default function ListingPage() {
               {/* Images and Price - Moved to top for mobile */}
               <div className="space-y-4 md:space-y-6 order-1 md:order-2">
                 <div className="relative">
-                  <Carousel className="w-full h-[300px] md:h-[400px] touch-pan-y">
+                  <Carousel 
+                    className="w-full h-[300px] md:h-[400px] touch-pan-y"
+                    onSelect={(index) => setCurrentImageIndex(index)}
+                  >
                     <CarouselContent>
                       {listing.imageUrls.map((url, index) => (
                       <CarouselItem key={index} className="flex items-center justify-center h-full">
