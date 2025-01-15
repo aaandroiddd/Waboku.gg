@@ -133,7 +133,7 @@ export function GameCategories() {
                 size="sm"
                 className="min-w-[120px] h-7 text-xs font-medium"
               >
-                More Games <ChevronDown className="ml-1 h-3 w-3" />
+                More <ChevronDown className="ml-1 h-3 w-3" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
