@@ -44,6 +44,7 @@ export const OTHER_GAME_MAPPING = {
   "Universus": "universus",
   "Vanguard": "vanguard",
   "Weiss Schwarz": "weiss",
+  "Accessories": "accessories",
 } as const
 
 export const MAIN_GAME_CATEGORIES = Object.keys(GAME_MAPPING) as (keyof typeof GAME_MAPPING)[]
