@@ -328,13 +328,13 @@ const CreateListingPage = () => {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="game">Game *</Label>
+                    <Label htmlFor="game">Category *</Label>
                     <Select
                       value={formData.game}
                       onValueChange={(value) => setFormData({ ...formData, game: value })}
                     >
                       <SelectTrigger className={errors.game ? "border-red-500" : ""}>
-                        <SelectValue placeholder="Select game" />
+                        <SelectValue placeholder="Select category" />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="dbs">Dragon Ball Super Card Game</SelectItem>
