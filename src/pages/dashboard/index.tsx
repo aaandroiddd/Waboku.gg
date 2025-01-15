@@ -481,8 +481,10 @@ const DashboardComponent = () => {
                       {/* Timer for archived listings */}
                       <div className="mt-2">
                         <ListingTimer
+                          createdAt={listing.createdAt}
                           archivedAt={listing.archivedAt || listing.createdAt}
-                          expiresIn={7 * 24 * 60 * 60 * 1000} // 7 days in milliseconds
+                          accountTier={profile?.tier || 'free'}
+                          status="archived"
                         />
                       </div>
                       <div className="flex flex-wrap gap-2 mt-4">
