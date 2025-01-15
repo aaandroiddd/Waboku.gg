@@ -121,15 +121,18 @@ export function useListings({ userId, searchQuery, showOnlyActive = false }: Use
       const updateData: any = { status };
       
       if (status === 'archived') {
-        // When archiving, set the archivedAt timestamp
+        // When archiving, store both the archive time and the original creation time
         updateData.archivedAt = new Date();
+        updateData.originalCreatedAt = listingData.createdAt;
       } else if (status === 'active') {
-        // When activating/restoring, set new createdAt and remove archivedAt
+        // When activating/restoring, set new createdAt and remove archive-related fields
         updateData.createdAt = new Date();
         updateData.archivedAt = null;
+        updateData.originalCreatedAt = null;
       } else {
-        // For inactive status, just remove archivedAt
+        // For inactive status, remove archive-related fields
         updateData.archivedAt = null;
+        updateData.originalCreatedAt = null;
       }
 
       // Update the listing status
