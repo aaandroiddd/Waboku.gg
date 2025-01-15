@@ -454,7 +454,6 @@ const CreateListingPage = () => {
                     )}
                   </div>
                 )}
-                </div>
 
                 <LocationInput
                   onLocationSelect={(city, state) => {
