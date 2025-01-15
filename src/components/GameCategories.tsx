@@ -108,7 +108,7 @@ export function GameCategories() {
             className={`min-w-[120px] h-7 text-xs font-medium ${!currentGame ? 'bg-primary text-primary-foreground hover:bg-primary/90' : ''}`}
             onClick={() => handleCategoryClick()}
           >
-            All Games
+            All Categories
           </Button>
         </motion.div>
         {MAIN_GAME_CATEGORIES.map((category) => (
