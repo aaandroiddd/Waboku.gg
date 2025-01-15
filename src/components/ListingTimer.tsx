@@ -4,11 +4,13 @@ import { Progress } from "@/components/ui/progress"
 interface ListingTimerProps {
   archivedAt: Date | number | string;
   expiresIn?: number; // in milliseconds, default 7 days
+  listingId?: string;
 }
 
-export function ListingTimer({ archivedAt, expiresIn = 7 * 24 * 60 * 60 * 1000 }: ListingTimerProps) {
+export function ListingTimer({ archivedAt, expiresIn = 7 * 24 * 60 * 60 * 1000, listingId }: ListingTimerProps) {
   const [timeLeft, setTimeLeft] = useState<number>(0);
   const [progress, setProgress] = useState<number>(0);
+  const [hasTriggeredCleanup, setHasTriggeredCleanup] = useState(false);
 
   useEffect(() => {
     const calculateTimeLeft = () => {
@@ -25,13 +27,33 @@ export function ListingTimer({ archivedAt, expiresIn = 7 * 24 * 60 * 60 * 1000 }
       
       setTimeLeft(remaining);
       setProgress(progressValue);
+
+      // Trigger cleanup when timer expires
+      if (remaining === 0 && !hasTriggeredCleanup) {
+        setHasTriggeredCleanup(true);
+        triggerCleanup();
+      }
     };
 
     calculateTimeLeft();
     const timer = setInterval(calculateTimeLeft, 1000);
 
     return () => clearInterval(timer);
-  }, [archivedAt, expiresIn]);
+  }, [archivedAt, expiresIn, hasTriggeredCleanup]);
+
+  const triggerCleanup = async () => {
+    try {
+      const response = await fetch('/api/cleanup-inactive-listings', {
+        method: 'POST',
+      });
+      
+      if (!response.ok) {
+        console.error('Failed to trigger cleanup');
+      }
+    } catch (error) {
+      console.error('Error triggering cleanup:', error);
+    }
+  };
 
   const days = Math.floor(timeLeft / (1000 * 60 * 60 * 24));
   const hours = Math.floor((timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
