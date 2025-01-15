@@ -46,7 +46,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { GAME_MAPPING, OTHER_GAME_MAPPING, GAME_NAME_MAPPING } from '@/components/GameCategories';
 
 const games = [
-  { value: "all", label: "All Games" },
+  { value: "all", label: "All Categories" },
   ...Object.entries(GAME_MAPPING).map(([label, value]) => ({ value, label })),
   ...Object.entries(OTHER_GAME_MAPPING).map(([label, value]) => ({ value, label })),
 ];
