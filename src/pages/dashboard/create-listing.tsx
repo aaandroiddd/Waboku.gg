@@ -331,7 +331,15 @@ const CreateListingPage = () => {
                     <Label htmlFor="game">Category *</Label>
                     <Select
                       value={formData.game}
-                      onValueChange={(value) => setFormData({ ...formData, game: value })}
+                      onValueChange={(value) => {
+                        if (value === 'accessories') {
+                          // Clear grading data when switching to accessories
+                          const { gradeLevel, gradingCompany, isGraded, ...rest } = formData;
+                          setFormData({ ...rest, game: value });
+                        } else {
+                          setFormData({ ...formData, game: value });
+                        }
+                      }}
                     >
                       <SelectTrigger className={errors.game ? "border-red-500" : ""}>
                         <SelectValue placeholder="Select category" />
