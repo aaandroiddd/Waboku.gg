@@ -45,20 +45,33 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .get();
 
     // Process each archived listing
-    archivedSnapshot.docs.forEach((doc) => {
+    for (const doc of archivedSnapshot.docs) {
       const data = doc.data();
-      const archivedAt = data.archivedAt?.toDate() || data.updatedAt?.toDate();
+      const archivedAt = data.archivedAt?.toDate();
+      const originalCreatedAt = data.originalCreatedAt?.toDate();
       
-      if (archivedAt) {
-        const expirationDate = new Date(archivedAt);
-        expirationDate.setDate(expirationDate.getDate() + 7); // Archived listings are deleted after 7 days
+      if (archivedAt && originalCreatedAt) {
+        // Get user's account tier
+        const userRef = db.collection('users').doc(data.userId);
+        const userDoc = await userRef.get();
+        const userData = userDoc.data();
+        const accountTier = userData?.accountTier || 'free';
+        const tierDuration = ACCOUNT_TIERS[accountTier].listingDuration;
+        
+        // Calculate how much time was left when the listing was archived
+        const totalDurationMs = tierDuration * 60 * 60 * 1000; // Convert hours to milliseconds
+        const timeUsedBeforeArchive = archivedAt.getTime() - originalCreatedAt.getTime();
+        const timeRemainingMs = totalDurationMs - timeUsedBeforeArchive;
+        
+        // Calculate when the listing should expire
+        const expirationDate = new Date(archivedAt.getTime() + timeRemainingMs);
         
         if (new Date() > expirationDate) {
           batch.delete(doc.ref);
           totalDeleted++;
         }
       }
-    });
+    };
 
     // Get inactive listings
     const inactiveSnapshot = await db.collection('listings')
