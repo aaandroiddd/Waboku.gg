@@ -350,6 +350,7 @@ const CreateListingPage = () => {
                         <SelectItem value="vanguard">Vanguard</SelectItem>
                         <SelectItem value="weiss">Weiss Schwarz</SelectItem>
                         <SelectItem value="yugioh">Yu-Gi-Oh!</SelectItem>
+                        <SelectItem value="accessories">Accessories</SelectItem>
                         <SelectItem value="other">Other</SelectItem>
                       </SelectContent>
                     </Select>
