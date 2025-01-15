@@ -320,7 +320,7 @@ export default function ListingsPage() {
                         </SheetHeader>
                         <div className="py-4 space-y-4">
                           <div className="space-y-2">
-                            <label className="text-sm font-medium">Game</label>
+                            <label className="text-sm font-medium">Category</label>
                             <Select value={selectedGame} onValueChange={setSelectedGame}>
                               <SelectTrigger>
                                 <SelectValue placeholder="Select game" />
