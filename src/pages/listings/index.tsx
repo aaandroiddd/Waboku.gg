@@ -323,7 +323,7 @@ export default function ListingsPage() {
                             <label className="text-sm font-medium">Category</label>
                             <Select value={selectedGame} onValueChange={setSelectedGame}>
                               <SelectTrigger>
-                                <SelectValue placeholder="Select game" />
+                                <SelectValue placeholder="Select category" />
                               </SelectTrigger>
                               <SelectContent>
                                 {games.map((game) => (
