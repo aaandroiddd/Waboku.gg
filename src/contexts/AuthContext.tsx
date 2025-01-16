@@ -12,7 +12,7 @@ import {
   sendPasswordResetEmail
 } from 'firebase/auth';
 import { doc, setDoc, getDoc, deleteDoc, collection, query, where, getDocs } from 'firebase/firestore';
-import { auth, db } from '@/lib/firebase';
+import { getFirebaseServices } from '@/lib/firebase';
 import { UserProfile } from '@/types/database';
 
 interface AuthContextType {
@@ -33,7 +33,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const actionCodeSettings = {
-  url: `${process.env.NEXT_PUBLIC_APP_URL || window.location.origin}/auth/verify-email`,
+  url: `${process.env.NEXT_PUBLIC_APP_URL || (typeof window !== 'undefined' ? window.location.origin : '')}/auth/verify-email`,
   handleCodeInApp: true
 };
 
@@ -42,6 +42,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  const { auth, db } = getFirebaseServices();
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -98,7 +100,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         bio: '',
         location: '',
         avatarUrl: '',
-        isEmailVerified: false, // Explicitly set to false for new users
+        isEmailVerified: false,
         verificationSentAt: null,
         social: {
           youtube: '',
@@ -129,7 +131,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Clean up if anything fails
       if (createdUser) {
         try {
-          // Clean up in reverse order
           await Promise.all([
             deleteDoc(doc(db, 'users', createdUser.uid)),
             deleteDoc(doc(db, 'usernames', username))
@@ -147,29 +148,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signIn = async (email: string, password: string) => {
     try {
-      // First, try to fetch user data by email from Firestore
       const usersRef = collection(db, 'users');
       const q = query(usersRef, where('email', '==', email));
       const querySnapshot = await getDocs(q);
       
       if (querySnapshot.empty) {
-        // If no user found with this email
         const error = new Error('No account found with this email address');
         error.name = 'auth/user-not-found';
         throw error;
       }
 
-      // If user exists, try to sign in
       try {
         await signInWithEmailAndPassword(auth, email, password);
       } catch (err: any) {
-        // If sign in fails after we found the email, it means password is wrong
         const error = new Error('Incorrect password');
         error.name = 'auth/wrong-password';
         throw error;
       }
     } catch (err: any) {
-      // Ensure we preserve the Firebase error code
       const error = new Error(err.message);
       error.name = err.code || 'auth/unknown';
       setError(error.message);
@@ -193,18 +189,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!profile) throw new Error('No profile found');
 
     try {
-      // If username is being updated
       if (data.username && data.username !== profile.username) {
-        // Check if new username is available
         const usernameDoc = await getDoc(doc(db, 'usernames', data.username));
         if (usernameDoc.exists()) {
           throw new Error('Username is already taken. Please choose another one.');
         }
 
-        // Delete old username document
         await deleteDoc(doc(db, 'usernames', profile.username));
 
-        // Create new username document
         await setDoc(doc(db, 'usernames', data.username), {
           uid: user.uid,
           username: data.username,
@@ -212,7 +204,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         });
       }
 
-      // Update Firebase Auth profile if username or photo URL changed
       if (data.username || data.photoURL) {
         await firebaseUpdateProfile(user, {
           displayName: data.username || user.displayName,
@@ -220,7 +211,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         });
       }
 
-      // Prepare profile update data
       const updatedProfile = {
         ...profile,
         username: data.username || profile.username,
@@ -234,11 +224,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         lastUpdated: new Date().toISOString()
       };
 
-      // Update Firestore profile
       await setDoc(doc(db, 'users', user.uid), updatedProfile);
       setProfile(updatedProfile as UserProfile);
     } catch (err: any) {
-      // If username update fails, revert changes
       if (data.username && data.username !== profile.username) {
         try {
           await deleteDoc(doc(db, 'usernames', data.username));
@@ -260,29 +248,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!user) throw new Error('No user logged in');
 
     try {
-      // First get the user profile to ensure we have the username
       const profileDoc = await getDoc(doc(db, 'users', user.uid));
       const userProfile = profileDoc.exists() ? profileDoc.data() as UserProfile : null;
 
-      // Get all usernames documents where uid matches the user's uid
       const usernamesCollection = collection(db, 'usernames');
       const usernamesDocs = await getDocs(usernamesCollection);
       const usernamesToDelete = usernamesDocs.docs
         .filter(doc => doc.data().uid === user.uid)
         .map(doc => deleteDoc(doc.ref));
 
-      // Delete user's profile document
       await deleteDoc(doc(db, 'users', user.uid));
       
-      // Delete all username documents associated with this user
       await Promise.all(usernamesToDelete);
 
-      // If we have the specific username from profile, ensure it's deleted
       if (userProfile?.username) {
         await deleteDoc(doc(db, 'usernames', userProfile.username));
       }
       
-      // Delete the user's auth account
       await deleteUser(user);
       
       setUser(null);
@@ -316,13 +298,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!user) return;
     
     try {
-      // Reload the user to get the latest verification status
       await user.reload();
       const freshUser = auth.currentUser;
       
       if (!freshUser) return;
       
-      // Only update if verification status has changed
       if (freshUser.emailVerified !== profile?.isEmailVerified) {
         const updatedProfile = {
           ...profile,
@@ -340,10 +320,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  // Modify signUp to send verification email
   const signUpWithVerification = async (email: string, password: string, username: string) => {
     await signUp(email, password, username);
-    // We need to wait for the auth state to be updated
     await new Promise((resolve) => setTimeout(resolve, 1000));
     if (auth.currentUser) {
       await sendVerificationEmail();
