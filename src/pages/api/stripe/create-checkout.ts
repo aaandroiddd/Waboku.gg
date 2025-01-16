@@ -1,8 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import Stripe from 'stripe';
-import { getAuth } from 'firebase-admin/auth';
-import { getFirestore } from 'firebase-admin/firestore';
-import { initAdmin } from '@/lib/firebase-admin';
+import { getFirebaseAdmin } from '@/lib/firebase-admin';
 
 if (!process.env.STRIPE_SECRET_KEY) {
   throw new Error('STRIPE_SECRET_KEY is not set');
@@ -26,8 +24,8 @@ export default async function handler(
   }
 
   try {
-    // Initialize Firebase Admin
-    initAdmin();
+    // Get Firebase Admin instance
+    const { auth } = getFirebaseAdmin();
     
     // Get the Firebase ID token from the Authorization header
     const authHeader = req.headers.authorization;
@@ -38,7 +36,7 @@ export default async function handler(
     const idToken = authHeader.split('Bearer ')[1];
     
     // Verify the Firebase ID token
-    const decodedToken = await getAuth().verifyIdToken(idToken);
+    const decodedToken = await auth.verifyIdToken(idToken);
     const userId = decodedToken.uid;
 
     // Create a new Stripe checkout session
@@ -56,6 +54,7 @@ export default async function handler(
       metadata: {
         userId,
       },
+      customer_email: decodedToken.email || undefined,
     });
 
     if (!session.url) {
