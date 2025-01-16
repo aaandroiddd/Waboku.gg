@@ -22,7 +22,7 @@ const nextConfig = {
               object-src 'none';
               base-uri 'self';
               form-action 'self';
-              frame-ancestors 'none';
+              frame-ancestors 'self' https://*.co.dev;
               frame-src 'self' https://*.stripe.com;
               connect-src 'self' https://*.stripe.com https://api.stripe.com;
               media-src 'self' https: data:;
