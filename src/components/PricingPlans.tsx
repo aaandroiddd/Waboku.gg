@@ -3,8 +3,12 @@ import { Card } from "@/components/ui/card";
 import { Check } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { ACCOUNT_TIERS } from "@/types/account";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useToast } from "@/components/ui/use-toast";
+import { loadStripe } from '@stripe/stripe-js';
+
+// Make sure to load Stripe outside of components
+const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
 
 export function PricingPlans() {
   const { user } = useAuth();
@@ -23,6 +27,11 @@ export function PricingPlans() {
 
     setIsLoading(true);
     try {
+      const stripe = await stripePromise;
+      if (!stripe) {
+        throw new Error('Stripe failed to initialize');
+      }
+
       const idToken = await user.getIdToken();
       const response = await fetch('/api/stripe/create-checkout', {
         method: 'POST',
@@ -42,8 +51,8 @@ export function PricingPlans() {
         throw new Error('No checkout URL received');
       }
 
-      // Open Stripe Checkout in the same window (not in an iframe)
-      window.open(data.sessionUrl, '_self');
+      // Redirect to Stripe Checkout
+      window.location.href = data.sessionUrl;
     } catch (error) {
       console.error('Subscription error:', error);
       toast({
@@ -51,6 +60,7 @@ export function PricingPlans() {
         description: "Failed to start subscription process. Please try again.",
         variant: "destructive",
       });
+    } finally {
       setIsLoading(false);
     }
   };
