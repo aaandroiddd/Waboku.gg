@@ -15,7 +15,7 @@ const nextConfig = {
             key: 'Content-Security-Policy',
             value: `
               default-src 'self';
-              script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://*.stripe.com;
+              script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://*.stripe.com https://apis.google.com https://*.firebaseio.com https://*.firebase.com;
               style-src 'self' 'unsafe-inline';
               img-src 'self' data: https: blob:;
               font-src 'self';
@@ -23,8 +23,16 @@ const nextConfig = {
               base-uri 'self';
               form-action 'self';
               frame-ancestors 'self' https://*.co.dev;
-              frame-src 'self' https://*.stripe.com;
-              connect-src 'self' https://*.stripe.com https://api.stripe.com;
+              frame-src 'self' https://*.stripe.com https://*.firebaseapp.com;
+              connect-src 'self' 
+                https://*.stripe.com 
+                https://api.stripe.com
+                https://*.googleapis.com
+                https://*.firebaseio.com
+                https://*.firebase.com
+                https://*.firebaseapp.com
+                wss://*.firebaseio.com
+                https://identitytoolkit.googleapis.com;
               media-src 'self' https: data:;
             `.replace(/\s+/g, ' ').trim()
           }
