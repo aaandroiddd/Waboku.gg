@@ -63,40 +63,39 @@ function SignInComponent() {
     setAuthError(null);
     setIsLoading(true);
 
-    if (!email || !password) {
-      const error = new Error("Please enter both email and password");
-      error.name = "auth/missing-fields";
-      setAuthError(error);
-      setIsLoading(false);
-      return;
-    }
-
     try {
+      if (!email || !password) {
+        throw Object.assign(new Error("Please enter both email and password"), {
+          name: "auth/missing-fields"
+        });
+      }
+
       if (!navigator.onLine) {
-        const error = new Error("No internet connection");
-        error.name = "auth/network-request-failed";
-        throw error;
+        throw Object.assign(new Error("No internet connection"), {
+          name: "auth/network-request-failed"
+        });
       }
 
       // Basic email validation
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(email)) {
-        const error = new Error("Invalid email format");
-        error.name = "auth/invalid-email";
-        throw error;
+        throw Object.assign(new Error("Invalid email format"), {
+          name: "auth/invalid-email"
+        });
       }
 
       await signIn(email, password);
+      // If sign in is successful, the router.replace in the useEffect will handle redirection
     } catch (err: any) {
       console.error("Sign in error:", {
         code: err.code || err.name,
         message: err.message,
+        stack: err.stack,
         timestamp: new Date().toISOString()
       });
       
-      // Convert any error to a proper Error object with name property
-      const error = new Error(err.message || "Failed to sign in");
-      // For Firebase Auth errors, the code is in err.code
+      // Ensure we have a proper Error object with both message and name
+      const error = err instanceof Error ? err : new Error(err.message || "Failed to sign in");
       error.name = err.code || err.name || "auth/unknown";
       setAuthError(error);
     } finally {
