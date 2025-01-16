@@ -148,25 +148,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signIn = async (email: string, password: string) => {
     try {
-      const usersRef = collection(db, 'users');
-      const q = query(usersRef, where('email', '==', email));
-      const querySnapshot = await getDocs(q);
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
       
-      if (querySnapshot.empty) {
-        const error = new Error('No account found with this email address');
-        error.name = 'auth/user-not-found';
-        throw error;
+      // After successful authentication, fetch the user profile
+      const profileDoc = await getDoc(doc(db, 'users', user.uid));
+      if (!profileDoc.exists()) {
+        console.warn('User authenticated but no profile found');
       }
-
-      try {
-        await signInWithEmailAndPassword(auth, email, password);
-      } catch (err: any) {
-        const error = new Error('Incorrect password');
-        error.name = 'auth/wrong-password';
-        throw error;
-      }
+      
+      return userCredential;
     } catch (err: any) {
-      const error = new Error(err.message);
+      let errorMessage = 'An error occurred during sign in';
+      if (err.code === 'auth/user-not-found') {
+        errorMessage = 'No account found with this email address';
+      } else if (err.code === 'auth/wrong-password') {
+        errorMessage = 'Incorrect password';
+      } else if (err.code === 'auth/invalid-email') {
+        errorMessage = 'Invalid email address';
+      }
+      const error = new Error(errorMessage);
       error.name = err.code || 'auth/unknown';
       setError(error.message);
       throw error;
