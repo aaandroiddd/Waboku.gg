@@ -47,6 +47,7 @@ export function PricingPlans() {
       }
 
       // Create checkout session
+      console.log('Creating checkout session...');
       const response = await fetch('/api/stripe/create-checkout', {
         method: 'POST',
         headers: {
@@ -55,7 +56,9 @@ export function PricingPlans() {
         },
       });
 
+      console.log('Response status:', response.status);
       const data = await response.json();
+      console.log('Response data:', data);
       
       if (!response.ok) {
         throw new Error(data.message || 'Failed to create checkout session');
@@ -65,16 +68,14 @@ export function PricingPlans() {
         throw new Error('Invalid checkout session');
       }
 
-      // Show success message before redirect
+      // Show success message and redirect
       toast({
         title: "Redirecting to checkout",
         description: "You'll be redirected to complete your payment securely.",
       });
 
-      // Small delay to ensure toast is visible
-      setTimeout(() => {
-        window.location.href = data.sessionUrl;
-      }, 1000);
+      // Direct redirect without timeout
+      window.location.assign(data.sessionUrl);
 
     } catch (error: any) {
       console.error('Subscription error:', error);
