@@ -32,8 +32,18 @@ export function PricingPlans() {
         },
       });
 
-      const { sessionUrl } = await response.json();
-      window.location.href = sessionUrl;
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to create checkout session');
+      }
+
+      if (!data.sessionUrl) {
+        throw new Error('No checkout URL received');
+      }
+
+      // Redirect to Stripe Checkout
+      window.location.href = data.sessionUrl;
     } catch (error) {
       toast({
         title: "Error",
