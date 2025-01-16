@@ -13,6 +13,8 @@
     "analyze": "ANALYZE=true next build"
   },
   "dependencies": {
+    "stripe": "^14.14.0",
+    "micro": "^10.0.1",
     "@emoji-mart/data": "^1.1.2",
     "@emoji-mart/react": "^1.1.1",
     "@hookform/resolvers": "^3.9.0",
