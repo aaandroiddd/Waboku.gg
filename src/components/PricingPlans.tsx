@@ -15,6 +15,16 @@ export function PricingPlans() {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
+  // Function to check if Stripe is blocked
+  const isStripeBlocked = async () => {
+    try {
+      const response = await fetch('https://js.stripe.com/v3/', { mode: 'no-cors' });
+      return false;
+    } catch (error) {
+      return true;
+    }
+  };
+
   const handleSubscribe = async () => {
     if (!user) {
       toast({
