@@ -148,6 +148,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signIn = async (email: string, password: string) => {
     try {
+      // Ensure Firebase is initialized
+      const { auth, db } = getFirebaseServices();
+      
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
       
@@ -155,21 +158,61 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const profileDoc = await getDoc(doc(db, 'users', user.uid));
       if (!profileDoc.exists()) {
         console.warn('User authenticated but no profile found');
+        // Create a basic profile if none exists
+        const basicProfile = {
+          uid: user.uid,
+          email: user.email!,
+          username: user.email!.split('@')[0],
+          joinDate: new Date().toISOString(),
+          totalSales: 0,
+          rating: 0,
+          bio: '',
+          location: '',
+          avatarUrl: '',
+          isEmailVerified: user.emailVerified,
+          verificationSentAt: null,
+          social: {
+            youtube: '',
+            twitter: '',
+            facebook: ''
+          }
+        };
+        await setDoc(doc(db, 'users', user.uid), basicProfile);
+        setProfile(basicProfile);
+      } else {
+        setProfile(profileDoc.data() as UserProfile);
       }
       
       return userCredential;
     } catch (err: any) {
+      console.error('Sign in error:', err);
+      
       let errorMessage = 'An error occurred during sign in';
-      if (err.code === 'auth/user-not-found') {
-        errorMessage = 'No account found with this email address';
-      } else if (err.code === 'auth/wrong-password') {
-        errorMessage = 'Incorrect password';
-      } else if (err.code === 'auth/invalid-email') {
-        errorMessage = 'Invalid email address';
+      let errorCode = err.code || 'auth/unknown';
+      
+      switch (err.code) {
+        case 'auth/user-not-found':
+        case 'auth/invalid-login-credentials':
+        case 'auth/invalid-credential':
+          errorMessage = 'No account found with this email address';
+          break;
+        case 'auth/wrong-password':
+          errorMessage = 'Incorrect password';
+          break;
+        case 'auth/invalid-email':
+          errorMessage = 'Invalid email address';
+          break;
+        case 'auth/network-request-failed':
+          errorMessage = 'Network error. Please check your internet connection.';
+          break;
+        case 'auth/too-many-requests':
+          errorMessage = 'Too many failed attempts. Please try again later.';
+          break;
       }
+      
       const error = new Error(errorMessage);
-      error.name = err.code || 'auth/unknown';
-      setError(error.message);
+      error.name = errorCode;
+      setError(errorMessage);
       throw error;
     }
   };
