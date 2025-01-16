@@ -55,6 +55,8 @@ export default async function handler(
         userId,
       },
       customer_email: decodedToken.email || undefined,
+      allow_promotion_codes: true,
+      billing_address_collection: 'auto',
     });
 
     if (!session.url) {
