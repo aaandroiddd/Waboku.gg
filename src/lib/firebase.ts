@@ -24,23 +24,33 @@ const firebaseConfig = {
   databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL
 };
 
-// Initialize Firebase only once
 let firebaseApp: FirebaseApp;
-if (!getApps().length) {
-  firebaseApp = initializeApp(firebaseConfig);
-} else {
-  firebaseApp = getApps()[0];
-}
+let auth: Auth;
+let db: Firestore;
+let storage: FirebaseStorage;
 
-// Initialize services
-const auth = getAuth(firebaseApp);
-const db = getFirestore(firebaseApp);
-const storage = getStorage(firebaseApp);
+export const getFirebaseServices = () => {
+  if (!firebaseApp) {
+    // Initialize Firebase only once
+    if (!getApps().length) {
+      firebaseApp = initializeApp(firebaseConfig);
+    } else {
+      firebaseApp = getApps()[0];
+    }
 
-// Set persistence
-if (typeof window !== 'undefined') {
-  setPersistence(auth, browserLocalPersistence)
-    .catch(error => console.error('Error setting auth persistence:', error));
-}
+    // Initialize services
+    auth = getAuth(firebaseApp);
+    db = getFirestore(firebaseApp);
+    storage = getStorage(firebaseApp);
+
+    // Set persistence
+    if (typeof window !== 'undefined') {
+      setPersistence(auth, browserLocalPersistence)
+        .catch(error => console.error('Error setting auth persistence:', error));
+    }
+  }
+
+  return { app: firebaseApp, auth, db, storage };
+};
 
 export { firebaseApp as app, auth, db, storage };
