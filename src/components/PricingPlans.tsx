@@ -3,7 +3,7 @@ import { Card } from "@/components/ui/card";
 import { Check } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { ACCOUNT_TIERS } from "@/types/account";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useToast } from "@/components/ui/use-toast";
 import { loadStripe } from '@stripe/stripe-js';
 
@@ -26,13 +26,27 @@ export function PricingPlans() {
     }
 
     setIsLoading(true);
+    
+    // Show initial loading state to user
+    toast({
+      title: "Preparing checkout...",
+      description: "Please wait while we set up your subscription.",
+    });
+
     try {
+      // Initialize Stripe
       const stripe = await stripePromise;
       if (!stripe) {
-        throw new Error('Stripe failed to initialize');
+        throw new Error('Unable to connect to payment provider');
       }
 
+      // Get user token
       const idToken = await user.getIdToken();
+      if (!idToken) {
+        throw new Error('Authentication error');
+      }
+
+      // Create checkout session
       const response = await fetch('/api/stripe/create-checkout', {
         method: 'POST',
         headers: {
@@ -48,16 +62,34 @@ export function PricingPlans() {
       }
 
       if (!data.sessionUrl) {
-        throw new Error('No checkout URL received');
+        throw new Error('Invalid checkout session');
       }
 
-      // Redirect to Stripe Checkout
-      window.location.href = data.sessionUrl;
-    } catch (error) {
+      // Show success message before redirect
+      toast({
+        title: "Redirecting to checkout",
+        description: "You'll be redirected to complete your payment securely.",
+      });
+
+      // Small delay to ensure toast is visible
+      setTimeout(() => {
+        window.location.href = data.sessionUrl;
+      }, 1000);
+
+    } catch (error: any) {
       console.error('Subscription error:', error);
+      
+      // Provide more specific error messages
+      let errorMessage = 'Failed to start subscription process. Please try again.';
+      if (error.message.includes('payment provider')) {
+        errorMessage = 'Unable to connect to payment service. Please check your internet connection and try again.';
+      } else if (error.message.includes('Authentication')) {
+        errorMessage = 'Please sign in again and retry.';
+      }
+
       toast({
         title: "Error",
-        description: "Failed to start subscription process. Please try again.",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
@@ -142,7 +174,7 @@ export function PricingPlans() {
           onClick={handleSubscribe}
           disabled={isLoading}
         >
-          {isLoading ? "Loading..." : "Upgrade to Premium"}
+          {isLoading ? "Preparing Checkout..." : "Upgrade to Premium"}
         </Button>
       </Card>
     </div>
