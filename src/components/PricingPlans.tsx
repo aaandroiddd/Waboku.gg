@@ -44,6 +44,16 @@ export function PricingPlans() {
     });
 
     try {
+      // Check if Stripe is blocked
+      if (await isStripeBlocked()) {
+        toast({
+          title: "Payment System Blocked",
+          description: "Please disable your ad blocker or privacy extensions to proceed with the payment. Our payment system uses Stripe, a secure payment processor.",
+          variant: "destructive",
+        });
+        return;
+      }
+
       // Initialize Stripe
       const stripe = await stripePromise;
       if (!stripe) {
