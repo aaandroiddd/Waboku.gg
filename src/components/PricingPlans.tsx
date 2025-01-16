@@ -42,15 +42,15 @@ export function PricingPlans() {
         throw new Error('No checkout URL received');
       }
 
-      // Redirect to Stripe Checkout
-      window.location.href = data.sessionUrl;
+      // Open Stripe Checkout in the same window (not in an iframe)
+      window.open(data.sessionUrl, '_self');
     } catch (error) {
+      console.error('Subscription error:', error);
       toast({
         title: "Error",
         description: "Failed to start subscription process. Please try again.",
         variant: "destructive",
       });
-    } finally {
       setIsLoading(false);
     }
   };
