@@ -30,7 +30,8 @@ export default async function handler(
 
     usersSnapshot.forEach((doc) => {
       const userData = doc.data();
-      if (!userData.accountTier) {
+      // Update all users to free tier unless they are already premium
+      if (userData.accountTier !== 'premium') {
         batch.update(doc.ref, {
           accountTier: 'free'
         });
