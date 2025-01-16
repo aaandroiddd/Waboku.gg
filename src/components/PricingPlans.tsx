@@ -23,10 +23,12 @@ export function PricingPlans() {
 
     setIsLoading(true);
     try {
+      const idToken = await user.getIdToken();
       const response = await fetch('/api/stripe/create-checkout', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${idToken}`,
         },
       });
 
