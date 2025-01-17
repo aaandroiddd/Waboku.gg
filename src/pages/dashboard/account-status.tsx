@@ -50,11 +50,6 @@ export default function AccountStatus() {
         </div>
         
         <div className="mb-8">
-          <h2 className="text-xl font-semibold text-foreground mb-4">Available Features</h2>
-          <AccountFeatures />
-        </div>
-
-        <div className="mb-8">
           <h2 className="text-xl font-semibold text-foreground mb-4">Subscription Plans</h2>
           <PricingPlans />
         </div>
