@@ -157,7 +157,7 @@ export function PricingPlans() {
           </p>
         </div>
         <div className="space-y-1">
-          <div className="text-3xl font-bold">$9.99</div>
+          <div className="text-3xl font-bold">$4.99</div>
           <div className="text-sm text-gray-500 dark:text-gray-400">per month</div>
         </div>
         <div className="space-y-2">
