@@ -1,4 +1,4 @@
-import { AccountFeatures } from '@/components/AccountFeatures';
+
 import { PricingPlans } from '@/components/PricingPlans';
 import { useAccount } from '@/contexts/AccountContext';
 import { Badge } from '@/components/ui/badge';
