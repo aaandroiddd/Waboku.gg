@@ -1,4 +1,3 @@
-
 import { PricingPlans } from '@/components/PricingPlans';
 import { useAccount } from '@/contexts/AccountContext';
 import { Badge } from '@/components/ui/badge';
@@ -13,18 +12,18 @@ export default function AccountStatus() {
   const { accountTier } = useAccount();
   const router = useRouter();
   const { toast } = useToast();
-  const { session_id } = router.query;
+  const { session_id, upgrade } = router.query;
 
   useEffect(() => {
-    if (session_id) {
+    if (session_id || upgrade === 'success') {
       toast({
         title: "Success!",
         description: "Your subscription has been processed. Your account will be upgraded shortly.",
       });
-      // Remove the session_id from the URL without refreshing the page
+      // Remove the query parameters from the URL without refreshing the page
       router.replace('/dashboard/account-status', undefined, { shallow: true });
     }
-  }, [session_id, toast, router]);
+  }, [session_id, upgrade, toast, router]);
 
   return (
     <div className="min-h-screen flex flex-col">
