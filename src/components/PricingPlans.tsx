@@ -85,6 +85,36 @@ export function PricingPlans() {
         throw new Error('Invalid checkout session');
       }
 
+      // Handle preview environment differently
+      if (data.isPreview) {
+        toast({
+          title: "Preview Environment",
+          description: "Processing test upgrade...",
+        });
+
+        // Make a POST request to the dev-success endpoint
+        const upgradeResponse = await fetch('/api/stripe/dev-success', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ userId: user.uid }),
+        });
+
+        if (!upgradeResponse.ok) {
+          throw new Error('Failed to process test upgrade');
+        }
+
+        toast({
+          title: "Success!",
+          description: "Your account has been upgraded in preview mode.",
+        });
+
+        // Redirect to account status page
+        window.location.href = '/dashboard/account-status';
+        return;
+      }
+
       toast({
         title: "Redirecting to secure checkout",
         description: "You'll be redirected to Stripe to complete your payment.",
