@@ -15,12 +15,8 @@ export default async function handler(
     return res.status(404).json({ error: 'Not found' });
   }
 
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
-
   try {
-    const { userId } = req.body;
+    const userId = req.method === 'POST' ? req.body.userId : req.query.userId;
 
     if (!userId) {
       return res.status(400).json({ error: 'User ID is required' });
@@ -36,6 +32,12 @@ export default async function handler(
       subscriptionStatus: 'active',
       subscriptionPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days from now
     });
+
+    // If it's a GET request, redirect to the account status page
+    if (req.method === 'GET') {
+      res.redirect(307, '/dashboard/account-status?upgrade=success');
+      return;
+    }
 
     return res.status(200).json({ success: true });
   } catch (error) {
