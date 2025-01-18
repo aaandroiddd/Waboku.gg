@@ -15,16 +15,6 @@ export function PricingPlans() {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
-  // Function to check if Stripe is blocked
-  const isStripeBlocked = async () => {
-    try {
-      const response = await fetch('https://js.stripe.com/v3/', { mode: 'no-cors' });
-      return false;
-    } catch (error) {
-      return true;
-    }
-  };
-
   const handleSubscribe = async () => {
     if (!user) {
       toast({
@@ -38,23 +28,6 @@ export function PricingPlans() {
     setIsLoading(true);
     
     try {
-      // Check if Stripe is blocked
-      if (await isStripeBlocked()) {
-        toast({
-          title: "Payment System Blocked",
-          description: "Please disable your ad blocker or privacy extensions to proceed with the payment.",
-          variant: "destructive",
-        });
-        setIsLoading(false);
-        return;
-      }
-
-      // Initialize Stripe
-      const stripe = await stripePromise;
-      if (!stripe) {
-        throw new Error('Unable to connect to payment provider');
-      }
-
       // Get user token
       const idToken = await user.getIdToken();
       if (!idToken) {
@@ -81,38 +54,20 @@ export function PricingPlans() {
         throw new Error(data.message || 'Failed to create checkout session');
       }
 
-      if (!data.sessionUrl) {
-        throw new Error('Invalid checkout session');
-      }
-
-      // Handle preview environment differently
+      // Handle preview environment
       if (data.isPreview) {
         toast({
           title: "Preview Environment",
           description: "Processing test upgrade...",
         });
 
-        // Make a POST request to the dev-success endpoint
-        const upgradeResponse = await fetch('/api/stripe/dev-success', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ userId: user.uid }),
-        });
-
-        if (!upgradeResponse.ok) {
-          throw new Error('Failed to process test upgrade');
-        }
-
-        toast({
-          title: "Success!",
-          description: "Your account has been upgraded in preview mode.",
-        });
-
-        // Redirect to account status page
-        window.location.href = '/dashboard/account-status';
+        // Redirect to dev-success endpoint
+        window.location.href = `/api/stripe/dev-success?userId=${user.uid}`;
         return;
+      }
+
+      if (!data.sessionUrl) {
+        throw new Error('Invalid checkout session');
       }
 
       toast({
@@ -120,10 +75,8 @@ export function PricingPlans() {
         description: "You'll be redirected to Stripe to complete your payment.",
       });
 
-      // Add a small delay to ensure the toast is visible
-      setTimeout(() => {
-        window.location.href = data.sessionUrl;
-      }, 1000);
+      // Redirect to Stripe checkout
+      window.location.href = data.sessionUrl;
 
     } catch (error: any) {
       console.error('Subscription error:', error);
@@ -222,7 +175,7 @@ export function PricingPlans() {
           onClick={handleSubscribe}
           disabled={isLoading}
         >
-          {isLoading ? "Preparing Checkout..." : "Upgrade to Premium"}
+          {isLoading ? "Processing..." : "Upgrade to Premium"}
         </Button>
       </Card>
     </div>
