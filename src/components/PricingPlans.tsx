@@ -37,20 +37,15 @@ export function PricingPlans() {
 
     setIsLoading(true);
     
-    // Show initial loading state to user
-    toast({
-      title: "Preparing checkout...",
-      description: "Please wait while we set up your subscription.",
-    });
-
     try {
       // Check if Stripe is blocked
       if (await isStripeBlocked()) {
         toast({
           title: "Payment System Blocked",
-          description: "Please disable your ad blocker or privacy extensions to proceed with the payment. Our payment system uses Stripe, a secure payment processor.",
+          description: "Please disable your ad blocker or privacy extensions to proceed with the payment.",
           variant: "destructive",
         });
+        setIsLoading(false);
         return;
       }
 
@@ -66,8 +61,12 @@ export function PricingPlans() {
         throw new Error('Authentication error');
       }
 
+      toast({
+        title: "Setting up checkout...",
+        description: "Please wait while we prepare your upgrade.",
+      });
+
       // Create checkout session
-      console.log('Creating checkout session...');
       const response = await fetch('/api/stripe/create-checkout', {
         method: 'POST',
         headers: {
@@ -76,9 +75,7 @@ export function PricingPlans() {
         },
       });
 
-      console.log('Response status:', response.status);
       const data = await response.json();
-      console.log('Response data:', data);
       
       if (!response.ok) {
         throw new Error(data.message || 'Failed to create checkout session');
@@ -88,32 +85,32 @@ export function PricingPlans() {
         throw new Error('Invalid checkout session');
       }
 
-      // Show success message and redirect
       toast({
-        title: "Redirecting to checkout",
-        description: "You'll be redirected to complete your payment securely.",
+        title: "Redirecting to secure checkout",
+        description: "You'll be redirected to Stripe to complete your payment.",
       });
 
-      // Direct redirect without timeout
-      window.location.assign(data.sessionUrl);
+      // Add a small delay to ensure the toast is visible
+      setTimeout(() => {
+        window.location.href = data.sessionUrl;
+      }, 1000);
 
     } catch (error: any) {
       console.error('Subscription error:', error);
       
-      // Provide more specific error messages
       let errorMessage = 'Failed to start subscription process. Please try again.';
       if (error.message.includes('payment provider')) {
-        errorMessage = 'Unable to connect to payment service. Please check your internet connection and try again.';
+        errorMessage = 'Unable to connect to payment service. Please check your internet connection.';
       } else if (error.message.includes('Authentication')) {
-        errorMessage = 'Please sign in again and retry.';
+        errorMessage = 'Your session has expired. Please sign in again.';
       }
 
       toast({
-        title: "Error",
+        title: "Subscription Error",
         description: errorMessage,
         variant: "destructive",
       });
-    } finally {
+      
       setIsLoading(false);
     }
   };
