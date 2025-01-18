@@ -56,6 +56,14 @@ export default async function handler(
 
     const userId = decodedToken.uid;
 
+    // For preview environment, return a special development success URL
+    if (process.env.NEXT_PUBLIC_CO_DEV_ENV === 'preview') {
+      return res.status(200).json({ 
+        sessionUrl: `${process.env.NEXT_PUBLIC_APP_URL}/api/stripe/dev-success?userId=${userId}`,
+        isPreview: true 
+      });
+    }
+
     // Create a new Stripe checkout session with error handling
     try {
       const session = await stripe.checkout.sessions.create({
