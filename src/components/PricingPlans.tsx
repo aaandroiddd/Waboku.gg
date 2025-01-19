@@ -17,6 +17,7 @@ export function PricingPlans() {
   
   // Check if user has premium subscription
   const [isPremium, setIsPremium] = useState(false);
+  const [subscriptionId, setSubscriptionId] = useState<string | null>(null);
   
   useEffect(() => {
     const checkPremiumStatus = async () => {
@@ -29,14 +30,69 @@ export function PricingPlans() {
         });
         const data = await response.json();
         setIsPremium(data.isPremium);
+        setSubscriptionId(data.subscriptionId);
       } catch (error) {
         console.error('Error checking premium status:', error);
         setIsPremium(false);
+        setSubscriptionId(null);
       }
     };
     
     checkPremiumStatus();
   }, [user]);
+
+  const handleCancelSubscription = async () => {
+    if (!user || !subscriptionId) {
+      toast({
+        title: "Error",
+        description: "Unable to cancel subscription. Please try again later.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsLoading(true);
+    
+    try {
+      const idToken = await user.getIdToken();
+      const response = await fetch('/api/stripe/cancel-subscription', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({ subscriptionId }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to cancel subscription');
+      }
+
+      toast({
+        title: "Subscription Cancelled",
+        description: "Your subscription will end at the end of the current billing period.",
+      });
+
+      // Refresh subscription status
+      const checkResponse = await fetch('/api/stripe/check-subscription', {
+        headers: {
+          'Authorization': `Bearer ${idToken}`
+        }
+      });
+      const data = await checkResponse.json();
+      setIsPremium(data.isPremium);
+      setSubscriptionId(data.subscriptionId);
+    } catch (error) {
+      console.error('Error canceling subscription:', error);
+      toast({
+        title: "Error",
+        description: "Failed to cancel subscription. Please try again later.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleSubscribe = async () => {
     if (!user) {
