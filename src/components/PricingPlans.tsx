@@ -124,7 +124,7 @@ export function PricingPlans() {
           </div>
         </div>
         <Button className="w-full" variant="outline" disabled>
-          Current Plan
+          {accountTier === 'free' ? 'Current Plan' : 'Basic Plan'}
         </Button>
       </Card>
 
