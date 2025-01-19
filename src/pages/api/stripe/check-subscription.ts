@@ -18,7 +18,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // In preview environment, simulate premium status
     if (process.env.NEXT_PUBLIC_CO_DEV_ENV === 'preview') {
-      return res.status(200).json({ isPremium: true });
+      return res.status(200).json({ 
+        isPremium: true,
+        subscriptionId: 'preview-subscription-id'
+      });
     }
 
     const idToken = authHeader.split('Bearer ')[1];
@@ -35,8 +38,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     });
 
     const isPremium = subscriptions.data.length > 0;
+    const subscriptionId = isPremium ? subscriptions.data[0].id : null;
 
-    return res.status(200).json({ isPremium });
+    return res.status(200).json({ 
+      isPremium,
+      subscriptionId
+    });
   } catch (error) {
     console.error('Error checking subscription:', error);
     return res.status(500).json({ error: 'Internal server error' });
