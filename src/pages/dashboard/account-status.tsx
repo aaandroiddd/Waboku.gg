@@ -40,7 +40,10 @@ export default function AccountStatus() {
   const handleCancelSubscription = async () => {
     try {
       console.log('Current subscription state:', subscription); // Debug log
+      console.log('Account tier:', accountTier); // Additional debug log
+      
       if (!subscription.stripeSubscriptionId) {
+        console.error('Missing subscription ID:', subscription); // Additional debug log
         toast({
           title: "Error",
           description: "No active subscription ID found. Please contact support.",
@@ -55,6 +58,11 @@ export default function AccountStatus() {
       });
     } catch (error: any) {
       console.error('Cancellation error:', error); // Debug log
+      console.error('Full error details:', { 
+        message: error.message,
+        stack: error.stack,
+        subscription: subscription 
+      }); // Additional debug info
       toast({
         title: "Error",
         description: error.message || "Failed to cancel subscription. Please try again.",
