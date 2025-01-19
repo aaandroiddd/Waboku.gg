@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { getDatabase, ref, onValue, off } from 'firebase/database';
 import { useAuth } from '@/contexts/AuthContext';
 import { AccountTier, ACCOUNT_TIERS } from '@/types/account';
 import { Badge } from '@/components/ui/badge';
@@ -13,7 +12,7 @@ interface SellerBadgeProps {
 
 interface UserData {
   isEmailVerified: boolean;
-  accountTier: AccountTier;
+  tier: AccountTier;
 }
 
 export function SellerBadge({ className, userId, showOnlyOnProfile = false }: SellerBadgeProps) {
@@ -21,34 +20,34 @@ export function SellerBadge({ className, userId, showOnlyOnProfile = false }: Se
   const [userData, setUserData] = useState<UserData | null>(null);
   
   useEffect(() => {
-    const fetchUserData = async () => {
-      try {
-        if (userId) {
-          const userDoc = await getDoc(doc(db, 'users', userId));
-          if (userDoc.exists()) {
-            const data = userDoc.data() as UserData;
-            setUserData({
-              isEmailVerified: data.isEmailVerified === true,
-              accountTier: data.accountTier || 'free'
-            });
-          } else {
-            setUserData(null);
-          }
-        }
-      } catch (error) {
-        console.error('Error fetching user data:', error);
+    if (!userId) return;
+
+    const db = getDatabase();
+    const userRef = ref(db, `users/${userId}/account`);
+
+    const unsubscribe = onValue(userRef, (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        setUserData({
+          isEmailVerified: data.isEmailVerified === true,
+          tier: data.tier || 'free'
+        });
+      } else {
         setUserData(null);
       }
-    };
+    }, (error) => {
+      console.error('Error fetching user data:', error);
+      setUserData(null);
+    });
 
-    if (userId) {
-      fetchUserData();
-    }
+    return () => {
+      off(userRef);
+    };
   }, [userId]);
 
   if (!userData || !userId) return null;
   
-  const accountFeatures = ACCOUNT_TIERS[userData.accountTier || 'free'];
+  const accountFeatures = ACCOUNT_TIERS[userData.tier || 'free'];
   
   return (
     <div className="flex gap-2">
@@ -75,17 +74,21 @@ export function SellerBadge({ className, userId, showOnlyOnProfile = false }: Se
           Verified
         </Badge>
       )}
-      <Badge 
-        variant="secondary"
-        className={`${
-          userData.accountTier === 'premium' 
-            ? 'bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-500 border-yellow-500/20' 
-            : 'bg-gray-500/10 hover:bg-gray-500/20 text-gray-500 border-gray-500/20'
-        }`}
-      >
-        {accountFeatures.badge || ''}
-        {accountFeatures.displayName}
-      </Badge>
+      {userData.tier === 'premium' ? (
+        <Badge 
+          variant="secondary"
+          className="bg-gradient-to-r from-yellow-500 to-yellow-600 text-white border-none"
+        >
+          ⭐ Premium
+        </Badge>
+      ) : (
+        <Badge 
+          variant="secondary"
+          className="bg-gray-500/10 hover:bg-gray-500/20 text-gray-500 border-gray-500/20"
+        >
+          Free User
+        </Badge>
+      )}
     </div>
   );
 }
