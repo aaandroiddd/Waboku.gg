@@ -3,7 +3,7 @@ import { Card } from "@/components/ui/card";
 import { Check } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { ACCOUNT_TIERS } from "@/types/account";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useToast } from "@/components/ui/use-toast";
 import { loadStripe } from '@stripe/stripe-js';
 
