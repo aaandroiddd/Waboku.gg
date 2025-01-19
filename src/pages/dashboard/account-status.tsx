@@ -7,9 +7,21 @@ import { useRouter } from 'next/router';
 import { Footer } from '@/components/Footer';
 import { useEffect } from 'react';
 import { useToast } from '@/components/ui/use-toast';
+import { Card } from '@/components/ui/card';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 export default function AccountStatus() {
-  const { accountTier } = useAccount();
+  const { accountTier, subscription, cancelSubscription } = useAccount();
   const router = useRouter();
   const { toast } = useToast();
   const { session_id, upgrade } = router.query;
@@ -24,6 +36,31 @@ export default function AccountStatus() {
       router.replace('/dashboard/account-status', undefined, { shallow: true });
     }
   }, [session_id, upgrade, toast, router]);
+
+  const handleCancelSubscription = async () => {
+    try {
+      await cancelSubscription();
+      toast({
+        title: "Subscription Canceled",
+        description: "Your subscription will remain active until the end of the current billing period.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to cancel subscription. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return 'N/A';
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  };
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -47,6 +84,60 @@ export default function AccountStatus() {
             </div>
           </div>
         </div>
+
+        {accountTier === 'premium' && (
+          <Card className="p-6 mb-8">
+            <h2 className="text-xl font-semibold mb-4">Subscription Details</h2>
+            <div className="space-y-2">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Status:</span>
+                <Badge variant={subscription.status === 'active' ? 'default' : 'secondary'}>
+                  {subscription.status === 'active' ? 'Active' : 'Canceled'}
+                </Badge>
+              </div>
+              {process.env.NEXT_PUBLIC_CO_DEV_ENV === 'preview' ? (
+                <>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Started:</span>
+                    <span>{formatDate(subscription.startDate)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Next Renewal:</span>
+                    <span>{formatDate(subscription.renewalDate)}</span>
+                  </div>
+                </>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  Your subscription renews automatically every 30 days.
+                </p>
+              )}
+              
+              {subscription.status === 'active' && (
+                <div className="mt-4">
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="destructive">Cancel Subscription</Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Cancel Premium Subscription?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Your premium features will remain active until the end of your current billing period. After that, your account will revert to the free tier.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Keep Subscription</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleCancelSubscription}>
+                          Yes, Cancel
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
+              )}
+            </div>
+          </Card>
+        )}
         
         <div className="mb-8">
           <h2 className="text-xl font-semibold text-foreground mb-4">Subscription Plans</h2>
