@@ -41,8 +41,7 @@ export default async function handler(
   }
 
   // Initialize Firebase Admin
-  initAdmin();
-  const db = getFirestore();
+  const { rtdb } = getFirebaseAdmin();
 
   try {
     switch (event.type) {
@@ -52,10 +51,16 @@ export default async function handler(
         const userId = subscription.metadata.userId;
 
         if (subscription.status === 'active') {
-          await db.collection('users').doc(userId).update({
-            accountTier: 'premium',
-            stripeSubscriptionId: subscription.id,
-            stripeCustomerId: subscription.customer as string,
+          await rtdb.ref(`users/${userId}/account`).update({
+            tier: 'premium',
+            subscription: {
+              status: 'active',
+              stripeSubscriptionId: subscription.id,
+              stripeCustomerId: subscription.customer as string,
+              startDate: new Date(subscription.current_period_start * 1000).toISOString(),
+              renewalDate: new Date(subscription.current_period_end * 1000).toISOString(),
+              cancelAtPeriodEnd: subscription.cancel_at_period_end,
+            }
           });
         }
         break;
@@ -65,10 +70,16 @@ export default async function handler(
         const subscription = event.data.object as Stripe.Subscription;
         const userId = subscription.metadata.userId;
 
-        await db.collection('users').doc(userId).update({
-          accountTier: 'free',
-          stripeSubscriptionId: null,
-          stripeCustomerId: null,
+        await rtdb.ref(`users/${userId}/account`).update({
+          tier: 'free',
+          subscription: {
+            status: 'none',
+            stripeSubscriptionId: null,
+            stripeCustomerId: null,
+            startDate: null,
+            renewalDate: null,
+            cancelAtPeriodEnd: false,
+          }
         });
         break;
       }
