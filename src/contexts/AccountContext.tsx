@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useAuth } from './AuthContext';
-import { AccountTier, ACCOUNT_TIERS, AccountFeatures } from '@/types/account';
+import { AccountTier, ACCOUNT_TIERS, AccountFeatures, SubscriptionDetails } from '@/types/account';
 import { getDatabase, ref, onValue, off } from 'firebase/database';
 import { initializeApp } from 'firebase/app';
 
@@ -8,7 +8,9 @@ interface AccountContextType {
   accountTier: AccountTier;
   features: AccountFeatures;
   isLoading: boolean;
+  subscription: SubscriptionDetails;
   upgradeToPremium: () => Promise<void>;
+  cancelSubscription: () => Promise<void>;
 }
 
 const AccountContext = createContext<AccountContextType | undefined>(undefined);
@@ -17,10 +19,14 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const [accountTier, setAccountTier] = useState<AccountTier>('free');
   const [isLoading, setIsLoading] = useState(true);
+  const [subscription, setSubscription] = useState<SubscriptionDetails>({
+    status: 'none'
+  });
 
   useEffect(() => {
     if (!user) {
       setAccountTier('free');
+      setSubscription({ status: 'none' });
       setIsLoading(false);
       return;
     }
@@ -31,15 +37,30 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
     // Listen for account changes
     const unsubscribe = onValue(accountRef, (snapshot) => {
       const data = snapshot.val();
-      if (data && data.tier) {
-        setAccountTier(data.tier as AccountTier);
+      if (data) {
+        setAccountTier(data.tier as AccountTier || 'free');
+        
+        // Handle subscription data
+        if (data.subscription) {
+          setSubscription({
+            startDate: data.subscription.startDate,
+            endDate: data.subscription.endDate,
+            renewalDate: data.subscription.renewalDate,
+            status: data.subscription.status || 'none',
+            stripeSubscriptionId: data.subscription.stripeSubscriptionId
+          });
+        } else {
+          setSubscription({ status: 'none' });
+        }
       } else {
         setAccountTier('free');
+        setSubscription({ status: 'none' });
       }
       setIsLoading(false);
     }, (error) => {
       console.error('Error loading account tier:', error);
       setAccountTier('free');
+      setSubscription({ status: 'none' });
       setIsLoading(false);
     });
 
@@ -62,13 +83,41 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const cancelSubscription = async () => {
+    if (!user) throw new Error('Must be logged in to cancel subscription');
+    if (!subscription.stripeSubscriptionId) throw new Error('No active subscription found');
+
+    try {
+      const response = await fetch('/api/stripe/cancel-subscription', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          subscriptionId: subscription.stripeSubscriptionId
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to cancel subscription');
+      }
+
+      // The actual status update will come through the Firebase listener
+    } catch (error) {
+      console.error('Error canceling subscription:', error);
+      throw error;
+    }
+  };
+
   return (
     <AccountContext.Provider
       value={{
         accountTier,
         features: ACCOUNT_TIERS[accountTier],
         isLoading,
+        subscription,
         upgradeToPremium,
+        cancelSubscription,
       }}
     >
       {children}
