@@ -20,7 +20,11 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
   const [accountTier, setAccountTier] = useState<AccountTier>('free');
   const [isLoading, setIsLoading] = useState(true);
   const [subscription, setSubscription] = useState<SubscriptionDetails>({
-    status: 'none'
+    status: 'none',
+    stripeSubscriptionId: undefined,
+    startDate: undefined,
+    endDate: undefined,
+    renewalDate: undefined
   });
 
   useEffect(() => {
