@@ -253,9 +253,10 @@ export function PricingPlans() {
           <Button 
             className="w-full" 
             variant="outline"
-            disabled
+            onClick={handleCancelSubscription}
+            disabled={isLoading}
           >
-            Current Plan
+            {isLoading ? "Processing..." : 'Cancel Subscription'}
           </Button>
         ) : (
           <Button 
