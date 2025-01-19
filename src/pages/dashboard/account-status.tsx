@@ -39,15 +39,25 @@ export default function AccountStatus() {
 
   const handleCancelSubscription = async () => {
     try {
+      console.log('Current subscription state:', subscription); // Debug log
+      if (!subscription.stripeSubscriptionId) {
+        toast({
+          title: "Error",
+          description: "No active subscription ID found. Please contact support.",
+          variant: "destructive",
+        });
+        return;
+      }
       await cancelSubscription();
       toast({
         title: "Subscription Canceled",
         description: "Your subscription will remain active until the end of the current billing period.",
       });
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Cancellation error:', error); // Debug log
       toast({
         title: "Error",
-        description: "Failed to cancel subscription. Please try again.",
+        description: error.message || "Failed to cancel subscription. Please try again.",
         variant: "destructive",
       });
     }
