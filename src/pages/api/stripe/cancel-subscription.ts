@@ -33,45 +33,47 @@ export default async function handler(
   try {
     const { subscriptionId, userId } = req.body;
 
-    console.log('Received request body:', req.body);
-    
-    console.log('Received cancellation request:', {
+    // Detailed request logging
+    console.log('Cancellation request details:', {
       subscriptionId,
       userId,
-      body: req.body,
       headers: req.headers,
-      isTestEnv: isTestEnvironment
+      isTestEnv: isTestEnvironment,
+      body: JSON.stringify(req.body)
     });
 
-    if (!subscriptionId || !userId) {
-      console.error('Missing required fields:', { 
-        hasSubscriptionId: !!subscriptionId, 
-        hasUserId: !!userId,
-        subscriptionIdValue: subscriptionId,
-        userIdValue: userId,
-        body: req.body 
-      });
+    // Validate required fields
+    if (!subscriptionId) {
+      console.error('Missing subscription ID:', { body: req.body });
       return res.status(400).json({ 
-        error: 'Subscription ID and User ID are required',
-        receivedSubscriptionId: subscriptionId ? 'yes' : 'no',
-        receivedUserId: userId ? 'yes' : 'no',
-        debug: { 
-          body: req.body,
-          subscriptionId,
-          userId
-        }
+        error: 'Subscription ID is required',
+        code: 'MISSING_SUBSCRIPTION_ID'
       });
     }
 
+    if (!userId) {
+      console.error('Missing user ID:', { body: req.body });
+      return res.status(400).json({ 
+        error: 'User ID is required',
+        code: 'MISSING_USER_ID'
+      });
+    }
+
+    const db = getDatabase();
+
     if (isTestEnvironment) {
-      // In test environment, directly update Firebase
-      const db = getDatabase();
+      console.log('Processing test environment cancellation');
       const now = new Date();
-      const endDate = new Date(now.setDate(now.getDate() + 30)); // Set end date to 30 days from now
+      const endDate = new Date(now.setDate(now.getDate() + 30));
 
       await update(ref(db, `users/${userId}/account/subscription`), {
         status: 'canceled',
         endDate: endDate.toISOString(),
+      });
+
+      console.log('Test cancellation successful:', {
+        userId,
+        endDate: endDate.toISOString()
       });
 
       return res.status(200).json({ 
@@ -80,29 +82,64 @@ export default async function handler(
         endDate: endDate.toISOString()
       });
     } else {
-      // Production environment - use Stripe
-      const subscription = await stripe.subscriptions.update(subscriptionId, {
+      console.log('Processing production cancellation:', { subscriptionId });
+      
+      // Verify subscription exists in Stripe
+      const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+      
+      if (!subscription) {
+        console.error('Subscription not found in Stripe:', { subscriptionId });
+        return res.status(404).json({ 
+          error: 'Subscription not found',
+          code: 'SUBSCRIPTION_NOT_FOUND'
+        });
+      }
+
+      // Cancel the subscription
+      const canceledSubscription = await stripe.subscriptions.update(subscriptionId, {
         cancel_at_period_end: true,
       });
 
-      // Update Firebase with the cancellation status
-      const db = getDatabase();
+      console.log('Stripe cancellation successful:', {
+        subscriptionId,
+        endDate: new Date(canceledSubscription.current_period_end * 1000)
+      });
+
+      // Update Firebase
       await update(ref(db, `users/${userId}/account/subscription`), {
         status: 'canceled',
-        endDate: new Date(subscription.current_period_end * 1000).toISOString(),
+        endDate: new Date(canceledSubscription.current_period_end * 1000).toISOString(),
       });
+
+      console.log('Firebase update successful');
 
       return res.status(200).json({ 
         success: true,
-        subscription,
-        endDate: new Date(subscription.current_period_end * 1000).toISOString()
+        subscription: canceledSubscription,
+        endDate: new Date(canceledSubscription.current_period_end * 1000).toISOString()
       });
     }
   } catch (error: any) {
-    console.error('Error canceling subscription:', error);
+    console.error('Subscription cancellation error:', {
+      error: error.message,
+      stack: error.stack,
+      type: error.type,
+      code: error.code
+    });
+
+    // Handle Stripe-specific errors
+    if (error instanceof Stripe.errors.StripeError) {
+      return res.status(400).json({
+        error: 'Stripe error occurred',
+        message: error.message,
+        code: error.code
+      });
+    }
+
     return res.status(500).json({ 
       error: 'Failed to cancel subscription',
-      message: error.message || 'Unknown error occurred'
+      message: error.message || 'Unknown error occurred',
+      code: 'INTERNAL_SERVER_ERROR'
     });
   }
 }
