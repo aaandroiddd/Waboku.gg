@@ -33,11 +33,19 @@ export default async function handler(
   try {
     const { subscriptionId, userId } = req.body;
 
+    console.log('Received request body:', req.body);
+    
     if (!subscriptionId || !userId) {
+      console.error('Missing required fields:', { 
+        hasSubscriptionId: !!subscriptionId, 
+        hasUserId: !!userId,
+        body: req.body 
+      });
       return res.status(400).json({ 
         error: 'Subscription ID and User ID are required',
         receivedSubscriptionId: subscriptionId ? 'yes' : 'no',
-        receivedUserId: userId ? 'yes' : 'no'
+        receivedUserId: userId ? 'yes' : 'no',
+        debug: { body: req.body }
       });
     }
 
