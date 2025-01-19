@@ -39,33 +39,51 @@ export default function AccountStatus() {
 
   const handleCancelSubscription = async () => {
     try {
-      console.log('Current subscription state:', subscription); // Debug log
-      console.log('Account tier:', accountTier); // Additional debug log
+      console.log('Initiating subscription cancellation:', {
+        subscription,
+        accountTier
+      });
       
-      if (!subscription.stripeSubscriptionId) {
-        console.error('Missing subscription ID:', subscription); // Additional debug log
-        toast({
-          title: "Error",
-          description: "No active subscription ID found. Please contact support.",
-          variant: "destructive",
-        });
-        return;
+      // Validate subscription state
+      if (!subscription) {
+        throw new Error('No subscription information available');
       }
+
+      if (subscription.status !== 'active') {
+        throw new Error('Subscription is not active');
+      }
+
+      if (!subscription.stripeSubscriptionId) {
+        throw new Error('No active subscription ID found');
+      }
+
+      // Attempt to cancel
       await cancelSubscription();
+
+      // Show success message
       toast({
         title: "Subscription Canceled",
         description: "Your subscription will remain active until the end of the current billing period.",
       });
     } catch (error: any) {
-      console.error('Cancellation error:', error); // Debug log
-      console.error('Full error details:', { 
-        message: error.message,
-        stack: error.stack,
-        subscription: subscription 
-      }); // Additional debug info
+      console.error('Subscription cancellation failed:', {
+        error: error.message,
+        subscription,
+        accountTier
+      });
+
+      // Handle specific error cases
+      let errorMessage = "Failed to cancel subscription. Please try again.";
+      
+      if (error.message.includes('No active subscription')) {
+        errorMessage = "No active subscription found. Please contact support.";
+      } else if (error.message.includes('not active')) {
+        errorMessage = "This subscription is already canceled or inactive.";
+      }
+
       toast({
         title: "Error",
-        description: error.message || "Failed to cancel subscription. Please try again.",
+        description: errorMessage,
         variant: "destructive",
       });
     }
