@@ -94,15 +94,25 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          subscriptionId: subscription.stripeSubscriptionId
+          subscriptionId: subscription.stripeSubscriptionId,
+          userId: user.uid
         }),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to cancel subscription');
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to cancel subscription');
       }
 
+      const result = await response.json();
+      
       // The actual status update will come through the Firebase listener
+      // but we can also update the local state for immediate feedback
+      setSubscription(prev => ({
+        ...prev,
+        status: 'canceled',
+        endDate: result.endDate || prev.endDate
+      }));
     } catch (error) {
       console.error('Error canceling subscription:', error);
       throw error;
