@@ -35,17 +35,31 @@ export default async function handler(
 
     console.log('Received request body:', req.body);
     
+    console.log('Received cancellation request:', {
+      subscriptionId,
+      userId,
+      body: req.body,
+      headers: req.headers,
+      isTestEnv: isTestEnvironment
+    });
+
     if (!subscriptionId || !userId) {
       console.error('Missing required fields:', { 
         hasSubscriptionId: !!subscriptionId, 
         hasUserId: !!userId,
+        subscriptionIdValue: subscriptionId,
+        userIdValue: userId,
         body: req.body 
       });
       return res.status(400).json({ 
         error: 'Subscription ID and User ID are required',
         receivedSubscriptionId: subscriptionId ? 'yes' : 'no',
         receivedUserId: userId ? 'yes' : 'no',
-        debug: { body: req.body }
+        debug: { 
+          body: req.body,
+          subscriptionId,
+          userId
+        }
       });
     }
 
