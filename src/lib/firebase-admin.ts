@@ -4,6 +4,7 @@ interface FirebaseAdminServices {
   db: admin.firestore.Firestore;
   auth: admin.auth.Auth;
   storage: admin.storage.Storage;
+  rtdb: admin.database.Database;
 }
 
 let firebaseAdmin: FirebaseAdminServices | null = null;
@@ -21,6 +22,7 @@ export function getFirebaseAdmin(): FirebaseAdminServices {
           clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
           privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
         }),
+        databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL,
         storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
       });
     } catch (error) {
@@ -33,6 +35,7 @@ export function getFirebaseAdmin(): FirebaseAdminServices {
     db: admin.firestore(),
     auth: admin.auth(),
     storage: admin.storage(),
+    rtdb: admin.database(),
   };
 
   return firebaseAdmin;
