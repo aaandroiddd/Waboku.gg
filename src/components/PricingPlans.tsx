@@ -11,9 +11,32 @@ import { loadStripe } from '@stripe/stripe-js';
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
 
 export function PricingPlans() {
-  const { user, accountTier } = useAuth();
+  const { user, profile } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  
+  // Check if user has premium subscription
+  const [isPremium, setIsPremium] = useState(false);
+  
+  useEffect(() => {
+    const checkPremiumStatus = async () => {
+      if (!user) return;
+      try {
+        const response = await fetch('/api/stripe/check-subscription', {
+          headers: {
+            'Authorization': `Bearer ${await user.getIdToken()}`
+          }
+        });
+        const data = await response.json();
+        setIsPremium(data.isPremium);
+      } catch (error) {
+        console.error('Error checking premium status:', error);
+        setIsPremium(false);
+      }
+    };
+    
+    checkPremiumStatus();
+  }, [user]);
 
   const handleSubscribe = async () => {
     if (!user) {
