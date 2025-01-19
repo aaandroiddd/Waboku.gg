@@ -1,10 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { getAuth } from 'firebase-admin/auth';
-import { getDatabase } from 'firebase-admin/database';
-import { initAdmin } from '@/lib/firebase-admin';
-
-// Initialize Firebase Admin
-initAdmin();
+import { getFirebaseAdmin } from '@/lib/firebase-admin';
 
 export default async function handler(
   req: NextApiRequest,
@@ -22,11 +17,11 @@ export default async function handler(
       return res.status(400).json({ error: 'User ID is required' });
     }
 
-    // Get database reference
-    const db = getDatabase();
+    // Get database reference using the proper initialization
+    const { rtdb } = getFirebaseAdmin();
     
     // Update user's subscription status
-    await db.ref(`users/${userId}/account`).update({
+    await rtdb.ref(`users/${userId}/account`).update({
       tier: 'premium',
       stripeSubscriptionId: 'dev_test_subscription',
       subscriptionStatus: 'active',
@@ -42,6 +37,6 @@ export default async function handler(
     return res.status(200).json({ success: true });
   } catch (error) {
     console.error('Error in dev-success:', error);
-    return res.status(500).json({ error: 'Internal server error' });
+    return res.status(500).json({ error: 'Internal server error', details: error instanceof Error ? error.message : 'Unknown error' });
   }
 }
