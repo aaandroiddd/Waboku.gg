@@ -129,7 +129,7 @@ export function PricingPlans() {
       </Card>
 
       {/* Premium Plan */}
-      <Card className="p-6 space-y-4 border-2 border-primary">
+      <Card className={`p-6 space-y-4 ${accountTier === 'premium' ? 'border-2 border-green-500' : 'border-2 border-primary'}`}>
         <div className="space-y-2">
           <h3 className="text-2xl font-bold">Premium ⭐</h3>
           <p className="text-gray-500 dark:text-gray-400">
@@ -170,13 +170,23 @@ export function PricingPlans() {
             <span>Ad-free experience</span>
           </div>
         </div>
-        <Button 
-          className="w-full" 
-          onClick={handleSubscribe}
-          disabled={isLoading || accountTier === 'premium'}
-        >
-          {isLoading ? "Processing..." : accountTier === 'premium' ? 'Current Plan' : 'Upgrade to Premium'}
-        </Button>
+        {accountTier === 'premium' ? (
+          <Button 
+            className="w-full" 
+            variant="outline"
+            disabled
+          >
+            Current Plan
+          </Button>
+        ) : (
+          <Button 
+            className="w-full" 
+            onClick={handleSubscribe}
+            disabled={isLoading}
+          >
+            {isLoading ? "Processing..." : 'Upgrade to Premium'}
+          </Button>
+        )}
       </Card>
     </div>
   );
