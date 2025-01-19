@@ -173,9 +173,9 @@ export function PricingPlans() {
         <Button 
           className="w-full" 
           onClick={handleSubscribe}
-          disabled={isLoading}
+          disabled={isLoading || accountTier === 'premium'}
         >
-          {isLoading ? "Processing..." : "Upgrade to Premium"}
+          {isLoading ? "Processing..." : accountTier === 'premium' ? 'Current Plan' : 'Upgrade to Premium'}
         </Button>
       </Card>
     </div>
