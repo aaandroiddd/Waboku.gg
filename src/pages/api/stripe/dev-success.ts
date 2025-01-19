@@ -20,12 +20,20 @@ export default async function handler(
     // Get database reference using the proper initialization
     const { rtdb } = getFirebaseAdmin();
     
+    const now = new Date();
+    const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+    
     // Update user's subscription status
     await rtdb.ref(`users/${userId}/account`).update({
       tier: 'premium',
-      stripeSubscriptionId: 'dev_test_subscription',
-      subscriptionStatus: 'active',
-      subscriptionPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days from now
+      subscription: {
+        status: 'active',
+        stripeSubscriptionId: 'dev_test_subscription',
+        stripeCustomerId: 'dev_test_customer',
+        startDate: now.toISOString(),
+        renewalDate: thirtyDaysFromNow.toISOString(),
+        cancelAtPeriodEnd: false,
+      }
     });
 
     // If it's a GET request, redirect to the account status page
