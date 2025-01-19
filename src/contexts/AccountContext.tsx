@@ -89,7 +89,21 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
 
   const cancelSubscription = async () => {
     if (!user) throw new Error('Must be logged in to cancel subscription');
-    if (!subscription.stripeSubscriptionId) throw new Error('No active subscription found');
+    
+    console.log('Attempting to cancel subscription:', {
+      userId: user.uid,
+      currentSubscription: subscription,
+      accountTier
+    });
+
+    if (!subscription.stripeSubscriptionId) {
+      console.error('Missing subscription ID:', {
+        subscription,
+        accountTier,
+        userId: user.uid
+      });
+      throw new Error('No active subscription ID found. Please contact support.');
+    }
 
     try {
       const response = await fetch('/api/stripe/cancel-subscription', {
@@ -103,22 +117,31 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
         }),
       });
 
+      const responseData = await response.json();
+      
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to cancel subscription');
+        console.error('Server responded with error:', {
+          status: response.status,
+          data: responseData
+        });
+        throw new Error(responseData.error || 'Failed to cancel subscription');
       }
 
-      const result = await response.json();
-      
       // The actual status update will come through the Firebase listener
       // but we can also update the local state for immediate feedback
       setSubscription(prev => ({
         ...prev,
         status: 'canceled',
-        endDate: result.endDate || prev.endDate
+        endDate: responseData.endDate || prev.endDate
       }));
-    } catch (error) {
-      console.error('Error canceling subscription:', error);
+
+      return responseData;
+    } catch (error: any) {
+      console.error('Error in cancelSubscription:', {
+        error,
+        subscription,
+        userId: user.uid
+      });
       throw error;
     }
   };
