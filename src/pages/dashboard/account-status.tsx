@@ -95,22 +95,17 @@ export default function AccountStatus() {
                   {subscription.status === 'active' ? 'Active' : 'Canceled'}
                 </Badge>
               </div>
-              {process.env.NEXT_PUBLIC_CO_DEV_ENV === 'preview' ? (
-                <>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Started:</span>
-                    <span>{formatDate(subscription.startDate)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Next Renewal:</span>
-                    <span>{formatDate(subscription.renewalDate)}</span>
-                  </div>
-                </>
-              ) : (
-                <p className="text-sm text-muted-foreground">
-                  Your subscription renews automatically every 30 days.
-                </p>
-              )}
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Started:</span>
+                <span>{formatDate(subscription.startDate)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Next Renewal:</span>
+                <span>{formatDate(subscription.renewalDate)}</span>
+              </div>
+              <p className="text-sm text-muted-foreground mt-2">
+                Your subscription renews automatically every 30 days.
+              </p>
               
               {subscription.status === 'active' && (
                 <div className="mt-4">
