@@ -193,7 +193,7 @@ export function PricingPlans() {
             <span>Ad-free experience</span>
           </div>
         </div>
-        {accountTier === 'premium' ? (
+        {isPremium ? (
           <Button 
             className="w-full" 
             variant="outline"
