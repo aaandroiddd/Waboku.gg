@@ -49,13 +49,19 @@ export default function AccountStatus() {
         throw new Error('No subscription information available');
       }
 
-      if (subscription.status !== 'active') {
-        throw new Error('Subscription is not active');
+      if (subscription.status === 'canceled') {
+        throw new Error('This subscription has already been canceled');
       }
 
       if (!subscription.stripeSubscriptionId) {
         throw new Error('No active subscription ID found');
       }
+
+      // Show loading state
+      toast({
+        title: "Processing...",
+        description: "Canceling your subscription...",
+      });
 
       // Attempt to cancel
       await cancelSubscription();
@@ -74,15 +80,21 @@ export default function AccountStatus() {
 
       // Handle specific error cases
       let errorMessage = "Failed to cancel subscription. Please try again.";
+      let errorTitle = "Error";
       
-      if (error.message.includes('No active subscription')) {
+      if (error.message.includes('already been canceled')) {
+        errorMessage = "This subscription has already been canceled.";
+        errorTitle = "Already Canceled";
+      } else if (error.message.includes('No active subscription')) {
         errorMessage = "No active subscription found. Please contact support.";
-      } else if (error.message.includes('not active')) {
-        errorMessage = "This subscription is already canceled or inactive.";
+        errorTitle = "No Subscription Found";
+      } else if (error.message.includes('not found in our records')) {
+        errorMessage = "Subscription not found in our records. Please contact support.";
+        errorTitle = "Subscription Not Found";
       }
 
       toast({
-        title: "Error",
+        title: errorTitle,
         description: errorMessage,
         variant: "destructive",
       });
