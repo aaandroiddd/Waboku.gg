@@ -133,7 +133,51 @@ export default function AccountStatus() {
           </div>
         </div>
 
-        {accountTier === 'premium' && (
+        <Card className="p-6 mb-8">
+            <h2 className="text-xl font-semibold mb-4">Subscription Details</h2>
+            <div className="space-y-2">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Status:</span>
+                <Badge variant={subscription.status === 'active' ? 'default' : 'secondary'}>
+                  {subscription.status === 'active' ? 'Active' : 
+                   subscription.status === 'canceled' ? 'Canceled' : 'No Active Subscription'}
+                </Badge>
+              </div>
+              {subscription.startDate && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Original Start Date:</span>
+                  <span>{formatDate(subscription.startDate)}</span>
+                </div>
+              )}
+              {subscription.status === 'active' && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Next Renewal:</span>
+                  <span>{formatDate(subscription.renewalDate)}</span>
+                </div>
+              )}
+              {subscription.status === 'canceled' && subscription.endDate && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Access Until:</span>
+                  <span>{formatDate(subscription.endDate)}</span>
+                </div>
+              )}
+              {subscription.status === 'active' && (
+                <p className="text-sm text-muted-foreground mt-2">
+                  Your subscription renews automatically every 30 days.
+                </p>
+              )}
+              {subscription.status === 'canceled' && (
+                <p className="text-sm text-muted-foreground mt-2">
+                  Your premium access will continue until the end of your current billing period.
+                </p>
+              )}
+              {subscription.status === 'none' && (
+                <p className="text-sm text-muted-foreground mt-2">
+                  You are currently on the free plan. Upgrade to premium to access additional features.
+                </p>
+              )}
+              
+              {subscription.status === 'active' && (
           <Card className="p-6 mb-8">
             <h2 className="text-xl font-semibold mb-4">Subscription Details</h2>
             <div className="space-y-2">
