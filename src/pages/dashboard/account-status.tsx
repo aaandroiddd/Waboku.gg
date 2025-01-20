@@ -172,17 +172,31 @@ export default function AccountStatus() {
                   Your subscription is canceled. You will lose access to premium features on {formatDate(subscription.endDate)}.
                 </p>
                 <Button 
-                  onClick={() => {
+                  onClick={async () => {
                     const pricingSection = document.querySelector('.subscription-plans');
                     if (pricingSection) {
                       pricingSection.scrollIntoView({ behavior: 'smooth' });
-                      // Add a small delay to ensure the section is visible before focusing
-                      setTimeout(() => {
-                        const upgradeButton = pricingSection.querySelector('button:not([disabled])');
-                        if (upgradeButton) {
+                      
+                      // Get the upgrade button
+                      const upgradeButton = pricingSection.querySelector('button:not([disabled])');
+                      if (upgradeButton) {
+                        // Add visual feedback
+                        toast({
+                          title: "Processing...",
+                          description: "Setting up your subscription renewal...",
+                        });
+                        
+                        // Trigger the click after scrolling is complete
+                        setTimeout(() => {
                           (upgradeButton as HTMLButtonElement).click();
-                        }
-                      }, 500);
+                        }, 500);
+                      } else {
+                        toast({
+                          title: "Error",
+                          description: "Unable to process subscription. Please try again.",
+                          variant: "destructive",
+                        });
+                      }
                     }
                   }}
                   className="w-full"
