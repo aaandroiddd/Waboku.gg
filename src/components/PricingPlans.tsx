@@ -249,14 +249,13 @@ export function PricingPlans() {
             <span>Ad-free experience</span>
           </div>
         </div>
-        {isPremium ? (
+        {isPremium && !subscriptionId ? (
           <Button 
             className="w-full" 
             variant="outline"
-            onClick={handleCancelSubscription}
-            disabled={isLoading}
+            disabled={true}
           >
-            {isLoading ? "Processing..." : 'Cancel Subscription'}
+            Current Plan
           </Button>
         ) : (
           <Button 
