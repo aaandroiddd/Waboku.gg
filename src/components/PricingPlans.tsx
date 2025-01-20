@@ -178,7 +178,7 @@ export function PricingPlans() {
   };
 
   const getPremiumButtonState = () => {
-    if (isPremium) {
+    if (isPremium && subscriptionId) {
       return {
         text: "Current Plan",
         disabled: true,
