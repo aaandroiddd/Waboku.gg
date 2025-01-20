@@ -176,6 +176,13 @@ export default function AccountStatus() {
                     const pricingSection = document.querySelector('.subscription-plans');
                     if (pricingSection) {
                       pricingSection.scrollIntoView({ behavior: 'smooth' });
+                      // Add a small delay to ensure the section is visible before focusing
+                      setTimeout(() => {
+                        const upgradeButton = pricingSection.querySelector('button:not([disabled])');
+                        if (upgradeButton) {
+                          (upgradeButton as HTMLButtonElement).click();
+                        }
+                      }, 500);
                     }
                   }}
                   className="w-full"
