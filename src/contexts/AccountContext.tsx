@@ -96,6 +96,15 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
       accountTier
     });
 
+    // Validate subscription state
+    if (!subscription) {
+      throw new Error('No subscription information available');
+    }
+
+    if (subscription.status === 'canceled') {
+      throw new Error('Subscription is already canceled');
+    }
+
     if (!subscription.stripeSubscriptionId) {
       console.error('Missing subscription ID:', {
         subscription,
@@ -122,23 +131,37 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
       if (!response.ok) {
         console.error('Server responded with error:', {
           status: response.status,
-          data: responseData
+          data: responseData,
+          subscription,
+          userId: user.uid
         });
+
+        // Handle specific error cases
+        if (responseData.code === 'ALREADY_CANCELED') {
+          throw new Error('This subscription has already been canceled');
+        } else if (responseData.code === 'NO_SUBSCRIPTION_DATA') {
+          throw new Error('No active subscription found. Please contact support.');
+        } else if (responseData.code === 'SUBSCRIPTION_NOT_FOUND') {
+          throw new Error('Subscription not found in our records. Please contact support.');
+        }
+
         throw new Error(responseData.error || 'Failed to cancel subscription');
       }
 
-      // The actual status update will come through the Firebase listener
-      // but we can also update the local state for immediate feedback
+      // Update local state immediately for better UX
       setSubscription(prev => ({
         ...prev,
         status: 'canceled',
         endDate: responseData.endDate || prev.endDate
       }));
 
+      // Update account tier to free
+      setAccountTier('free');
+
       return responseData;
     } catch (error: any) {
       console.error('Error in cancelSubscription:', {
-        error,
+        error: error.message,
         subscription,
         userId: user.uid
       });
