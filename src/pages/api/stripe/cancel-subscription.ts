@@ -1,13 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { getApps, cert, initializeApp } from 'firebase-admin/app';
 import { getDatabase as getAdminDatabase } from 'firebase-admin/database';
-import { ref, update, get } from 'firebase/database';
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2023-10-16',
-});
-
-const isTestEnvironment = process.env.NEXT_PUBLIC_CO_DEV_ENV === 'test';
+import { ref, get } from 'firebase/database';
 
 // Initialize Firebase Admin if it hasn't been initialized yet
 if (!getApps().length) {
@@ -33,10 +27,9 @@ export default async function handler(
     const { subscriptionId, userId } = req.body;
 
     // Detailed request logging
-    console.log('Cancellation request received:', {
+    console.log('Test cancellation request received:', {
       subscriptionId,
-      userId,
-      isTestEnv: isTestEnvironment
+      userId
     });
 
     // Validate required fields
@@ -87,106 +80,37 @@ export default async function handler(
       });
     }
 
-    if (isTestEnvironment) {
-      console.log('Processing test environment cancellation');
-      const now = new Date();
-      const endDate = new Date(now.setDate(now.getDate() + 30));
+    // Process test cancellation
+    console.log('Processing test environment cancellation');
+    const now = new Date();
+    const endDate = new Date(now.setDate(now.getDate() + 30));
 
-      await update(ref(db, `users/${userId}/account`), {
-        tier: 'free',
-        subscription: {
-          status: 'canceled',
-          endDate: endDate.toISOString(),
-          stripeSubscriptionId: subscriptionId
-        }
-      });
-
-      console.log('Test cancellation successful:', {
-        userId,
-        endDate: endDate.toISOString()
-      });
-
-      return res.status(200).json({ 
-        success: true,
-        message: 'Subscription canceled in test environment',
-        endDate: endDate.toISOString()
-      });
-    }
-
-    // Production environment
-    console.log('Processing production cancellation:', { subscriptionId });
-    
-    try {
-      // Verify subscription exists in Stripe
-      const subscription = await stripe.subscriptions.retrieve(subscriptionId);
-      
-      if (!subscription) {
-        console.error('Subscription not found in Stripe:', { subscriptionId });
-        return res.status(404).json({ 
-          error: 'Subscription not found in Stripe',
-          code: 'SUBSCRIPTION_NOT_FOUND'
-        });
+    // Update Firebase with test cancellation data
+    await db.ref(`users/${userId}/account`).update({
+      tier: 'free',
+      subscription: {
+        status: 'canceled',
+        endDate: endDate.toISOString(),
+        stripeSubscriptionId: subscriptionId
       }
+    });
 
-      if (subscription.status === 'canceled') {
-        console.log('Stripe subscription already canceled:', { subscriptionId });
-        return res.status(400).json({
-          error: 'Subscription is already canceled in Stripe',
-          code: 'STRIPE_ALREADY_CANCELED'
-        });
-      }
+    console.log('Test cancellation successful:', {
+      userId,
+      endDate: endDate.toISOString()
+    });
 
-      // Cancel the subscription
-      const canceledSubscription = await stripe.subscriptions.update(subscriptionId, {
-        cancel_at_period_end: true,
-      });
+    return res.status(200).json({ 
+      success: true,
+      message: 'Subscription canceled in test environment',
+      endDate: endDate.toISOString()
+    });
 
-      console.log('Stripe cancellation successful:', {
-        subscriptionId,
-        endDate: new Date(canceledSubscription.current_period_end * 1000)
-      });
-
-      // Update Firebase with both subscription and tier changes
-      await update(ref(db, `users/${userId}/account`), {
-        tier: 'free',
-        subscription: {
-          status: 'canceled',
-          endDate: new Date(canceledSubscription.current_period_end * 1000).toISOString(),
-          stripeSubscriptionId: subscriptionId
-        }
-      });
-
-      console.log('Firebase update successful');
-
-      return res.status(200).json({ 
-        success: true,
-        subscription: canceledSubscription,
-        endDate: new Date(canceledSubscription.current_period_end * 1000).toISOString()
-      });
-    } catch (stripeError: any) {
-      console.error('Stripe operation failed:', stripeError);
-      return res.status(400).json({
-        error: 'Stripe operation failed',
-        message: stripeError.message,
-        code: stripeError.code || 'STRIPE_ERROR'
-      });
-    }
   } catch (error: any) {
     console.error('Subscription cancellation error:', {
       error: error.message,
-      stack: error.stack,
-      type: error.type,
-      code: error.code
+      stack: error.stack
     });
-
-    // Handle Stripe-specific errors
-    if (error instanceof Stripe.errors.StripeError) {
-      return res.status(400).json({
-        error: 'Stripe error occurred',
-        message: error.message,
-        code: error.code
-      });
-    }
 
     return res.status(500).json({ 
       error: 'Failed to cancel subscription',
