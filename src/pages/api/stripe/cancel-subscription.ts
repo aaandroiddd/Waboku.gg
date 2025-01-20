@@ -82,13 +82,28 @@ export default async function handler(
 
     // Process test cancellation
     console.log('Processing test environment cancellation');
-    const now = new Date();
-    const endDate = new Date(now.setDate(now.getDate() + 30));
+    
+    // Get current subscription data
+    const subscriptionSnapshot = await db.ref(`users/${userId}/account/subscription`).get();
+    const currentSubscription = subscriptionSnapshot.val();
 
-    // Update Firebase with test cancellation data
+    if (!currentSubscription || !currentSubscription.startDate) {
+      return res.status(400).json({
+        error: 'Invalid subscription data',
+        code: 'INVALID_SUBSCRIPTION_DATA'
+      });
+    }
+
+    // Calculate the end date based on the original start date
+    const startDate = new Date(currentSubscription.startDate);
+    const endDate = new Date(startDate);
+    endDate.setMonth(endDate.getMonth() + 1); // Add one month from the start date
+
+    // Update Firebase with test cancellation data while preserving original dates
     await db.ref(`users/${userId}/account`).update({
       tier: 'free',
       subscription: {
+        ...currentSubscription,
         status: 'canceled',
         endDate: endDate.toISOString(),
         stripeSubscriptionId: subscriptionId
