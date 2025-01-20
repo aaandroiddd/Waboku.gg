@@ -167,9 +167,22 @@ export default function AccountStatus() {
               </p>
             )}
             {subscription.status === 'canceled' && (
-              <p className="text-sm text-muted-foreground mt-2">
-                Your premium access will continue until the end of your current billing period.
-              </p>
+              <div className="mt-4">
+                <p className="text-sm text-muted-foreground mb-4">
+                  Your subscription is canceled. You will lose access to premium features on {formatDate(subscription.endDate)}.
+                </p>
+                <Button 
+                  onClick={() => {
+                    const pricingSection = document.querySelector('.subscription-plans');
+                    if (pricingSection) {
+                      pricingSection.scrollIntoView({ behavior: 'smooth' });
+                    }
+                  }}
+                  className="w-full"
+                >
+                  Resubscribe to Premium
+                </Button>
+              </div>
             )}
             {subscription.status === 'none' && (
               <p className="text-sm text-muted-foreground mt-2">
