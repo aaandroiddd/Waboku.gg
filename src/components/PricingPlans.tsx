@@ -177,6 +177,23 @@ export function PricingPlans() {
     }
   };
 
+  const getPremiumButtonState = () => {
+    if (isPremium) {
+      return {
+        text: "Current Plan",
+        disabled: true,
+        variant: "outline" as const
+      };
+    }
+    return {
+      text: isLoading ? "Processing..." : "Upgrade to Premium",
+      disabled: isLoading,
+      variant: "default" as const
+    };
+  };
+
+  const premiumButtonState = getPremiumButtonState();
+
   return (
     <div className="grid gap-8 md:grid-cols-2 max-w-4xl mx-auto p-4 subscription-plans">
       {/* Free Plan */}
@@ -249,23 +266,14 @@ export function PricingPlans() {
             <span>Ad-free experience</span>
           </div>
         </div>
-        {isPremium && !subscriptionId ? (
-          <Button 
-            className="w-full" 
-            variant="outline"
-            disabled={true}
-          >
-            Current Plan
-          </Button>
-        ) : (
-          <Button 
-            className="w-full" 
-            onClick={handleSubscribe}
-            disabled={isLoading}
-          >
-            {isLoading ? "Processing..." : 'Upgrade to Premium'}
-          </Button>
-        )}
+        <Button 
+          className="w-full" 
+          onClick={handleSubscribe}
+          disabled={premiumButtonState.disabled}
+          variant={premiumButtonState.variant}
+        >
+          {premiumButtonState.text}
+        </Button>
       </Card>
     </div>
   );
