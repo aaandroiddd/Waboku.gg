@@ -1,8 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import Stripe from 'stripe';
-import { getDatabase, ref, update, get } from 'firebase/database';
-import { initializeApp, getApps, cert } from 'firebase-admin/app';
+import { getApps, cert, initializeApp } from 'firebase-admin/app';
 import { getDatabase as getAdminDatabase } from 'firebase-admin/database';
+import { ref, update, get } from 'firebase/database';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2023-10-16',
