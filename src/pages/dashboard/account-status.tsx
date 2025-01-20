@@ -144,16 +144,29 @@ export default function AccountStatus() {
                 </Badge>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Started:</span>
+                <span className="text-muted-foreground">Original Start Date:</span>
                 <span>{formatDate(subscription.startDate)}</span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Next Renewal:</span>
-                <span>{formatDate(subscription.renewalDate)}</span>
-              </div>
-              <p className="text-sm text-muted-foreground mt-2">
-                Your subscription renews automatically every 30 days.
-              </p>
+              {subscription.status === 'active' ? (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Next Renewal:</span>
+                  <span>{formatDate(subscription.renewalDate)}</span>
+                </div>
+              ) : (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Access Until:</span>
+                  <span>{formatDate(subscription.endDate)}</span>
+                </div>
+              )}
+              {subscription.status === 'active' ? (
+                <p className="text-sm text-muted-foreground mt-2">
+                  Your subscription renews automatically every 30 days.
+                </p>
+              ) : (
+                <p className="text-sm text-muted-foreground mt-2">
+                  Your premium access will continue until the end of your current billing period.
+                </p>
+              )}
               
               {subscription.status === 'active' && (
                 <div className="mt-4">
