@@ -29,31 +29,17 @@ export const useMessages = (chatId?: string) => {
 
   useEffect(() => {
     if (!chatId || !user) {
-      console.log('No chat ID or user, skipping message subscription');
       setMessages([]);
       setLoading(false);
       return;
     }
 
-    console.log('Setting up message subscription for chat:', chatId);
+    setLoading(true);
     const messagesRef = ref(database, `messages/${chatId}`);
-    const chatRef = ref(database, `chats/${chatId}`);
     
-    // Subscribe to both chat and messages
-    const unsubscribeChat = onValue(chatRef, (chatSnapshot) => {
-      const chatData = chatSnapshot.val();
-      
-      // If chat is deleted for current user, clear messages and stop
-      if (chatData?.deletedBy?.[user.uid]) {
-        setMessages([]);
-        setLoading(false);
-        return;
-      }
-
-      // If chat exists and is not deleted, subscribe to messages
-      const unsubscribeMessages = onValue(messagesRef, (snapshot) => {
+    const unsubscribe = onValue(messagesRef, (snapshot) => {
+      try {
         const data = snapshot.val();
-        console.log('Received messages data:', data);
         
         if (data) {
           const messageList = Object.entries(data).map(([id, message]: [string, any]) => ({
@@ -61,26 +47,24 @@ export const useMessages = (chatId?: string) => {
             ...message,
           }));
           const sortedMessages = messageList.sort((a, b) => a.timestamp - b.timestamp);
-          console.log('Processed messages:', sortedMessages);
           setMessages(sortedMessages);
         } else {
-          console.log('No messages found for chat:', chatId);
           setMessages([]);
         }
+      } catch (error) {
+        console.error('Error processing messages:', error);
+        setMessages([]);
+      } finally {
         setLoading(false);
-      }, (error) => {
-        console.error('Error in message subscription:', error);
-        setLoading(false);
-      });
-
-      return () => {
-        unsubscribeMessages();
-      };
+      }
+    }, (error) => {
+      console.error('Error in message subscription:', error);
+      setMessages([]);
+      setLoading(false);
     });
 
     return () => {
-      console.log('Cleaning up message subscription for chat:', chatId);
-      unsubscribeChat();
+      unsubscribe();
     };
   }, [chatId, user]);
 
