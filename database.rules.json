@@ -62,32 +62,33 @@
       ".read": "auth != null",
       ".write": "auth != null",
       ".indexOn": ["timestamp", "chatId"],
-      "$chatId": {
+      "$messageId": {
         ".read": "auth != null",
         ".write": "auth != null",
-        "$messageId": {
-          ".validate": "newData.hasChildren(['senderId', 'receiverId', 'content', 'timestamp', 'type'])",
-          "senderId": {
-            ".validate": "newData.val() === auth.uid"
-          },
-          "receiverId": {
-            ".validate": "newData.isString()"
-          },
-          "content": {
-            ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 2000"
-          },
-          "type": {
-            ".validate": "newData.isString() && (newData.val() === 'text' || newData.val() === 'image' || newData.val() === 'system')"
-          },
-          "timestamp": {
-            ".validate": "newData.isNumber() && newData.val() <= now"
-          },
-          "listingId": {
-            ".validate": "!newData.exists() || newData.isString()"
-          },
-          "read": {
-            ".validate": "newData.isBoolean()"
-          }
+        ".validate": "newData.hasChildren(['senderId', 'receiverId', 'content', 'timestamp', 'type'])",
+        "senderId": {
+          ".validate": "auth != null && newData.val() === auth.uid"
+        },
+        "receiverId": {
+          ".validate": "newData.isString()"
+        },
+        "content": {
+          ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 2000"
+        },
+        "type": {
+          ".validate": "newData.isString() && (newData.val() === 'text' || newData.val() === 'image' || newData.val() === 'system')"
+        },
+        "timestamp": {
+          ".validate": "newData.isNumber() && newData.val() <= now"
+        },
+        "listingId": {
+          ".validate": "!newData.exists() || newData.isString()"
+        },
+        "read": {
+          ".validate": "newData.isBoolean()"
+        },
+        "chatId": {
+          ".validate": "newData.isString()"
         }
       }
     },
