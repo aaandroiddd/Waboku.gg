@@ -117,8 +117,13 @@ export function ListingGrid({
   onLoadMore,
   loading: propLoading
 }: ListingGridProps) {
-  const listings = propListings || [];
-  const loading = propLoading;
+  const { listings: fetchedListings, isLoading } = useListings({ 
+    userId, 
+    showOnlyActive: true 
+  });
+  
+  const listings = propListings || fetchedListings || [];
+  const loading = propLoading || isLoading;
   
   const { toggleFavorite, isFavorite } = useFavorites();
   const { user } = useAuth();
