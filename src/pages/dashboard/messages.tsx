@@ -51,7 +51,8 @@ export default function MessagesPage() {
     const database = getDatabase();
     const chatsRef = ref(database, 'chats');
 
-    const unsubscribe = onValue(chatsRef, async (snapshot) => {
+    // First, get initial data
+    get(chatsRef).then(async (snapshot) => {
       try {
         const data = snapshot.val();
         if (!data) {
@@ -109,9 +110,74 @@ export default function MessagesPage() {
         setParticipantProfiles(profiles);
         setChats(chatList);
       } catch (error) {
-        console.error('Error loading chats:', error);
+        console.error('Error loading initial chats:', error);
       } finally {
         setLoading(false);
+      }
+    }).catch((error) => {
+      console.error('Error getting initial chats:', error);
+      setLoading(false);
+    });
+
+    // Then set up real-time listener
+    const unsubscribe = onValue(chatsRef, async (snapshot) => {
+      try {
+        const data = snapshot.val();
+        if (!data) {
+          setChats([]);
+          return;
+        }
+
+        const chatList = Object.entries(data)
+          .map(([id, chat]: [string, any]) => ({
+            id,
+            ...chat,
+          }))
+          .filter((chat) => 
+            chat.participants && 
+            chat.participants[user.uid] && 
+            (!chat.deletedBy || !chat.deletedBy[user.uid])
+          )
+          .sort((a, b) => {
+            const timestampA = a.lastMessage?.timestamp || 0;
+            const timestampB = b.lastMessage?.timestamp || 0;
+            return timestampB - timestampA;
+          });
+
+        // Get unique participants
+        const uniqueParticipants = new Set<string>();
+        chatList.forEach(chat => {
+          Object.keys(chat.participants || {}).forEach(participantId => {
+            if (participantId !== user.uid) {
+              uniqueParticipants.add(participantId);
+            }
+          });
+        });
+
+        // Fetch profiles from Firestore
+        const profiles: Record<string, any> = {};
+        await Promise.all(Array.from(uniqueParticipants).map(async (id) => {
+          try {
+            const userDoc = await getDoc(doc(db, 'users', id));
+            if (userDoc.exists()) {
+              const userData = userDoc.data();
+              profiles[id] = {
+                username: userData.displayName || userData.username || 'Unknown User',
+                avatarUrl: userData.avatarUrl || userData.photoURL || null
+              };
+            } else {
+              profiles[id] = { username: 'Unknown User' };
+            }
+          } catch (err) {
+            console.error(`Error fetching profile for ${id}:`, err);
+            profiles[id] = { username: 'Unknown User' };
+          }
+        }));
+        
+        setParticipantProfiles(profiles);
+        setChats(chatList);
+      } catch (error) {
+        console.error('Error processing chats update:', error);
       }
     });
 
