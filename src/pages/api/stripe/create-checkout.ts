@@ -1,6 +1,8 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import Stripe from 'stripe';
-import { getFirebaseAdmin } from '@/lib/firebase-admin';
+import { initAdmin } from '@/lib/firebase-admin';
+import { getDatabase } from 'firebase-admin/database';
+import { getAuth } from 'firebase-admin/auth';
 
 if (!process.env.STRIPE_SECRET_KEY) {
   throw new Error('STRIPE_SECRET_KEY is not set');
@@ -29,8 +31,10 @@ export default async function handler(
   }
 
   try {
-    // Get Firebase Admin instance
-    const { auth } = getFirebaseAdmin();
+    // Initialize Firebase Admin
+    initAdmin();
+    const auth = getAuth();
+    const db = getDatabase();
     
     // Get the Firebase ID token from the Authorization header
     const authHeader = req.headers.authorization;
@@ -66,10 +70,9 @@ export default async function handler(
 
     // Create a new Stripe checkout session with error handling
     try {
-      // Get user's Firestore data to check if they have a customer ID
-      const db = getFirebaseAdmin().firestore();
-      const userDoc = await db.collection('users').doc(userId).get();
-      const userData = userDoc.data();
+      // Get user's account data to check if they have a customer ID
+      const userSnapshot = await db.ref(`users/${userId}/account`).get();
+      const userData = userSnapshot.val();
       
       let sessionConfig: Stripe.Checkout.SessionCreateParams = {
         payment_method_types: ['card'],
