@@ -59,6 +59,8 @@
     },
 
     "messages": {
+      ".read": "auth != null",
+      ".write": "auth != null",
       ".indexOn": ["timestamp", "chatId"],
       "$chatId": {
         ".read": "auth != null",
@@ -69,7 +71,7 @@
             ".validate": "newData.val() === auth.uid"
           },
           "receiverId": {
-            ".validate": "newData.isString() && root.child('users').child(newData.val()).exists()"
+            ".validate": "newData.isString()"
           },
           "content": {
             ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 2000"
@@ -81,19 +83,18 @@
             ".validate": "newData.isNumber() && newData.val() <= now"
           },
           "listingId": {
-            ".validate": "!newData.exists() || (newData.isString() && root.child('listings').child(newData.val()).exists())"
+            ".validate": "!newData.exists() || newData.isString()"
           },
           "read": {
             ".validate": "newData.isBoolean()"
-          },
-          "$other": {
-            ".validate": false
           }
         }
       }
     },
 
     "chats": {
+      ".read": "auth != null",
+      ".write": "auth != null",
       ".indexOn": ["createdAt", "participants"],
       "$chatId": {
         ".read": "auth != null",
@@ -101,7 +102,7 @@
         ".validate": "newData.hasChildren(['participants', 'createdAt'])",
         "participants": {
           "$uid": {
-            ".validate": "newData.isBoolean() && ($uid === auth.uid || root.child('users').child($uid).exists())"
+            ".validate": "newData.isBoolean()"
           }
         },
         "deletedBy": {
@@ -127,16 +128,13 @@
           }
         },
         "listingId": {
-          ".validate": "!newData.exists() || (newData.isString() && root.child('listings').child(newData.val()).exists())"
+          ".validate": "!newData.exists() || newData.isString()"
         },
         "listingTitle": {
           ".validate": "!newData.exists() || newData.isString()"
         },
         "createdAt": {
           ".validate": "newData.isNumber() && (!data.exists() || data.val() === newData.val()) && newData.val() <= now"
-        },
-        "$other": {
-          ".validate": false
         }
       }
     },
@@ -162,8 +160,8 @@
     "typing": {
       "$chatId": {
         "$uid": {
-          ".read": "auth != null && root.child('chats').child($chatId).child('participants').child(auth.uid).exists()",
-          ".write": "auth != null && auth.uid == $uid && root.child('chats').child($chatId).child('participants').child(auth.uid).exists()",
+          ".read": "auth != null",
+          ".write": "auth != null && auth.uid == $uid",
           ".validate": "newData.isBoolean()"
         }
       }
