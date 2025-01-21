@@ -1,7 +1,8 @@
-import React, { useState, useCallback } from 'react';
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command"
-import { Search, Loader2 } from "lucide-react";
-import { useCardSearch } from '@/hooks/useCardSearch';
+import React from 'react';
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { HelpCircle } from "lucide-react";
 
 interface CardSearchInputProps {
   placeholder?: string;
@@ -10,89 +11,40 @@ interface CardSearchInputProps {
 }
 
 const CardSearchInput: React.FC<CardSearchInputProps> = ({ 
-  placeholder = "Search for cards...",
+  placeholder = "Enter card name with set number...",
   onSelect,
   onSearch 
 }) => {
-  const [searchQuery, setSearchQuery] = useState("");
-  const { results, isLoading, searchCards } = useCardSearch();
-
-  const handleInputChange = useCallback((value: string) => {
-    setSearchQuery(value);
-    searchCards(value);
-  }, [searchCards]);
-
-  const getDisplayName = (card: { name: string, number?: string }) => {
-    return card.number ? `${card.name} (${card.number})` : card.name;
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    if (onSelect) {
+      onSelect(value);
+    }
+    if (onSearch) {
+      onSearch(value);
+    }
   };
 
-  const handleSelect = useCallback((card: { name: string, number?: string }) => {
-    const displayName = getDisplayName(card);
-    setSearchQuery(displayName);
-    if (onSelect) {
-      onSelect(displayName);
-    }
-    // Also trigger search when suggestion is selected
-    if (onSearch) {
-      onSearch(displayName);
-    }
-  }, [onSelect, onSearch]);
-
-  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && onSearch) {
-      onSearch(searchQuery);
-    }
-  }, [searchQuery, onSearch]);
-
   return (
-    <div className="relative w-full">
-      <div className="relative">
-        <Command className="rounded-md border border-input">
-          <CommandInput
-            value={searchQuery}
-            onValueChange={handleInputChange}
-            onKeyDown={handleKeyDown}
-            placeholder={placeholder}
-            isLoading={isLoading}
-          />
-        </Command>
-        {searchQuery && (
-          <div className="absolute w-full z-50 bg-background border rounded-md mt-1 shadow-lg">
-            <Command>
-              <CommandGroup className="max-h-[300px] overflow-y-auto">
-                {results.length === 0 && !isLoading && (
-                  <CommandEmpty>No results found</CommandEmpty>
-                )}
-                {results.map((card, index) => (
-                  <CommandItem
-                    key={`${card.identifier}-${index}`}
-                    value={getDisplayName(card)}
-                    onSelect={() => handleSelect(card)}
-                    className="px-4 py-2"
-                  >
-                    <div className="flex items-center gap-2">
-                      {card.images.small && (
-                        <img 
-                          src={card.images.small} 
-                          alt={card.name} 
-                          className="w-8 h-8 object-cover rounded"
-                        />
-                      )}
-                      <div>
-                        <p className="font-medium">
-                          {card.name}
-                          {card.number && <span className="text-muted-foreground"> ({card.number})</span>}
-                        </p>
-                        <p className="text-sm text-muted-foreground">{card.set.name}</p>
-                      </div>
-                    </div>
-                  </CommandItem>
-                ))}
-              </CommandGroup>
-            </Command>
-          </div>
-        )}
+    <div className="space-y-2">
+      <div className="flex items-center gap-2">
+        <Label>Card Name</Label>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger>
+              <HelpCircle className="h-4 w-4 text-muted-foreground" />
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Enter the card name with the set number (e.g., "Dark Magician BLAR-EN001")</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       </div>
+      <Input
+        type="text"
+        placeholder={placeholder}
+        onChange={handleChange}
+      />
     </div>
   );
 };
