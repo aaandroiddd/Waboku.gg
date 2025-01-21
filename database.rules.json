@@ -29,9 +29,10 @@
     },
 
     "messages": {
+      ".indexOn": ["timestamp"],
       "$chatId": {
-        ".read": "auth != null && root.child('chats').child($chatId).child('participants').hasChild(auth.uid)",
-        ".write": "auth != null && root.child('chats').child($chatId).child('participants').hasChild(auth.uid)",
+        ".read": "auth != null && root.child('chats').child($chatId).child('participants').child(auth.uid).exists()",
+        ".write": "auth != null && root.child('chats').child($chatId).child('participants').child(auth.uid).exists()",
         "$messageId": {
           ".validate": "newData.hasChildren(['senderId', 'receiverId', 'content', 'timestamp'])",
           "senderId": {
