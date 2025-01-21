@@ -24,6 +24,7 @@ import {
 
 export default function AccountStatus() {
   const { accountTier, subscription, cancelSubscription } = useAccount();
+  const { user } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
   const { session_id, upgrade } = router.query;
