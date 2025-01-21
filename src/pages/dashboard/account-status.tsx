@@ -6,6 +6,8 @@ import { ChevronLeft } from 'lucide-react';
 import { useRouter } from 'next/router';
 import { Footer } from '@/components/Footer';
 import { useEffect } from 'react';
+import { getDatabase, ref, set } from 'firebase/database';
+import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/components/ui/use-toast';
 import { Card } from '@/components/ui/card';
 import {
