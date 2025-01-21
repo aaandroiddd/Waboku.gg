@@ -37,10 +37,10 @@ export const useMessages = (chatId?: string) => {
     setLoading(true);
     const messagesRef = ref(database, `messages/${chatId}`);
     
-    const unsubscribe = onValue(messagesRef, (snapshot) => {
+    // First, get the initial data
+    get(messagesRef).then((snapshot) => {
       try {
         const data = snapshot.val();
-        
         if (data) {
           const messageList = Object.entries(data).map(([id, message]: [string, any]) => ({
             id,
@@ -52,15 +52,36 @@ export const useMessages = (chatId?: string) => {
           setMessages([]);
         }
       } catch (error) {
-        console.error('Error processing messages:', error);
+        console.error('Error processing initial messages:', error);
         setMessages([]);
       } finally {
         setLoading(false);
       }
-    }, (error) => {
-      console.error('Error in message subscription:', error);
+    }).catch((error) => {
+      console.error('Error getting initial messages:', error);
       setMessages([]);
       setLoading(false);
+    });
+
+    // Then set up the real-time listener
+    const unsubscribe = onValue(messagesRef, (snapshot) => {
+      try {
+        const data = snapshot.val();
+        if (data) {
+          const messageList = Object.entries(data).map(([id, message]: [string, any]) => ({
+            id,
+            ...message,
+          }));
+          const sortedMessages = messageList.sort((a, b) => a.timestamp - b.timestamp);
+          setMessages(sortedMessages);
+        } else {
+          setMessages([]);
+        }
+      } catch (error) {
+        console.error('Error processing messages update:', error);
+      }
+    }, (error) => {
+      console.error('Error in message subscription:', error);
     });
 
     return () => {
