@@ -173,30 +173,38 @@ export default function AccountStatus() {
                 </p>
                 <Button 
                   onClick={async () => {
-                    const pricingSection = document.querySelector('.subscription-plans');
-                    if (pricingSection) {
-                      pricingSection.scrollIntoView({ behavior: 'smooth' });
-                      
-                      // Get the upgrade button
-                      const upgradeButton = pricingSection.querySelector('button:not([disabled])');
-                      if (upgradeButton) {
-                        // Add visual feedback
-                        toast({
-                          title: "Processing...",
-                          description: "Setting up your subscription renewal...",
-                        });
+                    try {
+                      // Show loading state
+                      toast({
+                        title: "Processing...",
+                        description: "Setting up your subscription renewal...",
+                      });
+
+                      const pricingSection = document.querySelector('.subscription-plans');
+                      if (pricingSection) {
+                        // Smooth scroll to pricing section
+                        pricingSection.scrollIntoView({ behavior: 'smooth' });
                         
-                        // Trigger the click after scrolling is complete
-                        setTimeout(() => {
+                        // Wait for scroll to complete
+                        await new Promise(resolve => setTimeout(resolve, 800));
+                        
+                        // Get the upgrade button
+                        const upgradeButton = pricingSection.querySelector('button:not([disabled])');
+                        if (upgradeButton) {
                           (upgradeButton as HTMLButtonElement).click();
-                        }, 500);
+                        } else {
+                          throw new Error('Upgrade button not found');
+                        }
                       } else {
-                        toast({
-                          title: "Error",
-                          description: "Unable to process subscription. Please try again.",
-                          variant: "destructive",
-                        });
+                        throw new Error('Pricing section not found');
                       }
+                    } catch (error) {
+                      console.error('Resubscribe error:', error);
+                      toast({
+                        title: "Error",
+                        description: "Unable to process subscription. Please try again or contact support.",
+                        variant: "destructive",
+                      });
                     }
                   }}
                   className="w-full"
