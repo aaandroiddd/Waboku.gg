@@ -104,7 +104,7 @@
     "typing": {
       "$chatId": {
         "$uid": {
-          ".read": "auth != null && root.child('chats').child($chatId).child('participants').hasChild(auth.uid)",
+          ".read": "auth != null && root.child('chats').child($chatId).child('participants').child(auth.uid).exists()",
           ".write": "auth != null && auth.uid == $uid",
           ".validate": "newData.isBoolean()"
         }
