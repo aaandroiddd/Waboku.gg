@@ -7,6 +7,7 @@ import { useState, useCallback, useMemo, memo } from 'react';
 import { RemoveFavoriteDialog } from './RemoveFavoriteDialog';
 import { Button } from '@/components/ui/button';
 import { ListingCard } from './ListingCard';
+import { useListings } from '@/hooks/useListings';
 
 interface ListingGridProps {
   listings?: Listing[];
@@ -17,8 +18,6 @@ interface ListingGridProps {
   onLoadMore?: () => void;
   loading?: boolean;
 }
-
-import { useListings } from '@/hooks/useListings';
 
 // Memoize the condition color mapping
 const conditionColors: Record<string, { base: string; hover: string }> = {
