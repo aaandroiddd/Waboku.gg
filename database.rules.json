@@ -6,9 +6,9 @@
     "users": {
       "$uid": {
         ".read": "auth != null && auth.uid === $uid",
-        ".write": "auth != null && auth.uid === $uid",
+        ".write": "auth != null && (auth.uid === $uid || auth.token.admin === true)",
         "account": {
-          ".validate": "newData.hasChildren(['tier', 'status'])",
+          ".validate": "newData.hasChildren(['tier'])",
           "tier": {
             ".validate": "newData.isString() && (newData.val() === 'free' || newData.val() === 'premium')"
           },
@@ -20,6 +20,9 @@
           },
           "subscriptionId": {
             ".validate": "!newData.exists() || newData.isString()"
+          },
+          "$other": {
+            ".validate": true
           }
         }
       }
