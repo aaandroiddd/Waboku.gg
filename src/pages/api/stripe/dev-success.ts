@@ -1,5 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { getFirebaseAdmin } from '@/lib/firebase-admin';
+import { initAdmin } from '@/lib/firebase-admin';
+import { getDatabase } from 'firebase-admin/database';
 
 export default async function handler(
   req: NextApiRequest,
@@ -17,23 +18,16 @@ export default async function handler(
       return res.status(400).json({ error: 'User ID is required' });
     }
 
-    // Get database reference using the proper initialization
-    const { rtdb } = getFirebaseAdmin();
-    
-    const now = new Date();
-    const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+    // Initialize Firebase Admin and get database reference
+    initAdmin();
+    const db = getDatabase();
     
     // Update user's subscription status
-    await rtdb.ref(`users/${userId}/account`).update({
+    await db.ref(`users/${userId}/account`).update({
       tier: 'premium',
-      subscription: {
-        status: 'active',
-        stripeSubscriptionId: 'dev_test_subscription',
-        stripeCustomerId: 'dev_test_customer',
-        startDate: now.toISOString(),
-        renewalDate: thirtyDaysFromNow.toISOString(),
-        cancelAtPeriodEnd: false,
-      }
+      status: 'active',
+      stripeCustomerId: 'dev_test_customer',
+      subscriptionId: 'dev_test_subscription'
     });
 
     // If it's a GET request, redirect to the account status page
