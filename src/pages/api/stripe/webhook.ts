@@ -1,7 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { buffer } from 'micro';
 import Stripe from 'stripe';
-import { getFirestore } from 'firebase-admin/firestore';
+import { getDatabase } from 'firebase-admin/database';
 import { initAdmin } from '@/lib/firebase-admin';
 
 // Initialize Stripe
@@ -41,7 +41,8 @@ export default async function handler(
   }
 
   // Initialize Firebase Admin
-  const { rtdb } = getFirebaseAdmin();
+  initAdmin();
+  const db = getDatabase();
 
   try {
     switch (event.type) {
@@ -51,16 +52,11 @@ export default async function handler(
         const userId = subscription.metadata.userId;
 
         if (subscription.status === 'active') {
-          await rtdb.ref(`users/${userId}/account`).update({
+          await db.ref(`users/${userId}/account`).update({
             tier: 'premium',
-            subscription: {
-              status: 'active',
-              stripeSubscriptionId: subscription.id,
-              stripeCustomerId: subscription.customer as string,
-              startDate: new Date(subscription.current_period_start * 1000).toISOString(),
-              renewalDate: new Date(subscription.current_period_end * 1000).toISOString(),
-              cancelAtPeriodEnd: subscription.cancel_at_period_end,
-            }
+            status: 'active',
+            stripeCustomerId: subscription.customer as string,
+            subscriptionId: subscription.id
           });
         }
         break;
@@ -70,16 +66,11 @@ export default async function handler(
         const subscription = event.data.object as Stripe.Subscription;
         const userId = subscription.metadata.userId;
 
-        await rtdb.ref(`users/${userId}/account`).update({
+        await db.ref(`users/${userId}/account`).update({
           tier: 'free',
-          subscription: {
-            status: 'none',
-            stripeSubscriptionId: null,
-            stripeCustomerId: null,
-            startDate: null,
-            renewalDate: null,
-            cancelAtPeriodEnd: false,
-          }
+          status: 'active',
+          stripeCustomerId: null,
+          subscriptionId: null
         });
         break;
       }
