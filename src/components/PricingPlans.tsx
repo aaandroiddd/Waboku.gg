@@ -127,11 +127,12 @@ export function PricingPlans() {
         },
       });
 
-      const data = await response.json();
-      
       if (!response.ok) {
-        throw new Error(data.message || 'Failed to create checkout session');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Failed to create checkout session');
       }
+
+      const data = await response.json();
 
       // Handle preview environment
       if (data.isPreview) {
@@ -140,8 +141,9 @@ export function PricingPlans() {
           description: "Processing test upgrade...",
         });
 
-        // Redirect to dev-success endpoint
-        window.location.href = `/api/stripe/dev-success?userId=${user.uid}`;
+        setTimeout(() => {
+          window.location.href = `/api/stripe/dev-success?userId=${user.uid}`;
+        }, 1000);
         return;
       }
 
@@ -154,8 +156,10 @@ export function PricingPlans() {
         description: "You'll be redirected to Stripe to complete your payment.",
       });
 
-      // Redirect to Stripe checkout
-      window.location.href = data.sessionUrl;
+      // Add a small delay to ensure toast is shown
+      setTimeout(() => {
+        window.location.href = data.sessionUrl;
+      }, 1000);
 
     } catch (error: any) {
       console.error('Subscription error:', error);
