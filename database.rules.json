@@ -58,12 +58,15 @@
     },
 
     "chats": {
+      ".indexOn": ["createdAt"],
       "$chatId": {
-        ".read": "auth != null && data.child('participants').hasChild(auth.uid)",
-        ".write": "auth != null && (!data.exists() || data.child('participants').hasChild(auth.uid))",
+        ".read": "auth != null && data.child('participants').child(auth.uid).exists()",
+        ".write": "auth != null && (!data.exists() || data.child('participants').child(auth.uid).exists())",
         "participants": {
-          ".validate": "newData.hasChildren()"
-        },
+          ".validate": "newData.hasChildren()",
+          "$uid": {
+            ".validate": "newData.isBoolean()"
+          },
         "deletedBy": {
           "$uid": {
             ".validate": "auth != null && $uid === auth.uid"
