@@ -66,7 +66,12 @@ export default async function handler(
 
     // Create a new Stripe checkout session with error handling
     try {
-      const session = await stripe.checkout.sessions.create({
+      // Get user's Firestore data to check if they have a customer ID
+      const db = getFirebaseAdmin().firestore();
+      const userDoc = await db.collection('users').doc(userId).get();
+      const userData = userDoc.data();
+      
+      let sessionConfig: Stripe.Checkout.SessionCreateParams = {
         payment_method_types: ['card'],
         line_items: [
           {
@@ -80,10 +85,18 @@ export default async function handler(
         metadata: {
           userId,
         },
-        customer_email: decodedToken.email || undefined,
         allow_promotion_codes: true,
         billing_address_collection: 'auto',
-      });
+      };
+
+      // If user has a Stripe customer ID, use it to ensure proper subscription linking
+      if (userData?.stripeCustomerId) {
+        sessionConfig.customer = userData.stripeCustomerId;
+      } else {
+        sessionConfig.customer_email = decodedToken.email || undefined;
+      }
+
+      const session = await stripe.checkout.sessions.create(sessionConfig);
 
       if (!session.url) {
         throw new Error('No session URL returned from Stripe');
