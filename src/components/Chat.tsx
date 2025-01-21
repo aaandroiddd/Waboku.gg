@@ -175,13 +175,22 @@ export function Chat({
       return;
     }
 
+    if (!receiverId) {
+      setError('Invalid recipient. Please try again.');
+      return;
+    }
+
     if (!newMessage.trim()) return;
 
     try {
+      setError('');
       const newChatId = await sendMessage(newMessage.trim(), receiverId, listingId, listingTitle);
       
+      if (!newChatId) {
+        throw new Error('Failed to create or update chat');
+      }
+      
       setNewMessage('');
-      setError('');
       setIsAtBottom(true);
       scrollToBottom();
       
@@ -204,7 +213,13 @@ export function Chat({
       }
     } catch (error) {
       console.error('Error sending message:', error);
-      setError('Failed to send message. Please try again.');
+      const errorMessage = error instanceof Error ? error.message : 'Failed to send message. Please try again.';
+      setError(errorMessage);
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive"
+      });
     }
   };
 
