@@ -18,6 +18,8 @@ interface ListingGridProps {
   loading?: boolean;
 }
 
+import { useListings } from '@/hooks/useListings';
+
 // Memoize the condition color mapping
 const conditionColors: Record<string, { base: string; hover: string }> = {
   'poor': {
