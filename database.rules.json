@@ -64,12 +64,12 @@
         ".read": "auth != null",
         ".write": "auth != null",
         "$messageId": {
-          ".validate": "newData.hasChildren(['senderId', 'receiverId', 'content', 'timestamp', 'type']) && (!data.exists() || data.child('senderId').val() === auth.uid)",
+          ".validate": "newData.hasChildren(['senderId', 'receiverId', 'content', 'timestamp', 'type'])",
           "senderId": {
             ".validate": "newData.val() === auth.uid"
           },
           "receiverId": {
-            ".validate": "newData.isString()"
+            ".validate": "newData.isString() && root.child('users').child(newData.val()).exists()"
           },
           "content": {
             ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 2000"
@@ -78,7 +78,7 @@
             ".validate": "newData.isString() && (newData.val() === 'text' || newData.val() === 'image' || newData.val() === 'system')"
           },
           "timestamp": {
-            ".validate": "newData.isNumber() && newData.val() <= now && (!data.exists() || newData.val() > data.val())"
+            ".validate": "newData.isNumber() && newData.val() <= now"
           },
           "listingId": {
             ".validate": "!newData.exists() || (newData.isString() && root.child('listings').child(newData.val()).exists())"
@@ -100,18 +100,16 @@
         ".write": "auth != null",
         ".validate": "newData.hasChildren(['participants', 'createdAt'])",
         "participants": {
-          ".validate": "newData.hasChildren()",
           "$uid": {
-            ".validate": "newData.isBoolean() && root.child('users').child($uid).exists()"
+            ".validate": "newData.isBoolean() && ($uid === auth.uid || root.child('users').child($uid).exists())"
           }
         },
         "deletedBy": {
           "$uid": {
-            ".validate": "auth != null && $uid === auth.uid && root.child('chats').child($chatId).child('participants').child($uid).exists()"
+            ".validate": "auth != null && $uid === auth.uid"
           }
         },
         "lastMessage": {
-          ".validate": "newData.hasChildren(['senderId', 'receiverId', 'content', 'timestamp', 'type'])",
           "senderId": {
             ".validate": "newData.isString()"
           },
@@ -132,7 +130,7 @@
           ".validate": "!newData.exists() || (newData.isString() && root.child('listings').child(newData.val()).exists())"
         },
         "listingTitle": {
-          ".validate": "!newData.exists() || (newData.isString() && newData.val().length <= 200)"
+          ".validate": "!newData.exists() || newData.isString()"
         },
         "createdAt": {
           ".validate": "newData.isNumber() && (!data.exists() || data.val() === newData.val()) && newData.val() <= now"
