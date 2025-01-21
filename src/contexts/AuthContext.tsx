@@ -151,6 +151,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Ensure Firebase is initialized
       const { auth, db } = getFirebaseServices();
       
+      // Validate Firebase configuration
+      if (!auth) {
+        throw new Error('Firebase authentication is not initialized');
+      }
+      
+      console.log('Attempting sign in with email:', email);
+      
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
       
