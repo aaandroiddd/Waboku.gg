@@ -29,10 +29,9 @@
     },
 
     "messages": {
-      ".read": false,
       "$chatId": {
-        ".read": "auth != null && root.child('chats').child($chatId).child('participants').child(auth.uid).val() === true",
-        ".write": "auth != null && root.child('chats').child($chatId).child('participants').child(auth.uid).val() === true",
+        ".read": "auth != null && root.child('chats').child($chatId).child('participants').hasChild(auth.uid)",
+        ".write": "auth != null && root.child('chats').child($chatId).child('participants').hasChild(auth.uid)",
         "$messageId": {
           ".validate": "newData.hasChildren(['senderId', 'receiverId', 'content', 'timestamp'])",
           "senderId": {
@@ -58,12 +57,11 @@
     },
 
     "chats": {
-      ".read": false,
       "$chatId": {
-        ".read": "auth != null && data.child('participants').child(auth.uid).val() === true",
-        ".write": "auth != null && (!data.exists() || data.child('participants').child(auth.uid).val() === true)",
+        ".read": "auth != null && data.child('participants').hasChild(auth.uid)",
+        ".write": "auth != null && (!data.exists() || data.child('participants').hasChild(auth.uid))",
         "participants": {
-          ".validate": "newData.hasChildren() && newData.val().keys().length >= 2"
+          ".validate": "newData.hasChildren()"
         },
         "deletedBy": {
           "$uid": {
@@ -102,7 +100,7 @@
     "typing": {
       "$chatId": {
         "$uid": {
-          ".read": "auth != null && root.child('chats').child($chatId).child('participants').child(auth.uid).val() === true",
+          ".read": "auth != null && root.child('chats').child($chatId).child('participants').hasChild(auth.uid)",
           ".write": "auth != null && auth.uid == $uid",
           ".validate": "newData.isBoolean()"
         }
