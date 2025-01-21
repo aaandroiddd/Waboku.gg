@@ -24,6 +24,17 @@ const firebaseConfig = {
   databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL
 };
 
+// Validate Firebase configuration
+if (!process.env.NEXT_PUBLIC_FIREBASE_API_KEY) {
+  console.error('Firebase API key is missing');
+}
+
+// Debug Firebase initialization
+console.log('Initializing Firebase with config:', {
+  ...firebaseConfig,
+  apiKey: firebaseConfig.apiKey ? '[PRESENT]' : '[MISSING]'
+});
+
 let firebaseApp: FirebaseApp;
 let auth: Auth;
 let db: Firestore;
