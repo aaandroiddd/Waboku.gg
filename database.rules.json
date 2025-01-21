@@ -3,6 +3,28 @@
     ".read": false,
     ".write": false,
     
+    "users": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": "auth != null && auth.uid === $uid",
+        "account": {
+          ".validate": "newData.hasChildren(['tier', 'status'])",
+          "tier": {
+            ".validate": "newData.isString() && (newData.val() === 'free' || newData.val() === 'premium')"
+          },
+          "status": {
+            ".validate": "newData.isString()"
+          },
+          "stripeCustomerId": {
+            ".validate": "!newData.exists() || newData.isString()"
+          },
+          "subscriptionId": {
+            ".validate": "!newData.exists() || newData.isString()"
+          }
+        }
+      }
+    },
+
     "messages": {
       ".read": false,
       "$chatId": {
