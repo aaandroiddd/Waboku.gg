@@ -359,7 +359,7 @@ const CreateListingPage = () => {
                     value={formData.condition}
                     onValueChange={(value) => setFormData({ ...formData, condition: value })}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className="select-trigger">
                       <SelectValue placeholder="Select condition" />
                     </SelectTrigger>
                     <SelectContent>
