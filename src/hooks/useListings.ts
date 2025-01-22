@@ -240,14 +240,18 @@ export function useListings({ userId, searchQuery, showOnlyActive = false }: Use
       // Prepare base listing data without grading fields
       const { gradeLevel, gradingCompany, ...baseData } = cleanListingData;
       
+      // Remove cardReference if it's null
+      const { cardReference, ...dataWithoutCard } = baseData;
+      
       const newListing = {
-        ...baseData,
+        ...dataWithoutCard,
         imageUrls,
         userId: user.uid,
         username: user.displayName || 'Anonymous',
         createdAt: new Date(),
         status: 'active',
-        isGraded: Boolean(cleanListingData.isGraded)
+        isGraded: Boolean(cleanListingData.isGraded),
+        ...(cardReference ? { cardReference } : {})
       };
 
       // Only add grading fields if the card is graded
