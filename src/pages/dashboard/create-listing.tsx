@@ -212,7 +212,7 @@ const CreateListingPage = () => {
   return (
     <DashboardLayout>
       <div className="max-w-3xl mx-auto space-y-6">
-        <div className="flex justify-between items-center">
+        <div className="flex justify-center items-center">
           <h1 className="text-3xl font-bold">Create New Listing</h1>
         </div>
 
