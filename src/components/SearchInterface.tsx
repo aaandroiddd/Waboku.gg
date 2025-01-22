@@ -23,24 +23,16 @@ const SearchInterface = () => {
           />
         </div>
         
-        <div className="flex gap-2">
-          <div className="flex-1">
-            <select
-              value={selectedState}
-              onChange={(e) => setSelectedState(e.target.value.toLowerCase())}
-              className="w-full h-10 px-3 rounded-md border border-input bg-background"
-            >
-              <option value="">Select State</option>
-              <option value="new">New</option>
-              <option value="used">Used</option>
-            </select>
-          </div>
-          <Button 
-            className="h-10 px-8" 
-            onClick={handleSearch}
+        <div className="flex-1">
+          <select
+            value={selectedState}
+            onChange={(e) => setSelectedState(e.target.value.toLowerCase())}
+            className="w-full h-10 px-3 rounded-md border border-input bg-background"
           >
-            <Search className="h-5 w-5" />
-          </Button>
+            <option value="">Select State</option>
+            <option value="new">New</option>
+            <option value="used">Used</option>
+          </select>
         </div>
       </div>
 
