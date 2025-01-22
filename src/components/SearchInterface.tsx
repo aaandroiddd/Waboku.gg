@@ -45,25 +45,16 @@ const SearchInterface = () => {
           />
         </div>
         
-        <div className="flex">
-          <div className="w-[180px]">
-            <select
-              value={selectedState}
-              onChange={(e) => setSelectedState(e.target.value.toLowerCase())}
-              className="w-full h-10 px-3 rounded-md border border-input bg-background"
-            >
-              <option value="">Select State</option>
-              <option value="new">New</option>
-              <option value="used">Used</option>
-            </select>
-          </div>
-          <Button 
-            className="h-10 w-10 ml-2" 
-            size="icon" 
-            onClick={handleSearch}
+        <div className="w-[180px]">
+          <select
+            value={selectedState}
+            onChange={(e) => setSelectedState(e.target.value.toLowerCase())}
+            className="w-full h-10 px-3 rounded-md border border-input bg-background"
           >
-            <Search className="h-5 w-5" />
-          </Button>
+            <option value="">Select State</option>
+            <option value="new">New</option>
+            <option value="used">Used</option>
+          </select>
         </div>
       </div>
     </div>
