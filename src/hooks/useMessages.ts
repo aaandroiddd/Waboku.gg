@@ -212,6 +212,7 @@ export const useMessages = (chatId?: string) => {
       [`chats/${chatReference}/lastMessage`]: {
         ...newMessage,
         id: messageRef.key,
+        type: content.startsWith('![Image]') ? 'image' : 'text'
       }
     };
 
