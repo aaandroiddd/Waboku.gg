@@ -1,8 +1,6 @@
 import React from 'react';
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { HelpCircle } from "lucide-react";
+import { Search } from "lucide-react";
 
 interface CardSearchInputProps {
   placeholder?: string;
@@ -11,7 +9,7 @@ interface CardSearchInputProps {
 }
 
 const CardSearchInput: React.FC<CardSearchInputProps> = ({ 
-  placeholder = "Enter card name with set number...",
+  placeholder = "Search cards...",
   onSelect,
   onSearch 
 }) => {
@@ -26,24 +24,13 @@ const CardSearchInput: React.FC<CardSearchInputProps> = ({
   };
 
   return (
-    <div className="space-y-2">
-      <div className="flex items-center gap-2">
-        <Label>Card Name</Label>
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger>
-              <HelpCircle className="h-4 w-4 text-muted-foreground" />
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Enter the card name with the set number (e.g., "Dark Magician BLAR-EN001")</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-      </div>
+    <div className="relative">
+      <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
       <Input
         type="text"
         placeholder={placeholder}
         onChange={handleChange}
+        className="pl-9 h-10"
       />
     </div>
   );
