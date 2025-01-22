@@ -4,6 +4,8 @@ import { Search, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useTrendingSearches } from '@/hooks/useTrendingSearches';
 import { Card } from "@/components/ui/card";
+import { validateSearchTerm, normalizeSearchTerm } from '@/lib/search-validation';
+import { useToast } from "@/components/ui/use-toast";
 
 interface CardSearchInputProps {
   placeholder?: string;
@@ -21,6 +23,7 @@ const CardSearchInput: React.FC<CardSearchInputProps> = ({
   const { trendingSearches, loading, recordSearch } = useTrendingSearches();
   const inputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const { toast } = useToast();
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -37,13 +40,28 @@ const CardSearchInput: React.FC<CardSearchInputProps> = ({
   }, []);
 
   const handleSearch = (term: string = searchTerm) => {
-    if (term.trim()) {
-      recordSearch(term.trim());
+    const normalizedTerm = normalizeSearchTerm(term);
+    
+    if (!normalizedTerm) {
+      return;
+    }
+
+    if (!validateSearchTerm(normalizedTerm)) {
+      toast({
+        title: "Invalid search term",
+        description: "Please enter a valid search term using letters and numbers.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (normalizedTerm.trim()) {
+      recordSearch(normalizedTerm.trim());
       if (onSearch) {
-        onSearch(term);
+        onSearch(normalizedTerm);
       }
       if (onSelect) {
-        onSelect(term);
+        onSelect(normalizedTerm);
       }
       setIsFocused(false);
     }
