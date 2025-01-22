@@ -72,7 +72,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signUp = async (email: string, password: string, username: string) => {
     let createdUser = null;
     try {
-      // First check if username is available
+      // First check if the email is already used by a Google account
+      const usersRef = collection(db, 'users');
+      const emailQuery = query(usersRef, where('email', '==', email));
+      const emailSnapshot = await getDocs(emailQuery);
+      
+      if (!emailSnapshot.empty) {
+        const existingUser = emailSnapshot.docs[0].data();
+        throw new Error('This email is already registered. Please sign in with Google if you used Google to create your account.');
+      }
+
+      // Then check if username is available
       const usernameDoc = await getDoc(doc(db, 'usernames', username));
       if (usernameDoc.exists()) {
         throw new Error('Username is already taken. Please choose another one.');
