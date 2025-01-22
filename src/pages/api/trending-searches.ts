@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { getDatabase, ref, query, orderByChild, get, limitToLast } from 'firebase/database';
 import { app } from '@/lib/firebase';
+import { validateSearchTerm } from '@/lib/search-validation';
 
 const DEFAULT_TRENDING = [
   { term: "Charizard VSTAR", count: 15 },
@@ -36,7 +37,8 @@ export default async function handler(
     
     snapshot.forEach((childSnapshot) => {
       const search = childSnapshot.val();
-      if (search.timestamp >= twoDaysAgo) {
+      // Only include valid searches from the last 48 hours
+      if (search.timestamp >= twoDaysAgo && validateSearchTerm(search.term)) {
         searches.push(search);
       }
     });
