@@ -30,7 +30,7 @@ const CardSearchInput: React.FC<CardSearchInputProps> = ({
         type="text"
         placeholder={placeholder}
         onChange={handleChange}
-        className="pl-9 h-10"
+        className="pl-9"
       />
     </div>
   );
