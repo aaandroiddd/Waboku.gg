@@ -328,7 +328,7 @@ const CreateListingPage = () => {
                         }
                       }}
                     >
-                      <SelectTrigger className={errors.game ? "border-red-500" : ""}>
+                      <SelectTrigger className={`select-trigger ${errors.game ? "border-red-500" : ""}`}>
                         <SelectValue placeholder="Select category" />
                       </SelectTrigger>
                       <SelectContent>
