@@ -199,6 +199,7 @@ export const useMessages = (chatId?: string) => {
       content,
       timestamp: Date.now(),
       read: false,
+      type: content.startsWith('![Image]') ? 'image' : 'text',
       ...(listingId ? { listingId } : {})
     };
 
