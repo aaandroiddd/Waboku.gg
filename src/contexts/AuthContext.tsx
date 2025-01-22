@@ -462,6 +462,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     error,
     signUp: signUpWithVerification,
     signIn,
+    signInWithGoogle,
     signOut,
     updateProfile,
     deleteAccount,
