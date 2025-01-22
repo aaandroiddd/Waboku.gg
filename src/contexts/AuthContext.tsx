@@ -382,6 +382,79 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const signInWithGoogle = async () => {
+    try {
+      const provider = new GoogleAuthProvider();
+      const result = await signInWithPopup(auth, provider);
+      const user = result.user;
+
+      // Check if user profile exists
+      const profileDoc = await getDoc(doc(db, 'users', user.uid));
+      
+      if (!profileDoc.exists()) {
+        // Create a new profile for Google sign-in users
+        const username = user.email!.split('@')[0];
+        let finalUsername = username;
+        let counter = 1;
+
+        // Check if username exists and generate a unique one if needed
+        while (true) {
+          const usernameDoc = await getDoc(doc(db, 'usernames', finalUsername));
+          if (!usernameDoc.exists()) break;
+          finalUsername = `${username}${counter}`;
+          counter++;
+        }
+
+        const newProfile: UserProfile = {
+          uid: user.uid,
+          email: user.email!,
+          username: finalUsername,
+          joinDate: new Date().toISOString(),
+          totalSales: 0,
+          rating: 0,
+          bio: '',
+          location: '',
+          avatarUrl: user.photoURL || '',
+          isEmailVerified: user.emailVerified,
+          verificationSentAt: null,
+          social: {
+            youtube: '',
+            twitter: '',
+            facebook: ''
+          }
+        };
+
+        // Create user profile
+        await setDoc(doc(db, 'users', user.uid), newProfile);
+
+        // Create username document
+        await setDoc(doc(db, 'usernames', finalUsername), {
+          uid: user.uid,
+          username: finalUsername,
+          createdAt: new Date().toISOString()
+        });
+
+        setProfile(newProfile);
+      } else {
+        setProfile(profileDoc.data() as UserProfile);
+      }
+
+      return result;
+    } catch (err: any) {
+      console.error('Google sign in error:', err);
+      let errorMessage = 'Failed to sign in with Google';
+      
+      if (err.code === 'auth/popup-closed-by-user') {
+        errorMessage = 'Sign in cancelled';
+      } else if (err.code === 'auth/popup-blocked') {
+        errorMessage = 'Sign in popup was blocked. Please allow popups for this site.';
+      }
+      
+      setError(errorMessage);
+      throw err;
+    }
+  };
+
   const value = {
     user,
     profile,
