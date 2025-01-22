@@ -8,6 +8,7 @@ export interface Message {
   receiverId: string;
   content: string;
   timestamp: number;
+  type: 'text' | 'image' | 'system';
   listingId?: string;
   read?: boolean;
 }
