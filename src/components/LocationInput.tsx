@@ -216,14 +216,16 @@ export function LocationInput({ onLocationSelect, initialCity, initialState, err
           className={`h-12 ${error ? "border-red-500" : ""}`}
         />
         {error && <p className="text-sm text-red-500">{error}</p>}
-        <Button 
-          variant="outline" 
-          size="sm" 
-          onClick={() => setUseFallback(true)}
-          className="mt-2"
-        >
-          Switch to manual input
-        </Button>
+        <div className="flex justify-between">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => setUseFallback(true)}
+            className="mt-2"
+          >
+            Switch to manual input
+          </Button>
+        </div>
       </div>
     </>
   );
