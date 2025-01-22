@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Input } from "@/components/ui/input";
-import { Search, TrendingUp } from "lucide-react";
+import { Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useTrendingSearches } from '@/hooks/useTrendingSearches';
 import { Card } from "@/components/ui/card";
@@ -101,10 +101,6 @@ const CardSearchInput: React.FC<CardSearchInputProps> = ({
 
       {isFocused && !loading && trendingSearches.length > 0 && (
         <Card ref={dropdownRef} className="absolute w-full mt-1 p-2 z-50 shadow-lg">
-          <div className="flex items-center gap-2 px-2 py-1 text-sm text-muted-foreground">
-            <TrendingUp className="h-4 w-4" />
-            <span>Trending Searches</span>
-          </div>
           <div className="mt-2">
             {trendingSearches.map((search, index) => (
               <button
@@ -112,7 +108,7 @@ const CardSearchInput: React.FC<CardSearchInputProps> = ({
                 onClick={() => handleTrendingClick(search.term)}
                 className="w-full text-left px-4 py-2 text-sm hover:bg-accent rounded-md transition-colors"
               >
-                {search.term}
+                {search.term} ({search.count})
               </button>
             ))}
           </div>
