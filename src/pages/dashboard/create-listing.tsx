@@ -23,7 +23,7 @@ import CardSearchInput from "@/components/CardSearchInput";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const MAX_TITLE_LENGTH = 100;
-const MAX_DESCRIPTION_LENGTH = 1000;
+const MAX_DESCRIPTION_LENGTH = 2000;
 const ALLOWED_FILE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
 const GAME_MAPPING: { [key: string]: string } = {
