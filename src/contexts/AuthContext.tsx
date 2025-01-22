@@ -9,7 +9,9 @@ import {
   updateProfile as firebaseUpdateProfile,
   sendEmailVerification,
   applyActionCode,
-  sendPasswordResetEmail
+  sendPasswordResetEmail,
+  GoogleAuthProvider,
+  signInWithPopup
 } from 'firebase/auth';
 import { doc, setDoc, getDoc, deleteDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { getFirebaseServices } from '@/lib/firebase';
