@@ -182,13 +182,26 @@ export function LocationInput({ onLocationSelect, initialCity, initialState, err
           </Select>
         </div>
 
-        <Button 
-          onClick={handleFallbackSubmit}
-          disabled={!fallbackCity || !fallbackState}
-          className="mt-2"
-        >
-          Set Location
-        </Button>
+        <div className="flex justify-between items-center gap-2">
+          <Button 
+            onClick={handleFallbackSubmit}
+            disabled={!fallbackCity || !fallbackState}
+          >
+            Set Location
+          </Button>
+          
+          {!googleLoadError && (
+            <Button 
+              variant="outline"
+              onClick={() => {
+                setUseFallback(false);
+                setSearchValue(fallbackCity && fallbackState ? `${fallbackCity}, ${fallbackState}` : '');
+              }}
+            >
+              Switch to search
+            </Button>
+          )}
+        </div>
         
         {error && <p className="text-sm text-red-500">{error}</p>}
       </div>
