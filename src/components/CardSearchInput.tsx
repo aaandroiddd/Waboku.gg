@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
 
@@ -6,20 +6,48 @@ interface CardSearchInputProps {
   placeholder?: string;
   onSelect?: (cardName: string) => void;
   onSearch?: (query: string) => void;
+  minSearchLength?: number;
+  debounceMs?: number;
 }
 
 const CardSearchInput: React.FC<CardSearchInputProps> = ({ 
   placeholder = "Search cards...",
   onSelect,
-  onSearch 
+  onSearch,
+  minSearchLength = 3,
+  debounceMs = 500
 }) => {
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    if (onSelect) {
-      onSelect(value);
+  const [searchTerm, setSearchTerm] = useState("");
+
+  const triggerSearch = useCallback((value: string) => {
+    if (value.length >= minSearchLength) {
+      if (onSearch) {
+        onSearch(value);
+      }
+      if (onSelect) {
+        onSelect(value);
+      }
     }
-    if (onSearch) {
-      onSearch(value);
+  }, [onSearch, onSelect, minSearchLength]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (searchTerm) {
+        triggerSearch(searchTerm);
+      }
+    }, debounceMs);
+
+    return () => clearTimeout(timer);
+  }, [searchTerm, debounceMs, triggerSearch]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchTerm(e.target.value);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      triggerSearch(searchTerm);
     }
   };
 
@@ -30,6 +58,8 @@ const CardSearchInput: React.FC<CardSearchInputProps> = ({
         type="text"
         placeholder={placeholder}
         onChange={handleChange}
+        onKeyDown={handleKeyDown}
+        value={searchTerm}
         className="pl-9"
       />
     </div>
