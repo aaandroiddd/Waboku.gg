@@ -221,19 +221,6 @@ const CreateListingPage = () => {
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="space-y-6">
                 <div className="space-y-2">
-                  <div className="flex items-center space-x-2">
-                    <Label>Search Card (Optional)</Label>
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger>
-                          <HelpCircle className="h-4 w-4 text-muted-foreground" />
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p className="max-w-xs">Search for your card to auto-fill details</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  </div>
                   <CardSearchInput
                     onCardSelect={(card) => {
                       const gameType = card.type === 'pokemon' ? 'pokemon' :
