@@ -45,8 +45,9 @@ function SignInComponent() {
   const [password, setPassword] = useState("");
   const [authError, setAuthError] = useState<Error | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [mounted, setMounted] = useState(false);
-  const { user, signIn } = useAuth();
+  const { user, signIn, signInWithGoogle } = useAuth();
 
   useEffect(() => {
     setMounted(true);
