@@ -265,6 +265,11 @@
 }
 
 @layer components {
+  .select-trigger {
+    min-height: 2.5rem !important;
+    height: 2.5rem !important;
+  }
+
   .glow-text {
     @apply dark:text-white text-foreground;
     text-shadow: none;
