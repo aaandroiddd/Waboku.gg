@@ -1,44 +1,31 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState } from 'react';
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface CardSearchInputProps {
   placeholder?: string;
   onSelect?: (cardName: string) => void;
   onSearch?: (query: string) => void;
-  minSearchLength?: number;
-  debounceMs?: number;
 }
 
 const CardSearchInput: React.FC<CardSearchInputProps> = ({ 
   placeholder = "Search cards...",
   onSelect,
-  onSearch,
-  minSearchLength = 3,
-  debounceMs = 500
+  onSearch 
 }) => {
   const [searchTerm, setSearchTerm] = useState("");
 
-  const triggerSearch = useCallback((value: string) => {
-    if (value.length >= minSearchLength) {
+  const handleSearch = () => {
+    if (searchTerm.trim()) {
       if (onSearch) {
-        onSearch(value);
+        onSearch(searchTerm);
       }
       if (onSelect) {
-        onSelect(value);
+        onSelect(searchTerm);
       }
     }
-  }, [onSearch, onSelect, minSearchLength]);
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (searchTerm) {
-        triggerSearch(searchTerm);
-      }
-    }, debounceMs);
-
-    return () => clearTimeout(timer);
-  }, [searchTerm, debounceMs, triggerSearch]);
+  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(e.target.value);
@@ -47,21 +34,31 @@ const CardSearchInput: React.FC<CardSearchInputProps> = ({
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       e.preventDefault();
-      triggerSearch(searchTerm);
+      handleSearch();
     }
   };
 
   return (
-    <div className="relative">
-      <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-      <Input
-        type="text"
-        placeholder={placeholder}
-        onChange={handleChange}
-        onKeyDown={handleKeyDown}
-        value={searchTerm}
-        className="pl-9"
-      />
+    <div className="relative flex gap-2">
+      <div className="relative flex-1">
+        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+        <Input
+          type="text"
+          placeholder={placeholder}
+          onChange={handleChange}
+          onKeyDown={handleKeyDown}
+          value={searchTerm}
+          className="pl-9"
+        />
+      </div>
+      <Button 
+        onClick={handleSearch}
+        type="button"
+        variant="default"
+      >
+        <Search className="h-4 w-4" />
+        <span className="sr-only">Search</span>
+      </Button>
     </div>
   );
 };
