@@ -1,5 +1,19 @@
 {
   "rules": {
+    "searches": {
+      ".read": true,
+      ".write": true,
+      ".indexOn": ["timestamp"],
+      "$searchId": {
+        ".validate": "newData.hasChildren(['term', 'timestamp'])",
+        "term": {
+          ".validate": "newData.isString() && newData.val().length >= 2 && newData.val().length <= 50"
+        },
+        "timestamp": {
+          ".validate": "newData.isNumber() && newData.val() <= now"
+        }
+      }
+    },
     "users": {
       "$uid": {
         ".read": "auth != null && (auth.uid === $uid || root.child('users').child(auth.uid).child('account').child('tier').val() === 'admin')",
