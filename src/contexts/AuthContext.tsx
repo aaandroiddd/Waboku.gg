@@ -119,6 +119,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           youtube: '',
           twitter: '',
           facebook: ''
+        },
+        accountTier: 'free',
+        subscription: {
+          status: 'inactive',
+          currentPlan: 'free',
+          startDate: new Date().toISOString()
         }
       };
 
