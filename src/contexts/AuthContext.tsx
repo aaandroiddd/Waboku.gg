@@ -272,14 +272,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           throw new Error('Username is already taken. Please choose another one.');
         }
 
-        // Archive old username with timestamp
-        await setDoc(doc(db, 'usernames', profile.username), {
-          uid: user.uid,
-          username: profile.username,
-          status: 'archived',
-          archivedAt: new Date().toISOString(),
-          createdAt: profile.joinDate
-        });
+        // Delete the old username document
+        await deleteDoc(doc(db, 'usernames', profile.username));
 
         // Create new username entry
         await setDoc(doc(db, 'usernames', data.username), {
