@@ -58,4 +58,12 @@ export interface UserProfile {
   lastUpdated?: string;
   isEmailVerified: boolean;
   verificationSentAt?: string;
+  accountTier: 'free' | 'premium';
+  subscription: {
+    status: 'active' | 'inactive';
+    stripeSubscriptionId?: string;
+    currentPlan: 'free' | 'premium';
+    startDate?: string;
+    endDate?: string;
+  };
 }
