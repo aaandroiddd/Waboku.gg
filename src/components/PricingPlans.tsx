@@ -182,13 +182,6 @@ export function PricingPlans() {
   };
 
   const getPremiumButtonState = () => {
-    if (isPremium && subscriptionId) {
-      return {
-        text: "Current Plan",
-        disabled: true,
-        variant: "outline" as const
-      };
-    }
     if (!user) {
       return {
         text: "Sign in to upgrade",
@@ -196,6 +189,16 @@ export function PricingPlans() {
         variant: "default" as const
       };
     }
+    
+    if (isPremium && subscriptionId) {
+      return {
+        text: "Current Plan",
+        disabled: true,
+        variant: "outline" as const
+      };
+    }
+
+    // For free users or users without active subscription
     return {
       text: isLoading ? "Processing..." : "Upgrade to Premium",
       disabled: isLoading,
