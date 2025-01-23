@@ -406,11 +406,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signInWithGoogle = async () => {
     try {
+      // First check if the email is already used
       const provider = new GoogleAuthProvider();
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
 
-      // Check if user profile exists
+      // Check if user profile exists with this email
+      const usersRef = collection(db, 'users');
+      const emailQuery = query(usersRef, where('email', '==', user.email));
+      const emailSnapshot = await getDocs(emailQuery);
+      
+      if (!emailSnapshot.empty) {
+        const existingUserDoc = emailSnapshot.docs[0];
+        if (existingUserDoc.id !== user.uid) {
+          // If the email exists but with a different UID, it means it's registered with a different method
+          await firebaseSignOut(auth);
+          throw new Error('This email is already registered. Please sign in with your existing account.');
+        }
+        // If the user exists with the same UID, just update the profile
+        setProfile(existingUserDoc.data() as UserProfile);
+        return result;
+      }
+
+      // If no profile exists, create a new one
       const profileDoc = await getDoc(doc(db, 'users', user.uid));
       
       if (!profileDoc.exists()) {
