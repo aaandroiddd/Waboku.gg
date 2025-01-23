@@ -266,16 +266,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     try {
       if (data.username && data.username !== profile.username) {
+        // Check if new username is available
         const usernameDoc = await getDoc(doc(db, 'usernames', data.username));
         if (usernameDoc.exists()) {
           throw new Error('Username is already taken. Please choose another one.');
         }
 
-        await deleteDoc(doc(db, 'usernames', profile.username));
+        // Archive old username with timestamp
+        await setDoc(doc(db, 'usernames', profile.username), {
+          uid: user.uid,
+          username: profile.username,
+          status: 'archived',
+          archivedAt: new Date().toISOString(),
+          createdAt: profile.joinDate
+        });
 
+        // Create new username entry
         await setDoc(doc(db, 'usernames', data.username), {
           uid: user.uid,
           username: data.username,
+          status: 'active',
           createdAt: new Date().toISOString()
         });
       }
