@@ -324,23 +324,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!user) throw new Error('No user logged in');
 
     try {
+      // Get user profile first
       const profileDoc = await getDoc(doc(db, 'users', user.uid));
       const userProfile = profileDoc.exists() ? profileDoc.data() as UserProfile : null;
 
-      const usernamesCollection = collection(db, 'usernames');
-      const usernamesDocs = await getDocs(usernamesCollection);
-      const usernamesToDelete = usernamesDocs.docs
-        .filter(doc => doc.data().uid === user.uid)
-        .map(doc => deleteDoc(doc.ref));
-
-      await deleteDoc(doc(db, 'users', user.uid));
-      
-      await Promise.all(usernamesToDelete);
-
+      // Delete username document first
       if (userProfile?.username) {
+        console.log('Deleting username document:', userProfile.username);
         await deleteDoc(doc(db, 'usernames', userProfile.username));
       }
+
+      // Delete any additional usernames that might be associated with this user
+      const usernamesCollection = collection(db, 'usernames');
+      const usernamesQuery = query(usernamesCollection, where('uid', '==', user.uid));
+      const usernamesDocs = await getDocs(usernamesQuery);
       
+      // Delete all username documents
+      await Promise.all(
+        usernamesDocs.docs.map(async (doc) => {
+          console.log('Deleting additional username document:', doc.id);
+          return deleteDoc(doc.ref);
+        })
+      );
+
+      // Delete user profile
+      console.log('Deleting user profile:', user.uid);
+      await deleteDoc(doc(db, 'users', user.uid));
+
+      // Delete user authentication last
+      console.log('Deleting user authentication:', user.uid);
       await deleteUser(user);
       
       setUser(null);
