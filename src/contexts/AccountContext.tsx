@@ -38,6 +38,24 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
     const db = getDatabase();
     const accountRef = ref(db, `users/${user.uid}/account`);
 
+    // Initialize account for new users
+    const initializeNewUser = async () => {
+      const snapshot = await onValue(accountRef, () => {}, { onlyOnce: true });
+      if (!snapshot.exists()) {
+        // Set default values for new users
+        const defaultAccount = {
+          tier: 'free',
+          subscription: {
+            status: 'none'
+          }
+        };
+        await set(accountRef, defaultAccount);
+      }
+    };
+
+    // Initialize new users
+    initializeNewUser().catch(console.error);
+
     // Listen for account changes
     const unsubscribe = onValue(accountRef, (snapshot) => {
       const data = snapshot.val();
