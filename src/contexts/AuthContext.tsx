@@ -201,6 +201,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             youtube: '',
             twitter: '',
             facebook: ''
+          },
+          accountTier: 'free',
+          subscription: {
+            status: 'inactive',
+            currentPlan: 'free',
+            startDate: new Date().toISOString()
           }
         };
         await setDoc(doc(db, 'users', user.uid), basicProfile);
