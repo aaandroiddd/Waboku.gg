@@ -328,11 +328,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (user.providerData[0]?.providerId === 'google.com') {
         const provider = new GoogleAuthProvider();
         try {
-          await signInWithPopup(auth, provider);
+          // Add select_account to force account selection
+          provider.setCustomParameters({
+            prompt: 'select_account'
+          });
+          const result = await signInWithPopup(auth, provider);
+          
+          // Verify that the reauthentication was with the same account
+          if (result.user.uid !== user.uid) {
+            throw new Error('Please sign in with the same Google account you want to delete');
+          }
         } catch (reauthError: any) {
           console.error('Reauthentication error:', reauthError);
           if (reauthError.code === 'auth/popup-closed-by-user') {
             throw new Error('Please complete the Google Sign-In process to delete your account');
+          } else if (reauthError.code === 'auth/popup-blocked') {
+            throw new Error('Sign in popup was blocked. Please allow popups for this site.');
+          } else if (reauthError.code === 'auth/cancelled-popup-request') {
+            throw new Error('The sign in process was cancelled. Please try again.');
+          } else if (reauthError.code === 'auth/network-request-failed') {
+            throw new Error('Network error. Please check your internet connection and try again.');
           }
           throw new Error('Failed to reauthenticate. Please try signing in again.');
         }
@@ -342,38 +357,43 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const profileDoc = await getDoc(doc(db, 'users', user.uid));
       const userProfile = profileDoc.exists() ? profileDoc.data() as UserProfile : null;
 
-      // Delete username document first
-      if (userProfile?.username) {
-        console.log('Deleting username document:', userProfile.username);
-        await deleteDoc(doc(db, 'usernames', userProfile.username));
+      try {
+        // Delete username document first
+        if (userProfile?.username) {
+          console.log('Deleting username document:', userProfile.username);
+          await deleteDoc(doc(db, 'usernames', userProfile.username));
+        }
+
+        // Delete any additional usernames that might be associated with this user
+        const usernamesCollection = collection(db, 'usernames');
+        const usernamesQuery = query(usernamesCollection, where('uid', '==', user.uid));
+        const usernamesDocs = await getDocs(usernamesQuery);
+        
+        // Delete all username documents
+        await Promise.all(
+          usernamesDocs.docs.map(async (doc) => {
+            console.log('Deleting additional username document:', doc.id);
+            return deleteDoc(doc.ref);
+          })
+        );
+
+        // Delete user profile
+        console.log('Deleting user profile:', user.uid);
+        await deleteDoc(doc(db, 'users', user.uid));
+
+        // Delete user authentication last
+        console.log('Deleting user authentication:', user.uid);
+        await deleteUser(user);
+        
+        setUser(null);
+        setProfile(null);
+      } catch (deleteError: any) {
+        console.error('Error during deletion process:', deleteError);
+        throw new Error('Failed to delete account data. Please try again.');
       }
-
-      // Delete any additional usernames that might be associated with this user
-      const usernamesCollection = collection(db, 'usernames');
-      const usernamesQuery = query(usernamesCollection, where('uid', '==', user.uid));
-      const usernamesDocs = await getDocs(usernamesQuery);
-      
-      // Delete all username documents
-      await Promise.all(
-        usernamesDocs.docs.map(async (doc) => {
-          console.log('Deleting additional username document:', doc.id);
-          return deleteDoc(doc.ref);
-        })
-      );
-
-      // Delete user profile
-      console.log('Deleting user profile:', user.uid);
-      await deleteDoc(doc(db, 'users', user.uid));
-
-      // Delete user authentication last
-      console.log('Deleting user authentication:', user.uid);
-      await deleteUser(user);
-      
-      setUser(null);
-      setProfile(null);
     } catch (err: any) {
       console.error('Error deleting account:', err);
-      setError(err.message);
+      setError(err.message || 'Failed to delete account. Please try again.');
       throw err;
     }
   };
