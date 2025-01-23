@@ -363,29 +363,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       }
 
-      // Get user profile first
-      const profileDoc = await getDoc(doc(db, 'users', user.uid));
-      const userProfile = profileDoc.exists() ? profileDoc.data() as UserProfile : null;
-
       try {
-        // Delete username document first
-        if (userProfile?.username) {
-          console.log('Deleting username document:', userProfile.username);
-          await deleteDoc(doc(db, 'usernames', userProfile.username));
-        }
+        // Get user profile first
+        const profileDoc = await getDoc(doc(db, 'users', user.uid));
+        const userProfile = profileDoc.exists() ? profileDoc.data() as UserProfile : null;
 
-        // Delete any additional usernames that might be associated with this user
+        // Find and delete ALL username documents (both active and archived) associated with this user
         const usernamesCollection = collection(db, 'usernames');
         const usernamesQuery = query(usernamesCollection, where('uid', '==', user.uid));
         const usernamesDocs = await getDocs(usernamesQuery);
         
-        // Delete all username documents
-        await Promise.all(
-          usernamesDocs.docs.map(async (doc) => {
-            console.log('Deleting additional username document:', doc.id);
-            return deleteDoc(doc.ref);
-          })
-        );
+        // Delete all username documents in parallel
+        const deletePromises = usernamesDocs.docs.map(async (doc) => {
+          console.log('Deleting username document:', doc.id, 'Status:', doc.data().status || 'active');
+          return deleteDoc(doc.ref);
+        });
+
+        // Wait for all username deletions to complete
+        await Promise.all(deletePromises);
+
+        // If we have the current username from profile and it wasn't found in the query
+        if (userProfile?.username) {
+          const currentUsernameDoc = doc(db, 'usernames', userProfile.username);
+          const currentUsernameSnapshot = await getDoc(currentUsernameDoc);
+          if (currentUsernameSnapshot.exists()) {
+            console.log('Deleting current username document:', userProfile.username);
+            await deleteDoc(currentUsernameDoc);
+          }
+        }
 
         // Delete user profile
         console.log('Deleting user profile:', user.uid);
