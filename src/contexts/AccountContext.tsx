@@ -46,14 +46,22 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
         const defaultAccount = {
           tier: 'free',
           subscription: {
-            status: 'none'
+            status: 'none',
+            currentPlan: 'free',
+            startDate: new Date().toISOString()
           }
         };
         await set(accountRef, defaultAccount);
+        setAccountTier('free');
+        setSubscription({
+          status: 'none',
+          currentPlan: 'free',
+          startDate: new Date().toISOString()
+        });
       }
     };
 
-    // Initialize new users
+    // Initialize new users and set up listener only after initialization
     initializeNewUser().catch(console.error);
 
     // Listen for account changes
