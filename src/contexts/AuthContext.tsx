@@ -418,10 +418,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signInWithGoogle = async () => {
     try {
-      // First check if the email is already used
       const provider = new GoogleAuthProvider();
+      
+      // Before signing in with popup, check if email exists
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
+      
+      if (!user.email) {
+        throw new Error('No email provided from Google account');
+      }
 
       // Check if user profile exists with this email
       const usersRef = collection(db, 'users');
@@ -430,13 +435,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       if (!emailSnapshot.empty) {
         const existingUserDoc = emailSnapshot.docs[0];
-        if (existingUserDoc.id !== user.uid) {
-          // If the email exists but with a different UID, it means it's registered with a different method
-          await firebaseSignOut(auth);
-          throw new Error('This email is already registered. Please sign in with your existing account.');
-        }
-        // If the user exists with the same UID, just update the profile
-        setProfile(existingUserDoc.data() as UserProfile);
+        const existingProfile = existingUserDoc.data() as UserProfile;
+
+        // If the profile exists, preserve the existing data
+        const updatedProfile = {
+          ...existingProfile,
+          isEmailVerified: user.emailVerified,
+          lastSignIn: new Date().toISOString(),
+          // Only update these if they don't exist
+          avatarUrl: existingProfile.avatarUrl || user.photoURL || '',
+        };
+
+        // Update the profile with preserved data
+        await setDoc(doc(db, 'users', existingUserDoc.id), updatedProfile, { merge: true });
+        setProfile(updatedProfile as UserProfile);
         return result;
       }
 
@@ -444,22 +456,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const profileDoc = await getDoc(doc(db, 'users', user.uid));
       
       if (!profileDoc.exists()) {
-        // Create a new profile for Google sign-in users
-        const username = user.email!.split('@')[0];
-        let finalUsername = username;
+        // Generate a unique username for new Google users
+        const baseUsername = user.email.split('@')[0];
+        let finalUsername = baseUsername;
         let counter = 1;
 
-        // Check if username exists and generate a unique one if needed
         while (true) {
           const usernameDoc = await getDoc(doc(db, 'usernames', finalUsername));
           if (!usernameDoc.exists()) break;
-          finalUsername = `${username}${counter}`;
+          finalUsername = `${baseUsername}${counter}`;
           counter++;
         }
 
         const newProfile: UserProfile = {
           uid: user.uid,
-          email: user.email!,
+          email: user.email,
           username: finalUsername,
           joinDate: new Date().toISOString(),
           totalSales: 0,
@@ -494,7 +505,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         setProfile(newProfile);
       } else {
-        setProfile(profileDoc.data() as UserProfile);
+        // If profile exists but wasn't found by email query
+        const existingProfile = profileDoc.data() as UserProfile;
+        setProfile(existingProfile);
       }
 
       return result;
@@ -506,6 +519,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         errorMessage = 'Sign in cancelled';
       } else if (err.code === 'auth/popup-blocked') {
         errorMessage = 'Sign in popup was blocked. Please allow popups for this site.';
+      } else if (err.code === 'auth/account-exists-with-different-credential') {
+        errorMessage = 'An account already exists with this email address. Please sign in using your original method.';
       }
       
       setError(errorMessage);
