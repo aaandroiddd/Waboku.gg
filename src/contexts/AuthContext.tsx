@@ -324,6 +324,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!user) throw new Error('No user logged in');
 
     try {
+      // For Google Sign-In users, we need to reauthenticate first
+      if (user.providerData[0]?.providerId === 'google.com') {
+        const provider = new GoogleAuthProvider();
+        try {
+          await signInWithPopup(auth, provider);
+        } catch (reauthError: any) {
+          console.error('Reauthentication error:', reauthError);
+          if (reauthError.code === 'auth/popup-closed-by-user') {
+            throw new Error('Please complete the Google Sign-In process to delete your account');
+          }
+          throw new Error('Failed to reauthenticate. Please try signing in again.');
+        }
+      }
+
       // Get user profile first
       const profileDoc = await getDoc(doc(db, 'users', user.uid));
       const userProfile = profileDoc.exists() ? profileDoc.data() as UserProfile : null;
