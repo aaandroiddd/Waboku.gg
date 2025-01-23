@@ -189,6 +189,13 @@ export function PricingPlans() {
         variant: "outline" as const
       };
     }
+    if (!user) {
+      return {
+        text: "Sign in to upgrade",
+        disabled: true,
+        variant: "default" as const
+      };
+    }
     return {
       text: isLoading ? "Processing..." : "Upgrade to Premium",
       disabled: isLoading,
