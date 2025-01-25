@@ -163,7 +163,7 @@ const DashboardComponent = () => {
         await updateListingStatus(listingId, 'inactive');
         toast({
           title: "Listing deactivated",
-          description: "The listing has been moved to your previous listings.",
+          description: "The listing has been moved to your archived listings.",
           duration: 3000,
         });
       }
