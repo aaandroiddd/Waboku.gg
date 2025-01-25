@@ -41,7 +41,10 @@ export function useFavorites() {
         return null;
       });
 
-      const resolvedFavorites = (await Promise.all(favoritePromises)).filter((f): f is Listing => f !== null);
+      const resolvedFavorites = (await Promise.all(favoritePromises))
+        .filter((f): f is Listing => f !== null)
+        // Filter out archived listings
+        .filter(listing => !listing.archivedAt);
       setFavorites(resolvedFavorites);
       setFavoriteIds(favoriteIdsSet);
     } catch (err) {
