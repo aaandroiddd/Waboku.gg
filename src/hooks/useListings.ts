@@ -169,6 +169,11 @@ export function useListings({ userId, searchQuery, showOnlyActive = false }: Use
       }
 
       const data = listingSnap.data();
+      
+      // Check if the listing is archived
+      if (data.status === 'archived' || data.archivedAt) {
+        throw new Error('This listing has been archived and is no longer available');
+      }
       return {
         id: listingSnap.id,
         ...data,
