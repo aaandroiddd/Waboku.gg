@@ -1,11 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { getDatabase, ref, query, get, update } from 'firebase/database';
-import { initializeApp } from 'firebase/app';
-import { firebaseConfig } from '@/lib/firebase';
-
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const db = getDatabase(app);
+import { getDatabase, ref, get, update } from 'firebase-admin/database';
+import { adminDb } from '@/lib/firebase-admin';
 
 export default async function handler(
   req: NextApiRequest,
@@ -17,8 +12,8 @@ export default async function handler(
 
   try {
     // Get all listings
-    const listingsRef = ref(db, 'listings');
-    const listingsSnapshot = await get(query(listingsRef));
+    const listingsRef = ref(adminDb, 'listings');
+    const listingsSnapshot = await get(listingsRef);
     
     if (!listingsSnapshot.exists()) {
       return res.status(200).json({ message: 'No listings to process' });
@@ -45,14 +40,18 @@ export default async function handler(
 
     if (Object.keys(updates).length > 0) {
       // Perform all updates in a single operation
-      await update(ref(db), updates);
+      await update(ref(adminDb), updates);
       console.log(`Successfully archived ${Object.keys(updates).length} expired listings`);
       return res.status(200).json({ 
-        message: `Successfully archived ${Object.keys(updates).length} expired listings`
+        message: `Successfully archived ${Object.keys(updates).length} expired listings`,
+        archivedCount: Object.keys(updates).length
       });
     }
 
-    return res.status(200).json({ message: 'No expired listings to archive' });
+    return res.status(200).json({ 
+      message: 'No expired listings to archive',
+      archivedCount: 0
+    });
 
   } catch (error) {
     console.error('Error archiving expired listings:', error);
