@@ -281,7 +281,7 @@ const DashboardComponent = () => {
       <Tabs defaultValue="active" className="space-y-4">
         <TabsList>
           <TabsTrigger value="active">Active Listings</TabsTrigger>
-          <TabsTrigger value="previous">Previous Listings</TabsTrigger>
+          <TabsTrigger value="previous">Archived Listings</TabsTrigger>
         </TabsList>
 
         <TabsContent value="active" className="space-y-4">
