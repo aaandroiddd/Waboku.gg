@@ -44,7 +44,7 @@ export function useFavorites() {
       const resolvedFavorites = (await Promise.all(favoritePromises))
         .filter((f): f is Listing => f !== null)
         // Filter out archived listings
-        .filter(listing => !listing.archivedAt);
+        .filter(listing => !listing.archivedAt && listing.status !== 'archived');
       setFavorites(resolvedFavorites);
       setFavoriteIds(favoriteIdsSet);
     } catch (err) {
