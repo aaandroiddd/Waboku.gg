@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Progress } from "@/components/ui/progress"
 import { ACCOUNT_TIERS } from '@/types/account';
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { AlertCircle } from "lucide-react"
 
 interface ListingTimerProps {
   createdAt: Date | number | string;
@@ -84,12 +86,24 @@ export function ListingTimer({ createdAt, archivedAt, accountTier, status }: Lis
     }
   };
 
+  const getProgressColor = (progress: number, accountTier: string) => {
+    if (accountTier === 'free') {
+      if (progress > 90) return 'bg-red-500';
+      if (progress > 75) return 'bg-orange-500';
+      return 'bg-blue-500';
+    }
+    return ''; // Default color for premium users
+  };
+
   if (timeLeft === 0) {
     return (
       <div className="flex flex-col gap-2">
-        <div className="text-sm text-destructive">
-          Listing expired
-        </div>
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            Listing expired
+          </AlertDescription>
+        </Alert>
         <Progress value={100} className="h-2" />
       </div>
     );
@@ -97,10 +111,23 @@ export function ListingTimer({ createdAt, archivedAt, accountTier, status }: Lis
 
   return (
     <div className="flex flex-col gap-2">
-      <div className="text-sm text-muted-foreground">
-        Expires in: {formatTimeLeft()}
-      </div>
-      <Progress value={progress} className="h-2" />
+      {accountTier === 'free' && status === 'active' && (
+        <Alert>
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            Free plan: Listing expires in {formatTimeLeft()}
+          </AlertDescription>
+        </Alert>
+      )}
+      {(accountTier !== 'free' || status !== 'active') && (
+        <div className="text-sm text-muted-foreground">
+          Expires in: {formatTimeLeft()}
+        </div>
+      )}
+      <Progress 
+        value={progress} 
+        className={`h-2 ${getProgressColor(progress, accountTier)}`}
+      />
     </div>
   );
 }
