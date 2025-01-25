@@ -82,7 +82,30 @@ export function Chat({
     if (listingTitle) {
       setDisplayedListingTitle(listingTitle);
     }
-  }, [listingTitle]);
+
+    // Check if the listing is archived when the component mounts
+    if (listingId) {
+      const checkListingStatus = async () => {
+        try {
+          const { db } = getFirebaseServices();
+          if (!db) return;
+          
+          const listingDoc = await getDoc(doc(db, 'listings', listingId));
+          if (listingDoc.exists()) {
+            const data = listingDoc.data();
+            if (data.status === 'archived' || data.archivedAt) {
+              setError('This listing has been archived and is no longer available for messaging.');
+              setNewMessage('');
+            }
+          }
+        } catch (err) {
+          console.error('Error checking listing status:', err);
+        }
+      };
+      
+      checkListingStatus();
+    }
+  }, [listingId, listingTitle]);
 
   const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
     if (scrollRef.current) {
