@@ -200,18 +200,29 @@ export default function ListingPage() {
   }
 
   if (error || !listing) {
+    const isArchived = error?.includes('archived');
     return (
       <div className="min-h-screen flex flex-col">
         <div className="container mx-auto p-4 flex-1">
-          <Card className="bg-destructive/10">
-            <CardContent className="p-6">
-              <p className="text-destructive">{error || 'Listing not found'}</p>
+          <Card className={isArchived ? "bg-muted" : "bg-destructive/10"}>
+            <CardContent className="p-6 text-center">
+              <div className="mb-6">
+                {isArchived ? (
+                  <>
+                    <h2 className="text-2xl font-semibold mb-2">Listing Archived</h2>
+                    <p className="text-muted-foreground">
+                      This listing has been archived and is no longer available for viewing.
+                    </p>
+                  </>
+                ) : (
+                  <p className="text-destructive">{error || 'Listing not found'}</p>
+                )}
+              </div>
               <Button 
                 variant="outline" 
-                className="mt-4" 
                 onClick={() => router.push('/listings')}
               >
-                Back to Listings
+                Browse Available Listings
               </Button>
             </CardContent>
           </Card>
