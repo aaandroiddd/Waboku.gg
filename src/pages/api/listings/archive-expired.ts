@@ -1,6 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { getDatabase, ref, get, update } from 'firebase-admin/database';
-import { adminDb } from '@/lib/firebase-admin';
+import { getFirebaseAdmin } from '@/lib/firebase-admin';
 
 export default async function handler(
   req: NextApiRequest,
@@ -11,9 +10,11 @@ export default async function handler(
   }
 
   try {
+    const { rtdb } = getFirebaseAdmin();
+    
     // Get all listings
-    const listingsRef = ref(adminDb, 'listings');
-    const listingsSnapshot = await get(listingsRef);
+    const listingsRef = rtdb.ref('listings');
+    const listingsSnapshot = await listingsRef.get();
     
     if (!listingsSnapshot.exists()) {
       return res.status(200).json({ message: 'No listings to process' });
@@ -40,7 +41,7 @@ export default async function handler(
 
     if (Object.keys(updates).length > 0) {
       // Perform all updates in a single operation
-      await update(ref(adminDb), updates);
+      await rtdb.ref().update(updates);
       console.log(`Successfully archived ${Object.keys(updates).length} expired listings`);
       return res.status(200).json({ 
         message: `Successfully archived ${Object.keys(updates).length} expired listings`,
@@ -55,6 +56,9 @@ export default async function handler(
 
   } catch (error) {
     console.error('Error archiving expired listings:', error);
-    return res.status(500).json({ error: 'Failed to archive expired listings' });
+    return res.status(500).json({ 
+      error: 'Failed to archive expired listings',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
   }
 }
