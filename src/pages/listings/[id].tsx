@@ -73,6 +73,11 @@ export default function ListingPage() {
 
         const data = listingDoc.data();
         
+        // Check if the listing is archived
+        if (data.status === 'archived') {
+          throw new Error('This listing has been archived and is no longer available');
+        }
+        
         const listingData: Listing = {
           id: listingDoc.id,
           title: data.title || 'Untitled Listing',
