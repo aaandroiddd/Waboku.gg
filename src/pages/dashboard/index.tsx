@@ -398,6 +398,13 @@ const DashboardComponent = () => {
                       <div className="flex justify-between items-center text-sm text-muted-foreground">
                         <span>Listed on {new Date(listing.createdAt).toLocaleDateString()}</span>
                       </div>
+                      <div className="mt-2">
+                        <ListingTimer
+                          createdAt={listing.createdAt}
+                          accountTier={profile?.tier || 'free'}
+                          status={listing.status}
+                        />
+                      </div>
                       <div className="flex flex-wrap gap-2 mt-4 relative z-10">
                         <Button
                           variant="outline"
