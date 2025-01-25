@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Progress } from "@/components/ui/progress"
 import { ACCOUNT_TIERS } from '@/types/account';
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -19,8 +19,51 @@ export function ListingTimer({ createdAt, archivedAt, accountTier, status, listi
   const [progress, setProgress] = useState<number>(0);
   const [hasTriggeredCleanup, setHasTriggeredCleanup] = useState(false);
   const [isExpired, setIsExpired] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
   const { toast } = useToast();
   const router = useRouter();
+
+  const triggerCleanup = useCallback(async () => {
+    if (isProcessing) return;
+    
+    setIsProcessing(true);
+    try {
+      const response = await fetch('/api/cleanup-inactive-listings', {
+        method: 'POST',
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to archive listing');
+      }
+
+      const data = await response.json();
+      
+      toast({
+        title: "Listing Status Updated",
+        description: data.message || "The listing has been archived.",
+        duration: 5000,
+      });
+
+      // If we're on the listing page, redirect to listings
+      if (router.pathname.includes('/listings/[id]')) {
+        router.push('/listings');
+      } else {
+        // If we're on any other page, refresh to update the UI
+        router.refresh();
+      }
+    } catch (error) {
+      console.error('Error triggering cleanup:', error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to archive the listing. Please try again later.",
+        variant: "destructive",
+        duration: 5000,
+      });
+    } finally {
+      setIsProcessing(false);
+    }
+  }, [router, toast, isProcessing]);
 
   useEffect(() => {
     const calculateTimeLeft = () => {
@@ -63,41 +106,7 @@ export function ListingTimer({ createdAt, archivedAt, accountTier, status, listi
     const timer = setInterval(calculateTimeLeft, 1000);
 
     return () => clearInterval(timer);
-  }, [createdAt, archivedAt, accountTier, status, hasTriggeredCleanup]);
-
-  const triggerCleanup = async () => {
-    try {
-      const response = await fetch('/api/cleanup-inactive-listings', {
-        method: 'POST',
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to archive listing');
-      }
-
-      toast({
-        title: "Listing Expired",
-        description: "This listing has been automatically archived.",
-        duration: 5000,
-      });
-
-      // If we're on the listing page, redirect to listings
-      if (router.pathname.includes('/listings/[id]')) {
-        router.push('/listings');
-      } else {
-        // If we're on any other page, refresh to update the UI
-        router.refresh();
-      }
-    } catch (error) {
-      console.error('Error triggering cleanup:', error);
-      toast({
-        title: "Error",
-        description: "Failed to archive the listing. Please try again later.",
-        variant: "destructive",
-        duration: 5000,
-      });
-    }
-  };
+  }, [createdAt, archivedAt, accountTier, status, hasTriggeredCleanup, triggerCleanup]);
 
   const formatTimeLeft = () => {
     const days = Math.floor(timeLeft / (1000 * 60 * 60 * 24));
@@ -128,7 +137,7 @@ export function ListingTimer({ createdAt, archivedAt, accountTier, status, listi
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
-            Listing expired
+            {isProcessing ? "Archiving listing..." : "Listing expired"}
           </AlertDescription>
         </Alert>
         <Progress value={100} className="h-2" />
