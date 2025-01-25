@@ -3,18 +3,24 @@ import { Progress } from "@/components/ui/progress"
 import { ACCOUNT_TIERS } from '@/types/account';
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { AlertCircle } from "lucide-react"
+import { useToast } from "@/components/ui/use-toast"
+import { useRouter } from 'next/router';
 
 interface ListingTimerProps {
   createdAt: Date | number | string;
   archivedAt?: Date | number | string;
   accountTier: 'free' | 'premium';
   status: 'active' | 'archived' | 'inactive';
+  listingId?: string;
 }
 
-export function ListingTimer({ createdAt, archivedAt, accountTier, status }: ListingTimerProps) {
+export function ListingTimer({ createdAt, archivedAt, accountTier, status, listingId }: ListingTimerProps) {
   const [timeLeft, setTimeLeft] = useState<number>(0);
   const [progress, setProgress] = useState<number>(0);
   const [hasTriggeredCleanup, setHasTriggeredCleanup] = useState(false);
+  const [isExpired, setIsExpired] = useState(false);
+  const { toast } = useToast();
+  const router = useRouter();
 
   useEffect(() => {
     const calculateTimeLeft = () => {
@@ -45,8 +51,9 @@ export function ListingTimer({ createdAt, archivedAt, accountTier, status }: Lis
       setTimeLeft(remaining);
       setProgress(progressValue);
 
-      // Trigger cleanup when timer expires
-      if (remaining === 0 && !hasTriggeredCleanup) {
+      // Check if the listing has expired
+      if (remaining === 0 && !hasTriggeredCleanup && status === 'active') {
+        setIsExpired(true);
         setHasTriggeredCleanup(true);
         triggerCleanup();
       }
@@ -65,10 +72,30 @@ export function ListingTimer({ createdAt, archivedAt, accountTier, status }: Lis
       });
       
       if (!response.ok) {
-        console.error('Failed to trigger cleanup');
+        throw new Error('Failed to archive listing');
+      }
+
+      toast({
+        title: "Listing Expired",
+        description: "This listing has been automatically archived.",
+        duration: 5000,
+      });
+
+      // If we're on the listing page, redirect to listings
+      if (router.pathname.includes('/listings/[id]')) {
+        router.push('/listings');
+      } else {
+        // If we're on any other page, refresh to update the UI
+        router.refresh();
       }
     } catch (error) {
       console.error('Error triggering cleanup:', error);
+      toast({
+        title: "Error",
+        description: "Failed to archive the listing. Please try again later.",
+        variant: "destructive",
+        duration: 5000,
+      });
     }
   };
 
@@ -95,7 +122,7 @@ export function ListingTimer({ createdAt, archivedAt, accountTier, status }: Lis
     return ''; // Default color for premium users
   };
 
-  if (timeLeft === 0) {
+  if (isExpired || timeLeft === 0) {
     return (
       <div className="flex flex-col gap-2">
         <Alert variant="destructive">
