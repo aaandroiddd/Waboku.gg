@@ -19,30 +19,39 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .get();
 
     // Process each active listing
-    for (const doc of activeListingsSnapshot.docs) {
-      const data = doc.data();
-      const createdAt = data.createdAt?.toDate() || new Date();
-      const userRef = db.collection('users').doc(data.userId);
-      const userDoc = await userRef.get();
-      const userData = userDoc.data();
-      
-      // Get user's account tier
-      const accountTier = userData?.accountTier || 'free';
-      const tierDuration = ACCOUNT_TIERS[accountTier].listingDuration;
-      
-      // Calculate expiration time in milliseconds
-      const expirationTime = new Date(createdAt.getTime() + (tierDuration * 60 * 60 * 1000));
-      
-      if (new Date() > expirationTime) {
-        // Instead of deleting, update the status to 'archived'
-        batch.update(doc.ref, {
-          status: 'archived',
-          archivedAt: Timestamp.now(),
-          originalCreatedAt: data.createdAt
-        });
-        totalArchived++;
+    const processPromises = activeListingsSnapshot.docs.map(async (doc) => {
+      try {
+        const data = doc.data();
+        if (!data) return;
+
+        const createdAt = data.createdAt?.toDate() || new Date();
+        const userRef = db.collection('users').doc(data.userId);
+        const userDoc = await userRef.get();
+        const userData = userDoc.exists ? userDoc.data() : null;
+        
+        // Get user's account tier
+        const accountTier = userData?.accountTier || 'free';
+        const tierDuration = ACCOUNT_TIERS[accountTier].listingDuration;
+        
+        // Calculate expiration time in milliseconds
+        const expirationTime = new Date(createdAt.getTime() + (tierDuration * 60 * 60 * 1000));
+        
+        if (new Date() > expirationTime) {
+          // Instead of deleting, update the status to 'archived'
+          batch.update(doc.ref, {
+            status: 'archived',
+            archivedAt: Timestamp.now(),
+            originalCreatedAt: data.createdAt
+          });
+          totalArchived++;
+        }
+      } catch (error) {
+        console.error(`Error processing listing ${doc.id}:`, error);
       }
-    }
+    });
+
+    // Wait for all listing processing to complete
+    await Promise.all(processPromises);
 
     // Get inactive listings older than 7 days
     const inactiveSnapshot = await db.collection('listings')
@@ -52,21 +61,34 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // Move inactive listings to archived as well
     inactiveSnapshot.docs.forEach((doc) => {
-      batch.update(doc.ref, {
-        status: 'archived',
-        archivedAt: Timestamp.now(),
-        originalCreatedAt: doc.data().createdAt
-      });
-      totalArchived++;
+      try {
+        const data = doc.data();
+        if (!data) return;
+
+        batch.update(doc.ref, {
+          status: 'archived',
+          archivedAt: Timestamp.now(),
+          originalCreatedAt: data.createdAt
+        });
+        totalArchived++;
+      } catch (error) {
+        console.error(`Error processing inactive listing ${doc.id}:`, error);
+      }
     });
     
-    await batch.commit();
+    // Only commit if there are changes to make
+    if (totalArchived > 0) {
+      await batch.commit();
+    }
 
     return res.status(200).json({ 
       message: `Successfully archived ${totalArchived} expired listings` 
     });
   } catch (error: any) {
     console.error('Error archiving expired listings:', error);
-    return res.status(500).json({ error: error.message });
+    return res.status(500).json({ 
+      error: 'Failed to archive listings',
+      details: error.message 
+    });
   }
 }
