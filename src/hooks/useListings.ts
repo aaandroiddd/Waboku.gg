@@ -169,6 +169,9 @@ export function useListings({ userId, searchQuery, showOnlyActive = false }: Use
       }
 
       const data = listingSnap.data();
+      if (!data) {
+        throw new Error('Listing data is empty');
+      }
       
       // Check if the listing is archived
       if (data.status === 'archived' || data.archivedAt) {
