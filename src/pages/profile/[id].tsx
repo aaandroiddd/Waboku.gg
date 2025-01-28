@@ -12,6 +12,7 @@ import { useEffect, useState } from 'react';
 import { Youtube, Twitter, Facebook, ArrowLeft } from 'lucide-react';
 import { Footer } from '@/components/Footer';
 import { SellerBadge } from '@/components/SellerBadge';
+import { AdminBadge } from '@/components/AdminBadge';
 
 const LoadingProfile = () => (
   <div className="container mx-auto p-6">
