@@ -210,22 +210,21 @@ export default function ListingPage() {
 
   if (error || !listing) {
     const isArchived = error?.includes('archived');
+    const isExpired = error?.includes('expired');
     return (
       <div className="min-h-screen flex flex-col">
         <div className="container mx-auto p-4 flex-1">
-          <Card className={isArchived ? "bg-muted" : "bg-destructive/10"}>
+          <Card className="bg-muted">
             <CardContent className="p-6 text-center">
               <div className="mb-6">
-                {isArchived ? (
-                  <>
-                    <h2 className="text-2xl font-semibold mb-2">Listing Archived</h2>
-                    <p className="text-muted-foreground">
-                      This listing has been archived and is no longer available for viewing.
-                    </p>
-                  </>
-                ) : (
-                  <p className="text-destructive">{error || 'Listing not found'}</p>
-                )}
+                <h2 className="text-2xl font-semibold mb-2">
+                  {isArchived || isExpired ? 'Listing No Longer Available' : 'Listing Not Found'}
+                </h2>
+                <p className="text-muted-foreground">
+                  {isArchived || isExpired ? 
+                    'This listing has been sold or is no longer available.' : 
+                    'We couldn\'t find the listing you\'re looking for.'}
+                </p>
               </div>
               <Button 
                 variant="outline" 
