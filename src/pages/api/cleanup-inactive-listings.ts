@@ -106,7 +106,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       message: `Successfully archived ${totalArchived} expired listings` 
     });
   } catch (error: any) {
-    console.error('Error archiving expired listings:', error);
+    logError('Cleanup inactive listings', error);
     return res.status(500).json({ 
       error: 'Failed to archive listings',
       details: error.message 
