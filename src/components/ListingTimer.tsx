@@ -28,42 +28,70 @@ export function ListingTimer({ createdAt, archivedAt, accountTier, status, listi
     
     setIsProcessing(true);
     try {
-      const response = await fetch('/api/cleanup-inactive-listings', {
-        method: 'POST',
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to archive listing');
-      }
+      // If the listing is active, archive it
+      if (status === 'active') {
+        const response = await fetch('/api/cleanup-inactive-listings', {
+          method: 'POST',
+        });
+        
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to archive listing');
+        }
 
-      const data = await response.json();
-      
-      toast({
-        title: "Listing Status Updated",
-        description: data.message || "The listing has been archived.",
-        duration: 5000,
-      });
+        const data = await response.json();
+        
+        toast({
+          title: "Listing Status Updated",
+          description: data.message || "The listing has been archived.",
+          duration: 5000,
+        });
 
-      // If we're on the listing page, redirect to listings
-      if (router.pathname.includes('/listings/[id]')) {
-        router.push('/listings');
-      } else {
-        // If we're on any other page, refresh to update the UI
-        router.refresh();
+        // If we're on the listing page, redirect to listings
+        if (router.pathname.includes('/listings/[id]')) {
+          router.push('/listings');
+        } else {
+          // If we're on any other page, refresh to update the UI
+          router.refresh();
+        }
+      } 
+      // If the listing is archived, delete it
+      else if (status === 'archived') {
+        const response = await fetch('/api/listings/cleanup-archived', {
+          method: 'POST',
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to delete archived listing');
+        }
+
+        const data = await response.json();
+        
+        toast({
+          title: "Listing Deleted",
+          description: "The archived listing has been permanently deleted.",
+          duration: 5000,
+        });
+
+        if (router.pathname.includes('/listings/[id]')) {
+          router.push('/listings');
+        } else {
+          router.refresh();
+        }
       }
     } catch (error) {
       console.error('Error triggering cleanup:', error);
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to archive the listing. Please try again later.",
+        description: error instanceof Error ? error.message : "Failed to process the listing. Please try again later.",
         variant: "destructive",
         duration: 5000,
       });
     } finally {
       setIsProcessing(false);
     }
-  }, [router, toast, isProcessing]);
+  }, [router, toast, isProcessing, status]);
 
   useEffect(() => {
     const calculateTimeLeft = () => {
