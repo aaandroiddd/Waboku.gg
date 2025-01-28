@@ -159,7 +159,14 @@ export function ListingGrid({
   }, [selectedListing, toggleFavorite, onLoadMore]);
 
   const displayedListings = useMemo(() => {
-    return listings.slice(0, displayCount);
+    // Filter out expired and archived listings
+    const filteredListings = listings.filter(listing => {
+      const isActive = listing.status === 'active';
+      const isNotExpired = !listing.expiresAt || new Date(listing.expiresAt) > new Date();
+      const isNotArchived = !listing.archivedAt;
+      return isActive && isNotExpired && isNotArchived;
+    });
+    return filteredListings.slice(0, displayCount);
   }, [listings, displayCount]);
 
   const memoizedGetConditionColor = useCallback(getConditionColor, []);
