@@ -27,7 +27,7 @@ export default async function handler(
     const { subscriptionId, userId } = req.body;
 
     // Detailed request logging
-    console.log('Test cancellation request received:', {
+    console.log('Cancellation request received:', {
       subscriptionId,
       userId
     });
@@ -80,9 +80,6 @@ export default async function handler(
       });
     }
 
-    // Process test cancellation
-    console.log('Processing test environment cancellation');
-    
     // Get current subscription data
     const subscriptionSnapshot = await db.ref(`users/${userId}/account/subscription`).get();
     const currentSubscription = subscriptionSnapshot.val();
@@ -99,25 +96,25 @@ export default async function handler(
     const endDate = new Date(startDate);
     endDate.setMonth(endDate.getMonth() + 1); // Add one month from the start date
 
-    // Update Firebase with test cancellation data while preserving original dates
+    // Update subscription status in Firebase
     await db.ref(`users/${userId}/account`).update({
-      tier: 'free',
       subscription: {
         ...currentSubscription,
         status: 'canceled',
         endDate: endDate.toISOString(),
-        stripeSubscriptionId: subscriptionId
+        stripeSubscriptionId: subscriptionId,
+        canceledAt: new Date().toISOString()
       }
     });
 
-    console.log('Test cancellation successful:', {
+    console.log('Cancellation successful:', {
       userId,
       endDate: endDate.toISOString()
     });
 
     return res.status(200).json({ 
       success: true,
-      message: 'Subscription canceled in test environment',
+      message: 'Subscription canceled successfully',
       endDate: endDate.toISOString()
     });
 
