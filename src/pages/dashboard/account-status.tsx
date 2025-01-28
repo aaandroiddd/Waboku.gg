@@ -191,12 +191,10 @@ export default function AccountStatus() {
                           const userRef = ref(db, `users/${user?.uid}/account`);
                           await set(userRef, {
                             tier: 'premium',
-                            subscription: {
-                              status: 'active',
-                              startDate: new Date().toISOString(),
-                              renewalDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-                              stripeSubscriptionId: 'test_sub_' + Math.random().toString(36).substr(2, 9)
-                            }
+                            status: 'active',
+                            stripeCustomerId: 'test_customer_' + Math.random().toString(36).substr(2, 9),
+                            subscriptionId: 'test_sub_' + Math.random().toString(36).substr(2, 9),
+                            lastUpdated: Date.now()
                           });
 
                           // Redirect to simulate the success flow
