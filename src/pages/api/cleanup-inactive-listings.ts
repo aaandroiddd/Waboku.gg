@@ -25,15 +25,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const { db } = getFirebaseAdmin();
     const batch = db.batch();
     let totalArchived = 0;
+    let totalDeleted = 0;
     
-    // Get all active listings
+    // Step 1: Archive expired active listings
     const activeListingsSnapshot = await db.collection('listings')
       .where('status', '==', 'active')
       .get();
 
     console.log(`[Cleanup Inactive Listings] Processing ${activeListingsSnapshot.size} active listings`);
     
-    // Process each active listing
     const processPromises = activeListingsSnapshot.docs.map(async (doc) => {
       try {
         const data = doc.data();
@@ -43,22 +43,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const userRef = db.collection('users').doc(data.userId);
         const userDoc = await userRef.get();
         
-        // Check if user document exists and has data
         const userData = userDoc.data();
         if (!userData) {
           console.log(`[Cleanup Inactive Listings] No user data found for listing ${doc.id}`);
           return;
         }
         
-        // Get user's account tier
         const accountTier = userData.accountTier || 'free';
         const tierDuration = ACCOUNT_TIERS[accountTier]?.listingDuration || ACCOUNT_TIERS.free.listingDuration;
         
-        // Calculate expiration time in milliseconds
         const expirationTime = new Date(createdAt.getTime() + (tierDuration * 60 * 60 * 1000));
         
         if (new Date() > expirationTime) {
-          // Instead of deleting, update the status to 'archived'
           batch.update(doc.ref, {
             status: 'archived',
             archivedAt: Timestamp.now(),
@@ -75,10 +71,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     });
 
-    // Wait for all listing processing to complete
     await Promise.all(processPromises);
 
-    // Get inactive listings older than 7 days
+    // Step 2: Archive inactive listings older than 7 days
     const inactiveSnapshot = await db.collection('listings')
       .where('status', '==', 'inactive')
       .where('updatedAt', '<', Timestamp.fromDate(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)))
@@ -86,7 +81,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     console.log(`[Cleanup Inactive Listings] Processing ${inactiveSnapshot.size} inactive listings`);
 
-    // Move inactive listings to archived as well
     inactiveSnapshot.docs.forEach((doc) => {
       try {
         const data = doc.data();
@@ -106,22 +100,43 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         });
       }
     });
+
+    // Step 3: Delete archived listings older than 7 days
+    const archivedSnapshot = await db.collection('listings')
+      .where('status', '==', 'archived')
+      .where('archivedAt', '<', Timestamp.fromDate(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)))
+      .get();
+
+    console.log(`[Cleanup Inactive Listings] Processing ${archivedSnapshot.size} archived listings for deletion`);
+
+    archivedSnapshot.docs.forEach((doc) => {
+      try {
+        batch.delete(doc.ref);
+        totalDeleted++;
+        console.log(`[Cleanup Inactive Listings] Marked listing ${doc.id} for deletion`);
+      } catch (error) {
+        logError('Processing archived listing', error, {
+          listingId: doc.id,
+          data: doc.data()
+        });
+      }
+    });
     
-    // Only commit if there are changes to make
-    if (totalArchived > 0) {
+    // Commit all changes
+    if (totalArchived > 0 || totalDeleted > 0) {
       await batch.commit();
-      console.log(`[Cleanup Inactive Listings] Successfully committed ${totalArchived} changes`);
+      console.log(`[Cleanup Inactive Listings] Successfully committed changes: ${totalArchived} archived, ${totalDeleted} deleted`);
     } else {
       console.log('[Cleanup Inactive Listings] No changes to commit');
     }
 
     return res.status(200).json({ 
-      message: `Successfully archived ${totalArchived} expired listings` 
+      message: `Successfully processed listings: ${totalArchived} archived, ${totalDeleted} deleted` 
     });
   } catch (error: any) {
     logError('Cleanup inactive listings', error);
     return res.status(500).json({ 
-      error: 'Failed to archive listings',
+      error: 'Failed to process listings',
       details: error.message 
     });
   }
