@@ -15,6 +15,8 @@ interface Stats {
   recentArchivals: number;
 }
 
+import { checkAdminStatus } from '@/middleware/adminAuth';
+
 export default function AdminMonitor() {
   const [stats, setStats] = useState<Stats>({
     totalListings: 0,
