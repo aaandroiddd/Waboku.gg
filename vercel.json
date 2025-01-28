@@ -2,8 +2,8 @@
   "installCommand": "pnpm install --no-frozen-lockfile --prefer-offline",
   "crons": [
     {
-      "path": "/api/admin/test-cleanup",
-      "schedule": "*/5 * * * *"
+      "path": "/api/listings/archive-expired",
+      "schedule": "0 */1 * * *"
     }
   ]
 }
