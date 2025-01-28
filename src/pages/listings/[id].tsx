@@ -73,9 +73,18 @@ export default function ListingPage() {
 
         const data = listingDoc.data();
         
-        // Check if the listing is archived - both conditions must be checked
-        if (data.status === 'archived' && data.archivedAt) {
+        // Check if the listing is archived or expired
+        if (data.status === 'archived' || data.archivedAt) {
           throw new Error('This listing has been archived and is no longer available');
+        }
+        
+        // Check if the listing has expired based on creation date
+        const now = Date.now();
+        const FORTY_EIGHT_HOURS = 48 * 60 * 60 * 1000; // 48 hours in milliseconds
+        const createdAt = data.createdAt?.toDate().getTime() || 0;
+        
+        if (!data.isPremium && (now - createdAt) > FORTY_EIGHT_HOURS) {
+          throw new Error('This listing has expired and is no longer available');
         }
         
         const listingData: Listing = {
