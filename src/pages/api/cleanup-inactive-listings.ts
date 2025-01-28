@@ -13,7 +13,9 @@ const logError = (context: string, error: any, additionalInfo?: any) => {
 };
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  console.log('[Cleanup Inactive Listings] Starting cleanup process');
+  // Force console log to ensure visibility in Vercel logs
+  console.log('[Cleanup Inactive Listings] Starting cleanup process', new Date().toISOString());
+  console.log('[Cleanup Inactive Listings] Request method:', req.method);
   
   if (req.method !== 'POST') {
     console.warn('[Cleanup Inactive Listings] Invalid method:', req.method);
