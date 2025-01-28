@@ -61,7 +61,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           totalArchived++;
         }
       } catch (error) {
-        console.error(`Error processing listing ${doc.id}:`, error);
+        logError('Processing active listing', error, {
+          listingId: doc.id,
+          data: doc.data()
+        });
       }
     });
 
