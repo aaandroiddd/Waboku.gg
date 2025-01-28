@@ -32,14 +32,11 @@ export default function AdminMonitor() {
   useEffect(() => {
     const fetchStats = async () => {
       try {
+        // Check admin status first
+        await checkAdminStatus();
+        
         const db = getDatabase();
         const auth = getAuth();
-        
-        // Ensure user is authenticated and has admin rights
-        const user = auth.currentUser;
-        if (!user) {
-          throw new Error('Authentication required');
-        }
 
         // Fetch listings data
         const listingsSnapshot = await get(ref(db, 'listings'));
