@@ -67,7 +67,7 @@ export default function ListingPage() {
         const listingRef = doc(db, 'listings', id);
         const listingDoc = await getDoc(listingRef);
 
-        if (!listingDoc.exists()) {
+        if (!listingDoc.exists) {
           throw new Error('Listing not found');
         }
 
