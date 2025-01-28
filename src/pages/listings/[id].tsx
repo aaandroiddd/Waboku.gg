@@ -116,7 +116,7 @@ export default function ListingPage() {
           const favoriteRef = doc(db, 'users', user.uid, 'favorites', id);
           const favoriteDoc = await getDoc(favoriteRef);
           if (isMounted) {
-            setIsFavorited(favoriteDoc.exists);
+            setIsFavorited(favoriteDoc.exists());
           }
         }
       } catch (err: any) {
