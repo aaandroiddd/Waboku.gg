@@ -42,11 +42,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const createdAt = data.createdAt?.toDate() || new Date();
         const userRef = db.collection('users').doc(data.userId);
         const userDoc = await userRef.get();
-        const userData = userDoc.exists ? userDoc.data() : null;
+        
+        // Check if user document exists and has data
+        const userData = userDoc.data();
+        if (!userData) {
+          console.log(`[Cleanup Inactive Listings] No user data found for listing ${doc.id}`);
+          return;
+        }
         
         // Get user's account tier
-        const accountTier = userData?.accountTier || 'free';
-        const tierDuration = ACCOUNT_TIERS[accountTier].listingDuration;
+        const accountTier = userData.accountTier || 'free';
+        const tierDuration = ACCOUNT_TIERS[accountTier]?.listingDuration || ACCOUNT_TIERS.free.listingDuration;
         
         // Calculate expiration time in milliseconds
         const expirationTime = new Date(createdAt.getTime() + (tierDuration * 60 * 60 * 1000));
@@ -59,6 +65,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             originalCreatedAt: data.createdAt
           });
           totalArchived++;
+          console.log(`[Cleanup Inactive Listings] Marked listing ${doc.id} for archival`);
         }
       } catch (error) {
         logError('Processing active listing', error, {
@@ -77,6 +84,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .where('updatedAt', '<', Timestamp.fromDate(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)))
       .get();
 
+    console.log(`[Cleanup Inactive Listings] Processing ${inactiveSnapshot.size} inactive listings`);
+
     // Move inactive listings to archived as well
     inactiveSnapshot.docs.forEach((doc) => {
       try {
@@ -89,6 +98,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           originalCreatedAt: data.createdAt
         });
         totalArchived++;
+        console.log(`[Cleanup Inactive Listings] Marked inactive listing ${doc.id} for archival`);
       } catch (error) {
         logError('Processing inactive listing', error, {
           listingId: doc.id,
@@ -100,6 +110,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Only commit if there are changes to make
     if (totalArchived > 0) {
       await batch.commit();
+      console.log(`[Cleanup Inactive Listings] Successfully committed ${totalArchived} changes`);
+    } else {
+      console.log('[Cleanup Inactive Listings] No changes to commit');
     }
 
     return res.status(200).json({ 
