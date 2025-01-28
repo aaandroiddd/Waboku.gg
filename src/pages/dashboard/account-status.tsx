@@ -185,25 +185,27 @@ export default function AccountStatus() {
 
                       // For testing purposes in preview environment
                       if (process.env.NEXT_PUBLIC_CO_DEV_ENV === 'preview') {
-                        // Simulate successful resubscription
-                        const db = getDatabase();
-                        const userRef = ref(db, `users/${user?.uid}/account`);
-                        await set(userRef, {
-                          tier: 'premium',
-                          subscription: {
-                            status: 'active',
-                            startDate: new Date().toISOString(),
-                            renewalDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-                            stripeSubscriptionId: 'test_sub_' + Math.random().toString(36).substr(2, 9)
-                          }
-                        });
+                        // Simulate successful resubscription by directly updating Firebase
+                        try {
+                          const db = getDatabase();
+                          const userRef = ref(db, `users/${user?.uid}/account`);
+                          await set(userRef, {
+                            tier: 'premium',
+                            subscription: {
+                              status: 'active',
+                              startDate: new Date().toISOString(),
+                              renewalDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+                              stripeSubscriptionId: 'test_sub_' + Math.random().toString(36).substr(2, 9)
+                            }
+                          });
 
-                        toast({
-                          title: "Success!",
-                          description: "Your subscription has been reactivated.",
-                        });
-
-                        return;
+                          // Redirect to simulate the success flow
+                          router.push('/dashboard/account-status?upgrade=success');
+                          return;
+                        } catch (error) {
+                          console.error('Preview mode update failed:', error);
+                          throw new Error('Failed to simulate subscription in preview mode');
+                        }
                       }
 
                       const idToken = await user?.getIdToken(true); // Force token refresh
