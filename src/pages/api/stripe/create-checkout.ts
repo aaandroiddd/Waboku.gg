@@ -83,10 +83,11 @@ export default async function handler(
           },
         ],
         mode: 'subscription',
-        success_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/account-status?session_id={CHECKOUT_SESSION_ID}`,
+        success_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/account-status?upgrade=success`,
         cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/account-status`,
         metadata: {
           userId,
+          isResubscription: userData?.subscription?.status === 'canceled' ? 'true' : 'false'
         },
         allow_promotion_codes: true,
         billing_address_collection: 'auto',
