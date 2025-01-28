@@ -5,6 +5,9 @@ import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Footer } from '../Footer';
 import { VerificationStatus } from '../VerificationStatus';
 import { SellerBadge } from '../SellerBadge';
+import { AdminBadge } from '../AdminBadge';
+import { useContext } from 'react';
+import { AccountContext } from '@/contexts/AccountContext';
 
 export const DashboardLayout = ({ children }: { children: ReactNode }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
