@@ -45,8 +45,21 @@ type Card = PokemonCard | MtgCard | OnePieceCard;
 export default function SearchBar() {
   const router = useRouter();
 
+  const trackSearch = async (term: string) => {
+    try {
+      const searchTermsRef = ref(database, 'searchTerms');
+      await push(searchTermsRef, {
+        term,
+        timestamp: serverTimestamp()
+      });
+    } catch (error) {
+      console.error('Error tracking search term:', error);
+    }
+  };
+
   const handleSearch = (query: string) => {
     if (query.trim()) {
+      trackSearch(query.trim());
       router.push({
         pathname: '/listings',
         query: { 
