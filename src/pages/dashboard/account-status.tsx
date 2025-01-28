@@ -180,7 +180,7 @@ export default function AccountStatus() {
                       // Show loading state
                       toast({
                         title: "Processing...",
-                        description: "Reactivating your subscription...",
+                        description: "Preparing subscription checkout...",
                       });
 
                       // For testing purposes in preview environment
@@ -206,26 +206,37 @@ export default function AccountStatus() {
                         return;
                       }
 
-                      // In production, this would redirect to Stripe
+                      const idToken = await user?.getIdToken(true); // Force token refresh
+                      if (!idToken) {
+                        throw new Error('Not authenticated');
+                      }
+
                       const response = await fetch('/api/stripe/create-checkout', {
                         method: 'POST',
                         headers: {
                           'Content-Type': 'application/json',
-                          'Authorization': `Bearer ${await user?.getIdToken()}`,
+                          'Authorization': `Bearer ${idToken}`,
                         },
                       });
 
                       if (!response.ok) {
-                        throw new Error('Failed to create checkout session');
+                        const errorData = await response.json();
+                        throw new Error(errorData.message || 'Failed to create checkout session');
                       }
 
                       const data = await response.json();
-                      window.location.href = data.sessionUrl;
-                    } catch (error) {
+                      
+                      if (data.isPreview) {
+                        window.location.href = data.sessionUrl;
+                      } else {
+                        // Use client-side redirect for production Stripe checkout
+                        window.location.assign(data.sessionUrl);
+                      }
+                    } catch (error: any) {
                       console.error('Resubscribe error:', error);
                       toast({
                         title: "Error",
-                        description: "Unable to process subscription. Please try again or contact support.",
+                        description: error.message || "Unable to process subscription. Please try again or contact support.",
                         variant: "destructive",
                       });
                     }
