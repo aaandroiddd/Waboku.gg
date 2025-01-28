@@ -13,11 +13,15 @@ const logError = (context: string, error: any, additionalInfo?: any) => {
 };
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  console.log('[Cleanup Inactive Listings] Starting cleanup process');
+  
   if (req.method !== 'POST') {
+    console.warn('[Cleanup Inactive Listings] Invalid method:', req.method);
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
   try {
+    console.log('[Cleanup Inactive Listings] Initializing Firebase Admin');
     const { db } = getFirebaseAdmin();
     const batch = db.batch();
     let totalArchived = 0;
