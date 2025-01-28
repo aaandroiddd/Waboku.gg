@@ -3,6 +3,15 @@ import { getFirebaseAdmin } from '@/lib/firebase-admin';
 import { Timestamp } from 'firebase-admin/firestore';
 import { ACCOUNT_TIERS } from '@/types/account';
 
+// Helper function to log errors with context
+const logError = (context: string, error: any, additionalInfo?: any) => {
+  console.error(`[${new Date().toISOString()}] Error in ${context}:`, {
+    message: error.message,
+    stack: error.stack,
+    ...additionalInfo
+  });
+};
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
