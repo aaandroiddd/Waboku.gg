@@ -1,5 +1,7 @@
 import { useRouter } from 'next/router';
 import CardSearchInput from '@/components/CardSearchInput';
+import { database } from '@/lib/firebase';
+import { ref, push, serverTimestamp } from 'firebase/database';
 
 interface PokemonCard {
   id: string;
