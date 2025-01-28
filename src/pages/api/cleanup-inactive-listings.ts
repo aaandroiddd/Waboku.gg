@@ -31,6 +31,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .where('status', '==', 'active')
       .get();
 
+    console.log(`[Cleanup Inactive Listings] Processing ${activeListingsSnapshot.size} active listings`);
+    
     // Process each active listing
     const processPromises = activeListingsSnapshot.docs.map(async (doc) => {
       try {
