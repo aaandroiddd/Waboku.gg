@@ -90,7 +90,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         });
         totalArchived++;
       } catch (error) {
-        console.error(`Error processing inactive listing ${doc.id}:`, error);
+        logError('Processing inactive listing', error, {
+          listingId: doc.id,
+          data: doc.data()
+        });
       }
     });
     
