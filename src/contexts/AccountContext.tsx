@@ -2,7 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useAuth } from './AuthContext';
 import { AccountTier, ACCOUNT_TIERS, AccountFeatures, SubscriptionDetails } from '@/types/account';
 import { getDatabase, ref, onValue, off, set } from 'firebase/database';
-import { initializeApp } from 'firebase/app';
+import { getFirebaseServices } from '@/lib/firebase';
 
 interface AccountContextType {
   accountTier: AccountTier;
@@ -13,34 +13,53 @@ interface AccountContextType {
   cancelSubscription: () => Promise<void>;
 }
 
-const AccountContext = createContext<AccountContextType | undefined>(undefined);
+const defaultSubscription: SubscriptionDetails = {
+  status: 'none',
+  stripeSubscriptionId: undefined,
+  startDate: undefined,
+  endDate: undefined,
+  renewalDate: undefined
+};
+
+const defaultContext: AccountContextType = {
+  accountTier: 'free',
+  features: ACCOUNT_TIERS['free'],
+  isLoading: true,
+  subscription: defaultSubscription,
+  upgradeToPremium: async () => {
+    throw new Error('Context not initialized');
+  },
+  cancelSubscription: async () => {
+    throw new Error('Context not initialized');
+  },
+};
+
+const AccountContext = createContext<AccountContextType>(defaultContext);
 
 export function AccountProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const [accountTier, setAccountTier] = useState<AccountTier>('free');
   const [isLoading, setIsLoading] = useState(true);
-  const [subscription, setSubscription] = useState<SubscriptionDetails>({
-    status: 'none',
-    stripeSubscriptionId: undefined,
-    startDate: undefined,
-    endDate: undefined,
-    renewalDate: undefined
-  });
+  const [subscription, setSubscription] = useState<SubscriptionDetails>(defaultSubscription);
 
   useEffect(() => {
-    if (!user) {
-      setAccountTier('free');
-      setSubscription({ status: 'none' });
-      setIsLoading(false);
-      return;
-    }
+    let isMounted = true;
 
-    const db = getDatabase();
-    const accountRef = ref(db, `users/${user.uid}/account`);
+    const initializeAccount = async () => {
+      if (!user) {
+        if (isMounted) {
+          setAccountTier('free');
+          setSubscription(defaultSubscription);
+          setIsLoading(false);
+        }
+        return;
+      }
 
-    // Initialize account for new users
-    const initializeNewUser = async () => {
       try {
+        const { db: realtimeDb } = getFirebaseServices();
+        const accountRef = ref(realtimeDb, `users/${user.uid}/account`);
+
+        // Initialize account for new users
         const snapshot = await new Promise((resolve) => {
           const unsubscribe = onValue(accountRef, (snapshot) => {
             unsubscribe();
@@ -61,61 +80,66 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
             }
           };
           await set(accountRef, defaultAccount);
-          setAccountTier('free');
-          setSubscription({
-            status: 'none',
-            currentPlan: 'free',
-            startDate: new Date().toISOString()
-          });
+          if (isMounted) {
+            setAccountTier('free');
+            setSubscription({
+              status: 'none',
+              currentPlan: 'free',
+              startDate: new Date().toISOString()
+            });
+          }
         }
-      } catch (error) {
-        console.error('Error initializing new user:', error);
-        // Set default values even if there's an error
-        setAccountTier('free');
-        setSubscription({
-          status: 'none',
-          currentPlan: 'free',
-          startDate: new Date().toISOString()
+
+        // Set up listener for account changes
+        const unsubscribe = onValue(accountRef, (snapshot) => {
+          if (!isMounted) return;
+
+          const data = snapshot.val();
+          if (data) {
+            setAccountTier(data.tier as AccountTier || 'free');
+            
+            if (data.subscription) {
+              setSubscription({
+                startDate: data.subscription.startDate,
+                endDate: data.subscription.endDate,
+                renewalDate: data.subscription.renewalDate,
+                status: data.subscription.status || 'none',
+                stripeSubscriptionId: data.subscription.stripeSubscriptionId
+              });
+            } else {
+              setSubscription(defaultSubscription);
+            }
+          } else {
+            setAccountTier('free');
+            setSubscription(defaultSubscription);
+          }
+          setIsLoading(false);
+        }, (error) => {
+          console.error('Error loading account tier:', error);
+          if (isMounted) {
+            setAccountTier('free');
+            setSubscription(defaultSubscription);
+            setIsLoading(false);
+          }
         });
+
+        return () => {
+          unsubscribe();
+        };
+      } catch (error) {
+        console.error('Error initializing account:', error);
+        if (isMounted) {
+          setAccountTier('free');
+          setSubscription(defaultSubscription);
+          setIsLoading(false);
+        }
       }
     };
 
-    // Initialize new users and set up listener only after initialization
-    initializeNewUser();
+    initializeAccount();
 
-    // Listen for account changes
-    const unsubscribe = onValue(accountRef, (snapshot) => {
-      const data = snapshot.val();
-      if (data) {
-        setAccountTier(data.tier as AccountTier || 'free');
-        
-        // Handle subscription data
-        if (data.subscription) {
-          setSubscription({
-            startDate: data.subscription.startDate,
-            endDate: data.subscription.endDate,
-            renewalDate: data.subscription.renewalDate,
-            status: data.subscription.status || 'none',
-            stripeSubscriptionId: data.subscription.stripeSubscriptionId
-          });
-        } else {
-          setSubscription({ status: 'none' });
-        }
-      } else {
-        setAccountTier('free');
-        setSubscription({ status: 'none' });
-      }
-      setIsLoading(false);
-    }, (error) => {
-      console.error('Error loading account tier:', error);
-      setAccountTier('free');
-      setSubscription({ status: 'none' });
-      setIsLoading(false);
-    });
-
-    // Cleanup subscription
     return () => {
-      off(accountRef);
+      isMounted = false;
     };
   }, [user]);
 
@@ -214,25 +238,21 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  return (
-    <AccountContext.Provider
-      value={{
-        accountTier,
-        features: ACCOUNT_TIERS[accountTier],
-        isLoading,
-        subscription,
-        upgradeToPremium,
-        cancelSubscription,
-      }}
-    >
-      {children}
-    </AccountContext.Provider>
-  );
+  const value = {
+    accountTier,
+    features: ACCOUNT_TIERS[accountTier],
+    isLoading,
+    subscription,
+    upgradeToPremium,
+    cancelSubscription,
+  };
+
+  return <AccountContext.Provider value={value}>{children}</AccountContext.Provider>;
 }
 
 export function useAccount() {
   const context = useContext(AccountContext);
-  if (context === undefined) {
+  if (!context) {
     throw new Error('useAccount must be used within an AccountProvider');
   }
   return context;
