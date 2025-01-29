@@ -96,19 +96,21 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
 
           const data = snapshot.val();
           if (data) {
-            setAccountTier(data.tier as AccountTier || 'free');
+            // Determine account tier based on subscription status
+            const subscriptionData = data.subscription || defaultSubscription;
+            const isActivePremium = subscriptionData.status === 'active';
             
-            if (data.subscription) {
-              setSubscription({
-                startDate: data.subscription.startDate,
-                endDate: data.subscription.endDate,
-                renewalDate: data.subscription.renewalDate,
-                status: data.subscription.status || 'none',
-                stripeSubscriptionId: data.subscription.stripeSubscriptionId
-              });
-            } else {
-              setSubscription(defaultSubscription);
-            }
+            // Set subscription data
+            setSubscription({
+              startDate: subscriptionData.startDate,
+              endDate: subscriptionData.endDate,
+              renewalDate: subscriptionData.renewalDate,
+              status: subscriptionData.status || 'none',
+              stripeSubscriptionId: subscriptionData.stripeSubscriptionId
+            });
+
+            // Set account tier based on subscription status
+            setAccountTier(isActivePremium ? 'premium' : 'free');
           } else {
             setAccountTier('free');
             setSubscription(defaultSubscription);
