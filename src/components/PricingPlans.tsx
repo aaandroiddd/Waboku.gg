@@ -190,30 +190,30 @@ export function PricingPlans() {
       };
     }
     
-    // Check if user has an active or canceled but not expired subscription
+    // Check subscription status
     const hasActiveSubscription = isPremium && subscriptionId;
     const isCanceled = profile?.account?.subscription?.status === 'canceled';
     const endDate = profile?.account?.subscription?.endDate;
     const now = new Date();
-    const isExpired = endDate && new Date(endDate) <= now;
+    const isExpired = endDate ? new Date(endDate) <= now : true;
 
-    if (hasActiveSubscription) {
-      if (isCanceled && !isExpired) {
-        return {
-          text: "Subscription Ending Soon",
-          disabled: true,
-          variant: "outline" as const
-        };
-      } else if (!isCanceled) {
-        return {
-          text: "Current Plan",
-          disabled: true,
-          variant: "outline" as const
-        };
-      }
+    if (hasActiveSubscription && !isCanceled) {
+      return {
+        text: "Current Plan",
+        disabled: true,
+        variant: "outline" as const
+      };
     }
 
-    // For free users or users with expired subscriptions
+    if (isCanceled && !isExpired) {
+      return {
+        text: "Subscription Ending Soon",
+        disabled: true,
+        variant: "outline" as const
+      };
+    }
+
+    // For free users, expired subscriptions, or canceled subscriptions
     return {
       text: isLoading ? "Processing..." : "Upgrade to Premium",
       disabled: isLoading,
