@@ -6,11 +6,11 @@ import { Footer } from '../Footer';
 import { VerificationStatus } from '../VerificationStatus';
 import { SellerBadge } from '../SellerBadge';
 import { AdminBadge } from '../AdminBadge';
-import { useContext } from 'react';
-import { AccountContext } from '@/contexts/AccountContext';
+import { useAuth } from '@/contexts/AuthContext';
 
 export const DashboardLayout = ({ children }: { children: ReactNode }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const { profile } = useAuth();
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -42,7 +42,7 @@ export const DashboardLayout = ({ children }: { children: ReactNode }) => {
             <div className="p-4 md:p-8 pt-16 md:pt-8">
               <div className="flex flex-wrap gap-2 items-center">
                 <VerificationStatus />
-                {useContext(AccountContext)?.account?.isAdmin && <AdminBadge />}
+                {profile?.isAdmin && <AdminBadge />}
               </div>
             </div>
             <main className="flex-1 min-h-0">
