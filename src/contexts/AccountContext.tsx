@@ -96,9 +96,19 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
 
           const data = snapshot.val();
           if (data) {
-            // Determine account tier based on subscription status
+            // Get subscription data
             const subscriptionData = data.subscription || defaultSubscription;
-            const isActivePremium = subscriptionData.status === 'active';
+            
+            // Determine account status based on subscription
+            const now = new Date();
+            const endDate = subscriptionData.endDate ? new Date(subscriptionData.endDate) : null;
+            
+            // A user is premium if:
+            // 1. They have an active subscription OR
+            // 2. They have a canceled subscription but the end date hasn't been reached
+            const isActivePremium = 
+              subscriptionData.status === 'active' || 
+              (subscriptionData.status === 'canceled' && endDate && endDate > now);
             
             // Set subscription data
             setSubscription({
@@ -111,6 +121,11 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
 
             // Set account tier based on subscription status
             setAccountTier(isActivePremium ? 'premium' : 'free');
+
+            // If the subscription is canceled and past end date, ensure account is set to free
+            if (subscriptionData.status === 'canceled' && endDate && endDate <= now) {
+              set(ref(realtimeDb, `users/${user.uid}/account/tier`), 'free');
+            }
           } else {
             setAccountTier('free');
             setSubscription(defaultSubscription);
