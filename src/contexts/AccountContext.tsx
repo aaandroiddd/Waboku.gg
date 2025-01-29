@@ -34,7 +34,7 @@ const defaultContext: AccountContextType = {
   },
 };
 
-const AccountContext = createContext<AccountContextType | undefined>(undefined);
+const AccountContext = createContext<AccountContextType>(defaultContext);
 
 export function AccountProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
