@@ -56,15 +56,40 @@ export default function AccountStatus() {
         throw new Error('This subscription has already been canceled');
       }
 
-      if (!subscription.stripeSubscriptionId) {
-        throw new Error('No active subscription ID found');
-      }
-
       // Show loading state
       toast({
         title: "Processing...",
         description: "Canceling your subscription...",
       });
+
+      // Handle preview environment
+      if (process.env.NEXT_PUBLIC_CO_DEV_ENV === 'preview') {
+        // Simulate cancellation by updating the subscription status
+        const db = getDatabase();
+        const userRef = ref(db, `users/${user?.uid}/account/subscription`);
+        const currentDate = new Date();
+        const endDate = new Date();
+        endDate.setDate(currentDate.getDate() + 30); // Set end date to 30 days from now
+        
+        await set(userRef, {
+          status: 'canceled',
+          startDate: currentDate.toISOString(),
+          endDate: endDate.toISOString(),
+          stripeSubscriptionId: 'preview-sub-canceled'
+        });
+
+        toast({
+          title: "Subscription Canceled",
+          description: "Your subscription will remain active until " + endDate.toLocaleDateString(),
+        });
+
+        return;
+      }
+
+      // Production flow
+      if (!subscription.stripeSubscriptionId) {
+        throw new Error('No active subscription ID found');
+      }
 
       // Attempt to cancel
       await cancelSubscription();
