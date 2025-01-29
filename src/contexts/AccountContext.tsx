@@ -235,14 +235,19 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
       }
 
       // Update local state immediately for better UX
+      const newEndDate = responseData.endDate || subscription.endDate;
       setSubscription(prev => ({
         ...prev,
         status: 'canceled',
-        endDate: responseData.endDate || prev.endDate
+        endDate: newEndDate
       }));
 
-      // Update account tier to free
-      setAccountTier('free');
+      // Only update account tier to free if the end date has passed
+      const now = new Date();
+      const endDate = newEndDate ? new Date(newEndDate) : null;
+      if (endDate && endDate <= now) {
+        setAccountTier('free');
+      }
 
       return responseData;
     } catch (error: any) {
