@@ -40,18 +40,37 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
 
     // Initialize account for new users
     const initializeNewUser = async () => {
-      const snapshot = await onValue(accountRef, () => {}, { onlyOnce: true });
-      if (!snapshot.exists()) {
-        // Set default values for new users
-        const defaultAccount = {
-          tier: 'free',
-          subscription: {
+      try {
+        const snapshot = await new Promise((resolve) => {
+          const unsubscribe = onValue(accountRef, (snapshot) => {
+            unsubscribe();
+            resolve(snapshot);
+          }, {
+            onlyOnce: true
+          });
+        });
+
+        if (!snapshot || !(snapshot as any).exists()) {
+          // Set default values for new users
+          const defaultAccount = {
+            tier: 'free',
+            subscription: {
+              status: 'none',
+              currentPlan: 'free',
+              startDate: new Date().toISOString()
+            }
+          };
+          await set(accountRef, defaultAccount);
+          setAccountTier('free');
+          setSubscription({
             status: 'none',
             currentPlan: 'free',
             startDate: new Date().toISOString()
-          }
-        };
-        await set(accountRef, defaultAccount);
+          });
+        }
+      } catch (error) {
+        console.error('Error initializing new user:', error);
+        // Set default values even if there's an error
         setAccountTier('free');
         setSubscription({
           status: 'none',
@@ -62,7 +81,7 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
     };
 
     // Initialize new users and set up listener only after initialization
-    initializeNewUser().catch(console.error);
+    initializeNewUser();
 
     // Listen for account changes
     const unsubscribe = onValue(accountRef, (snapshot) => {
