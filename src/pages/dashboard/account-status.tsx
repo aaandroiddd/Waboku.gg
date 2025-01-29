@@ -156,9 +156,13 @@ export default function AccountStatus() {
               <p className="text-muted-foreground">Current Plan:</p>
               <Badge 
                 variant={accountTier === 'premium' ? 'default' : 'secondary'} 
-                className={accountTier === 'premium' ? 'bg-gradient-to-r from-blue-500 to-purple-500' : ''}
+                className={`
+                  ${accountTier === 'premium' && subscription?.status === 'active' ? 'bg-gradient-to-r from-blue-500 to-purple-500' : ''}
+                  ${subscription?.status === 'canceled' ? 'bg-gradient-to-r from-orange-500 to-red-500' : ''}
+                `}
               >
-                {accountTier === 'premium' ? 'Premium ⭐' : 'Free'}
+                {accountTier === 'premium' && subscription?.status === 'active' ? 'Premium ⭐' : 
+                 subscription?.status === 'canceled' ? 'Premium (Canceling)' : 'Free'}
               </Badge>
             </div>
           </div>
