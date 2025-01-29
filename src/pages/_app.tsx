@@ -8,6 +8,8 @@ import { RouteGuard } from '@/components/RouteGuard';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/router';
 import { useEffect, useState, memo } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
+import { useAccount } from '@/contexts/AccountContext';
 import { AnimatePresence } from 'framer-motion';
 
 const LoadingScreen = dynamic(() => import('@/components/LoadingScreen').then(mod => ({ default: mod.LoadingScreen })), {
