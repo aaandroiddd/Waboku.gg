@@ -103,14 +103,14 @@ export function ListingTimer({ createdAt, archivedAt, accountTier, status, listi
         startTime = archivedAt instanceof Date 
           ? archivedAt.getTime() 
           : typeof archivedAt === 'string' 
-            ? new Date(archivedAt).getTime() 
+            ? Date.parse(archivedAt) 
             : archivedAt as number;
         duration = 7 * 24 * 60 * 60 * 1000; // 7 days for archived listings
       } else {
         startTime = createdAt instanceof Date 
           ? createdAt.getTime() 
           : typeof createdAt === 'string' 
-            ? new Date(createdAt).getTime() 
+            ? Date.parse(createdAt) 
             : createdAt as number;
         duration = ACCOUNT_TIERS[accountTier].listingDuration * 60 * 60 * 1000;
       }
