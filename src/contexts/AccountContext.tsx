@@ -252,7 +252,7 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
 
 export function useAccount() {
   const context = useContext(AccountContext);
-  if (!context) {
+  if (context === undefined) {
     throw new Error('useAccount must be used within an AccountProvider');
   }
   return context;
