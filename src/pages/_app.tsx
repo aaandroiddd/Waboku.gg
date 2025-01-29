@@ -32,17 +32,27 @@ const MainContent = memo(({ Component, pageProps, pathname, isLoading }: {
   pageProps: any;
   pathname: string;
   isLoading: boolean;
-}) => (
-  <>
-    <LoadingScreen isLoading={isLoading} />
-    <AnimatePresence mode="wait">
-      <PageTransition key={pathname}>
-        <Component {...pageProps} />
-      </PageTransition>
-    </AnimatePresence>
-    <Toaster />
-  </>
-));
+}) => {
+  const auth = useAuth();
+  const account = useAccount();
+
+  // Show loading screen while auth or account is initializing
+  if (auth.isLoading || account.isLoading) {
+    return <LoadingScreen isLoading={true} />;
+  }
+
+  return (
+    <>
+      <LoadingScreen isLoading={isLoading} />
+      <AnimatePresence mode="wait">
+        <PageTransition key={pathname}>
+          <Component {...pageProps} />
+        </PageTransition>
+      </AnimatePresence>
+      <Toaster />
+    </>
+  );
+});
 
 MainContent.displayName = 'MainContent';
 
