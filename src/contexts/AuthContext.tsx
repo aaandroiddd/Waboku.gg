@@ -33,7 +33,23 @@ interface AuthContextType {
   checkVerificationStatus: () => Promise<void>;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const defaultAuthContext: AuthContextType = {
+  user: null,
+  profile: null,
+  isLoading: true,
+  error: null,
+  signUp: async () => { throw new Error('AuthContext not initialized') },
+  signIn: async () => { throw new Error('AuthContext not initialized') },
+  signInWithGoogle: async () => { throw new Error('AuthContext not initialized') },
+  signOut: async () => { throw new Error('AuthContext not initialized') },
+  updateProfile: async () => { throw new Error('AuthContext not initialized') },
+  deleteAccount: async () => { throw new Error('AuthContext not initialized') },
+  sendVerificationEmail: async () => { throw new Error('AuthContext not initialized') },
+  isEmailVerified: () => false,
+  checkVerificationStatus: async () => { throw new Error('AuthContext not initialized') }
+};
+
+const AuthContext = createContext<AuthContextType>(defaultAuthContext);
 
 const actionCodeSettings = {
   url: `${process.env.NEXT_PUBLIC_APP_URL || (typeof window !== 'undefined' ? window.location.origin : '')}/auth/verify-email`,
