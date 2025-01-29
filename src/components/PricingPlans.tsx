@@ -190,15 +190,30 @@ export function PricingPlans() {
       };
     }
     
-    if (isPremium && subscriptionId) {
-      return {
-        text: "Current Plan",
-        disabled: true,
-        variant: "outline" as const
-      };
+    // Check if user has an active or canceled but not expired subscription
+    const hasActiveSubscription = isPremium && subscriptionId;
+    const isCanceled = profile?.account?.subscription?.status === 'canceled';
+    const endDate = profile?.account?.subscription?.endDate;
+    const now = new Date();
+    const isExpired = endDate && new Date(endDate) <= now;
+
+    if (hasActiveSubscription) {
+      if (isCanceled && !isExpired) {
+        return {
+          text: "Subscription Ending Soon",
+          disabled: true,
+          variant: "outline" as const
+        };
+      } else if (!isCanceled) {
+        return {
+          text: "Current Plan",
+          disabled: true,
+          variant: "outline" as const
+        };
+      }
     }
 
-    // For free users or users without active subscription
+    // For free users or users with expired subscriptions
     return {
       text: isLoading ? "Processing..." : "Upgrade to Premium",
       disabled: isLoading,
