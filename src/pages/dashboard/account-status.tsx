@@ -129,8 +129,11 @@ export default function AccountStatus() {
             <h1 className="text-3xl font-bold text-foreground mb-2">Account Status</h1>
             <div className="flex items-center gap-2 justify-end">
               <p className="text-muted-foreground">Current Plan:</p>
-              <Badge variant={accountTier === 'premium' ? 'default' : 'secondary'} className={accountTier === 'premium' ? 'bg-gradient-to-r from-blue-500 to-purple-500' : ''}>
-                {accountTier === 'premium' ? 'Premium ⭐' : 'Free'}
+              <Badge 
+                variant={subscription.status === 'active' ? 'default' : 'secondary'} 
+                className={subscription.status === 'active' ? 'bg-gradient-to-r from-blue-500 to-purple-500' : ''}
+              >
+                {subscription.status === 'active' ? 'Premium ⭐' : 'Free'}
               </Badge>
             </div>
           </div>
