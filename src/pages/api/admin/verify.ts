@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { getDatabase, ref, get } from 'firebase-database-compat';
+import { getDatabase, ref, get } from 'firebase-admin/database';
 import { getAuth } from 'firebase-admin/auth';
 import { initAdmin } from '@/lib/firebase-admin';
 
