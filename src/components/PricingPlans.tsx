@@ -18,10 +18,16 @@ export function PricingPlans() {
   // Check if user has premium subscription
   const [isPremium, setIsPremium] = useState(false);
   const [subscriptionId, setSubscriptionId] = useState<string | null>(null);
+  const [isCheckingStatus, setIsCheckingStatus] = useState(true);
   
   useEffect(() => {
     const checkPremiumStatus = async () => {
-      if (!user) return;
+      if (!user) {
+        setIsCheckingStatus(false);
+        return;
+      }
+      
+      setIsCheckingStatus(true);
       try {
         const response = await fetch('/api/stripe/check-subscription', {
           headers: {
@@ -35,6 +41,8 @@ export function PricingPlans() {
         console.error('Error checking premium status:', error);
         setIsPremium(false);
         setSubscriptionId(null);
+      } finally {
+        setIsCheckingStatus(false);
       }
     };
     
