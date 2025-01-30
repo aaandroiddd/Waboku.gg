@@ -15,15 +15,31 @@ if (!getApps().length) {
   });
 }
 
-// Initialize Stripe
+// Initialize Stripe with more detailed configuration
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2023-10-16',
+  maxNetworkRetries: 3, // Add automatic retrying of requests that fail due to network problems
+  timeout: 20000, // Set timeout to 20 seconds
 });
 
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
+  // Set CORS headers
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,DELETE,PATCH,POST,PUT');
+  res.setHeader(
+    'Access-Control-Allow-Headers',
+    'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
+  );
+
+  if (req.method === 'OPTIONS') {
+    res.status(200).end();
+    return;
+  }
+
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -34,7 +50,8 @@ export default async function handler(
     // Detailed request logging
     console.log('Cancellation request received:', {
       subscriptionId,
-      userId
+      userId,
+      timestamp: new Date().toISOString()
     });
 
     // Validate required fields
@@ -59,68 +76,81 @@ export default async function handler(
     const userRef = db.ref(`users/${userId}/account/subscription`);
     
     try {
-      const userSnapshot = await userRef.get();
-      const userData = userSnapshot.val();
-
-      if (!userData) {
-        console.error('No subscription data found in Firebase:', { userId });
+      // First verify the subscription exists in Stripe
+      const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+      
+      if (!subscription) {
+        console.error('Subscription not found in Stripe:', subscriptionId);
         return res.status(404).json({
-          error: 'No subscription data found',
-          code: 'NO_SUBSCRIPTION_DATA'
+          error: 'Subscription not found in Stripe',
+          code: 'SUBSCRIPTION_NOT_FOUND'
         });
       }
 
-      if (userData.status === 'canceled') {
-        console.log('Subscription already canceled:', { userId, subscriptionData: userData });
+      if (subscription.status === 'canceled') {
+        console.log('Subscription already canceled in Stripe:', subscriptionId);
         return res.status(400).json({
           error: 'Subscription is already canceled',
           code: 'ALREADY_CANCELED'
         });
       }
-    } catch (dbError) {
-      console.error('Error accessing Firebase:', dbError);
-      return res.status(500).json({
-        error: 'Database error occurred',
-        code: 'DATABASE_ERROR'
-      });
-    }
 
-    // Cancel the subscription in Stripe
-    try {
+      // Cancel the subscription in Stripe
       console.log('Attempting to cancel Stripe subscription:', subscriptionId);
-      const subscription = await stripe.subscriptions.cancel(subscriptionId);
-      console.log('Stripe subscription canceled successfully:', subscription.id);
+      const canceledSubscription = await stripe.subscriptions.update(subscriptionId, {
+        cancel_at_period_end: true
+      });
+
+      console.log('Stripe subscription updated successfully:', {
+        id: canceledSubscription.id,
+        status: canceledSubscription.status,
+        cancelAt: canceledSubscription.cancel_at
+      });
 
       // Calculate the end date from Stripe's response
-      const endDate = new Date(subscription.current_period_end * 1000).toISOString();
+      const endDate = new Date(canceledSubscription.current_period_end * 1000).toISOString();
 
       // Update subscription status in Firebase
       await userRef.update({
-        status: 'canceled',
+        status: 'canceling',
         endDate: endDate,
         stripeSubscriptionId: subscriptionId,
-        canceledAt: new Date().toISOString()
+        canceledAt: new Date().toISOString(),
+        cancelAtPeriodEnd: true
       });
 
-      console.log('Cancellation successful:', {
+      console.log('Cancellation process completed successfully:', {
         userId,
+        subscriptionId,
         endDate
       });
 
       return res.status(200).json({ 
         success: true,
-        message: 'Subscription canceled successfully',
-        endDate
-      });
-    } catch (stripeError: any) {
-      console.error('Stripe cancellation error:', {
-        error: stripeError.message,
-        code: stripeError.code,
-        type: stripeError.type
+        message: 'Subscription will be canceled at the end of the billing period',
+        endDate,
+        status: 'canceling'
       });
 
-      return res.status(400).json({
-        error: 'Failed to cancel Stripe subscription',
+    } catch (stripeError: any) {
+      console.error('Stripe operation error:', {
+        error: stripeError.message,
+        code: stripeError.code,
+        type: stripeError.type,
+        requestId: stripeError.requestId
+      });
+
+      // Handle specific Stripe errors
+      if (stripeError.type === 'StripeInvalidRequestError') {
+        return res.status(400).json({
+          error: 'Invalid subscription details',
+          message: stripeError.message,
+          code: 'INVALID_SUBSCRIPTION'
+        });
+      }
+
+      return res.status(500).json({
+        error: 'Failed to process subscription cancellation',
         message: stripeError.message,
         code: stripeError.code || 'STRIPE_ERROR'
       });
@@ -129,7 +159,8 @@ export default async function handler(
   } catch (error: any) {
     console.error('Subscription cancellation error:', {
       error: error.message,
-      stack: error.stack
+      stack: error.stack,
+      timestamp: new Date().toISOString()
     });
 
     return res.status(500).json({ 
