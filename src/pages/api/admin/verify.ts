@@ -16,12 +16,11 @@ export default async function handler(
     }
 
     const token = authHeader.split('Bearer ')[1];
-    const decodedToken = await getAuth().verifyIdToken(token);
+    const admin = getFirebaseAdmin();
+    const decodedToken = await admin.auth.verifyIdToken(token);
     const uid = decodedToken.uid;
 
-    const db = getDatabase();
-    const userRef = ref(db, `users/${uid}`);
-    const snapshot = await get(userRef);
+    const snapshot = await admin.rtdb.ref(`users/${uid}`).get();
     const userData = snapshot.val();
 
     if (!userData?.isAdmin) {
