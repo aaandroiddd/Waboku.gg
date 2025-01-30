@@ -1,9 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { getDatabase, ref, get } from 'firebase-admin/database';
-import { getAuth } from 'firebase-admin/auth';
-import { initAdmin } from '@/lib/firebase-admin';
-
-initAdmin();
+import { getFirebaseAdmin } from '@/lib/firebase-admin';
 
 export default async function handler(
   req: NextApiRequest,
