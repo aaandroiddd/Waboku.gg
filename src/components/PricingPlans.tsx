@@ -189,6 +189,52 @@ export function PricingPlans() {
     }
   };
 
+  const getBasicButtonState = () => {
+    if (!user) {
+      return {
+        text: "Sign in to continue",
+        disabled: true,
+        variant: "outline" as const,
+        onClick: undefined
+      };
+    }
+
+    if (isCheckingStatus) {
+      return {
+        text: "Loading...",
+        disabled: true,
+        variant: "outline" as const,
+        onClick: undefined
+      };
+    }
+
+    if (isLoading) {
+      return {
+        text: "Processing...",
+        disabled: true,
+        variant: "outline" as const,
+        onClick: undefined
+      };
+    }
+
+    if (!isPremium) {
+      return {
+        text: "Current Plan",
+        disabled: true,
+        variant: "outline" as const,
+        onClick: undefined
+      };
+    }
+
+    // For premium users - show downgrade option
+    return {
+      text: "Downgrade to Basic",
+      disabled: false,
+      variant: "secondary" as const,
+      onClick: handleCancelSubscription
+    };
+  };
+
   const getPremiumButtonState = () => {
     if (!user) {
       return {
@@ -198,7 +244,6 @@ export function PricingPlans() {
       };
     }
     
-    // If we're still checking the initial subscription status
     if (isCheckingStatus) {
       return {
         text: "Loading...",
@@ -207,7 +252,6 @@ export function PricingPlans() {
       };
     }
 
-    // If we're processing a subscription action
     if (isLoading) {
       return {
         text: "Processing...",
@@ -216,14 +260,12 @@ export function PricingPlans() {
       };
     }
     
-    // Check subscription status
     const hasActiveSubscription = isPremium && subscriptionId;
     const isCanceled = profile?.account?.subscription?.status === 'canceled';
     const endDate = profile?.account?.subscription?.endDate;
     const now = new Date();
     const isExpired = endDate ? new Date(endDate) <= now : false;
 
-    // Active subscription
     if (hasActiveSubscription && !isCanceled) {
       return {
         text: "Current Plan",
@@ -232,7 +274,6 @@ export function PricingPlans() {
       };
     }
 
-    // Canceled but not expired subscription
     if (isCanceled && !isExpired) {
       return {
         text: "Subscription Ending Soon",
@@ -241,7 +282,6 @@ export function PricingPlans() {
       };
     }
 
-    // Free users, expired subscriptions, or no subscription
     return {
       text: "Upgrade to Premium",
       disabled: false,
@@ -249,12 +289,13 @@ export function PricingPlans() {
     };
   };
 
+  const basicButtonState = getBasicButtonState();
   const premiumButtonState = getPremiumButtonState();
 
   return (
     <div className="grid gap-8 md:grid-cols-2 max-w-4xl mx-auto p-4 subscription-plans">
       {/* Free Plan */}
-      <Card className="p-6 space-y-4">
+      <Card className={`p-6 space-y-4 ${!isPremium ? 'border-2 border-green-500' : ''}`}>
         <div className="space-y-2">
           <h3 className="text-2xl font-bold">Free</h3>
           <p className="text-gray-500 dark:text-gray-400">
@@ -276,8 +317,13 @@ export function PricingPlans() {
             <span>Basic search</span>
           </div>
         </div>
-        <Button className="w-full" variant="outline" disabled>
-          {!isPremium ? 'Current Plan' : 'Basic Plan'}
+        <Button 
+          className="w-full" 
+          variant={basicButtonState.variant}
+          disabled={basicButtonState.disabled}
+          onClick={basicButtonState.onClick}
+        >
+          {basicButtonState.text}
         </Button>
       </Card>
 
