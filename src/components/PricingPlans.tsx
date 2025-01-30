@@ -198,21 +198,30 @@ export function PricingPlans() {
       };
     }
     
-    // Check subscription status
-    const hasActiveSubscription = isPremium && subscriptionId;
-    const isCanceled = profile?.account?.subscription?.status === 'canceled';
-    const endDate = profile?.account?.subscription?.endDate;
-    const now = new Date();
-    const isExpired = endDate ? new Date(endDate) <= now : false;
-
-    // If we're still loading the subscription status
-    if (isLoading) {
+    // If we're still checking the initial subscription status
+    if (isCheckingStatus) {
       return {
         text: "Loading...",
         disabled: true,
         variant: "outline" as const
       };
     }
+
+    // If we're processing a subscription action
+    if (isLoading) {
+      return {
+        text: "Processing...",
+        disabled: true,
+        variant: "outline" as const
+      };
+    }
+    
+    // Check subscription status
+    const hasActiveSubscription = isPremium && subscriptionId;
+    const isCanceled = profile?.account?.subscription?.status === 'canceled';
+    const endDate = profile?.account?.subscription?.endDate;
+    const now = new Date();
+    const isExpired = endDate ? new Date(endDate) <= now : false;
 
     // Active subscription
     if (hasActiveSubscription && !isCanceled) {
