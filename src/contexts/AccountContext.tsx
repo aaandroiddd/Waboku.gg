@@ -201,55 +201,91 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
     }
 
     try {
-      const response = await fetch('/api/stripe/cancel-subscription', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          subscriptionId: subscription.stripeSubscriptionId,
-          userId: user.uid
-        }),
-      });
+      // Add retry logic for network issues
+      const MAX_RETRIES = 3;
+      let attempt = 0;
+      let lastError;
 
-      const responseData = await response.json();
-      
-      if (!response.ok) {
-        console.error('Server responded with error:', {
-          status: response.status,
-          data: responseData,
-          subscription,
-          userId: user.uid
-        });
+      while (attempt < MAX_RETRIES) {
+        try {
+          const response = await fetch('/api/stripe/cancel-subscription', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              subscriptionId: subscription.stripeSubscriptionId,
+              userId: user.uid
+            }),
+            // Add credentials and cache control
+            credentials: 'include',
+            cache: 'no-cache',
+          });
 
-        // Handle specific error cases
-        if (responseData.code === 'ALREADY_CANCELED') {
-          throw new Error('This subscription has already been canceled');
-        } else if (responseData.code === 'NO_SUBSCRIPTION_DATA') {
-          throw new Error('No active subscription found. Please contact support.');
-        } else if (responseData.code === 'SUBSCRIPTION_NOT_FOUND') {
-          throw new Error('Subscription not found in our records. Please contact support.');
+          const responseData = await response.json();
+          
+          if (!response.ok) {
+            console.error('Server responded with error:', {
+              status: response.status,
+              data: responseData,
+              subscription,
+              userId: user.uid,
+              attempt: attempt + 1
+            });
+
+            // Handle specific error cases
+            if (responseData.code === 'ALREADY_CANCELED') {
+              throw new Error('This subscription has already been canceled');
+            } else if (responseData.code === 'NO_SUBSCRIPTION_DATA') {
+              throw new Error('No active subscription found. Please contact support.');
+            } else if (responseData.code === 'SUBSCRIPTION_NOT_FOUND') {
+              throw new Error('Subscription not found in our records. Please contact support.');
+            }
+
+            throw new Error(responseData.error || 'Failed to cancel subscription');
+          }
+
+          // Update local state immediately for better UX
+          const newEndDate = responseData.endDate || subscription.endDate;
+          setSubscription(prev => ({
+            ...prev,
+            status: 'canceled',
+            endDate: newEndDate
+          }));
+
+          // Only update account tier to free if the end date has passed
+          const now = new Date();
+          const endDate = newEndDate ? new Date(newEndDate) : null;
+          if (endDate && endDate <= now) {
+            setAccountTier('free');
+          }
+
+          return responseData;
+        } catch (error: any) {
+          lastError = error;
+          
+          // Only retry on network errors
+          if (!error.message.includes('Failed to fetch')) {
+            throw error;
+          }
+          
+          console.warn(`Attempt ${attempt + 1} failed:`, error);
+          attempt++;
+          
+          if (attempt < MAX_RETRIES) {
+            // Wait before retrying (exponential backoff)
+            await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000));
+          }
         }
-
-        throw new Error(responseData.error || 'Failed to cancel subscription');
       }
 
-      // Update local state immediately for better UX
-      const newEndDate = responseData.endDate || subscription.endDate;
-      setSubscription(prev => ({
-        ...prev,
-        status: 'canceled',
-        endDate: newEndDate
-      }));
-
-      // Only update account tier to free if the end date has passed
-      const now = new Date();
-      const endDate = newEndDate ? new Date(newEndDate) : null;
-      if (endDate && endDate <= now) {
-        setAccountTier('free');
-      }
-
-      return responseData;
+      // If we've exhausted all retries
+      console.error('All retry attempts failed:', {
+        error: lastError,
+        subscription,
+        userId: user.uid
+      });
+      throw new Error('Network error: Unable to reach the server after multiple attempts. Please try again later.');
     } catch (error: any) {
       console.error('Error in cancelSubscription:', {
         error: error.message,
