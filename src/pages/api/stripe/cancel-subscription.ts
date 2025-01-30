@@ -18,23 +18,33 @@ if (!getApps().length) {
 // Initialize Stripe with more detailed configuration
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2023-10-16',
-  maxNetworkRetries: 3, // Add automatic retrying of requests that fail due to network problems
-  timeout: 20000, // Set timeout to 20 seconds
+  maxNetworkRetries: 3,
+  timeout: 20000,
 });
+
+// Allowed origins for CORS
+const allowedOrigins = [
+  process.env.NEXT_PUBLIC_APP_URL,
+  'http://localhost:3000',
+  'http://localhost:3001',
+];
 
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  // Set CORS headers
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,DELETE,PATCH,POST,PUT');
-  res.setHeader(
-    'Access-Control-Allow-Headers',
-    'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
-  );
+  // Get the origin from the request headers
+  const origin = req.headers.origin;
 
+  // Set CORS headers based on the origin
+  if (origin && allowedOrigins.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  }
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+
+  // Handle preflight request
   if (req.method === 'OPTIONS') {
     res.status(200).end();
     return;
