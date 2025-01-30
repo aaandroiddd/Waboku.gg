@@ -1,7 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { getApps, cert, initializeApp } from 'firebase-admin/app';
 import { getDatabase as getAdminDatabase } from 'firebase-admin/database';
-import { ref, get } from 'firebase/database';
+import Stripe from 'stripe';
 
 // Initialize Firebase Admin if it hasn't been initialized yet
 if (!getApps().length) {
@@ -14,6 +14,11 @@ if (!getApps().length) {
     databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL,
   });
 }
+
+// Initialize Stripe
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+  apiVersion: '2023-10-16',
+});
 
 export default async function handler(
   req: NextApiRequest,
@@ -51,10 +56,10 @@ export default async function handler(
 
     // Use admin database instance for server operations
     const db = getAdminDatabase();
-    const userRef = ref(db, `users/${userId}/account/subscription`);
+    const userRef = db.ref(`users/${userId}/account/subscription`);
     
     try {
-      const userSnapshot = await get(userRef);
+      const userSnapshot = await userRef.get();
       const userData = userSnapshot.val();
 
       if (!userData) {
@@ -80,43 +85,46 @@ export default async function handler(
       });
     }
 
-    // Get current subscription data
-    const subscriptionSnapshot = await db.ref(`users/${userId}/account/subscription`).get();
-    const currentSubscription = subscriptionSnapshot.val();
+    // Cancel the subscription in Stripe
+    try {
+      console.log('Attempting to cancel Stripe subscription:', subscriptionId);
+      const subscription = await stripe.subscriptions.cancel(subscriptionId);
+      console.log('Stripe subscription canceled successfully:', subscription.id);
 
-    if (!currentSubscription || !currentSubscription.startDate) {
-      return res.status(400).json({
-        error: 'Invalid subscription data',
-        code: 'INVALID_SUBSCRIPTION_DATA'
-      });
-    }
+      // Calculate the end date from Stripe's response
+      const endDate = new Date(subscription.current_period_end * 1000).toISOString();
 
-    // Calculate the end date based on the original start date
-    const startDate = new Date(currentSubscription.startDate);
-    const endDate = new Date(startDate);
-    endDate.setMonth(endDate.getMonth() + 1); // Add one month from the start date
-
-    // Update subscription status in Firebase
-    await db.ref(`users/${userId}/account`).update({
-      subscription: {
-        ...currentSubscription,
+      // Update subscription status in Firebase
+      await userRef.update({
         status: 'canceled',
-        endDate: endDate.toISOString(),
+        endDate: endDate,
         stripeSubscriptionId: subscriptionId,
         canceledAt: new Date().toISOString()
-      }
-    });
+      });
 
-    console.log('Cancellation successful:', {
-      userId,
-      endDate: endDate.toISOString()
-    });
+      console.log('Cancellation successful:', {
+        userId,
+        endDate
+      });
 
-    return res.status(200).json({ 
-      success: true,
-      message: 'Subscription canceled successfully',
-      endDate: endDate.toISOString()
-    });
+      return res.status(200).json({ 
+        success: true,
+        message: 'Subscription canceled successfully',
+        endDate
+      });
+    } catch (stripeError: any) {
+      console.error('Stripe cancellation error:', {
+        error: stripeError.message,
+        code: stripeError.code,
+        type: stripeError.type
+      });
+
+      return res.status(400).json({
+        error: 'Failed to cancel Stripe subscription',
+        message: stripeError.message,
+        code: stripeError.code || 'STRIPE_ERROR'
+      });
+    }
 
   } catch (error: any) {
     console.error('Subscription cancellation error:', {
