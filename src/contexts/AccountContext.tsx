@@ -102,25 +102,53 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
             // Determine account status based on subscription
             const now = new Date();
             const endDate = subscriptionData.endDate ? new Date(subscriptionData.endDate) : null;
+            const startDate = subscriptionData.startDate ? new Date(subscriptionData.startDate) : null;
             
-            // A user is premium if:
-            // 1. They have an active subscription OR
-            // 2. They have a canceled subscription but the end date hasn't been reached
-            const isActivePremium = 
-              subscriptionData.status === 'active' || 
-              (subscriptionData.status === 'canceled' && endDate && endDate > now);
+            // Enhanced premium status check
+            const isActivePremium = (
+              // Case 1: Active subscription
+              subscriptionData.status === 'active' ||
+              // Case 2: Canceled but not expired
+              (subscriptionData.status === 'canceled' && endDate && endDate > now) ||
+              // Case 3: Has valid subscription ID and start date is valid
+              (subscriptionData.stripeSubscriptionId && startDate && startDate <= now) ||
+              // Case 4: Explicitly set as premium tier
+              data.tier === 'premium'
+            );
             
-            // Set subscription data
-            setSubscription({
+            // Set subscription data with enhanced validation
+            const subscriptionStatus = (() => {
+              if (subscriptionData.status === 'active') return 'active';
+              if (subscriptionData.status === 'canceled' && endDate && endDate > now) return 'canceled';
+              if (subscriptionData.stripeSubscriptionId && !subscriptionData.status) return 'active';
+              return 'none';
+            })();
+
+            const subscriptionDetails = {
               startDate: subscriptionData.startDate,
               endDate: subscriptionData.endDate,
               renewalDate: subscriptionData.renewalDate,
-              status: subscriptionData.status || 'none',
+              status: subscriptionStatus,
               stripeSubscriptionId: subscriptionData.stripeSubscriptionId
-            });
+            };
+            
+            // Set subscription data
+            setSubscription(subscriptionDetails);
 
-            // Set account tier based on subscription status
-            setAccountTier(isActivePremium ? 'premium' : 'free');
+            // Set account tier based on enhanced premium status check
+            const newTier = isActivePremium ? 'premium' : 'free';
+            setAccountTier(newTier);
+
+            // Update the database if there's a mismatch between stored tier and actual status
+            if (data.tier !== newTier) {
+              console.log('Fixing account tier mismatch:', {
+                storedTier: data.tier,
+                calculatedTier: newTier,
+                subscriptionStatus,
+                hasStripeId: !!subscriptionData.stripeSubscriptionId
+              });
+              set(ref(realtimeDb, `users/${user.uid}/account/tier`), newTier);
+            }
 
             // If the subscription is canceled and past end date, ensure account is set to free
             if (subscriptionData.status === 'canceled' && endDate && endDate <= now) {
