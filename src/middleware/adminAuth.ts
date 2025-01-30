@@ -1,4 +1,3 @@
-import { getDatabase, ref, get } from 'firebase/database';
 import { getAuth } from 'firebase/auth';
 
 export async function checkAdminStatus() {
@@ -10,17 +9,23 @@ export async function checkAdminStatus() {
       throw new Error('Authentication required');
     }
 
-    const db = getDatabase();
-    const userRef = ref(db, `users/${user.uid}`);
-    const snapshot = await get(userRef);
-    const userData = snapshot.val();
+    const token = await user.getIdToken();
+    const response = await fetch('/api/admin/verify', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
 
-    if (!userData?.isAdmin) {
-      throw new Error('Admin access required');
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Admin access required');
     }
 
     return true;
-  } catch (error) {
+  } catch (error: any) {
+    console.error('Admin verification error:', error);
     throw error;
   }
 }
