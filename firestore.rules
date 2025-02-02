@@ -89,11 +89,20 @@ service cloud.firestore {
 
     // Messages with rate limiting and content validation
     match /messages/{messageId} {
+      // Allow read access to messages for authenticated users
       allow read: if isAuthenticated();
+      
+      // Allow users to create messages if they are authenticated and senderId matches the authenticated user
       allow create: if isAuthenticated()
-        && request.resource.data.senderId == request.auth.uid;
+        && request.resource.data.senderId == request.auth.uid
+        && request.resource.data.receiverId != request.auth.uid  // Ensure sender and receiver are different users
+        && isValidMessage(request.resource.data);
+      
+      // Allow users to update their own messages
       allow update: if isAuthenticated() 
         && resource.data.senderId == request.auth.uid;
+      
+      // Allow users to delete their own messages
       allow delete: if isAuthenticated() 
         && resource.data.senderId == request.auth.uid;
     }
