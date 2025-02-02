@@ -113,7 +113,7 @@
       "$chatId": {
         ".read": "auth != null",
         ".write": "auth != null",
-        ".validate": "newData.hasChildren(['participants', 'createdAt'])",
+        ".validate": "newData.hasChildren(['participants'])",
         "participants": {
           "$uid": {
             ".validate": "newData.isBoolean()"
@@ -125,6 +125,7 @@
           }
         },
         "lastMessage": {
+          ".validate": "!newData.exists() || newData.hasChildren(['senderId', 'content', 'timestamp'])",
           "senderId": {
             ".validate": "newData.isString()"
           },
@@ -135,7 +136,7 @@
             ".validate": "newData.isString() && newData.val().length <= 2000"
           },
           "type": {
-            ".validate": "newData.isString() && (newData.val() === 'text' || newData.val() === 'image' || newData.val() === 'system')"
+            ".validate": "!newData.exists() || (newData.isString() && (newData.val() === 'text' || newData.val() === 'image' || newData.val() === 'system'))"
           },
           "timestamp": {
             ".validate": "newData.isNumber() && newData.val() <= now"
@@ -148,7 +149,7 @@
           ".validate": "!newData.exists() || newData.isString()"
         },
         "createdAt": {
-          ".validate": "newData.isNumber() && (!data.exists() || data.val() === newData.val()) && newData.val() <= now"
+          ".validate": "!newData.exists() || (newData.isNumber() && newData.val() <= now)"
         }
       }
     },
