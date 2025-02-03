@@ -74,22 +74,35 @@
 
     "messages": {
       ".read": "auth != null",
-      ".write": "auth != null",
       ".indexOn": ["timestamp", "chatId"],
       "$messageGroupId": {
+        ".read": "auth != null",
+        ".write": "auth != null",
         "$messageId": {
-          ".validate": "newData.hasChildren(['senderId', 'receiverId', 'text', 'createdAt'])",
+          ".validate": "newData.hasChildren(['senderId', 'receiverId', 'content', 'timestamp'])",
           "senderId": {
             ".validate": "newData.val() === auth.uid"
           },
           "receiverId": {
             ".validate": "newData.isString() && newData.val() !== auth.uid"
           },
-          "text": {
+          "content": {
             ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 2000"
           },
-          "createdAt": {
-            ".validate": "newData.isString()"
+          "timestamp": {
+            ".validate": "newData.isNumber() && newData.val() <= now"
+          },
+          "type": {
+            ".validate": "!newData.exists() || (newData.isString() && (newData.val() === 'text' || newData.val() === 'image' || newData.val() === 'system'))"
+          },
+          "read": {
+            ".validate": "newData.isBoolean()"
+          },
+          "listingId": {
+            ".validate": "!newData.exists() || newData.isString()"
+          },
+          "$other": {
+            ".validate": false
           }
         }
       }
