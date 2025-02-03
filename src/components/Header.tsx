@@ -7,11 +7,15 @@ import dynamic from "next/dynamic";
 import {
   Sheet,
   SheetContent,
+  SheetHeader,
+  SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { Menu } from "lucide-react";
+import { Menu, LayoutDashboard, Heart, MessageSquare, Settings, Store, LogOut } from "lucide-react";
 import { useState } from "react";
 import { motion } from "framer-motion";
+import { useAuth } from "@/contexts/AuthContext";
+import { SignOutDialog } from "./SignOutDialog";
 
 // Dynamically import the auth-dependent navigation component
 const AuthNav = dynamic(() => import("./AuthNav"), {
@@ -20,8 +24,21 @@ const AuthNav = dynamic(() => import("./AuthNav"), {
 
 export default function Header() {
   const router = useRouter();
+  const { user, profile, signOut } = useAuth();
   const isAuthPage = router.pathname.startsWith("/auth/");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [showSignOutDialog, setShowSignOutDialog] = useState(false);
+
+  const handleSignOut = async () => {
+    await signOut();
+    router.push("/");
+    setIsMobileMenuOpen(false);
+  };
+
+  const handleNavigation = (path: string) => {
+    router.push(path);
+    setIsMobileMenuOpen(false);
+  };
 
   return (
     <motion.header 
@@ -72,25 +89,90 @@ export default function Header() {
                 <span className="sr-only">Toggle menu</span>
               </Button>
             </SheetTrigger>
-            <SheetContent side="right" className="w-[280px] p-4">
-              <nav className="flex flex-col gap-6 mt-4">
+            <SheetContent side="right" className="w-[280px] sm:w-[320px]">
+              <SheetHeader className="mb-4">
+                <SheetTitle>Menu</SheetTitle>
+              </SheetHeader>
+              <nav className="flex flex-col space-y-3">
                 <Link 
                   href="/" 
-                  className="flex items-center gap-2 px-2 py-1 hover:bg-accent rounded-md transition-colors"
+                  className="flex items-center gap-2 px-2 py-2 hover:bg-accent rounded-md transition-colors"
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
                   Home
                 </Link>
                 <Link 
                   href="/listings" 
-                  className="flex items-center gap-2 px-2 py-1 hover:bg-accent rounded-md transition-colors"
+                  className="flex items-center gap-2 px-2 py-2 hover:bg-accent rounded-md transition-colors"
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
                   Browse Listings
                 </Link>
-                {!isAuthPage && (
-                  <div className="flex flex-col gap-4">
-                    <AuthNav />
+
+                {user ? (
+                  <>
+                    <div className="pt-2 pb-2">
+                      <div className="text-sm font-medium text-muted-foreground px-2">
+                        Welcome, {profile?.username || 'User'}!
+                      </div>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      className="flex items-center justify-start gap-2 h-auto py-2"
+                      onClick={() => handleNavigation('/dashboard')}
+                    >
+                      <LayoutDashboard className="h-4 w-4" />
+                      Dashboard Overview
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      className="flex items-center justify-start gap-2 h-auto py-2"
+                      onClick={() => handleNavigation('/dashboard/create-listing')}
+                    >
+                      <Store className="h-4 w-4" />
+                      Create Listing
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      className="flex items-center justify-start gap-2 h-auto py-2"
+                      onClick={() => handleNavigation('/dashboard/favorites')}
+                    >
+                      <Heart className="h-4 w-4" />
+                      Favorites
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      className="flex items-center justify-start gap-2 h-auto py-2"
+                      onClick={() => handleNavigation('/dashboard/messages')}
+                    >
+                      <MessageSquare className="h-4 w-4" />
+                      Messages
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      className="flex items-center justify-start gap-2 h-auto py-2"
+                      onClick={() => handleNavigation('/dashboard/settings')}
+                    >
+                      <Settings className="h-4 w-4" />
+                      Settings
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      className="flex items-center justify-start gap-2 h-auto py-2 text-red-500 hover:text-red-600 hover:bg-red-50"
+                      onClick={() => setShowSignOutDialog(true)}
+                    >
+                      <LogOut className="h-4 w-4" />
+                      Sign Out
+                    </Button>
+                  </>
+                ) : (
+                  <div className="flex flex-col gap-2 pt-2">
+                    <Link href="/auth/sign-in">
+                      <Button variant="outline" className="w-full">Sign In</Button>
+                    </Link>
+                    <Link href="/auth/sign-up">
+                      <Button className="w-full bg-sky-400 hover:bg-sky-500">Get Started</Button>
+                    </Link>
                   </div>
                 )}
               </nav>
@@ -98,6 +180,11 @@ export default function Header() {
           </Sheet>
         </div>
       </div>
+      <SignOutDialog
+        isOpen={showSignOutDialog}
+        onConfirm={handleSignOut}
+        onCancel={() => setShowSignOutDialog(false)}
+      />
     </motion.header>
   );
 }
