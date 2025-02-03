@@ -76,31 +76,20 @@
       ".read": "auth != null",
       ".write": "auth != null",
       ".indexOn": ["timestamp", "chatId"],
-      "$chatId": {
-        ".read": "auth != null",
-        ".write": "auth != null",
+      "$messageGroupId": {
         "$messageId": {
-          ".validate": "newData.hasChildren(['senderId', 'receiverId', 'content', 'timestamp', 'type'])",
+          ".validate": "newData.hasChildren(['senderId', 'receiverId', 'text', 'createdAt'])",
           "senderId": {
             ".validate": "newData.val() === auth.uid"
           },
           "receiverId": {
-            ".validate": "newData.isString()"
+            ".validate": "newData.isString() && newData.val() !== auth.uid"
           },
-          "content": {
+          "text": {
             ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 2000"
           },
-          "type": {
-            ".validate": "newData.isString() && (newData.val() === 'text' || newData.val() === 'image' || newData.val() === 'system')"
-          },
-          "timestamp": {
-            ".validate": "newData.isNumber() && newData.val() <= now"
-          },
-          "listingId": {
-            ".validate": "!newData.exists() || newData.isString()"
-          },
-          "read": {
-            ".validate": "newData.isBoolean()"
+          "createdAt": {
+            ".validate": "newData.isString()"
           }
         }
       }
