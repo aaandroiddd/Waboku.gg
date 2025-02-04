@@ -51,6 +51,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
+  const { listingId } = req.body; // Optional: specific listing ID to process
+
   try {
     console.log('[Cleanup Inactive Listings] Initializing Firebase Admin');
     const { db } = getFirebaseAdmin();
@@ -59,9 +61,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     
     // Step 1: Archive expired active listings
     console.log('[Cleanup Inactive Listings] Fetching active listings...');
-    const activeListingsSnapshot = await db.collection('listings')
-      .where('status', '==', 'active')
-      .get();
+    let activeListingsQuery = db.collection('listings')
+      .where('status', '==', 'active');
+
+    // If specific listing ID provided, only process that one
+    if (listingId) {
+      activeListingsQuery = activeListingsQuery.where('__name__', '==', listingId);
+    }
+
+    const activeListingsSnapshot = await activeListingsQuery.get();
 
     console.log(`[Cleanup Inactive Listings] Found ${activeListingsSnapshot.size} active listings to process`);
     
@@ -88,7 +96,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             batch.update(doc.ref, {
               status: 'archived',
               archivedAt: Timestamp.now(),
-              originalCreatedAt: data.createdAt
+              originalCreatedAt: data.createdAt,
+              updatedAt: Timestamp.now()
             });
             totalArchived++;
           }
@@ -104,7 +113,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           batch.update(doc.ref, {
             status: 'archived',
             archivedAt: Timestamp.now(),
-            originalCreatedAt: data.createdAt
+            originalCreatedAt: data.createdAt,
+            updatedAt: Timestamp.now()
           });
           totalArchived++;
         }
@@ -122,64 +132,67 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     // Step 2: Archive inactive listings older than 7 days
-    console.log('[Cleanup Inactive Listings] Processing inactive listings...');
-    const inactiveSnapshot = await db.collection('listings')
-      .where('status', '==', 'inactive')
-      .where('updatedAt', '<', Timestamp.fromDate(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)))
-      .get();
+    if (!listingId) { // Only process these if not handling a specific listing
+      console.log('[Cleanup Inactive Listings] Processing inactive listings...');
+      const inactiveSnapshot = await db.collection('listings')
+        .where('status', '==', 'inactive')
+        .where('updatedAt', '<', Timestamp.fromDate(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)))
+        .get();
 
-    console.log(`[Cleanup Inactive Listings] Found ${inactiveSnapshot.size} inactive listings to archive`);
+      console.log(`[Cleanup Inactive Listings] Found ${inactiveSnapshot.size} inactive listings to archive`);
 
-    const processInactiveListing = async (doc: FirebaseFirestore.QueryDocumentSnapshot, batch: FirebaseFirestore.WriteBatch) => {
-      try {
-        const data = doc.data();
-        if (!data) return;
+      const processInactiveListing = async (doc: FirebaseFirestore.QueryDocumentSnapshot, batch: FirebaseFirestore.WriteBatch) => {
+        try {
+          const data = doc.data();
+          if (!data) return;
 
-        console.log(`[Cleanup Inactive Listings] Archiving inactive listing ${doc.id}`);
-        batch.update(doc.ref, {
-          status: 'archived',
-          archivedAt: Timestamp.now(),
-          originalCreatedAt: data.createdAt
-        });
-        totalArchived++;
-      } catch (error) {
-        logError('Processing inactive listing', error, {
-          listingId: doc.id,
-          data: doc.data()
-        });
-        throw error;
+          console.log(`[Cleanup Inactive Listings] Archiving inactive listing ${doc.id}`);
+          batch.update(doc.ref, {
+            status: 'archived',
+            archivedAt: Timestamp.now(),
+            originalCreatedAt: data.createdAt,
+            updatedAt: Timestamp.now()
+          });
+          totalArchived++;
+        } catch (error) {
+          logError('Processing inactive listing', error, {
+            listingId: doc.id,
+            data: doc.data()
+          });
+          throw error;
+        }
+      };
+
+      if (inactiveSnapshot.size > 0) {
+        await processBatch(inactiveSnapshot.docs, processInactiveListing, db);
       }
-    };
 
-    if (inactiveSnapshot.size > 0) {
-      await processBatch(inactiveSnapshot.docs, processInactiveListing, db);
-    }
+      // Step 3: Delete archived listings older than 7 days
+      console.log('[Cleanup Inactive Listings] Processing archived listings...');
+      const archivedSnapshot = await db.collection('listings')
+        .where('status', '==', 'archived')
+        .where('archivedAt', '<', Timestamp.fromDate(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)))
+        .get();
 
-    // Step 3: Delete archived listings older than 7 days
-    console.log('[Cleanup Inactive Listings] Processing archived listings...');
-    const archivedSnapshot = await db.collection('listings')
-      .where('status', '==', 'archived')
-      .where('archivedAt', '<', Timestamp.fromDate(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)))
-      .get();
+      console.log(`[Cleanup Inactive Listings] Found ${archivedSnapshot.size} archived listings for deletion`);
 
-    console.log(`[Cleanup Inactive Listings] Found ${archivedSnapshot.size} archived listings for deletion`);
+      const processArchivedListing = async (doc: FirebaseFirestore.QueryDocumentSnapshot, batch: FirebaseFirestore.WriteBatch) => {
+        try {
+          console.log(`[Cleanup Inactive Listings] Deleting archived listing ${doc.id}`);
+          batch.delete(doc.ref);
+          totalDeleted++;
+        } catch (error) {
+          logError('Processing archived listing', error, {
+            listingId: doc.id,
+            data: doc.data()
+          });
+          throw error;
+        }
+      };
 
-    const processArchivedListing = async (doc: FirebaseFirestore.QueryDocumentSnapshot, batch: FirebaseFirestore.WriteBatch) => {
-      try {
-        console.log(`[Cleanup Inactive Listings] Deleting archived listing ${doc.id}`);
-        batch.delete(doc.ref);
-        totalDeleted++;
-      } catch (error) {
-        logError('Processing archived listing', error, {
-          listingId: doc.id,
-          data: doc.data()
-        });
-        throw error;
+      if (archivedSnapshot.size > 0) {
+        await processBatch(archivedSnapshot.docs, processArchivedListing, db);
       }
-    };
-
-    if (archivedSnapshot.size > 0) {
-      await processBatch(archivedSnapshot.docs, processArchivedListing, db);
     }
     
     const summary = `Successfully processed listings: ${totalArchived} archived, ${totalDeleted} deleted`;
@@ -196,8 +209,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     logError('Cleanup inactive listings', error);
     return res.status(500).json({ 
       error: 'Failed to process listings',
-      details: error.message,
-      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      details: error.message
     });
   }
 }

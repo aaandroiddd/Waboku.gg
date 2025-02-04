@@ -28,57 +28,43 @@ export function ListingTimer({ createdAt, archivedAt, accountTier, status, listi
     
     setIsProcessing(true);
     try {
-      // If the listing is active, archive it
-      if (status === 'active') {
-        const response = await fetch('/api/cleanup-inactive-listings', {
-          method: 'POST',
-        });
-        
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || 'Failed to archive listing');
-        }
+      const response = await fetch('/api/cleanup-inactive-listings', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          listingId: listingId // Pass the specific listing ID
+        }),
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to process listing');
+      }
 
-        const data = await response.json();
-        
+      const data = await response.json();
+      
+      if (status === 'active') {
         toast({
-          title: "Listing Status Updated",
-          description: data.message || "The listing has been archived.",
+          title: "Listing Archived",
+          description: "The listing has been moved to archived status.",
           duration: 5000,
         });
-
-        // If we're on the listing page, redirect to listings
-        if (router.pathname.includes('/listings/[id]')) {
-          router.push('/listings');
-        } else {
-          // If we're on any other page, refresh to update the UI
-          router.refresh();
-        }
-      } 
-      // If the listing is archived, delete it
-      else if (status === 'archived') {
-        const response = await fetch('/api/listings/cleanup-archived', {
-          method: 'POST',
-        });
-
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || 'Failed to delete archived listing');
-        }
-
-        const data = await response.json();
-        
+      } else if (status === 'archived') {
         toast({
           title: "Listing Deleted",
           description: "The archived listing has been permanently deleted.",
           duration: 5000,
         });
+      }
 
-        if (router.pathname.includes('/listings/[id]')) {
-          router.push('/listings');
-        } else {
-          router.refresh();
-        }
+      // If we're on the listing page, redirect to listings
+      if (router.pathname.includes('/listings/[id]')) {
+        router.push('/listings');
+      } else {
+        // If we're on any other page, refresh to update the UI
+        router.refresh();
       }
     } catch (error) {
       console.error('Error triggering cleanup:', error);
@@ -91,7 +77,7 @@ export function ListingTimer({ createdAt, archivedAt, accountTier, status, listi
     } finally {
       setIsProcessing(false);
     }
-  }, [router, toast, isProcessing, status]);
+  }, [router, toast, isProcessing, status, listingId]);
 
   useEffect(() => {
     const calculateTimeLeft = () => {
@@ -100,6 +86,7 @@ export function ListingTimer({ createdAt, archivedAt, accountTier, status, listi
       let duration: number;
 
       if (status === 'archived') {
+        // For archived listings, use archivedAt as start time and 7 days duration
         startTime = archivedAt instanceof Date 
           ? archivedAt.getTime() 
           : typeof archivedAt === 'string' 
@@ -107,6 +94,7 @@ export function ListingTimer({ createdAt, archivedAt, accountTier, status, listi
             : archivedAt as number;
         duration = 7 * 24 * 60 * 60 * 1000; // 7 days for archived listings
       } else {
+        // For active listings, use createdAt and tier duration
         startTime = createdAt instanceof Date 
           ? createdAt.getTime() 
           : typeof createdAt === 'string' 
@@ -123,7 +111,7 @@ export function ListingTimer({ createdAt, archivedAt, accountTier, status, listi
       setProgress(progressValue);
 
       // Check if the listing has expired
-      if (remaining === 0 && !hasTriggeredCleanup && status === 'active') {
+      if (remaining === 0 && !hasTriggeredCleanup) {
         setIsExpired(true);
         setHasTriggeredCleanup(true);
         triggerCleanup();
@@ -150,13 +138,16 @@ export function ListingTimer({ createdAt, archivedAt, accountTier, status, listi
     }
   };
 
-  const getProgressColor = (progress: number, accountTier: string) => {
-    if (accountTier === 'free') {
+  const getProgressColor = (progress: number, status: string) => {
+    if (status === 'archived') {
       if (progress > 90) return 'bg-red-500';
       if (progress > 75) return 'bg-orange-500';
-      return 'bg-blue-500';
+      return 'bg-yellow-500';
     }
-    return ''; // Default color for premium users
+    
+    if (progress > 90) return 'bg-red-500';
+    if (progress > 75) return 'bg-orange-500';
+    return 'bg-blue-500';
   };
 
   if (isExpired || timeLeft === 0) {
@@ -165,7 +156,8 @@ export function ListingTimer({ createdAt, archivedAt, accountTier, status, listi
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
-            {isProcessing ? "Archiving listing..." : "Listing expired"}
+            {isProcessing ? (status === 'active' ? "Archiving listing..." : "Deleting listing...") : 
+             (status === 'active' ? "Listing expired" : "Archived listing expired")}
           </AlertDescription>
         </Alert>
         <Progress value={100} className="h-2" />
@@ -175,22 +167,27 @@ export function ListingTimer({ createdAt, archivedAt, accountTier, status, listi
 
   return (
     <div className="flex flex-col gap-2">
-      {accountTier === 'free' && status === 'active' && (
+      {status === 'active' && (
         <Alert>
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
-            Free plan: Listing expires in {formatTimeLeft()}
+            {accountTier === 'free' ? 
+              `Free plan: Listing expires in ${formatTimeLeft()}` :
+              `Listing expires in ${formatTimeLeft()}`}
           </AlertDescription>
         </Alert>
       )}
-      {(accountTier !== 'free' || status !== 'active') && (
-        <div className="text-sm text-muted-foreground">
-          Expires in: {formatTimeLeft()}
-        </div>
+      {status === 'archived' && (
+        <Alert variant="warning">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            Archived: Will be deleted in {formatTimeLeft()}
+          </AlertDescription>
+        </Alert>
       )}
       <Progress 
         value={progress} 
-        className={`h-2 ${getProgressColor(progress, accountTier)}`}
+        className={`h-2 ${getProgressColor(progress, status)}`}
       />
     </div>
   );
