@@ -251,12 +251,17 @@ export function useListings({ userId, searchQuery, showOnlyActive = false }: Use
       // Remove cardReference if it's null
       const { cardReference, ...dataWithoutCard } = baseData;
       
+      // Set expiration date to 30 days from creation by default
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + 30);
+
       const newListing = {
         ...dataWithoutCard,
         imageUrls,
         userId: user.uid,
         username: user.displayName || 'Anonymous',
         createdAt: new Date(),
+        expiresAt, // Add expiration date
         status: 'active',
         isGraded: Boolean(cleanListingData.isGraded),
         ...(cardReference ? { cardReference } : {})
