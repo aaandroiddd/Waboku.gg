@@ -30,26 +30,48 @@ export const useMessages = (chatId?: string) => {
 
   useEffect(() => {
     if (!chatId || !user) {
+      console.log('No chat ID or user, skipping messages load');
       setMessages([]);
+      setLoading(false);
+      return;
+    }
+
+    console.log(`Loading messages for chat: ${chatId}`);
+    const { database } = getFirebaseServices();
+    
+    if (!database) {
+      console.error('Realtime Database not initialized');
       setLoading(false);
       return;
     }
 
     setLoading(true);
     const messagesRef = ref(database, `messages/${chatId}`);
+    console.log('Fetching messages from:', messagesRef.toString());
     
     // First, get the initial data
     get(messagesRef).then((snapshot) => {
       try {
         const data = snapshot.val();
+        console.log('Raw messages data:', data ? 'Data present' : 'No data');
+        
         if (data) {
-          const messageList = Object.entries(data).map(([id, message]: [string, any]) => ({
-            id,
-            ...message,
-          }));
+          const messageList = Object.entries(data).map(([id, message]: [string, any]) => {
+            console.log(`Processing message ${id}:`, {
+              senderId: message.senderId,
+              timestamp: new Date(message.timestamp).toISOString(),
+              type: message.type
+            });
+            return {
+              id,
+              ...message,
+            };
+          });
           const sortedMessages = messageList.sort((a, b) => a.timestamp - b.timestamp);
           setMessages(sortedMessages);
+          console.log(`Loaded ${sortedMessages.length} messages`);
         } else {
+          console.log('No messages found for this chat');
           setMessages([]);
         }
       } catch (error) {

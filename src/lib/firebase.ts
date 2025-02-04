@@ -39,13 +39,16 @@ let firebaseApp: FirebaseApp;
 let auth: Auth;
 let db: Firestore;
 let storage: FirebaseStorage;
+let database: any;
 
 export const getFirebaseServices = () => {
   if (!firebaseApp) {
     // Initialize Firebase only once
     if (!getApps().length) {
+      console.log('Initializing Firebase app...');
       firebaseApp = initializeApp(firebaseConfig);
     } else {
+      console.log('Using existing Firebase app...');
       firebaseApp = getApps()[0];
     }
 
@@ -54,6 +57,20 @@ export const getFirebaseServices = () => {
     db = getFirestore(firebaseApp);
     storage = getStorage(firebaseApp);
 
+    // Initialize Realtime Database
+    if (firebaseConfig.databaseURL) {
+      console.log('Initializing Realtime Database...');
+      try {
+        const { getDatabase } = require('firebase/database');
+        database = getDatabase(firebaseApp);
+        console.log('Realtime Database initialized successfully');
+      } catch (error) {
+        console.error('Error initializing Realtime Database:', error);
+      }
+    } else {
+      console.error('Firebase Realtime Database URL is missing');
+    }
+
     // Set persistence
     if (typeof window !== 'undefined') {
       setPersistence(auth, browserLocalPersistence)
@@ -61,7 +78,7 @@ export const getFirebaseServices = () => {
     }
   }
 
-  return { app: firebaseApp, auth, db, storage };
+  return { app: firebaseApp, auth, db, storage, database };
 };
 
 export { firebaseApp as app, auth, db, storage };

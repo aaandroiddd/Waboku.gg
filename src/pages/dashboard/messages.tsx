@@ -44,17 +44,29 @@ export default function MessagesPage() {
 
   useEffect(() => {
     if (!user) {
+      console.log('No user found, skipping messages load');
       setLoading(false);
       return;
     }
 
-    const database = getDatabase();
+    console.log('Loading messages for user:', user.uid);
+    const { database } = getFirebaseServices();
+    
+    if (!database) {
+      console.error('Realtime Database not initialized');
+      setLoading(false);
+      return;
+    }
+
     const chatsRef = ref(database, 'chats');
+    console.log('Fetching chats from:', chatsRef.toString());
 
     // First, get initial data
     get(chatsRef).then(async (snapshot) => {
       try {
         const data = snapshot.val();
+        console.log('Raw chats data:', data ? 'Data present' : 'No data');
+        
         if (!data) {
           setChats([]);
           setLoading(false);
@@ -62,15 +74,32 @@ export default function MessagesPage() {
         }
 
         const chatList = Object.entries(data)
-          .map(([id, chat]: [string, any]) => ({
-            id,
-            ...chat,
-          }))
-          .filter((chat) => 
-            chat.participants && 
-            chat.participants[user.uid] && 
-            (!chat.deletedBy || !chat.deletedBy[user.uid])
-          )
+          .map(([id, chat]: [string, any]) => {
+            console.log(`Processing chat ${id}:`, {
+              hasParticipants: !!chat.participants,
+              isUserParticipant: chat.participants?.[user.uid],
+              isDeleted: chat.deletedBy?.[user.uid]
+            });
+            return {
+              id,
+              ...chat,
+            };
+          })
+          .filter((chat) => {
+            const isValid = chat.participants && 
+                          chat.participants[user.uid] && 
+                          (!chat.deletedBy || !chat.deletedBy[user.uid]);
+            
+            if (!isValid) {
+              console.log(`Chat ${chat.id} filtered out:`, {
+                hasParticipants: !!chat.participants,
+                isUserParticipant: chat.participants?.[user.uid],
+                isDeleted: chat.deletedBy?.[user.uid]
+              });
+            }
+            
+            return isValid;
+          })
           .sort((a, b) => {
             const timestampA = a.lastMessage?.timestamp || 0;
             const timestampB = b.lastMessage?.timestamp || 0;
