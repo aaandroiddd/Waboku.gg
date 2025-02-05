@@ -3,7 +3,7 @@ import { getFirebaseAdmin } from '@/lib/firebase-admin';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+    return res.status(400).json({ error: 'Method not allowed' });
   }
 
   const { userId } = req.body;
@@ -19,23 +19,62 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const { rtdb } = getFirebaseAdmin();
+    const { rtdb, firestore } = getFirebaseAdmin();
     
-    // Update account status in Firebase
-    await rtdb.ref(`users/${userId}/account`).set({
-      tier: 'premium',
-      subscription: {
-        status: 'active',
-        startDate: new Date().toISOString(),
-        renewalDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days from now
-        stripeSubscriptionId: `restored_${Date.now()}`
-      }
+    // Get current data from both databases
+    const rtdbSnapshot = await rtdb.ref(`users/${userId}/account`).get();
+    const firestoreDoc = await firestore.collection('users').doc(userId).get();
+
+    const rtdbData = rtdbSnapshot.val();
+    const firestoreData = firestoreDoc.data();
+
+    console.log('Current data:', {
+      rtdb: rtdbData,
+      firestore: firestoreData
+    });
+
+    // Determine correct account status
+    const subscriptionData = rtdbData?.subscription || {};
+    const now = new Date();
+    const endDate = subscriptionData.endDate ? new Date(subscriptionData.endDate) : null;
+    
+    const isActivePremium = (
+      subscriptionData.status === 'active' ||
+      (subscriptionData.status === 'canceled' && endDate && endDate > now) ||
+      (subscriptionData.stripeSubscriptionId && !subscriptionData.status)
+    );
+
+    const correctTier = isActivePremium ? 'premium' : 'free';
+
+    // Update Firestore
+    await firestore.collection('users').doc(userId).update({
+      accountTier: correctTier,
+      updatedAt: now
+    });
+
+    // Update Realtime Database
+    await rtdb.ref(`users/${userId}/account`).update({
+      tier: correctTier,
+      lastChecked: now.toISOString()
+    });
+
+    console.log('Account status updated:', {
+      userId,
+      newTier: correctTier,
+      subscriptionStatus: subscriptionData.status,
+      hasStripeId: !!subscriptionData.stripeSubscriptionId
     });
 
     return res.status(200).json({ 
       success: true, 
       message: 'Account status updated successfully',
-      userId
+      userId,
+      newTier: correctTier,
+      subscriptionDetails: {
+        status: subscriptionData.status,
+        stripeSubscriptionId: subscriptionData.stripeSubscriptionId,
+        endDate: subscriptionData.endDate
+      }
     });
   } catch (error: any) {
     console.error('Error updating account status:', error);
