@@ -19,62 +19,28 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const { rtdb, firestore } = getFirebaseAdmin();
-    
-    // Get current data from both databases
-    const rtdbSnapshot = await rtdb.ref(`users/${userId}/account`).get();
-    const firestoreDoc = await firestore.collection('users').doc(userId).get();
-
-    const rtdbData = rtdbSnapshot.val();
-    const firestoreData = firestoreDoc.data();
-
-    console.log('Current data:', {
-      rtdb: rtdbData,
-      firestore: firestoreData
-    });
-
-    // Determine correct account status
-    const subscriptionData = rtdbData?.subscription || {};
+    const { firestore } = getFirebaseAdmin();
     const now = new Date();
-    const endDate = subscriptionData.endDate ? new Date(subscriptionData.endDate) : null;
-    
-    const isActivePremium = (
-      subscriptionData.status === 'active' ||
-      (subscriptionData.status === 'canceled' && endDate && endDate > now) ||
-      (subscriptionData.stripeSubscriptionId && !subscriptionData.status)
-    );
 
-    const correctTier = isActivePremium ? 'premium' : 'free';
-
-    // Update Firestore
+    // Update Firestore with premium tier
     await firestore.collection('users').doc(userId).update({
-      accountTier: correctTier,
-      updatedAt: now
-    });
-
-    // Update Realtime Database
-    await rtdb.ref(`users/${userId}/account`).update({
-      tier: correctTier,
-      lastChecked: now.toISOString()
+      accountTier: 'premium',
+      updatedAt: now,
+      subscriptionStatus: 'active'
     });
 
     console.log('Account status updated:', {
       userId,
-      newTier: correctTier,
-      subscriptionStatus: subscriptionData.status,
-      hasStripeId: !!subscriptionData.stripeSubscriptionId
+      newTier: 'premium',
+      timestamp: now.toISOString()
     });
 
     return res.status(200).json({ 
       success: true, 
       message: 'Account status updated successfully',
       userId,
-      newTier: correctTier,
-      subscriptionDetails: {
-        status: subscriptionData.status,
-        stripeSubscriptionId: subscriptionData.stripeSubscriptionId,
-        endDate: subscriptionData.endDate
-      }
+      newTier: 'premium',
+      updatedAt: now.toISOString()
     });
   } catch (error: any) {
     console.error('Error updating account status:', error);
