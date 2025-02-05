@@ -159,14 +159,15 @@ export function ListingGrid({
   }, [selectedListing, toggleFavorite, onLoadMore]);
 
   const displayedListings = useMemo(() => {
-    // Filter out expired and archived listings
+    // Filter out archived listings and optionally limit the count
     const filteredListings = listings.filter(listing => {
       const isActive = listing.status === 'active';
-      const isNotExpired = !listing.expiresAt || new Date(listing.expiresAt) > new Date();
       const isNotArchived = !listing.archivedAt;
-      return isActive && isNotExpired && isNotArchived;
+      // Only check expiration if the field exists
+      const isNotExpired = !listing.expiresAt || new Date(listing.expiresAt) > new Date();
+      return isActive && isNotArchived && isNotExpired;
     });
-    return filteredListings.slice(0, displayCount);
+    return displayCount ? filteredListings.slice(0, displayCount) : filteredListings;
   }, [listings, displayCount]);
 
   const memoizedGetConditionColor = useCallback(getConditionColor, []);

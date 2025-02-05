@@ -300,8 +300,6 @@ export function useListings({ userId, searchQuery, showOnlyActive = false }: Use
         if (showOnlyActive || !userId) {
           // For public listings or when showOnlyActive is true, only show active listings
           constraints.push(where('status', '==', 'active'));
-          // Add constraint to filter out expired listings
-          constraints.push(where('expiresAt', '>', new Date()));
         } else if (userId) {
           // For user's own listings, show both active and inactive, but not archived
           constraints.push(where('status', 'in', ['active', 'inactive']));
