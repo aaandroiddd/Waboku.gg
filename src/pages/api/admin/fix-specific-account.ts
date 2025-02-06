@@ -63,7 +63,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const { db, rtdb } = admin;
     const now = new Date();
     const timestamp = now.toISOString();
-    const firestoreTimestamp = admin.db.Timestamp.fromDate(now);
+    const firestoreTimestamp = admin.firestore.Timestamp.fromDate(now);
 
     // Initialize update promises array
     const updatePromises = [];
