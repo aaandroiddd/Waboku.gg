@@ -5,6 +5,7 @@ interface FirebaseAdminServices {
   auth: admin.auth.Auth;
   storage: admin.storage.Storage;
   rtdb: admin.database.Database;
+  Timestamp: typeof admin.firestore.Timestamp;
 }
 
 let firebaseAdmin: FirebaseAdminServices | null = null;
@@ -36,6 +37,7 @@ export function getFirebaseAdmin(): FirebaseAdminServices {
     auth: admin.auth(),
     storage: admin.storage(),
     rtdb: admin.database(),
+    Timestamp: admin.firestore.Timestamp,
   };
 
   return firebaseAdmin;

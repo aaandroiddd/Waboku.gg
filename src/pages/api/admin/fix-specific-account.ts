@@ -26,10 +26,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     console.log('[fix-specific-account] Processing update request:', { userId, accountTier });
 
-    const admin = getFirebaseAdmin();
+    const { db, rtdb } = getFirebaseAdmin();
     const now = new Date();
     const timestamp = now.toISOString();
-    const firestoreTimestamp = admin.firestore.Timestamp.fromDate(now);
+    const firestoreTimestamp = db.Timestamp.fromDate(now);
 
     // Initialize update promises array
     const updatePromises = [];
@@ -38,7 +38,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Check and update Firestore
     try {
       console.log('[fix-specific-account] Checking Firestore for user:', userId);
-      const firestoreDoc = await admin.firestore().collection('users').doc(userId).get();
+      const firestoreDoc = await db.collection('users').doc(userId).get();
       
       if (firestoreDoc.exists) {
         console.log('[fix-specific-account] User found in Firestore, preparing updates');
@@ -52,7 +52,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
         // Add Firestore update promises
         updatePromises.push(
-          admin.firestore().collection('users').doc(userId).set(firestoreData, { merge: true })
+          db.collection('users').doc(userId).set(firestoreData, { merge: true })
             .then(() => console.log('[fix-specific-account] Firestore main document updated'))
             .catch(error => {
               console.error('[fix-specific-account] Error updating Firestore main document:', error);
@@ -66,7 +66,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         };
 
         updatePromises.push(
-          admin.firestore().collection('users').doc(userId).collection('account').doc('tier').set(tierData)
+          db.collection('users').doc(userId).collection('account').doc('tier').set(tierData)
             .then(() => console.log('[fix-specific-account] Firestore tier document updated'))
             .catch(error => {
               console.error('[fix-specific-account] Error updating Firestore tier document:', error);
@@ -84,7 +84,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Check and update RTDB
     try {
       console.log('[fix-specific-account] Checking RTDB for user:', userId);
-      const rtdbRef = admin.database().ref(`users/${userId}`);
+      const rtdbRef = rtdb.ref(`users/${userId}`);
       const rtdbSnapshot = await rtdbRef.get();
       
       if (rtdbSnapshot.exists()) {
