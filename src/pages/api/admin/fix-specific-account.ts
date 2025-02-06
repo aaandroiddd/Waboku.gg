@@ -134,19 +134,30 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(200).json(successResponse);
 
   } catch (error: any) {
+    // Enhanced error logging
     console.error('[fix-specific-account] Critical error:', {
       error: {
         message: error.message,
         code: error.code,
         stack: error.stack,
-        details: error.details || 'No additional details'
+        details: error.details || 'No additional details',
+        name: error.name,
+        cause: error.cause,
+      },
+      request: {
+        body: req.body,
+        headers: {
+          ...req.headers,
+          authorization: '[REDACTED]'
+        }
       }
     });
     
     return res.status(500).json({ 
       error: 'Failed to update account status',
       details: error.message,
-      code: error.code || 'UNKNOWN_ERROR'
+      code: error.code || 'UNKNOWN_ERROR',
+      name: error.name
     });
   }
 }

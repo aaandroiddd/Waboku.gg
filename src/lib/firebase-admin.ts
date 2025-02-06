@@ -17,6 +17,23 @@ export function getFirebaseAdmin(): FirebaseAdminServices {
 
   if (!admin.apps.length) {
     try {
+      // Validate required environment variables
+      const requiredEnvVars = {
+        projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+        clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+        privateKey: process.env.FIREBASE_PRIVATE_KEY,
+        databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL,
+        storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+      };
+
+      const missingVars = Object.entries(requiredEnvVars)
+        .filter(([_, value]) => !value)
+        .map(([key]) => key);
+
+      if (missingVars.length > 0) {
+        throw new Error(`Missing required environment variables: ${missingVars.join(', ')}`);
+      }
+
       admin.initializeApp({
         credential: admin.credential.cert({
           projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
@@ -26,8 +43,13 @@ export function getFirebaseAdmin(): FirebaseAdminServices {
         databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL,
         storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
       });
-    } catch (error) {
-      console.error('Firebase admin initialization error:', error);
+    } catch (error: any) {
+      console.error('Firebase admin initialization error:', {
+        message: error.message,
+        stack: error.stack,
+        cause: error.cause,
+        name: error.name
+      });
       throw error;
     }
   }
