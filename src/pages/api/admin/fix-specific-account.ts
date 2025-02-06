@@ -2,28 +2,36 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import { getFirebaseAdmin } from '@/lib/firebase-admin';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  console.log('[fix-specific-account] Starting request handling');
+  
   try {
     // Method validation
     if (req.method !== 'POST') {
       console.error('[fix-specific-account] Method not allowed:', req.method);
-      return res.status(400).json({ error: 'Method not allowed. Use POST request.' });
+      return res.status(405).json({ error: 'Method not allowed. Use POST request.' });
     }
 
     // Auth validation
     const authHeader = req.headers.authorization;
-    if (!authHeader) {
-      console.error('[fix-specific-account] Missing authorization header');
-      return res.status(401).json({ error: 'Unauthorized. Missing authorization header.' });
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      console.error('[fix-specific-account] Missing or invalid authorization header');
+      return res.status(401).json({ error: 'Unauthorized. Missing or invalid authorization header.' });
     }
 
     const adminSecret = authHeader.split(' ')[1];
-    if (!adminSecret || adminSecret !== process.env.ADMIN_SECRET) {
+    if (!process.env.ADMIN_SECRET) {
+      console.error('[fix-specific-account] ADMIN_SECRET environment variable is not set');
+      return res.status(500).json({ error: 'Server configuration error' });
+    }
+
+    if (adminSecret !== process.env.ADMIN_SECRET) {
       console.error('[fix-specific-account] Invalid admin secret');
       return res.status(401).json({ error: 'Unauthorized. Invalid admin secret.' });
     }
 
     // Input validation
     const { userId, accountTier } = req.body;
+    console.log('[fix-specific-account] Request body:', { userId, accountTier });
 
     if (!userId) {
       console.error('[fix-specific-account] Missing userId in request body');
@@ -55,106 +63,107 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const { db, rtdb } = admin;
     const now = new Date();
     const timestamp = now.toISOString();
-    const firestoreTimestamp = db.Timestamp.fromDate(now);
+    const firestoreTimestamp = admin.db.Timestamp.fromDate(now);
 
     // Initialize update promises array
     const updatePromises = [];
     let userFound = false;
 
-    // Check and update Firestore
+    // Check user existence first
+    console.log('[fix-specific-account] Checking user existence');
+    
     try {
-      console.log('[fix-specific-account] Checking Firestore for user:', userId);
-      const firestoreDoc = await db.collection('users').doc(userId).get();
+      const [firestoreDoc, rtdbSnapshot] = await Promise.all([
+        db.collection('users').doc(userId).get(),
+        rtdb.ref(`users/${userId}`).get()
+      ]);
+
+      userFound = firestoreDoc.exists || rtdbSnapshot.exists();
       
-      if (firestoreDoc.exists) {
-        console.log('[fix-specific-account] User found in Firestore');
-        userFound = true;
-        
-        const firestoreData = {
-          accountTier,
-          updatedAt: firestoreTimestamp,
-          subscriptionStatus: accountTier === 'premium' ? 'active' : 'inactive'
-        };
-
-        updatePromises.push(
-          db.collection('users').doc(userId).set(firestoreData, { merge: true })
-            .then(() => console.log('[fix-specific-account] Firestore main document updated'))
-            .catch(error => {
-              console.error('[fix-specific-account] Error updating Firestore main document:', error);
-              throw error;
-            })
-        );
-
-        const tierData = {
-          tier: accountTier,
-          updatedAt: firestoreTimestamp
-        };
-
-        updatePromises.push(
-          db.collection('users').doc(userId).collection('account').doc('tier').set(tierData)
-            .then(() => console.log('[fix-specific-account] Firestore tier document updated'))
-            .catch(error => {
-              console.error('[fix-specific-account] Error updating Firestore tier document:', error);
-              throw error;
-            })
-        );
+      if (!userFound) {
+        console.error('[fix-specific-account] User not found:', userId);
+        return res.status(404).json({ error: 'User not found' });
       }
+    } catch (existenceError: any) {
+      console.error('[fix-specific-account] Error checking user existence:', {
+        error: existenceError.message,
+        stack: existenceError.stack
+      });
+      return res.status(500).json({ 
+        error: 'Failed to check user existence',
+        details: existenceError.message
+      });
+    }
+
+    // Update Firestore
+    try {
+      console.log('[fix-specific-account] Updating Firestore');
+      
+      const firestoreData = {
+        accountTier,
+        updatedAt: firestoreTimestamp,
+        subscriptionStatus: accountTier === 'premium' ? 'active' : 'inactive'
+      };
+
+      updatePromises.push(
+        db.collection('users').doc(userId).set(firestoreData, { merge: true })
+          .then(() => console.log('[fix-specific-account] Firestore main document updated'))
+      );
+
+      const tierData = {
+        tier: accountTier,
+        updatedAt: firestoreTimestamp
+      };
+
+      updatePromises.push(
+        db.collection('users').doc(userId).collection('account').doc('tier').set(tierData)
+          .then(() => console.log('[fix-specific-account] Firestore tier document updated'))
+      );
     } catch (firestoreError: any) {
-      console.error('[fix-specific-account] Firestore operation error:', {
+      console.error('[fix-specific-account] Firestore update error:', {
         error: firestoreError.message,
         stack: firestoreError.stack
       });
-      return res.status(500).json({ 
-        error: 'Firestore operation failed',
-        details: firestoreError.message
-      });
+      // Continue with RTDB update even if Firestore fails
+      console.log('[fix-specific-account] Continuing with RTDB update despite Firestore error');
     }
 
-    // Check and update RTDB
+    // Update RTDB
     try {
-      console.log('[fix-specific-account] Checking RTDB for user:', userId);
-      const rtdbRef = rtdb.ref(`users/${userId}`);
-      const rtdbSnapshot = await rtdbRef.get();
+      console.log('[fix-specific-account] Updating RTDB');
       
-      if (rtdbSnapshot.exists()) {
-        console.log('[fix-specific-account] User found in RTDB');
-        userFound = true;
-        
-        const rtdbData = {
-          'account/tier': accountTier,
-          'account/updatedAt': timestamp,
-          'account/subscriptionStatus': accountTier === 'premium' ? 'active' : 'inactive'
-        };
+      const rtdbData = {
+        'account/tier': accountTier,
+        'account/updatedAt': timestamp,
+        'account/subscriptionStatus': accountTier === 'premium' ? 'active' : 'inactive'
+      };
 
-        updatePromises.push(
-          rtdbRef.update(rtdbData)
-            .then(() => console.log('[fix-specific-account] RTDB updated successfully'))
-            .catch(error => {
-              console.error('[fix-specific-account] Error updating RTDB:', error);
-              throw error;
-            })
-        );
-      }
+      updatePromises.push(
+        rtdb.ref(`users/${userId}`).update(rtdbData)
+          .then(() => console.log('[fix-specific-account] RTDB updated successfully'))
+      );
     } catch (rtdbError: any) {
-      console.error('[fix-specific-account] RTDB operation error:', {
+      console.error('[fix-specific-account] RTDB update error:', {
         error: rtdbError.message,
         stack: rtdbError.stack
       });
-      return res.status(500).json({ 
-        error: 'RTDB operation failed',
-        details: rtdbError.message
-      });
-    }
-
-    if (!userFound) {
-      console.error('[fix-specific-account] User not found in any database:', userId);
-      return res.status(404).json({ error: 'User not found in any database' });
+      // Continue if RTDB update fails
+      console.log('[fix-specific-account] Continuing despite RTDB error');
     }
 
     // Execute all updates
     try {
       console.log('[fix-specific-account] Executing all database updates');
-      await Promise.all(updatePromises);
+      await Promise.allSettled(updatePromises);
+      
+      // Check if any updates were successful
+      const results = await Promise.allSettled(updatePromises);
+      const successfulUpdates = results.filter(result => result.status === 'fulfilled').length;
+      
+      if (successfulUpdates === 0) {
+        throw new Error('All database updates failed');
+      }
+      
     } catch (updateError: any) {
       console.error('[fix-specific-account] Failed to execute updates:', {
         error: updateError.message,
