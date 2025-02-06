@@ -47,9 +47,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     console.log('[fix-specific-account] Starting update process for:', { userId, accountTier });
 
     // Initialize Firebase Admin
-    let admin;
+    let firebaseServices;
     try {
-      admin = getFirebaseAdmin();
+      firebaseServices = getFirebaseAdmin();
     } catch (firebaseError: any) {
       console.error('[fix-specific-account] Firebase initialization error:', {
         error: firebaseError.message,
@@ -61,7 +61,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       });
     }
 
-    const { db, rtdb } = admin;
+    const { db, rtdb } = firebaseServices;
     const now = new Date();
     const timestamp = now.toISOString();
     const firestoreTimestamp = admin.firestore.Timestamp.fromDate(now);
