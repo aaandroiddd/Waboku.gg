@@ -1,5 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { getFirebaseAdmin } from '@/lib/firebase-admin';
+import * as admin from 'firebase-admin';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   console.log('[fix-specific-account] Starting request handling');
@@ -63,7 +64,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const { db, rtdb } = admin;
     const now = new Date();
     const timestamp = now.toISOString();
-    const firestoreTimestamp = admin.getFirestore().Timestamp.fromDate(now);
+    const firestoreTimestamp = admin.firestore.Timestamp.fromDate(now);
 
     // Initialize update promises array
     const updatePromises = [];
