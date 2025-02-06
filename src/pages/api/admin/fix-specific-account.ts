@@ -10,23 +10,49 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     // Auth validation
-    const adminSecret = req.headers.authorization?.split(' ')[1];
-    if (adminSecret !== process.env.ADMIN_SECRET) {
-      console.error('[fix-specific-account] Unauthorized access attempt');
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      console.error('[fix-specific-account] Missing authorization header');
+      return res.status(401).json({ error: 'Unauthorized. Missing authorization header.' });
+    }
+
+    const adminSecret = authHeader.split(' ')[1];
+    if (!adminSecret || adminSecret !== process.env.ADMIN_SECRET) {
+      console.error('[fix-specific-account] Invalid admin secret');
       return res.status(401).json({ error: 'Unauthorized. Invalid admin secret.' });
     }
 
     // Input validation
-    const { userId, accountTier = 'premium' } = req.body;
+    const { userId, accountTier } = req.body;
 
     if (!userId) {
       console.error('[fix-specific-account] Missing userId in request body');
       return res.status(400).json({ error: 'User ID is required' });
     }
 
-    console.log('[fix-specific-account] Processing update request:', { userId, accountTier });
+    if (!accountTier || !['premium', 'free'].includes(accountTier)) {
+      console.error('[fix-specific-account] Invalid account tier:', accountTier);
+      return res.status(400).json({ error: 'Invalid account tier. Must be "premium" or "free".' });
+    }
 
-    const { db, rtdb } = getFirebaseAdmin();
+    console.log('[fix-specific-account] Starting update process for:', { userId, accountTier });
+
+    // Initialize Firebase Admin
+    let admin;
+    try {
+      admin = getFirebaseAdmin();
+    } catch (firebaseError: any) {
+      console.error('[fix-specific-account] Firebase initialization error:', {
+        error: firebaseError.message,
+        stack: firebaseError.stack
+      });
+      return res.status(500).json({ 
+        error: 'Failed to initialize Firebase',
+        details: firebaseError.message
+      });
+    }
+
+    const { db, rtdb } = admin;
     const now = new Date();
     const timestamp = now.toISOString();
     const firestoreTimestamp = db.Timestamp.fromDate(now);
@@ -41,7 +67,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const firestoreDoc = await db.collection('users').doc(userId).get();
       
       if (firestoreDoc.exists) {
-        console.log('[fix-specific-account] User found in Firestore, preparing updates');
+        console.log('[fix-specific-account] User found in Firestore');
         userFound = true;
         
         const firestoreData = {
@@ -50,7 +76,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           subscriptionStatus: accountTier === 'premium' ? 'active' : 'inactive'
         };
 
-        // Add Firestore update promises
         updatePromises.push(
           db.collection('users').doc(userId).set(firestoreData, { merge: true })
             .then(() => console.log('[fix-specific-account] Firestore main document updated'))
@@ -73,12 +98,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
               throw error;
             })
         );
-      } else {
-        console.log('[fix-specific-account] User not found in Firestore');
       }
-    } catch (firestoreError) {
-      console.error('[fix-specific-account] Firestore operation error:', firestoreError);
-      throw firestoreError;
+    } catch (firestoreError: any) {
+      console.error('[fix-specific-account] Firestore operation error:', {
+        error: firestoreError.message,
+        stack: firestoreError.stack
+      });
+      return res.status(500).json({ 
+        error: 'Firestore operation failed',
+        details: firestoreError.message
+      });
     }
 
     // Check and update RTDB
@@ -88,7 +117,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const rtdbSnapshot = await rtdbRef.get();
       
       if (rtdbSnapshot.exists()) {
-        console.log('[fix-specific-account] User found in RTDB, preparing update');
+        console.log('[fix-specific-account] User found in RTDB');
         userFound = true;
         
         const rtdbData = {
@@ -105,12 +134,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
               throw error;
             })
         );
-      } else {
-        console.log('[fix-specific-account] User not found in RTDB');
       }
-    } catch (rtdbError) {
-      console.error('[fix-specific-account] RTDB operation error:', rtdbError);
-      throw rtdbError;
+    } catch (rtdbError: any) {
+      console.error('[fix-specific-account] RTDB operation error:', {
+        error: rtdbError.message,
+        stack: rtdbError.stack
+      });
+      return res.status(500).json({ 
+        error: 'RTDB operation failed',
+        details: rtdbError.message
+      });
     }
 
     if (!userFound) {
@@ -119,8 +152,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     // Execute all updates
-    console.log('[fix-specific-account] Executing database updates');
-    await Promise.all(updatePromises);
+    try {
+      console.log('[fix-specific-account] Executing all database updates');
+      await Promise.all(updatePromises);
+    } catch (updateError: any) {
+      console.error('[fix-specific-account] Failed to execute updates:', {
+        error: updateError.message,
+        stack: updateError.stack
+      });
+      return res.status(500).json({ 
+        error: 'Failed to execute database updates',
+        details: updateError.message
+      });
+    }
 
     const successResponse = {
       success: true,
@@ -130,12 +174,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       updatedAt: timestamp
     };
 
-    console.log('[fix-specific-account] Account status updated successfully:', successResponse);
+    console.log('[fix-specific-account] Update completed successfully:', successResponse);
     return res.status(200).json(successResponse);
 
   } catch (error: any) {
-    // Enhanced error logging
-    console.error('[fix-specific-account] Critical error:', {
+    // Enhanced error logging for unexpected errors
+    console.error('[fix-specific-account] Unexpected error:', {
       error: {
         message: error.message,
         code: error.code,
@@ -154,7 +198,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     });
     
     return res.status(500).json({ 
-      error: 'Failed to update account status',
+      error: 'An unexpected error occurred',
       details: error.message,
       code: error.code || 'UNKNOWN_ERROR',
       name: error.name
