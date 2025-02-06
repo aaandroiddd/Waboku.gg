@@ -22,12 +22,41 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const admin = getFirebaseAdmin();
     const now = new Date();
 
-    // Update Firestore with specified tier for the user
-    await admin.db.collection('users').doc(userId).update({
-      accountTier,
-      updatedAt: now,
-      subscriptionStatus: accountTier === 'premium' ? 'active' : 'inactive'
-    });
+    // Check if user exists in Firestore
+    const firestoreDoc = await admin.firestore.collection('users').doc(userId).get();
+    
+    if (firestoreDoc.exists) {
+      console.log('Updating user in Firestore:', userId);
+      // Update Firestore
+      await admin.firestore.collection('users').doc(userId).set({
+        accountTier,
+        updatedAt: now,
+        subscriptionStatus: accountTier === 'premium' ? 'active' : 'inactive'
+      }, { merge: true });
+
+      // Update account collection
+      await admin.firestore.collection('users').doc(userId).collection('account').doc('tier').set({
+        tier: accountTier,
+        updatedAt: now
+      });
+    }
+
+    // Check if user exists in RTDB
+    const rtdbSnapshot = await admin.rtdb.ref(`users/${userId}`).get();
+    
+    if (rtdbSnapshot.exists()) {
+      console.log('Updating user in RTDB:', userId);
+      // Update RTDB
+      await admin.rtdb.ref(`users/${userId}/account`).update({
+        tier: accountTier,
+        updatedAt: now.toISOString(),
+        subscriptionStatus: accountTier === 'premium' ? 'active' : 'inactive'
+      });
+    }
+
+    if (!firestoreDoc.exists && !rtdbSnapshot.exists()) {
+      return res.status(404).json({ error: 'User not found in any database' });
+    }
 
     console.log('Account status updated for user:', {
       userId,

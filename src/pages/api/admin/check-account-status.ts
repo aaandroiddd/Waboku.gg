@@ -28,21 +28,51 @@ export default async function handler(
 
     const admin = getFirebaseAdmin();
 
-    // Get user data from Realtime Database
-    const userSnapshot = await admin.rtdb.ref(`users/${userId}`).get();
-    const userData = userSnapshot.val();
+    // First try to get user data from Firestore
+    const firestoreDoc = await admin.firestore.collection('users').doc(userId).get();
+    let userData = null;
+    let subscription = null;
+    let accountTier = 'free';
 
-    if (!userData) {
-      return res.status(404).json({ error: 'User not found' });
+    if (firestoreDoc.exists) {
+      userData = firestoreDoc.data();
+      console.log('Found user in Firestore:', userId);
+      
+      // Try to get subscription data from Firestore
+      const subscriptionDoc = await admin.firestore.collection('users').doc(userId).collection('account').doc('subscription').get();
+      if (subscriptionDoc.exists) {
+        subscription = subscriptionDoc.data();
+      }
+
+      // Try to get account tier from Firestore
+      const accountDoc = await admin.firestore.collection('users').doc(userId).collection('account').doc('tier').get();
+      if (accountDoc.exists) {
+        accountTier = accountDoc.data()?.tier || 'free';
+      }
     }
 
-    // Get subscription data if exists
-    const subscriptionSnapshot = await admin.rtdb.ref(`users/${userId}/account/subscription`).get();
-    const subscription = subscriptionSnapshot.exists() ? subscriptionSnapshot.val() : null;
+    // If not found in Firestore, try Realtime Database
+    if (!userData) {
+      console.log('User not found in Firestore, checking RTDB:', userId);
+      const userSnapshot = await admin.rtdb.ref(`users/${userId}`).get();
+      userData = userSnapshot.val();
 
-    // Get account tier
-    const accountTierSnapshot = await admin.rtdb.ref(`users/${userId}/account/tier`).get();
-    const accountTier = accountTierSnapshot.exists() ? accountTierSnapshot.val() : 'free';
+      if (userData) {
+        console.log('Found user in RTDB:', userId);
+        // Get subscription data if exists
+        const subscriptionSnapshot = await admin.rtdb.ref(`users/${userId}/account/subscription`).get();
+        subscription = subscriptionSnapshot.exists() ? subscriptionSnapshot.val() : null;
+
+        // Get account tier
+        const accountTierSnapshot = await admin.rtdb.ref(`users/${userId}/account/tier`).get();
+        accountTier = accountTierSnapshot.exists() ? accountTierSnapshot.val() : 'free';
+      }
+    }
+
+    if (!userData) {
+      console.log('User not found in either database:', userId);
+      return res.status(404).json({ error: 'User not found' });
+    }
 
     return res.status(200).json({
       userId,
