@@ -15,11 +15,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const { firestore } = getFirebaseAdmin();
+    const admin = getFirebaseAdmin();
     const now = new Date();
 
     // Update Firestore with premium tier for the specific user
-    await firestore.collection('users').doc(SPECIFIC_USER_ID).update({
+    await admin.db.collection('users').doc(SPECIFIC_USER_ID).update({
       accountTier: 'premium',
       updatedAt: now,
       subscriptionStatus: 'active'
@@ -42,7 +42,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     console.error('Error updating account status:', error);
     return res.status(500).json({ 
       error: 'Failed to update account status',
-      details: error.message 
+      details: error.message,
+      stack: error.stack
     });
   }
 }
