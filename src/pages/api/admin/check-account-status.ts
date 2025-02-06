@@ -29,7 +29,7 @@ export default async function handler(
     const admin = getFirebaseAdmin();
 
     // First try to get user data from Firestore
-    const firestoreDoc = await admin.firestore.collection('users').doc(userId).get();
+    const firestoreDoc = await admin.db.collection('users').doc(userId).get();
     let userData = null;
     let subscription = null;
     let accountTier = 'free';
@@ -39,13 +39,13 @@ export default async function handler(
       console.log('Found user in Firestore:', userId);
       
       // Try to get subscription data from Firestore
-      const subscriptionDoc = await admin.firestore.collection('users').doc(userId).collection('account').doc('subscription').get();
+      const subscriptionDoc = await admin.db.collection('users').doc(userId).collection('account').doc('subscription').get();
       if (subscriptionDoc.exists) {
         subscription = subscriptionDoc.data();
       }
 
       // Try to get account tier from Firestore
-      const accountDoc = await admin.firestore.collection('users').doc(userId).collection('account').doc('tier').get();
+      const accountDoc = await admin.db.collection('users').doc(userId).collection('account').doc('tier').get();
       if (accountDoc.exists) {
         accountTier = accountDoc.data()?.tier || 'free';
       }
