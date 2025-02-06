@@ -9,7 +9,7 @@ import { useRouter } from 'next/router';
 
 export default function AccountStatusPage() {
   const [userId, setUserId] = useState('');
-  const [searchUserId, setSearchUserId] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
   const [accountTier, setAccountTier] = useState('premium');
   const [isLoading, setIsLoading] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
@@ -60,7 +60,7 @@ export default function AccountStatusPage() {
   };
 
   const handleSearch = async () => {
-    if (!searchUserId) return;
+    if (!searchTerm) return;
     
     setIsSearching(true);
     try {
@@ -70,14 +70,17 @@ export default function AccountStatusPage() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${adminSecret}`
         },
-        body: JSON.stringify({ userId: searchUserId })
+        body: JSON.stringify({ 
+          username: searchTerm.toLowerCase(),
+          userId: searchTerm // In case it's a userId
+        })
       });
 
       const data = await response.json();
 
       if (response.ok) {
         setCurrentStatus(data);
-        setUserId(searchUserId);
+        setUserId(data.userId);
         setAccountTier(data.accountTier || 'free');
         toast({
           title: "Success",
@@ -165,16 +168,16 @@ export default function AccountStatusPage() {
         
         <Alert className="mb-6">
           <AlertDescription>
-            Use this form to update a user&apos;s account tier. Please ensure you have the correct user ID.
+            Search by username or user ID to update a user&apos;s account tier.
           </AlertDescription>
         </Alert>
 
         <div className="mb-6 space-y-4">
           <div className="flex gap-2">
             <Input
-              placeholder="Search user ID"
-              value={searchUserId}
-              onChange={(e) => setSearchUserId(e.target.value)}
+              placeholder="Enter username or user ID"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
             />
             <Button 
               onClick={handleSearch}
@@ -188,6 +191,7 @@ export default function AccountStatusPage() {
             <Alert>
               <AlertDescription>
                 <div className="space-y-2">
+                  <p><strong>Username:</strong> {currentStatus.username}</p>
                   <p><strong>User ID:</strong> {currentStatus.userId}</p>
                   <p><strong>Current Tier:</strong> {currentStatus.accountTier || 'free'}</p>
                   {currentStatus.subscription && (
@@ -206,10 +210,11 @@ export default function AccountStatusPage() {
             </label>
             <Input
               id="userId"
-              placeholder="Enter user ID"
+              placeholder="User ID will be populated after search"
               value={userId}
               onChange={(e) => setUserId(e.target.value)}
               required
+              disabled
             />
           </div>
 
@@ -234,7 +239,7 @@ export default function AccountStatusPage() {
           <Button 
             type="submit" 
             className="w-full"
-            disabled={isLoading}
+            disabled={isLoading || !userId}
           >
             {isLoading ? "Updating..." : "Update Account Status"}
           </Button>
