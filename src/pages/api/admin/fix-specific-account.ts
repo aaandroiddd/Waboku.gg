@@ -26,6 +26,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     const admin = getFirebaseAdmin();
     const now = new Date();
+    const timestamp = now.toISOString();
 
     // Initialize update promises array
     const updatePromises = [];
@@ -37,20 +38,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (firestoreDoc.exists) {
       console.log('User found in Firestore, preparing updates');
       
+      const firestoreData = {
+        accountTier,
+        updatedAt: admin.firestore.Timestamp.fromDate(now),
+        subscriptionStatus: accountTier === 'premium' ? 'active' : 'inactive'
+      };
+
       // Add Firestore update promises
       updatePromises.push(
-        admin.firestore().collection('users').doc(userId).set({
-          accountTier,
-          updatedAt: now,
-          subscriptionStatus: accountTier === 'premium' ? 'active' : 'inactive'
-        }, { merge: true })
+        admin.firestore().collection('users').doc(userId).set(firestoreData, { merge: true })
       );
 
+      const tierData = {
+        tier: accountTier,
+        updatedAt: admin.firestore.Timestamp.fromDate(now)
+      };
+
       updatePromises.push(
-        admin.firestore().collection('users').doc(userId).collection('account').doc('tier').set({
-          tier: accountTier,
-          updatedAt: now
-        })
+        admin.firestore().collection('users').doc(userId).collection('account').doc('tier').set(tierData)
       );
     } else {
       console.log('User not found in Firestore');
@@ -58,19 +63,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // Check if user exists in RTDB
     console.log('Checking RTDB for user:', userId);
-    const rtdbSnapshot = await admin.database().ref(`users/${userId}`).get();
+    const rtdbRef = admin.database().ref(`users/${userId}`);
+    const rtdbSnapshot = await rtdbRef.get();
     
     if (rtdbSnapshot.exists()) {
       console.log('User found in RTDB, preparing update');
       
+      const rtdbData = {
+        'account/tier': accountTier,
+        'account/updatedAt': timestamp,
+        'account/subscriptionStatus': accountTier === 'premium' ? 'active' : 'inactive'
+      };
+
       // Add RTDB update promise
-      updatePromises.push(
-        admin.database().ref(`users/${userId}/account`).update({
-          tier: accountTier,
-          updatedAt: now.toISOString(),
-          subscriptionStatus: accountTier === 'premium' ? 'active' : 'inactive'
-        })
-      );
+      updatePromises.push(rtdbRef.update(rtdbData));
     } else {
       console.log('User not found in RTDB');
     }
@@ -84,33 +90,30 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     console.log('Executing database updates');
     await Promise.all(updatePromises);
 
-    console.log('Account status updated successfully for user:', {
-      userId,
-      newTier: accountTier,
-      timestamp: now.toISOString()
-    });
-
-    return res.status(200).json({ 
-      success: true, 
+    const successResponse = {
+      success: true,
       message: 'Account status updated successfully',
       userId,
       newTier: accountTier,
-      updatedAt: now.toISOString()
-    });
+      updatedAt: timestamp
+    };
+
+    console.log('Account status updated successfully:', successResponse);
+
+    return res.status(200).json(successResponse);
   } catch (error: any) {
     console.error('Error updating account status:', {
-      error: error.message,
-      stack: error.stack,
-      code: error.code,
       userId,
-      accountTier
+      accountTier,
+      errorMessage: error.message,
+      errorCode: error.code,
+      errorStack: error.stack
     });
     
-    // Return more detailed error information
     return res.status(500).json({ 
       error: 'Failed to update account status',
       details: error.message,
-      code: error.code
+      code: error.code || 'UNKNOWN_ERROR'
     });
   }
 }
