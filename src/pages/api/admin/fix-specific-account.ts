@@ -1,41 +1,45 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { getFirebaseAdmin } from '@/lib/firebase-admin';
 
-const SPECIFIC_USER_ID = 'PlXySPUa5QM0hc0jpWu2N3hECgm1';
-
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method !== 'GET') {
-    return res.status(400).json({ error: 'Method not allowed. Use GET request.' });
+  if (req.method !== 'POST') {
+    return res.status(400).json({ error: 'Method not allowed. Use POST request.' });
   }
 
-  // Verify admin secret from query parameter for easier access
-  const adminSecret = req.query.adminSecret as string;
+  // Verify admin secret from header
+  const adminSecret = req.headers.authorization?.split(' ')[1];
   if (adminSecret !== process.env.ADMIN_SECRET) {
     return res.status(401).json({ error: 'Unauthorized. Invalid admin secret.' });
+  }
+
+  const { userId, accountTier = 'premium' } = req.body;
+
+  if (!userId) {
+    return res.status(400).json({ error: 'User ID is required' });
   }
 
   try {
     const admin = getFirebaseAdmin();
     const now = new Date();
 
-    // Update Firestore with premium tier for the specific user
-    await admin.db.collection('users').doc(SPECIFIC_USER_ID).update({
-      accountTier: 'premium',
+    // Update Firestore with specified tier for the user
+    await admin.db.collection('users').doc(userId).update({
+      accountTier,
       updatedAt: now,
-      subscriptionStatus: 'active'
+      subscriptionStatus: accountTier === 'premium' ? 'active' : 'inactive'
     });
 
-    console.log('Account status updated for specific user:', {
-      userId: SPECIFIC_USER_ID,
-      newTier: 'premium',
+    console.log('Account status updated for user:', {
+      userId,
+      newTier: accountTier,
       timestamp: now.toISOString()
     });
 
     return res.status(200).json({ 
       success: true, 
-      message: 'Account status updated successfully for the specific user',
-      userId: SPECIFIC_USER_ID,
-      newTier: 'premium',
+      message: 'Account status updated successfully',
+      userId,
+      newTier: accountTier,
       updatedAt: now.toISOString()
     });
   } catch (error: any) {
