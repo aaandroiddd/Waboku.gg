@@ -1,16 +1,101 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/components/ui/use-toast";
+import { useRouter } from 'next/router';
 
 export default function AccountStatusPage() {
   const [userId, setUserId] = useState('');
+  const [searchUserId, setSearchUserId] = useState('');
   const [accountTier, setAccountTier] = useState('premium');
   const [isLoading, setIsLoading] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
+  const [currentStatus, setCurrentStatus] = useState<any>(null);
+  const [adminSecret, setAdminSecret] = useState('');
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const { toast } = useToast();
+  const router = useRouter();
+
+  useEffect(() => {
+    const storedSecret = localStorage.getItem('adminSecret');
+    if (storedSecret) {
+      verifyAdminSecret(storedSecret);
+    }
+  }, []);
+
+  const verifyAdminSecret = async (secret: string) => {
+    try {
+      const response = await fetch('/api/admin/verify', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${secret}`
+        }
+      });
+
+      if (response.ok) {
+        setIsAuthenticated(true);
+        localStorage.setItem('adminSecret', secret);
+        setAdminSecret(secret);
+      } else {
+        setIsAuthenticated(false);
+        localStorage.removeItem('adminSecret');
+        toast({
+          title: "Authentication Error",
+          description: "Invalid admin secret",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      setIsAuthenticated(false);
+      toast({
+        title: "Error",
+        description: "Failed to verify admin secret",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleSearch = async () => {
+    if (!searchUserId) return;
+    
+    setIsSearching(true);
+    try {
+      const response = await fetch('/api/admin/check-account-status', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${adminSecret}`
+        },
+        body: JSON.stringify({ userId: searchUserId })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setCurrentStatus(data);
+        setUserId(searchUserId);
+        setAccountTier(data.accountTier || 'free');
+        toast({
+          title: "Success",
+          description: "User account status retrieved successfully",
+        });
+      } else {
+        throw new Error(data.error || 'Failed to fetch account status');
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsSearching(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -21,7 +106,7 @@ export default function AccountStatusPage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_ADMIN_SECRET}`
+          'Authorization': `Bearer ${adminSecret}`
         },
         body: JSON.stringify({ userId, accountTier })
       });
@@ -33,7 +118,8 @@ export default function AccountStatusPage() {
           title: "Success",
           description: `Account status updated for user ${userId} to ${accountTier}`,
         });
-        setUserId(''); // Reset form
+        // Refresh the current status
+        handleSearch();
       } else {
         throw new Error(data.error || 'Failed to update account status');
       }
@@ -48,6 +134,30 @@ export default function AccountStatusPage() {
     }
   };
 
+  if (!isAuthenticated) {
+    return (
+      <div className="container mx-auto p-8 max-w-2xl">
+        <Card className="p-6">
+          <h1 className="text-2xl font-bold mb-6">Admin Authentication</h1>
+          <div className="space-y-4">
+            <Input
+              type="password"
+              placeholder="Enter admin secret"
+              value={adminSecret}
+              onChange={(e) => setAdminSecret(e.target.value)}
+            />
+            <Button 
+              onClick={() => verifyAdminSecret(adminSecret)}
+              className="w-full"
+            >
+              Authenticate
+            </Button>
+          </div>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="container mx-auto p-8 max-w-2xl">
       <Card className="p-6">
@@ -58,6 +168,36 @@ export default function AccountStatusPage() {
             Use this form to update a user&apos;s account tier. Please ensure you have the correct user ID.
           </AlertDescription>
         </Alert>
+
+        <div className="mb-6 space-y-4">
+          <div className="flex gap-2">
+            <Input
+              placeholder="Search user ID"
+              value={searchUserId}
+              onChange={(e) => setSearchUserId(e.target.value)}
+            />
+            <Button 
+              onClick={handleSearch}
+              disabled={isSearching}
+            >
+              {isSearching ? "Searching..." : "Search"}
+            </Button>
+          </div>
+
+          {currentStatus && (
+            <Alert>
+              <AlertDescription>
+                <div className="space-y-2">
+                  <p><strong>User ID:</strong> {currentStatus.userId}</p>
+                  <p><strong>Current Tier:</strong> {currentStatus.accountTier || 'free'}</p>
+                  {currentStatus.subscription && (
+                    <p><strong>Subscription Status:</strong> {currentStatus.subscription.status}</p>
+                  )}
+                </div>
+              </AlertDescription>
+            </Alert>
+          )}
+        </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">

@@ -1,5 +1,4 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { getFirebaseAdmin } from '@/lib/firebase-admin';
 
 export default async function handler(
   req: NextApiRequest,
@@ -11,25 +10,18 @@ export default async function handler(
 
   try {
     const authHeader = req.headers.authorization;
-    if (!authHeader?.startsWith('Bearer ')) {
-      throw new Error('Invalid authorization header');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    const token = authHeader.split('Bearer ')[1];
-    const admin = getFirebaseAdmin();
-    const decodedToken = await admin.auth.verifyIdToken(token);
-    const uid = decodedToken.uid;
-
-    const snapshot = await admin.rtdb.ref(`users/${uid}`).get();
-    const userData = snapshot.val();
-
-    if (!userData?.isAdmin) {
-      throw new Error('Admin access required');
+    const token = authHeader.split(' ')[1];
+    if (token !== process.env.ADMIN_SECRET) {
+      return res.status(401).json({ error: 'Invalid admin secret' });
     }
 
-    return res.status(200).json({ isAdmin: true });
-  } catch (error: any) {
+    return res.status(200).json({ success: true });
+  } catch (error) {
     console.error('Admin verification error:', error);
-    return res.status(403).json({ error: error.message || 'Admin access required' });
+    return res.status(500).json({ error: 'Internal server error' });
   }
 }
