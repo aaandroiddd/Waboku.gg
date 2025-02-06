@@ -22,84 +22,95 @@ export default async function handler(
     }
 
     const { userId, username } = req.body;
-    if (!userId && !username) {
-      return res.status(400).json({ error: 'User ID or username is required' });
+    const searchTerm = username || userId;
+    
+    if (!searchTerm) {
+      return res.status(400).json({ error: 'Search term is required' });
     }
 
     const admin = getFirebaseAdmin();
-    let targetUserId = userId;
+    let targetUserId = null;
+    let userData = null;
 
-    // If username is provided, search for userId by username
-    if (username && !userId) {
-      // First try Firestore
-      const usersSnapshot = await admin.db.collection('users')
-        .where('username', '==', username.toLowerCase())
+    // First try to find by userId in Firestore
+    const firestoreUserDoc = await admin.db.collection('users').doc(searchTerm).get();
+    if (firestoreUserDoc.exists) {
+      targetUserId = searchTerm;
+      userData = firestoreUserDoc.data();
+    }
+
+    // If not found, try RTDB by userId
+    if (!userData) {
+      const rtdbUserSnapshot = await admin.rtdb.ref(`users/${searchTerm}`).get();
+      if (rtdbUserSnapshot.exists()) {
+        targetUserId = searchTerm;
+        userData = rtdbUserSnapshot.val();
+      }
+    }
+
+    // If still not found, search by username in Firestore
+    if (!userData) {
+      const firestoreUsernameQuery = await admin.db.collection('users')
+        .where('username', '==', searchTerm.toLowerCase())
         .limit(1)
         .get();
 
-      if (!usersSnapshot.empty) {
-        targetUserId = usersSnapshot.docs[0].id;
-      } else {
-        // Try RTDB if not found in Firestore
-        const usersSnapshot = await admin.rtdb.ref('users').orderByChild('username')
-          .equalTo(username.toLowerCase())
-          .once('value');
-        
-        const userData = usersSnapshot.val();
-        if (userData) {
-          targetUserId = Object.keys(userData)[0];
-        }
-      }
-
-      if (!targetUserId) {
-        return res.status(404).json({ error: 'User not found with provided username' });
+      if (!firestoreUsernameQuery.empty) {
+        const doc = firestoreUsernameQuery.docs[0];
+        targetUserId = doc.id;
+        userData = doc.data();
       }
     }
 
-    // First try to get user data from Firestore
-    const firestoreDoc = await admin.db.collection('users').doc(targetUserId).get();
-    let userData = null;
+    // Finally, try RTDB username search
+    if (!userData) {
+      const rtdbUsernameQuery = await admin.rtdb.ref('users')
+        .orderByChild('username')
+        .equalTo(searchTerm.toLowerCase())
+        .once('value');
+      
+      const rtdbData = rtdbUsernameQuery.val();
+      if (rtdbData) {
+        targetUserId = Object.keys(rtdbData)[0];
+        userData = rtdbData[targetUserId];
+      }
+    }
+
+    if (!userData || !targetUserId) {
+      console.log('User not found for search term:', searchTerm);
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Get subscription and account tier data
     let subscription = null;
     let accountTier = 'free';
 
-    if (firestoreDoc.exists) {
-      userData = firestoreDoc.data();
-      console.log('Found user in Firestore:', targetUserId);
-      
-      // Try to get subscription data from Firestore
-      const subscriptionDoc = await admin.db.collection('users').doc(targetUserId).collection('account').doc('subscription').get();
-      if (subscriptionDoc.exists) {
-        subscription = subscriptionDoc.data();
-      }
+    // Try Firestore first
+    const subscriptionDoc = await admin.db.collection('users').doc(targetUserId)
+      .collection('account').doc('subscription').get();
+    if (subscriptionDoc.exists) {
+      subscription = subscriptionDoc.data();
+    }
 
-      // Try to get account tier from Firestore
-      const accountDoc = await admin.db.collection('users').doc(targetUserId).collection('account').doc('tier').get();
-      if (accountDoc.exists) {
-        accountTier = accountDoc.data()?.tier || 'free';
+    const accountDoc = await admin.db.collection('users').doc(targetUserId)
+      .collection('account').doc('tier').get();
+    if (accountDoc.exists) {
+      accountTier = accountDoc.data()?.tier || 'free';
+    }
+
+    // If not found in Firestore, try RTDB
+    if (!subscription) {
+      const rtdbSubscriptionSnapshot = await admin.rtdb.ref(`users/${targetUserId}/account/subscription`).get();
+      if (rtdbSubscriptionSnapshot.exists()) {
+        subscription = rtdbSubscriptionSnapshot.val();
       }
     }
 
-    // If not found in Firestore, try Realtime Database
-    if (!userData) {
-      console.log('User not found in Firestore, checking RTDB:', targetUserId);
-      const userSnapshot = await admin.rtdb.ref(`users/${targetUserId}`).get();
-      userData = userSnapshot.val();
-
-      if (userData) {
-        console.log('Found user in RTDB:', targetUserId);
-        // Get subscription data if exists
-        const subscriptionSnapshot = await admin.rtdb.ref(`users/${targetUserId}/account/subscription`).get();
-        subscription = subscriptionSnapshot.exists() ? subscriptionSnapshot.val() : null;
-
-        // Get account tier
-        const accountTierSnapshot = await admin.rtdb.ref(`users/${targetUserId}/account/tier`).get();
-        accountTier = accountTierSnapshot.exists() ? accountTierSnapshot.val() : 'free';
+    if (accountTier === 'free') {
+      const rtdbTierSnapshot = await admin.rtdb.ref(`users/${targetUserId}/account/tier`).get();
+      if (rtdbTierSnapshot.exists()) {
+        accountTier = rtdbTierSnapshot.val();
       }
-    }
-
-    if (!userData) {
-      console.log('User not found in either database:', targetUserId);
-      return res.status(404).json({ error: 'User not found' });
     }
 
     return res.status(200).json({
