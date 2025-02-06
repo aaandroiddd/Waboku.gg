@@ -7,7 +7,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/components/ui/use-toast";
 import { useRouter } from 'next/router';
 
-export default function AccountStatusPage() {
+export default function AccountTierPage() {
   const [userId, setUserId] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [accountTier, setAccountTier] = useState('premium');
