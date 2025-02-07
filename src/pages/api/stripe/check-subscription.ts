@@ -40,12 +40,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    // In preview environment, simulate premium status
+    // In preview environment, use Firestore data
     if (process.env.NEXT_PUBLIC_CO_DEV_ENV === 'preview') {
+      // Get the user's account tier from Firestore
+      const { getFirestore } = require('firebase-admin/firestore');
+      const db = getFirestore();
+      const userDoc = await db.collection('users').doc(userId).get();
+      const userData = userDoc.data();
+      
+      if (!userData) {
+        return res.status(200).json({ 
+          isPremium: false,
+          subscriptionId: null,
+          status: 'none'
+        });
+      }
+
       return res.status(200).json({ 
-        isPremium: true,
-        subscriptionId: 'preview-subscription-id',
-        status: 'active'
+        isPremium: userData.accountTier === 'premium',
+        subscriptionId: userData.currentSubscriptionId || null,
+        status: userData.currentPlan === 'premium' ? 'active' : 'none'
       });
     }
 
