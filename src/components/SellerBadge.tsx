@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import { getDatabase, ref, onValue, off } from 'firebase/database';
+import { getFirestore, doc, onSnapshot } from 'firebase/firestore';
 import { useAuth } from '@/contexts/AuthContext';
 import { AccountTier, ACCOUNT_TIERS } from '@/types/account';
 import { Badge } from '@/components/ui/badge';
+import { getFirebaseServices } from '@/lib/firebase';
 
 interface SellerBadgeProps {
   className?: string;
@@ -12,7 +13,11 @@ interface SellerBadgeProps {
 
 interface UserData {
   isEmailVerified: boolean;
-  tier: AccountTier;
+  accountTier: AccountTier;
+  subscription?: {
+    status: string;
+    endDate?: string;
+  };
 }
 
 export function SellerBadge({ className, userId, showOnlyOnProfile = false }: SellerBadgeProps) {
@@ -22,15 +27,17 @@ export function SellerBadge({ className, userId, showOnlyOnProfile = false }: Se
   useEffect(() => {
     if (!userId) return;
 
-    const db = getDatabase();
-    const userRef = ref(db, `users/${userId}/account`);
+    const { app } = getFirebaseServices();
+    const firestore = getFirestore(app);
+    const userDocRef = doc(firestore, 'users', userId);
 
-    const unsubscribe = onValue(userRef, (snapshot) => {
-      const data = snapshot.val();
+    const unsubscribe = onSnapshot(userDocRef, (doc) => {
+      const data = doc.data();
       if (data) {
         setUserData({
           isEmailVerified: data.isEmailVerified === true,
-          tier: data.tier || 'free'
+          accountTier: data.accountTier || 'free',
+          subscription: data.subscription
         });
       } else {
         setUserData(null);
@@ -41,13 +48,15 @@ export function SellerBadge({ className, userId, showOnlyOnProfile = false }: Se
     });
 
     return () => {
-      off(userRef);
+      unsubscribe();
     };
   }, [userId]);
 
   if (!userData || !userId) return null;
-  
-  const accountFeatures = ACCOUNT_TIERS[userData.tier || 'free'];
+
+  // Check if premium is active
+  const isPremiumActive = userData.accountTier === 'premium' && 
+    (!userData.subscription?.endDate || new Date(userData.subscription.endDate) > new Date());
   
   return (
     <div className="flex gap-2">
@@ -74,7 +83,7 @@ export function SellerBadge({ className, userId, showOnlyOnProfile = false }: Se
           Verified
         </Badge>
       )}
-      {userData.tier === 'premium' ? (
+      {isPremiumActive ? (
         <Badge 
           variant="secondary"
           className="bg-gradient-to-r from-yellow-500 to-yellow-600 text-white border-none"
