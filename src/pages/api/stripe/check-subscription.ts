@@ -40,31 +40,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    // In preview environment, use Firestore data
-    if (process.env.NEXT_PUBLIC_CO_DEV_ENV === 'preview') {
-      // Get the user's account tier from Firestore
-      const { getFirestore } = require('firebase-admin/firestore');
-      const db = getFirestore();
-      const userDoc = await db.collection('users').doc(userId).get();
-      const userData = userDoc.data();
-      
-      if (!userData) {
-        return res.status(200).json({ 
-          isPremium: false,
-          subscriptionId: null,
-          status: 'none'
-        });
-      }
+    const idToken = authHeader.split('Bearer ')[1];
+    const userId = idToken; // In preview, we'll use the token as userId for simplicity
 
+    // In preview environment, return simulated data
+    if (process.env.NEXT_PUBLIC_CO_DEV_ENV === 'preview') {
       return res.status(200).json({ 
-        isPremium: userData.accountTier === 'premium',
-        subscriptionId: userData.currentSubscriptionId || null,
-        status: userData.currentPlan === 'premium' ? 'active' : 'none'
+        isPremium: false,
+        subscriptionId: null,
+        status: 'none',
+        isPreview: true
       });
     }
-
-    const idToken = authHeader.split('Bearer ')[1];
-    const userId = 'preview-user'; // In real env, this would be from Firebase Auth
 
     // Get subscription data from Firebase
     const db = getDatabase();
