@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { initAdmin } from '@/lib/firebase-admin';
+import { getFirebaseAdmin } from '@/lib/firebase-admin';
 import { getDatabase } from 'firebase-admin/database';
 
 export default async function handler(
@@ -19,7 +19,7 @@ export default async function handler(
     }
 
     // Initialize Firebase Admin and get database reference
-    initAdmin();
+    const admin = getFirebaseAdmin();
     const db = getDatabase();
     
     // Update user's subscription status
