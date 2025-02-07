@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useAuth } from './AuthContext';
 import { AccountTier, ACCOUNT_TIERS, AccountFeatures, SubscriptionDetails } from '@/types/account';
-import { getDatabase, ref, onValue, off, set } from 'firebase/database';
+import { getFirestore, doc, onSnapshot, setDoc, updateDoc } from 'firebase/firestore';
 import { getFirebaseServices } from '@/lib/firebase';
 
 interface AccountContextType {
@@ -56,45 +56,15 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
       }
 
       try {
-        const { db: realtimeDb } = getFirebaseServices();
-        const accountRef = ref(realtimeDb, `users/${user.uid}/account`);
+        const { app } = getFirebaseServices();
+        const firestore = getFirestore(app);
+        const userDocRef = doc(firestore, 'users', user.uid);
 
-        // Initialize account for new users
-        const snapshot = await new Promise((resolve) => {
-          const unsubscribe = onValue(accountRef, (snapshot) => {
-            unsubscribe();
-            resolve(snapshot);
-          }, {
-            onlyOnce: true
-          });
-        });
-
-        if (!snapshot || !(snapshot as any).exists()) {
-          // Set default values for new users
-          const defaultAccount = {
-            tier: 'free',
-            subscription: {
-              status: 'none',
-              currentPlan: 'free',
-              startDate: new Date().toISOString()
-            }
-          };
-          await set(accountRef, defaultAccount);
-          if (isMounted) {
-            setAccountTier('free');
-            setSubscription({
-              status: 'none',
-              currentPlan: 'free',
-              startDate: new Date().toISOString()
-            });
-          }
-        }
-
-        // Set up listener for account changes
-        const unsubscribe = onValue(accountRef, (snapshot) => {
+        // Set up listener for Firestore document changes
+        const unsubscribe = onSnapshot(userDocRef, (doc) => {
           if (!isMounted) return;
 
-          const data = snapshot.val();
+          const data = doc.data();
           if (data) {
             // Get subscription data
             const subscriptionData = data.subscription || defaultSubscription;
@@ -140,19 +110,25 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
             setAccountTier(newTier);
 
             // Update the database if there's a mismatch between stored tier and actual status
-            if (data.tier !== newTier) {
+            if (data.accountTier !== newTier) {
               console.log('Fixing account tier mismatch:', {
-                storedTier: data.tier,
+                storedTier: data.accountTier,
                 calculatedTier: newTier,
                 subscriptionStatus,
                 hasStripeId: !!subscriptionData.stripeSubscriptionId
               });
-              set(ref(realtimeDb, `users/${user.uid}/account/tier`), newTier);
+              await updateDoc(userDocRef, {
+                accountTier: newTier,
+                updatedAt: new Date()
+              });
             }
 
             // If the subscription is canceled and past end date, ensure account is set to free
             if (subscriptionData.status === 'canceled' && endDate && endDate <= now) {
-              set(ref(realtimeDb, `users/${user.uid}/account/tier`), 'free');
+              await updateDoc(userDocRef, {
+                accountTier: 'free',
+                updatedAt: new Date()
+              });
             }
           } else {
             setAccountTier('free');
