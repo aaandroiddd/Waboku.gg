@@ -1,62 +1,70 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { db } from '@/lib/firebase-admin';
-import { ref, query, orderByChild, equalTo, get, remove } from 'firebase/database';
+import { getFirebaseAdmin } from '@/lib/firebase-admin';
+import { Timestamp } from 'firebase-admin/firestore';
+
+// Helper function to log errors with context
+const logError = (context: string, error: any, additionalInfo?: any) => {
+  console.error(`[${new Date().toISOString()}] Error in ${context}:`, {
+    message: error.message,
+    stack: error.stack,
+    ...additionalInfo
+  });
+};
 
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+  // Verify that this is a cron job request from Vercel
+  const authHeader = req.headers.authorization;
+  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+    console.warn('[Cleanup Archived] Unauthorized access attempt');
+    return res.status(401).json({ error: 'Unauthorized' });
   }
 
+  console.log('[Cleanup Archived] Starting cleanup process', new Date().toISOString());
+
   try {
-    // Get reference to listings
-    const listingsRef = ref(db, 'listings');
-    
-    // Get all archived listings
-    const archivedListingsQuery = query(
-      listingsRef,
-      orderByChild('status'),
-      equalTo('archived')
-    );
+    const { db } = getFirebaseAdmin();
+    const batch = db.batch();
+    let totalDeleted = 0;
 
-    const snapshot = await get(archivedListingsQuery);
-    const now = Date.now();
-    const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
-    let deletedCount = 0;
+    // Get all archived listings older than 7 days
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    const archivedSnapshot = await db.collection('listings')
+      .where('status', '==', 'archived')
+      .where('archivedAt', '<', Timestamp.fromDate(sevenDaysAgo))
+      .get();
 
-    if (snapshot.exists()) {
-      const listings = snapshot.val();
-      const deletionPromises: Promise<void>[] = [];
+    console.log(`[Cleanup Archived] Found ${archivedSnapshot.size} archived listings to clean up`);
 
-      // Check each archived listing
-      Object.entries(listings).forEach(([id, listing]: [string, any]) => {
-        const archivedAt = new Date(listing.archivedAt).getTime();
-        
-        // If listing has been archived for more than 7 days
-        if (now - archivedAt >= SEVEN_DAYS_MS) {
-          // Add to deletion queue
-          deletionPromises.push(
-            remove(ref(db, `listings/${id}`))
-              .then(() => { deletedCount++; })
-              .catch((error) => {
-                console.error(`Failed to delete listing ${id}:`, error);
-              })
-          );
-        }
-      });
+    archivedSnapshot.docs.forEach((doc) => {
+      try {
+        batch.delete(doc.ref);
+        totalDeleted++;
+        console.log(`[Cleanup Archived] Marked listing ${doc.id} for deletion`);
+      } catch (error) {
+        logError('Processing archived listing for deletion', error, {
+          listingId: doc.id,
+          data: doc.data()
+        });
+      }
+    });
 
-      // Wait for all deletions to complete
-      await Promise.all(deletionPromises);
+    // Commit all deletions
+    if (totalDeleted > 0) {
+      await batch.commit();
+      console.log(`[Cleanup Archived] Successfully deleted ${totalDeleted} archived listings`);
+    } else {
+      console.log('[Cleanup Archived] No listings to delete');
     }
 
     return res.status(200).json({
-      message: `Successfully cleaned up ${deletedCount} expired archived listings`,
-      deletedCount
+      message: `Successfully cleaned up ${totalDeleted} expired archived listings`,
+      deletedCount: totalDeleted
     });
   } catch (error) {
-    console.error('Error cleaning up archived listings:', error);
+    logError('Cleanup archived listings', error);
     return res.status(500).json({
       error: 'Failed to clean up archived listings',
       details: error instanceof Error ? error.message : 'Unknown error'
