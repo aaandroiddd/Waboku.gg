@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useAuth } from './AuthContext';
 import { AccountTier, ACCOUNT_TIERS, AccountFeatures, SubscriptionDetails } from '@/types/account';
-import { getFirestore, doc, onSnapshot, setDoc, updateDoc } from 'firebase/firestore';
+import { getFirestore, doc, onSnapshot, setDoc, updateDoc, getDoc } from 'firebase/firestore';
 import { getFirebaseServices } from '@/lib/firebase';
 
 interface AccountContextType {
@@ -60,8 +60,24 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
         const firestore = getFirestore(app);
         const userDocRef = doc(firestore, 'users', user.uid);
 
+        // Initialize account for new users
+        const docSnapshot = await getDoc(userDocRef);
+        if (!docSnapshot.exists()) {
+          // Set default values for new users
+          await setDoc(userDocRef, {
+            accountTier: 'free',
+            subscription: {
+              status: 'none',
+              currentPlan: 'free',
+              startDate: new Date().toISOString()
+            },
+            createdAt: new Date(),
+            updatedAt: new Date()
+          });
+        }
+
         // Set up listener for Firestore document changes
-        const unsubscribe = onSnapshot(userDocRef, (doc) => {
+        const unsubscribe = onSnapshot(userDocRef, async (doc) => {
           if (!isMounted) return;
 
           const data = doc.data();
