@@ -2,7 +2,7 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import { buffer } from 'micro';
 import Stripe from 'stripe';
 import { getDatabase } from 'firebase-admin/database';
-import { initAdmin } from '@/lib/firebase-admin';
+import { getFirebaseAdmin } from '@/lib/firebase-admin';
 
 // Initialize Stripe
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
@@ -41,7 +41,7 @@ export default async function handler(
   }
 
   // Initialize Firebase Admin
-  initAdmin();
+  getFirebaseAdmin();
   const db = getDatabase();
 
   try {
