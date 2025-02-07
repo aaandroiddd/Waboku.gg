@@ -4,29 +4,19 @@ import { initAdmin } from '@/lib/firebase-admin';
 import { getDatabase } from 'firebase-admin/database';
 import { getAuth } from 'firebase-admin/auth';
 
-// Validate required environment variables
-const requiredEnvVars = {
-  STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY,
-  STRIPE_PREMIUM_PRICE_ID: process.env.STRIPE_PREMIUM_PRICE_ID,
-  NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL
-};
-
-Object.entries(requiredEnvVars).forEach(([key, value]) => {
-  if (!value) {
-    throw new Error(`${key} is not set`);
-  }
-});
-
-// Initialize Stripe with the secret key
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2023-10-16',
-  typescript: true,
-});
+// Initialize Firebase Admin at the module level
+try {
+  initAdmin();
+} catch (error) {
+  console.error('Firebase Admin initialization error:', error);
+}
 
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
+  console.log('Starting checkout process...');
+
   // Only allow POST requests
   if (req.method !== 'POST') {
     console.log('Method not allowed:', req.method);
@@ -37,8 +27,6 @@ export default async function handler(
   }
 
   try {
-    // Initialize Firebase Admin
-    initAdmin();
     const auth = getAuth();
     const db = getDatabase();
     
@@ -69,17 +57,51 @@ export default async function handler(
     const userId = decodedToken.uid;
     console.log('Processing checkout for user:', userId);
 
-    // For preview environment, return a special development success URL
+    // For preview environment, handle differently
     if (process.env.NEXT_PUBLIC_CO_DEV_ENV === 'preview') {
-      console.log('Preview environment detected, returning dev success URL');
-      const devSuccessUrl = `${process.env.NEXT_PUBLIC_APP_URL}/api/stripe/dev-success?userId=${userId}`;
-      return res.status(200).json({ 
-        sessionUrl: devSuccessUrl,
-        isPreview: true 
+      console.log('Preview environment detected, simulating checkout...');
+      
+      try {
+        // Update user's subscription status directly in preview mode
+        await db.ref(`users/${userId}/account`).update({
+          tier: 'premium',
+          status: 'active',
+          stripeCustomerId: 'preview_customer_' + userId,
+          subscription: {
+            status: 'active',
+            id: 'preview_subscription_' + userId,
+            currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+          }
+        });
+
+        return res.status(200).json({ 
+          sessionUrl: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/account-status?upgrade=success`,
+          isPreview: true 
+        });
+      } catch (dbError) {
+        console.error('Database update error in preview mode:', dbError);
+        return res.status(500).json({
+          error: 'Database error',
+          message: 'Failed to update user subscription status in preview mode'
+        });
+      }
+    }
+
+    // Production environment - handle actual Stripe checkout
+    if (!process.env.STRIPE_SECRET_KEY || !process.env.STRIPE_PREMIUM_PRICE_ID) {
+      console.error('Missing required Stripe environment variables');
+      return res.status(500).json({
+        error: 'Configuration error',
+        message: 'Stripe configuration is incomplete'
       });
     }
 
-    // Get user's account data to check if they have a customer ID
+    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+      apiVersion: '2023-10-16',
+      typescript: true,
+    });
+
+    // Get user's account data
     const userSnapshot = await db.ref(`users/${userId}/account`).get();
     const userData = userSnapshot.val();
     
@@ -104,13 +126,13 @@ export default async function handler(
       billing_address_collection: 'auto',
     };
 
-    // If user has a Stripe customer ID, use it to ensure proper subscription linking
+    // If user has a Stripe customer ID, use it
     if (userData?.stripeCustomerId) {
       console.log('Using existing Stripe customer ID:', userData.stripeCustomerId);
       sessionConfig.customer = userData.stripeCustomerId;
-    } else {
-      console.log('Creating new customer with email:', decodedToken.email);
-      sessionConfig.customer_email = decodedToken.email || undefined;
+    } else if (decodedToken.email) {
+      console.log('Setting customer email:', decodedToken.email);
+      sessionConfig.customer_email = decodedToken.email;
     }
 
     const session = await stripe.checkout.sessions.create(sessionConfig);
