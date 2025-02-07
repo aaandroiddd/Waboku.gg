@@ -1,12 +1,12 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import Stripe from 'stripe';
-import { initAdmin } from '@/lib/firebase-admin';
+import { getFirebaseAdmin } from '@/lib/firebase-admin';
 import { getDatabase } from 'firebase-admin/database';
 import { getAuth } from 'firebase-admin/auth';
 
 // Initialize Firebase Admin at the module level
 try {
-  initAdmin();
+  getFirebaseAdmin();
 } catch (error) {
   console.error('Firebase Admin initialization error:', error);
 }
