@@ -30,8 +30,6 @@ const AuthError: React.FC<AuthErrorProps> = ({ error, errorCode, onClose }) => {
         };
 
       case "auth/user-not-found":
-      case "auth/invalid-login-credentials":  // Firebase sometimes returns this code instead
-      case "auth/invalid-credential":  // New Firebase error code
         return {
           title: "Account Not Found",
           description: (
@@ -39,6 +37,23 @@ const AuthError: React.FC<AuthErrorProps> = ({ error, errorCode, onClose }) => {
               We couldn't find an account with this email.{" "}
               <Link href="/auth/sign-up" className="text-primary hover:underline">
                 Create a new account
+              </Link>
+            </>
+          ),
+        };
+
+      case "auth/invalid-login-credentials":  // Firebase sometimes returns this code instead
+      case "auth/invalid-credential":  // New Firebase error code
+        return {
+          title: "Invalid Credentials",
+          description: (
+            <>
+              The email or password you entered is incorrect.{" "}
+              <Link
+                href="/auth/forgot-password"
+                className="text-primary hover:underline"
+              >
+                Forgot your password?
               </Link>
             </>
           ),
