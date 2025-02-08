@@ -416,30 +416,29 @@ export function useListings({ userId, searchQuery, showOnlyActive = false }: Use
         
         const { db } = await getFirebaseServices();
         const listingsRef = collection(db, 'listings');
-        const constraints: QueryConstraint[] = [];
-
-        // Add userId constraint if provided
-        if (userId) {
-          constraints.push(where('userId', '==', userId));
-        }
-
-        // Add status constraints
-        if (showOnlyActive || !userId) {
-          // For active listings, only check status
-          constraints.push(where('status', '==', 'active'));
-        } else if (userId) {
-          // For user's own listings, show both active and inactive
-          constraints.push(where('status', 'in', ['active', 'inactive']));
-        }
-
-        // Always order by creation date
-        constraints.push(orderBy('createdAt', 'desc'));
-
-        console.log('Executing query with constraints:', constraints);
-        const q = query(listingsRef, ...constraints);
         
+        // Create base query for active listings
+        const q = query(
+          listingsRef,
+          where('status', '==', 'active'),
+          orderBy('createdAt', 'desc')
+        );
+        
+        console.log('Executing Firestore query for active listings...');
         const querySnapshot = await getDocs(q);
-        console.log(`Found ${querySnapshot.size} listings`);
+        console.log(`Found ${querySnapshot.size} listings in Firestore`);
+        
+        // Debug log each listing
+        querySnapshot.forEach((doc) => {
+          const data = doc.data();
+          console.log('Listing:', {
+            id: doc.id,
+            title: data.title,
+            status: data.status,
+            createdAt: data.createdAt?.toDate(),
+            expiresAt: data.expiresAt?.toDate()
+          });
+        });
         
         // Debug log for specific listing
         const specificListing = querySnapshot.docs.find(doc => doc.id === 'F69t6xo6IFkEGfTvTsev');
