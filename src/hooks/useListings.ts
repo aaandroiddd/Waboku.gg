@@ -313,6 +313,21 @@ export function useListings({ userId, searchQuery, showOnlyActive = false }: Use
         
         const querySnapshot = await getDocs(q);
         console.log(`Found ${querySnapshot.size} listings`);
+        
+        // Debug log for specific listing
+        const specificListing = querySnapshot.docs.find(doc => doc.id === 'F69t6xo6IFkEGfTvTsev');
+        if (specificListing) {
+          const data = specificListing.data();
+          console.log('Found specific listing F69t6xo6IFkEGfTvTsev:', {
+            id: specificListing.id,
+            status: data.status,
+            expiresAt: data.expiresAt?.toDate(),
+            archivedAt: data.archivedAt?.toDate(),
+            createdAt: data.createdAt?.toDate()
+          });
+        } else {
+          console.log('Listing F69t6xo6IFkEGfTvTsev not found in query results');
+        }
           
         let fetchedListings = querySnapshot.docs.map(doc => {
           const data = doc.data();
