@@ -10,6 +10,8 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from 'next/router';
 import { Textarea } from "@/components/ui/textarea";
+import { useTheme } from "next-themes";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
@@ -30,6 +32,7 @@ const DashboardLayout = dynamic(
 );
 
 const SettingsPageContent = () => {
+  const { theme, setTheme } = useTheme();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [deleteConfirmation, setDeleteConfirmation] = useState("");
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
@@ -113,6 +116,11 @@ const SettingsPageContent = () => {
             twitter: userData.social?.twitter || "",
             facebook: userData.social?.facebook || "",
           });
+
+          // Set theme from user preferences if it exists
+          if (userData.theme) {
+            setTheme(userData.theme);
+          }
         } else {
           setFormData({
             username: user.displayName || "",
@@ -131,7 +139,7 @@ const SettingsPageContent = () => {
     };
 
     loadUserData();
-  }, [user?.uid]);
+  }, [user?.uid, setTheme]);
 
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -228,6 +236,7 @@ const SettingsPageContent = () => {
         bio: formData.bio,
         contact: formData.contact,
         location: formData.location,
+        theme: theme,
         social: {
           youtube: formData.youtube || '',
           twitter: formData.twitter || '',
@@ -399,6 +408,30 @@ const SettingsPageContent = () => {
                 />
                 <p className="text-xs text-muted-foreground">
                   Help others find local trades
+                </p>
+              </div>
+
+              <Separator />
+
+              {/* Theme Section */}
+              <div className="space-y-2">
+                <Label htmlFor="theme">Theme Preference</Label>
+                <Select
+                  value={theme}
+                  onValueChange={(value) => {
+                    setTheme(value);
+                  }}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select your preferred theme" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="light">Light</SelectItem>
+                    <SelectItem value="dark">Dark</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Choose your preferred theme for the application
                 </p>
               </div>
 
