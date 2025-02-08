@@ -423,15 +423,13 @@ export function useListings({ userId, searchQuery, showOnlyActive = false }: Use
           constraints.push(where('userId', '==', userId));
         }
 
-        // Add status constraints - only show active listings that are not archived
+        // Add status constraints
         if (showOnlyActive || !userId) {
+          // For active listings, only check status
           constraints.push(where('status', '==', 'active'));
-          // Make sure archivedAt is null or undefined
-          constraints.push(where('archivedAt', '==', null));
         } else if (userId) {
-          // For user's own listings, show both active and inactive, but not archived
+          // For user's own listings, show both active and inactive
           constraints.push(where('status', 'in', ['active', 'inactive']));
-          constraints.push(where('archivedAt', '==', null));
         }
 
         // Always order by creation date
