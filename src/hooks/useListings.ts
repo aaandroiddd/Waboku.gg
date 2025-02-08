@@ -309,7 +309,35 @@ export function useListings({ userId, searchQuery, showOnlyActive = false }: Use
   };
 
   useEffect(() => {
-    checkSpecificListing(); // Run this once when component mounts
+    // Enhanced debugging for the specific listing
+    const debugListing = async () => {
+      try {
+        const { db } = await getFirebaseServices();
+        const listingRef = doc(db, 'listings', 'bo4AaFHrWo8h2QNWdPya');
+        const listingSnap = await getDoc(listingRef);
+        
+        if (listingSnap.exists()) {
+          const data = listingSnap.data();
+          console.log('Debug - Listing bo4AaFHrWo8h2QNWdPya:', {
+            exists: true,
+            id: listingSnap.id,
+            status: data.status,
+            expiresAt: data.expiresAt?.toDate(),
+            archivedAt: data.archivedAt?.toDate(),
+            createdAt: data.createdAt?.toDate(),
+            title: data.title,
+            price: data.price,
+            allFields: data
+          });
+        } else {
+          console.log('Debug - Listing bo4AaFHrWo8h2QNWdPya does not exist');
+        }
+      } catch (error) {
+        console.error('Error in debug check:', error);
+      }
+    };
+
+    debugListing();
     const fetchListings = async () => {
       try {
         setIsLoading(true);

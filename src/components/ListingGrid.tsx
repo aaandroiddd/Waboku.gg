@@ -165,6 +165,20 @@ export function ListingGrid({
       const isNotArchived = !listing.archivedAt;
       // Only check expiration if the field exists
       const isNotExpired = !listing.expiresAt || new Date(listing.expiresAt) > new Date();
+      
+      // Debug log for our specific listing
+      if (listing.id === 'bo4AaFHrWo8h2QNWdPya') {
+        console.log('Debug - Filtering listing bo4AaFHrWo8h2QNWdPya:', {
+          isActive,
+          isNotArchived,
+          isNotExpired,
+          status: listing.status,
+          archivedAt: listing.archivedAt,
+          expiresAt: listing.expiresAt,
+          willShow: isActive && isNotArchived && isNotExpired
+        });
+      }
+      
       return isActive && isNotArchived && isNotExpired;
     });
     return displayCount ? filteredListings.slice(0, displayCount) : filteredListings;
