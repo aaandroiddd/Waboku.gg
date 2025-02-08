@@ -414,12 +414,8 @@ export function useListings({ userId, searchQuery, showOnlyActive = false }: Use
         setIsLoading(true);
         setError(null);
         
-        // Check if we have authentication
-        if (!user) {
-          console.log('Debug: No authenticated user found');
-          setError('Please sign in to view listings');
-          return;
-        }
+        // Remove authentication check for viewing listings
+        // as this should be publicly accessible
         
         const { db } = await getFirebaseServices();
         const listingsRef = collection(db, 'listings');
