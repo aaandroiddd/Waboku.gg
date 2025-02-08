@@ -281,7 +281,35 @@ export function useListings({ userId, searchQuery, showOnlyActive = false }: Use
     }
   };
 
+  // Debug function to check specific listing
+  const checkSpecificListing = async () => {
+    try {
+      const { db } = await getFirebaseServices();
+      const listingRef = doc(db, 'listings', 'F69t6xo6IFkEGfTvTsev');
+      const listingSnap = await getDoc(listingRef);
+      
+      if (listingSnap.exists()) {
+        const data = listingSnap.data();
+        console.log('Direct check of listing F69t6xo6IFkEGfTvTsev:', {
+          exists: true,
+          id: listingSnap.id,
+          status: data.status,
+          expiresAt: data.expiresAt?.toDate(),
+          archivedAt: data.archivedAt?.toDate(),
+          createdAt: data.createdAt?.toDate(),
+          title: data.title,
+          price: data.price
+        });
+      } else {
+        console.log('Direct check: Listing F69t6xo6IFkEGfTvTsev does not exist');
+      }
+    } catch (error) {
+      console.error('Error checking specific listing:', error);
+    }
+  };
+
   useEffect(() => {
+    checkSpecificListing(); // Run this once when component mounts
     const fetchListings = async () => {
       try {
         setIsLoading(true);
