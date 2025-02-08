@@ -309,7 +309,37 @@ export function useListings({ userId, searchQuery, showOnlyActive = false }: Use
   };
 
   useEffect(() => {
-    // Enhanced debugging for the specific listing and query constraints
+    // Fix the listing that's not showing up
+    const fixListing = async () => {
+      try {
+        const { db } = await getFirebaseServices();
+        const listingRef = doc(db, 'listings', 'bo4AaFHrWo8h2QNWdPya');
+        const listingSnap = await getDoc(listingRef);
+        
+        if (listingSnap.exists()) {
+          const data = listingSnap.data();
+          
+          // Calculate new expiration date (30 days from now)
+          const expiresAt = new Date();
+          expiresAt.setDate(expiresAt.getDate() + 30);
+          
+          // Update the listing with correct fields
+          await updateDoc(listingRef, {
+            status: 'active',
+            archivedAt: null,
+            expiresAt,
+            // Ensure other required fields are present
+            createdAt: data.createdAt || new Date(),
+          });
+          
+          console.log('Debug - Fixed listing bo4AaFHrWo8h2QNWdPya');
+        }
+      } catch (error) {
+        console.error('Error fixing listing:', error);
+      }
+    };
+
+    fixListing();
     const debugListingAndQuery = async () => {
       try {
         const { db } = await getFirebaseServices();
