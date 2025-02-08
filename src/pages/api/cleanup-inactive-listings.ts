@@ -123,7 +123,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           listingId: doc.id,
           data: doc.data()
         });
-        throw error; // Re-throw to handle in processBatch
+        throw error;
       }
     };
 
@@ -132,7 +132,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     // Step 2: Archive inactive listings older than 7 days
-    if (!listingId) { // Only process these if not handling a specific listing
+    if (!listingId) {
       console.log('[Cleanup Inactive Listings] Processing inactive listings...');
       const inactiveSnapshot = await db.collection('listings')
         .where('status', '==', 'inactive')
@@ -167,14 +167,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         await processBatch(inactiveSnapshot.docs, processInactiveListing, db);
       }
 
-      // Step 3: Delete archived listings older than 7 days
+      // Step 3: Delete all archived listings
       console.log('[Cleanup Inactive Listings] Processing archived listings...');
-      const archivedSnapshot = await db.collection('listings')
+      
+      // First, get archived listings older than 7 days
+      const oldArchivedSnapshot = await db.collection('listings')
         .where('status', '==', 'archived')
         .where('archivedAt', '<', Timestamp.fromDate(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)))
         .get();
 
-      console.log(`[Cleanup Inactive Listings] Found ${archivedSnapshot.size} archived listings for deletion`);
+      // Then, get all remaining archived listings
+      const allArchivedSnapshot = await db.collection('listings')
+        .where('status', '==', 'archived')
+        .get();
+
+      console.log(`[Cleanup Inactive Listings] Found ${oldArchivedSnapshot.size} old archived listings and ${allArchivedSnapshot.size} total archived listings for deletion`);
 
       const processArchivedListing = async (doc: FirebaseFirestore.QueryDocumentSnapshot, batch: FirebaseFirestore.WriteBatch) => {
         try {
@@ -190,8 +197,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }
       };
 
-      if (archivedSnapshot.size > 0) {
-        await processBatch(archivedSnapshot.docs, processArchivedListing, db);
+      // Process old archived listings first
+      if (oldArchivedSnapshot.size > 0) {
+        await processBatch(oldArchivedSnapshot.docs, processArchivedListing, db);
+      }
+
+      // Then process any remaining archived listings
+      if (allArchivedSnapshot.size > 0) {
+        const remainingDocs = allArchivedSnapshot.docs.filter(
+          doc => !oldArchivedSnapshot.docs.some(oldDoc => oldDoc.id === doc.id)
+        );
+        if (remainingDocs.length > 0) {
+          console.log(`[Cleanup Inactive Listings] Processing ${remainingDocs.length} remaining archived listings`);
+          await processBatch(remainingDocs, processArchivedListing, db);
+        }
       }
     }
     
