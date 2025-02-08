@@ -4,6 +4,10 @@
     {
       "path": "/api/listings/archive-expired",
       "schedule": "0 */1 * * *"
+    },
+    {
+      "path": "/api/listings/cleanup-archived",
+      "schedule": "0 3 * * *"
     }
   ]
 }
