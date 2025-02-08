@@ -309,7 +309,48 @@ export function useListings({ userId, searchQuery, showOnlyActive = false }: Use
   };
 
   useEffect(() => {
-    // Enhanced debugging for the specific listing
+    // Enhanced debugging for the specific listing and query constraints
+    const debugListingAndQuery = async () => {
+      try {
+        const { db } = await getFirebaseServices();
+        const listingRef = doc(db, 'listings', 'bo4AaFHrWo8h2QNWdPya');
+        const listingSnap = await getDoc(listingRef);
+        
+        if (listingSnap.exists()) {
+          const data = listingSnap.data();
+          console.log('Debug - Direct DB check for bo4AaFHrWo8h2QNWdPya:', {
+            exists: true,
+            id: listingSnap.id,
+            status: data.status,
+            expiresAt: data.expiresAt?.toDate(),
+            archivedAt: data.archivedAt?.toDate(),
+            createdAt: data.createdAt?.toDate(),
+            title: data.title,
+            price: data.price,
+            allFields: data
+          });
+
+          // Test the query that should return this listing
+          const listingsRef = collection(db, 'listings');
+          const q = query(
+            listingsRef,
+            where('status', '==', 'active'),
+            orderBy('createdAt', 'desc')
+          );
+          
+          const querySnapshot = await getDocs(q);
+          const found = querySnapshot.docs.some(doc => doc.id === 'bo4AaFHrWo8h2QNWdPya');
+          console.log('Debug - Query test result:', {
+            totalResults: querySnapshot.size,
+            listingFound: found
+          });
+        }
+      } catch (error) {
+        console.error('Error in debug check:', error);
+      }
+    };
+
+    debugListingAndQuery();
     const debugListing = async () => {
       try {
         const { db } = await getFirebaseServices();
