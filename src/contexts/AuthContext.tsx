@@ -240,12 +240,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       switch (err.code) {
         case 'auth/user-not-found':
+          errorMessage = 'No account found with this email address';
+          errorCode = 'auth/user-not-found';
+          break;
         case 'auth/invalid-login-credentials':
         case 'auth/invalid-credential':
-          errorMessage = 'No account found with this email address';
-          break;
         case 'auth/wrong-password':
-          errorMessage = 'Incorrect password';
+          errorMessage = 'The email or password you entered is incorrect';
+          errorCode = 'auth/invalid-login-credentials';
           break;
         case 'auth/invalid-email':
           errorMessage = 'Invalid email address';
