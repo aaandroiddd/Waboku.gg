@@ -424,13 +424,13 @@ export function useListings({ userId, searchQuery, showOnlyActive = false }: Use
         const now = new Date();
         
         // Create base query for active listings
-        // Note: We'll filter expired listings in memory since Firestore doesn't support
-        // complex date comparisons in queries
         const q = query(
           listingsRef,
           where('status', '==', 'active'),
           orderBy('createdAt', 'desc')
         );
+        
+        console.log('Debug: Executing Firestore query for active listings');
 
         console.log('Debug: Executing Firestore query with timestamp:', now.toISOString());
         
