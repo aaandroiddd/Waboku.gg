@@ -97,10 +97,14 @@ const EmptyState = memo(function EmptyState() {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
+      className="text-center"
     >
       <Card>
-        <CardContent className="p-4">
-          <p className="text-muted-foreground">No listings found.</p>
+        <CardContent className="p-8">
+          <h3 className="text-lg font-semibold mb-2">No Listings Available</h3>
+          <p className="text-muted-foreground">
+            There are currently no active listings. Check back later or try adjusting your search filters.
+          </p>
         </CardContent>
       </Card>
     </motion.div>
@@ -176,7 +180,10 @@ export function ListingGrid({
     return <LoadingSkeleton />;
   }
 
-  if (!listings?.length) {
+  // Check if we have any listings after filtering
+  const hasListings = displayedListings.length > 0;
+  
+  if (!hasListings) {
     return <EmptyState />;
   }
 
