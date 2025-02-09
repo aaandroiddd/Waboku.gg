@@ -37,11 +37,17 @@ const MainContent = memo(({ Component, pageProps, pathname, isLoading }: {
 }) => {
   const auth = useAuth();
   const account = useAccount();
+  const ThemeSync = dynamic(() => import('@/hooks/useThemeSync').then(mod => ({ default: mod.useThemeSync })), {
+    ssr: false
+  });
 
   // Show loading screen while auth or account is initializing
   if (auth.isLoading || account.isLoading) {
     return <LoadingScreen isLoading={true} />;
   }
+
+  // Initialize theme sync
+  ThemeSync();
 
   return (
     <>

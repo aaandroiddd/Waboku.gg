@@ -420,6 +420,8 @@ const SettingsPageContent = () => {
                   value={theme}
                   onValueChange={(value) => {
                     setTheme(value);
+                    // Update profile with new theme preference
+                    updateProfile({ theme: value });
                   }}
                 >
                   <SelectTrigger className="w-full">
@@ -428,6 +430,7 @@ const SettingsPageContent = () => {
                   <SelectContent>
                     <SelectItem value="light">Light</SelectItem>
                     <SelectItem value="dark">Dark</SelectItem>
+                    <SelectItem value="system">System</SelectItem>
                   </SelectContent>
                 </Select>
                 <p className="text-xs text-muted-foreground">
