@@ -417,11 +417,24 @@ const SettingsPageContent = () => {
               <div className="space-y-2">
                 <Label htmlFor="theme">Theme Preference</Label>
                 <Select
-                  value={theme}
-                  onValueChange={(value) => {
-                    setTheme(value);
-                    // Update profile with new theme preference
-                    updateProfile({ theme: value });
+                  value={theme || 'system'}
+                  onValueChange={async (value) => {
+                    try {
+                      setTheme(value);
+                      await updateProfile({
+                        ...formData,
+                        theme: value,
+                        social: {
+                          youtube: formData.youtube || '',
+                          twitter: formData.twitter || '',
+                          facebook: formData.facebook || ''
+                        }
+                      });
+                      setSuccess("Theme updated successfully!");
+                    } catch (err) {
+                      console.error('Failed to update theme:', err);
+                      setError("Failed to update theme preference");
+                    }
                   }}
                 >
                   <SelectTrigger className="w-full">
