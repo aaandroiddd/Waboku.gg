@@ -60,6 +60,7 @@ export interface UserProfile {
   isEmailVerified: boolean;
   verificationSentAt?: string;
   accountTier: 'free' | 'premium';
+  theme?: 'light' | 'dark' | 'system';
   subscription: {
     status: 'active' | 'inactive';
     stripeSubscriptionId?: string;

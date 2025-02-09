@@ -4,14 +4,17 @@ import { useAuth } from '@/contexts/AuthContext';
 
 export function useThemeSync() {
   const { profile } = useAuth();
-  const { setTheme, theme } = useTheme();
+  const { setTheme, theme, resolvedTheme } = useTheme();
 
   useEffect(() => {
-    // Only set theme from profile on initial load when theme is not yet set
-    if (profile?.theme && !theme) {
+    // Set theme from profile when profile is loaded and theme exists
+    if (profile?.theme) {
       setTheme(profile.theme);
+    } else if (!theme && resolvedTheme) {
+      // If no profile theme, use system theme as default
+      setTheme('system');
     }
-  }, [profile, setTheme, theme]);
+  }, [profile, setTheme, theme, resolvedTheme]);
 
   return null;
 }
