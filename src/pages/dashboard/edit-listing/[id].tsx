@@ -42,6 +42,7 @@ const EditListingPage = () => {
     isGraded: false,
     gradeLevel: undefined as number | undefined,
     gradingCompany: undefined as string | undefined,
+    quantity: 1,
   });
 
   const [errors, setErrors] = useState<{
@@ -128,6 +129,7 @@ const EditListingPage = () => {
           isGraded: listingData.isGraded || false,
           gradeLevel: listingData.gradeLevel,
           gradingCompany: listingData.gradingCompany,
+          quantity: listingData.quantity || 1,
         });
       } catch (error) {
         console.error('Error fetching listing:', error);
@@ -170,6 +172,7 @@ const EditListingPage = () => {
         city: formData.city,
         state: formData.state,
         isGraded: formData.isGraded,
+        quantity: formData.quantity,
         updatedAt: new Date(),
       };
 
@@ -286,7 +289,7 @@ const EditListingPage = () => {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-3 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="price">Price *</Label>
                     <Input
@@ -301,6 +304,18 @@ const EditListingPage = () => {
                       className={errors.price ? "border-red-500" : ""}
                     />
                     {errors.price && <p className="text-sm text-red-500">{errors.price}</p>}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="quantity">Quantity</Label>
+                    <Input
+                      id="quantity"
+                      type="number"
+                      min="1"
+                      value={formData.quantity}
+                      onChange={(e) => setFormData({ ...formData, quantity: parseInt(e.target.value) || 1 })}
+                      className="w-full"
+                    />
                   </div>
 
                   <div className="space-y-2">
