@@ -102,7 +102,6 @@ export default function ArchivedListings() {
   return (
     <DashboardLayout>
       <div className="p-4 space-y-4">
-        <h1 className="text-2xl font-bold">Archived Listings</h1>
         {archivedListings.length === 0 ? (
           <Card className="p-6 text-center text-muted-foreground">
             No archived listings found
