@@ -422,23 +422,23 @@ export function useListings({ userId, searchQuery, showOnlyActive = false }: Use
         const now = new Date();
         
         // Create base query for listings
-        let queryConstraints: QueryConstraint[] = [
-          orderBy('createdAt', 'desc')
-        ];
+        let queryConstraints: QueryConstraint[] = [];
 
         // Add user filter if userId is provided
         if (userId) {
-          queryConstraints.unshift(where('userId', '==', userId));
+          queryConstraints.push(where('userId', '==', userId));
         }
 
-        // Add status filter if showOnlyActive is true
+        // Add status and expiration filters for active listings
         if (showOnlyActive) {
-          queryConstraints = [
+          queryConstraints.push(
             where('status', '==', 'active'),
-            where('expiresAt', '>', now),
-            ...queryConstraints
-          ];
+            where('expiresAt', '>', now)
+          );
         }
+
+        // Always add sorting by creation date
+        queryConstraints.push(orderBy('createdAt', 'desc'));
 
         const q = query(listingsRef, ...queryConstraints);
         
