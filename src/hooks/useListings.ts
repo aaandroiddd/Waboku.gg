@@ -314,7 +314,7 @@ export function useListings({ userId, searchQuery, showOnlyActive = false }: Use
     const fixListing = async () => {
       try {
         const { db } = await getFirebaseServices();
-        const listingRef = doc(db, 'listings', 'bo4AaFHrWo8h2QNWdPya');
+        const listingRef = doc(db, 'listings', 'PnnBwXaVtz0EyN81KLnw');
         const listingSnap = await getDoc(listingRef);
         
         if (listingSnap.exists()) {
@@ -333,7 +333,7 @@ export function useListings({ userId, searchQuery, showOnlyActive = false }: Use
             createdAt: data.createdAt || new Date(),
           });
           
-          console.log('Debug - Fixed listing bo4AaFHrWo8h2QNWdPya');
+          console.log('Debug - Fixed listing PnnBwXaVtz0EyN81KLnw');
         }
       } catch (error) {
         console.error('Error fixing listing:', error);
