@@ -4,64 +4,81 @@ import { ListingCard } from '@/components/ListingCard';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card } from '@/components/ui/card';
 import { ListingTimer } from '@/components/ListingTimer';
-
-interface ArchivedListing {
-  id: string;
-  title: string;
-  price: number;
-  imageUrl: string;
-  description: string;
-  archivedAt: number;
-  // Add other relevant fields
-}
+import { db } from '@/lib/firebase';
+import { collection, query, where, orderBy, getDocs, deleteDoc, doc } from 'firebase/firestore';
+import { useToast } from '@/components/ui/use-toast';
+import { Listing } from '@/types/database';
 
 export default function ArchivedListings() {
   const { user } = useAuth();
-  const [archivedListings, setArchivedListings] = useState<ArchivedListing[]>([]);
+  const [archivedListings, setArchivedListings] = useState<Listing[]>([]);
   const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
+
+  // Function to get condition color based on condition
+  const getConditionColor = (condition: string) => {
+    const colors = {
+      'Mint': { base: 'bg-green-100 text-green-800', hover: 'hover:bg-green-200' },
+      'Near Mint': { base: 'bg-emerald-100 text-emerald-800', hover: 'hover:bg-emerald-200' },
+      'Excellent': { base: 'bg-blue-100 text-blue-800', hover: 'hover:bg-blue-200' },
+      'Good': { base: 'bg-yellow-100 text-yellow-800', hover: 'hover:bg-yellow-200' },
+      'Light Played': { base: 'bg-orange-100 text-orange-800', hover: 'hover:bg-orange-200' },
+      'Played': { base: 'bg-red-100 text-red-800', hover: 'hover:bg-red-200' },
+      'Poor': { base: 'bg-gray-100 text-gray-800', hover: 'hover:bg-gray-200' }
+    };
+    return colors[condition as keyof typeof colors] || { base: 'bg-gray-100 text-gray-800', hover: 'hover:bg-gray-200' };
+  };
 
   useEffect(() => {
     const fetchArchivedListings = async () => {
       if (!user) return;
 
       try {
-        // Fetch archived listings from Firebase
-        // You'll need to implement this in your Firebase setup
-        const listingsRef = firebase.firestore()
-          .collection('listings')
-          .where('userId', '==', user.uid)
-          .where('status', '==', 'archived')
-          .orderBy('archivedAt', 'desc');
+        const listingsRef = collection(db, 'listings');
+        const q = query(
+          listingsRef,
+          where('userId', '==', user.uid),
+          where('status', '==', 'archived'),
+          orderBy('archivedAt', 'desc')
+        );
 
-        const snapshot = await listingsRef.get();
+        const snapshot = await getDocs(q);
         const listings = snapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data(),
-        })) as ArchivedListing[];
+        })) as Listing[];
 
         setArchivedListings(listings);
       } catch (error) {
         console.error('Error fetching archived listings:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load archived listings. Please try again later.",
+          variant: "destructive",
+        });
       } finally {
         setLoading(false);
       }
     };
 
     fetchArchivedListings();
-  }, [user]);
+  }, [user, toast]);
 
   const handleDelete = async (listingId: string) => {
     try {
-      await firebase.firestore()
-        .collection('listings')
-        .doc(listingId)
-        .delete();
-
-      setArchivedListings(prev => 
-        prev.filter(listing => listing.id !== listingId)
-      );
+      await deleteDoc(doc(db, 'listings', listingId));
+      setArchivedListings(prev => prev.filter(listing => listing.id !== listingId));
+      toast({
+        title: "Success",
+        description: "Listing has been permanently deleted.",
+      });
     } catch (error) {
       console.error('Error deleting listing:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete the listing. Please try again later.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -96,8 +113,9 @@ export default function ArchivedListings() {
               <div key={listing.id} className="relative">
                 <ListingCard
                   listing={listing}
-                  onDelete={() => handleDelete(listing.id)}
-                  showDeleteButton
+                  isFavorite={false}
+                  onFavoriteClick={() => {}}
+                  getConditionColor={getConditionColor}
                 />
                 <div className="mt-2">
                   <ListingTimer
