@@ -415,9 +415,6 @@ export function useListings({ userId, searchQuery, showOnlyActive = false }: Use
         setIsLoading(true);
         setError(null);
         
-        // Remove authentication check for viewing listings
-        // as this should be publicly accessible
-        
         const { db } = await getFirebaseServices();
         const listingsRef = collection(db, 'listings');
         
@@ -436,52 +433,32 @@ export function useListings({ userId, searchQuery, showOnlyActive = false }: Use
 
         // Add status filter if showOnlyActive is true
         if (showOnlyActive) {
-          queryConstraints.unshift(where('status', '==', 'active'));
+          queryConstraints = [
+            where('status', '==', 'active'),
+            where('expiresAt', '>', now),
+            ...queryConstraints
+          ];
         }
 
         const q = query(listingsRef, ...queryConstraints);
         
-        console.log('Debug: Executing Firestore query for active listings');
-
-        console.log('Debug: Executing Firestore query with timestamp:', now.toISOString());
+        console.log('Debug: Executing Firestore query with constraints:', {
+          userId,
+          showOnlyActive,
+          timestamp: now.toISOString(),
+          constraints: queryConstraints.map(c => c.toString())
+        });
         
-        console.log('Executing Firestore query for active listings...');
         const querySnapshot = await getDocs(q);
         console.log(`Found ${querySnapshot.size} listings in Firestore`);
         
-        // Debug log each listing
-        querySnapshot.forEach((doc) => {
-          const data = doc.data();
-          console.log('Listing:', {
-            id: doc.id,
-            title: data.title,
-            status: data.status,
-            createdAt: data.createdAt?.toDate(),
-            expiresAt: data.expiresAt?.toDate()
-          });
-        });
-        
-        // Debug log for specific listing
-        const specificListing = querySnapshot.docs.find(doc => doc.id === 'F69t6xo6IFkEGfTvTsev');
-        if (specificListing) {
-          const data = specificListing.data();
-          console.log('Found specific listing F69t6xo6IFkEGfTvTsev:', {
-            id: specificListing.id,
-            status: data.status,
-            expiresAt: data.expiresAt?.toDate(),
-            archivedAt: data.archivedAt?.toDate(),
-            createdAt: data.createdAt?.toDate()
-          });
-        } else {
-          console.log('Listing F69t6xo6IFkEGfTvTsev not found in query results');
-        }
-          
         let fetchedListings = querySnapshot.docs.map(doc => {
           const data = doc.data();
           return {
             id: doc.id,
             ...data,
             createdAt: data.createdAt?.toDate() || new Date(),
+            expiresAt: data.expiresAt?.toDate() || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now if not set
             price: Number(data.price) || 0,
             imageUrls: Array.isArray(data.imageUrls) ? data.imageUrls : [],
             isGraded: Boolean(data.isGraded),

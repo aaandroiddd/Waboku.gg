@@ -163,18 +163,10 @@ export function ListingGrid({
   }, [selectedListing, toggleFavorite, onLoadMore]);
 
   const displayedListings = useMemo(() => {
-    // Only filter by display count if specified
-    const filteredListings = listings.filter(listing => {
-      // Show all active listings that are not expired
-      const now = new Date();
-      const expiresAt = listing.expiresAt ? new Date(listing.expiresAt) : null;
-      return listing.status === 'active' && (!expiresAt || expiresAt > now);
-    });
-    
-    console.log('Filtered listings:', {
+    // Only apply display count limit if specified
+    console.log('Listings received:', {
       total: listings.length,
-      filtered: filteredListings.length,
-      activeAndNotExpired: filteredListings.map(l => ({
+      sample: listings.slice(0, 3).map(l => ({
         id: l.id,
         title: l.title,
         status: l.status,
@@ -182,7 +174,7 @@ export function ListingGrid({
       }))
     });
     
-    return displayCount ? filteredListings.slice(0, displayCount) : filteredListings;
+    return displayCount ? listings.slice(0, displayCount) : listings;
   }, [listings, displayCount]);
 
   const memoizedGetConditionColor = useCallback(getConditionColor, []);
