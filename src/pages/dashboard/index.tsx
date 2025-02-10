@@ -61,13 +61,9 @@ const DashboardComponent = () => {
   const { user, loading: authLoading } = useAuth();
   const [error, setError] = useState<string | null>(null);
   const { listings: allListings, loading: listingsLoading, error: listingsError, refreshListings, updateListingStatus, permanentlyDeleteListing } = useListings({ 
-    userId: user?.uid, // This ensures we only get listings for the current user
-    showOnlyActive: false // Get all listings, both active and archived
+    userId: user?.uid,
+    showOnlyActive: false
   });
-
-  // Separate active and archived listings
-  const activeListings = allListings.filter(listing => listing.status === 'active');
-  const archivedListings = allListings.filter(listing => listing.status === 'archived');
   const { profile, loading: profileLoading } = useProfile(user?.uid || null);
   
   const loading = authLoading || listingsLoading || profileLoading;
@@ -99,7 +95,7 @@ const DashboardComponent = () => {
     }
   }, [listingsError, user, refreshListings]);
   
-  const sortedListings = [...(listings || [])].sort((a, b) => {
+  const sortedListings = [...(allListings || [])].sort((a, b) => {
     if (sortBy === 'date') {
       const dateA = a.createdAt instanceof Date ? a.createdAt : new Date(a.createdAt);
       const dateB = b.createdAt instanceof Date ? b.createdAt : new Date(b.createdAt);
