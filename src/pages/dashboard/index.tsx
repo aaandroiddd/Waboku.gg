@@ -60,7 +60,10 @@ const DashboardComponent = () => {
   const { tab = 'active', new: newListingId } = router.query;
   const { user, loading: authLoading } = useAuth();
   const [error, setError] = useState<string | null>(null);
-  const { listings, loading: listingsLoading, error: listingsError, refreshListings, updateListingStatus, permanentlyDeleteListing } = useListings({ userId: user?.uid });
+  const { listings, loading: listingsLoading, error: listingsError, refreshListings, updateListingStatus, permanentlyDeleteListing } = useListings({ 
+    userId: user?.uid, // This ensures we only get listings for the current user
+    showOnlyActive: true 
+  });
   const { profile, loading: profileLoading } = useProfile(user?.uid || null);
   
   const loading = authLoading || listingsLoading || profileLoading;

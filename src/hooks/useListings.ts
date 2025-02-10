@@ -424,11 +424,17 @@ export function useListings({ userId, searchQuery, showOnlyActive = false }: Use
         const now = new Date();
         
         // Create base query for active listings
-        const q = query(
-          listingsRef,
+        let queryConstraints: QueryConstraint[] = [
           where('status', '==', 'active'),
           orderBy('createdAt', 'desc')
-        );
+        ];
+
+        // Add user filter if userId is provided
+        if (userId) {
+          queryConstraints.unshift(where('userId', '==', userId));
+        }
+
+        const q = query(listingsRef, ...queryConstraints);
         
         console.log('Debug: Executing Firestore query for active listings');
 
