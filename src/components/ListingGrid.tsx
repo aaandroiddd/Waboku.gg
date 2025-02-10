@@ -165,9 +165,23 @@ export function ListingGrid({
   const displayedListings = useMemo(() => {
     // Only filter by display count if specified
     const filteredListings = listings.filter(listing => {
-      // Show all active listings
-      return listing.status === 'active';
+      // Show all active listings that are not expired
+      const now = new Date();
+      const expiresAt = listing.expiresAt ? new Date(listing.expiresAt) : null;
+      return listing.status === 'active' && (!expiresAt || expiresAt > now);
     });
+    
+    console.log('Filtered listings:', {
+      total: listings.length,
+      filtered: filteredListings.length,
+      activeAndNotExpired: filteredListings.map(l => ({
+        id: l.id,
+        title: l.title,
+        status: l.status,
+        expiresAt: l.expiresAt
+      }))
+    });
+    
     return displayCount ? filteredListings.slice(0, displayCount) : filteredListings;
   }, [listings, displayCount]);
 

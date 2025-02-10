@@ -202,6 +202,7 @@ export function useListings({ userId, searchQuery, showOnlyActive = false }: Use
     if (!user) throw new Error('Must be logged in to create a listing');
 
     try {
+      console.log('Creating new listing:', listingData);
       // First, upload images to Firebase Storage
       const imageUrls = [];
       const storage = getStorage();
