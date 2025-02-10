@@ -104,7 +104,9 @@ export default function ListingPage() {
           gradingCompany: data.gradingCompany,
           city: data.city || 'Unknown',
           state: data.state || 'Unknown',
-          favoriteCount: typeof data.favoriteCount === 'number' ? data.favoriteCount : 0
+          favoriteCount: typeof data.favoriteCount === 'number' ? data.favoriteCount : 0,
+          quantity: data.quantity ? Number(data.quantity) : undefined,
+          cardName: data.cardName || undefined
         };
 
         if (isMounted) {
