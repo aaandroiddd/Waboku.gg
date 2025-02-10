@@ -361,9 +361,25 @@ export default function ListingPage() {
                   </div>
                 </div>
 
-                <div>
-                  <h2 className="text-lg font-semibold mb-2">Description</h2>
-                  <p className="text-muted-foreground whitespace-pre-wrap text-sm md:text-base">{listing.description}</p>
+                <div className="space-y-4">
+                  {listing.cardName && (
+                    <div>
+                      <h2 className="text-lg font-semibold mb-2">Card Name</h2>
+                      <p className="text-muted-foreground text-sm md:text-base">{listing.cardName}</p>
+                    </div>
+                  )}
+                  
+                  <div>
+                    <h2 className="text-lg font-semibold mb-2">Description</h2>
+                    <p className="text-muted-foreground whitespace-pre-wrap text-sm md:text-base">{listing.description}</p>
+                  </div>
+
+                  {listing.quantity && parseInt(listing.quantity) > 0 && (
+                    <div>
+                      <h2 className="text-lg font-semibold mb-2">Quantity Available</h2>
+                      <p className="text-muted-foreground text-sm md:text-base">{listing.quantity}</p>
+                    </div>
+                  )}
                 </div>
 
                 <Separator />

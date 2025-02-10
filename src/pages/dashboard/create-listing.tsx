@@ -56,7 +56,8 @@ const CreateListingPage = () => {
     isGraded: false,
     gradeLevel: undefined as number | undefined,
     gradingCompany: undefined as string | undefined,
-    cardReference: null as { id: string; name: string; set?: string; game: string } | null,
+    cardName: "",
+    quantity: "" as string,
   });
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -220,27 +221,27 @@ const CreateListingPage = () => {
           <CardContent className="pt-6">
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="space-y-6">
-                <div className="space-y-2">
-                  <CardSearchInput
-                    onCardSelect={(card) => {
-                      const gameType = card.type === 'pokemon' ? 'pokemon' :
-                                     card.type === 'mtg' ? 'mtg' :
-                                     card.type === 'onepiece' ? 'onepiece' : 'other';
-                      
-                      setFormData(prev => ({
-                        ...prev,
-                        cardReference: {
-                          id: card.id,
-                          name: card.name,
-                          set: card.type === 'pokemon' ? card.set.name :
-                               card.type === 'mtg' ? card.set_name :
-                               card.set_name,
-                          game: gameType
-                        },
-                        game: gameType
-                      }));
-                    }}
-                  />
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="cardName">Card Name</Label>
+                    <Input
+                      id="cardName"
+                      value={formData.cardName}
+                      onChange={(e) => setFormData({ ...formData, cardName: e.target.value })}
+                      placeholder="Enter card name"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="quantity">Quantity</Label>
+                    <Input
+                      id="quantity"
+                      type="number"
+                      min="0"
+                      value={formData.quantity}
+                      onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
+                      placeholder="Enter quantity (optional)"
+                    />
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <div className="flex items-center space-x-2">

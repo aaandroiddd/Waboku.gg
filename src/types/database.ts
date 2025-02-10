@@ -18,6 +18,8 @@ export interface Listing {
   city: string;
   state: string;
   favoriteCount?: number;
+  cardName?: string;
+  quantity?: number;
 }
 
 export interface CreateListingData {
