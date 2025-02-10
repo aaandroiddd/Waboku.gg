@@ -29,11 +29,11 @@ export default async function handler(
     const batch = db.batch();
     let totalDeleted = 0;
 
-    // Get all archived listings older than 7 days
-    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    // Get all archived listings that have expired
+    const now = new Date();
     const archivedSnapshot = await db.collection('listings')
       .where('status', '==', 'archived')
-      .where('archivedAt', '<', Timestamp.fromDate(sevenDaysAgo))
+      .where('expiresAt', '<', Timestamp.fromDate(now))
       .get();
 
     console.log(`[Cleanup Archived] Found ${archivedSnapshot.size} archived listings to clean up`);

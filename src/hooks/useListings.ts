@@ -119,18 +119,27 @@ export function useListings({ userId, searchQuery, showOnlyActive = false }: Use
 
       // Prepare update data
       const updateData: any = { status };
+      const now = new Date();
       
       if (status === 'archived') {
-        // When archiving, store both the archive time and the original creation time
-        updateData.archivedAt = new Date();
+        // When archiving, set archive time and 7-day expiration
+        const archiveExpiration = new Date(now);
+        archiveExpiration.setDate(archiveExpiration.getDate() + 7);
+        
+        updateData.archivedAt = now;
+        updateData.expiresAt = archiveExpiration;
         updateData.originalCreatedAt = listingData.createdAt;
       } else if (status === 'active') {
-        // When activating/restoring, set new createdAt and remove archive-related fields
-        updateData.createdAt = new Date();
+        // When activating/restoring, set new dates and remove archive-related fields
+        const standardExpiration = new Date(now);
+        standardExpiration.setDate(standardExpiration.getDate() + 30);
+        
+        updateData.createdAt = now;
+        updateData.expiresAt = standardExpiration;
         updateData.archivedAt = null;
         updateData.originalCreatedAt = null;
       } else {
-        // For inactive status, remove archive-related fields
+        // For inactive status, keep current expiration but remove archive-related fields
         updateData.archivedAt = null;
         updateData.originalCreatedAt = null;
       }
@@ -145,7 +154,8 @@ export function useListings({ userId, searchQuery, showOnlyActive = false }: Use
             ? { 
                 ...listing, 
                 ...updateData,
-                createdAt: updateData.createdAt || listing.createdAt 
+                createdAt: updateData.createdAt || listing.createdAt,
+                expiresAt: updateData.expiresAt || listing.expiresAt
               } 
             : listing
         )
