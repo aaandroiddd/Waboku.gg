@@ -60,10 +60,14 @@ const DashboardComponent = () => {
   const { tab = 'active', new: newListingId } = router.query;
   const { user, loading: authLoading } = useAuth();
   const [error, setError] = useState<string | null>(null);
-  const { listings, loading: listingsLoading, error: listingsError, refreshListings, updateListingStatus, permanentlyDeleteListing } = useListings({ 
+  const { listings: allListings, loading: listingsLoading, error: listingsError, refreshListings, updateListingStatus, permanentlyDeleteListing } = useListings({ 
     userId: user?.uid, // This ensures we only get listings for the current user
-    showOnlyActive: true 
+    showOnlyActive: false // Get all listings, both active and archived
   });
+
+  // Separate active and archived listings
+  const activeListings = allListings.filter(listing => listing.status === 'active');
+  const archivedListings = allListings.filter(listing => listing.status === 'archived');
   const { profile, loading: profileLoading } = useProfile(user?.uid || null);
   
   const loading = authLoading || listingsLoading || profileLoading;
@@ -163,9 +167,9 @@ const DashboardComponent = () => {
           duration: 3000,
         });
       } else {
-        await updateListingStatus(listingId, 'inactive');
+        await updateListingStatus(listingId, 'archived');
         toast({
-          title: "Listing deactivated",
+          title: "Listing archived",
           description: "The listing has been moved to your archived listings.",
           duration: 3000,
         });

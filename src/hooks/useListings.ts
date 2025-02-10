@@ -423,15 +423,19 @@ export function useListings({ userId, searchQuery, showOnlyActive = false }: Use
         // Get current date for expiration check
         const now = new Date();
         
-        // Create base query for active listings
+        // Create base query for listings
         let queryConstraints: QueryConstraint[] = [
-          where('status', '==', 'active'),
           orderBy('createdAt', 'desc')
         ];
 
         // Add user filter if userId is provided
         if (userId) {
           queryConstraints.unshift(where('userId', '==', userId));
+        }
+
+        // Add status filter if showOnlyActive is true
+        if (showOnlyActive) {
+          queryConstraints.unshift(where('status', '==', 'active'));
         }
 
         const q = query(listingsRef, ...queryConstraints);
