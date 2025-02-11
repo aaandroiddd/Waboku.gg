@@ -165,49 +165,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     });
 
-    // Step 3: Delete archived listings older than 7 days
-    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-    const archivedSnapshot = await db.collection('listings')
-      .where('status', '==', 'archived')
-      .where('archivedAt', '<', Timestamp.fromDate(sevenDaysAgo))
-      .get();
-    
-    // Log the listings that will be deleted for debugging
-    console.log('[Archive Expired] Found expired archived listings:', archivedSnapshot.docs.map(doc => ({
-      id: doc.id,
-      archivedAt: doc.data().archivedAt?.toDate(),
-      userId: doc.data().userId,
-      title: doc.data().title
-    })));
-
-    console.log(`[Archive Expired] Processing ${archivedSnapshot.size} archived listings for deletion`);
-
-    archivedSnapshot.docs.forEach((doc) => {
-      try {
-        batch = createNewBatchIfNeeded(db, batch, batchOperations);
-        
-        batch.delete(doc.ref);
-        batchOperations++;
-        totalDeleted++;
-        
-        if (batchOperations >= BATCH_SIZE) {
-          batch.commit();
-          completedBatches++;
-          console.log(`[Archive Expired] Committed batch ${completedBatches} with ${batchOperations} operations`);
-          batch = db.batch();
-          batchOperations = 0;
-        }
-        
-        console.log(`[Archive Expired] Marked listing ${doc.id} for deletion`, {
-          archivedAt: doc.data()?.archivedAt?.toDate().toISOString()
-        });
-      } catch (error) {
-        logError('Processing archived listing', error, {
-          listingId: doc.id,
-          data: doc.data()
-        });
-      }
-    });
+    // Removed deletion of archived listings as it's handled by cleanup-archived.ts
     
     // Commit any remaining changes
     if (batchOperations > 0) {
