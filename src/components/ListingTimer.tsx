@@ -111,13 +111,13 @@ export function ListingTimer({ createdAt, archivedAt, accountTier, status, listi
       setProgress(progressValue);
 
       // Only trigger cleanup for active listings that expire
-      // Archived listings should be handled by the scheduled cleanup job
-      if (remaining === 0 && !hasTriggeredCleanup && status === 'active') {
+      // Archived listings are handled by the CRON job
+      if (remaining === 0) {
         setIsExpired(true);
-        setHasTriggeredCleanup(true);
-        triggerCleanup();
-      } else if (remaining === 0) {
-        setIsExpired(true);
+        if (!hasTriggeredCleanup && status === 'active') {
+          setHasTriggeredCleanup(true);
+          triggerCleanup();
+        }
       }
     };
 

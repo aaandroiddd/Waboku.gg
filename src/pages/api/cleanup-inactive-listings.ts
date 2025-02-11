@@ -3,6 +3,17 @@ import { getFirebaseAdmin } from '@/lib/firebase-admin';
 import { Timestamp } from 'firebase-admin/firestore';
 import { ACCOUNT_TIERS } from '@/types/account';
 
+// Maximum number of operations in a single batch
+const BATCH_SIZE = 500;
+
+// Helper function to create a new batch when the current one is full
+const createNewBatchIfNeeded = (db: FirebaseFirestore.Firestore, currentBatch: FirebaseFirestore.WriteBatch, operationCount: number) => {
+  if (operationCount >= BATCH_SIZE) {
+    return db.batch();
+  }
+  return currentBatch;
+};
+
 // Helper function to log errors with context
 const logError = (context: string, error: any, additionalInfo?: any) => {
   console.error(`[${new Date().toISOString()}] Error in ${context}:`, {
