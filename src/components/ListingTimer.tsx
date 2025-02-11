@@ -85,7 +85,7 @@ export function ListingTimer({ createdAt, archivedAt, accountTier, status, listi
       let startTime: number;
       let duration: number;
 
-      if (status === 'archived') {
+      if (status === 'archived' && archivedAt) {
         // For archived listings, use archivedAt as start time and 7 days duration
         startTime = archivedAt instanceof Date 
           ? archivedAt.getTime() 
@@ -112,12 +112,10 @@ export function ListingTimer({ createdAt, archivedAt, accountTier, status, listi
 
       // Only trigger cleanup for active listings that expire
       // Archived listings are handled by the CRON job
-      if (remaining === 0) {
+      if (remaining === 0 && status === 'active' && !hasTriggeredCleanup) {
         setIsExpired(true);
-        if (!hasTriggeredCleanup && status === 'active') {
-          setHasTriggeredCleanup(true);
-          triggerCleanup();
-        }
+        setHasTriggeredCleanup(true);
+        triggerCleanup();
       }
     };
 
@@ -153,14 +151,13 @@ export function ListingTimer({ createdAt, archivedAt, accountTier, status, listi
     return 'bg-blue-500';
   };
 
-  if (isExpired || timeLeft === 0) {
+  if (isExpired && status === 'active') {
     return (
       <div className="flex flex-col gap-2">
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
-            {isProcessing ? (status === 'active' ? "Archiving listing..." : "Deleting listing...") : 
-             (status === 'active' ? "Listing expired" : "Archived listing expired")}
+            {isProcessing ? "Archiving listing..." : "Listing expired"}
           </AlertDescription>
         </Alert>
         <Progress value={100} className="h-2" />
@@ -180,7 +177,7 @@ export function ListingTimer({ createdAt, archivedAt, accountTier, status, listi
           </AlertDescription>
         </Alert>
       )}
-      {status === 'archived' && (
+      {status === 'archived' && archivedAt && (
         <Alert variant="warning">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
