@@ -85,13 +85,13 @@ export function ListingTimer({ createdAt, archivedAt, accountTier, status, listi
       let startTime: number;
       let duration: number;
 
-      if (status === 'archived' && archivedAt) {
+      if (status === 'archived') {
         // For archived listings, use archivedAt as start time and 7 days duration
         startTime = archivedAt instanceof Date 
           ? archivedAt.getTime() 
           : typeof archivedAt === 'string' 
             ? Date.parse(archivedAt) 
-            : archivedAt as number;
+            : Number(archivedAt);
         duration = 7 * 24 * 60 * 60 * 1000; // 7 days for archived listings
       } else {
         // For active listings, use createdAt and tier duration
@@ -99,7 +99,7 @@ export function ListingTimer({ createdAt, archivedAt, accountTier, status, listi
           ? createdAt.getTime() 
           : typeof createdAt === 'string' 
             ? Date.parse(createdAt) 
-            : createdAt as number;
+            : Number(createdAt);
         duration = ACCOUNT_TIERS[accountTier].listingDuration * 60 * 60 * 1000;
       }
       
@@ -110,12 +110,13 @@ export function ListingTimer({ createdAt, archivedAt, accountTier, status, listi
       setTimeLeft(remaining);
       setProgress(progressValue);
 
-      // Only trigger cleanup for active listings that expire
-      // Archived listings are handled by the CRON job
-      if (remaining === 0 && status === 'active' && !hasTriggeredCleanup) {
+      // Handle both active and archived listings expiration
+      if (remaining === 0 && !hasTriggeredCleanup) {
         setIsExpired(true);
         setHasTriggeredCleanup(true);
-        triggerCleanup();
+        if (status === 'active' || status === 'archived') {
+          triggerCleanup();
+        }
       }
     };
 
