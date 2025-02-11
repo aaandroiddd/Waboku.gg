@@ -37,14 +37,6 @@ export const useMessages = (chatId?: string) => {
     }
 
     console.log(`Loading messages for chat: ${chatId}`);
-    const { database } = getFirebaseServices();
-    
-    if (!database) {
-      console.error('Realtime Database not initialized');
-      setLoading(false);
-      return;
-    }
-
     setLoading(true);
     const messagesRef = ref(database, `messages/${chatId}`);
     console.log('Fetching messages from:', messagesRef.toString());

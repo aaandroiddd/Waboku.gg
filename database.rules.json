@@ -74,8 +74,9 @@
 
     "messages": {
       ".read": "auth != null",
+      ".write": "auth != null",
       ".indexOn": ["timestamp", "chatId"],
-      "$messageGroupId": {
+      "$chatId": {
         ".read": "auth != null",
         ".write": "auth != null",
         "$messageId": {
