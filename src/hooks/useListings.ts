@@ -78,16 +78,38 @@ export function useListings({ userId, searchQuery, showOnlyActive = false }: Use
         throw new Error('You do not have permission to delete this listing');
       }
 
-      // Delete the listing
-      await deleteDoc(listingRef);
+      // Set up archive data with 7-day expiration
+      const now = new Date();
+      const sevenDaysFromNow = new Date(now);
+      sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
+
+      // Update the listing to archived status instead of deleting
+      await updateDoc(listingRef, {
+        status: 'archived',
+        archivedAt: now,
+        originalCreatedAt: listingData.createdAt,
+        expirationReason: 'user_deleted',
+        expiresAt: sevenDaysFromNow
+      });
       
-      // Update local state
-      setListings(prevListings => prevListings.filter(listing => listing.id !== listingId));
+      // Update local state to reflect the archived status
+      setListings(prevListings => prevListings.map(listing => 
+        listing.id === listingId 
+          ? {
+              ...listing,
+              status: 'archived',
+              archivedAt: now,
+              originalCreatedAt: listing.createdAt,
+              expirationReason: 'user_deleted',
+              expiresAt: sevenDaysFromNow
+            }
+          : listing
+      ));
 
       return true;
     } catch (error: any) {
-      console.error('Error deleting listing:', error);
-      throw new Error(error.message || 'Error deleting listing');
+      console.error('Error archiving listing:', error);
+      throw new Error(error.message || 'Error archiving listing');
     }
   };
 
