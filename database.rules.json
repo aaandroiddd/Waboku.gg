@@ -115,7 +115,7 @@
       ".indexOn": ["createdAt", "participants"],
       "$chatId": {
         ".read": "auth != null",
-        ".write": "auth != null",
+        ".write": "auth != null && (!data.exists() || data.child('participants').child(auth.uid).exists())",
         ".validate": "newData.hasChildren(['participants'])",
         "participants": {
           "$uid": {
