@@ -439,12 +439,15 @@ export function useListings({ userId, searchQuery, showOnlyActive = false }: Use
           queryConstraints.push(where('userId', '==', userId));
         }
 
-        // Add status and expiration filters for active listings
+        // Add status and expiration filters
         if (showOnlyActive) {
-          queryConstraints.push(
-            where('status', '==', 'active'),
-            where('expiresAt', '>', now)
-          );
+          queryConstraints.push(where('status', '==', 'active'));
+        } else if (userId) {
+          // For user's own listings, show both active and archived
+          queryConstraints.push(where('status', 'in', ['active', 'archived']));
+        } else {
+          // For other cases, only show active listings
+          queryConstraints.push(where('status', '==', 'active'));
         }
 
         // Always add sorting by creation date

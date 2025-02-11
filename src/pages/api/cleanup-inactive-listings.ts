@@ -167,27 +167,31 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         await processBatch(inactiveSnapshot.docs, processInactiveListing, db);
       }
 
-      // Step 3: Delete all archived listings
+      // Step 3: Delete archived listings that have exceeded their 7-day retention period
       console.log('[Cleanup Inactive Listings] Processing archived listings...');
       
-      // First, get archived listings older than 7 days
-      const oldArchivedSnapshot = await db.collection('listings')
+      // Only get archived listings that are older than 7 days based on their archivedAt timestamp
+      const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+      const expiredArchivedSnapshot = await db.collection('listings')
         .where('status', '==', 'archived')
-        .where('archivedAt', '<', Timestamp.fromDate(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)))
+        .where('archivedAt', '<', Timestamp.fromDate(sevenDaysAgo))
         .get();
 
-      // Then, get all remaining archived listings
-      const allArchivedSnapshot = await db.collection('listings')
-        .where('status', '==', 'archived')
-        .get();
-
-      console.log(`[Cleanup Inactive Listings] Found ${oldArchivedSnapshot.size} old archived listings and ${allArchivedSnapshot.size} total archived listings for deletion`);
+      console.log(`[Cleanup Inactive Listings] Found ${expiredArchivedSnapshot.size} expired archived listings for deletion`);
 
       const processArchivedListing = async (doc: FirebaseFirestore.QueryDocumentSnapshot, batch: FirebaseFirestore.WriteBatch) => {
         try {
-          console.log(`[Cleanup Inactive Listings] Deleting archived listing ${doc.id}`);
-          batch.delete(doc.ref);
-          totalDeleted++;
+          const data = doc.data();
+          const archivedAt = data.archivedAt?.toDate();
+          
+          // Double-check the archive date to ensure we're only deleting listings that are truly expired
+          if (archivedAt && archivedAt < sevenDaysAgo) {
+            console.log(`[Cleanup Inactive Listings] Deleting expired archived listing ${doc.id} (archived: ${archivedAt.toISOString()})`);
+            batch.delete(doc.ref);
+            totalDeleted++;
+          } else {
+            console.log(`[Cleanup Inactive Listings] Skipping non-expired archived listing ${doc.id}`);
+          }
         } catch (error) {
           logError('Processing archived listing', error, {
             listingId: doc.id,
@@ -197,20 +201,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }
       };
 
-      // Process old archived listings first
-      if (oldArchivedSnapshot.size > 0) {
-        await processBatch(oldArchivedSnapshot.docs, processArchivedListing, db);
-      }
-
-      // Then process any remaining archived listings
-      if (allArchivedSnapshot.size > 0) {
-        const remainingDocs = allArchivedSnapshot.docs.filter(
-          doc => !oldArchivedSnapshot.docs.some(oldDoc => oldDoc.id === doc.id)
-        );
-        if (remainingDocs.length > 0) {
-          console.log(`[Cleanup Inactive Listings] Processing ${remainingDocs.length} remaining archived listings`);
-          await processBatch(remainingDocs, processArchivedListing, db);
-        }
+      if (expiredArchivedSnapshot.size > 0) {
+        await processBatch(expiredArchivedSnapshot.docs, processArchivedListing, db);
       }
     }
     
