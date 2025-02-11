@@ -111,15 +111,26 @@ export const useMessages = (chatId?: string) => {
     
     if (!chats) return null;
 
-    // Find chat with exact listing match only
-    const existingChatId = Object.entries(chats).find(([_, chat]: [string, any]) => {
+    // First try to find a chat with the same listing
+    let existingChatId = Object.entries(chats).find(([_, chat]: [string, any]) => {
       const participants = chat.participants || {};
       const notDeleted = !chat.deletedBy?.[userId];
       return participants[userId] && 
              participants[receiverId] && 
-             chat.listingId === listingId && // Strict equality check for listingId
+             chat.listingId === listingId && 
              notDeleted;
     })?.[0];
+
+    // If no chat found with the same listing, find any existing chat between these users
+    if (!existingChatId) {
+      existingChatId = Object.entries(chats).find(([_, chat]: [string, any]) => {
+        const participants = chat.participants || {};
+        const notDeleted = !chat.deletedBy?.[userId];
+        return participants[userId] && 
+               participants[receiverId] && 
+               notDeleted;
+      })?.[0];
+    }
 
     return existingChatId;
   };
