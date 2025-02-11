@@ -39,7 +39,7 @@ export default function ListingPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isZoomDialogOpen, setIsZoomDialogOpen] = useState(false);
-  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [currentImageIndex, setCurrentImageIndex] = useState(listing?.coverImageIndex || 0);
   const [isFavorited, setIsFavorited] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const { user } = useAuth();
@@ -95,6 +95,7 @@ export default function ListingPage() {
           condition: data.condition || 'unknown',
           game: data.game || 'other',
           imageUrls: Array.isArray(data.imageUrls) ? data.imageUrls : [],
+          coverImageIndex: data.coverImageIndex || 0,
           userId: data.userId || '',
           username: data.username || 'Unknown User',
           createdAt: data.createdAt?.toDate() || new Date(),
@@ -262,6 +263,7 @@ export default function ListingPage() {
                   <Carousel 
                     className="w-full h-[300px] md:h-[400px] touch-pan-y"
                     onSelect={(index) => setCurrentImageIndex(index)}
+                    defaultIndex={listing.coverImageIndex}
                   >
                     <div className="absolute top-4 right-4 z-10">
                       <Badge variant="secondary" className="bg-background/80 backdrop-blur-sm">
