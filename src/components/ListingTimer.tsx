@@ -110,11 +110,14 @@ export function ListingTimer({ createdAt, archivedAt, accountTier, status, listi
       setTimeLeft(remaining);
       setProgress(progressValue);
 
-      // Check if the listing has expired
-      if (remaining === 0 && !hasTriggeredCleanup) {
+      // Only trigger cleanup for active listings that expire
+      // Archived listings should be handled by the scheduled cleanup job
+      if (remaining === 0 && !hasTriggeredCleanup && status === 'active') {
         setIsExpired(true);
         setHasTriggeredCleanup(true);
         triggerCleanup();
+      } else if (remaining === 0) {
+        setIsExpired(true);
       }
     };
 
