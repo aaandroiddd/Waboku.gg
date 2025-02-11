@@ -176,6 +176,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         .where('status', '==', 'archived')
         .where('archivedAt', '<', Timestamp.fromDate(sevenDaysAgo))
         .get();
+      
+      // Log the listings that will be deleted for debugging
+      console.log('[Cleanup Inactive Listings] Found expired archived listings:', expiredArchivedSnapshot.docs.map(doc => ({
+        id: doc.id,
+        archivedAt: doc.data().archivedAt?.toDate(),
+        userId: doc.data().userId,
+        title: doc.data().title
+      })));
 
       console.log(`[Cleanup Inactive Listings] Found ${expiredArchivedSnapshot.size} expired archived listings for deletion`);
 

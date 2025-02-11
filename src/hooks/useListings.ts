@@ -444,7 +444,7 @@ export function useListings({ userId, searchQuery, showOnlyActive = false }: Use
           queryConstraints.push(where('status', '==', 'active'));
         } else if (userId) {
           // For user's own listings, show both active and archived
-          queryConstraints.push(where('status', 'in', ['active', 'archived']));
+          queryConstraints.push(where('status', 'in', ['active', 'archived', 'inactive']));
         } else {
           // For other cases, only show active listings
           queryConstraints.push(where('status', '==', 'active'));
