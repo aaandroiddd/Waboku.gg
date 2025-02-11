@@ -39,7 +39,13 @@ export default function ListingPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isZoomDialogOpen, setIsZoomDialogOpen] = useState(false);
-  const [currentImageIndex, setCurrentImageIndex] = useState(listing?.coverImageIndex || 0);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+
+  useEffect(() => {
+    if (listing?.coverImageIndex !== undefined) {
+      setCurrentImageIndex(listing.coverImageIndex);
+    }
+  }, [listing?.coverImageIndex]);
   const [isFavorited, setIsFavorited] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const { user } = useAuth();
