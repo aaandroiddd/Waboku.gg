@@ -84,13 +84,18 @@ export function useListings({ userId, searchQuery, showOnlyActive = false }: Use
       sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
 
       // Update the listing to archived status instead of deleting
-      await updateDoc(listingRef, {
+      const updateData = {
         status: 'archived',
         archivedAt: now,
         originalCreatedAt: listingData.createdAt,
         expirationReason: 'user_deleted',
-        expiresAt: sevenDaysFromNow
-      });
+        expiresAt: sevenDaysFromNow,
+        // Preserve the original listing data
+        previousStatus: listingData.status,
+        previousExpiresAt: listingData.expiresAt
+      };
+      
+      await updateDoc(listingRef, updateData);
       
       // Update local state to reflect the archived status
       setListings(prevListings => prevListings.map(listing => 
@@ -463,9 +468,10 @@ export function useListings({ userId, searchQuery, showOnlyActive = false }: Use
 
         // Add status and expiration filters
         if (showOnlyActive) {
+          // For active listings view, only show truly active listings
           queryConstraints.push(where('status', '==', 'active'));
         } else if (userId) {
-          // For user's own listings, show both active and archived
+          // For user's own listings, show all statuses but filter archived ones by expiration
           queryConstraints.push(where('status', 'in', ['active', 'archived', 'inactive']));
         } else {
           // For other cases, only show active listings

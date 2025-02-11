@@ -91,7 +91,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             archivedAt: now,
             originalCreatedAt: data.createdAt,
             expirationReason: 'tier_duration_exceeded',
-            expiresAt: Timestamp.fromDate(sevenDaysFromNow)
+            expiresAt: Timestamp.fromDate(sevenDaysFromNow),
+            // Store previous state
+            previousStatus: data.status,
+            previousExpiresAt: data.expiresAt
           });
           
           batchOperations++;
