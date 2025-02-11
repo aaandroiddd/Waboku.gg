@@ -43,6 +43,8 @@ const EditListingPage = () => {
     gradeLevel: undefined as number | undefined,
     gradingCompany: undefined as string | undefined,
     quantity: 1,
+    imageUrls: [] as string[],
+    coverImageIndex: 0,
   });
 
   const [errors, setErrors] = useState<{
@@ -130,6 +132,8 @@ const EditListingPage = () => {
           gradeLevel: listingData.gradeLevel,
           gradingCompany: listingData.gradingCompany,
           quantity: listingData.quantity || 1,
+          imageUrls: listingData.imageUrls || [],
+          coverImageIndex: listingData.coverImageIndex || 0,
         });
       } catch (error) {
         console.error('Error fetching listing:', error);
@@ -173,6 +177,7 @@ const EditListingPage = () => {
         state: formData.state,
         isGraded: formData.isGraded,
         quantity: formData.quantity,
+        coverImageIndex: formData.coverImageIndex,
         updatedAt: new Date(),
       };
 
@@ -444,6 +449,53 @@ const EditListingPage = () => {
                   initialState={formData.state}
                   error={errors.location}
                 />
+
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <Label>Listing Images</Label>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger>
+                          <HelpCircle className="h-4 w-4 text-muted-foreground" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p className="max-w-xs">Click on an image to set it as the cover photo</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
+
+                  {formData.imageUrls.length > 0 && (
+                    <div className="grid grid-cols-4 gap-4">
+                      {formData.imageUrls.map((url, index) => (
+                        <div 
+                          key={index}
+                          className={`relative aspect-square rounded-lg overflow-hidden border-2 cursor-pointer transition-all
+                            ${index === formData.coverImageIndex ? 'border-primary' : 'border-gray-200 hover:border-gray-300'}`}
+                          onClick={() => {
+                            setFormData(prev => ({ ...prev, coverImageIndex: index }));
+                            // Update the cover image index in the database
+                            if (id) {
+                              const listingRef = doc(db, 'listings', id as string);
+                              updateDoc(listingRef, { coverImageIndex: index });
+                            }
+                          }}
+                        >
+                          <img
+                            src={url}
+                            alt={`Image ${index + 1}`}
+                            className="w-full h-full object-cover"
+                          />
+                          {index === formData.coverImageIndex && (
+                            <div className="absolute top-2 right-2 bg-primary text-primary-foreground text-xs px-2 py-1 rounded">
+                              Cover
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div className="flex justify-between pt-6">

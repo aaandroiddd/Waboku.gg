@@ -296,6 +296,7 @@ export function useListings({ userId, searchQuery, showOnlyActive = false }: Use
       const newListing = {
         ...dataWithoutCard,
         imageUrls,
+        coverImageIndex: cleanListingData.coverImageIndex || 0,
         userId: user.uid,
         username: user.displayName || 'Anonymous',
         createdAt: new Date(),
