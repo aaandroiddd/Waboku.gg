@@ -90,13 +90,23 @@ export function ListingTimer({ createdAt, archivedAt, accountTier, status, listi
         try {
           if (archivedAt instanceof Date) {
             startTime = archivedAt.getTime();
-          } else if (typeof archivedAt === 'object' && archivedAt._seconds) {
-            // Handle Firestore Timestamp
-            startTime = archivedAt._seconds * 1000;
+          } else if (typeof archivedAt === 'object') {
+            // Handle Firestore Timestamp with seconds and nanoseconds
+            if ('seconds' in archivedAt) {
+              startTime = archivedAt.seconds * 1000;
+            } else if ('_seconds' in archivedAt) {
+              startTime = archivedAt._seconds * 1000;
+            } else {
+              console.error('Unknown timestamp format:', archivedAt);
+              startTime = now;
+            }
           } else if (typeof archivedAt === 'string') {
             startTime = Date.parse(archivedAt);
+          } else if (typeof archivedAt === 'number') {
+            startTime = archivedAt;
           } else {
-            startTime = Number(archivedAt);
+            console.error('Invalid archivedAt type:', typeof archivedAt);
+            startTime = now;
           }
           
           if (isNaN(startTime)) {
