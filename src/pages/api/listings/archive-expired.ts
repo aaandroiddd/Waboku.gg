@@ -82,11 +82,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         if (new Date() > expirationTime) {
           batch = createNewBatchIfNeeded(db, batch, batchOperations);
           
+          const now = Timestamp.now();
+          const sevenDaysFromNow = new Date();
+          sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
+          
           batch.update(doc.ref, {
             status: 'archived',
-            archivedAt: Timestamp.now(),
+            archivedAt: now,
             originalCreatedAt: data.createdAt,
-            expirationReason: 'tier_duration_exceeded'
+            expirationReason: 'tier_duration_exceeded',
+            expiresAt: Timestamp.fromDate(sevenDaysFromNow)
           });
           
           batchOperations++;
@@ -135,11 +140,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
         batch = createNewBatchIfNeeded(db, batch, batchOperations);
         
+        const now = Timestamp.now();
+        const sevenDaysFromNow = new Date();
+        sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
+        
         batch.update(doc.ref, {
           status: 'archived',
-          archivedAt: Timestamp.now(),
+          archivedAt: now,
           originalCreatedAt: data.createdAt,
-          expirationReason: 'inactive_timeout'
+          expirationReason: 'inactive_timeout',
+          expiresAt: Timestamp.fromDate(sevenDaysFromNow)
         });
         
         batchOperations++;
