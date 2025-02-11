@@ -85,21 +85,51 @@ export function ListingTimer({ createdAt, archivedAt, accountTier, status, listi
       let startTime: number;
       let duration: number;
 
-      if (status === 'archived') {
+      if (status === 'archived' && archivedAt) {
         // For archived listings, use archivedAt as start time and 7 days duration
-        startTime = archivedAt instanceof Date 
-          ? archivedAt.getTime() 
-          : typeof archivedAt === 'string' 
-            ? Date.parse(archivedAt) 
-            : Number(archivedAt);
+        try {
+          if (archivedAt instanceof Date) {
+            startTime = archivedAt.getTime();
+          } else if (typeof archivedAt === 'object' && archivedAt._seconds) {
+            // Handle Firestore Timestamp
+            startTime = archivedAt._seconds * 1000;
+          } else if (typeof archivedAt === 'string') {
+            startTime = Date.parse(archivedAt);
+          } else {
+            startTime = Number(archivedAt);
+          }
+          
+          if (isNaN(startTime)) {
+            console.error('Invalid archivedAt timestamp:', archivedAt);
+            startTime = now; // Fallback to current time
+          }
+        } catch (error) {
+          console.error('Error parsing archivedAt:', error);
+          startTime = now; // Fallback to current time
+        }
         duration = 7 * 24 * 60 * 60 * 1000; // 7 days for archived listings
       } else {
         // For active listings, use createdAt and tier duration
-        startTime = createdAt instanceof Date 
-          ? createdAt.getTime() 
-          : typeof createdAt === 'string' 
-            ? Date.parse(createdAt) 
-            : Number(createdAt);
+        try {
+          if (createdAt instanceof Date) {
+            startTime = createdAt.getTime();
+          } else if (typeof createdAt === 'object' && createdAt._seconds) {
+            // Handle Firestore Timestamp
+            startTime = createdAt._seconds * 1000;
+          } else if (typeof createdAt === 'string') {
+            startTime = Date.parse(createdAt);
+          } else {
+            startTime = Number(createdAt);
+          }
+          
+          if (isNaN(startTime)) {
+            console.error('Invalid createdAt timestamp:', createdAt);
+            startTime = now; // Fallback to current time
+          }
+        } catch (error) {
+          console.error('Error parsing createdAt:', error);
+          startTime = now; // Fallback to current time
+        }
         duration = ACCOUNT_TIERS[accountTier].listingDuration * 60 * 60 * 1000;
       }
       
