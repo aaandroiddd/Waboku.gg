@@ -55,10 +55,24 @@ export default function CleanupPage() {
     setResult(null);
 
     try {
+      // First verify admin secret
+      const verifyResponse = await fetch('/api/admin/verify', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ adminSecret }),
+      });
+
+      if (!verifyResponse.ok) {
+        throw new Error('Invalid admin credentials');
+      }
+
+      // If admin verification passed, proceed with storage cleanup using CRON_SECRET
       const response = await fetch('/api/cleanup/storage-cleanup', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${adminSecret}`,
+          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_ADMIN_SECRET}`,
           'Content-Type': 'application/json',
         },
       });

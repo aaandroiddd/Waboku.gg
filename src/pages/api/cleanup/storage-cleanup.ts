@@ -6,11 +6,11 @@ export default async function handler(
   res: NextApiResponse
 ) {
   try {
-    // Verify the request is authorized using CRON_SECRET
+    // Verify the request is authorized using ADMIN_SECRET
     const authHeader = req.headers.authorization;
     const token = authHeader?.split(' ')[1];  // Get the token part from "Bearer TOKEN"
     
-    if (!token || token !== process.env.CRON_SECRET) {
+    if (!token || token !== process.env.ADMIN_SECRET) {
       console.error('Unauthorized attempt to access storage cleanup');
       return res.status(401).json({ error: 'Unauthorized' });
     }
