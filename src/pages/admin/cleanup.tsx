@@ -27,12 +27,25 @@ export default function CleanupPage() {
     setResult(null);
 
     try {
-      const response = await fetch('/api/admin/cleanup-listings', {
+      // First verify admin secret
+      const verifyResponse = await fetch('/api/admin/verify', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ adminSecret }),
+      });
+
+      if (!verifyResponse.ok) {
+        throw new Error('Invalid admin credentials');
+      }
+
+      const response = await fetch('/api/admin/cleanup-listings', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${adminSecret}`,
+          'Content-Type': 'application/json',
+        },
       });
 
       const data = await response.json();

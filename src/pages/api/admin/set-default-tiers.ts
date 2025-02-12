@@ -10,9 +10,12 @@ export default async function handler(
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  // Verify admin secret
-  const adminSecret = req.headers['x-admin-secret'];
-  if (adminSecret !== process.env.ADMIN_SECRET) {
+  // Verify admin authorization
+  const authHeader = req.headers.authorization;
+  const token = authHeader?.split(' ')[1];  // Get the token part from "Bearer TOKEN"
+  
+  if (!token || token !== process.env.ADMIN_SECRET) {
+    console.error('Unauthorized attempt to access admin endpoint');
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
