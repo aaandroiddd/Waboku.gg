@@ -46,6 +46,10 @@ export default function ListingPage() {
       setCurrentImageIndex(listing.coverImageIndex);
     }
   }, [listing?.coverImageIndex]);
+
+  const handleCarouselChange = (index: number) => {
+    setCurrentImageIndex(index);
+  };
   const [isFavorited, setIsFavorited] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const { user } = useAuth();
@@ -268,8 +272,9 @@ export default function ListingPage() {
                 <div className="relative">
                   <Carousel 
                     className="w-full h-[300px] md:h-[400px] touch-pan-y"
-                    onSelect={(index) => setCurrentImageIndex(index)}
+                    onSelect={handleCarouselChange}
                     defaultIndex={listing.coverImageIndex || 0}
+                    index={currentImageIndex}
                   >
                     <div className="absolute top-4 right-4 z-10">
                       <Badge variant="secondary" className="bg-background/80 backdrop-blur-sm">
@@ -433,8 +438,9 @@ export default function ListingPage() {
             <div className="relative w-full h-[90vh] flex items-center justify-center">
               <Carousel 
                 className="w-full h-full"
-                onSelect={(index) => setCurrentImageIndex(index)}
+                onSelect={handleCarouselChange}
                 defaultIndex={listing.coverImageIndex || 0}
+                index={currentImageIndex}
               >
                 <div className="absolute top-4 left-4 z-20">
                   <Badge variant="secondary" className="bg-background/80 backdrop-blur-sm">
