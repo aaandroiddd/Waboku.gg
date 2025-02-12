@@ -160,7 +160,7 @@ export const ListingCard = memo(({ listing, isFavorite, onFavoriteClick, getCond
                     }}
                   />
                   <Image
-                    src={listing.imageUrls[0]}
+                    src={listing.imageUrls[listing.coverImageIndex || 0]}
                     alt={listing.title}
                     className="rounded-lg transition-opacity duration-300 opacity-0"
                     fill

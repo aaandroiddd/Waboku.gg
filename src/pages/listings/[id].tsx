@@ -269,7 +269,7 @@ export default function ListingPage() {
                   <Carousel 
                     className="w-full h-[300px] md:h-[400px] touch-pan-y"
                     onSelect={(index) => setCurrentImageIndex(index)}
-                    defaultIndex={listing.coverImageIndex}
+                    defaultIndex={listing.coverImageIndex || 0}
                   >
                     <div className="absolute top-4 right-4 z-10">
                       <Badge variant="secondary" className="bg-background/80 backdrop-blur-sm">
@@ -439,7 +439,7 @@ export default function ListingPage() {
               <Carousel 
                 className="w-full h-full"
                 onSelect={(index) => setCurrentImageIndex(index)}
-                defaultIndex={currentImageIndex}
+                defaultIndex={listing.coverImageIndex || 0}
               >
                 <div className="absolute top-4 left-4 z-20">
                   <Badge variant="secondary" className="bg-background/80 backdrop-blur-sm">
