@@ -48,7 +48,9 @@ export default function ListingPage() {
   }, [listing?.coverImageIndex]);
 
   const handleCarouselChange = (index: number) => {
-    setCurrentImageIndex(index);
+    // Ensure the index is within bounds
+    const validIndex = Math.max(0, Math.min(index, (listing?.imageUrls?.length || 1) - 1));
+    setCurrentImageIndex(validIndex);
   };
   const [isFavorited, setIsFavorited] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
