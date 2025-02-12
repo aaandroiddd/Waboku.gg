@@ -47,10 +47,10 @@ export default function ListingPage() {
     }
   }, [listing?.coverImageIndex]);
 
-  const handleCarouselChange = (index: number) => {
-    // Ensure the index is within bounds
-    const validIndex = Math.max(0, Math.min(index, (listing?.imageUrls?.length || 1) - 1));
-    setCurrentImageIndex(validIndex);
+  const handleCarouselChange = (api: any) => {
+    if (!api) return;
+    const index = api.selectedScrollSnap();
+    setCurrentImageIndex(index);
   };
   const [isFavorited, setIsFavorited] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);

@@ -17,6 +17,7 @@ type CarouselProps = {
   plugins?: CarouselPlugin
   orientation?: "horizontal" | "vertical"
   setApi?: (api: CarouselApi) => void
+  onSelect?: (api: CarouselApi) => void
 }
 
 type CarouselContextProps = {
@@ -73,7 +74,11 @@ const Carousel = React.forwardRef<
 
       setCanScrollPrev(api.canScrollPrev())
       setCanScrollNext(api.canScrollNext())
-    }, [])
+      
+      if (props.onSelect) {
+        props.onSelect(api)
+      }
+    }, [props.onSelect])
 
     const scrollPrev = React.useCallback(() => {
       api?.scrollPrev()
