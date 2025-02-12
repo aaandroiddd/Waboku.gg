@@ -474,11 +474,6 @@ const EditListingPage = () => {
                             ${index === formData.coverImageIndex ? 'border-primary' : 'border-gray-200 hover:border-gray-300'}`}
                           onClick={() => {
                             setFormData(prev => ({ ...prev, coverImageIndex: index }));
-                            // Update the cover image index in the database
-                            if (id) {
-                              const listingRef = doc(db, 'listings', id as string);
-                              updateDoc(listingRef, { coverImageIndex: index });
-                            }
                           }}
                         >
                           <img
