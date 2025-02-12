@@ -160,17 +160,16 @@ export const ListingCard = memo(({ listing, isFavorite, onFavoriteClick, getCond
                     }}
                   />
                   <Image
-                    src={listing.imageUrls[listing.coverImageIndex || 0]}
+                    src={listing.imageUrls[listing.coverImageIndex ?? 0]}
                     alt={listing.title}
-                    className="rounded-lg transition-opacity duration-300 opacity-0"
+                    className="rounded-lg object-cover"
                     fill
                     sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                     priority={false}
                     quality={85}
-                    style={{ objectFit: 'cover' }}
-                    onLoadingComplete={(image) => {
-                      image.classList.remove('opacity-0');
-                      image.classList.add('opacity-100');
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      target.src = '/images/rect.png';
                     }}
                   />
                 </motion.div>

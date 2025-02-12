@@ -291,16 +291,11 @@ export default function ListingPage() {
                                     src={url}
                                     alt={`${listing.title} - Image ${index + 1}`}
                                     fill
-                                    className="object-contain rounded-lg opacity-0 transition-opacity duration-300 data-[loaded=true]:opacity-100"
-                                    data-loaded="false"
+                                    className="object-contain rounded-lg"
                                     sizes="(max-width: 768px) 90vw, (max-width: 1200px) 50vw, 33vw"
                                     priority={index === 0}
                                     loading={index === 0 ? "eager" : "lazy"}
                                     quality={100}
-                                    onLoad={(e) => {
-                                      const target = e.target as HTMLImageElement;
-                                      target.dataset.loaded = "true";
-                                    }}
                                     onError={(e) => {
                                       const target = e.target as HTMLImageElement;
                                       target.src = '/images/rect.png';
