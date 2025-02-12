@@ -1,9 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { getFirebaseAdmin } from '@/lib/firebase-admin';
 
-// Initialize Firebase Admin
-const admin = getFirebaseAdmin();
-
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
@@ -11,7 +8,9 @@ export default async function handler(
   try {
     // Verify the request is authorized using CRON_SECRET
     const authHeader = req.headers.authorization;
-    if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+    const token = authHeader?.split(' ')[1];  // Get the token part from "Bearer TOKEN"
+    
+    if (!token || token !== process.env.CRON_SECRET) {
       console.error('Unauthorized attempt to access storage cleanup');
       return res.status(401).json({ error: 'Unauthorized' });
     }
@@ -21,6 +20,8 @@ export default async function handler(
       return res.status(405).json({ error: 'Method not allowed' });
     }
 
+    // Initialize Firebase Admin
+    const admin = getFirebaseAdmin();
     const storage = admin.storage;
     const bucket = storage.bucket();
 
