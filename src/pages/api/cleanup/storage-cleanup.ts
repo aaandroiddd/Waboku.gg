@@ -1,9 +1,8 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { initAdmin } from '@/lib/firebase-admin';
-import { getStorage } from 'firebase-admin/storage';
+import { getFirebaseAdmin } from '@/lib/firebase-admin';
 
 // Initialize Firebase Admin
-const admin = initAdmin();
+const admin = getFirebaseAdmin();
 
 export default async function handler(
   req: NextApiRequest,
@@ -22,7 +21,7 @@ export default async function handler(
       return res.status(405).json({ error: 'Method not allowed' });
     }
 
-    const storage = getStorage();
+    const storage = admin.storage;
     const bucket = storage.bucket();
 
     // Calculate the date 60 days ago
