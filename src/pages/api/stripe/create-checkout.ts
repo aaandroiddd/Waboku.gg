@@ -29,13 +29,25 @@ export default async function handler(
   try {
     // Validate environment variables first
     if (!process.env.STRIPE_SECRET_KEY) {
-      throw new Error('STRIPE_SECRET_KEY is not configured');
+      console.error('Missing STRIPE_SECRET_KEY');
+      return res.status(500).json({
+        error: 'Configuration error',
+        message: 'Payment service configuration is incomplete (missing secret key)'
+      });
     }
     if (!process.env.STRIPE_PREMIUM_PRICE_ID) {
-      throw new Error('STRIPE_PREMIUM_PRICE_ID is not configured');
+      console.error('Missing STRIPE_PREMIUM_PRICE_ID');
+      return res.status(500).json({
+        error: 'Configuration error',
+        message: 'Payment service configuration is incomplete (missing price ID)'
+      });
     }
     if (!process.env.NEXT_PUBLIC_APP_URL) {
-      throw new Error('NEXT_PUBLIC_APP_URL is not configured');
+      console.error('Missing NEXT_PUBLIC_APP_URL');
+      return res.status(500).json({
+        error: 'Configuration error',
+        message: 'Application URL configuration is missing'
+      });
     }
 
     const auth = getAuth();
@@ -78,7 +90,11 @@ export default async function handler(
       });
     } catch (error: any) {
       console.error('Stripe initialization error:', error);
-      throw new Error(`Failed to initialize Stripe: ${error.message}`);
+      return res.status(500).json({
+        error: 'Payment service error',
+        message: 'Failed to initialize payment service',
+        details: error.message
+      });
     }
 
     // Get user's account data
@@ -89,7 +105,11 @@ export default async function handler(
       console.log('User data retrieved:', JSON.stringify(userData));
     } catch (error: any) {
       console.error('Error fetching user data:', error);
-      throw new Error(`Failed to fetch user data: ${error.message}`);
+      return res.status(500).json({
+        error: 'Database error',
+        message: 'Failed to fetch user data',
+        details: error.message
+      });
     }
     
     console.log('Creating Stripe checkout session for user:', userId);
@@ -129,12 +149,19 @@ export default async function handler(
       session = await stripe.checkout.sessions.create(sessionConfig);
     } catch (error: any) {
       console.error('Stripe session creation error:', error);
-      throw new Error(`Failed to create Stripe session: ${error.message}`);
+      return res.status(500).json({
+        error: 'Payment service error',
+        message: 'Failed to create checkout session',
+        details: error.message
+      });
     }
 
     if (!session.url) {
       console.error('No session URL returned from Stripe');
-      throw new Error('No session URL returned from Stripe');
+      return res.status(500).json({
+        error: 'Payment service error',
+        message: 'Invalid checkout session response'
+      });
     }
 
     console.log('Checkout session created successfully');
@@ -144,7 +171,7 @@ export default async function handler(
     return res.status(500).json({ 
       error: 'Server error',
       message: error.message || 'An unexpected error occurred',
-      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }
 }

@@ -135,12 +135,12 @@ export function PricingPlans() {
         },
       });
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || 'Failed to create checkout session');
-      }
-
       const data = await response.json();
+      
+      if (!response.ok) {
+        console.error('Checkout error details:', data);
+        throw new Error(data.message || data.error || 'Failed to create checkout session');
+      }
 
       // Proceed with Stripe checkout regardless of environment
 
