@@ -25,8 +25,15 @@ export interface Chat {
 export const useMessages = (chatId?: string) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const { user } = useAuth();
   const database = getDatabase();
+
+  const resetState = () => {
+    setMessages([]);
+    setLoading(false);
+    setError(null);
+  };
 
   useEffect(() => {
     if (!chatId || !user) {

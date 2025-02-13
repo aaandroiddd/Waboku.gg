@@ -64,7 +64,8 @@ export function Chat({
     }
   }, [receiverProfile]);
 
-  const { messages, sendMessage, markAsRead, deleteChat } = useMessages(chatId);
+  const { messages, loading: messagesLoading, sendMessage, markAsRead, deleteChat } = useMessages(chatId);
+  const [loadingState, setLoadingState] = useState<'loading' | 'error' | 'success'>('loading');
   const { user } = useAuth();
   const { toast } = useToast();
   const router = useRouter();

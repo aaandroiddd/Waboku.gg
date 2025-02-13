@@ -28,6 +28,7 @@ export default function MessagesPage() {
   const { user } = useAuth();
   const [chats, setChats] = useState<ChatPreview[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [selectedChat, setSelectedChat] = useState<string | null>(null);
   const [participantProfiles, setParticipantProfiles] = useState<Record<string, any>>({});
   const [isMobileView, setIsMobileView] = useState(false);
