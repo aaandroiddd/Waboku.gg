@@ -147,15 +147,6 @@ export default async function handler(
       });
     }
 
-    // Handle preview environment
-    if (process.env.NEXT_PUBLIC_CO_DEV_ENV === 'preview') {
-      console.log('[Stripe Checkout] Running in preview mode');
-      return res.status(200).json({
-        isPreview: true,
-        sessionUrl: `${appUrl}/dashboard/account-status?session_id=preview_session_${Date.now()}`
-      });
-    }
-
     // Verify the price ID exists in Stripe
     try {
       console.log('[Stripe Checkout] Verifying price ID:', stripePriceId);
