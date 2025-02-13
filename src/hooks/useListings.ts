@@ -19,7 +19,8 @@ const GAME_NAME_MAPPING: { [key: string]: string[] } = {
   'union-arena': ['union arena'],
   'universus': ['universus'],
   'vanguard': ['vanguard'],
-  'weiss': ['weiss schwarz']
+  'weiss': ['weiss schwarz'],
+  'accessories': ['accessories', 'tcg accessories']
 };
 
 interface UseListingsProps {

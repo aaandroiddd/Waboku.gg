@@ -33,7 +33,8 @@ export const GAME_NAME_MAPPING = {
   "union-arena": ["union-arena", "Union Arena"],
   "universus": ["universus", "Universus"],
   "vanguard": ["vanguard", "Cardfight Vanguard", "Vanguard"],
-  "weiss": ["weiss", "Weiss Schwarz", "Weiss"]
+  "weiss": ["weiss", "Weiss Schwarz", "Weiss"],
+  "accessories": ["accessories", "Accessories", "ACCESSORIES", "TCG Accessories"]
 }
 
 export const OTHER_GAME_MAPPING = {
