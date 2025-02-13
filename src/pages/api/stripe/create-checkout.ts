@@ -11,6 +11,11 @@ try {
   console.error('Firebase Admin initialization error:', error);
 }
 
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+  apiVersion: '2023-10-16',
+  typescript: true,
+});
+
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
@@ -46,9 +51,6 @@ export default async function handler(
       });
     }
 
-    const auth = getAuth();
-    const db = getDatabase();
-    
     // Get the Firebase ID token from the Authorization header
     const authHeader = req.headers.authorization;
     if (!authHeader?.startsWith('Bearer ')) {
@@ -62,6 +64,7 @@ export default async function handler(
     const idToken = authHeader.split('Bearer ')[1];
     
     // Verify the Firebase ID token
+    const auth = getAuth();
     let decodedToken;
     try {
       decodedToken = await auth.verifyIdToken(idToken);
@@ -77,27 +80,12 @@ export default async function handler(
     const userId = decodedToken.uid;
     console.log('[Stripe Checkout] Processing checkout for user:', userId);
 
-    // Initialize Stripe with error handling
-    let stripe: Stripe;
-    try {
-      stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-        apiVersion: '2023-10-16',
-        typescript: true,
-      });
-    } catch (error: any) {
-      console.error('[Stripe Checkout] Stripe initialization error:', error);
-      return res.status(500).json({
-        error: 'Payment service error',
-        message: 'Failed to initialize payment service',
-        details: error.message
-      });
-    }
-
     // Get user's account data
+    const db = getDatabase();
     let userData;
     try {
       const userSnapshot = await db.ref(`users/${userId}/account`).get();
-      userData = userSnapshot.val();
+      userData = userSnapshot.val() || {};
       console.log('[Stripe Checkout] User data retrieved:', JSON.stringify(userData));
     } catch (error: any) {
       console.error('[Stripe Checkout] Error fetching user data:', error);
@@ -123,7 +111,8 @@ export default async function handler(
     
     console.log('[Stripe Checkout] Creating checkout session for user:', userId);
     
-    let sessionConfig: Stripe.Checkout.SessionCreateParams = {
+    // Prepare session configuration
+    const sessionConfig: Stripe.Checkout.SessionCreateParams = {
       payment_method_types: ['card'],
       line_items: [
         {
@@ -134,6 +123,7 @@ export default async function handler(
       mode: 'subscription',
       success_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/account-status?upgrade=success`,
       cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/account-status`,
+      client_reference_id: userId,
       metadata: {
         userId,
         isResubscription: userData?.subscription?.status === 'canceled' ? 'true' : 'false'
@@ -151,7 +141,11 @@ export default async function handler(
       sessionConfig.customer_email = decodedToken.email;
     }
 
-    console.log('[Stripe Checkout] Creating session with config:', JSON.stringify(sessionConfig));
+    console.log('[Stripe Checkout] Creating session with config:', JSON.stringify({
+      ...sessionConfig,
+      customer_email: sessionConfig.customer_email ? '[REDACTED]' : undefined,
+      customer: sessionConfig.customer ? '[REDACTED]' : undefined
+    }));
     
     let session;
     try {
@@ -165,7 +159,7 @@ export default async function handler(
       });
     }
 
-    if (!session.url) {
+    if (!session?.url) {
       console.error('[Stripe Checkout] No session URL returned from Stripe');
       return res.status(500).json({
         error: 'Payment service error',
