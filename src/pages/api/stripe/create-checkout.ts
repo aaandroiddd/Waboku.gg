@@ -8,11 +8,26 @@ import { getAuth } from 'firebase-admin/auth';
 try {
   getFirebaseAdmin();
 } catch (error) {
-  console.error('Firebase Admin initialization error:', error);
+  console.error('[Stripe Checkout] Firebase Admin initialization error:', error);
 }
 
-// Validate Stripe secret key format
+// Validate environment variables
 const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
+const stripePriceId = process.env.STRIPE_PREMIUM_PRICE_ID;
+const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+
+if (!stripeSecretKey) {
+  console.error('[Stripe Checkout] STRIPE_SECRET_KEY is not set');
+}
+
+if (!stripePriceId) {
+  console.error('[Stripe Checkout] STRIPE_PREMIUM_PRICE_ID is not set');
+}
+
+if (!appUrl) {
+  console.error('[Stripe Checkout] NEXT_PUBLIC_APP_URL is not set');
+}
+
 if (!stripeSecretKey?.startsWith('sk_')) {
   console.error('[Stripe Checkout] Invalid STRIPE_SECRET_KEY format');
 }
@@ -27,10 +42,14 @@ export default async function handler(
   res: NextApiResponse
 ) {
   console.log('[Stripe Checkout] Starting checkout process...');
-  console.log('[Stripe Checkout] Environment check:', {
-    hasStripeKey: !!process.env.STRIPE_SECRET_KEY,
-    hasPriceId: !!process.env.STRIPE_PREMIUM_PRICE_ID,
-    appUrl: process.env.NEXT_PUBLIC_APP_URL,
+  
+  // Log request details (excluding sensitive data)
+  console.log('[Stripe Checkout] Request details:', {
+    method: req.method,
+    headers: {
+      ...req.headers,
+      authorization: req.headers.authorization ? '[REDACTED]' : undefined
+    }
   });
 
   // Only allow POST requests
@@ -45,9 +64,9 @@ export default async function handler(
   try {
     // Validate environment variables first
     const requiredEnvVars = {
-      STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY,
-      STRIPE_PREMIUM_PRICE_ID: process.env.STRIPE_PREMIUM_PRICE_ID,
-      NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL
+      STRIPE_SECRET_KEY: stripeSecretKey,
+      STRIPE_PREMIUM_PRICE_ID: stripePriceId,
+      NEXT_PUBLIC_APP_URL: appUrl
     };
 
     const missingVars = Object.entries(requiredEnvVars)
@@ -97,7 +116,10 @@ export default async function handler(
     try {
       const userSnapshot = await db.ref(`users/${userId}/account`).get();
       userData = userSnapshot.val() || {};
-      console.log('[Stripe Checkout] User data retrieved:', JSON.stringify(userData));
+      console.log('[Stripe Checkout] User data retrieved:', {
+        ...userData,
+        stripeCustomerId: userData?.stripeCustomerId ? '[REDACTED]' : undefined
+      });
     } catch (error: any) {
       console.error('[Stripe Checkout] Error fetching user data:', error);
       return res.status(500).json({
@@ -107,10 +129,19 @@ export default async function handler(
       });
     }
 
+    // Check if user already has an active subscription
+    if (userData?.subscription?.status === 'active') {
+      console.log('[Stripe Checkout] User already has an active subscription');
+      return res.status(400).json({
+        error: 'Subscription error',
+        message: 'You already have an active subscription'
+      });
+    }
+
     // Verify the price ID exists in Stripe
     try {
-      console.log('[Stripe Checkout] Verifying price ID:', process.env.STRIPE_PREMIUM_PRICE_ID);
-      const price = await stripe.prices.retrieve(process.env.STRIPE_PREMIUM_PRICE_ID!);
+      console.log('[Stripe Checkout] Verifying price ID:', stripePriceId);
+      const price = await stripe.prices.retrieve(stripePriceId!);
       console.log('[Stripe Checkout] Price verified:', price.id);
     } catch (error: any) {
       console.error('[Stripe Checkout] Invalid price ID:', error);
@@ -121,20 +152,18 @@ export default async function handler(
       });
     }
     
-    console.log('[Stripe Checkout] Creating checkout session for user:', userId);
-    
     // Prepare session configuration
     const sessionConfig: Stripe.Checkout.SessionCreateParams = {
       payment_method_types: ['card'],
       line_items: [
         {
-          price: process.env.STRIPE_PREMIUM_PRICE_ID,
+          price: stripePriceId,
           quantity: 1,
         },
       ],
       mode: 'subscription',
-      success_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/account-status?upgrade=success`,
-      cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/account-status`,
+      success_url: `${appUrl}/dashboard/account-status?upgrade=success`,
+      cancel_url: `${appUrl}/dashboard/account-status`,
       client_reference_id: userId,
       metadata: {
         userId,
@@ -146,24 +175,29 @@ export default async function handler(
 
     // If user has a Stripe customer ID, use it
     if (userData?.stripeCustomerId) {
-      console.log('[Stripe Checkout] Using existing Stripe customer ID:', userData.stripeCustomerId);
+      console.log('[Stripe Checkout] Using existing Stripe customer ID');
       sessionConfig.customer = userData.stripeCustomerId;
     } else if (decodedToken.email) {
-      console.log('[Stripe Checkout] Setting customer email:', decodedToken.email);
+      console.log('[Stripe Checkout] Setting customer email');
       sessionConfig.customer_email = decodedToken.email;
     }
 
-    console.log('[Stripe Checkout] Creating session with config:', JSON.stringify({
+    console.log('[Stripe Checkout] Creating session with config:', {
       ...sessionConfig,
       customer_email: sessionConfig.customer_email ? '[REDACTED]' : undefined,
       customer: sessionConfig.customer ? '[REDACTED]' : undefined
-    }));
+    });
     
     let session;
     try {
       session = await stripe.checkout.sessions.create(sessionConfig);
     } catch (error: any) {
-      console.error('[Stripe Checkout] Session creation error:', error);
+      console.error('[Stripe Checkout] Session creation error:', {
+        message: error.message,
+        type: error.type,
+        code: error.code,
+        param: error.param
+      });
       return res.status(500).json({
         error: 'Payment service error',
         message: 'Failed to create checkout session',
@@ -182,10 +216,14 @@ export default async function handler(
     console.log('[Stripe Checkout] Session created successfully:', session.id);
     return res.status(200).json({ sessionUrl: session.url });
   } catch (error: any) {
-    console.error('[Stripe Checkout] Unhandled server error:', error);
+    console.error('[Stripe Checkout] Unhandled server error:', {
+      message: error.message,
+      stack: error.stack,
+      name: error.name
+    });
     return res.status(500).json({ 
       error: 'Server error',
-      message: error.message || 'An unexpected error occurred',
+      message: 'An unexpected error occurred while processing your request',
       details: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }
