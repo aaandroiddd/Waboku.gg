@@ -333,6 +333,7 @@ const EditListingPage = () => {
                         <SelectValue placeholder="Select game" />
                       </SelectTrigger>
                       <SelectContent>
+                        <SelectItem value="accessories">Accessories</SelectItem>
                         <SelectItem value="dbs">Dragon Ball Super Card Game</SelectItem>
                         <SelectItem value="digimon">Digimon</SelectItem>
                         <SelectItem value="lorcana">Disney Lorcana</SelectItem>
