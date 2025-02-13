@@ -199,19 +199,53 @@ export default async function handler(
     
     let session;
     try {
-      session = await stripe.checkout.sessions.create(sessionConfig);
+      // Log the exact configuration being sent to Stripe (excluding sensitive data)
+      console.log('[Stripe Checkout] Stripe configuration:', {
+        mode: sessionConfig.mode,
+        payment_method_types: sessionConfig.payment_method_types,
+        line_items: sessionConfig.line_items,
+        success_url: sessionConfig.success_url,
+        cancel_url: sessionConfig.cancel_url,
+        client_reference_id: sessionConfig.client_reference_id,
+        metadata: sessionConfig.metadata,
+        allow_promotion_codes: sessionConfig.allow_promotion_codes,
+        billing_address_collection: sessionConfig.billing_address_collection,
+      });
+
+      // Verify Stripe key format
+      if (!stripeSecretKey?.startsWith('sk_')) {
+        throw new Error('Invalid Stripe secret key format');
+      }
+
+      session = await stripe.checkout.sessions.create({
+        ...sessionConfig,
+        payment_method_types: ['card'],
+        mode: 'subscription',
+        billing_address_collection: 'required',
+      });
+
+      console.log('[Stripe Checkout] Session created:', {
+        sessionId: session.id,
+        url: session.url ? 'Present' : 'Missing',
+        status: session.status,
+        paymentStatus: session.payment_status,
+      });
     } catch (error: any) {
       console.error('[Stripe Checkout] Session creation error:', {
         message: error.message,
         type: error.type,
         code: error.code,
         param: error.param,
-        requestId: error.requestId
+        requestId: error.requestId,
+        raw: error
       });
-      return res.status(500).json({
+
+      // Return a more specific error message
+      return res.status(400).json({
         error: 'Payment service error',
-        message: 'Failed to create checkout session',
-        details: error.message
+        message: error.message || 'Failed to create checkout session',
+        code: error.code,
+        type: error.type
       });
     }
 
