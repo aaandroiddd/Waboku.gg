@@ -32,7 +32,13 @@ if (!stripeSecretKey?.startsWith('sk_')) {
   console.error('[Stripe Checkout] Invalid STRIPE_SECRET_KEY format');
 }
 
-const stripe = new Stripe(stripeSecretKey!, {
+// Validate Stripe secret key format before initialization
+if (!stripeSecretKey?.startsWith('sk_')) {
+  console.error('[Stripe Checkout] Invalid STRIPE_SECRET_KEY format');
+  throw new Error('Invalid Stripe secret key format');
+}
+
+const stripe = new Stripe(stripeSecretKey, {
   apiVersion: '2023-10-16',
   typescript: true,
 });
