@@ -142,18 +142,7 @@ export function PricingPlans() {
 
       const data = await response.json();
 
-      // Handle preview environment
-      if (data.isPreview) {
-        toast({
-          title: "Preview Environment",
-          description: "Processing test upgrade...",
-        });
-
-        setTimeout(() => {
-          window.location.href = `/api/stripe/dev-success?userId=${user.uid}`;
-        }, 1000);
-        return;
-      }
+      // Proceed with Stripe checkout regardless of environment
 
       if (!data.sessionUrl) {
         throw new Error('Invalid checkout session');

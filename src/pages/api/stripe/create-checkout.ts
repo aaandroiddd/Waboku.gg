@@ -57,34 +57,10 @@ export default async function handler(
     const userId = decodedToken.uid;
     console.log('Processing checkout for user:', userId);
 
-    // For preview environment, handle differently
+    // Even in preview environment, we'll use real Stripe checkout
+    // Just log that we're in preview mode for debugging
     if (process.env.NEXT_PUBLIC_CO_DEV_ENV === 'preview') {
-      console.log('Preview environment detected, simulating checkout...');
-      
-      try {
-        // Update user's subscription status directly in preview mode
-        await db.ref(`users/${userId}/account`).update({
-          tier: 'premium',
-          status: 'active',
-          stripeCustomerId: 'preview_customer_' + userId,
-          subscription: {
-            status: 'active',
-            id: 'preview_subscription_' + userId,
-            currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-          }
-        });
-
-        return res.status(200).json({ 
-          sessionUrl: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/account-status?upgrade=success`,
-          isPreview: true 
-        });
-      } catch (dbError) {
-        console.error('Database update error in preview mode:', dbError);
-        return res.status(500).json({
-          error: 'Database error',
-          message: 'Failed to update user subscription status in preview mode'
-        });
-      }
+      console.log('Preview environment detected, proceeding with Stripe checkout...');
     }
 
     // Production environment - handle actual Stripe checkout
