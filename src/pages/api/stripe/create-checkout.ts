@@ -27,6 +27,17 @@ export default async function handler(
   }
 
   try {
+    // Validate environment variables first
+    if (!process.env.STRIPE_SECRET_KEY) {
+      throw new Error('STRIPE_SECRET_KEY is not configured');
+    }
+    if (!process.env.STRIPE_PREMIUM_PRICE_ID) {
+      throw new Error('STRIPE_PREMIUM_PRICE_ID is not configured');
+    }
+    if (!process.env.NEXT_PUBLIC_APP_URL) {
+      throw new Error('NEXT_PUBLIC_APP_URL is not configured');
+    }
+
     const auth = getAuth();
     const db = getDatabase();
     
@@ -50,36 +61,36 @@ export default async function handler(
       console.error('Token verification error:', error);
       return res.status(401).json({ 
         error: 'Authentication error',
-        message: 'Invalid authentication token'
+        message: 'Invalid authentication token',
+        details: error.message
       });
     }
 
     const userId = decodedToken.uid;
     console.log('Processing checkout for user:', userId);
 
-    // Even in preview environment, we'll use real Stripe checkout
-    // Just log that we're in preview mode for debugging
-    if (process.env.NEXT_PUBLIC_CO_DEV_ENV === 'preview') {
-      console.log('Preview environment detected, proceeding with Stripe checkout...');
-    }
-
-    // Production environment - handle actual Stripe checkout
-    if (!process.env.STRIPE_SECRET_KEY || !process.env.STRIPE_PREMIUM_PRICE_ID) {
-      console.error('Missing required Stripe environment variables');
-      return res.status(500).json({
-        error: 'Configuration error',
-        message: 'Stripe configuration is incomplete'
+    // Initialize Stripe with error handling
+    let stripe: Stripe;
+    try {
+      stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+        apiVersion: '2023-10-16',
+        typescript: true,
       });
+    } catch (error: any) {
+      console.error('Stripe initialization error:', error);
+      throw new Error(`Failed to initialize Stripe: ${error.message}`);
     }
-
-    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-      apiVersion: '2023-10-16',
-      typescript: true,
-    });
 
     // Get user's account data
-    const userSnapshot = await db.ref(`users/${userId}/account`).get();
-    const userData = userSnapshot.val();
+    let userData;
+    try {
+      const userSnapshot = await db.ref(`users/${userId}/account`).get();
+      userData = userSnapshot.val();
+      console.log('User data retrieved:', JSON.stringify(userData));
+    } catch (error: any) {
+      console.error('Error fetching user data:', error);
+      throw new Error(`Failed to fetch user data: ${error.message}`);
+    }
     
     console.log('Creating Stripe checkout session for user:', userId);
     
@@ -111,7 +122,15 @@ export default async function handler(
       sessionConfig.customer_email = decodedToken.email;
     }
 
-    const session = await stripe.checkout.sessions.create(sessionConfig);
+    console.log('Creating Stripe session with config:', JSON.stringify(sessionConfig));
+    
+    let session;
+    try {
+      session = await stripe.checkout.sessions.create(sessionConfig);
+    } catch (error: any) {
+      console.error('Stripe session creation error:', error);
+      throw new Error(`Failed to create Stripe session: ${error.message}`);
+    }
 
     if (!session.url) {
       console.error('No session URL returned from Stripe');
@@ -124,7 +143,8 @@ export default async function handler(
     console.error('Server error:', error);
     return res.status(500).json({ 
       error: 'Server error',
-      message: error.message || 'An unexpected error occurred'
+      message: error.message || 'An unexpected error occurred',
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }
 }
