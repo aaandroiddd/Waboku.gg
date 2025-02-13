@@ -188,11 +188,8 @@ export default async function handler(
       billing_address_collection: 'auto',
     };
 
-    // If user has a Stripe customer ID, use it
-    if (userData?.stripeCustomerId) {
-      console.log('[Stripe Checkout] Using existing Stripe customer ID');
-      sessionConfig.customer = userData.stripeCustomerId;
-    } else if (decodedToken.email) {
+    // Always use email for new checkout sessions to avoid customer ID issues
+    if (decodedToken.email) {
       console.log('[Stripe Checkout] Setting customer email');
       sessionConfig.customer_email = decodedToken.email;
     }

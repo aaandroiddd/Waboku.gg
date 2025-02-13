@@ -56,7 +56,11 @@ export default async function handler(
             tier: 'premium',
             status: 'active',
             stripeCustomerId: subscription.customer as string,
-            subscriptionId: subscription.id
+            subscription: {
+              status: 'active',
+              id: subscription.id,
+              currentPeriodEnd: subscription.current_period_end
+            }
           });
         }
         break;
