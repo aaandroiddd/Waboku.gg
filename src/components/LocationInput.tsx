@@ -122,8 +122,8 @@ export function LocationInput({ onLocationSelect, initialCity, initialState, err
   };
 
   useEffect(() => {
-    // Check if Google Maps is already loaded
-    if (window.google && window.google.maps && !autocompleteRef.current) {
+    // Check if Google Maps is already loaded and we're not in fallback mode
+    if (window.google && window.google.maps && !useFallback) {
       initializeAutocomplete();
     }
 
@@ -131,9 +131,10 @@ export function LocationInput({ onLocationSelect, initialCity, initialState, err
     return () => {
       if (autocompleteRef.current) {
         window.google?.maps?.event?.clearInstanceListeners(autocompleteRef.current);
+        autocompleteRef.current = null;
       }
     };
-  }, [isGoogleLoaded]);
+  }, [isGoogleLoaded, useFallback]);
 
   if (useFallback || googleLoadError) {
     return (
