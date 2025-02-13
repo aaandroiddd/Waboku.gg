@@ -11,7 +11,13 @@ try {
   console.error('Firebase Admin initialization error:', error);
 }
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+// Validate Stripe secret key format
+const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
+if (!stripeSecretKey?.startsWith('sk_')) {
+  console.error('[Stripe Checkout] Invalid STRIPE_SECRET_KEY format');
+}
+
+const stripe = new Stripe(stripeSecretKey!, {
   apiVersion: '2023-10-16',
   typescript: true,
 });
@@ -21,6 +27,11 @@ export default async function handler(
   res: NextApiResponse
 ) {
   console.log('[Stripe Checkout] Starting checkout process...');
+  console.log('[Stripe Checkout] Environment check:', {
+    hasStripeKey: !!process.env.STRIPE_SECRET_KEY,
+    hasPriceId: !!process.env.STRIPE_PREMIUM_PRICE_ID,
+    appUrl: process.env.NEXT_PUBLIC_APP_URL,
+  });
 
   // Only allow POST requests
   if (req.method !== 'POST') {
@@ -98,6 +109,7 @@ export default async function handler(
 
     // Verify the price ID exists in Stripe
     try {
+      console.log('[Stripe Checkout] Verifying price ID:', process.env.STRIPE_PREMIUM_PRICE_ID);
       const price = await stripe.prices.retrieve(process.env.STRIPE_PREMIUM_PRICE_ID!);
       console.log('[Stripe Checkout] Price verified:', price.id);
     } catch (error: any) {
