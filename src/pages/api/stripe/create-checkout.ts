@@ -46,9 +46,11 @@ export default async function handler(
   // Log request details (excluding sensitive data)
   console.log('[Stripe Checkout] Request details:', {
     method: req.method,
+    url: req.url,
     headers: {
       ...req.headers,
-      authorization: req.headers.authorization ? '[REDACTED]' : undefined
+      authorization: req.headers.authorization ? '[REDACTED]' : undefined,
+      cookie: '[REDACTED]'
     }
   });
 
@@ -92,14 +94,20 @@ export default async function handler(
     }
 
     const idToken = authHeader.split('Bearer ')[1];
+    console.log('[Stripe Checkout] Token received, length:', idToken.length);
     
     // Verify the Firebase ID token
     const auth = getAuth();
     let decodedToken;
     try {
       decodedToken = await auth.verifyIdToken(idToken);
+      console.log('[Stripe Checkout] Token verified successfully for user:', decodedToken.uid);
     } catch (error: any) {
-      console.error('[Stripe Checkout] Token verification error:', error);
+      console.error('[Stripe Checkout] Token verification error:', {
+        error: error.message,
+        code: error.code,
+        tokenLength: idToken.length
+      });
       return res.status(401).json({ 
         error: 'Authentication error',
         message: 'Invalid authentication token',
@@ -117,8 +125,9 @@ export default async function handler(
       const userSnapshot = await db.ref(`users/${userId}/account`).get();
       userData = userSnapshot.val() || {};
       console.log('[Stripe Checkout] User data retrieved:', {
-        ...userData,
-        stripeCustomerId: userData?.stripeCustomerId ? '[REDACTED]' : undefined
+        tier: userData?.tier,
+        hasStripeId: !!userData?.stripeCustomerId,
+        subscriptionStatus: userData?.subscription?.status
       });
     } catch (error: any) {
       console.error('[Stripe Checkout] Error fetching user data:', error);
@@ -135,6 +144,15 @@ export default async function handler(
       return res.status(400).json({
         error: 'Subscription error',
         message: 'You already have an active subscription'
+      });
+    }
+
+    // Handle preview environment
+    if (process.env.NEXT_PUBLIC_CO_DEV_ENV === 'preview') {
+      console.log('[Stripe Checkout] Running in preview mode');
+      return res.status(200).json({
+        isPreview: true,
+        sessionUrl: `${appUrl}/dashboard/account-status?session_id=preview_session_${Date.now()}`
       });
     }
 
@@ -162,7 +180,7 @@ export default async function handler(
         },
       ],
       mode: 'subscription',
-      success_url: `${appUrl}/dashboard/account-status?upgrade=success`,
+      success_url: `${appUrl}/dashboard/account-status?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${appUrl}/dashboard/account-status`,
       client_reference_id: userId,
       metadata: {
@@ -196,7 +214,8 @@ export default async function handler(
         message: error.message,
         type: error.type,
         code: error.code,
-        param: error.param
+        param: error.param,
+        requestId: error.requestId
       });
       return res.status(500).json({
         error: 'Payment service error',
@@ -213,7 +232,11 @@ export default async function handler(
       });
     }
 
-    console.log('[Stripe Checkout] Session created successfully:', session.id);
+    console.log('[Stripe Checkout] Session created successfully:', {
+      sessionId: session.id,
+      hasUrl: !!session.url
+    });
+    
     return res.status(200).json({ sessionUrl: session.url });
   } catch (error: any) {
     console.error('[Stripe Checkout] Unhandled server error:', {
@@ -224,7 +247,7 @@ export default async function handler(
     return res.status(500).json({ 
       error: 'Server error',
       message: 'An unexpected error occurred while processing your request',
-      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 }
