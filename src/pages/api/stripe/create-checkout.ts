@@ -117,7 +117,27 @@ export default async function handler(
       });
     }
     
-    // Create the checkout session
+    // Check if user already has a Stripe customer ID
+    let stripeCustomerId = userData?.stripeCustomerId;
+
+    // If no customer ID exists, create a new customer
+    if (!stripeCustomerId) {
+      console.log('[Stripe Checkout] Creating new customer for user:', userId);
+      const customer = await stripe.customers.create({
+        email: decodedToken.email,
+        metadata: {
+          userId: userId
+        }
+      });
+      stripeCustomerId = customer.id;
+      
+      // Store the customer ID in Firebase
+      await db.ref(`users/${userId}/account`).update({
+        stripeCustomerId: stripeCustomerId
+      });
+    }
+
+    // Create the checkout session with the customer ID
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       line_items: [
@@ -130,7 +150,7 @@ export default async function handler(
       success_url: `${appUrl}/dashboard/account-status?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${appUrl}/dashboard/account-status`,
       client_reference_id: userId,
-      customer_email: decodedToken.email,
+      customer: stripeCustomerId,
       metadata: {
         userId,
         isResubscription: userData?.subscription?.status === 'canceled' ? 'true' : 'false'
