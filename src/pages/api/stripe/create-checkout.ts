@@ -43,7 +43,11 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  console.log('[Stripe Checkout] Starting checkout process...');
+  console.log('[Stripe Checkout] Starting checkout process...', {
+    method: req.method,
+    hasAuthHeader: !!req.headers.authorization,
+    body: req.body
+  });
   
   // Only allow POST requests
   if (req.method !== 'POST') {

@@ -243,6 +243,8 @@ export default function AccountStatus() {
                         throw new Error('Not authenticated');
                       }
 
+                      console.log('Initiating checkout with token:', !!idToken);
+                      
                       const response = await fetch('/api/stripe/create-checkout', {
                         method: 'POST',
                         headers: {
@@ -250,6 +252,29 @@ export default function AccountStatus() {
                           'Authorization': `Bearer ${idToken}`,
                         },
                       });
+
+                      if (response.status === 401) {
+                        // Token might be expired, try to refresh and retry
+                        const newToken = await user?.getIdToken(true);
+                        if (!newToken) {
+                          throw new Error('Failed to refresh authentication');
+                        }
+
+                        const retryResponse = await fetch('/api/stripe/create-checkout', {
+                          method: 'POST',
+                          headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${newToken}`,
+                          },
+                        });
+
+                        if (!retryResponse.ok) {
+                          const errorData = await retryResponse.json();
+                          throw new Error(errorData.message || 'Failed to create checkout session after token refresh');
+                        }
+
+                        return retryResponse.json();
+                      }
 
                       if (!response.ok) {
                         const errorData = await response.json();
