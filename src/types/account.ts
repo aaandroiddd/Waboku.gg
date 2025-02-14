@@ -14,7 +14,7 @@ export interface SubscriptionDetails {
   startDate?: string;
   endDate?: string;
   renewalDate?: string;
-  status: 'active' | 'canceled' | 'none';
+  status: 'active' | 'canceled' | 'none' | 'pending';
   stripeSubscriptionId?: string;
 }
 
