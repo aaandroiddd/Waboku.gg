@@ -1,50 +1,37 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { getDatabase, ref, query, orderByChild, get, limitToLast } from 'firebase/database';
-import { initializeApp, getApps } from 'firebase/app';
+import { initializeApp, getApps, cert } from 'firebase-admin/app';
+import { getDatabase } from 'firebase-admin/database';
 import { validateSearchTerm } from '@/lib/search-validation';
 
 const CACHE_DURATION = 30 * 1000; // 30 seconds cache
 let cachedTrending: any = null;
 let lastCacheTime = 0;
 
-// Initialize Firebase for server-side
-const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
-  databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL
-};
-
-// Validate Firebase configuration
-const validateConfig = () => {
-  const requiredFields = [
-    'apiKey',
-    'authDomain',
-    'projectId',
-    'databaseURL'
-  ];
-
-  const missingFields = requiredFields.filter(field => !firebaseConfig[field as keyof typeof firebaseConfig]);
-  
-  if (missingFields.length > 0) {
-    throw new Error(`Missing required Firebase configuration: ${missingFields.join(', ')}`);
-  }
-};
-
-// Initialize Firebase if not already initialized
-const getFirebaseAdmin = () => {
+// Initialize Firebase Admin for server-side
+const initializeFirebaseAdmin = () => {
   try {
-    validateConfig();
-    
-    if (!getApps().length) {
-      return initializeApp(firebaseConfig);
+    if (!process.env.FIREBASE_PRIVATE_KEY || !process.env.FIREBASE_CLIENT_EMAIL) {
+      throw new Error('Missing Firebase Admin credentials');
     }
-    return getApps()[0];
+
+    if (!process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL) {
+      throw new Error('Missing Firebase Database URL');
+    }
+
+    if (getApps().length === 0) {
+      initializeApp({
+        credential: cert({
+          projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+          clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+          privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+        }),
+        databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL
+      });
+    }
+
+    return getDatabase();
   } catch (error: any) {
-    console.error('Firebase initialization error:', {
+    console.error('Firebase Admin initialization error:', {
       message: error.message,
       stack: error.stack,
       timestamp: new Date().toISOString()
@@ -57,7 +44,7 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  console.log('Trending searches API called');
+  console.log('Trending searches API called at:', new Date().toISOString());
   
   // Enable CORS
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -78,36 +65,18 @@ export default async function handler(
     return res.status(200).json(cachedTrending);
   }
 
-  let app;
-  let database;
-
   try {
-    console.log('Initializing Firebase...');
-    app = getFirebaseAdmin();
+    console.log('Initializing Firebase Admin...');
+    const database = initializeFirebaseAdmin();
     
-    if (!app) {
-      throw new Error('Failed to initialize Firebase app');
-    }
-
-    database = getDatabase(app);
-
-    if (!database) {
-      throw new Error('Failed to initialize Firebase Realtime Database');
-    }
-
     console.log('Fetching trending searches from Firebase...');
-    const searchesRef = ref(database, 'searches');
-    
-    // Get searches from the last 48 hours
     const twoDaysAgo = now - (48 * 60 * 60 * 1000);
     
-    const searchesQuery = query(
-      searchesRef,
-      orderByChild('timestamp'),
-      limitToLast(500) // Increased limit for better trending calculation
-    );
-
-    const snapshot = await get(searchesQuery);
+    const snapshot = await database
+      .ref('searches')
+      .orderByChild('timestamp')
+      .limitToLast(500)
+      .once('value');
     
     if (!snapshot.exists()) {
       console.log('No trending searches found');
@@ -116,30 +85,30 @@ export default async function handler(
       return res.status(200).json([]);
     }
 
-    const searches: any = [];
+    const searches: any[] = [];
     
     snapshot.forEach((childSnapshot) => {
       const search = childSnapshot.val();
-      // Only include valid searches from the last 48 hours
       if (search.timestamp >= twoDaysAgo && validateSearchTerm(search.term)) {
         searches.push(search);
       }
+      return false; // Required for TypeScript forEach
     });
 
     // Count occurrences and sort by frequency
-    const searchCounts = searches.reduce((acc: any, curr: any) => {
+    const searchCounts = searches.reduce((acc: Record<string, number>, curr: any) => {
       const term = curr.term.trim().toLowerCase();
       acc[term] = (acc[term] || 0) + 1;
       return acc;
     }, {});
 
-    let trending = Object.entries(searchCounts)
+    const trending = Object.entries(searchCounts)
       .map(([term, count]) => ({ 
-        term: term.charAt(0).toUpperCase() + term.slice(1), // Capitalize first letter
+        term: term.charAt(0).toUpperCase() + term.slice(1),
         count 
       }))
-      .sort((a: any, b: any) => b.count - a.count)
-      .slice(0, 5); // Return top 5 trending searches
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
 
     // Update cache
     cachedTrending = trending;
@@ -153,15 +122,14 @@ export default async function handler(
       stack: error.stack,
       code: error.code,
       config: {
-        hasApiKey: !!process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-        hasAuthDomain: !!process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+        hasPrivateKey: !!process.env.FIREBASE_PRIVATE_KEY,
+        hasClientEmail: !!process.env.FIREBASE_CLIENT_EMAIL,
         hasProjectId: !!process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
         hasDatabaseUrl: !!process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL
       },
       timestamp: new Date().toISOString()
     });
     
-    // Return a more specific error message
     return res.status(500).json({
       error: 'Internal Server Error',
       message: process.env.NEXT_PUBLIC_CO_DEV_ENV === 'development' 
@@ -169,14 +137,5 @@ export default async function handler(
         : 'Failed to fetch trending searches',
       code: error.code
     });
-  } finally {
-    // Clean up any resources if needed
-    if (database) {
-      try {
-        await database.goOffline();
-      } catch (e) {
-        console.error('Error closing database connection:', e);
-      }
-    }
   }
 }
