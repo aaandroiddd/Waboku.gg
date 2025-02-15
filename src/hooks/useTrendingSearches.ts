@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { getDatabase, ref, push, onValue, Query, query, orderByChild, limitToLast } from 'firebase/database';
-import { app } from '@/lib/firebase';
+import { ref, push, onValue, Query, query, orderByChild, limitToLast } from 'firebase/database';
+import { database } from '@/lib/firebase';
 
 interface TrendingSearch {
   term: string;
@@ -21,7 +21,8 @@ export function useTrendingSearches() {
     try {
       const response = await fetch('/api/trending-searches');
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorData = await response.json();
+        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
       }
       const data = await response.json();
       setError(null);
@@ -44,8 +45,11 @@ export function useTrendingSearches() {
 
     const setupRealtimeListener = () => {
       try {
-        const db = getDatabase(app);
-        const searchesRef = ref(db, 'searches');
+        if (!database) {
+          throw new Error('Firebase Realtime Database is not initialized');
+        }
+
+        const searchesRef = ref(database, 'searches');
         const searchesQuery: Query = query(
           searchesRef,
           orderByChild('timestamp'),
@@ -56,9 +60,13 @@ export function useTrendingSearches() {
           if (isSubscribed) {
             fetchTrendingSearches();
           }
+        }, (error) => {
+          console.error('Error in realtime listener:', error);
+          setError('Failed to setup realtime updates');
         });
       } catch (error) {
         console.error('Error setting up realtime listener:', error);
+        setError('Failed to setup realtime updates');
       }
     };
 
@@ -105,8 +113,11 @@ export function useTrendingSearches() {
 
   const recordSearch = async (term: string) => {
     try {
-      const db = getDatabase(app);
-      const searchesRef = ref(db, 'searches');
+      if (!database) {
+        throw new Error('Firebase Realtime Database is not initialized');
+      }
+
+      const searchesRef = ref(database, 'searches');
       await push(searchesRef, {
         term,
         timestamp: Date.now(),

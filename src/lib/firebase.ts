@@ -43,32 +43,52 @@ if (missingConfig.length > 0) {
   throw new Error(`Missing required Firebase configuration: ${missingConfig.join(', ')}`);
 }
 
-let firebaseApp: FirebaseApp;
+let app: FirebaseApp;
 let auth: Auth;
 let db: Firestore;
 let storage: FirebaseStorage;
 let database: Database;
 
-// Initialize Firebase
-if (!getApps().length) {
-  console.log('Initializing new Firebase app...');
-  firebaseApp = initializeApp(firebaseConfig);
-} else {
-  console.log('Using existing Firebase app...');
-  firebaseApp = getApps()[0];
-}
-
-// Initialize services
-auth = getAuth(firebaseApp);
-db = getFirestore(firebaseApp);
-storage = getStorage(firebaseApp);
-database = getDatabase(firebaseApp);
-
-// Set persistence for browser environment
 if (typeof window !== 'undefined') {
-  setPersistence(auth, browserLocalPersistence)
-    .catch(error => console.error('Error setting auth persistence:', error));
+  try {
+    if (!getApps().length) {
+      app = initializeApp(firebaseConfig);
+    } else {
+      app = getApps()[0];
+    }
+
+    auth = getAuth(app);
+    db = getFirestore(app);
+    storage = getStorage(app);
+    database = getDatabase(app);
+
+    // Set persistence for browser environment
+    setPersistence(auth, browserLocalPersistence)
+      .catch(error => console.error('Error setting auth persistence:', error));
+  } catch (error) {
+    console.error('Error initializing Firebase:', error);
+    throw error;
+  }
+} else {
+  // Server-side initialization
+  if (!getApps().length) {
+    app = initializeApp(firebaseConfig);
+  } else {
+    app = getApps()[0];
+  }
+  
+  auth = getAuth(app);
+  db = getFirestore(app);
+  storage = getStorage(app);
+  database = getDatabase(app);
 }
 
-// Export initialized services
-export { firebaseApp as app, auth, db, storage, database };
+export { app, auth, db, storage, database };
+
+// Helper function to get Firebase services
+export function getFirebaseServices() {
+  if (!app || !auth || !db || !storage || !database) {
+    throw new Error('Firebase services not initialized');
+  }
+  return { app, auth, db, storage, database };
+}
