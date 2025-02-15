@@ -11,8 +11,16 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
+  // Enable CORS
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET');
+  
   if (req.method !== 'GET') {
-    return res.status(405).json({ message: 'Method not allowed' });
+    console.error('Invalid method for trending-searches:', req.method);
+    return res.status(405).json({ 
+      error: 'Method not allowed',
+      message: 'Only GET requests are supported'
+    });
   }
 
   // Check if we have a valid cache
@@ -22,7 +30,12 @@ export default async function handler(
   }
 
   try {
+    console.log('Fetching trending searches from Firebase...');
     const db = getDatabase(app);
+    if (!db) {
+      throw new Error('Firebase database connection failed');
+    }
+
     const searchesRef = ref(db, 'searches');
     
     // Get searches from the last 48 hours
@@ -35,6 +48,11 @@ export default async function handler(
     );
 
     const snapshot = await get(searchesQuery);
+    if (!snapshot.exists()) {
+      console.log('No trending searches found');
+      return res.status(200).json([]);
+    }
+
     const searches: any = [];
     
     snapshot.forEach((childSnapshot) => {
@@ -64,10 +82,18 @@ export default async function handler(
     cachedTrending = trending;
     lastCacheTime = now;
 
+    console.log(`Successfully fetched ${trending.length} trending searches`);
     return res.status(200).json(trending);
-  } catch (error) {
-    console.error('Error fetching trending searches:', error);
-    // Return empty array in case of error instead of default trending
-    return res.status(200).json([]);
+  } catch (error: any) {
+    console.error('Error in trending-searches API:', {
+      message: error.message,
+      stack: error.stack,
+      timestamp: new Date().toISOString()
+    });
+    
+    return res.status(500).json({
+      error: 'Internal Server Error',
+      message: 'Failed to fetch trending searches'
+    });
   }
 }
