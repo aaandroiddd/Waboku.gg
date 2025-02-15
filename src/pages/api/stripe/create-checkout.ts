@@ -27,8 +27,8 @@ if (!stripeSecretKey || !stripePriceId || !appUrl) {
 // Initialize Stripe with proper error handling
 let stripe: Stripe;
 try {
-  if (!stripeSecretKey?.startsWith('sk_')) {
-    throw new Error('Invalid Stripe secret key format');
+  if (!stripeSecretKey) {
+    throw new Error('Stripe secret key is not configured');
   }
   stripe = new Stripe(stripeSecretKey, {
     apiVersion: '2023-10-16',
@@ -46,7 +46,6 @@ export default async function handler(
   console.log('[Stripe Checkout] Starting checkout process...', {
     method: req.method,
     hasAuthHeader: !!req.headers.authorization,
-    body: req.body
   });
   
   // Only allow POST requests
@@ -98,8 +97,16 @@ export default async function handler(
 
     // Get user's account data
     const db = getDatabase();
-    const userSnapshot = await db.ref(`users/${userId}/account`).get();
+    const userRef = db.ref(`users/${userId}/account`);
+    const userSnapshot = await userRef.get();
     const userData = userSnapshot.val() || {};
+
+    console.log('[Stripe Checkout] User data retrieved:', {
+      userId,
+      hasSubscription: !!userData?.subscription,
+      subscriptionStatus: userData?.subscription?.status,
+      accountTier: userData?.tier
+    });
 
     // Check if user already has an active subscription
     if (userData?.subscription?.status === 'active') {
@@ -136,7 +143,7 @@ export default async function handler(
       stripeCustomerId = customer.id;
       
       // Store the customer ID in Firebase
-      await db.ref(`users/${userId}/account`).update({
+      await userRef.update({
         stripeCustomerId: stripeCustomerId
       });
     }
@@ -161,6 +168,11 @@ export default async function handler(
       },
       allow_promotion_codes: true,
       billing_address_collection: 'required',
+      subscription_data: {
+        metadata: {
+          userId
+        }
+      }
     });
 
     if (!session?.url) {
@@ -181,7 +193,7 @@ export default async function handler(
     console.error('[Stripe Checkout] Unhandled error:', error);
     return res.status(500).json({ 
       error: 'Server error',
-      message: 'An unexpected error occurred',
+      message: error.message || 'An unexpected error occurred',
       details: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
