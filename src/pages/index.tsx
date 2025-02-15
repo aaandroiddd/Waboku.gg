@@ -15,6 +15,7 @@ import { GameCategories } from "@/components/GameCategories";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
+import { TrendingSearches } from "@/components/TrendingSearches";
 import {
   Command,
   CommandEmpty,
@@ -522,6 +523,11 @@ export default function Home() {
                         <Search className="h-5 w-5" />
                       </Button>
                     </div>
+                  </div>
+
+                  {/* Trending Searches */}
+                  <div className="mt-4">
+                    <TrendingSearches />
                   </div>
                 </div>
               </div>
