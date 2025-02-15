@@ -43,21 +43,22 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
+  console.log('[Stripe Checkout] Request received:', {
+    method: req.method,
+    hasAuth: !!req.headers.authorization,
+    preview: process.env.NEXT_PUBLIC_CO_DEV_ENV === 'preview'
+  });
+
   // Handle preview environment
   if (process.env.NEXT_PUBLIC_CO_DEV_ENV === 'preview') {
     console.log('[Stripe Checkout] Running in preview mode');
-    // Ensure we're using the correct path for redirection
-    const successUrl = new URL('/dashboard/account-status', process.env.NEXT_PUBLIC_APP_URL);
+    const successUrl = new URL('/dashboard/account-status', appUrl);
     successUrl.searchParams.append('upgrade', 'success');
     return res.status(200).json({
       sessionUrl: successUrl.toString(),
       isPreview: true
     });
   }
-  console.log('[Stripe Checkout] Starting checkout process...', {
-    method: req.method,
-    hasAuthHeader: !!req.headers.authorization,
-  });
   
   // Only allow POST requests
   if (req.method !== 'POST') {
@@ -105,6 +106,15 @@ export default async function handler(
     }
 
     const userId = decodedToken.uid;
+    const userEmail = decodedToken.email;
+
+    if (!userEmail) {
+      console.error('[Stripe Checkout] No email found for user:', userId);
+      return res.status(400).json({
+        error: 'User data error',
+        message: 'User email is required for subscription'
+      });
+    }
 
     // Get user's account data
     const db = getDatabase();
@@ -114,9 +124,9 @@ export default async function handler(
 
     console.log('[Stripe Checkout] User data retrieved:', {
       userId,
+      hasStripeCustomerId: !!userData?.stripeCustomerId,
       hasSubscription: !!userData?.subscription,
-      subscriptionStatus: userData?.subscription?.status,
-      accountTier: userData?.tier
+      subscriptionStatus: userData?.subscription?.status
     });
 
     // Check if user already has an active subscription
@@ -128,27 +138,31 @@ export default async function handler(
       });
     }
 
-    // Verify the price exists in Stripe
-    try {
-      await stripe.prices.retrieve(stripePriceId);
-    } catch (error: any) {
-      console.error('[Stripe Checkout] Price verification error:', error);
-      return res.status(500).json({
-        error: 'Configuration error',
-        message: 'Invalid price configuration'
-      });
-    }
-    
-    // Check if user already has a Stripe customer ID
+    // Handle customer creation/retrieval
     let stripeCustomerId = userData?.stripeCustomerId;
 
-    // If no customer ID exists, create a new customer
+    if (stripeCustomerId) {
+      // Verify the customer still exists in Stripe
+      try {
+        const customer = await stripe.customers.retrieve(stripeCustomerId);
+        if (customer.deleted) {
+          console.log('[Stripe Checkout] Customer was deleted, creating new one');
+          stripeCustomerId = null;
+        }
+      } catch (error) {
+        console.log('[Stripe Checkout] Customer not found in Stripe, creating new one');
+        stripeCustomerId = null;
+      }
+    }
+
+    // Create new customer if needed
     if (!stripeCustomerId) {
-      console.log('[Stripe Checkout] Creating new customer for user:', userId);
+      console.log('[Stripe Checkout] Creating new Stripe customer');
       const customer = await stripe.customers.create({
-        email: decodedToken.email,
+        email: userEmail,
         metadata: {
-          userId: userId
+          userId: userId,
+          firebaseEmail: userEmail
         }
       });
       stripeCustomerId = customer.id;
@@ -157,9 +171,14 @@ export default async function handler(
       await userRef.update({
         stripeCustomerId: stripeCustomerId
       });
+      
+      console.log('[Stripe Checkout] New customer created:', {
+        customerId: stripeCustomerId,
+        userId: userId
+      });
     }
 
-    // Create the checkout session with the customer ID
+    // Create the checkout session
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       line_items: [
@@ -181,7 +200,8 @@ export default async function handler(
       billing_address_collection: 'required',
       subscription_data: {
         metadata: {
-          userId
+          userId,
+          firebaseEmail: userEmail
         }
       }
     });
@@ -196,6 +216,7 @@ export default async function handler(
 
     console.log('[Stripe Checkout] Session created successfully:', {
       sessionId: session.id,
+      customerId: stripeCustomerId,
       hasUrl: !!session.url
     });
     
