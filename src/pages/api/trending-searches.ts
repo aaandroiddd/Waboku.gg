@@ -1,16 +1,37 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { ref, query, orderByChild, get, limitToLast } from 'firebase/database';
-import { database } from '@/lib/firebase';
+import { getDatabase, ref, query, orderByChild, get, limitToLast } from 'firebase/database';
+import { initializeApp, getApps } from 'firebase/app';
 import { validateSearchTerm } from '@/lib/search-validation';
 
 const CACHE_DURATION = 30 * 1000; // 30 seconds cache
 let cachedTrending: any = null;
 let lastCacheTime = 0;
 
+// Initialize Firebase for server-side
+const firebaseConfig = {
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+  databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL
+};
+
+// Initialize Firebase if not already initialized
+const getFirebaseAdmin = () => {
+  if (!getApps().length) {
+    return initializeApp(firebaseConfig);
+  }
+  return getApps()[0];
+};
+
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
+  console.log('Trending searches API called');
+  
   // Enable CORS
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET');
@@ -26,16 +47,20 @@ export default async function handler(
   // Check if we have a valid cache
   const now = Date.now();
   if (cachedTrending && (now - lastCacheTime) < CACHE_DURATION) {
+    console.log('Returning cached trending searches');
     return res.status(200).json(cachedTrending);
   }
 
   try {
-    console.log('Fetching trending searches from Firebase...');
-    
+    console.log('Initializing Firebase...');
+    const app = getFirebaseAdmin();
+    const database = getDatabase(app);
+
     if (!database) {
-      throw new Error('Firebase Realtime Database is not initialized');
+      throw new Error('Firebase Realtime Database initialization failed');
     }
 
+    console.log('Fetching trending searches from Firebase...');
     const searchesRef = ref(database, 'searches');
     
     // Get searches from the last 48 hours
@@ -48,6 +73,7 @@ export default async function handler(
     );
 
     const snapshot = await get(searchesQuery);
+    
     if (!snapshot.exists()) {
       console.log('No trending searches found');
       return res.status(200).json([]);
@@ -88,12 +114,14 @@ export default async function handler(
     console.error('Error in trending-searches API:', {
       message: error.message,
       stack: error.stack,
+      code: error.code,
       timestamp: new Date().toISOString()
     });
     
     return res.status(500).json({
       error: 'Internal Server Error',
-      message: 'Failed to fetch trending searches'
+      message: error.message || 'Failed to fetch trending searches',
+      code: error.code
     });
   }
 }

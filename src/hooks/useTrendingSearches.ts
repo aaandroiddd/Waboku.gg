@@ -10,20 +10,22 @@ interface TrendingSearch {
 const REFRESH_INTERVAL = 5 * 60 * 1000; // 5 minutes
 const REAL_TIME_LIMIT = 100; // Limit real-time updates to last 100 searches
 const MAX_RETRIES = 3;
-const RETRY_DELAY = 1000; // 1 second
+const INITIAL_RETRY_DELAY = 1000; // 1 second
 
 export function useTrendingSearches() {
   const [trendingSearches, setTrendingSearches] = useState<TrendingSearch[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchWithRetry = async (retries = MAX_RETRIES): Promise<TrendingSearch[]> => {
+  const fetchWithRetry = async (retries = MAX_RETRIES, delay = INITIAL_RETRY_DELAY): Promise<TrendingSearch[]> => {
     try {
       const response = await fetch('/api/trending-searches');
+      
       if (!response.ok) {
-        const errorData = await response.json();
+        const errorData = await response.json().catch(() => ({ message: 'Unknown error occurred' }));
         throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
       }
+      
       const data = await response.json();
       setError(null);
       return data;
@@ -31,8 +33,10 @@ export function useTrendingSearches() {
       console.error(`Attempt failed. Retries left: ${retries}`, error);
       
       if (retries > 0) {
-        await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
-        return fetchWithRetry(retries - 1);
+        // Exponential backoff
+        const nextDelay = delay * 2;
+        await new Promise(resolve => setTimeout(resolve, delay));
+        return fetchWithRetry(retries - 1, nextDelay);
       }
       
       throw new Error(error.message || 'Failed to fetch trending searches');
@@ -42,11 +46,14 @@ export function useTrendingSearches() {
   useEffect(() => {
     let unsubscribe: (() => void) | undefined;
     let isSubscribed = true;
+    let retryTimeout: NodeJS.Timeout;
 
     const setupRealtimeListener = () => {
       try {
         if (!database) {
-          throw new Error('Firebase Realtime Database is not initialized');
+          console.warn('Firebase Realtime Database is not initialized, will retry...');
+          retryTimeout = setTimeout(setupRealtimeListener, 2000);
+          return;
         }
 
         const searchesRef = ref(database, 'searches');
@@ -83,7 +90,10 @@ export function useTrendingSearches() {
         console.error('Error fetching trending searches:', error);
         if (isSubscribed) {
           setError(error.message);
-          setTrendingSearches([]); // Fallback to empty array
+          // Keep the old data if available
+          if (trendingSearches.length === 0) {
+            setTrendingSearches([]); // Only set empty array if we don't have any data
+          }
         }
       } finally {
         if (isSubscribed) {
@@ -105,6 +115,7 @@ export function useTrendingSearches() {
     return () => {
       isSubscribed = false;
       clearInterval(intervalId);
+      clearTimeout(retryTimeout);
       if (unsubscribe) {
         unsubscribe();
       }
@@ -124,6 +135,7 @@ export function useTrendingSearches() {
       });
     } catch (error) {
       console.error('Error recording search:', error);
+      // Don't throw the error as this is a non-critical operation
     }
   };
 
