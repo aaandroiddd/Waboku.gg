@@ -92,14 +92,12 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
             
             // Enhanced premium status check
             const isActivePremium = (
-              // Case 1: Active subscription
+              // Case 1: Active subscription - this should ALWAYS result in premium status
               subscriptionData.status === 'active' ||
               // Case 2: Canceled but not expired
               (subscriptionData.status === 'canceled' && endDate && endDate > now) ||
-              // Case 3: Has valid subscription ID and start date is valid
-              (subscriptionData.stripeSubscriptionId && startDate && startDate <= now) ||
-              // Case 4: Explicitly set as premium tier
-              data.tier === 'premium'
+              // Case 3: Has valid subscription ID and start date is valid and no explicit status set
+              (subscriptionData.stripeSubscriptionId && startDate && startDate <= now && !subscriptionData.status)
             );
             
             // Set subscription data with enhanced validation
