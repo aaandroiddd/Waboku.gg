@@ -18,12 +18,39 @@ const firebaseConfig = {
   databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL
 };
 
+// Validate Firebase configuration
+const validateConfig = () => {
+  const requiredFields = [
+    'apiKey',
+    'authDomain',
+    'projectId',
+    'databaseURL'
+  ];
+
+  const missingFields = requiredFields.filter(field => !firebaseConfig[field as keyof typeof firebaseConfig]);
+  
+  if (missingFields.length > 0) {
+    throw new Error(`Missing required Firebase configuration: ${missingFields.join(', ')}`);
+  }
+};
+
 // Initialize Firebase if not already initialized
 const getFirebaseAdmin = () => {
-  if (!getApps().length) {
-    return initializeApp(firebaseConfig);
+  try {
+    validateConfig();
+    
+    if (!getApps().length) {
+      return initializeApp(firebaseConfig);
+    }
+    return getApps()[0];
+  } catch (error: any) {
+    console.error('Firebase initialization error:', {
+      message: error.message,
+      stack: error.stack,
+      timestamp: new Date().toISOString()
+    });
+    throw error;
   }
-  return getApps()[0];
 };
 
 export default async function handler(
@@ -51,13 +78,21 @@ export default async function handler(
     return res.status(200).json(cachedTrending);
   }
 
+  let app;
+  let database;
+
   try {
     console.log('Initializing Firebase...');
-    const app = getFirebaseAdmin();
-    const database = getDatabase(app);
+    app = getFirebaseAdmin();
+    
+    if (!app) {
+      throw new Error('Failed to initialize Firebase app');
+    }
+
+    database = getDatabase(app);
 
     if (!database) {
-      throw new Error('Firebase Realtime Database initialization failed');
+      throw new Error('Failed to initialize Firebase Realtime Database');
     }
 
     console.log('Fetching trending searches from Firebase...');
@@ -76,6 +111,8 @@ export default async function handler(
     
     if (!snapshot.exists()) {
       console.log('No trending searches found');
+      cachedTrending = [];
+      lastCacheTime = now;
       return res.status(200).json([]);
     }
 
@@ -115,13 +152,31 @@ export default async function handler(
       message: error.message,
       stack: error.stack,
       code: error.code,
+      config: {
+        hasApiKey: !!process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+        hasAuthDomain: !!process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+        hasProjectId: !!process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+        hasDatabaseUrl: !!process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL
+      },
       timestamp: new Date().toISOString()
     });
     
+    // Return a more specific error message
     return res.status(500).json({
       error: 'Internal Server Error',
-      message: error.message || 'Failed to fetch trending searches',
+      message: process.env.NEXT_PUBLIC_CO_DEV_ENV === 'development' 
+        ? error.message 
+        : 'Failed to fetch trending searches',
       code: error.code
     });
+  } finally {
+    // Clean up any resources if needed
+    if (database) {
+      try {
+        await database.goOffline();
+      } catch (e) {
+        console.error('Error closing database connection:', e);
+      }
+    }
   }
 }

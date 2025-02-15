@@ -19,7 +19,18 @@ export function useTrendingSearches() {
 
   const fetchWithRetry = async (retries = MAX_RETRIES, delay = INITIAL_RETRY_DELAY): Promise<TrendingSearch[]> => {
     try {
-      const response = await fetch('/api/trending-searches');
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+
+      const response = await fetch('/api/trending-searches', {
+        signal: controller.signal,
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
+        }
+      });
+
+      clearTimeout(timeoutId);
       
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: 'Unknown error occurred' }));
@@ -27,10 +38,19 @@ export function useTrendingSearches() {
       }
       
       const data = await response.json();
+      
+      if (!Array.isArray(data)) {
+        throw new Error('Invalid response format');
+      }
+
       setError(null);
       return data;
     } catch (error: any) {
       console.error(`Attempt failed. Retries left: ${retries}`, error);
+      
+      if (error.name === 'AbortError') {
+        throw new Error('Request timed out');
+      }
       
       if (retries > 0) {
         // Exponential backoff
@@ -39,14 +59,14 @@ export function useTrendingSearches() {
         return fetchWithRetry(retries - 1, nextDelay);
       }
       
-      throw new Error(error.message || 'Failed to fetch trending searches');
+      throw error;
     }
   };
 
   useEffect(() => {
-    let unsubscribe: (() => void) | undefined;
     let isSubscribed = true;
     let retryTimeout: NodeJS.Timeout;
+    let unsubscribe: (() => void) | undefined;
 
     const setupRealtimeListener = () => {
       try {
@@ -123,6 +143,8 @@ export function useTrendingSearches() {
   }, []);
 
   const recordSearch = async (term: string) => {
+    if (!term.trim()) return;
+    
     try {
       if (!database) {
         throw new Error('Firebase Realtime Database is not initialized');
@@ -130,7 +152,7 @@ export function useTrendingSearches() {
 
       const searchesRef = ref(database, 'searches');
       await push(searchesRef, {
-        term,
+        term: term.trim(),
         timestamp: Date.now(),
       });
     } catch (error) {
