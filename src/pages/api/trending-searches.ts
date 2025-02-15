@@ -1,6 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { getDatabase, ref, query, orderByChild, get, limitToLast } from 'firebase/database';
-import { app } from '@/lib/firebase';
+import { ref, query, orderByChild, get, limitToLast } from 'firebase/database';
+import { database } from '@/lib/firebase';
 import { validateSearchTerm } from '@/lib/search-validation';
 
 const CACHE_DURATION = 30 * 1000; // 30 seconds cache
@@ -31,12 +31,12 @@ export default async function handler(
 
   try {
     console.log('Fetching trending searches from Firebase...');
-    const db = getDatabase(app);
-    if (!db) {
-      throw new Error('Firebase database connection failed');
+    
+    if (!database) {
+      throw new Error('Firebase Realtime Database is not initialized');
     }
 
-    const searchesRef = ref(db, 'searches');
+    const searchesRef = ref(database, 'searches');
     
     // Get searches from the last 48 hours
     const twoDaysAgo = now - (48 * 60 * 60 * 1000);

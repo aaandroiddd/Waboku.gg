@@ -13,6 +13,7 @@ import {
   Firestore
 } from 'firebase/firestore';
 import { getStorage, FirebaseStorage } from 'firebase/storage';
+import { getDatabase, Database } from 'firebase/database';
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -31,7 +32,8 @@ const requiredConfig = [
   'projectId',
   'storageBucket',
   'messagingSenderId',
-  'appId'
+  'appId',
+  'databaseURL'
 ];
 
 const missingConfig = requiredConfig.filter(key => !firebaseConfig[key as keyof typeof firebaseConfig]);
@@ -45,50 +47,28 @@ let firebaseApp: FirebaseApp;
 let auth: Auth;
 let db: Firestore;
 let storage: FirebaseStorage;
-let database: any;
+let database: Database;
 
-export const getFirebaseServices = () => {
-  try {
-    if (!firebaseApp) {
-      // Initialize Firebase only once
-      if (!getApps().length) {
-        console.log('Initializing new Firebase app...');
-        firebaseApp = initializeApp(firebaseConfig);
-      } else {
-        console.log('Using existing Firebase app...');
-        firebaseApp = getApps()[0];
-      }
+// Initialize Firebase
+if (!getApps().length) {
+  console.log('Initializing new Firebase app...');
+  firebaseApp = initializeApp(firebaseConfig);
+} else {
+  console.log('Using existing Firebase app...');
+  firebaseApp = getApps()[0];
+}
 
-      // Initialize services
-      auth = getAuth(firebaseApp);
-      db = getFirestore(firebaseApp);
-      storage = getStorage(firebaseApp);
+// Initialize services
+auth = getAuth(firebaseApp);
+db = getFirestore(firebaseApp);
+storage = getStorage(firebaseApp);
+database = getDatabase(firebaseApp);
 
-      // Initialize Realtime Database if URL is provided
-      if (firebaseConfig.databaseURL) {
-        console.log('Initializing Realtime Database...');
-        try {
-          const { getDatabase } = require('firebase/database');
-          database = getDatabase(firebaseApp);
-          console.log('Realtime Database initialized successfully');
-        } catch (error) {
-          console.error('Error initializing Realtime Database:', error);
-        }
-      }
-
-      // Set persistence for browser environment
-      if (typeof window !== 'undefined') {
-        setPersistence(auth, browserLocalPersistence)
-          .catch(error => console.error('Error setting auth persistence:', error));
-      }
-    }
-
-    return { app: firebaseApp, auth, db, storage, database };
-  } catch (error) {
-    console.error('Error initializing Firebase services:', error);
-    throw error;
-  }
-};
+// Set persistence for browser environment
+if (typeof window !== 'undefined') {
+  setPersistence(auth, browserLocalPersistence)
+    .catch(error => console.error('Error setting auth persistence:', error));
+}
 
 // Export initialized services
-export { firebaseApp as app, auth, db, storage };
+export { firebaseApp as app, auth, db, storage, database };
