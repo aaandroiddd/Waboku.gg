@@ -43,6 +43,14 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
+  // Handle preview environment
+  if (process.env.NEXT_PUBLIC_CO_DEV_ENV === 'preview') {
+    console.log('[Stripe Checkout] Running in preview mode');
+    return res.status(200).json({
+      sessionUrl: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/account-status?upgrade=success`,
+      isPreview: true
+    });
+  }
   console.log('[Stripe Checkout] Starting checkout process...', {
     method: req.method,
     hasAuthHeader: !!req.headers.authorization,
