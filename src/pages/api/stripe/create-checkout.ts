@@ -46,8 +46,11 @@ export default async function handler(
   // Handle preview environment
   if (process.env.NEXT_PUBLIC_CO_DEV_ENV === 'preview') {
     console.log('[Stripe Checkout] Running in preview mode');
+    // Ensure we're using the correct path for redirection
+    const successUrl = new URL('/dashboard/account-status', process.env.NEXT_PUBLIC_APP_URL);
+    successUrl.searchParams.append('upgrade', 'success');
     return res.status(200).json({
-      sessionUrl: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/account-status?upgrade=success`,
+      sessionUrl: successUrl.toString(),
       isPreview: true
     });
   }
