@@ -58,8 +58,11 @@ const CardSearchInput: React.FC<CardSearchInputProps> = ({
 
   return (
     <div className="relative flex-1">
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+      <div className="relative flex items-center">
+        <Search 
+          className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer transition-colors" 
+          onClick={() => handleSearch()}
+        />
         <Input
           ref={inputRef}
           type="text"
