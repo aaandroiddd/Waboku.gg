@@ -1,14 +1,13 @@
 import { useState, useEffect } from 'react';
-import { ref, get, set, onValue, Query, query, orderByChild, limitToLast } from 'firebase/database';
 import { database } from '@/lib/firebase';
+import { ref, get, set } from 'firebase/database';
 
 interface TrendingSearch {
   term: string;
   count: number;
 }
 
-const REFRESH_INTERVAL = 5 * 60 * 1000; // 5 minutes
-const REAL_TIME_LIMIT = 100; // Limit real-time updates to last 100 searches
+const REFRESH_INTERVAL = 30 * 1000; // 30 seconds
 const MAX_RETRIES = 3;
 const INITIAL_RETRY_DELAY = 1000; // 1 second
 
@@ -18,7 +17,6 @@ export function useTrendingSearches() {
   const [error, setError] = useState<string | null>(null);
 
   const fetchWithRetry = async (retries = MAX_RETRIES, delay = INITIAL_RETRY_DELAY): Promise<TrendingSearch[]> => {
-    console.log(`Attempting to fetch trending searches. Retries left: ${retries}`);
     try {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
@@ -66,37 +64,7 @@ export function useTrendingSearches() {
 
   useEffect(() => {
     let isSubscribed = true;
-    let retryTimeout: NodeJS.Timeout;
-    let unsubscribe: (() => void) | undefined;
-
-    const setupRealtimeListener = () => {
-      try {
-        if (!database) {
-          console.warn('Firebase Realtime Database is not initialized, will retry...');
-          retryTimeout = setTimeout(setupRealtimeListener, 2000);
-          return;
-        }
-
-        const searchTermsRef = ref(database, 'searchTerms');
-        const searchTermsQuery: Query = query(
-          searchTermsRef,
-          orderByChild('count'),
-          limitToLast(REAL_TIME_LIMIT)
-        );
-
-        unsubscribe = onValue(searchTermsQuery, () => {
-          if (isSubscribed) {
-            fetchTrendingSearches();
-          }
-        }, (error) => {
-          console.error('Error in realtime listener:', error);
-          setError('Failed to setup realtime updates');
-        });
-      } catch (error) {
-        console.error('Error setting up realtime listener:', error);
-        setError('Failed to setup realtime updates');
-      }
-    };
+    let intervalId: NodeJS.Timeout;
 
     const fetchTrendingSearches = async () => {
       if (!isSubscribed) return;
@@ -126,20 +94,13 @@ export function useTrendingSearches() {
     // Initial fetch
     fetchTrendingSearches();
 
-    // Set up real-time listener
-    setupRealtimeListener();
-
     // Set up periodic refresh
-    const intervalId = setInterval(fetchTrendingSearches, REFRESH_INTERVAL);
+    intervalId = setInterval(fetchTrendingSearches, REFRESH_INTERVAL);
 
     // Cleanup
     return () => {
       isSubscribed = false;
       clearInterval(intervalId);
-      clearTimeout(retryTimeout);
-      if (unsubscribe) {
-        unsubscribe();
-      }
     };
   }, []);
 
@@ -168,7 +129,7 @@ export function useTrendingSearches() {
 
   return {
     trendingSearches,
-    loading,
+    isLoading: loading,
     error,
     recordSearch,
   };
