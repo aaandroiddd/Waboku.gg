@@ -1,7 +1,6 @@
 import { useRouter } from 'next/router';
 import CardSearchInput from '@/components/CardSearchInput';
-import { database } from '@/lib/firebase';
-import { ref, push, serverTimestamp } from 'firebase/database';
+import { useTrendingSearches } from '@/hooks/useTrendingSearches';
 
 interface PokemonCard {
   id: string;
@@ -46,22 +45,11 @@ type Card = PokemonCard | MtgCard | OnePieceCard;
 
 export default function SearchBar() {
   const router = useRouter();
+  const { recordSearch } = useTrendingSearches();
 
-  const trackSearch = async (term: string) => {
-    try {
-      const searchTermsRef = ref(database, 'searchTerms');
-      await push(searchTermsRef, {
-        term,
-        timestamp: serverTimestamp()
-      });
-    } catch (error) {
-      console.error('Error tracking search term:', error);
-    }
-  };
-
-  const handleSearch = (query: string) => {
+  const handleSearch = async (query: string) => {
     if (query.trim()) {
-      trackSearch(query.trim());
+      await recordSearch(query.trim());
       router.push({
         pathname: '/listings',
         query: { 
@@ -71,7 +59,7 @@ export default function SearchBar() {
     }
   };
 
-  const handleCardSelect = (card: any) => {
+  const handleCardSelect = async (card: any) => {
     let searchTerm;
     switch (card.type) {
       case 'pokemon':
@@ -85,13 +73,16 @@ export default function SearchBar() {
         break;
     }
     
-    router.push({
-      pathname: '/listings',
-      query: { 
-        query: searchTerm.trim(),
-        game: card.type
-      }
-    });
+    if (searchTerm) {
+      await recordSearch(searchTerm.trim());
+      router.push({
+        pathname: '/listings',
+        query: { 
+          query: searchTerm.trim(),
+          game: card.type
+        }
+      });
+    }
   };
 
   return (
