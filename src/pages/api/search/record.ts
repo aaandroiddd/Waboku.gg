@@ -2,6 +2,7 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import { validateSearchTerm, normalizeSearchTerm } from '@/lib/search-validation';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { getFirebaseAdmin } from '@/lib/firebase-admin';
+import { FieldValue } from 'firebase-admin/firestore';
 
 export default async function handler(
   req: NextApiRequest,
@@ -11,20 +12,15 @@ export default async function handler(
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  try {
-    const ip = req.socket.remoteAddress || 'unknown';
-    console.log(`Processing search request from IP: ${ip}`);
+  const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
+  console.log(`Processing search request from IP: ${ip}`);
 
+  try {
     // Apply rate limiting
-    try {
-      const isAllowed = await checkRateLimit(ip);
-      if (!isAllowed) {
-        console.log(`Rate limit exceeded for IP: ${ip}`);
-        return res.status(429).json({ error: 'Rate limit exceeded' });
-      }
-    } catch (rateLimitError) {
-      console.error('Rate limit check error:', rateLimitError);
-      // Continue processing if rate limit check fails
+    const isAllowed = await checkRateLimit(ip);
+    if (!isAllowed) {
+      console.log(`Rate limit exceeded for IP: ${ip}`);
+      return res.status(429).json({ error: 'Rate limit exceeded. Please try again later.' });
     }
 
     const { searchTerm } = req.body;
@@ -46,20 +42,22 @@ export default async function handler(
       return res.status(400).json({ error: 'Invalid or inappropriate search term' });
     }
 
-    // Initialize Firebase Admin
+    // Initialize Firebase Admin and get Firestore instance
     const { db } = getFirebaseAdmin();
 
     // Record the search term in Firebase
     try {
       const searchRef = db.collection('searchStats').doc('trending');
-      await searchRef.set({
-        [normalizedTerm]: db.FieldValue.increment(1),
-        lastUpdated: db.FieldValue.serverTimestamp(),
-      }, { merge: true });
+      const updateData = {
+        [normalizedTerm]: FieldValue.increment(1),
+        lastUpdated: FieldValue.serverTimestamp(),
+      };
+      
+      await searchRef.set(updateData, { merge: true });
       console.log(`Successfully recorded search term: ${normalizedTerm}`);
     } catch (dbError) {
       console.error('Database error:', dbError);
-      throw dbError; // Re-throw to be caught by main error handler
+      throw new Error(`Failed to record search term: ${dbError.message}`);
     }
 
     return res.status(200).json({ 
@@ -69,8 +67,8 @@ export default async function handler(
   } catch (error) {
     console.error('Error processing search request:', error);
     return res.status(500).json({ 
-      error: 'Internal server error',
-      message: process.env.NODE_ENV === 'development' ? error.message : undefined
+      error: 'An error occurred while processing your request',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 }
