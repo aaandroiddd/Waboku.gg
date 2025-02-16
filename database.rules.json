@@ -2,8 +2,8 @@
   "rules": {
     "searchTerms": {
       ".read": true,
-      ".write": true,
-      ".indexOn": ["count"],
+      ".write": "auth != null",
+      ".indexOn": ["count", "lastUpdated"],
       "$termId": {
         ".validate": "newData.hasChildren(['term', 'count'])",
         "term": {
@@ -16,7 +16,7 @@
     },
     "searches": {
       ".read": true,
-      ".write": true,
+      ".write": "auth != null",
       ".indexOn": ["timestamp"],
       "$searchId": {
         ".validate": "newData.hasChildren(['term', 'timestamp'])",
