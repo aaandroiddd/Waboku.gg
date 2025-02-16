@@ -62,37 +62,35 @@ export function useTrendingSearches() {
     }
   };
 
+  const fetchTrendingSearches = async () => {
+    setLoading(true);
+    try {
+      const data = await fetchWithRetry();
+      setTrendingSearches(data);
+      setError(null);
+    } catch (error: any) {
+      console.error('Error fetching trending searches:', error);
+      setError(error.message);
+      // Keep the old data if available
+      if (trendingSearches.length === 0) {
+        setTrendingSearches([]); // Only set empty array if we don't have any data
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     let isSubscribed = true;
     let intervalId: NodeJS.Timeout;
 
-    const fetchTrendingSearches = async () => {
+    const initFetch = async () => {
       if (!isSubscribed) return;
-      
-      try {
-        const data = await fetchWithRetry();
-        if (isSubscribed) {
-          setTrendingSearches(data);
-          setError(null);
-        }
-      } catch (error: any) {
-        console.error('Error fetching trending searches:', error);
-        if (isSubscribed) {
-          setError(error.message);
-          // Keep the old data if available
-          if (trendingSearches.length === 0) {
-            setTrendingSearches([]); // Only set empty array if we don't have any data
-          }
-        }
-      } finally {
-        if (isSubscribed) {
-          setLoading(false);
-        }
-      }
+      await fetchTrendingSearches();
     };
 
     // Initial fetch
-    fetchTrendingSearches();
+    initFetch();
 
     // Set up periodic refresh
     intervalId = setInterval(fetchTrendingSearches, REFRESH_INTERVAL);
@@ -127,10 +125,15 @@ export function useTrendingSearches() {
     }
   };
 
+  const refreshTrending = async () => {
+    await fetchTrendingSearches();
+  };
+
   return {
     trendingSearches,
-    isLoading: loading,
+    loading,
     error,
     recordSearch,
+    refreshTrending,
   };
 }
