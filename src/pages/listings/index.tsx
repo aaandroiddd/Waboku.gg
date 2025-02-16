@@ -263,7 +263,7 @@ export default function ListingsPage() {
               <div className="space-y-4">
                 {/* Search bar with integrated button */}
                 <div className="relative flex-1">
-                  <SearchBar />
+                  <SearchBar showSearchButton={true} />
                 </div>
 
                 {/* Controls row */}

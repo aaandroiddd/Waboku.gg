@@ -3,17 +3,20 @@ import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
 import { validateSearchTerm, normalizeSearchTerm } from '@/lib/search-validation';
 import { useToast } from "@/components/ui/use-toast";
+import { Button } from "@/components/ui/button";
 
 interface CardSearchInputProps {
   placeholder?: string;
   onSelect?: (cardName: string) => void;
   onSearch?: (query: string) => void;
+  showSearchButton?: boolean;
 }
 
 const CardSearchInput: React.FC<CardSearchInputProps> = ({ 
   placeholder = "Search cards...",
   onSelect,
-  onSearch 
+  onSearch,
+  showSearchButton = false
 }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
@@ -70,9 +73,16 @@ const CardSearchInput: React.FC<CardSearchInputProps> = ({
           onChange={handleChange}
           onKeyDown={handleKeyDown}
           value={searchTerm}
-          className="pl-9 pr-4 w-full"
+          className={`pl-9 pr-4 w-full ${showSearchButton ? 'rounded-r-none' : ''}`}
         />
-
+        {showSearchButton && (
+          <Button 
+            onClick={() => handleSearch()}
+            className="rounded-l-none h-12"
+          >
+            <Search className="h-4 w-4" />
+          </Button>
+        )}
       </div>
     </div>
   );
