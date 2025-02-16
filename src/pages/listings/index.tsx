@@ -191,19 +191,49 @@ export default function ListingsPage() {
     setFilteredListings(filtered);
   }, [allListings, selectedState, selectedGame, selectedCondition, priceRange, showGradedOnly]);
 
-  const handleSearch = () => {
-    // Update URL with search parameters
-    router.push({
-      pathname: '/listings',
-      query: {
-        ...(searchQuery && { query: searchQuery }),
-        ...(selectedState !== 'all' && { state: selectedState }),
-        ...(selectedGame !== 'all' && { game: selectedGame }),
-        ...(selectedCondition !== 'all' && { condition: selectedCondition }),
-        ...(priceRange[0] !== 0 && { minPrice: priceRange[0] }),
-        ...(priceRange[1] !== 1000 && { maxPrice: priceRange[1] }),
-      },
-    }, undefined, { shallow: true });
+  const handleSearch = async () => {
+    if (!searchQuery.trim()) return;
+
+    try {
+      // Record search term and validate
+      const response = await fetch('/api/search/record', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ searchTerm: searchQuery }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        if (response.status === 429) {
+          // Rate limit exceeded
+          alert('Please wait a moment before searching again.');
+          return;
+        } else if (response.status === 400) {
+          // Invalid or inappropriate search term
+          alert('Invalid or inappropriate search term.');
+          return;
+        }
+        throw new Error(data.error || 'Failed to process search');
+      }
+
+      // Update URL with search parameters
+      router.push({
+        pathname: '/listings',
+        query: {
+          ...(searchQuery && { query: searchQuery }),
+          ...(selectedState !== 'all' && { state: selectedState }),
+          ...(selectedGame !== 'all' && { game: selectedGame }),
+          ...(selectedCondition !== 'all' && { condition: selectedCondition }),
+          ...(priceRange[0] !== 0 && { minPrice: priceRange[0] }),
+          ...(priceRange[1] !== 1000 && { maxPrice: priceRange[1] }),
+        },
+      }, undefined, { shallow: true });
+    } catch (error) {
+      console.error('Search error:', error);
+      alert('An error occurred while processing your search. Please try again.');
+    }
   };
 
   const resetFilters = () => {
