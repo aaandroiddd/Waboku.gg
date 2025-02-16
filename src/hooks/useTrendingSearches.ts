@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ref, push, onValue, Query, query, orderByChild, limitToLast } from 'firebase/database';
+import { ref, get, set, onValue, Query, query, orderByChild, limitToLast } from 'firebase/database';
 import { database } from '@/lib/firebase';
 
 interface TrendingSearch {
@@ -76,14 +76,14 @@ export function useTrendingSearches() {
           return;
         }
 
-        const searchesRef = ref(database, 'searches');
-        const searchesQuery: Query = query(
-          searchesRef,
-          orderByChild('timestamp'),
+        const searchTermsRef = ref(database, 'searchTerms');
+        const searchTermsQuery: Query = query(
+          searchTermsRef,
+          orderByChild('count'),
           limitToLast(REAL_TIME_LIMIT)
         );
 
-        unsubscribe = onValue(searchesQuery, () => {
+        unsubscribe = onValue(searchTermsQuery, () => {
           if (isSubscribed) {
             fetchTrendingSearches();
           }
@@ -150,10 +150,14 @@ export function useTrendingSearches() {
         throw new Error('Firebase Realtime Database is not initialized');
       }
 
-      const searchesRef = ref(database, 'searches');
-      await push(searchesRef, {
+      const searchTermRef = ref(database, `searchTerms/${term.trim().toLowerCase()}`);
+      const snapshot = await get(searchTermRef);
+      const currentCount = snapshot.exists() ? snapshot.val().count || 0 : 0;
+      
+      await set(searchTermRef, {
         term: term.trim(),
-        timestamp: Date.now(),
+        count: currentCount + 1,
+        lastUpdated: Date.now()
       });
     } catch (error) {
       console.error('Error recording search:', error);

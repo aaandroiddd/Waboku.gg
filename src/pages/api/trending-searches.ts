@@ -73,9 +73,9 @@ export default async function handler(
     const twoDaysAgo = now - (48 * 60 * 60 * 1000);
     
     const snapshot = await database
-      .ref('searches')
-      .orderByChild('timestamp')
-      .limitToLast(500)
+      .ref('searchTerms')
+      .orderByChild('count')
+      .limitToLast(10)
       .once('value');
     
     if (!snapshot.exists()) {
@@ -85,30 +85,21 @@ export default async function handler(
       return res.status(200).json([]);
     }
 
-    const searches: any[] = [];
+    const trending: any[] = [];
     
     snapshot.forEach((childSnapshot) => {
       const search = childSnapshot.val();
-      if (search.timestamp >= twoDaysAgo && validateSearchTerm(search.term)) {
-        searches.push(search);
+      if (validateSearchTerm(search.term)) {
+        trending.push({
+          term: search.term.charAt(0).toUpperCase() + search.term.slice(1),
+          count: search.count
+        });
       }
       return false; // Required for TypeScript forEach
     });
 
-    // Count occurrences and sort by frequency
-    const searchCounts = searches.reduce((acc: Record<string, number>, curr: any) => {
-      const term = curr.term.trim().toLowerCase();
-      acc[term] = (acc[term] || 0) + 1;
-      return acc;
-    }, {});
-
-    const trending = Object.entries(searchCounts)
-      .map(([term, count]) => ({ 
-        term: term.charAt(0).toUpperCase() + term.slice(1),
-        count 
-      }))
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 5);
+    // Sort by count in descending order
+    trending.sort((a, b) => b.count - a.count);
 
     // Update cache
     cachedTrending = trending;
