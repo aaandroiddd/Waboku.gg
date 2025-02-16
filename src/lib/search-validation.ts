@@ -1,3 +1,7 @@
+import { ProfanityFilter } from 'glin-profanity';
+
+const filter = new ProfanityFilter();
+
 // Basic search term validation rules
 export function validateSearchTerm(term: string): boolean {
   // Remove extra spaces and trim
@@ -12,6 +16,12 @@ export function validateSearchTerm(term: string): boolean {
   // Only allow letters, numbers, spaces, and basic punctuation
   const validCharacters = /^[a-zA-Z0-9\s\-',.]+$/;
   if (!validCharacters.test(cleanTerm)) return false;
+
+  // Check for profanity
+  if (filter.isProfane(cleanTerm)) {
+    console.warn(`Profanity detected in search term: ${cleanTerm}`);
+    return false;
+  }
 
   // Blacklist common spam patterns
   const spamPatterns = [
