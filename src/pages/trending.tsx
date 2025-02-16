@@ -13,6 +13,8 @@ import {
   HoverCardTrigger,
 } from "@/components/ui/hover-card"
 
+import { Footer } from "@/components/Footer"
+
 export default function TrendingPage() {
   const router = useRouter()
   const { trendingSearches, isLoading, error } = useTrendingSearches()
@@ -46,7 +48,8 @@ export default function TrendingPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="min-h-screen flex flex-col">
+      <div className="container mx-auto px-4 py-8 flex-grow">
       <Card className="p-6">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-3xl font-bold">Trending Searches</h1>
@@ -122,6 +125,8 @@ export default function TrendingPage() {
           </div>
         )}
       </Card>
+    </div>
+      <Footer />
     </div>
   )
 }
