@@ -1,13 +1,8 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { validateSearchTerm } from '@/lib/search-validation';
-import { rateLimit } from '@/lib/rate-limit';
+import { checkRateLimit } from '@/lib/rate-limit';
 import { db } from '@/lib/firebase-admin';
 import { FieldValue } from 'firebase-admin/firestore';
-
-const limiter = rateLimit({
-  interval: 60 * 1000, // 60 seconds
-  uniqueTokenPerInterval: 500, // Max 500 users per interval
-});
 
 export default async function handler(
   req: NextApiRequest,
@@ -19,7 +14,12 @@ export default async function handler(
 
   try {
     // Apply rate limiting
-    await limiter.check(res, 10, req.socket.remoteAddress!);
+    const ip = req.socket.remoteAddress || 'unknown';
+    const isAllowed = await checkRateLimit(ip);
+    
+    if (!isAllowed) {
+      return res.status(429).json({ error: 'Rate limit exceeded' });
+    }
 
     const { searchTerm } = req.body;
 
@@ -42,9 +42,6 @@ export default async function handler(
 
     return res.status(200).json({ success: true });
   } catch (error) {
-    if (error.statusCode === 429) {
-      return res.status(429).json({ error: 'Rate limit exceeded' });
-    }
     console.error('Error recording search term:', error);
     return res.status(500).json({ error: 'Internal server error' });
   }
