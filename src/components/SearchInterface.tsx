@@ -6,8 +6,10 @@ import CardSearchInput from './CardSearchInput';
 const SearchInterface = () => {
   const [selectedState, setSelectedState] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
 
   const handleSearch = useCallback(() => {
+    setDebouncedQuery(searchQuery);
     // Implement your search logic here
     console.log('Searching:', { searchQuery, selectedState });
   }, [searchQuery, selectedState]);
@@ -39,10 +41,21 @@ const SearchInterface = () => {
       {/* Desktop Search Controls */}
       <div className="hidden sm:flex gap-4">
         <div className="flex-1">
-          <CardSearchInput
-            onSelect={setSearchQuery}
-            onSearch={handleSearch}
-          />
+          <form onSubmit={(e) => {
+            e.preventDefault();
+            handleSearch();
+          }} className="flex gap-4">
+            <div className="flex-1">
+              <CardSearchInput
+                onSelect={setSearchQuery}
+                onSearch={handleSearch}
+              />
+            </div>
+            <Button type="submit" className="h-10">
+              <Search className="h-4 w-4 mr-2" />
+              Search
+            </Button>
+          </form>
         </div>
         
         <div className="w-[180px]">

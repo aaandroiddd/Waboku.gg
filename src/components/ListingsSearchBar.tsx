@@ -14,6 +14,7 @@ import { StateSelect } from "./StateSelect";
 interface ListingsSearchBarProps {
   value: string;
   onChange: (value: string) => void;
+  onSearch: (value: string) => void;
   state?: string;
   onStateChange?: (state: string) => void;
   placeholder?: string;
@@ -23,21 +24,30 @@ interface ListingsSearchBarProps {
 export function ListingsSearchBar({ 
   value, 
   onChange,
+  onSearch,
   state,
   onStateChange, 
   placeholder = "Search your listings...",
   className 
 }: ListingsSearchBarProps) {
   const [open, setOpen] = useState(false);
+  const [inputValue, setInputValue] = useState(value);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onChange(inputValue);
+    onSearch(inputValue);
+    setOpen(false);
+  };
 
   const SearchInput = () => (
-    <div className="flex gap-4 w-full">
+    <form onSubmit={handleSubmit} className="flex gap-4 w-full">
       <div className="relative flex-1">
         <Input
           type="text"
           placeholder={placeholder}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
+          value={inputValue}
+          onChange={(e) => setInputValue(e.target.value)}
           className="w-full h-12"
           autoFocus
         />
@@ -45,7 +55,11 @@ export function ListingsSearchBar({
       <div className="w-[200px]">
         <StateSelect value={state} onValueChange={onStateChange} />
       </div>
-    </div>
+      <Button type="submit" className="h-12">
+        <Search className="h-4 w-4 mr-2" />
+        Search
+      </Button>
+    </form>
   );
 
   return (
