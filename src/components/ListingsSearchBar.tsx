@@ -55,8 +55,8 @@ export function ListingsSearchBar({
       <div className="w-[200px]">
         <StateSelect value={state} onValueChange={onStateChange} />
       </div>
-      <Button type="submit" className="h-12">
-        <Search className="h-4 w-4 mr-2" />
+      <Button type="submit" className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary text-primary-foreground shadow hover:bg-primary/90 h-10">
+        <Search className="h-5 w-5" />
         Search
       </Button>
     </form>
@@ -66,8 +66,8 @@ export function ListingsSearchBar({
     <div className={className}>
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetTrigger asChild>
-          <Button variant="ghost" size="icon" className="h-12 w-12">
-            <Search className="h-4 w-4" />
+          <Button className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary text-primary-foreground shadow hover:bg-primary/90 h-10 w-10">
+            <Search className="h-5 w-5" />
           </Button>
         </SheetTrigger>
         <SheetContent side="top" className="w-full p-4">
