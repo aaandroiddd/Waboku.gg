@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import SearchBar from '@/components/SearchBar';
 import { Listing } from '@/types/database';
 import { ListingGrid } from '@/components/ListingGrid';
 import { SearchListingList } from '@/components/SearchListingList';
@@ -261,25 +262,9 @@ export default function ListingsPage() {
             <div className="mb-8">
               <div className="space-y-4">
                 {/* Search bar with integrated button */}
-                <form onSubmit={(e) => {
-                    e.preventDefault();
-                    handleSearch();
-                  }} className="relative flex-1">
-                  <Input
-                    type="text"
-                    placeholder="Search for cards..."
-                    className="pr-[88px] h-12 w-full"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                  />
-                  <Button 
-                    type="submit"
-                    variant="default"
-                    className="absolute right-1 top-1 h-10"
-                  >
-                    <Search className="h-5 w-5" />
-                  </Button>
-                </form>
+                <div className="relative flex-1">
+                  <SearchBar />
+                </div>
 
                 {/* Controls row */}
                 <div className="flex flex-wrap gap-2 items-center justify-between">
