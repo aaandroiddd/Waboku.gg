@@ -1,6 +1,6 @@
-import { ProfanityFilter } from 'glin-profanity';
+const profanity = require('glin-profanity');
 
-const filter = new ProfanityFilter();
+const filter = profanity;
 
 // Basic search term validation rules
 export function validateSearchTerm(term: string): boolean {
