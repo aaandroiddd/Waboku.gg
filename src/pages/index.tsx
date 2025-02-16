@@ -526,7 +526,7 @@ export default function Home() {
                   </div>
 
                   {/* Trending Searches */}
-                  <div className="mt-4">
+                  <div className="mt-4 bg-card/50 rounded-lg p-2">
                     <TrendingSearches />
                   </div>
                 </div>
