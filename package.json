@@ -13,7 +13,7 @@
     "analyze": "ANALYZE=true next build"
   },
   "dependencies": {
-    "glin-profanity": "^1.0.1",
+    "bad-words": "^3.0.4",
     "@stripe/stripe-js": "^2.4.0",
     "stripe": "^14.14.0",
     "micro": "^10.0.1",

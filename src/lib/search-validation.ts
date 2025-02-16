@@ -1,6 +1,6 @@
-const profanity = require('glin-profanity');
+import Filter from 'bad-words';
 
-const filter = profanity;
+const filter = new Filter();
 
 // Basic search term validation rules
 export function validateSearchTerm(term: string): boolean {
@@ -18,9 +18,14 @@ export function validateSearchTerm(term: string): boolean {
   if (!validCharacters.test(cleanTerm)) return false;
 
   // Check for profanity
-  if (filter.isProfane(cleanTerm)) {
-    console.warn(`Profanity detected in search term: ${cleanTerm}`);
-    return false;
+  try {
+    if (filter.isProfane(cleanTerm)) {
+      console.warn(`Profanity detected in search term: ${cleanTerm}`);
+      return false;
+    }
+  } catch (error) {
+    console.error('Error checking profanity:', error);
+    // If profanity check fails, continue with other validations
   }
 
   // Blacklist common spam patterns
