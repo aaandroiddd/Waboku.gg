@@ -349,106 +349,6 @@ export function useListings({ userId, searchQuery, showOnlyActive = false }: Use
   };
 
   useEffect(() => {
-    // Fix the listing that's not showing up
-    const fixListing = async () => {
-      try {
-        const { db } = await getFirebaseServices();
-        const listingRef = doc(db, 'listings', 'PnnBwXaVtz0EyN81KLnw');
-        const listingSnap = await getDoc(listingRef);
-        
-        if (listingSnap.exists()) {
-          const data = listingSnap.data();
-          
-          // Calculate new expiration date (30 days from now)
-          const expiresAt = new Date();
-          expiresAt.setDate(expiresAt.getDate() + 30);
-          
-          // Update the listing with correct fields
-          await updateDoc(listingRef, {
-            status: 'active',
-            archivedAt: null,
-            expiresAt,
-            // Ensure other required fields are present
-            createdAt: data.createdAt || new Date(),
-          });
-          
-          console.log('Debug - Fixed listing PnnBwXaVtz0EyN81KLnw');
-        }
-      } catch (error) {
-        console.error('Error fixing listing:', error);
-      }
-    };
-
-    fixListing();
-    const debugListingAndQuery = async () => {
-      try {
-        const { db } = await getFirebaseServices();
-        const listingRef = doc(db, 'listings', 'bo4AaFHrWo8h2QNWdPya');
-        const listingSnap = await getDoc(listingRef);
-        
-        if (listingSnap.exists()) {
-          const data = listingSnap.data();
-          console.log('Debug - Direct DB check for bo4AaFHrWo8h2QNWdPya:', {
-            exists: true,
-            id: listingSnap.id,
-            status: data.status,
-            expiresAt: data.expiresAt?.toDate(),
-            archivedAt: data.archivedAt?.toDate(),
-            createdAt: data.createdAt?.toDate(),
-            title: data.title,
-            price: data.price,
-            allFields: data
-          });
-
-          // Test the query that should return this listing
-          const listingsRef = collection(db, 'listings');
-          const q = query(
-            listingsRef,
-            where('status', '==', 'active'),
-            orderBy('createdAt', 'desc')
-          );
-          
-          const querySnapshot = await getDocs(q);
-          const found = querySnapshot.docs.some(doc => doc.id === 'bo4AaFHrWo8h2QNWdPya');
-          console.log('Debug - Query test result:', {
-            totalResults: querySnapshot.size,
-            listingFound: found
-          });
-        }
-      } catch (error) {
-        console.error('Error in debug check:', error);
-      }
-    };
-
-    debugListingAndQuery();
-    const debugListing = async () => {
-      try {
-        const { db } = await getFirebaseServices();
-        const listingRef = doc(db, 'listings', 'bo4AaFHrWo8h2QNWdPya');
-        const listingSnap = await getDoc(listingRef);
-        
-        if (listingSnap.exists()) {
-          const data = listingSnap.data();
-          console.log('Debug - Listing bo4AaFHrWo8h2QNWdPya:', {
-            exists: true,
-            id: listingSnap.id,
-            status: data.status,
-            expiresAt: data.expiresAt?.toDate(),
-            archivedAt: data.archivedAt?.toDate(),
-            createdAt: data.createdAt?.toDate(),
-            title: data.title,
-            price: data.price,
-            allFields: data
-          });
-        } else {
-          console.log('Debug - Listing bo4AaFHrWo8h2QNWdPya does not exist');
-        }
-      } catch (error) {
-        console.error('Error in debug check:', error);
-      }
-    };
-
-    debugListing();
     const fetchListings = async () => {
       try {
         setIsLoading(true);
@@ -456,9 +356,6 @@ export function useListings({ userId, searchQuery, showOnlyActive = false }: Use
         
         const { db } = await getFirebaseServices();
         const listingsRef = collection(db, 'listings');
-        
-        // Get current date for expiration check
-        const now = new Date();
         
         // Create base query for listings
         let queryConstraints: QueryConstraint[] = [];
@@ -468,15 +365,12 @@ export function useListings({ userId, searchQuery, showOnlyActive = false }: Use
           queryConstraints.push(where('userId', '==', userId));
         }
 
-        // Add status and expiration filters
+        // Add status filters
         if (showOnlyActive) {
-          // For active listings view, only show truly active listings
           queryConstraints.push(where('status', '==', 'active'));
         } else if (userId) {
-          // For user's own listings, show all statuses but filter archived ones by expiration
           queryConstraints.push(where('status', 'in', ['active', 'archived', 'inactive']));
         } else {
-          // For other cases, only show active listings
           queryConstraints.push(where('status', '==', 'active'));
         }
 
@@ -484,16 +378,7 @@ export function useListings({ userId, searchQuery, showOnlyActive = false }: Use
         queryConstraints.push(orderBy('createdAt', 'desc'));
 
         const q = query(listingsRef, ...queryConstraints);
-        
-        console.log('Debug: Executing Firestore query with constraints:', {
-          userId,
-          showOnlyActive,
-          timestamp: now.toISOString(),
-          constraints: queryConstraints.map(c => c.toString())
-        });
-        
         const querySnapshot = await getDocs(q);
-        console.log(`Found ${querySnapshot.size} listings in Firestore`);
         
         let fetchedListings = querySnapshot.docs.map(doc => {
           const data = doc.data();
@@ -501,7 +386,7 @@ export function useListings({ userId, searchQuery, showOnlyActive = false }: Use
             id: doc.id,
             ...data,
             createdAt: data.createdAt?.toDate() || new Date(),
-            expiresAt: data.expiresAt?.toDate() || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now if not set
+            expiresAt: data.expiresAt?.toDate() || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
             price: Number(data.price) || 0,
             imageUrls: Array.isArray(data.imageUrls) ? data.imageUrls : [],
             isGraded: Boolean(data.isGraded),
@@ -515,31 +400,28 @@ export function useListings({ userId, searchQuery, showOnlyActive = false }: Use
           } as Listing;
         });
 
-        // If there's a search query, filter results in memory to handle case-insensitive search
-        if (searchQuery) {
+        // If there's a search query, filter results in memory
+        if (searchQuery?.trim()) {
           const searchLower = searchQuery.toLowerCase();
           fetchedListings = fetchedListings.filter(listing => 
             listing.title?.toLowerCase().includes(searchLower)
           );
-          console.log(`After search filter: ${fetchedListings.length} listings`);
         }
         
         setListings(fetchedListings);
       } catch (err: any) {
-        console.error('Error fetching listings:', {
-          error: err,
-          message: err.message,
-          code: err.code,
-          stack: err.stack
-        });
+        console.error('Error fetching listings:', err);
         setError(err.message || 'Error fetching listings');
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchListings();
-  }, [userId, searchQuery]);
+    // Only fetch on initial load or when userId changes
+    if (!searchQuery) {
+      fetchListings();
+    }
+  }, [userId]);
 
   return { 
     listings, 

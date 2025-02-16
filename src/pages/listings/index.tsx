@@ -130,10 +130,8 @@ export default function ListingsPage() {
   const [priceRange, setPriceRange] = useState([0, 1000]);
   const [showGradedOnly, setShowGradedOnly] = useState(false);
 
-  // Use the enhanced useListings hook
-  const { listings: allListings, isLoading, error } = useListings({ 
-    searchQuery: searchQuery 
-  });
+  // Use the enhanced useListings hook without automatic search
+  const { listings: allListings, isLoading, error } = useListings();
 
   const [filteredListings, setFilteredListings] = useState<Listing[]>([]);
 
@@ -263,27 +261,25 @@ export default function ListingsPage() {
             <div className="mb-8">
               <div className="space-y-4">
                 {/* Search bar with integrated button */}
-                <div className="relative flex-1">
+                <form onSubmit={(e) => {
+                    e.preventDefault();
+                    handleSearch();
+                  }} className="relative flex-1">
                   <Input
                     type="text"
                     placeholder="Search for cards..."
                     className="pr-[88px] h-12 w-full"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        handleSearch();
-                      }
-                    }}
                   />
                   <Button 
+                    type="submit"
                     variant="default"
-                    className="absolute right-1 top-1 h-10" 
-                    onClick={handleSearch}
+                    className="absolute right-1 top-1 h-10"
                   >
                     <Search className="h-5 w-5" />
                   </Button>
-                </div>
+                </form>
 
                 {/* Controls row */}
                 <div className="flex flex-wrap gap-2 items-center justify-between">
