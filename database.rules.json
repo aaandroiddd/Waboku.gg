@@ -2,7 +2,7 @@
   "rules": {
     "searchTerms": {
       ".read": true,
-      ".write": "auth != null",
+      ".write": true,
       ".indexOn": ["count", "lastUpdated"],
       "$termId": {
         ".validate": "newData.hasChildren(['term', 'count'])",

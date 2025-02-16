@@ -18,6 +18,7 @@ export function useTrendingSearches() {
   const [error, setError] = useState<string | null>(null);
 
   const fetchWithRetry = async (retries = MAX_RETRIES, delay = INITIAL_RETRY_DELAY): Promise<TrendingSearch[]> => {
+    console.log(`Attempting to fetch trending searches. Retries left: ${retries}`);
     try {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
