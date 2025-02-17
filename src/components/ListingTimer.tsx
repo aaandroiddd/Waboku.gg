@@ -180,17 +180,7 @@ export function ListingTimer({ createdAt, archivedAt, accountTier, status, listi
     }
   };
 
-  const getProgressColor = (progress: number, status: string) => {
-    if (status === 'archived') {
-      if (progress > 90) return 'bg-red-500';
-      if (progress > 75) return 'bg-orange-500';
-      return 'bg-yellow-500';
-    }
-    
-    if (progress > 90) return 'bg-red-500';
-    if (progress > 75) return 'bg-orange-500';
-    return 'bg-blue-500';
-  };
+  // Removed getProgressColor as we're using a different approach for visualization
 
   if (isExpired && status === 'active') {
     return (
@@ -201,7 +191,7 @@ export function ListingTimer({ createdAt, archivedAt, accountTier, status, listi
             {isProcessing ? "Archiving listing..." : "Listing expired"}
           </AlertDescription>
         </Alert>
-        <Progress value={100} className="h-2" />
+        <div className="h-2 w-full bg-red-500 rounded-full" />
       </div>
     );
   }
@@ -226,10 +216,12 @@ export function ListingTimer({ createdAt, archivedAt, accountTier, status, listi
           </AlertDescription>
         </Alert>
       )}
-      <Progress 
-        value={progress} 
-        className={`h-2 ${getProgressColor(progress, status)}`}
-      />
+      <div className="h-2 w-full bg-red-100 rounded-full overflow-hidden">
+        <div 
+          className="h-full bg-blue-500 transition-all duration-1000 ease-linear rounded-full"
+          style={{ width: `${100 - progress}%` }}
+        />
+      </div>
     </div>
   );
 }
