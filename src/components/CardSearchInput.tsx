@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
 import { validateSearchTerm, normalizeSearchTerm } from '@/lib/search-validation';
@@ -10,15 +10,21 @@ interface CardSearchInputProps {
   onSelect?: (cardName: string) => void;
   onSearch?: (query: string) => void;
   showSearchButton?: boolean;
+  initialValue?: string;
 }
 
 const CardSearchInput: React.FC<CardSearchInputProps> = ({ 
   placeholder = "Search cards...",
   onSelect,
   onSearch,
-  showSearchButton = false
+  showSearchButton = false,
+  initialValue = ""
 }) => {
-  const [searchTerm, setSearchTerm] = useState("");
+  const [searchTerm, setSearchTerm] = useState(initialValue);
+
+  useEffect(() => {
+    setSearchTerm(initialValue);
+  }, [initialValue]);
   const inputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
@@ -42,7 +48,6 @@ const CardSearchInput: React.FC<CardSearchInputProps> = ({
       if (onSearch) {
         onSearch(normalizedTerm);
       }
-      setSearchTerm(""); // Clear the search term after search
     }
   };
 

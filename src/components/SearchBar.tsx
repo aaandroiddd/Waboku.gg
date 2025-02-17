@@ -45,9 +45,10 @@ type Card = PokemonCard | MtgCard | OnePieceCard;
 
 interface SearchBarProps {
   showSearchButton?: boolean;
+  initialValue?: string;
 }
 
-export default function SearchBar({ showSearchButton = false }: SearchBarProps) {
+export default function SearchBar({ showSearchButton = false, initialValue = "" }: SearchBarProps) {
   const router = useRouter();
   const { recordSearch } = useTrendingSearches();
 
@@ -94,6 +95,7 @@ export default function SearchBar({ showSearchButton = false }: SearchBarProps) 
       onCardSelect={handleCardSelect}
       onSearch={handleSearch}
       showSearchButton={showSearchButton}
+      initialValue={initialValue}
     />
   );
 }
