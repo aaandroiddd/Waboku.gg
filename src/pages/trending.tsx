@@ -7,18 +7,45 @@ import { Progress } from "@/components/ui/progress"
 import { ArrowUpIcon, SearchIcon, InfoIcon } from "lucide-react"
 import { useRouter } from "next/router"
 import { useTrendingSearches } from "@/hooks/useTrendingSearches"
+import { useToast } from "@/components/ui/use-toast"
 import {
   HoverCard,
   HoverCardContent,
   HoverCardTrigger,
 } from "@/components/ui/hover-card"
-
+import { useAuth } from "@/contexts/AuthContext"
+import { useProfile } from "@/hooks/useProfile"
 import { Footer } from "@/components/Footer"
 
 export default function TrendingPage() {
   const router = useRouter()
-  const { trendingSearches, isLoading, error } = useTrendingSearches()
+  const { toast } = useToast()
+  const { user } = useAuth()
+  const { profile, isLoading: profileLoading } = useProfile(user?.uid)
+  const { trendingSearches, isLoading: searchesLoading, error } = useTrendingSearches()
   const [maxCount, setMaxCount] = useState(0)
+
+  useEffect(() => {
+    if (!user) {
+      toast({
+        title: "Premium Feature",
+        description: "Please sign in to access trending searches.",
+        variant: "default"
+      })
+      router.push("/auth/sign-in")
+      return
+    }
+
+    if (!profileLoading && profile && profile.tier !== "premium") {
+      toast({
+        title: "Premium Feature",
+        description: "Upgrade to Premium to access trending searches and analytics.",
+        variant: "default"
+      })
+      router.push("/dashboard/account-status")
+      return
+    }
+  }, [user, profile, profileLoading, router, toast])
 
   useEffect(() => {
     if (trendingSearches.length > 0) {
@@ -32,6 +59,21 @@ export default function TrendingPage() {
 
   const handleSearchClick = (term: string) => {
     router.push(`/listings?search=${encodeURIComponent(term)}`)
+  }
+
+  // Show loading state while checking authentication and profile
+  if (profileLoading || !user || (profile && profile.tier !== "premium")) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <Card className="p-6">
+          <div className="space-y-4">
+            {[...Array(5)].map((_, i) => (
+              <Skeleton key={i} className="h-16 w-full" />
+            ))}
+          </div>
+        </Card>
+      </div>
+    )
   }
 
   if (error) {
@@ -80,7 +122,7 @@ export default function TrendingPage() {
           Discover what other collectors are searching for right now. Updated hourly.
         </p>
 
-        {isLoading ? (
+        {searchesLoading ? (
           <div className="space-y-4">
             {[...Array(10)].map((_, i) => (
               <Skeleton key={i} className="h-16 w-full" />
