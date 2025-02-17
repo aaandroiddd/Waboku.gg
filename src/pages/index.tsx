@@ -331,8 +331,8 @@ export default function Home() {
     let filtered = [...listings];
 
     // Apply active search parameters
-    if (activeSearchParams.query) {
-      const query = activeSearchParams.query.toLowerCase();
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
       filtered = filtered.filter(listing => 
         listing.title?.toLowerCase().includes(query) ||
         listing.description?.toLowerCase().includes(query)
@@ -340,34 +340,34 @@ export default function Home() {
     }
 
     // Apply game filter
-    if (activeSearchParams.game !== "all") {
+    if (selectedGame !== "all") {
       filtered = filtered.filter(listing => 
-        listing.game?.toLowerCase() === activeSearchParams.game.toLowerCase()
+        listing.game?.toLowerCase() === selectedGame.toLowerCase()
       );
     }
 
     // Apply condition filter
-    if (activeSearchParams.condition !== "all") {
+    if (selectedCondition !== "all") {
       filtered = filtered.filter(listing => 
-        listing.condition?.toLowerCase() === activeSearchParams.condition.toLowerCase()
+        listing.condition?.toLowerCase() === selectedCondition.toLowerCase()
       );
     }
 
     // Apply location filter
-    if (activeSearchParams.state !== "all") {
+    if (selectedState !== "all") {
       filtered = filtered.filter(listing => 
-        listing.state?.toLowerCase() === activeSearchParams.state.toLowerCase()
+        listing.state?.toLowerCase() === selectedState.toLowerCase()
       );
     }
 
     // Apply price filter
     filtered = filtered.filter(listing => 
-      listing.price >= activeSearchParams.priceRange[0] && 
-      listing.price <= activeSearchParams.priceRange[1]
+      listing.price >= priceRange[0] && 
+      listing.price <= priceRange[1]
     );
 
     setFilteredListings(filtered);
-  }, [activeSearchParams, listings]);
+  }, [listings, searchQuery, selectedGame, selectedCondition, selectedState, priceRange]);
 
   const router = useRouter();
 

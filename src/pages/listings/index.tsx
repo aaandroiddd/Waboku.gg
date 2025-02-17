@@ -152,6 +152,15 @@ export default function ListingsPage() {
     // First filter out inactive listings
     let filtered = allListings.filter(listing => listing.status === 'active');
 
+    // Apply search query filter
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(listing => 
+        listing.title?.toLowerCase().includes(query) ||
+        listing.description?.toLowerCase().includes(query)
+      );
+    }
+
     // Apply game filter
     if (selectedGame !== "all") {
       filtered = filtered.filter(listing => {
@@ -188,7 +197,7 @@ export default function ListingsPage() {
     }
 
     setFilteredListings(filtered);
-  }, [allListings, selectedState, selectedGame, selectedCondition, priceRange, showGradedOnly]);
+  }, [allListings, searchQuery, selectedState, selectedGame, selectedCondition, priceRange, showGradedOnly]);
 
   const handleSearch = async () => {
     if (!searchQuery.trim()) return;
