@@ -43,6 +43,16 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
+  // Enhanced debug logging
+  console.log('=== Stripe Checkout Debug Start ===');
+  console.log('Request Headers:', JSON.stringify(req.headers, null, 2));
+  console.log('Request Body:', JSON.stringify(req.body, null, 2));
+  console.log('Stripe Key Check:', !!process.env.STRIPE_SECRET_KEY);
+  console.log('Environment:', process.env.NODE_ENV);
+  console.log('Price ID Check:', !!process.env.STRIPE_PREMIUM_PRICE_ID);
+  console.log('App URL Check:', !!process.env.NEXT_PUBLIC_APP_URL);
+  console.log('Preview Mode:', process.env.NEXT_PUBLIC_CO_DEV_ENV === 'preview');
+  console.log('=== Stripe Checkout Debug End ===');
   // Debug logging for Stripe configuration
   console.log('Stripe Key Check:', !!process.env.STRIPE_SECRET_KEY);
   console.log('Environment:', process.env.NODE_ENV);
