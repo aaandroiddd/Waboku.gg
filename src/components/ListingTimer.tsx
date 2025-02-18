@@ -172,7 +172,7 @@ export function ListingTimer({ createdAt, archivedAt, accountTier, status, listi
     const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
 
     if (days > 0) {
-      return `${days}d ${hours}h`;
+      return `${days}d ${hours}h ${minutes}m`;
     } else if (hours > 0) {
       return `${hours}h ${minutes}m`;
     } else {
