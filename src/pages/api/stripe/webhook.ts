@@ -1,7 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { buffer } from 'micro';
 import Stripe from 'stripe';
-import { getDatabase } from 'firebase-admin/database';
+import { getFirestore } from 'firebase-admin/firestore';
 import { getFirebaseAdmin } from '@/lib/firebase-admin';
 
 // Initialize Stripe
@@ -71,7 +71,7 @@ export default async function handler(
 
   // Initialize Firebase Admin
   getFirebaseAdmin();
-  const db = getDatabase();
+  const db = getFirestore();
 
   try {
     switch (event.type) {
@@ -81,15 +81,22 @@ export default async function handler(
         const userId = subscription.metadata.userId;
 
         if (subscription.status === 'active') {
-          await db.ref(`users/${userId}/account`).update({
-            tier: 'premium',
-            status: 'active',
-            stripeCustomerId: subscription.customer as string,
-            subscription: {
+          await db.collection('users').doc(userId).set({
+            account: {
+              tier: 'premium',
               status: 'active',
-              id: subscription.id,
-              currentPeriodEnd: subscription.current_period_end
+              stripeCustomerId: subscription.customer as string,
+              subscription: {
+                status: 'active',
+                id: subscription.id,
+                currentPeriodEnd: subscription.current_period_end
+              }
             }
+          }, { merge: true });
+          
+          console.log('[Stripe Webhook] Updated user account to premium:', {
+            userId,
+            subscriptionId: subscription.id
           });
         }
         break;
@@ -99,11 +106,17 @@ export default async function handler(
         const subscription = event.data.object as Stripe.Subscription;
         const userId = subscription.metadata.userId;
 
-        await db.ref(`users/${userId}/account`).update({
-          tier: 'free',
-          status: 'active',
-          stripeCustomerId: null,
-          subscriptionId: null
+        await db.collection('users').doc(userId).set({
+          account: {
+            tier: 'free',
+            status: 'active',
+            stripeCustomerId: null,
+            subscription: null
+          }
+        }, { merge: true });
+        
+        console.log('[Stripe Webhook] Reset user account to free tier:', {
+          userId
         });
         break;
       }

@@ -66,6 +66,47 @@ export default async function handler(
   // Handle preview environment
   if (process.env.NEXT_PUBLIC_CO_DEV_ENV === 'preview') {
     console.log('[Stripe Checkout] Running in preview mode');
+    
+    // Get the Firebase ID token from the Authorization header
+    const authHeader = req.headers.authorization;
+    if (!authHeader?.startsWith('Bearer ')) {
+      console.log('[Stripe Checkout] Missing or invalid authorization header');
+      return res.status(401).json({ 
+        error: 'Authentication error',
+        message: 'Missing or invalid authorization header'
+      });
+    }
+
+    const idToken = authHeader.split('Bearer ')[1];
+    
+    // Verify the Firebase ID token
+    const auth = getAuth();
+    let decodedToken;
+    try {
+      decodedToken = await auth.verifyIdToken(idToken);
+      console.log('[Stripe Checkout] Token verified for user:', decodedToken.uid);
+    } catch (error: any) {
+      console.error('[Stripe Checkout] Token verification error:', error);
+      return res.status(401).json({ 
+        error: 'Authentication error',
+        message: 'Invalid authentication token'
+      });
+    }
+
+    const userId = decodedToken.uid;
+    
+    // Update user's account tier directly in preview mode
+    const db = getDatabase();
+    await db.ref(`users/${userId}/account`).update({
+      tier: 'premium',
+      status: 'active',
+      subscription: {
+        status: 'active',
+        id: 'preview-subscription',
+        currentPeriodEnd: Date.now() + 30 * 24 * 60 * 60 * 1000 // 30 days from now
+      }
+    });
+
     // Ensure appUrl starts with http:// or https://
     const baseUrl = appUrl.startsWith('http') ? appUrl : `https://${appUrl}`;
     const successUrl = `${baseUrl}/dashboard/account-status?upgrade=success`;
