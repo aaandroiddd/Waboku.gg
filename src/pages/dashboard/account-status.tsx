@@ -251,6 +251,7 @@ export default function AccountStatus() {
                           'Content-Type': 'application/json',
                           'Authorization': `Bearer ${idToken}`,
                         },
+                        body: JSON.stringify({}), // Add empty body for POST request
                       });
 
                       if (response.status === 401) {

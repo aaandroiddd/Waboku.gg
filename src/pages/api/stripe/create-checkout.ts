@@ -11,10 +11,6 @@ try {
   console.error('[Stripe Checkout] Firebase Admin initialization error:', error);
 }
 
-// Validate environment variables
-const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
-const stripePriceId = process.env.STRIPE_PREMIUM_PRICE_ID;
-
 // Get the app URL, handling preview environment
 const getAppUrl = (req: NextApiRequest) => {
   if (process.env.NEXT_PUBLIC_CO_DEV_ENV === 'preview') {
@@ -26,11 +22,14 @@ const getAppUrl = (req: NextApiRequest) => {
   return process.env.NEXT_PUBLIC_APP_URL;
 };
 
-if (!stripeSecretKey || !stripePriceId || !appUrl) {
+// Validate environment variables
+const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
+const stripePriceId = process.env.STRIPE_PREMIUM_PRICE_ID;
+
+if (!stripeSecretKey || !stripePriceId) {
   console.error('[Stripe Checkout] Missing required environment variables:', {
     hasStripeKey: !!stripeSecretKey,
-    hasPriceId: !!stripePriceId,
-    hasAppUrl: !!appUrl
+    hasPriceId: !!stripePriceId
   });
 }
 
