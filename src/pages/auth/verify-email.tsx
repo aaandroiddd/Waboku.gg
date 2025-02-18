@@ -32,10 +32,21 @@ export default function VerifyEmail() {
         });
         
         setStatus('error');
-        if (error.message.includes('API_KEY_SERVICE_BLOCKED')) {
-          setError('The verification service is temporarily unavailable. Please try again in a few minutes or contact support if the issue persists.');
-        } else {
-          setError(error.message || 'Failed to verify email');
+        switch (error.code) {
+          case 'auth/invalid-action-code':
+            setError('The verification link has expired or has already been used. Please request a new verification email.');
+            break;
+          case 'auth/user-disabled':
+            setError('This account has been disabled. Please contact support for assistance.');
+            break;
+          case 'auth/user-not-found':
+            setError('The account associated with this verification link no longer exists.');
+            break;
+          case 'auth/api-key-service-blocked':
+            setError('The verification service is temporarily unavailable. Please try again in a few minutes or contact support if the issue persists.');
+            break;
+          default:
+            setError('Failed to verify email. Please try again or contact support if the issue persists.');
         }
       }
     };

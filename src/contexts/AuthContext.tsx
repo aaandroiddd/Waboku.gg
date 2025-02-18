@@ -52,8 +52,9 @@ const defaultAuthContext: AuthContextType = {
 const AuthContext = createContext<AuthContextType>(defaultAuthContext);
 
 const actionCodeSettings = {
-  url: `${process.env.NEXT_PUBLIC_APP_URL || (typeof window !== 'undefined' ? window.location.origin : '')}/auth/verify-email`,
-  handleCodeInApp: true
+  url: `${process.env.NEXT_PUBLIC_APP_URL}/auth/verify-email`,
+  handleCodeInApp: true,
+  dynamicLinkDomain: undefined // Let Firebase handle the domain
 };
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
