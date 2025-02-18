@@ -14,7 +14,17 @@ try {
 // Validate environment variables
 const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
 const stripePriceId = process.env.STRIPE_PREMIUM_PRICE_ID;
-const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+
+// Get the app URL, handling preview environment
+const getAppUrl = (req: NextApiRequest) => {
+  if (process.env.NEXT_PUBLIC_CO_DEV_ENV === 'preview') {
+    // Use the host from the request headers for preview environment
+    const protocol = req.headers['x-forwarded-proto'] || 'https';
+    const host = req.headers.host || req.headers['x-forwarded-host'];
+    return `${protocol}://${host}`;
+  }
+  return process.env.NEXT_PUBLIC_APP_URL;
+};
 
 if (!stripeSecretKey || !stripePriceId || !appUrl) {
   console.error('[Stripe Checkout] Missing required environment variables:', {
@@ -107,9 +117,8 @@ export default async function handler(
       }
     });
 
-    // Ensure appUrl starts with http:// or https://
-    const baseUrl = appUrl.startsWith('http') ? appUrl : `https://${appUrl}`;
-    const successUrl = `${baseUrl}/dashboard/account-status?upgrade=success`;
+    const appUrl = getAppUrl(req);
+    const successUrl = `${appUrl}/dashboard/account-status?upgrade=success`;
     return res.status(200).json({
       sessionUrl: successUrl,
       isPreview: true
@@ -266,6 +275,9 @@ export default async function handler(
         // Don't fail the request, but log the error
       }
     }
+
+    // Get the correct app URL for the environment
+    const appUrl = getAppUrl(req);
 
     // Create the checkout session
     const session = await stripe.checkout.sessions.create({
