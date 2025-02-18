@@ -157,25 +157,58 @@ export default async function handler(
 
     // Create new customer if needed
     if (!stripeCustomerId) {
-      console.log('[Stripe Checkout] Creating new Stripe customer');
-      const customer = await stripe.customers.create({
+      console.log('[Stripe Checkout] No existing customer ID, checking for existing customer by email');
+      
+      // First check if customer already exists with this email
+      const existingCustomers = await stripe.customers.list({
         email: userEmail,
-        metadata: {
-          userId: userId,
-          firebaseEmail: userEmail
-        }
+        limit: 1
       });
-      stripeCustomerId = customer.id;
+
+      if (existingCustomers.data.length > 0) {
+        stripeCustomerId = existingCustomers.data[0].id;
+        console.log('[Stripe Checkout] Found existing customer:', stripeCustomerId);
+        
+        // Update customer metadata if needed
+        await stripe.customers.update(stripeCustomerId, {
+          metadata: {
+            userId: userId,
+            firebaseEmail: userEmail
+          }
+        });
+      } else {
+        console.log('[Stripe Checkout] Creating new Stripe customer');
+        try {
+          const customer = await stripe.customers.create({
+            email: userEmail,
+            metadata: {
+              userId: userId,
+              firebaseEmail: userEmail
+            }
+          });
+          stripeCustomerId = customer.id;
+          console.log('[Stripe Checkout] New customer created:', {
+            customerId: stripeCustomerId,
+            userId: userId
+          });
+        } catch (error: any) {
+          console.error('[Stripe Checkout] Customer creation failed:', error);
+          return res.status(400).json({
+            error: 'Customer creation failed',
+            message: 'Unable to create customer record. Please try again.'
+          });
+        }
+      }
       
       // Store the customer ID in Firebase
-      await userRef.update({
-        stripeCustomerId: stripeCustomerId
-      });
-      
-      console.log('[Stripe Checkout] New customer created:', {
-        customerId: stripeCustomerId,
-        userId: userId
-      });
+      try {
+        await userRef.update({
+          stripeCustomerId: stripeCustomerId
+        });
+      } catch (error) {
+        console.error('[Stripe Checkout] Failed to update Firebase with customer ID:', error);
+        // Don't fail the request, but log the error
+      }
     }
 
     // Create the checkout session
