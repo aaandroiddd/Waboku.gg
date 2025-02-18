@@ -43,6 +43,10 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
+  // Debug logging for Stripe configuration
+  console.log('Stripe Key Check:', !!process.env.STRIPE_SECRET_KEY);
+  console.log('Environment:', process.env.NODE_ENV);
+  console.log('Price ID Check:', !!process.env.STRIPE_PREMIUM_PRICE_ID);
   console.log('[Stripe Checkout] Request received:', {
     method: req.method,
     hasAuth: !!req.headers.authorization,
