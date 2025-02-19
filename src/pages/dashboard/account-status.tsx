@@ -285,7 +285,8 @@ export default function AccountStatus() {
                       const data = await response.json();
                       
                       if (data.isPreview) {
-                        window.location.href = data.sessionUrl;
+                        // For preview environment, use Next.js router
+                        router.push(data.sessionUrl);
                       } else {
                         // Use client-side redirect for production Stripe checkout
                         window.location.assign(data.sessionUrl);
