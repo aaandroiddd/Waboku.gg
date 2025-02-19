@@ -34,6 +34,15 @@ const defaultContext: AccountContextType = {
   },
 };
 
+// Initialize subscription state outside of the effect to prevent reference errors
+const initialSubscriptionState: SubscriptionDetails = {
+  status: 'none',
+  stripeSubscriptionId: undefined,
+  startDate: undefined,
+  endDate: undefined,
+  renewalDate: undefined
+};
+
 const AccountContext = createContext<AccountContextType>(defaultContext);
 
 export function AccountProvider({ children }: { children: React.ReactNode }) {

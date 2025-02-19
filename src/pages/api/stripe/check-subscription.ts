@@ -7,6 +7,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   console.info('[Subscription Check] Started:', {
     method: req.method,
     url: req.url,
+    headers: req.headers,
     timestamp: new Date().toISOString()
   });
 

@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/alert-dialog";
 
 export default function AccountStatus() {
-  const { accountTier, subscription, cancelSubscription } = useAccount();
+  const { accountTier, subscription = { status: 'none' }, cancelSubscription } = useAccount();
   const { user } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
