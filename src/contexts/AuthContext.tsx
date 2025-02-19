@@ -53,7 +53,8 @@ const AuthContext = createContext<AuthContextType>(defaultAuthContext);
 
 const actionCodeSettings = {
   url: `${process.env.NEXT_PUBLIC_APP_URL}/auth/verify-email`,
-  handleCodeInApp: true
+  handleCodeInApp: true,
+  dynamicLinkDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
 };
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -427,15 +428,53 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const sendVerificationEmail = async () => {
     if (!user) throw new Error('No user logged in');
+    
+    // Check if user is already verified
+    if (user.emailVerified) {
+      throw new Error('Email is already verified');
+    }
+    
+    // Check if we've sent a verification email recently (within last 5 minutes)
+    if (profile?.verificationSentAt) {
+      const lastSent = new Date(profile.verificationSentAt).getTime();
+      const now = new Date().getTime();
+      const fiveMinutes = 5 * 60 * 1000;
+      
+      if (now - lastSent < fiveMinutes) {
+        throw new Error('Please wait 5 minutes before requesting another verification email');
+      }
+    }
+    
     try {
+      console.log('Sending verification email to:', user.email);
+      console.log('Using action code settings:', actionCodeSettings);
+      
       await sendEmailVerification(user, actionCodeSettings);
-      await setDoc(doc(db, 'users', user.uid), {
+      
+      // Update the profile with verification sent timestamp
+      const updatedProfile = {
         ...profile,
         verificationSentAt: new Date().toISOString()
-      }, { merge: true });
+      };
+      
+      await setDoc(doc(db, 'users', user.uid), updatedProfile, { merge: true });
+      setProfile(updatedProfile as UserProfile);
+      
+      console.log('Verification email sent successfully');
     } catch (err: any) {
-      setError(err.message);
-      throw err;
+      console.error('Error sending verification email:', err);
+      
+      let errorMessage = 'Failed to send verification email';
+      if (err.code === 'auth/too-many-requests') {
+        errorMessage = 'Too many attempts. Please try again later.';
+      } else if (err.code === 'auth/invalid-email') {
+        errorMessage = 'Invalid email address';
+      } else if (err.code === 'auth/network-request-failed') {
+        errorMessage = 'Network error. Please check your internet connection.';
+      }
+      
+      setError(errorMessage);
+      throw new Error(errorMessage);
     }
   };
 
