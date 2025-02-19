@@ -445,10 +445,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     
     try {
-      console.log('Sending verification email to:', user.email);
-      console.log('Using action code settings:', actionCodeSettings);
+      // Ensure we have valid Firebase configuration
+      const { auth, db } = getFirebaseServices();
+      if (!auth || !auth.currentUser) {
+        throw new Error('Firebase authentication is not properly initialized');
+      }
+
+      // Ensure we have a valid app URL
+      if (!process.env.NEXT_PUBLIC_APP_URL) {
+        throw new Error('Application URL is not configured');
+      }
+
+      const continueUrl = `${process.env.NEXT_PUBLIC_APP_URL}/auth/verify-email`;
+      const verificationSettings = {
+        url: continueUrl,
+        handleCodeInApp: false
+      };
+
+      console.log('Sending verification email with settings:', {
+        email: user.email,
+        continueUrl,
+        handleCodeInApp: false
+      });
       
-      await sendEmailVerification(user, actionCodeSettings);
+      // Reload user before sending verification email
+      await user.reload();
+      
+      await sendEmailVerification(auth.currentUser, verificationSettings);
       
       // Update the profile with verification sent timestamp
       const updatedProfile = {
@@ -461,15 +484,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       console.log('Verification email sent successfully');
     } catch (err: any) {
-      console.error('Error sending verification email:', err);
+      console.error('Error sending verification email:', {
+        code: err.code,
+        message: err.message,
+        details: err.details,
+        stack: err.stack
+      });
       
       let errorMessage = 'Failed to send verification email';
-      if (err.code === 'auth/too-many-requests') {
-        errorMessage = 'Too many attempts. Please try again later.';
-      } else if (err.code === 'auth/invalid-email') {
-        errorMessage = 'Invalid email address';
-      } else if (err.code === 'auth/network-request-failed') {
-        errorMessage = 'Network error. Please check your internet connection.';
+      switch (err.code) {
+        case 'auth/too-many-requests':
+          errorMessage = 'Too many attempts. Please try again later.';
+          break;
+        case 'auth/invalid-email':
+          errorMessage = 'Invalid email address';
+          break;
+        case 'auth/network-request-failed':
+          errorMessage = 'Network error. Please check your internet connection.';
+          break;
+        case 'auth/invalid-continue-uri':
+          errorMessage = 'Invalid verification URL configuration.';
+          break;
+        case 'auth/missing-continue-uri':
+          errorMessage = 'Missing verification URL configuration.';
+          break;
+        case 'auth/unauthorized-continue-uri':
+          errorMessage = 'The verification URL domain is not authorized.';
+          break;
+        default:
+          errorMessage = `Verification email error: ${err.message}`;
       }
       
       setError(errorMessage);
