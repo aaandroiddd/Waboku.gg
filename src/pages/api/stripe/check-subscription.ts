@@ -1,33 +1,17 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import Stripe from 'stripe';
-import { getApps, cert, initializeApp } from 'firebase-admin/app';
+import { getFirestore } from 'firebase-admin/firestore';
 import { getDatabase } from 'firebase-admin/database';
-
-// Initialize Firebase Admin if it hasn't been initialized yet
-if (!getApps().length) {
-  initializeApp({
-    credential: cert({
-      projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-    }),
-    databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL,
-  });
-}
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2023-10-16',
-});
+import { getFirebaseAdmin } from '@/lib/firebase-admin';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  console.info('Subscription check started:', {
+  console.info('[Subscription Check] Started:', {
     method: req.method,
     url: req.url,
     timestamp: new Date().toISOString()
   });
 
   if (req.method !== 'GET') {
-    console.warn('Invalid method for subscription check:', {
+    console.warn('[Subscription Check] Invalid method:', {
       method: req.method,
       url: req.url
     });
@@ -43,45 +27,49 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const idToken = authHeader.split('Bearer ')[1];
     const userId = idToken; // In preview, we'll use the token as userId for simplicity
 
-    // Get subscription data from Firestore
-    const db = getFirestore();
-    const userDoc = await db.collection('users').doc(userId).get();
-    const userData = userDoc.data();
+    // Initialize Firebase Admin
+    getFirebaseAdmin();
+    const realtimeDb = getDatabase();
 
-    if (!userData) {
+    // Get subscription data from Realtime Database
+    const userRef = realtimeDb.ref(`users/${userId}/account`);
+    const snapshot = await userRef.once('value');
+    const accountData = snapshot.val();
+
+    if (!accountData || !accountData.subscription) {
+      console.log('[Subscription Check] No subscription found:', { userId });
       return res.status(200).json({ 
         isPremium: false,
-        subscriptionId: null,
-        status: 'none'
+        status: 'none',
+        tier: 'free'
       });
     }
 
-    const subscriptionStatus = userData.subscriptionStatus || 'none';
-    const accountTier = userData.accountTier || 'free';
-    const subscriptionId = userData.subscriptionId;
-    const subscriptionEndDate = userData.subscriptionEndDate;
+    const { subscription } = accountData;
+    const now = Date.now() / 1000; // Convert to seconds for comparison with Stripe timestamps
+    const isActive = subscription.status === 'active' && 
+                    subscription.currentPeriodEnd && 
+                    subscription.currentPeriodEnd > now;
 
-    if (!subscriptionData) {
-      return res.status(200).json({ 
-        isPremium: false,
-        subscriptionId: null,
-        status: 'none'
-      });
-    }
-
-    // Check if subscription is canceled but still active
-    const now = new Date();
-    const endDate = subscriptionData.endDate ? new Date(subscriptionData.endDate) : null;
-    const isStillActive = endDate ? now < endDate : false;
-
-    return res.status(200).json({ 
-      isPremium: isStillActive,
-      subscriptionId: subscriptionData.stripeSubscriptionId || null,
-      status: subscriptionData.status || 'none',
-      endDate: endDate ? endDate.toISOString() : null
+    console.log('[Subscription Check] Status:', {
+      userId,
+      isActive,
+      subscription: {
+        status: subscription.status,
+        tier: subscription.tier,
+        currentPeriodEnd: subscription.currentPeriodEnd
+      }
     });
+
+    return res.status(200).json({
+      isPremium: isActive && subscription.tier === 'premium',
+      status: subscription.status,
+      tier: subscription.tier,
+      currentPeriodEnd: subscription.currentPeriodEnd
+    });
+
   } catch (error) {
-    console.error('Error checking subscription:', error);
+    console.error('[Subscription Check] Error:', error);
     return res.status(500).json({ error: 'Internal server error' });
   }
 }

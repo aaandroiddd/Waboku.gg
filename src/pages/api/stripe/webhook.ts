@@ -2,6 +2,7 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import { buffer } from 'micro';
 import Stripe from 'stripe';
 import { getFirestore } from 'firebase-admin/firestore';
+import { getDatabase } from 'firebase-admin/database';
 import { getFirebaseAdmin } from '@/lib/firebase-admin';
 
 // Initialize Stripe
@@ -71,7 +72,8 @@ export default async function handler(
 
   // Initialize Firebase Admin
   getFirebaseAdmin();
-  const db = getFirestore();
+  const firestoreDb = getFirestore();
+  const realtimeDb = getDatabase();
 
   try {
     switch (event.type) {
@@ -80,18 +82,36 @@ export default async function handler(
         const subscription = event.data.object as Stripe.Subscription;
         const userId = subscription.metadata.userId;
 
+        if (!userId) {
+          throw new Error('No userId found in subscription metadata');
+        }
+
         if (subscription.status === 'active') {
-          await db.collection('users').doc(userId).set({
-            accountTier: 'premium',
-            subscriptionStatus: 'active',
-            stripeCustomerId: subscription.customer as string,
-            subscriptionId: subscription.id,
-            subscriptionEndDate: subscription.current_period_end
+          // Update Firestore
+          await firestoreDb.collection('users').doc(userId).set({
+            subscription: {
+              currentPlan: 'premium',
+              startDate: new Date(subscription.current_period_start * 1000).toISOString(),
+              status: 'active'
+            }
           }, { merge: true });
+
+          // Update Realtime Database
+          await realtimeDb.ref(`users/${userId}/account`).update({
+            status: 'active',
+            subscription: {
+              id: subscription.id,
+              status: 'active',
+              tier: 'premium',
+              currentPeriodEnd: subscription.current_period_end
+            }
+          });
           
-          console.log('[Stripe Webhook] Updated user account to premium:', {
+          console.log('[Stripe Webhook] Updated user subscription status:', {
             userId,
-            subscriptionId: subscription.id
+            subscriptionId: subscription.id,
+            status: 'active',
+            tier: 'premium'
           });
         }
         break;
@@ -101,17 +121,31 @@ export default async function handler(
         const subscription = event.data.object as Stripe.Subscription;
         const userId = subscription.metadata.userId;
 
-        await db.collection('users').doc(userId).set({
-          account: {
-            tier: 'free',
-            status: 'active',
-            stripeCustomerId: null,
-            subscription: null
+        if (!userId) {
+          throw new Error('No userId found in subscription metadata');
+        }
+
+        // Update Firestore
+        await firestoreDb.collection('users').doc(userId).set({
+          subscription: {
+            currentPlan: 'free',
+            status: 'inactive'
           }
         }, { merge: true });
+
+        // Update Realtime Database
+        await realtimeDb.ref(`users/${userId}/account`).update({
+          status: 'active',
+          subscription: {
+            status: 'inactive',
+            tier: 'free'
+          }
+        });
         
-        console.log('[Stripe Webhook] Reset user account to free tier:', {
-          userId
+        console.log('[Stripe Webhook] Reset user subscription:', {
+          userId,
+          status: 'inactive',
+          tier: 'free'
         });
         break;
       }
@@ -119,7 +153,7 @@ export default async function handler(
 
     return res.status(200).json({ received: true });
   } catch (error) {
-    console.error('Error processing webhook:', error);
+    console.error('[Stripe Webhook] Error processing webhook:', error);
     return res.status(500).json({ error: 'Failed to process webhook' });
   }
 }
