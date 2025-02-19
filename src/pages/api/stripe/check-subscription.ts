@@ -43,21 +43,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const idToken = authHeader.split('Bearer ')[1];
     const userId = idToken; // In preview, we'll use the token as userId for simplicity
 
-    // In preview environment, return simulated data
-    if (process.env.NEXT_PUBLIC_CO_DEV_ENV === 'preview') {
+    // Get subscription data from Firestore
+    const db = getFirestore();
+    const userDoc = await db.collection('users').doc(userId).get();
+    const userData = userDoc.data();
+
+    if (!userData) {
       return res.status(200).json({ 
         isPremium: false,
         subscriptionId: null,
-        status: 'none',
-        isPreview: true
+        status: 'none'
       });
     }
 
-    // Get subscription data from Firebase
-    const db = getDatabase();
-    const userRef = db.ref(`users/${userId}/account/subscription`);
-    const snapshot = await userRef.get();
-    const subscriptionData = snapshot.val();
+    const subscriptionStatus = userData.subscriptionStatus || 'none';
+    const accountTier = userData.accountTier || 'free';
+    const subscriptionId = userData.subscriptionId;
+    const subscriptionEndDate = userData.subscriptionEndDate;
 
     if (!subscriptionData) {
       return res.status(200).json({ 

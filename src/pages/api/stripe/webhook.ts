@@ -82,16 +82,11 @@ export default async function handler(
 
         if (subscription.status === 'active') {
           await db.collection('users').doc(userId).set({
-            account: {
-              tier: 'premium',
-              status: 'active',
-              stripeCustomerId: subscription.customer as string,
-              subscription: {
-                status: 'active',
-                id: subscription.id,
-                currentPeriodEnd: subscription.current_period_end
-              }
-            }
+            accountTier: 'premium',
+            subscriptionStatus: 'active',
+            stripeCustomerId: subscription.customer as string,
+            subscriptionId: subscription.id,
+            subscriptionEndDate: subscription.current_period_end
           }, { merge: true });
           
           console.log('[Stripe Webhook] Updated user account to premium:', {
