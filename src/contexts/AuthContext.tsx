@@ -53,7 +53,8 @@ const AuthContext = createContext<AuthContextType>(defaultAuthContext);
 
 const actionCodeSettings = {
   url: `${process.env.NEXT_PUBLIC_APP_URL}/auth/verify-email`,
-  handleCodeInApp: true
+  handleCodeInApp: true,
+  dynamicLinkDomain: process.env.NEXT_PUBLIC_APP_URL?.replace(/^https?:\/\//, '')
 };
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
