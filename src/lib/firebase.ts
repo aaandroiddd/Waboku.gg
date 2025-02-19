@@ -25,70 +25,57 @@ const firebaseConfig = {
   databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL
 };
 
-// Validate required Firebase configuration
-const requiredConfig = [
-  'apiKey',
-  'authDomain',
-  'projectId',
-  'storageBucket',
-  'messagingSenderId',
-  'appId',
-  'databaseURL'
-];
-
-const missingConfig = requiredConfig.filter(key => !firebaseConfig[key as keyof typeof firebaseConfig]);
-
-if (missingConfig.length > 0) {
-  console.error('Missing required Firebase configuration:', missingConfig);
-  throw new Error(`Missing required Firebase configuration: ${missingConfig.join(', ')}`);
-}
-
+// Initialize Firebase services
 let app: FirebaseApp;
 let auth: Auth;
 let db: Firestore;
 let storage: FirebaseStorage;
 let database: Database;
 
-if (typeof window !== 'undefined') {
+function initializeFirebase() {
   try {
+    // Check if Firebase is already initialized
     if (!getApps().length) {
       app = initializeApp(firebaseConfig);
     } else {
       app = getApps()[0];
     }
 
+    // Initialize services
     auth = getAuth(app);
     db = getFirestore(app);
-    storage = getStorage(app);
     database = getDatabase(app);
 
-    // Set persistence for browser environment
-    setPersistence(auth, browserLocalPersistence)
-      .catch(error => console.error('Error setting auth persistence:', error));
+    // Only initialize storage in browser environment
+    if (typeof window !== 'undefined') {
+      storage = getStorage(app);
+    }
+
+    // Set persistence only in browser environment
+    if (typeof window !== 'undefined') {
+      setPersistence(auth, browserLocalPersistence)
+        .catch(error => {
+          console.error('Error setting auth persistence:', error);
+        });
+    }
+
+    return { app, auth, db, storage, database };
   } catch (error) {
     console.error('Error initializing Firebase:', error);
     throw error;
   }
-} else {
-  // Server-side initialization
-  if (!getApps().length) {
-    app = initializeApp(firebaseConfig);
-  } else {
-    app = getApps()[0];
-  }
-  
-  auth = getAuth(app);
-  db = getFirestore(app);
-  storage = getStorage(app);
-  database = getDatabase(app);
 }
 
-export { app, auth, db, storage, database };
+// Initialize Firebase on module load
+const services = initializeFirebase();
+
+// Export initialized services
+export const { app: firebaseApp, auth: firebaseAuth, db: firebaseDb, storage: firebaseStorage, database: firebaseDatabase } = services;
 
 // Helper function to get Firebase services
 export function getFirebaseServices() {
-  if (!app || !auth || !db || !storage || !database) {
+  if (!firebaseApp || !firebaseAuth || !firebaseDb) {
     throw new Error('Firebase services not initialized');
   }
-  return { app, auth, db, storage, database };
+  return services;
 }
