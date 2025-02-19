@@ -27,6 +27,7 @@ const nextConfig = {
               connect-src 'self' 
                 https://*.stripe.com 
                 https://api.stripe.com
+                https://r.stripe.com
                 https://*.googleapis.com
                 https://*.firebaseio.com
                 https://*.firebase.com

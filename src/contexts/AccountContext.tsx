@@ -68,7 +68,6 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
             accountTier: 'free',
             subscription: {
               status: 'none',
-              currentPlan: 'free',
               startDate: new Date().toISOString()
             },
             createdAt: new Date(),
