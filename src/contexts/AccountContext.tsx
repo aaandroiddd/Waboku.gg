@@ -194,7 +194,22 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
     if (!user) throw new Error('Must be logged in to upgrade');
 
     try {
-      setAccountTier('premium');
+      const idToken = await user.getIdToken();
+      const response = await fetch('/api/stripe/create-checkout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${idToken}`
+        }
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to create checkout session');
+      }
+
+      const { url } = await response.json();
+      window.location.href = url;
     } catch (error) {
       console.error('Error upgrading account:', error);
       throw error;
