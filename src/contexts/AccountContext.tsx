@@ -45,6 +45,28 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let isMounted = true;
 
+    const checkSubscriptionStatus = async () => {
+      if (!user) return null;
+      
+      try {
+        const idToken = await user.getIdToken();
+        const response = await fetch('/api/stripe/check-subscription', {
+          headers: {
+            'Authorization': `Bearer ${idToken}`
+          }
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to check subscription status');
+        }
+
+        return await response.json();
+      } catch (error) {
+        console.error('Error checking subscription status:', error);
+        return null;
+      }
+    };
+
     const initializeAccount = async () => {
       if (!user) {
         if (isMounted) {
@@ -75,6 +97,9 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
           });
         }
 
+        // Check subscription status
+        const subscriptionStatus = await checkSubscriptionStatus();
+        
         // Set up listener for Firestore document changes
         const unsubscribe = onSnapshot(userDocRef, async (doc) => {
           if (!isMounted) return;
@@ -82,7 +107,7 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
           const data = doc.data();
           if (data) {
             // Get subscription data
-            const subscriptionData = data.subscription || defaultSubscription;
+            const subscriptionData = subscriptionStatus || data.subscription || defaultSubscription;
             
             // Determine account status based on subscription
             const now = new Date();
@@ -91,11 +116,8 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
             
             // Enhanced premium status check
             const isActivePremium = (
-              // Case 1: Active subscription - this should ALWAYS result in premium status
               subscriptionData.status === 'active' ||
-              // Case 2: Canceled but not expired
               (subscriptionData.status === 'canceled' && endDate && endDate > now) ||
-              // Case 3: Has valid subscription ID and start date is valid and no explicit status set
               (subscriptionData.stripeSubscriptionId && startDate && startDate <= now && !subscriptionData.status)
             );
             
@@ -115,31 +137,13 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
               stripeSubscriptionId: subscriptionData.stripeSubscriptionId
             };
             
-            // Set subscription data
             setSubscription(subscriptionDetails);
+            setAccountTier(isActivePremium ? 'premium' : 'free');
 
-            // Set account tier based on enhanced premium status check
-            const newTier = isActivePremium ? 'premium' : 'free';
-            setAccountTier(newTier);
-
-            // Update the database if there's a mismatch between stored tier and actual status
-            if (data.accountTier !== newTier) {
-              console.log('Fixing account tier mismatch:', {
-                storedTier: data.accountTier,
-                calculatedTier: newTier,
-                subscriptionStatus,
-                hasStripeId: !!subscriptionData.stripeSubscriptionId
-              });
+            // Update the database if needed
+            if (data.accountTier !== (isActivePremium ? 'premium' : 'free')) {
               await updateDoc(userDocRef, {
-                accountTier: newTier,
-                updatedAt: new Date()
-              });
-            }
-
-            // If the subscription is canceled and past end date, ensure account is set to free
-            if (subscriptionData.status === 'canceled' && endDate && endDate <= now) {
-              await updateDoc(userDocRef, {
-                accountTier: 'free',
+                accountTier: isActivePremium ? 'premium' : 'free',
                 updatedAt: new Date()
               });
             }
@@ -181,8 +185,6 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
     if (!user) throw new Error('Must be logged in to upgrade');
 
     try {
-      // The actual upgrade is handled by the Stripe checkout or dev-success endpoint
-      // This method is kept for potential direct upgrades in the future
       setAccountTier('premium');
     } catch (error) {
       console.error('Error upgrading account:', error);
@@ -193,13 +195,6 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
   const cancelSubscription = async () => {
     if (!user) throw new Error('Must be logged in to cancel subscription');
     
-    console.log('Attempting to cancel subscription:', {
-      userId: user.uid,
-      currentSubscription: subscription,
-      accountTier
-    });
-
-    // Validate subscription state
     if (!subscription) {
       throw new Error('No subscription information available');
     }
@@ -209,106 +204,37 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
     }
 
     if (!subscription.stripeSubscriptionId) {
-      console.error('Missing subscription ID:', {
-        subscription,
-        accountTier,
-        userId: user.uid
-      });
       throw new Error('No active subscription ID found. Please contact support.');
     }
 
     try {
-      // Add retry logic for network issues
-      const MAX_RETRIES = 3;
-      let attempt = 0;
-      let lastError;
+      const idToken = await user.getIdToken();
+      const response = await fetch('/api/stripe/cancel-subscription', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${idToken}`
+        },
+        body: JSON.stringify({
+          subscriptionId: subscription.stripeSubscriptionId
+        })
+      });
 
-      while (attempt < MAX_RETRIES) {
-        try {
-          const response = await fetch('/api/stripe/cancel-subscription', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              subscriptionId: subscription.stripeSubscriptionId,
-              userId: user.uid
-            }),
-            // Add credentials and cache control
-            credentials: 'include',
-            cache: 'no-cache',
-          });
-
-          const responseData = await response.json();
-          
-          if (!response.ok) {
-            console.error('Server responded with error:', {
-              status: response.status,
-              data: responseData,
-              subscription,
-              userId: user.uid,
-              attempt: attempt + 1
-            });
-
-            // Handle specific error cases
-            if (responseData.code === 'ALREADY_CANCELED') {
-              throw new Error('This subscription has already been canceled');
-            } else if (responseData.code === 'NO_SUBSCRIPTION_DATA') {
-              throw new Error('No active subscription found. Please contact support.');
-            } else if (responseData.code === 'SUBSCRIPTION_NOT_FOUND') {
-              throw new Error('Subscription not found in our records. Please contact support.');
-            }
-
-            throw new Error(responseData.error || 'Failed to cancel subscription');
-          }
-
-          // Update local state immediately for better UX
-          const newEndDate = responseData.endDate || subscription.endDate;
-          setSubscription(prev => ({
-            ...prev,
-            status: 'canceled',
-            endDate: newEndDate
-          }));
-
-          // Only update account tier to free if the end date has passed
-          const now = new Date();
-          const endDate = newEndDate ? new Date(newEndDate) : null;
-          if (endDate && endDate <= now) {
-            setAccountTier('free');
-          }
-
-          return responseData;
-        } catch (error: any) {
-          lastError = error;
-          
-          // Only retry on network errors
-          if (!error.message.includes('Failed to fetch')) {
-            throw error;
-          }
-          
-          console.warn(`Attempt ${attempt + 1} failed:`, error);
-          attempt++;
-          
-          if (attempt < MAX_RETRIES) {
-            // Wait before retrying (exponential backoff)
-            await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000));
-          }
-        }
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to cancel subscription');
       }
 
-      // If we've exhausted all retries
-      console.error('All retry attempts failed:', {
-        error: lastError,
-        subscription,
-        userId: user.uid
-      });
-      throw new Error('Network error: Unable to reach the server after multiple attempts. Please try again later.');
+      const data = await response.json();
+      setSubscription(prev => ({
+        ...prev,
+        status: 'canceled',
+        endDate: data.endDate
+      }));
+
+      return data;
     } catch (error: any) {
-      console.error('Error in cancelSubscription:', {
-        error: error.message,
-        subscription,
-        userId: user.uid
-      });
+      console.error('Error canceling subscription:', error);
       throw error;
     }
   };
