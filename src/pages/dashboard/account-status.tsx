@@ -23,8 +23,54 @@ import {
 } from "@/components/ui/alert-dialog";
 
 export default function AccountStatus() {
-  const { accountTier, subscription, cancelSubscription, isLoading } = useAccount();
+  const { accountTier, subscription = {}, cancelSubscription, isLoading } = useAccount();
   const { user } = useAuth();
+  
+  // Redirect unverified users or show verification message
+  if (user && !user.emailVerified) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <div className="container max-w-7xl mx-auto p-6 flex-grow">
+          <div className="flex justify-between items-start mb-8">
+            <Button
+              variant="ghost"
+              onClick={() => router.back()}
+            >
+              <ChevronLeft className="h-4 w-4 mr-2" />
+              Back
+            </Button>
+          </div>
+          
+          <Card className="p-6 mb-8">
+            <h2 className="text-xl font-semibold mb-4">Email Verification Required</h2>
+            <p className="text-muted-foreground mb-4">
+              Please verify your email address before accessing premium features. Check your inbox for a verification email.
+            </p>
+            <Button 
+              onClick={async () => {
+                try {
+                  await user.sendEmailVerification();
+                  toast({
+                    title: "Verification Email Sent",
+                    description: "Please check your inbox and follow the verification link.",
+                  });
+                } catch (error) {
+                  toast({
+                    title: "Error",
+                    description: "Failed to send verification email. Please try again later.",
+                    variant: "destructive",
+                  });
+                }
+              }}
+            >
+              Resend Verification Email
+            </Button>
+          </Card>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
   const router = useRouter();
   const { toast } = useToast();
   const { session_id, upgrade } = router.query;
