@@ -53,7 +53,7 @@ const AuthContext = createContext<AuthContextType>(defaultAuthContext);
 
 const actionCodeSettings = {
   url: `${process.env.NEXT_PUBLIC_APP_URL}/auth/verify-email`,
-  handleCodeInApp: false // Changed to false as we're using direct email links
+  handleCodeInApp: true
 };
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
