@@ -13,6 +13,7 @@ import { Youtube, Twitter, Facebook, ArrowLeft } from 'lucide-react';
 import { Footer } from '@/components/Footer';
 import { SellerBadge } from '@/components/SellerBadge';
 import { AdminBadge } from '@/components/AdminBadge';
+import { MessageDialog } from '@/components/MessageDialog';
 
 const LoadingProfile = () => (
   <div className="container mx-auto p-6">
@@ -139,13 +140,12 @@ const ProfileContent = ({ userId }: { userId: string | null }) => {
                 </div>
                 {/* Message button for mobile */}
                 {user && user.uid !== userId && (
-                  <Button 
-                    variant="secondary" 
-                    onClick={() => router.push(`/messages?userId=${userId}`)}
-                    className="w-full md:hidden"
-                  >
-                    Message
-                  </Button>
+                  <div className="md:hidden w-full">
+                    <MessageDialog
+                      recipientId={userId}
+                      recipientName={profile.username || 'User'}
+                    />
+                  </div>
                 )}
               </div>
               <div className="flex-1">
@@ -160,13 +160,12 @@ const ProfileContent = ({ userId }: { userId: string | null }) => {
                   </div>
                   {/* Message button for desktop */}
                   {user && user.uid !== userId && (
-                    <Button 
-                      variant="secondary" 
-                      onClick={() => router.push(`/messages?userId=${userId}`)}
-                      className="hidden md:flex mt-4 md:mt-0"
-                    >
-                      Message
-                    </Button>
+                    <div className="hidden md:block mt-4 md:mt-0">
+                      <MessageDialog
+                        recipientId={userId}
+                        recipientName={profile.username || 'User'}
+                      />
+                    </div>
                   )}
                 </div>
                 
