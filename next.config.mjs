@@ -33,7 +33,8 @@ const nextConfig = {
                 https://*.firebase.com
                 https://*.firebaseapp.com
                 wss://*.firebaseio.com
-                https://identitytoolkit.googleapis.com;
+                https://identitytoolkit.googleapis.com
+                https://*.preview.co.dev;
               media-src 'self' https: data:;
             `.replace(/\s+/g, ' ').trim()
           }
