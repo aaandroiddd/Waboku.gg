@@ -31,13 +31,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: 'Invalid tier. Must be either "free" or "premium"' });
     }
 
-    // Initialize Firebase Admin
-    console.log('Initializing Firebase Admin...');
-    const { db } = getFirebaseAdmin();
+    // Initialize Firebase Admin and get Firestore instance
+    const admin = getFirebaseAdmin();
+    console.log('Firebase Admin initialized successfully');
 
     // Get user document
     console.log('Fetching user document...');
-    const userRef = db.collection('users').doc(userId);
+    const userRef = admin.db.collection('users').doc(userId);
     const userDoc = await userRef.get();
 
     if (!userDoc.exists) {
