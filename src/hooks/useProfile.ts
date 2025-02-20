@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { doc, getDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { firebaseDb } from '@/lib/firebase';
 import { UserProfile } from '@/types/database';
 
 export function useProfile(userId: string | null) {
@@ -21,7 +21,7 @@ export function useProfile(userId: string | null) {
         setError(null);
         
         // First try to get the user document
-        const userDoc = await getDoc(doc(db, 'users', userId));
+        const userDoc = await getDoc(doc(firebaseDb, 'users', userId));
         const userData = userDoc.data();
         
         // Create a default profile even if the document doesn't exist
