@@ -122,7 +122,7 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
             );
             
             // Set subscription data with enhanced validation
-            const subscriptionStatus = (() => {
+            const currentStatus = (() => {
               if (subscriptionData.status === 'active') return 'active';
               if (subscriptionData.status === 'canceled' && endDate && endDate > now) return 'canceled';
               if (subscriptionData.stripeSubscriptionId && !subscriptionData.status) return 'active';
@@ -133,7 +133,7 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
               startDate: subscriptionData.startDate,
               endDate: subscriptionData.endDate,
               renewalDate: subscriptionData.renewalDate,
-              status: subscriptionStatus,
+              status: currentStatus,
               stripeSubscriptionId: subscriptionData.stripeSubscriptionId
             };
             
