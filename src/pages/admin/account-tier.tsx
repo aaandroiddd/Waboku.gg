@@ -105,18 +105,21 @@ export default function AccountTierPage() {
     setIsLoading(true);
 
     try {
-      const response = await fetch('/api/admin/fix-specific-account', {
+      const response = await fetch('/api/admin/update-user-tier', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${adminSecret}`
         },
-        body: JSON.stringify({ userId, accountTier })
+        body: JSON.stringify({ 
+          userId, 
+          tier: accountTier 
+        })
       });
 
       const data = await response.json();
 
-      if (data.success) {
+      if (response.ok) {
         toast({
           title: "Success",
           description: `Account status updated for user ${userId} to ${accountTier}`,
@@ -124,7 +127,7 @@ export default function AccountTierPage() {
         // Refresh the current status
         handleSearch();
       } else {
-        throw new Error(data.error || 'Failed to update account status');
+        throw new Error(data.error || data.details || 'Failed to update account status');
       }
     } catch (error: any) {
       toast({
