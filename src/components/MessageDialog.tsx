@@ -11,6 +11,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { useState } from "react"
+import { getAuth } from "firebase/auth"
 import { useToast } from "./ui/use-toast"
 
 interface MessageDialogProps {
@@ -37,7 +38,33 @@ export function MessageDialog({ recipientId, recipientName }: MessageDialogProps
 
     setIsSending(true)
     try {
-      // Here we'll add the logic to send the message later
+      const auth = getAuth()
+      const currentUser = auth.currentUser
+      
+      if (!currentUser) {
+        throw new Error("You must be logged in to send messages")
+      }
+
+      const token = await currentUser.getIdToken()
+      
+      const response = await fetch('/api/messages/send', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          recipientId,
+          subject: subject.trim(),
+          message: message.trim()
+        })
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Failed to send message')
+      }
+
       toast({
         title: "Message sent",
         description: "Your message has been sent successfully.",
@@ -50,7 +77,7 @@ export function MessageDialog({ recipientId, recipientName }: MessageDialogProps
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to send message. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to send message. Please try again.",
       })
     } finally {
       setIsSending(false)
