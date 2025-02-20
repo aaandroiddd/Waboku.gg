@@ -6,6 +6,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -72,7 +73,7 @@ export default function AdminDashboard() {
       const response = await fetch(endpoint, {
         method,
         headers: {
-          'Authorization': `Bearer ${adminSecret}`,
+          'x-admin-secret': adminSecret,
           'Content-Type': 'application/json'
         }
       });
@@ -241,6 +242,9 @@ export default function AdminDashboard() {
           <DialogContent className="max-w-[600px]">
             <DialogHeader>
               <DialogTitle>API Response</DialogTitle>
+              <DialogDescription>
+                Response details from the API operation
+              </DialogDescription>
             </DialogHeader>
             <ScrollArea className="max-h-[400px] mt-4">
               <pre className="p-4 bg-muted rounded-lg overflow-x-auto">

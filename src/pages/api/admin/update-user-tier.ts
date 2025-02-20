@@ -70,7 +70,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     });
     return res.status(500).json({ 
       error: 'Internal server error',
-      details: error.message // Adding error details for debugging
+      details: error.message
     });
   }
 }
