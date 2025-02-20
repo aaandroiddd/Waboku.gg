@@ -97,15 +97,15 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
           });
         }
 
-        // Check subscription status
-        const subscriptionStatus = await checkSubscriptionStatus();
-        
         // Set up listener for Firestore document changes
         const unsubscribe = onSnapshot(userDocRef, async (doc) => {
           if (!isMounted) return;
 
           const data = doc.data();
           if (data) {
+            // Check subscription status
+            const subscriptionStatus = await checkSubscriptionStatus();
+            
             // Get subscription data
             const subscriptionData = subscriptionStatus || data.subscription || defaultSubscription;
             

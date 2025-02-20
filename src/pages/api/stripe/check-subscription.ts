@@ -2,6 +2,11 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import { getFirestore } from 'firebase-admin/firestore';
 import { getDatabase } from 'firebase-admin/database';
 import { getFirebaseAdmin } from '@/lib/firebase-admin';
+import Stripe from 'stripe';
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+  apiVersion: '2023-10-16',
+});
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   console.info('[Subscription Check] Started:', {
@@ -57,8 +62,37 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
 
       const { subscription } = accountData;
+      
+      // If there's a Stripe subscription ID, verify with Stripe
+      let stripeSubscription = null;
+      if (subscription.stripeSubscriptionId) {
+        try {
+          stripeSubscription = await stripe.subscriptions.retrieve(subscription.stripeSubscriptionId);
+          
+          // Update subscription status from Stripe
+          subscription.status = stripeSubscription.status;
+          subscription.currentPeriodEnd = stripeSubscription.current_period_end;
+          
+          // Update the database with latest Stripe status
+          await userRef.child('subscription').update({
+            status: stripeSubscription.status,
+            currentPeriodEnd: stripeSubscription.current_period_end
+          });
+        } catch (stripeError) {
+          console.error('[Subscription Check] Stripe error:', stripeError);
+          // If Stripe subscription not found, reset status
+          if ((stripeError as any).code === 'resource_missing') {
+            subscription.status = 'none';
+            await userRef.child('subscription').update({
+              status: 'none',
+              stripeSubscriptionId: null
+            });
+          }
+        }
+      }
+      
       const now = Date.now() / 1000;
-      const isActive = subscription.status === 'active' && 
+      const isActive = (subscription.status === 'active' || subscription.status === 'trialing') && 
                       subscription.currentPeriodEnd && 
                       subscription.currentPeriodEnd > now;
 
