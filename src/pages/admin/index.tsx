@@ -9,6 +9,15 @@ import {
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface ApiResponse {
   success?: boolean;
@@ -23,6 +32,8 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(false);
   const [responseDialog, setResponseDialog] = useState(false);
   const [apiResponse, setApiResponse] = useState<ApiResponse | null>(null);
+  const [userId, setUserId] = useState('');
+  const [selectedTier, setSelectedTier] = useState<string>('');
 
   useEffect(() => {
     const secret = localStorage.getItem('admin_secret');
@@ -128,6 +139,43 @@ export default function AdminDashboard() {
     }
   ];
 
+  const handleUpdateUserTier = async () => {
+    if (!userId || !selectedTier) {
+      setApiResponse({ error: 'User ID and tier are required' });
+      setResponseDialog(true);
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await fetch('/api/admin/update-user-tier', {
+        method: 'POST',
+        headers: {
+          'x-admin-secret': adminSecret,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          userId,
+          tier: selectedTier
+        })
+      });
+      
+      const data = await response.json();
+      setApiResponse(data);
+      setResponseDialog(true);
+      
+      if (response.ok) {
+        // Clear form on success
+        setUserId('');
+        setSelectedTier('');
+      }
+    } catch (error) {
+      setApiResponse({ error: 'Failed to update user tier' });
+      setResponseDialog(true);
+    }
+    setLoading(false);
+  };
+
   return (
     <div className="container mx-auto p-8">
       <Card className="p-6">
@@ -137,6 +185,41 @@ export default function AdminDashboard() {
             ⚠️ These operations can modify or delete data. Use with caution.
           </AlertDescription>
         </Alert>
+
+        {/* User Tier Management Section */}
+        <Card className="p-6 mb-8">
+          <h2 className="text-xl font-semibold mb-4">User Tier Management</h2>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="userId">User ID</Label>
+              <Input
+                id="userId"
+                placeholder="Enter Firebase User ID"
+                value={userId}
+                onChange={(e) => setUserId(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="tier">Account Tier</Label>
+              <Select value={selectedTier} onValueChange={setSelectedTier}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select tier" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="free">Free</SelectItem>
+                  <SelectItem value="premium">Premium</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <Button 
+              onClick={handleUpdateUserTier}
+              disabled={loading || !userId || !selectedTier}
+              className="w-full"
+            >
+              {loading ? 'Updating...' : 'Update User Tier'}
+            </Button>
+          </div>
+        </Card>
         
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {apiEndpoints.map((api) => (
