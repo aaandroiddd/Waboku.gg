@@ -19,6 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Footer } from '@/components/Footer';
 
 interface ApiResponse {
   success?: boolean;
@@ -90,24 +91,27 @@ export default function AdminDashboard() {
 
   if (!isAuthorized) {
     return (
-      <div className="container mx-auto p-8">
-        <Card className="p-6">
-          <h1 className="text-2xl font-bold mb-4">Admin Authentication</h1>
-          <div className="space-y-4">
-            <input
-              type="password"
-              placeholder="Enter admin secret"
-              className="w-full p-2 border rounded"
-              onChange={(e) => setAdminSecret(e.target.value)}
-            />
-            <Button 
-              onClick={() => verifyAdmin(adminSecret)}
-              disabled={!adminSecret}
-            >
-              Verify Admin Access
-            </Button>
-          </div>
-        </Card>
+      <div className="min-h-screen flex flex-col">
+        <div className="container mx-auto p-8 flex-grow">
+          <Card className="p-6">
+            <h1 className="text-2xl font-bold mb-4">Admin Authentication</h1>
+            <div className="space-y-4">
+              <input
+                type="password"
+                placeholder="Enter admin secret"
+                className="w-full p-2 border rounded"
+                onChange={(e) => setAdminSecret(e.target.value)}
+              />
+              <Button 
+                onClick={() => verifyAdmin(adminSecret)}
+                disabled={!adminSecret}
+              >
+                Verify Admin Access
+              </Button>
+            </div>
+          </Card>
+        </div>
+        <Footer />
       </div>
     );
   }
@@ -178,82 +182,85 @@ export default function AdminDashboard() {
   };
 
   return (
-    <div className="container mx-auto p-8">
-      <Card className="p-6">
-        <h1 className="text-2xl font-bold mb-6">Admin Dashboard</h1>
-        <Alert className="mb-6">
-          <AlertDescription>
-            ⚠️ These operations can modify or delete data. Use with caution.
-          </AlertDescription>
-        </Alert>
+    <div className="min-h-screen flex flex-col">
+      <div className="container mx-auto p-8 flex-grow">
+        <Card className="p-6">
+          <h1 className="text-2xl font-bold mb-6">Admin Dashboard</h1>
+          <Alert className="mb-6">
+            <AlertDescription>
+              ⚠️ These operations can modify or delete data. Use with caution.
+            </AlertDescription>
+          </Alert>
 
-        {/* User Tier Management Section */}
-        <Card className="p-6 mb-8">
-          <h2 className="text-xl font-semibold mb-4">User Tier Management</h2>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="userId">User ID</Label>
-              <Input
-                id="userId"
-                placeholder="Enter Firebase User ID"
-                value={userId}
-                onChange={(e) => setUserId(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="tier">Account Tier</Label>
-              <Select value={selectedTier} onValueChange={setSelectedTier}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select tier" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="free">Free</SelectItem>
-                  <SelectItem value="premium">Premium</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <Button 
-              onClick={handleUpdateUserTier}
-              disabled={loading || !userId || !selectedTier}
-              className="w-full"
-            >
-              {loading ? 'Updating...' : 'Update User Tier'}
-            </Button>
-          </div>
-        </Card>
-        
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {apiEndpoints.map((api) => (
-            <Card key={api.endpoint} className="p-4">
-              <h3 className="font-semibold mb-2">{api.name}</h3>
-              <p className="text-sm text-muted-foreground mb-4">{api.description}</p>
-              <Button
-                onClick={() => handleApiCall(api.endpoint)}
-                disabled={loading}
+          {/* User Tier Management Section */}
+          <Card className="p-6 mb-8">
+            <h2 className="text-xl font-semibold mb-4">User Tier Management</h2>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="userId">User ID</Label>
+                <Input
+                  id="userId"
+                  placeholder="Enter Firebase User ID"
+                  value={userId}
+                  onChange={(e) => setUserId(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="tier">Account Tier</Label>
+                <Select value={selectedTier} onValueChange={setSelectedTier}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select tier" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="free">Free</SelectItem>
+                    <SelectItem value="premium">Premium</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button 
+                onClick={handleUpdateUserTier}
+                disabled={loading || !userId || !selectedTier}
                 className="w-full"
               >
-                {loading ? 'Processing...' : 'Execute'}
+                {loading ? 'Updating...' : 'Update User Tier'}
               </Button>
-            </Card>
-          ))}
-        </div>
+            </div>
+          </Card>
+          
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {apiEndpoints.map((api) => (
+              <Card key={api.endpoint} className="p-4">
+                <h3 className="font-semibold mb-2">{api.name}</h3>
+                <p className="text-sm text-muted-foreground mb-4">{api.description}</p>
+                <Button
+                  onClick={() => handleApiCall(api.endpoint)}
+                  disabled={loading}
+                  className="w-full"
+                >
+                  {loading ? 'Processing...' : 'Execute'}
+                </Button>
+              </Card>
+            ))}
+          </div>
 
-        <Dialog open={responseDialog} onOpenChange={setResponseDialog}>
-          <DialogContent className="max-w-[600px]">
-            <DialogHeader>
-              <DialogTitle>API Response</DialogTitle>
-              <DialogDescription>
-                Response details from the API operation
-              </DialogDescription>
-            </DialogHeader>
-            <ScrollArea className="max-h-[400px] mt-4">
-              <pre className="p-4 bg-muted rounded-lg overflow-x-auto">
-                {JSON.stringify(apiResponse, null, 2)}
-              </pre>
-            </ScrollArea>
-          </DialogContent>
-        </Dialog>
-      </Card>
+          <Dialog open={responseDialog} onOpenChange={setResponseDialog}>
+            <DialogContent className="max-w-[600px]">
+              <DialogHeader>
+                <DialogTitle>API Response</DialogTitle>
+                <DialogDescription>
+                  Response details from the API operation
+                </DialogDescription>
+              </DialogHeader>
+              <ScrollArea className="max-h-[400px] mt-4">
+                <pre className="p-4 bg-muted rounded-lg overflow-x-auto">
+                  {JSON.stringify(apiResponse, null, 2)}
+                </pre>
+              </ScrollArea>
+            </DialogContent>
+          </Dialog>
+        </Card>
+      </div>
+      <Footer />
     </div>
   );
 }
