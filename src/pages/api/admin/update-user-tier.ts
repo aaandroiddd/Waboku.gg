@@ -1,6 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { getFirestore } from 'firebase-admin/firestore';
-import { initAdmin } from '@/lib/firebase-admin';
+import { getFirebaseAdmin } from '@/lib/firebase-admin';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -34,8 +33,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // Initialize Firebase Admin
     console.log('Initializing Firebase Admin...');
-    const app = initAdmin();
-    const db = getFirestore(app);
+    const { db } = getFirebaseAdmin();
 
     // Get user document
     console.log('Fetching user document...');
