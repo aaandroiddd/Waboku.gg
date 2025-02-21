@@ -299,7 +299,7 @@ export default function MessagesPage() {
                         onClick={() => setSelectedChat(chat.id)}
                       >
                         <div className="text-left w-full space-y-1.5">
-                          <div className="font-medium">{otherParticipant.name}</div>
+                          <div className="font-medium">{otherParticipant.name !== 'Unknown User' ? otherParticipant.name : 'Loading...'}</div>
                           {chat.subject && (
                             <div className="text-sm font-medium text-primary truncate">
                               {chat.subject}
