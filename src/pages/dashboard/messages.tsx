@@ -161,9 +161,19 @@ export default function MessagesPage() {
     const profile = participantProfiles[otherParticipantId];
     const isLoading = profilesLoading[otherParticipantId];
     
+    // First try to get name from participantNames in chat data
+    const nameFromChat = chat.participantNames?.[otherParticipantId];
+    if (nameFromChat) {
+      return {
+        id: otherParticipantId,
+        name: nameFromChat
+      };
+    }
+    
+    // If no name in chat data, use profile data
     return {
       id: otherParticipantId,
-      name: isLoading ? 'Loading...' : (profile?.username || chat.participantNames?.[otherParticipantId] || 'Unknown User')
+      name: isLoading ? 'Loading...' : (profile?.username || 'Unknown User')
     };
   };
 
