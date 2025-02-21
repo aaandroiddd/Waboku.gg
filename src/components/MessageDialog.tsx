@@ -101,9 +101,11 @@ export function MessageDialog({ recipientId, recipientName }: MessageDialogProps
           <div className="grid gap-2">
             <Input
               id="subject"
-              placeholder="Subject"
+              placeholder="Subject (required)"
               value={subject}
               onChange={(e) => setSubject(e.target.value)}
+              required
+              aria-required="true"
             />
           </div>
           <div className="grid gap-2">

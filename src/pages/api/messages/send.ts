@@ -62,10 +62,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       // If no existing chat found or if there's a subject, create a new one
       if (!chatId) {
+        // Get recipient's user data
+        const recipientData = await admin.auth.getUser(recipientId);
+        const recipientName = recipientData.displayName || 'Unknown User';
+
         const newChatRef = await chatsRef.push({
           participants: {
             [senderId]: true,
             [recipientId]: true
+          },
+          participantNames: {
+            [senderId]: (await admin.auth.getUser(senderId)).displayName || 'Unknown User',
+            [recipientId]: recipientName
           },
           createdAt: Date.now(),
           ...(subject ? { subject } : {}),

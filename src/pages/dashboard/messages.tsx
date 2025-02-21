@@ -220,6 +220,15 @@ export default function MessagesPage() {
     const otherParticipantId = Object.keys(chat.participants).find(id => id !== user?.uid);
     if (!otherParticipantId) return { id: '', name: 'Unknown User' };
 
+    // First try to get name from chat's participantNames
+    if (chat.participantNames?.[otherParticipantId]) {
+      return {
+        id: otherParticipantId,
+        name: chat.participantNames[otherParticipantId]
+      };
+    }
+
+    // Fallback to profile data
     const profile = participantProfiles[otherParticipantId];
     return {
       id: otherParticipantId,
