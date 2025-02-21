@@ -220,7 +220,7 @@ export default function MessagesPage() {
     const otherParticipantId = Object.keys(chat.participants).find(id => id !== user?.uid);
     if (!otherParticipantId) return { id: '', name: 'Unknown User' };
 
-    // First try to get name from chat's participantNames
+    // First try to get name from chat's participantNames in realtime database
     if (chat.participantNames?.[otherParticipantId]) {
       return {
         id: otherParticipantId,
@@ -228,11 +228,40 @@ export default function MessagesPage() {
       };
     }
 
-    // Fallback to profile data
+    // Then try to get from Firestore profiles
     const profile = participantProfiles[otherParticipantId];
+    if (profile?.username) {
+      return {
+        id: otherParticipantId,
+        name: profile.username
+      };
+    }
+
+    // If we still don't have a name, try to fetch it from realtime database users
+    const { database } = getFirebaseServices();
+    if (database) {
+      const userRef = ref(database, `users/${otherParticipantId}`);
+      get(userRef).then((snapshot) => {
+        if (snapshot.exists()) {
+          const userData = snapshot.val();
+          if (userData.displayName || userData.username) {
+            const newProfiles = { ...participantProfiles };
+            newProfiles[otherParticipantId] = {
+              username: userData.displayName || userData.username,
+              avatarUrl: userData.avatarUrl || userData.photoURL || null
+            };
+            setParticipantProfiles(newProfiles);
+          }
+        }
+      }).catch((error) => {
+        console.error('Error fetching user data from realtime database:', error);
+      });
+    }
+
+    // Return loading state while we fetch the data
     return {
       id: otherParticipantId,
-      name: profile?.username || 'Unknown User'
+      name: 'Loading...'
     };
   };
 
