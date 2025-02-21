@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { MessageCircle, Check, CheckCheck, Image, Smile, Trash2 } from 'lucide-react';
+import { UserNameLink } from './UserNameLink';
 import { useAuth } from '@/contexts/AuthContext';
 import { useMessages } from '@/hooks/useMessages';
 import { Card } from './ui/card';
@@ -346,7 +347,7 @@ export function Chat({
                 )}
               </Avatar>
               <div className="flex flex-col">
-                <span className="font-medium">{displayName}</span>
+                <UserNameLink userId={receiverId} initialUsername={displayName} />
                 {messages[0]?.subject && (
                   <div className="text-sm font-medium text-primary">
                     {messages[0].subject}
@@ -429,9 +430,12 @@ export function Chat({
                   <div className={`flex ${isUserMessage ? 'justify-end' : 'justify-start'} mb-2`}>
                     <div className="flex flex-col gap-1">
                       {!isUserMessage && (
-                        <span className="text-xs text-muted-foreground ml-2">
-                          {userProfiles[message.senderId]?.username || 'Loading...'}
-                        </span>
+                        <div className="text-xs text-muted-foreground ml-2">
+                          <UserNameLink 
+                            userId={message.senderId} 
+                            initialUsername={userProfiles[message.senderId]?.username || 'Loading...'}
+                          />
+                        </div>
                       )}
                       <div
                         className={`max-w-[70%] rounded-lg p-2.5 ${
