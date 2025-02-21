@@ -36,15 +36,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return res.status(404).json({ error: 'Recipient not found' })
       }
 
-      // Check for existing chat between these users
       const chatsRef = admin.rtdb.ref('chats')
-      const chatsSnapshot = await chatsRef.once('value')
-      const chats = chatsSnapshot.val() || {}
-
       let chatId = null
-      
-      // First try to find a chat with the same listing if listingId is provided
-      if (listingId) {
+
+      // If there's a subject, always create a new chat thread
+      // If there's a listingId, try to find existing chat or create new one
+      if (!subject && listingId) {
+        const chatsSnapshot = await chatsRef.once('value')
+        const chats = chatsSnapshot.val() || {}
+        
+        // Try to find a chat with the same listing
         for (const [id, chat] of Object.entries(chats)) {
           const chatData = chat as any
           if (
@@ -59,22 +60,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }
       }
 
-      // If no chat found with listing, look for any existing chat between users
-      if (!chatId) {
-        for (const [id, chat] of Object.entries(chats)) {
-          const chatData = chat as any
-          if (
-            chatData.participants?.[senderId] &&
-            chatData.participants?.[recipientId] &&
-            !chatData.deletedBy?.[senderId]
-          ) {
-            chatId = id
-            break
-          }
-        }
-      }
-
-      // If no existing chat found, create a new one
+      // If no existing chat found or if there's a subject, create a new one
       if (!chatId) {
         const newChatRef = await chatsRef.push({
           participants: {
@@ -82,6 +68,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             [recipientId]: true
           },
           createdAt: Date.now(),
+          ...(subject ? { subject } : {}),
           ...(listingId ? { listingId, listingTitle } : {})
         })
         chatId = newChatRef.key
@@ -120,17 +107,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       await unreadCountRef.transaction((current) => (current || 0) + 1)
 
       // Ensure both users have the chat in their threads
-      updates[`users/${senderId}/messageThreads/${recipientId}`] = {
+      updates[`users/${senderId}/messageThreads/${chatId}`] = {
+        recipientId,
         chatId,
         lastMessageTime: messageData.timestamp,
         unreadCount: 0,
+        ...(subject ? { subject } : {}),
         ...(listingId ? { listingId, listingTitle } : {})
       }
 
-      updates[`users/${recipientId}/messageThreads/${senderId}`] = {
+      updates[`users/${recipientId}/messageThreads/${chatId}`] = {
+        recipientId: senderId,
         chatId,
         lastMessageTime: messageData.timestamp,
         unreadCount: await unreadCountRef.once('value').then(snap => snap.val() || 0),
+        ...(subject ? { subject } : {}),
         ...(listingId ? { listingId, listingTitle } : {})
       }
 
