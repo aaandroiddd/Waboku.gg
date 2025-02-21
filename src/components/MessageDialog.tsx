@@ -13,6 +13,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { useState } from "react"
 import { getAuth } from "firebase/auth"
 import { useToast } from "./ui/use-toast"
+import { getFirebaseServices } from "@/lib/firebase"
 
 interface MessageDialogProps {
   recipientId: string
@@ -38,7 +39,7 @@ export function MessageDialog({ recipientId, recipientName }: MessageDialogProps
 
     setIsSending(true)
     try {
-      const auth = getAuth()
+      const { auth } = getFirebaseServices()
       const currentUser = auth.currentUser
       
       if (!currentUser) {
