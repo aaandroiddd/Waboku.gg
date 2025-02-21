@@ -300,6 +300,11 @@ export default function MessagesPage() {
                       >
                         <div className="text-left w-full space-y-1.5">
                           <div className="font-medium">{otherParticipant.name}</div>
+                          {chat.subject && (
+                            <div className="text-sm font-medium text-primary truncate">
+                              {chat.subject}
+                            </div>
+                          )}
                           {chat.listingTitle && (
                             <div className="text-sm font-medium text-muted-foreground truncate border-l-2 border-primary pl-2">
                               {chat.listingTitle}

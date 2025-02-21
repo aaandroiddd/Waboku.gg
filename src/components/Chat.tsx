@@ -307,6 +307,11 @@ export function Chat({
               </Avatar>
               <div className="flex flex-col">
                 <span className="font-medium">{displayName}</span>
+                {messages[0]?.subject && (
+                  <div className="text-sm font-medium text-primary">
+                    {messages[0].subject}
+                  </div>
+                )}
                 {listingTitle && (
                   <div className="flex items-center gap-2 mt-1">
                     <div className="h-4 w-1 bg-primary rounded-full"></div>
