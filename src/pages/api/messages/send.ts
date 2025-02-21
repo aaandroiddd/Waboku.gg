@@ -1,9 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { getAuth } from 'firebase-admin/auth'
 import { getDatabase } from 'firebase-admin/database'
-import { initAdmin } from '@/lib/firebase-admin'
-
-initAdmin()
+import { getFirebaseAdmin } from '@/lib/firebase-admin'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -16,8 +14,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(401).json({ error: 'Unauthorized' })
     }
 
+    // Initialize Firebase Admin
+    const admin = getFirebaseAdmin();
     const token = authHeader.split('Bearer ')[1]
-    const decodedToken = await getAuth().verifyIdToken(token)
+    const decodedToken = await admin.auth.verifyIdToken(token)
     const senderId = decodedToken.uid
 
     const { recipientId, subject, message } = req.body
@@ -28,13 +28,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // Verify recipient exists
     try {
-      await getAuth().getUser(recipientId)
+      await admin.auth.getUser(recipientId)
     } catch (error) {
       console.error('Error verifying recipient:', error)
       return res.status(404).json({ error: 'Recipient not found' })
     }
 
-    const db = getDatabase()
     const messageData = {
       senderId,
       recipientId,
@@ -44,7 +43,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       read: false
     }
 
-    const newMessageRef = await db.ref('messages').push(messageData)
+    const newMessageRef = await admin.rtdb.ref('messages').push(messageData)
 
     // Create conversation references for both users
     const conversationData = {
@@ -55,8 +54,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     await Promise.all([
-      db.ref(`users/${senderId}/conversations/${recipientId}`).set(conversationData),
-      db.ref(`users/${recipientId}/conversations/${senderId}`).set(conversationData)
+      admin.rtdb.ref(`users/${senderId}/conversations/${recipientId}`).set(conversationData),
+      admin.rtdb.ref(`users/${recipientId}/conversations/${senderId}`).set(conversationData)
     ])
 
     return res.status(200).json({ success: true, messageId: newMessageRef.key })
