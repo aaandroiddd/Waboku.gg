@@ -21,6 +21,13 @@ interface ChatPreview {
   };
   listingId?: string;
   listingTitle?: string;
+  subject?: string;
+  participantNames?: Record<string, string>;
+}
+
+interface ParticipantProfile {
+  username: string;
+  avatarUrl: string | null;
 }
 
 export default function MessagesPage() {
@@ -30,8 +37,9 @@ export default function MessagesPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedChat, setSelectedChat] = useState<string | null>(null);
-  const [participantProfiles, setParticipantProfiles] = useState<Record<string, any>>({});
+  const [participantProfiles, setParticipantProfiles] = useState<Record<string, ParticipantProfile>>({});
   const [isMobileView, setIsMobileView] = useState(false);
+  const [profilesLoading, setProfilesLoading] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     const handleResize = () => {
@@ -43,173 +51,103 @@ export default function MessagesPage() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  const fetchUserProfile = async (userId: string) => {
+    if (!userId) return null;
+    
+    try {
+      setProfilesLoading(prev => ({ ...prev, [userId]: true }));
+      const userDoc = await getDoc(doc(db, 'users', userId));
+      
+      if (userDoc.exists()) {
+        const userData = userDoc.data();
+        return {
+          username: userData.displayName || userData.username || 'Unknown User',
+          avatarUrl: userData.avatarUrl || userData.photoURL || null
+        };
+      }
+      return { username: 'Unknown User', avatarUrl: null };
+    } catch (err) {
+      console.error(`Error fetching profile for ${userId}:`, err);
+      return { username: 'Unknown User', avatarUrl: null };
+    } finally {
+      setProfilesLoading(prev => ({ ...prev, [userId]: false }));
+    }
+  };
+
   useEffect(() => {
     if (!user) {
-      console.log('No user found, skipping messages load');
       setLoading(false);
       return;
     }
 
-    console.log('Loading messages for user:', user.uid);
     const { database } = getFirebaseServices();
     
     if (!database) {
-      console.error('Realtime Database not initialized');
+      setError('Database connection failed');
       setLoading(false);
       return;
     }
 
     const chatsRef = ref(database, 'chats');
-    console.log('Fetching chats from:', chatsRef.toString());
 
-    // First, get initial data
-    get(chatsRef).then(async (snapshot) => {
-      try {
-        const data = snapshot.val();
-        console.log('Raw chats data:', data ? 'Data present' : 'No data');
-        
-        if (!data) {
-          setChats([]);
-          setLoading(false);
-          return;
-        }
-
-        const chatList = Object.entries(data)
-          .map(([id, chat]: [string, any]) => {
-            console.log(`Processing chat ${id}:`, {
-              hasParticipants: !!chat.participants,
-              isUserParticipant: chat.participants?.[user.uid],
-              isDeleted: chat.deletedBy?.[user.uid]
-            });
-            return {
-              id,
-              ...chat,
-            };
-          })
-          .filter((chat) => {
-            const isValid = chat.participants && 
-                          chat.participants[user.uid] && 
-                          (!chat.deletedBy || !chat.deletedBy[user.uid]);
-            
-            if (!isValid) {
-              console.log(`Chat ${chat.id} filtered out:`, {
-                hasParticipants: !!chat.participants,
-                isUserParticipant: chat.participants?.[user.uid],
-                isDeleted: chat.deletedBy?.[user.uid]
-              });
-            }
-            
-            return isValid;
-          })
-          .sort((a, b) => {
-            const timestampA = a.lastMessage?.timestamp || 0;
-            const timestampB = b.lastMessage?.timestamp || 0;
-            return timestampB - timestampA;
-          });
-
-        // Get unique participants
-        const uniqueParticipants = new Set<string>();
-        chatList.forEach(chat => {
-          Object.keys(chat.participants || {}).forEach(participantId => {
-            if (participantId !== user.uid) {
-              uniqueParticipants.add(participantId);
-            }
-          });
-        });
-
-        // Fetch profiles from Firestore
-        const profiles: Record<string, any> = {};
-        await Promise.all(Array.from(uniqueParticipants).map(async (id) => {
-          try {
-            const userDoc = await getDoc(doc(db, 'users', id));
-            if (userDoc.exists()) {
-              const userData = userDoc.data();
-              profiles[id] = {
-                username: userData.displayName || userData.username || 'Unknown User',
-                avatarUrl: userData.avatarUrl || userData.photoURL || null
-              };
-            } else {
-              profiles[id] = { username: 'Unknown User' };
-            }
-          } catch (err) {
-            console.error(`Error fetching profile for ${id}:`, err);
-            profiles[id] = { username: 'Unknown User' };
-          }
-        }));
-        
-        setParticipantProfiles(profiles);
-        setChats(chatList);
-      } catch (error) {
-        console.error('Error loading initial chats:', error);
-      } finally {
-        setLoading(false);
+    const processChats = async (data: any) => {
+      if (!data) {
+        setChats([]);
+        return;
       }
-    }).catch((error) => {
-      console.error('Error getting initial chats:', error);
-      setLoading(false);
-    });
 
-    // Then set up real-time listener
-    const unsubscribe = onValue(chatsRef, async (snapshot) => {
-      try {
-        const data = snapshot.val();
-        if (!data) {
-          setChats([]);
-          return;
-        }
+      const chatList = Object.entries(data)
+        .map(([id, chat]: [string, any]) => ({
+          id,
+          ...chat,
+        }))
+        .filter((chat) => 
+          chat.participants && 
+          chat.participants[user.uid] && 
+          (!chat.deletedBy || !chat.deletedBy[user.uid])
+        )
+        .sort((a, b) => (b.lastMessage?.timestamp || 0) - (a.lastMessage?.timestamp || 0));
 
-        const chatList = Object.entries(data)
-          .map(([id, chat]: [string, any]) => ({
-            id,
-            ...chat,
-          }))
-          .filter((chat) => 
-            chat.participants && 
-            chat.participants[user.uid] && 
-            (!chat.deletedBy || !chat.deletedBy[user.uid])
-          )
-          .sort((a, b) => {
-            const timestampA = a.lastMessage?.timestamp || 0;
-            const timestampB = b.lastMessage?.timestamp || 0;
-            return timestampB - timestampA;
-          });
-
-        // Get unique participants
-        const uniqueParticipants = new Set<string>();
-        chatList.forEach(chat => {
-          Object.keys(chat.participants || {}).forEach(participantId => {
-            if (participantId !== user.uid) {
-              uniqueParticipants.add(participantId);
-            }
-          });
-        });
-
-        // Fetch profiles from Firestore
-        const profiles: Record<string, any> = {};
-        await Promise.all(Array.from(uniqueParticipants).map(async (id) => {
-          try {
-            const userDoc = await getDoc(doc(db, 'users', id));
-            if (userDoc.exists()) {
-              const userData = userDoc.data();
-              profiles[id] = {
-                username: userData.displayName || userData.username || 'Unknown User',
-                avatarUrl: userData.avatarUrl || userData.photoURL || null
-              };
-            } else {
-              profiles[id] = { username: 'Unknown User' };
-            }
-          } catch (err) {
-            console.error(`Error fetching profile for ${id}:`, err);
-            profiles[id] = { username: 'Unknown User' };
+      const uniqueParticipants = new Set<string>();
+      chatList.forEach(chat => {
+        Object.keys(chat.participants || {}).forEach(participantId => {
+          if (participantId !== user.uid) {
+            uniqueParticipants.add(participantId);
           }
-        }));
-        
-        setParticipantProfiles(profiles);
-        setChats(chatList);
-      } catch (error) {
-        console.error('Error processing chats update:', error);
+        });
+      });
+
+      const profiles: Record<string, ParticipantProfile> = {};
+      await Promise.all(
+        Array.from(uniqueParticipants).map(async (id) => {
+          const profile = await fetchUserProfile(id);
+          if (profile) {
+            profiles[id] = profile;
+          }
+        })
+      );
+      
+      setParticipantProfiles(prev => ({ ...prev, ...profiles }));
+      setChats(chatList);
+    };
+
+    // Initial load
+    get(chatsRef)
+      .then(snapshot => processChats(snapshot.val()))
+      .catch(err => {
+        console.error('Error loading initial chats:', err);
+        setError('Failed to load messages');
+      })
+      .finally(() => setLoading(false));
+
+    // Real-time updates
+    const unsubscribe = onValue(chatsRef, 
+      snapshot => processChats(snapshot.val()),
+      error => {
+        console.error('Real-time update error:', error);
+        setError('Failed to receive updates');
       }
-    });
+    );
 
     return () => unsubscribe();
   }, [user]);
@@ -220,16 +158,36 @@ export default function MessagesPage() {
     const otherParticipantId = Object.keys(chat.participants).find(id => id !== user?.uid);
     if (!otherParticipantId) return { id: '', name: 'Unknown User' };
 
-    // Use profile from our state
     const profile = participantProfiles[otherParticipantId];
+    const isLoading = profilesLoading[otherParticipantId];
     
     return {
       id: otherParticipantId,
-      name: profile?.username || chat.participantNames?.[otherParticipantId] || 'Unknown User'
+      name: isLoading ? 'Loading...' : (profile?.username || chat.participantNames?.[otherParticipantId] || 'Unknown User')
     };
   };
 
   if (!user) return null;
+
+  if (error) {
+    return (
+      <DashboardLayout>
+        <div className="h-[calc(100vh-8rem)] flex items-center justify-center">
+          <div className="text-center">
+            <h3 className="text-lg font-semibold text-red-600 mb-2">Error Loading Messages</h3>
+            <p className="text-muted-foreground">{error}</p>
+            <Button
+              onClick={() => window.location.reload()}
+              className="mt-4"
+              variant="outline"
+            >
+              Retry
+            </Button>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   const showChatList = !isMobileView || !selectedChat;
   const showChat = !isMobileView || selectedChat;
@@ -292,7 +250,13 @@ export default function MessagesPage() {
                         onClick={() => setSelectedChat(chat.id)}
                       >
                         <div className="text-left w-full space-y-1.5">
-                          <div className="font-medium">{otherParticipant.name !== 'Unknown User' ? otherParticipant.name : 'Loading...'}</div>
+                          <div className="font-medium">
+                            {profilesLoading[otherParticipant.id] ? (
+                              <Skeleton className="h-4 w-24" />
+                            ) : (
+                              otherParticipant.name
+                            )}
+                          </div>
                           {chat.subject && (
                             <div className="text-sm font-medium text-primary truncate">
                               {chat.subject}
