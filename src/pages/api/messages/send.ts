@@ -43,22 +43,48 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       read: false
     }
 
+    // Create the message
     const newMessageRef = await admin.rtdb.ref('messages').push(messageData)
+    const messageId = newMessageRef.key
+
+    if (!messageId) {
+      throw new Error('Failed to create message')
+    }
 
     // Create conversation references for both users
     const conversationData = {
       lastMessage: message,
       lastMessageTime: messageData.timestamp,
-      messageId: newMessageRef.key,
-      subject
+      messageId,
+      subject,
+      participants: {
+        [senderId]: true,
+        [recipientId]: true
+      },
+      unreadCount: {
+        [senderId]: 0,
+        [recipientId]: 1
+      }
     }
 
-    await Promise.all([
-      admin.rtdb.ref(`users/${senderId}/conversations/${recipientId}`).set(conversationData),
-      admin.rtdb.ref(`users/${recipientId}/conversations/${senderId}`).set(conversationData)
-    ])
+    // Create/update conversation threads for both users
+    const updates: { [key: string]: any } = {
+      [`conversations/${messageId}`]: conversationData,
+      [`users/${senderId}/messageThreads/${recipientId}`]: {
+        conversationId: messageId,
+        lastMessageTime: messageData.timestamp,
+        unreadCount: 0
+      },
+      [`users/${recipientId}/messageThreads/${senderId}`]: {
+        conversationId: messageId,
+        lastMessageTime: messageData.timestamp,
+        unreadCount: 1
+      }
+    }
 
-    return res.status(200).json({ success: true, messageId: newMessageRef.key })
+    await admin.rtdb.ref().update(updates)
+
+    return res.status(200).json({ success: true, messageId })
   } catch (error) {
     console.error('Error sending message:', error)
     return res.status(500).json({ error: 'Failed to send message' })
