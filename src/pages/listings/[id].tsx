@@ -531,7 +531,6 @@ export default function ListingPage() {
           {listing && (
             <Chat
               receiverId={listing.userId}
-              receiverName={listing.username}
               listingId={listing.id}
               listingTitle={listing.title}
               onClose={() => setIsChatOpen(false)}
