@@ -290,6 +290,42 @@ export function Chat({
 
   if (!user) return null;
 
+  // Track user profiles for messages
+  const [userProfiles, setUserProfiles] = useState<Record<string, any>>({});
+
+  // Fetch user profiles for messages
+  useEffect(() => {
+    const fetchUserProfiles = async () => {
+      const uniqueUserIds = [...new Set(messages.map(msg => msg.senderId))];
+      const profiles: Record<string, any> = {};
+      
+      for (const userId of uniqueUserIds) {
+        if (!userProfiles[userId]) {
+          try {
+            const userDoc = await getDoc(doc(firebaseDb, 'users', userId));
+            const userData = userDoc.data();
+            profiles[userId] = {
+              username: userData?.displayName || userData?.username || 'Anonymous User',
+              avatarUrl: userData?.avatarUrl || userData?.photoURL || null,
+            };
+          } catch (err) {
+            console.error(`Error fetching profile for ${userId}:`, err);
+            profiles[userId] = {
+              username: 'Anonymous User',
+              avatarUrl: null,
+            };
+          }
+        }
+      }
+      
+      setUserProfiles(prev => ({ ...prev, ...profiles }));
+    };
+
+    if (messages.length > 0) {
+      fetchUserProfiles();
+    }
+  }, [messages]);
+
   return (
     <>
       <Card className={`flex flex-col h-full w-full ${className}`}>
@@ -298,12 +334,16 @@ export function Chat({
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Avatar>
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-                  <path d="M8 10h.01"/>
-                  <path d="M12 10h.01"/>
-                  <path d="M16 10h.01"/>
-                </svg>
+                {receiverProfile?.avatarUrl ? (
+                  <img src={receiverProfile.avatarUrl} alt={displayName} />
+                ) : (
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                    <path d="M8 10h.01"/>
+                    <path d="M12 10h.01"/>
+                    <path d="M16 10h.01"/>
+                  </svg>
+                )}
               </Avatar>
               <div className="flex flex-col">
                 <span className="font-medium">{displayName}</span>
@@ -387,24 +427,31 @@ export function Chat({
                     </div>
                   )}
                   <div className={`flex ${isUserMessage ? 'justify-end' : 'justify-start'} mb-2`}>
-                    <div
-                      className={`max-w-[70%] rounded-lg p-2.5 ${
-                        isUserMessage
-                          ? 'bg-primary text-primary-foreground'
-                          : 'bg-muted'
-                      }`}
-                    >
-                      <MessageContent 
-                        content={message.content}
-                        className={isUserMessage ? 'text-primary-foreground' : ''}
-                      />
-                      <div className="flex items-center justify-end gap-1 text-xs mt-1 opacity-75">
-                        <span>{formatMessageTime(message.timestamp)}</span>
-                        {isUserMessage && (
-                          message.read 
-                            ? <CheckCheck className="w-3 h-3" />
-                            : <Check className="w-3 h-3" />
-                        )}
+                    <div className="flex flex-col gap-1">
+                      {!isUserMessage && (
+                        <span className="text-xs text-muted-foreground ml-2">
+                          {userProfiles[message.senderId]?.username || 'Loading...'}
+                        </span>
+                      )}
+                      <div
+                        className={`max-w-[70%] rounded-lg p-2.5 ${
+                          isUserMessage
+                            ? 'bg-primary text-primary-foreground'
+                            : 'bg-muted'
+                        }`}
+                      >
+                        <MessageContent 
+                          content={message.content}
+                          className={isUserMessage ? 'text-primary-foreground' : ''}
+                        />
+                        <div className="flex items-center justify-end gap-1 text-xs mt-1 opacity-75">
+                          <span>{formatMessageTime(message.timestamp)}</span>
+                          {isUserMessage && (
+                            message.read 
+                              ? <CheckCheck className="w-3 h-3" />
+                              : <Check className="w-3 h-3" />
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
