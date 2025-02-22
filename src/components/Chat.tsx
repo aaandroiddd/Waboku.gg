@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { MessageCircle, Check, CheckCheck, Image, Smile, Trash2, Ban } from 'lucide-react';
+import { BlockUserDialog } from './BlockUserDialog';
 import { UserNameLink } from './UserNameLink';
 import { useAuth } from '@/contexts/AuthContext';
 import { useMessages } from '@/hooks/useMessages';
