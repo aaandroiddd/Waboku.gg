@@ -16,7 +16,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { doc, getDoc, deleteDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { doc, getDoc, deleteDoc, collection, query, where, getDocs, setDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
 const DashboardLayout = dynamic(
@@ -158,13 +158,34 @@ const SettingsPageContent = () => {
         }
       } catch (err: any) {
         console.error('Error loading user data:', err);
+        
         // More specific error messages based on the error type
         if (err.code === 'permission-denied') {
           setError("You don't have permission to access this data. Please sign in again.");
+          router.push('/auth/sign-in');
         } else if (err.code === 'not-found') {
           setError("Your profile data could not be found. Please try signing out and back in.");
-        } else if (err.name === 'FirebaseError' && err.code === 'auth/network-request-failed') {
-          setError("Network error. Please check your internet connection.");
+          router.push('/auth/sign-in');
+        } else if (err.name === 'FirebaseError') {
+          switch (err.code) {
+            case 'auth/network-request-failed':
+              setError("Network error. Please check your internet connection and try again.");
+              break;
+            case 'auth/user-token-expired':
+              setError("Your session has expired. Please sign in again.");
+              router.push('/auth/sign-in');
+              break;
+            case 'auth/user-not-found':
+              setError("User account not found. Please sign in again.");
+              router.push('/auth/sign-in');
+              break;
+            case 'auth/invalid-user-token':
+              setError("Invalid session. Please sign in again.");
+              router.push('/auth/sign-in');
+              break;
+            default:
+              setError("An error occurred while loading your profile. Please try refreshing the page.");
+          }
         } else {
           setError("Failed to load user data. Please try refreshing the page.");
         }
