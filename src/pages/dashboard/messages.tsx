@@ -292,9 +292,9 @@ export default function MessagesPage() {
         {showChat && (
           <div className="flex-1 flex flex-col bg-muted/30">
             {selectedChat ? (
-              <>
+              <div className="flex flex-col h-full">
                 {isMobileView && (
-                  <div className="p-2 border-b bg-background">
+                  <div className="flex-none p-2 border-b bg-background">
                     <Button
                       variant="ghost"
                       size="sm"
@@ -317,7 +317,7 @@ export default function MessagesPage() {
                     onDelete={() => setSelectedChat(null)}
                   />
                 </div>
-              </>
+              </div>
             ) : (
               <div className="flex-1 flex items-center justify-center text-muted-foreground">
                 Select a conversation to view messages
