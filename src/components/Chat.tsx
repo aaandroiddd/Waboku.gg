@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { MessageCircle, Check, CheckCheck, Image, Smile, Trash2 } from 'lucide-react';
+import { MessageCircle, Check, CheckCheck, Image, Smile, Trash2, Ban } from 'lucide-react';
 import { UserNameLink } from './UserNameLink';
 import { useAuth } from '@/contexts/AuthContext';
 import { useMessages } from '@/hooks/useMessages';
@@ -56,6 +56,46 @@ export function Chat({
   const { profile: receiverProfile } = useProfile(receiverId);
   const [displayName, setDisplayName] = useState(initialReceiverName);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showBlockDialog, setShowBlockDialog] = useState(false);
+
+  const handleBlockUser = async () => {
+    if (!user || !receiverId) return;
+    
+    try {
+      const response = await fetch('/api/users/block', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${await user.getIdToken()}`
+        },
+        body: JSON.stringify({
+          blockedUserId: receiverId
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to block user');
+      }
+
+      toast({
+        title: "User blocked",
+        description: `You have blocked ${displayName}. They can no longer send you messages.`
+      });
+
+      if (onClose) {
+        onClose();
+      } else if (router) {
+        router.push('/dashboard/messages');
+      }
+    } catch (error) {
+      console.error('Error blocking user:', error);
+      toast({
+        title: "Error",
+        description: "Failed to block user. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -374,13 +414,24 @@ export function Chat({
             </div>
             <div className="flex items-center gap-2">
               {chatId && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setShowDeleteDialog(true)}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+                <>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setShowBlockDialog(true)}
+                    title="Block user"
+                  >
+                    <Ban className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setShowDeleteDialog(true)}
+                    title="Delete chat"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </>
               )}
               {onClose && (
                 <Button variant="ghost" size="sm" onClick={onClose}>
@@ -388,6 +439,13 @@ export function Chat({
                 </Button>
               )}
             </div>
+            <BlockUserDialog
+              open={showBlockDialog}
+              onOpenChange={setShowBlockDialog}
+              userId={receiverId}
+              username={displayName}
+              onBlock={handleBlockUser}
+            />
           </div>
         </div>
 
