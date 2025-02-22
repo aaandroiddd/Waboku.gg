@@ -467,70 +467,69 @@ export function Chat({
             }}
           >
             <div className="p-4 min-h-full">
-            {error && (
-              <div className="bg-destructive/10 border border-destructive text-destructive px-4 py-3 rounded mb-4">
-                {error}
-              </div>
-            )}
-            
-            <div className="space-y-4">
-              {messages.length === 0 && !chatId && (
-                <div className="text-center text-sm text-muted-foreground p-4">
-                  Start the conversation by introducing yourself and asking about the listing.
+              {error && (
+                <div className="bg-destructive/10 border border-destructive text-destructive px-4 py-3 rounded mb-4">
+                  {error}
                 </div>
               )}
-              {messages.map((message, index) => {
-                const isUserMessage = message.senderId === user.uid;
-                const showDate = index === 0 || 
-                  new Date(message.timestamp).toDateString() !== new Date(messages[index - 1].timestamp).toDateString();
+              
+              <div className="space-y-4">
+                {messages.length === 0 && !chatId && (
+                  <div className="text-center text-sm text-muted-foreground p-4">
+                    Start the conversation by introducing yourself and asking about the listing.
+                  </div>
+                )}
+                {messages.map((message, index) => {
+                  const isUserMessage = message.senderId === user.uid;
+                  const showDate = index === 0 || 
+                    new Date(message.timestamp).toDateString() !== new Date(messages[index - 1].timestamp).toDateString();
 
-                return (
-                  <React.Fragment key={message.id}>
-                    {showDate && (
-                      <div className="flex justify-center my-4">
-                        <div className="bg-muted px-3 py-1 rounded-full text-xs text-muted-foreground">
-                          {new Date(message.timestamp).toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' })}
+                  return (
+                    <React.Fragment key={message.id}>
+                      {showDate && (
+                        <div className="flex justify-center my-4">
+                          <div className="bg-muted px-3 py-1 rounded-full text-xs text-muted-foreground">
+                            {new Date(message.timestamp).toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' })}
+                          </div>
                         </div>
-                      </div>
-                    )}
-                    <div className={`flex ${isUserMessage ? 'justify-end' : 'justify-start'}`}>
-                      <div className={`flex flex-col gap-1 max-w-[80%] md:max-w-[70%]`}>
-                        {!isUserMessage && (
-                          <div className="text-xs text-muted-foreground ml-2">
-                            <UserNameLink 
-                              userId={message.senderId} 
-                              initialUsername={userProfiles[message.senderId]?.username || 'Loading...'}
+                      )}
+                      <div className={`flex ${isUserMessage ? 'justify-end' : 'justify-start'}`}>
+                        <div className={`flex flex-col gap-1 max-w-[80%] md:max-w-[70%]`}>
+                          {!isUserMessage && (
+                            <div className="text-xs text-muted-foreground ml-2">
+                              <UserNameLink 
+                                userId={message.senderId} 
+                                initialUsername={userProfiles[message.senderId]?.username || 'Loading...'}
+                              />
+                            </div>
+                          )}
+                          <div
+                            className={`rounded-lg p-3 break-words ${
+                              isUserMessage
+                                ? 'bg-primary text-primary-foreground'
+                                : 'bg-muted'
+                            }`}
+                          >
+                            <MessageContent 
+                              content={message.content}
+                              className={isUserMessage ? 'text-primary-foreground' : ''}
                             />
-                          </div>
-                        )}
-                        <div
-                          className={`rounded-lg p-3 break-words ${
-                            isUserMessage
-                              ? 'bg-primary text-primary-foreground'
-                              : 'bg-muted'
-                          }`}
-                        >
-                          <MessageContent 
-                            content={message.content}
-                            className={isUserMessage ? 'text-primary-foreground' : ''}
-                          />
-                          <div className="flex items-center justify-end gap-1 text-xs mt-1.5 opacity-75">
-                            <span>{formatMessageTime(message.timestamp)}</span>
-                            {isUserMessage && (
-                              message.read 
-                                ? <CheckCheck className="w-3 h-3" />
-                                : <Check className="w-3 h-3" />
-                            )}
+                            <div className="flex items-center justify-end gap-1 text-xs mt-1.5 opacity-75">
+                              <span>{formatMessageTime(message.timestamp)}</span>
+                              {isUserMessage && (
+                                message.read 
+                                  ? <CheckCheck className="w-3 h-3" />
+                                  : <Check className="w-3 h-3" />
+                              )}
+                            </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  </React.Fragment>
-                );
-              })}
-              <div ref={bottomRef} className="h-px" />
-            </div>
-            </div>
+                    </React.Fragment>
+                  );
+                })}
+                <div ref={bottomRef} className="h-px" />
+              </div>
             </div>
           </ScrollArea>
 
