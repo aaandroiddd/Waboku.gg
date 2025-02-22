@@ -13,8 +13,23 @@ export function MessageContent({ content, className = '' }: MessageContentProps)
   // Split content by URLs
   const parts = content.split(urlPattern);
   
+  // Check if content is an image markdown
+  const imageMatch = content.match(/!\[.*?\]\((.*?)\)/);
+  if (imageMatch) {
+    return (
+      <div className={`max-w-full ${className}`}>
+        <img 
+          src={imageMatch[1]} 
+          alt="Message attachment" 
+          className="max-w-full h-auto rounded-lg"
+          loading="lazy"
+        />
+      </div>
+    );
+  }
+
   return (
-    <div className={`whitespace-pre-wrap break-words ${className}`}>
+    <div className={`whitespace-pre-wrap break-words max-w-full ${className}`}>
       {parts.map((part, index) => {
         if (part.match(urlPattern)) {
           return (

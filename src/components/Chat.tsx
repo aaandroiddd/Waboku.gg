@@ -370,9 +370,9 @@ export function Chat({
 
   return (
     <>
-      <Card className={`flex flex-col h-full w-full ${className}`}>
+      <Card className={`flex flex-col h-full w-full overflow-hidden ${className}`}>
         {/* Chat Header */}
-        <div className="flex flex-col p-4 border-b bg-card">
+        <div className="flex-none flex flex-col p-4 border-b bg-card">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Avatar>
