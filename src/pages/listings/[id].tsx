@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { loadStripe } from '@stripe/stripe-js';
 import { UserNameLink } from '@/components/UserNameLink';
 import { useRouter } from 'next/router';
 import { formatPrice } from '@/lib/price';
@@ -195,6 +196,53 @@ export default function ListingPage() {
     } catch (error) {
       console.error('Error toggling favorite:', error);
       toast.error('Failed to update favorites');
+    }
+  };
+
+  const handleBuyNow = async () => {
+    if (!user) {
+      toast.error('Please sign in to make a purchase');
+      router.push('/auth/sign-in');
+      return;
+    }
+
+    if (user.uid === listing?.userId) {
+      toast.error('You cannot buy your own listing');
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/stripe/create-buy-now-session', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          listingId: listing?.id,
+          userId: user.uid,
+          email: user.email,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to create checkout session');
+      }
+
+      const { sessionId } = await response.json();
+      
+      const stripe = await loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
+      if (!stripe) throw new Error('Failed to load Stripe');
+
+      const { error } = await stripe.redirectToCheckout({ sessionId });
+      
+      if (error) {
+        console.error('Stripe checkout error:', error);
+        toast.error(error.message);
+      }
+    } catch (error: any) {
+      console.error('Error creating checkout session:', error);
+      toast.error(error.message || 'Failed to process purchase. Please try again.');
     }
   };
 
@@ -407,25 +455,36 @@ export default function ListingPage() {
                     <Calendar className="h-4 w-4 mr-2" />
                     Listed on {listing.createdAt.toLocaleDateString()}
                   </div>
-                  <div className="flex w-full sm:w-auto space-x-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleFavoriteToggle}
-                      className={`flex-1 sm:flex-none ${isFavorited ? "text-red-500" : ""}`}
-                    >
-                      <Heart className={`h-4 w-4 mr-2 ${isFavorited ? "fill-current" : ""}`} />
-                      {isFavorited ? "Saved" : "Save"}
-                    </Button>
+                  <div className="flex flex-col sm:flex-row w-full sm:w-auto gap-2">
                     <Button
                       variant="default"
-                      size="sm"
-                      onClick={handleMessage}
-                      className="flex-1 sm:flex-none"
+                      size="lg"
+                      onClick={handleBuyNow}
+                      className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                      disabled={user?.uid === listing.userId}
                     >
-                      <MessageCircle className="h-4 w-4 mr-2" />
-                      Message
+                      Buy Now - {formatPrice(listing.price)}
                     </Button>
+                    <div className="flex space-x-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleFavoriteToggle}
+                        className={`flex-1 sm:flex-none ${isFavorited ? "text-red-500" : ""}`}
+                      >
+                        <Heart className={`h-4 w-4 mr-2 ${isFavorited ? "fill-current" : ""}`} />
+                        {isFavorited ? "Saved" : "Save"}
+                      </Button>
+                      <Button
+                        variant="default"
+                        size="sm"
+                        onClick={handleMessage}
+                        className="flex-1 sm:flex-none"
+                      >
+                        <MessageCircle className="h-4 w-4 mr-2" />
+                        Message
+                      </Button>
+                    </div>
                   </div>
                 </div>
               </div>

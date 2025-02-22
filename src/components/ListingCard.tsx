@@ -65,6 +65,62 @@ const buttonVariants = {
   }
 };
 
+interface BuyNowButtonProps {
+  listing: Listing;
+  className?: string;
+}
+
+const BuyNowButton = ({ listing, className }: BuyNowButtonProps) => {
+  const { user } = useAuth();
+  const router = useRouter();
+
+  const handleBuyNow = async () => {
+    if (!user) {
+      toast.error('Please sign in to make a purchase');
+      router.push('/auth/sign-in');
+      return;
+    }
+
+    if (user.uid === listing.userId) {
+      toast.error('You cannot buy your own listing');
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/stripe/create-buy-now-session', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          listingId: listing.id,
+          userId: user.uid,
+          email: user.email,
+        }),
+      });
+
+      const { sessionId } = await response.json();
+      
+      const stripe = await loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
+      if (!stripe) throw new Error('Failed to load Stripe');
+
+      await stripe.redirectToCheckout({ sessionId });
+    } catch (error) {
+      console.error('Error creating checkout session:', error);
+      toast.error('Failed to process purchase. Please try again.');
+    }
+  };
+
+  return (
+    <Button
+      onClick={handleBuyNow}
+      className={cn("w-full bg-green-600 hover:bg-green-700 text-white", className)}
+    >
+      Buy Now
+    </Button>
+  );
+};
+
 export const ListingCard = memo(({ listing, isFavorite, onFavoriteClick, getConditionColor }: ListingCardProps) => {
   return (
     <motion.div
