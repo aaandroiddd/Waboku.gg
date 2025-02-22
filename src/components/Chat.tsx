@@ -370,7 +370,7 @@ export function Chat({
 
   return (
     <>
-      <Card className={`flex flex-col h-[calc(100vh-4rem)] w-full ${className} relative`}>
+      <Card className={`flex flex-col h-[calc(100vh-4rem)] w-full ${className}`}>
         {/* Chat Header */}
         <div className="flex-none flex flex-col p-4 border-b bg-card">
           <div className="flex items-center justify-between">
@@ -450,12 +450,12 @@ export function Chat({
           </div>
         </div>
 
-        {/* Messages Container */}
-        <div className="flex-1 min-h-0 flex flex-col overflow-hidden relative">
+        {/* Main Content Area - Using CSS Grid for better layout control */}
+        <div className="flex-1 grid grid-rows-[1fr,auto] overflow-hidden">
           {/* Messages Area */}
           <ScrollArea 
             ref={scrollRef} 
-            className="flex-1 p-4"
+            className="w-full h-full p-4"
             onScroll={(e) => {
               const target = e.target as HTMLDivElement;
               const isBottom = Math.abs(target.scrollHeight - target.clientHeight - target.scrollTop) < 1;
