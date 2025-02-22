@@ -1,4 +1,4 @@
-import { db } from '@/lib/firebase';
+import { firebaseDb as db } from '@/lib/firebase';
 import { Listing } from '@/types/database';
 import { useAuth } from '@/contexts/AuthContext';
 import { collection, doc, getDoc, getDocs, query, where, setDoc, deleteDoc } from 'firebase/firestore';
@@ -40,15 +40,20 @@ export function useFavorites() {
         }
         
         // Fallback to fetching from the listing reference if listingData is not available
-        const listingDoc = await getDoc(favoriteData.listingRef);
-        if (listingDoc.exists()) {
-          const data = listingDoc.data();
-          return {
-            id: listingDoc.id,
-            ...data,
-            createdAt: data.createdAt?.toDate(),
-            archivedAt: data.archivedAt?.toDate()
-          } as Listing;
+        try {
+          const listingRef = doc(db, 'listings', listingId);
+          const listingDoc = await getDoc(listingRef);
+          if (listingDoc.exists()) {
+            const data = listingDoc.data();
+            return {
+              id: listingDoc.id,
+              ...data,
+              createdAt: data.createdAt?.toDate(),
+              archivedAt: data.archivedAt?.toDate()
+            } as Listing;
+          }
+        } catch (err) {
+          console.error('Error fetching listing:', err);
         }
         return null;
       });
@@ -60,6 +65,7 @@ export function useFavorites() {
       setFavorites(resolvedFavorites);
       setFavoriteIds(favoriteIdsSet);
     } catch (err) {
+      console.error('Error in fetchFavorites:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch favorites');
     } finally {
       setIsLoading(false);
@@ -95,6 +101,7 @@ export function useFavorites() {
         setFavorites(prev => [...prev, listing]);
       }
     } catch (err) {
+      console.error('Error in toggleFavorite:', err);
       setError(err instanceof Error ? err.message : 'Failed to update favorite');
       // Re-fetch favorites to ensure UI is in sync even if there was an error
       await fetchFavorites();

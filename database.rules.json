@@ -1,5 +1,17 @@
 {
   "rules": {
+    "favorites": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": "auth != null && auth.uid === $uid",
+        "$listingId": {
+          ".validate": "newData.hasChildren(['createdAt'])",
+          "createdAt": {
+            ".validate": "newData.isNumber() && newData.val() <= now"
+          }
+        }
+      }
+    },
     "searchTerms": {
       ".read": true,
       ".write": true,
