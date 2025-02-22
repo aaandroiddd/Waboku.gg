@@ -450,12 +450,12 @@ export function Chat({
           </div>
         </div>
 
-        {/* Main Content Area - Using CSS Grid for better layout control */}
-        <div className="flex-1 grid grid-rows-[1fr,auto] overflow-hidden">
+        {/* Main Content Area */}
+        <div className="flex-1 flex flex-col min-h-0">
           {/* Messages Area */}
           <ScrollArea 
             ref={scrollRef} 
-            className="flex-1 w-full"
+            className="flex-1"
             type="always"
             onScroll={(e) => {
               const target = e.currentTarget;
