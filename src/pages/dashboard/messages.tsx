@@ -201,9 +201,9 @@ export default function MessagesPage() {
 
   return (
     <DashboardLayout>
-      <div className="h-[calc(100vh-10rem)] flex overflow-hidden">
+      <div className="h-[calc(100vh-8rem)] flex overflow-hidden">
         {showChatList && (
-          <div className={`${isMobileView ? 'w-full' : 'w-80'} border-r bg-background flex flex-col`}>
+          <div className={`${isMobileView ? 'w-full' : 'w-80'} border-r bg-background flex flex-col overflow-hidden`}>
             <div className="p-4 border-b flex-none">
               <h2 className="text-lg font-semibold">Messages</h2>
               <p className="text-sm text-muted-foreground">Your conversations</p>
