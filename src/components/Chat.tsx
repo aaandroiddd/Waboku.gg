@@ -370,7 +370,7 @@ export function Chat({
 
   return (
     <>
-      <Card className={`flex flex-col h-[calc(100vh-4rem)] w-full ${className}`}>
+      <Card className={`flex flex-col h-[calc(100vh-4rem)] w-full overflow-hidden ${className}`}>
         {/* Chat Header */}
         <div className="flex-none flex flex-col p-4 border-b bg-card">
           <div className="flex items-center justify-between">
@@ -455,7 +455,7 @@ export function Chat({
           {/* Messages Area */}
           <ScrollArea 
             ref={scrollRef} 
-            className="flex-1"
+            className="flex-1 relative"
             type="always"
             onScroll={(e) => {
               const target = e.currentTarget;
@@ -504,10 +504,10 @@ export function Chat({
                             </div>
                           )}
                           <div
-                            className={`rounded-lg p-3 break-words ${
+                            className={`rounded-lg p-3 break-words shadow-sm ${
                               isUserMessage
                                 ? 'bg-primary text-primary-foreground'
-                                : 'bg-muted'
+                                : 'bg-muted hover:bg-muted/90'
                             }`}
                           >
                             <MessageContent 
