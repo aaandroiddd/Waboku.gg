@@ -179,8 +179,14 @@ export default function ListingPage() {
         setIsFavorited(false);
         toast.success('Removed from favorites');
       } else {
+        // Store the full listing data along with the reference
         await setDoc(favoriteRef, {
           listingRef,
+          listingData: {
+            ...listing,
+            createdAt: listing.createdAt,
+            id: listing.id
+          },
           createdAt: new Date()
         });
         setIsFavorited(true);

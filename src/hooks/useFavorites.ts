@@ -28,7 +28,19 @@ export function useFavorites() {
         const listingId = doc.id;
         favoriteIdsSet.add(listingId);
         
-        const listingDoc = await getDoc(doc.data().listingRef);
+        // First try to get the data from the stored listingData
+        const favoriteData = doc.data();
+        if (favoriteData.listingData) {
+          const listingData = favoriteData.listingData;
+          return {
+            ...listingData,
+            createdAt: listingData.createdAt instanceof Date ? listingData.createdAt : listingData.createdAt.toDate(),
+            archivedAt: listingData.archivedAt instanceof Date ? listingData.archivedAt : listingData.archivedAt?.toDate()
+          } as Listing;
+        }
+        
+        // Fallback to fetching from the listing reference if listingData is not available
+        const listingDoc = await getDoc(favoriteData.listingRef);
         if (listingDoc.exists()) {
           const data = listingDoc.data();
           return {
@@ -72,6 +84,11 @@ export function useFavorites() {
       } else {
         await setDoc(favoriteRef, {
           listingRef,
+          listingData: {
+            ...listing,
+            createdAt: listing.createdAt,
+            id: listing.id
+          },
           createdAt: new Date()
         });
         setFavoriteIds(prev => new Set([...prev, listing.id]));
