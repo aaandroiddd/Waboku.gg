@@ -77,6 +77,32 @@ export default async function handler(
 
   try {
     switch (event.type) {
+      case 'checkout.session.completed': {
+        const session = event.data.object as Stripe.Checkout.Session;
+        const userId = session.metadata?.userId;
+
+        if (!userId) {
+          throw new Error('No userId found in session metadata');
+        }
+
+        // Update user's subscription status immediately after successful checkout
+        await realtimeDb.ref(`users/${userId}/account`).update({
+          tier: 'premium',
+          status: 'active',
+          subscription: {
+            status: 'processing',
+            tier: 'premium',
+            lastUpdated: Date.now()
+          }
+        });
+
+        console.log('[Stripe Webhook] Checkout completed:', {
+          userId,
+          sessionId: session.id
+        });
+        break;
+      }
+
       case 'customer.subscription.created':
       case 'customer.subscription.updated': {
         const subscription = event.data.object as Stripe.Subscription;
@@ -86,34 +112,41 @@ export default async function handler(
           throw new Error('No userId found in subscription metadata');
         }
 
-        if (subscription.status === 'active') {
-          // Update Firestore
-          await firestoreDb.collection('users').doc(userId).set({
-            subscription: {
-              currentPlan: 'premium',
-              startDate: new Date(subscription.current_period_start * 1000).toISOString(),
-              status: 'active'
-            }
-          }, { merge: true });
+        const status = subscription.status;
+        const currentPeriodEnd = new Date(subscription.current_period_end * 1000).toISOString();
+        const currentPeriodStart = new Date(subscription.current_period_start * 1000).toISOString();
 
-          // Update Realtime Database
-          await realtimeDb.ref(`users/${userId}/account`).update({
-            status: 'active',
-            subscription: {
-              id: subscription.id,
-              status: 'active',
-              tier: 'premium',
-              currentPeriodEnd: subscription.current_period_end
-            }
-          });
-          
-          console.log('[Stripe Webhook] Updated user subscription status:', {
-            userId,
-            subscriptionId: subscription.id,
-            status: 'active',
-            tier: 'premium'
-          });
-        }
+        // Update Firestore
+        await firestoreDb.collection('users').doc(userId).set({
+          subscription: {
+            currentPlan: status === 'active' ? 'premium' : 'free',
+            startDate: currentPeriodStart,
+            endDate: currentPeriodEnd,
+            status: status
+          }
+        }, { merge: true });
+
+        // Update Realtime Database
+        await realtimeDb.ref(`users/${userId}/account`).update({
+          tier: status === 'active' ? 'premium' : 'free',
+          status: 'active',
+          subscription: {
+            id: subscription.id,
+            status: status,
+            tier: status === 'active' ? 'premium' : 'free',
+            startDate: currentPeriodStart,
+            endDate: currentPeriodEnd,
+            currentPeriodEnd: subscription.current_period_end,
+            lastUpdated: Date.now()
+          }
+        });
+        
+        console.log('[Stripe Webhook] Updated subscription status:', {
+          userId,
+          subscriptionId: subscription.id,
+          status: status,
+          tier: status === 'active' ? 'premium' : 'free'
+        });
         break;
       }
 
@@ -125,27 +158,56 @@ export default async function handler(
           throw new Error('No userId found in subscription metadata');
         }
 
+        const endDate = new Date(subscription.current_period_end * 1000).toISOString();
+
         // Update Firestore
         await firestoreDb.collection('users').doc(userId).set({
           subscription: {
             currentPlan: 'free',
-            status: 'inactive'
+            status: 'inactive',
+            endDate: endDate
           }
         }, { merge: true });
 
         // Update Realtime Database
         await realtimeDb.ref(`users/${userId}/account`).update({
-          status: 'active',
+          tier: 'free',
           subscription: {
             status: 'inactive',
-            tier: 'free'
+            tier: 'free',
+            endDate: endDate,
+            lastUpdated: Date.now()
           }
         });
         
-        console.log('[Stripe Webhook] Reset user subscription:', {
+        console.log('[Stripe Webhook] Subscription deleted:', {
           userId,
-          status: 'inactive',
-          tier: 'free'
+          endDate: endDate
+        });
+        break;
+      }
+
+      case 'invoice.payment_failed': {
+        const invoice = event.data.object as Stripe.Invoice;
+        const subscription = invoice.subscription as string;
+        
+        // Get the subscription to find the user ID
+        const subDetails = await stripe.subscriptions.retrieve(subscription);
+        const userId = subDetails.metadata.userId;
+
+        if (!userId) {
+          throw new Error('No userId found in subscription metadata');
+        }
+
+        // Update subscription status in database
+        await realtimeDb.ref(`users/${userId}/account/subscription`).update({
+          status: 'payment_failed',
+          lastUpdated: Date.now()
+        });
+
+        console.log('[Stripe Webhook] Payment failed:', {
+          userId,
+          subscriptionId: subscription
         });
         break;
       }

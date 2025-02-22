@@ -60,6 +60,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return res.status(400).json({ error: 'User email is required' });
       }
 
+      // Check if user already has an active subscription
+      const db = admin.database();
+      const userRef = db.ref(`users/${userId}/account/subscription`);
+      const snapshot = await userRef.once('value');
+      const currentSubscription = snapshot.val();
+
+      if (currentSubscription?.status === 'active') {
+        return res.status(400).json({ 
+          error: 'Subscription exists',
+          message: 'You already have an active subscription'
+        });
+      }
+
       // Create a Checkout Session
       const session = await stripe.checkout.sessions.create({
         payment_method_types: ['card'],
@@ -70,15 +83,33 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           },
         ],
         mode: 'subscription',
-        success_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard?session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard`,
+        success_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/account-status?session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/account-status`,
         customer_email: userEmail,
         metadata: {
           userId: userId,
         },
+        allow_promotion_codes: true,
+        billing_address_collection: 'auto',
+        subscription_data: {
+          metadata: {
+            userId: userId,
+          },
+        },
       });
 
-      return res.status(200).json({ url: session.url });
+      if (process.env.NEXT_PUBLIC_CO_DEV_ENV === 'preview') {
+        // For preview environment, return a simulated success URL
+        return res.status(200).json({ 
+          sessionUrl: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/account-status?session_id=preview_session`,
+          isPreview: true
+        });
+      }
+
+      return res.status(200).json({ 
+        sessionUrl: session.url,
+        isPreview: false
+      });
 
     } catch (authError) {
       console.error('[Create Checkout] Auth error:', authError);
