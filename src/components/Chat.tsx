@@ -370,7 +370,7 @@ export function Chat({
 
   return (
     <>
-      <Card className={`flex flex-col h-[calc(100vh-4rem)] w-full ${className}`}>
+      <Card className={`flex flex-col h-[calc(100vh-4rem)] w-full ${className} relative`}>
         {/* Chat Header */}
         <div className="flex-none flex flex-col p-4 border-b bg-card">
           <div className="flex items-center justify-between">
@@ -451,11 +451,11 @@ export function Chat({
         </div>
 
         {/* Messages Container */}
-        <div className="flex-1 min-h-0 flex flex-col">
+        <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
           {/* Messages Area */}
           <ScrollArea 
             ref={scrollRef} 
-            className="flex-1 p-4"
+            className="flex-1 p-4 pb-20"
             onScroll={(e) => {
               const target = e.target as HTMLDivElement;
               const isBottom = Math.abs(target.scrollHeight - target.clientHeight - target.scrollTop) < 1;
@@ -543,7 +543,7 @@ export function Chat({
           )}
 
           {/* Message Input */}
-          <div className="flex-none border-t bg-card">
+          <div className="flex-none border-t bg-card fixed bottom-0 left-0 right-0 z-10">
             <form onSubmit={handleSend} className="p-4">
               <div className="flex gap-2">
                 <div className="flex-1 flex gap-2">
