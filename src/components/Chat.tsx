@@ -370,7 +370,7 @@ export function Chat({
 
   return (
     <>
-      <Card className={`flex flex-col h-[calc(100vh-4rem)] w-full ${className}`}>
+      <Card className={`flex flex-col h-[calc(100vh-4rem)] w-full overflow-hidden ${className}`}>
         {/* Chat Header */}
         <div className="flex-none flex flex-col p-4 border-b bg-card">
           <div className="flex items-center justify-between">
@@ -549,7 +549,7 @@ export function Chat({
           )}
 
           {/* Message Input */}
-          <div className="flex-none border-t bg-card sticky bottom-0 z-10">
+          <div className="flex-none border-t bg-card">
             <form onSubmit={handleSend} className="p-4">
               <div className="flex gap-2">
                 <div className="flex-1 flex gap-2">
