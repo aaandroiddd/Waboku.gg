@@ -104,6 +104,12 @@ const SettingsPageContent = () => {
       }
 
       try {
+        setIsLoading(true);
+        setError("");
+        
+        // First check if user auth is still valid
+        await user.reload();
+        
         const userDoc = await getDoc(doc(db, 'users', user.uid));
         if (userDoc.exists()) {
           const userData = userDoc.data();
@@ -122,6 +128,24 @@ const SettingsPageContent = () => {
             setTheme(userData.theme);
           }
         } else {
+          // If no user document exists, create one with basic data
+          const basicProfile = {
+            uid: user.uid,
+            email: user.email,
+            username: user.displayName || user.email?.split('@')[0] || "",
+            joinDate: new Date().toISOString(),
+            bio: "",
+            contact: "",
+            location: "",
+            social: {
+              youtube: "",
+              twitter: "",
+              facebook: ""
+            }
+          };
+          
+          await setDoc(doc(db, 'users', user.uid), basicProfile);
+          
           setFormData({
             username: user.displayName || "",
             bio: "",
@@ -132,9 +156,20 @@ const SettingsPageContent = () => {
             facebook: "",
           });
         }
-      } catch (err) {
+      } catch (err: any) {
         console.error('Error loading user data:', err);
-        setError("Failed to load user data. Please try refreshing the page.");
+        // More specific error messages based on the error type
+        if (err.code === 'permission-denied') {
+          setError("You don't have permission to access this data. Please sign in again.");
+        } else if (err.code === 'not-found') {
+          setError("Your profile data could not be found. Please try signing out and back in.");
+        } else if (err.name === 'FirebaseError' && err.code === 'auth/network-request-failed') {
+          setError("Network error. Please check your internet connection.");
+        } else {
+          setError("Failed to load user data. Please try refreshing the page.");
+        }
+      } finally {
+        setIsLoading(false);
       }
     };
 
