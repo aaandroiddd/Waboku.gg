@@ -451,16 +451,17 @@ export function Chat({
         </div>
 
         {/* Main Content Area - Using CSS Grid for better layout control */}
-        <div className="flex-1 grid grid-rows-[1fr,auto] overflow-hidden">
+        <div className="flex-1 grid grid-rows-[1fr,auto] overflow-hidden relative">
           {/* Messages Area */}
           <ScrollArea 
             ref={scrollRef} 
-            className="w-full h-full p-4"
+            className="w-full h-full p-4 overflow-y-auto"
             onScroll={(e) => {
               const target = e.target as HTMLDivElement;
               const isBottom = Math.abs(target.scrollHeight - target.clientHeight - target.scrollTop) < 1;
               setIsAtBottom(isBottom);
             }}
+            type="always"
           >
             {error && (
               <div className="bg-destructive/10 border border-destructive text-destructive px-4 py-3 rounded mb-4">
