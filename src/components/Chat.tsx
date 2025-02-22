@@ -451,18 +451,22 @@ export function Chat({
         </div>
 
         {/* Main Content Area - Using CSS Grid for better layout control */}
-        <div className="flex-1 grid grid-rows-[1fr,auto] overflow-hidden relative">
+        <div className="flex-1 grid grid-rows-[1fr,auto] overflow-hidden">
           {/* Messages Area */}
           <ScrollArea 
             ref={scrollRef} 
-            className="w-full h-full p-4 overflow-y-auto"
-            onScroll={(e) => {
-              const target = e.target as HTMLDivElement;
-              const isBottom = Math.abs(target.scrollHeight - target.clientHeight - target.scrollTop) < 1;
-              setIsAtBottom(isBottom);
-            }}
+            className="flex-1 w-full"
             type="always"
+            onScroll={(e) => {
+              const target = e.currentTarget;
+              const viewport = target.querySelector('[data-radix-scroll-area-viewport]');
+              if (viewport) {
+                const isBottom = Math.abs(viewport.scrollHeight - viewport.clientHeight - viewport.scrollTop) < 1;
+                setIsAtBottom(isBottom);
+              }
+            }}
           >
+            <div className="p-4 min-h-full">
             {error && (
               <div className="bg-destructive/10 border border-destructive text-destructive px-4 py-3 rounded mb-4">
                 {error}
