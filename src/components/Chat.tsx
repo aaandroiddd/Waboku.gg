@@ -451,11 +451,11 @@ export function Chat({
         </div>
 
         {/* Messages Container */}
-        <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+        <div className="flex-1 min-h-0 flex flex-col overflow-hidden relative">
           {/* Messages Area */}
           <ScrollArea 
             ref={scrollRef} 
-            className="flex-1 p-4 pb-20"
+            className="flex-1 p-4"
             onScroll={(e) => {
               const target = e.target as HTMLDivElement;
               const isBottom = Math.abs(target.scrollHeight - target.clientHeight - target.scrollTop) < 1;
