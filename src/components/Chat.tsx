@@ -370,7 +370,7 @@ export function Chat({
 
   return (
     <>
-      <Card className={`flex flex-col h-full w-full ${className}`}>
+      <Card className={`flex flex-col h-[calc(100vh-4rem)] max-h-[800px] w-full ${className}`}>
         {/* Chat Header */}
         <div className="flex flex-col p-4 border-b bg-card">
           <div className="flex items-center justify-between">
