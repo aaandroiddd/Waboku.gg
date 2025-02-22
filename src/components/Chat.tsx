@@ -370,7 +370,7 @@ export function Chat({
 
   return (
     <>
-      <Card className={`flex flex-col h-[calc(100vh-4rem)] max-h-[800px] w-full overflow-hidden ${className}`}>
+      <Card className={`flex flex-col h-[calc(100vh-4rem)] w-full ${className}`}>
         {/* Chat Header */}
         <div className="flex-none flex flex-col p-4 border-b bg-card">
           <div className="flex items-center justify-between">
@@ -450,159 +450,164 @@ export function Chat({
           </div>
         </div>
 
-        {/* Messages Area */}
-        <ScrollArea 
-          ref={scrollRef} 
-          className="flex-1 p-4"
-          onScroll={(e) => {
-            const target = e.target as HTMLDivElement;
-            const isBottom = Math.abs(target.scrollHeight - target.clientHeight - target.scrollTop) < 1;
-            setIsAtBottom(isBottom);
-          }}
-        >
-          {error && (
-            <div className="bg-destructive/10 border border-destructive text-destructive px-4 py-3 rounded mb-4">
-              {error}
-            </div>
-          )}
-          
-          <div className="space-y-2">
-            {messages.length === 0 && !chatId && (
-              <div className="text-center text-sm text-muted-foreground p-4">
-                Start the conversation by introducing yourself and asking about the listing.
-              </div>
-            )}
-            {messages.map((message, index) => {
-              const isUserMessage = message.senderId === user.uid;
-              const showDate = index === 0 || 
-                new Date(message.timestamp).toDateString() !== new Date(messages[index - 1].timestamp).toDateString();
-
-              return (
-                <React.Fragment key={message.id}>
-                  {showDate && (
-                    <div className="flex justify-center my-2">
-                      <div className="bg-muted px-3 py-1 rounded-full text-xs text-muted-foreground">
-                        {new Date(message.timestamp).toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' })}
-                      </div>
-                    </div>
-                  )}
-                  <div className={`flex ${isUserMessage ? 'justify-end' : 'justify-start'} mb-2`}>
-                    <div className="flex flex-col gap-1">
-                      {!isUserMessage && (
-                        <div className="text-xs text-muted-foreground ml-2">
-                          <UserNameLink 
-                            userId={message.senderId} 
-                            initialUsername={userProfiles[message.senderId]?.username || 'Loading...'}
-                          />
-                        </div>
-                      )}
-                      <div
-                        className={`max-w-[70%] rounded-lg p-2.5 ${
-                          isUserMessage
-                            ? 'bg-primary text-primary-foreground'
-                            : 'bg-muted'
-                        }`}
-                      >
-                        <MessageContent 
-                          content={message.content}
-                          className={isUserMessage ? 'text-primary-foreground' : ''}
-                        />
-                        <div className="flex items-center justify-end gap-1 text-xs mt-1 opacity-75">
-                          <span>{formatMessageTime(message.timestamp)}</span>
-                          {isUserMessage && (
-                            message.read 
-                              ? <CheckCheck className="w-3 h-3" />
-                              : <Check className="w-3 h-3" />
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </React.Fragment>
-              );
-            })}
-            <div ref={bottomRef} style={{ height: '1px' }} />
-          </div>
-        </ScrollArea>
-
-        {/* Scroll to bottom button */}
-        {!isAtBottom && messages.length > 0 && (
-          <Button
-            variant="secondary"
-            size="sm"
-            className="absolute bottom-20 right-6 rounded-full opacity-90 hover:opacity-100"
-            onClick={() => {
-              setIsAtBottom(true);
-              scrollToBottom();
+        {/* Messages Container */}
+        <div className="flex-1 min-h-0 flex flex-col">
+          {/* Messages Area */}
+          <ScrollArea 
+            ref={scrollRef} 
+            className="flex-1 p-4"
+            onScroll={(e) => {
+              const target = e.target as HTMLDivElement;
+              const isBottom = Math.abs(target.scrollHeight - target.clientHeight - target.scrollTop) < 1;
+              setIsAtBottom(isBottom);
             }}
           >
-            ↓
-          </Button>
-        )}
+            {error && (
+              <div className="bg-destructive/10 border border-destructive text-destructive px-4 py-3 rounded mb-4">
+                {error}
+              </div>
+            )}
+            
+            <div className="space-y-4">
+              {messages.length === 0 && !chatId && (
+                <div className="text-center text-sm text-muted-foreground p-4">
+                  Start the conversation by introducing yourself and asking about the listing.
+                </div>
+              )}
+              {messages.map((message, index) => {
+                const isUserMessage = message.senderId === user.uid;
+                const showDate = index === 0 || 
+                  new Date(message.timestamp).toDateString() !== new Date(messages[index - 1].timestamp).toDateString();
 
-        {/* Message Input */}
-        <form onSubmit={handleSend} className="p-4 border-t bg-card">
-          <div className="flex gap-2">
-            <div className="flex-1 flex gap-2">
-              <Input
-                value={newMessage}
-                onChange={(e) => setNewMessage(e.target.value)}
-                placeholder="Type your message..."
-                className="text-sm"
-                disabled={isUploading}
-              />
-              <input
-                type="file"
-                ref={fileInputRef}
-                className="hidden"
-                accept="image/*"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) {
-                    handleImageUpload(file);
-                  }
-                  e.target.value = '';
-                }}
-              />
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                disabled={isUploading}
-                onClick={() => fileInputRef.current?.click()}
-              >
-                <Image className="h-4 w-4" />
-              </Button>
-              <Popover open={showEmojiPicker} onOpenChange={setShowEmojiPicker}>
-                <PopoverTrigger asChild>
+                return (
+                  <React.Fragment key={message.id}>
+                    {showDate && (
+                      <div className="flex justify-center my-4">
+                        <div className="bg-muted px-3 py-1 rounded-full text-xs text-muted-foreground">
+                          {new Date(message.timestamp).toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' })}
+                        </div>
+                      </div>
+                    )}
+                    <div className={`flex ${isUserMessage ? 'justify-end' : 'justify-start'}`}>
+                      <div className={`flex flex-col gap-1 max-w-[80%] md:max-w-[70%]`}>
+                        {!isUserMessage && (
+                          <div className="text-xs text-muted-foreground ml-2">
+                            <UserNameLink 
+                              userId={message.senderId} 
+                              initialUsername={userProfiles[message.senderId]?.username || 'Loading...'}
+                            />
+                          </div>
+                        )}
+                        <div
+                          className={`rounded-lg p-3 break-words ${
+                            isUserMessage
+                              ? 'bg-primary text-primary-foreground'
+                              : 'bg-muted'
+                          }`}
+                        >
+                          <MessageContent 
+                            content={message.content}
+                            className={isUserMessage ? 'text-primary-foreground' : ''}
+                          />
+                          <div className="flex items-center justify-end gap-1 text-xs mt-1.5 opacity-75">
+                            <span>{formatMessageTime(message.timestamp)}</span>
+                            {isUserMessage && (
+                              message.read 
+                                ? <CheckCheck className="w-3 h-3" />
+                                : <Check className="w-3 h-3" />
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </React.Fragment>
+                );
+              })}
+              <div ref={bottomRef} className="h-px" />
+            </div>
+          </ScrollArea>
+
+          {/* Scroll to bottom button */}
+          {!isAtBottom && messages.length > 0 && (
+            <Button
+              variant="secondary"
+              size="sm"
+              className="fixed bottom-24 right-8 rounded-full opacity-90 hover:opacity-100 shadow-md"
+              onClick={() => {
+                setIsAtBottom(true);
+                scrollToBottom();
+              }}
+            >
+              ↓
+            </Button>
+          )}
+
+          {/* Message Input */}
+          <div className="flex-none border-t bg-card">
+            <form onSubmit={handleSend} className="p-4">
+              <div className="flex gap-2">
+                <div className="flex-1 flex gap-2">
+                  <Input
+                    value={newMessage}
+                    onChange={(e) => setNewMessage(e.target.value)}
+                    placeholder="Type your message..."
+                    className="text-sm"
+                    disabled={isUploading}
+                  />
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    className="hidden"
+                    accept="image/*"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        handleImageUpload(file);
+                      }
+                      e.target.value = '';
+                    }}
+                  />
                   <Button
                     type="button"
                     variant="ghost"
                     size="icon"
                     disabled={isUploading}
+                    onClick={() => fileInputRef.current?.click()}
                   >
-                    <Smile className="h-4 w-4" />
+                    <Image className="h-4 w-4" />
                   </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-full p-0" align="end">
-                  <Picker
-                    data={data}
-                    onEmojiSelect={(emoji: any) => {
-                      setNewMessage((prev) => prev + emoji.native);
-                      setShowEmojiPicker(false);
-                    }}
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
-            <Button 
-              type="submit"
-              disabled={!newMessage.trim() || isUploading}
-            >
-              Send
-            </Button>
+                  <Popover open={showEmojiPicker} onOpenChange={setShowEmojiPicker}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        disabled={isUploading}
+                      >
+                        <Smile className="h-4 w-4" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-full p-0" align="end">
+                      <Picker
+                        data={data}
+                        onEmojiSelect={(emoji: any) => {
+                          setNewMessage((prev) => prev + emoji.native);
+                          setShowEmojiPicker(false);
+                        }}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+                <Button 
+                  type="submit"
+                  disabled={!newMessage.trim() || isUploading}
+                >
+                  Send
+                </Button>
+              </div>
+            </form>
           </div>
-        </form>
+        </div>
       </Card>
 
       {/* Success Dialog */}
