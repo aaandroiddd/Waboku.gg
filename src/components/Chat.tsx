@@ -530,6 +530,8 @@ export function Chat({
               })}
               <div ref={bottomRef} className="h-px" />
             </div>
+            </div>
+            </div>
           </ScrollArea>
 
           {/* Scroll to bottom button */}
