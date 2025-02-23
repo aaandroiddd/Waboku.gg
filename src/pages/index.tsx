@@ -226,6 +226,7 @@ export default function Home() {
         const db = getFirestore(app);
         const q = query(
           collection(db, 'listings'),
+          where('status', '==', 'active'),
           orderBy('createdAt', 'desc'),
           limit(20)
         );
@@ -238,20 +239,18 @@ export default function Home() {
               id: doc.id,
               ...data,
               createdAt: data.createdAt?.toDate() || new Date(),
-              // Ensure required fields have default values
               title: data.title || 'Untitled Listing',
               price: data.price || 0,
               condition: data.condition || 'Not Specified',
               game: data.game || 'Other',
               imageUrls: data.imageUrls || [],
-              status: data.status || 'active',
+              status: 'active',
               username: data.username || 'Anonymous',
               userId: data.userId || '',
               city: data.city || '',
               state: data.state || '',
             };
-          })
-          .filter(listing => listing.status === 'active') as Listing[];
+          }) as Listing[];
 
         if (latitude && longitude) {
           fetchedListings = fetchedListings
@@ -266,51 +265,12 @@ export default function Home() {
             .sort((a, b) => (a.distance || Infinity) - (b.distance || Infinity));
         }
 
-        // Add some sample listings if no listings are found (for development)
-        if (fetchedListings.length === 0) {
-          fetchedListings = [
-            {
-              id: '1',
-              title: 'Sample Card Listing',
-              price: 29.99,
-              condition: 'Near Mint',
-              game: 'Yu-Gi-Oh!',
-              imageUrls: ['/images/rect.png'],
-              status: 'active',
-              username: 'Sample User',
-              userId: '1',
-              city: 'Sample City',
-              state: 'CA',
-              createdAt: new Date(),
-            },
-            // Add more sample listings as needed
-          ];
-        }
-
         setListings(fetchedListings);
         setFilteredListings(fetchedListings);
       } catch (error) {
         console.error('Error fetching listings:', error);
-        // Set sample data in case of error
-        const sampleListings = [
-          {
-            id: '1',
-            title: 'Sample Card Listing',
-            price: 29.99,
-            condition: 'Near Mint',
-            game: 'Yu-Gi-Oh!',
-            imageUrls: ['/images/rect.png'],
-            status: 'active',
-            username: 'Sample User',
-            userId: '1',
-            city: 'Sample City',
-            state: 'CA',
-            createdAt: new Date(),
-          },
-          // Add more sample listings as needed
-        ];
-        setListings(sampleListings);
-        setFilteredListings(sampleListings);
+        setListings([]);
+        setFilteredListings([]);
       } finally {
         setLoading(false);
       }

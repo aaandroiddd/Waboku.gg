@@ -112,21 +112,22 @@ const EmptyState = memo(function EmptyState() {
 });
 
 export function ListingGrid({ 
-  listings: propListings,
+  listings: propListings = [],
   userId,
   showOnlyActive = false,
   displayCount,
   hasMore,
   onLoadMore,
-  loading: propLoading
+  loading: propLoading = false
 }: ListingGridProps) {
+  // Only use useListings if no listings are provided and userId is provided
   const { listings: fetchedListings, isLoading } = useListings({ 
     userId, 
     showOnlyActive: true 
   });
   
-  const listings = propListings || fetchedListings || [];
-  const loading = propLoading || isLoading;
+  const listings = userId ? (propListings.length > 0 ? propListings : fetchedListings) : propListings;
+  const loading = propLoading || (userId ? isLoading : false);
   
   const { toggleFavorite, isFavorite } = useFavorites();
   const { user } = useAuth();
