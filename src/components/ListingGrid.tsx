@@ -120,6 +120,7 @@ export function ListingGrid({
   onLoadMore,
   loading: propLoading = false
 }: ListingGridProps) {
+  const { latitude, longitude } = useGeolocation();
   // Only use useListings if no listings are provided and userId is provided
   const { listings: fetchedListings, isLoading } = useListings({ 
     userId, 

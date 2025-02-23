@@ -133,8 +133,33 @@ export default function ListingsPage() {
 
   // Use the enhanced useListings hook without automatic search
   const { listings: allListings, isLoading, error } = useListings();
+  const { latitude, longitude } = useGeolocation();
+
+  // Function to calculate distances and add proximity categories
+  const addDistanceInfo = (listings: Listing[]) => {
+    if (!latitude || !longitude) return listings;
+
+    return listings.map(listing => {
+      const listingLat = listing.coordinates?.latitude;
+      const listingLng = listing.coordinates?.longitude;
+      const distance = listingLat && listingLng
+        ? calculateDistance(latitude, longitude, listingLat, listingLng)
+        : Infinity;
+      
+      // Add proximity category
+      let proximity = 'far';
+      if (distance <= 5) proximity = 'very-close';
+      else if (distance <= 15) proximity = 'close';
+      else if (distance <= 30) proximity = 'medium';
+      
+      return { ...listing, distance, proximity };
+    });
+  };
 
   const [filteredListings, setFilteredListings] = useState<Listing[]>([]);
+
+  // Import calculateDistance from useGeolocation hook
+  const { calculateDistance } = useGeolocation();
 
   useEffect(() => {
     // Initialize filters from URL parameters
@@ -196,6 +221,8 @@ export default function ListingsPage() {
       filtered = filtered.filter(listing => listing.isGraded);
     }
 
+    // Add distance information to filtered listings
+    filtered = addDistanceInfo(filtered);
     setFilteredListings(filtered);
   }, [allListings, searchQuery, selectedState, selectedGame, selectedCondition, priceRange, showGradedOnly]);
 
