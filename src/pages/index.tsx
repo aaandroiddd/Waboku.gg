@@ -5,7 +5,7 @@ import { StateSelect } from "@/components/StateSelect";
 import SearchBar from "@/components/SearchBar";
 import { useGeolocation, calculateDistance } from "@/hooks/useGeolocation";
 import { Footer } from "@/components/Footer";
-import { getFirestore, collection, query, orderBy, getDocs, limit } from 'firebase/firestore';
+import { getFirestore, collection, query, orderBy, getDocs, limit, where } from 'firebase/firestore';
 import { app } from '@/lib/firebase';
 import { Listing } from '@/types/database';
 import { ListingGrid } from '@/components/ListingGrid';
