@@ -271,12 +271,44 @@ export const ListingCard = memo(({ listing, isFavorite, onFavoriteClick, getCond
               <div className="flex items-center justify-between text-xs">
                 <span className="text-muted-foreground">{listing.city}, {listing.state}</span>
                 {typeof distance === 'number' && (
-                  <span className={`flex items-center gap-1 font-medium ${
-                    distance <= 5 
+                  import { useLocation } from '@/hooks/useLocation';
+import { useEffect, useState } from 'react';
+
+// Add this function at the top of the file
+const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+  const R = 3959; // Earth's radius in miles
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = 
+    Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+    Math.sin(dLon/2) * Math.sin(dLon/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R * c;
+};
+
+// Inside your component, before the return statement:
+const { location, loading: locationLoading, error: locationError } = useLocation();
+const [calculatedDistance, setCalculatedDistance] = useState<number | null>(null);
+
+useEffect(() => {
+  if (location && listing?.location) {
+    const distance = calculateDistance(
+      location.latitude,
+      location.longitude,
+      listing.location.latitude,
+      listing.location.longitude
+    );
+    setCalculatedDistance(distance);
+  }
+}, [location, listing]);
+
+<span className={`flex items-center gap-1 font-medium ${
+                    calculatedDistance && calculatedDistance <= 5 
                       ? 'text-green-500 dark:text-green-400'
-                      : distance <= 20
+                      : calculatedDistance && calculatedDistance <= 20
                       ? 'text-blue-500 dark:text-blue-400'
-                      : distance <= 50
+                      : calculatedDistance && calculatedDistance <= 50
                       ? 'text-yellow-500 dark:text-yellow-400'
                       : 'text-muted-foreground'
                   }`}>
