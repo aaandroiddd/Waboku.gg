@@ -272,17 +272,17 @@ export const ListingCard = memo(({ listing, isFavorite, onFavoriteClick, getCond
                 <span className="text-muted-foreground">{listing.city}, {listing.state}</span>
                 {typeof distance === 'number' && (
                   <span className={`flex items-center gap-1 font-medium ${
-                    (listing as any).proximity === 'very-close' 
+                    distance <= 5 
                       ? 'text-green-500 dark:text-green-400'
-                      : (listing as any).proximity === 'close'
+                      : distance <= 20
                       ? 'text-blue-500 dark:text-blue-400'
-                      : (listing as any).proximity === 'medium'
+                      : distance <= 50
                       ? 'text-yellow-500 dark:text-yellow-400'
                       : 'text-muted-foreground'
                   }`}>
                     <svg 
                       className={`w-3 h-3 ${
-                        (listing as any).proximity === 'very-close' && 'animate-pulse'
+                        distance <= 5 && 'animate-pulse'
                       }`} 
                       viewBox="0 0 24 24" 
                       fill="none" 
@@ -293,12 +293,12 @@ export const ListingCard = memo(({ listing, isFavorite, onFavoriteClick, getCond
                       <circle cx="12" cy="10" r="3" />
                     </svg>
                     {distance < 1 
-                      ? 'Less than 1 km!' 
+                      ? 'Less than 1 mile!' 
                       : distance <= 5 
-                      ? `${Math.round(distance)} km - Very Close!`
-                      : distance <= 15
-                      ? `${Math.round(distance)} km - Nearby`
-                      : `${Math.round(distance)} km`
+                      ? `${distance.toFixed(1)} mi - Very Close!`
+                      : distance <= 20
+                      ? `${distance.toFixed(1)} mi - Nearby`
+                      : `${distance.toFixed(1)} mi`
                     }
                   </span>
                 )}

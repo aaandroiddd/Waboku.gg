@@ -53,7 +53,7 @@ export const calculateDistance = (
   lat2: number,
   lon2: number
 ): number => {
-  const R = 6371; // Earth's radius in kilometers
+  const R = 3959; // Earth's radius in miles
   const dLat = toRad(lat2 - lat1);
   const dLon = toRad(lon2 - lon1);
   const a =
@@ -62,7 +62,7 @@ export const calculateDistance = (
     Math.sin(dLon / 2) * Math.sin(dLon / 2);
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   const d = R * c;
-  return d;
+  return Number(d.toFixed(2)); // Return distance in miles with 2 decimal places
 };
 
 const toRad = (value: number): number => {
