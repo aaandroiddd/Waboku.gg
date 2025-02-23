@@ -294,6 +294,20 @@ export function useListings({ userId, searchQuery, showOnlyActive = false }: Use
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + 30);
 
+      // Get user's location for the listing
+      let latitude = null;
+      let longitude = null;
+      
+      try {
+        const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(resolve, reject);
+        });
+        latitude = position.coords.latitude;
+        longitude = position.coords.longitude;
+      } catch (locationError) {
+        console.log('Location access not granted or unavailable');
+      }
+
       const newListing = {
         ...dataWithoutCard,
         imageUrls,
@@ -304,7 +318,9 @@ export function useListings({ userId, searchQuery, showOnlyActive = false }: Use
         expiresAt, // Add expiration date
         status: 'active',
         isGraded: Boolean(cleanListingData.isGraded),
-        ...(cardReference ? { cardReference } : {})
+        ...(cardReference ? { cardReference } : {}),
+        // Add location data if available
+        ...(latitude !== null && longitude !== null ? { latitude, longitude } : {})
       };
 
       // Only add grading fields if the card is graded
@@ -354,6 +370,21 @@ export function useListings({ userId, searchQuery, showOnlyActive = false }: Use
         setIsLoading(true);
         setError(null);
         
+        // Get user's location
+        let userLocation: { latitude: number | null; longitude: number | null } = { latitude: null, longitude: null };
+        
+        try {
+          const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(resolve, reject);
+          });
+          userLocation = {
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude
+          };
+        } catch (locationError) {
+          console.log('Location access not granted or unavailable');
+        }
+
         const { db } = await getFirebaseServices();
         const listingsRef = collection(db, 'listings');
         
@@ -382,7 +413,7 @@ export function useListings({ userId, searchQuery, showOnlyActive = false }: Use
         
         let fetchedListings = querySnapshot.docs.map(doc => {
           const data = doc.data();
-          return {
+          const listing = {
             id: doc.id,
             ...data,
             createdAt: data.createdAt?.toDate() || new Date(),
@@ -396,8 +427,21 @@ export function useListings({ userId, searchQuery, showOnlyActive = false }: Use
             game: data.game || 'Not specified',
             city: data.city || 'Unknown',
             state: data.state || 'Unknown',
-            gradingCompany: data.gradingCompany || undefined
-          } as Listing;
+            gradingCompany: data.gradingCompany || undefined,
+            distance: 0 // Default distance
+          } as Listing & { distance: number };
+
+          // Calculate distance if we have both user location and listing location
+          if (userLocation.latitude && userLocation.longitude && data.latitude && data.longitude) {
+            listing.distance = calculateDistance(
+              userLocation.latitude,
+              userLocation.longitude,
+              data.latitude,
+              data.longitude
+            );
+          }
+
+          return listing;
         });
 
         // If there's a search query, filter results in memory
@@ -406,6 +450,26 @@ export function useListings({ userId, searchQuery, showOnlyActive = false }: Use
           fetchedListings = fetchedListings.filter(listing => 
             listing.title?.toLowerCase().includes(searchLower)
           );
+        }
+
+        // Sort listings by distance if location is available, otherwise keep creation date sort
+        if (userLocation.latitude && userLocation.longitude) {
+          fetchedListings.sort((a, b) => {
+            // First prioritize recent listings within 50km
+            const aIsNearby = a.distance <= 50;
+            const bIsNearby = b.distance <= 50;
+            
+            if (aIsNearby && !bIsNearby) return -1;
+            if (!aIsNearby && bIsNearby) return 1;
+            
+            // For listings in the same distance category, sort by date
+            if (aIsNearby === bIsNearby) {
+              return b.createdAt.getTime() - a.createdAt.getTime();
+            }
+            
+            // If neither is nearby, sort by distance
+            return a.distance - b.distance;
+          });
         }
         
         setListings(fetchedListings);

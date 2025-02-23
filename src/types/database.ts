@@ -20,6 +20,9 @@ export interface Listing {
   favoriteCount?: number;
   cardName?: string;
   quantity?: number;
+  latitude?: number;
+  longitude?: number;
+  distance?: number;
 }
 
 export interface CreateListingData {
