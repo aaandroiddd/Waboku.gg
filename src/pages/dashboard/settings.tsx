@@ -17,7 +17,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { doc, getDoc, deleteDoc, collection, query, where, getDocs, setDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { db, auth } from '@/lib/firebase';
 
 const DashboardLayout = dynamic(
   () => import('@/components/dashboard/DashboardLayout').then(mod => mod.DashboardLayout),
@@ -110,6 +110,14 @@ const SettingsPageContent = () => {
         // First check if user auth is still valid
         await user.reload();
         
+        // Add a small delay to ensure Firebase auth state is fully updated
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        // Double check if user is still authenticated after reload
+        if (!auth.currentUser) {
+          throw new Error('auth/user-not-authenticated');
+        }
+        
         const userDoc = await getDoc(doc(db, 'users', user.uid));
         if (userDoc.exists()) {
           const userData = userDoc.data();
@@ -128,6 +136,7 @@ const SettingsPageContent = () => {
             setTheme(userData.theme);
           }
         } else {
+          console.log('Creating new user profile for:', user.uid);
           // If no user document exists, create one with basic data
           const basicProfile = {
             uid: user.uid,
@@ -160,6 +169,12 @@ const SettingsPageContent = () => {
         console.error('Error loading user data:', err);
         
         // More specific error messages based on the error type
+        if (err.message === 'auth/user-not-authenticated') {
+          setError("Your session has expired. Please sign in again.");
+          router.push('/auth/sign-in');
+          return;
+        }
+        
         if (err.code === 'permission-denied') {
           setError("You don't have permission to access this data. Please sign in again.");
           router.push('/auth/sign-in');
@@ -172,22 +187,18 @@ const SettingsPageContent = () => {
               setError("Network error. Please check your internet connection and try again.");
               break;
             case 'auth/user-token-expired':
+            case 'auth/user-not-found':
+            case 'auth/invalid-user-token':
               setError("Your session has expired. Please sign in again.");
               router.push('/auth/sign-in');
               break;
-            case 'auth/user-not-found':
-              setError("User account not found. Please sign in again.");
-              router.push('/auth/sign-in');
-              break;
-            case 'auth/invalid-user-token':
-              setError("Invalid session. Please sign in again.");
-              router.push('/auth/sign-in');
-              break;
             default:
-              setError("An error occurred while loading your profile. Please try refreshing the page.");
+              console.error('Unhandled Firebase error:', err);
+              setError("An error occurred while loading your profile. Please try signing out and back in.");
           }
         } else {
-          setError("Failed to load user data. Please try refreshing the page.");
+          console.error('Unknown error:', err);
+          setError("Failed to load user data. Please try refreshing the page or sign in again.");
         }
       } finally {
         setIsLoading(false);
@@ -195,7 +206,7 @@ const SettingsPageContent = () => {
     };
 
     loadUserData();
-  }, [user?.uid, setTheme]);
+  }, [user?.uid, setTheme, router]);
 
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
