@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import SearchBar from '@/components/SearchBar';
+import { useGeolocation, calculateDistance } from '@/hooks/useGeolocation';
 import { Listing } from '@/types/database';
 import { ListingGrid } from '@/components/ListingGrid';
 import { SearchListingList } from '@/components/SearchListingList';
@@ -158,8 +159,7 @@ export default function ListingsPage() {
 
   const [filteredListings, setFilteredListings] = useState<Listing[]>([]);
 
-  // Import calculateDistance from useGeolocation hook
-  const { calculateDistance } = useGeolocation();
+  // Get geolocation data
 
   useEffect(() => {
     // Initialize filters from URL parameters
