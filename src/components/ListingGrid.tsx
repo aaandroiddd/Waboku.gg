@@ -1,4 +1,5 @@
 import { Card, CardContent } from '@/components/ui/card';
+import { useGeolocation } from '@/hooks/useGeolocation';
 import { useFavorites } from '@/hooks/useFavorites';
 import { useAuth } from '@/contexts/AuthContext';
 import { Listing } from '@/types/database';
@@ -120,7 +121,7 @@ export function ListingGrid({
   onLoadMore,
   loading: propLoading = false
 }: ListingGridProps) {
-  const { latitude, longitude } = useGeolocation();
+  const { latitude, longitude, error: geoError, loading: geoLoading } = useGeolocation();
   // Only use useListings if no listings are provided and userId is provided
   const { listings: fetchedListings, isLoading } = useListings({ 
     userId, 
