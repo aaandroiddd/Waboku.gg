@@ -268,15 +268,38 @@ export const ListingCard = memo(({ listing, isFavorite, onFavoriteClick, getCond
                   </motion.span>
                 )}
               </div>
-              <div className="flex items-center justify-between text-xs text-muted-foreground">
-                <span>{listing.city}, {listing.state}</span>
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-muted-foreground">{listing.city}, {listing.state}</span>
                 {typeof distance === 'number' && (
-                  <span className="flex items-center gap-1">
-                    <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <span className={`flex items-center gap-1 font-medium ${
+                    (listing as any).proximity === 'very-close' 
+                      ? 'text-green-500 dark:text-green-400'
+                      : (listing as any).proximity === 'close'
+                      ? 'text-blue-500 dark:text-blue-400'
+                      : (listing as any).proximity === 'medium'
+                      ? 'text-yellow-500 dark:text-yellow-400'
+                      : 'text-muted-foreground'
+                  }`}>
+                    <svg 
+                      className={`w-3 h-3 ${
+                        (listing as any).proximity === 'very-close' && 'animate-pulse'
+                      }`} 
+                      viewBox="0 0 24 24" 
+                      fill="none" 
+                      stroke="currentColor" 
+                      strokeWidth="2"
+                    >
                       <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
                       <circle cx="12" cy="10" r="3" />
                     </svg>
-                    {distance < 1 ? '< 1 km' : `${Math.round(distance)} km`}
+                    {distance < 1 
+                      ? 'Less than 1 km!' 
+                      : distance <= 5 
+                      ? `${Math.round(distance)} km - Very Close!`
+                      : distance <= 15
+                      ? `${Math.round(distance)} km - Nearby`
+                      : `${Math.round(distance)} km`
+                    }
                   </span>
                 )}
               </div>

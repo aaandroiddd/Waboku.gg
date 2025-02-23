@@ -228,7 +228,7 @@ export default function Home() {
           collection(db, 'listings'),
           where('status', '==', 'active'),
           orderBy('createdAt', 'desc'),
-          limit(20)
+          limit(50) // Increased limit to get more listings for better location-based filtering
         );
 
         const querySnapshot = await getDocs(q);
@@ -253,6 +253,7 @@ export default function Home() {
           }) as Listing[];
 
         if (latitude && longitude) {
+          // Calculate distances and add proximity categories
           fetchedListings = fetchedListings
             .map(listing => {
               const listingLat = listing.coordinates?.latitude;
@@ -260,9 +261,31 @@ export default function Home() {
               const distance = listingLat && listingLng
                 ? calculateDistance(latitude, longitude, listingLat, listingLng)
                 : Infinity;
-              return { ...listing, distance };
+              
+              // Add proximity category
+              let proximity = 'far';
+              if (distance <= 5) proximity = 'very-close';
+              else if (distance <= 15) proximity = 'close';
+              else if (distance <= 30) proximity = 'medium';
+              
+              return { ...listing, distance, proximity };
             })
-            .sort((a, b) => (a.distance || Infinity) - (b.distance || Infinity));
+            .sort((a, b) => {
+              // Prioritize listings within 50km
+              const aWithin50 = (a.distance || Infinity) <= 50;
+              const bWithin50 = (b.distance || Infinity) <= 50;
+              
+              if (aWithin50 && !bWithin50) return -1;
+              if (!aWithin50 && bWithin50) return 1;
+              
+              // For listings within 50km, sort by distance
+              if (aWithin50 && bWithin50) {
+                return (a.distance || Infinity) - (b.distance || Infinity);
+              }
+              
+              // For listings beyond 50km, sort by recency
+              return (b.createdAt?.getTime() || 0) - (a.createdAt?.getTime() || 0);
+            });
         }
 
         setListings(fetchedListings);
