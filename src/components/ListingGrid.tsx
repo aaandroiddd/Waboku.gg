@@ -211,6 +211,7 @@ export function ListingGrid({
               isFavorite={user ? isFavorite(listing.id) : false}
               onFavoriteClick={handleFavoriteClick}
               getConditionColor={memoizedGetConditionColor}
+              distance={(listing as any).distance}
             />
           ))}
         </AnimatePresence>

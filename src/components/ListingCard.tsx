@@ -11,6 +11,7 @@ import { UserNameLink } from './UserNameLink';
 import { memo } from 'react';
 
 interface ListingCardProps {
+  distance?: number;
   listing: Listing;
   isFavorite: boolean;
   onFavoriteClick: (e: React.MouseEvent, listing: Listing) => void;
@@ -121,7 +122,7 @@ const BuyNowButton = ({ listing, className }: BuyNowButtonProps) => {
   );
 };
 
-export const ListingCard = memo(({ listing, isFavorite, onFavoriteClick, getConditionColor }: ListingCardProps) => {
+export const ListingCard = memo(({ listing, isFavorite, onFavoriteClick, getConditionColor, distance }: ListingCardProps) => {
   return (
     <motion.div
       variants={cardVariants}
@@ -267,7 +268,18 @@ export const ListingCard = memo(({ listing, isFavorite, onFavoriteClick, getCond
                   </motion.span>
                 )}
               </div>
-              <p className="text-xs text-muted-foreground">{listing.city}, {listing.state}</p>
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <span>{listing.city}, {listing.state}</span>
+                {typeof distance === 'number' && (
+                  <span className="flex items-center gap-1">
+                    <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                      <circle cx="12" cy="10" r="3" />
+                    </svg>
+                    {distance < 1 ? '< 1 km' : `${Math.round(distance)} km`}
+                  </span>
+                )}
+              </div>
             </motion.div>
           </CardContent>
         </Link>
