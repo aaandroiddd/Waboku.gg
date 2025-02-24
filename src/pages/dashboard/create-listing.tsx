@@ -60,6 +60,7 @@ const CreateListingPage = () => {
     gradingCompany: undefined as string | undefined,
     cardName: "",
     quantity: "" as string,
+    termsAccepted: false,
   });
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -70,6 +71,7 @@ const CreateListingPage = () => {
     game?: string;
     images?: string;
     location?: string;
+    terms?: string;
   }>({});
 
   const validateForm = () => {
@@ -105,6 +107,10 @@ const CreateListingPage = () => {
 
     if (formData.images.length === 0) {
       newErrors.images = "At least one image is required";
+    }
+
+    if (!formData.termsAccepted) {
+      newErrors.terms = "You must accept the terms to create a listing";
     }
 
     setErrors(newErrors);
