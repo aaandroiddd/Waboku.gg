@@ -118,7 +118,8 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
             const isActivePremium = (
               subscriptionData.status === 'active' ||
               (subscriptionData.status === 'canceled' && endDate && endDate > now) ||
-              (subscriptionData.stripeSubscriptionId && startDate && startDate <= now && !subscriptionData.status)
+              (subscriptionData.stripeSubscriptionId && startDate && startDate <= now && !subscriptionData.status) ||
+              (data.accountTier === 'premium' && subscriptionData.manuallyUpdated)
             );
             
             // Set subscription data with enhanced validation

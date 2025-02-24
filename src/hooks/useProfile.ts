@@ -40,7 +40,12 @@ export function useProfile(userId: string | null) {
             youtube: userData.social.youtube || null,
             twitter: userData.social.twitter || null,
             facebook: userData.social.facebook || null
-          } : null
+          } : null,
+          tier: userData?.accountTier || userData?.tier || 'free',
+          subscription: userData?.subscription || {
+            currentPlan: 'free',
+            status: 'inactive'
+          }
         };
         setProfile(profileData);
       } catch (err: any) {

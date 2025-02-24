@@ -54,10 +54,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       lastUpdated: now,
       subscription: {
         currentPlan: tier,
-        status: tier === 'premium' ? 'active' : 'inactive',
+        status: tier === 'premium' ? 'active' : 'none',
         manuallyUpdated: true,
         lastManualUpdate: now,
-        startDate: userDoc.data()?.subscription?.startDate || now,
+        startDate: now,
+        endDate: tier === 'premium' ? null : now,
+        stripeSubscriptionId: tier === 'premium' ? `admin_${userId}_${Date.now()}` : null
       }
     };
 
