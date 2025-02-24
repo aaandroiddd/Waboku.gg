@@ -4,7 +4,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
-import { ArrowUpIcon, SearchIcon, InfoIcon } from "lucide-react"
+import { ArrowUpIcon, SearchIcon, InfoIcon, RefreshCwIcon } from "lucide-react"
 import { useRouter } from "next/router"
 import { useTrendingSearches } from "@/hooks/useTrendingSearches"
 import { useToast } from "@/components/ui/use-toast"
@@ -22,8 +22,9 @@ export default function TrendingPage() {
   const { toast } = useToast()
   const { user } = useAuth()
   const { profile, isLoading: profileLoading } = useProfile(user?.uid)
-  const { trendingSearches, isLoading: searchesLoading, error } = useTrendingSearches()
+  const { trendingSearches, isLoading: searchesLoading, error, refreshTrending } = useTrendingSearches()
   const [maxCount, setMaxCount] = useState(0)
+  const [isRefreshDisabled, setIsRefreshDisabled] = useState(false)
 
   useEffect(() => {
     if (!user) {
@@ -61,6 +62,22 @@ export default function TrendingPage() {
     router.push(`/listings?search=${encodeURIComponent(term)}`)
   }
 
+  const handleRefresh = async () => {
+    setIsRefreshDisabled(true)
+    await refreshTrending()
+    
+    // Enable the refresh button after 10 seconds
+    setTimeout(() => {
+      setIsRefreshDisabled(false)
+    }, 10000)
+
+    toast({
+      title: "Refreshed",
+      description: "Trending searches have been updated.",
+      variant: "default"
+    })
+  }
+
   // Show loading state while checking authentication and profile
   if (profileLoading || !user || (profile && profile.tier !== "premium")) {
     return (
@@ -94,7 +111,17 @@ export default function TrendingPage() {
       <div className="container mx-auto px-4 py-8 flex-grow">
       <Card className="p-6">
         <div className="flex items-center justify-between mb-6">
-          <h1 className="text-3xl font-bold">Trending Searches</h1>
+          <div className="flex items-center gap-4">
+            <h1 className="text-3xl font-bold">Trending Searches</h1>
+            <Button 
+              variant="outline" 
+              size="icon"
+              onClick={handleRefresh}
+              disabled={isRefreshDisabled || searchesLoading}
+            >
+              <RefreshCwIcon className={`h-5 w-5 ${searchesLoading ? 'animate-spin' : ''}`} />
+            </Button>
+          </div>
           <HoverCard>
             <HoverCardTrigger asChild>
               <Button variant="ghost" size="icon">
@@ -119,7 +146,7 @@ export default function TrendingPage() {
         </div>
         
         <p className="text-muted-foreground mb-8">
-          Discover what other collectors are searching for right now. Updated hourly.
+          Discover what other collectors are searching for right now. Click the refresh button to get the latest data.
         </p>
 
         {searchesLoading ? (
