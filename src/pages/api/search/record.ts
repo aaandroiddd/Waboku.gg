@@ -1,8 +1,36 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { validateSearchTerm, normalizeSearchTerm } from '@/lib/search-validation';
 import { checkRateLimit } from '@/lib/rate-limit';
-import { getFirebaseAdmin } from '@/lib/firebase-admin';
-import { FieldValue } from 'firebase-admin/firestore';
+import { initializeApp, getApps, cert } from 'firebase-admin/app';
+import { getDatabase } from 'firebase-admin/database';
+
+const initializeFirebaseAdmin = () => {
+  try {
+    if (!process.env.FIREBASE_PRIVATE_KEY || !process.env.FIREBASE_CLIENT_EMAIL) {
+      throw new Error('Missing Firebase Admin credentials');
+    }
+
+    if (!process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL) {
+      throw new Error('Missing Firebase Database URL');
+    }
+
+    if (getApps().length === 0) {
+      initializeApp({
+        credential: cert({
+          projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+          clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+          privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+        }),
+        databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL
+      });
+    }
+
+    return getDatabase();
+  } catch (error: any) {
+    console.error('Firebase Admin initialization error:', error);
+    throw error;
+  }
+};
 
 export default async function handler(
   req: NextApiRequest,
@@ -42,18 +70,21 @@ export default async function handler(
       return res.status(400).json({ error: 'Invalid or inappropriate search term' });
     }
 
-    // Initialize Firebase Admin and get Firestore instance
-    const { db } = getFirebaseAdmin();
+    // Initialize Firebase Admin and get Database instance
+    const database = initializeFirebaseAdmin();
 
-    // Record the search term in Firebase
+    // Record the search term in Firebase Realtime Database
     try {
-      const searchRef = db.collection('searchStats').doc('trending');
-      const updateData = {
-        [normalizedTerm]: FieldValue.increment(1),
-        lastUpdated: FieldValue.serverTimestamp(),
-      };
+      const searchRef = database.ref(`searchTerms/${normalizedTerm.toLowerCase()}`);
+      const snapshot = await searchRef.once('value');
+      const currentCount = snapshot.exists() ? snapshot.val().count || 0 : 0;
       
-      await searchRef.set(updateData, { merge: true });
+      await searchRef.set({
+        term: normalizedTerm,
+        count: currentCount + 1,
+        lastUpdated: Date.now()
+      });
+      
       console.log(`Successfully recorded search term: ${normalizedTerm}`);
     } catch (dbError) {
       console.error('Database error:', dbError);
