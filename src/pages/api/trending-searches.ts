@@ -46,8 +46,8 @@ export default async function handler(
 ) {
   // Add CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   
   // Handle preflight request
   if (req.method === 'OPTIONS') {
@@ -55,10 +55,6 @@ export default async function handler(
     return;
   }
   console.log('Trending searches API called at:', new Date().toISOString());
-  
-  // Enable CORS
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET');
   
   if (req.method !== 'GET') {
     console.error('Invalid method for trending-searches:', req.method);
