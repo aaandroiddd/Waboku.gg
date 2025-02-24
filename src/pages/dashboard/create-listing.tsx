@@ -1,4 +1,6 @@
 import { useState, useEffect } from "react";
+import Link from "next/link";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useCardSearch } from "@/hooks/useCardSearch";
 import { useRouter } from "next/router";
 import dynamic from 'next/dynamic';
