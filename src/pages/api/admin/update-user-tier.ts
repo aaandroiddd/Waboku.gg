@@ -45,21 +45,35 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(404).json({ error: 'User not found' });
     }
 
-    // Update user's tier
-    console.log('Updating user tier...');
-    await userRef.update({
-      accountTier: tier,
-      updatedAt: new Date(),
-      'subscription.manuallyUpdated': true,
-      'subscription.lastManualUpdate': new Date()
-    });
+    const now = admin.firestore.Timestamp.now();
 
-    console.log(`Successfully updated user ${userId} to ${tier} tier`);
+    // Update user's subscription and account status
+    console.log('Updating user tier...');
+    const updateData = {
+      accountTier: tier,
+      lastUpdated: now,
+      subscription: {
+        currentPlan: tier,
+        status: tier === 'premium' ? 'active' : 'inactive',
+        manuallyUpdated: true,
+        lastManualUpdate: now,
+        startDate: userDoc.data()?.subscription?.startDate || now,
+      }
+    };
+
+    await userRef.update(updateData);
+
+    console.log(`Successfully updated user ${userId} to ${tier} tier with data:`, updateData);
+
+    // Get updated user data to confirm changes
+    const updatedDoc = await userRef.get();
+    console.log('Updated user data:', updatedDoc.data());
 
     return res.status(200).json({
       message: `Successfully updated user tier`,
       userId,
-      newTier: tier
+      newTier: tier,
+      updatedData: updatedDoc.data()
     });
 
   } catch (error: any) {
