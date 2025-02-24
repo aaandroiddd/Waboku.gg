@@ -1,24 +1,13 @@
-import { useLocation } from '@/hooks/useLocation';
-import { calculateDistance, formatDistance } from '@/lib/utils';
+import { formatDistance } from '@/lib/utils';
 
 interface DistanceIndicatorProps {
-  targetLat: number;
-  targetLon: number;
+  distance: number | null;
 }
 
-export function DistanceIndicator({ targetLat, targetLon }: DistanceIndicatorProps) {
-  const { location, loading, error } = useLocation();
-
-  if (loading || error || !location) {
+export function DistanceIndicator({ distance }: DistanceIndicatorProps) {
+  if (distance === null) {
     return null;
   }
-
-  const distance = calculateDistance(
-    location.latitude,
-    location.longitude,
-    targetLat,
-    targetLon
-  );
 
   return (
     <span className="ml-2 text-sm text-muted-foreground">

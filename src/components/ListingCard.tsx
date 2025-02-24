@@ -145,7 +145,7 @@ export const ListingCard = memo(({ listing, isFavorite, onFavoriteClick, getCond
   const [calculatedDistance, setCalculatedDistance] = useState<number | null>(null);
 
   useEffect(() => {
-    if (location && listing?.location) {
+    if (location?.latitude && location?.longitude && listing?.location?.latitude && listing?.location?.longitude) {
       const distance = calculateDistance(
         location.latitude,
         location.longitude,
@@ -153,6 +153,8 @@ export const ListingCard = memo(({ listing, isFavorite, onFavoriteClick, getCond
         listing.location.longitude
       );
       setCalculatedDistance(distance);
+    } else {
+      setCalculatedDistance(null);
     }
   }, [location, listing]);
 
