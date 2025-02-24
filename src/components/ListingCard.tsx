@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Heart } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { DistanceIndicator } from './DistanceIndicator';
 import { Listing } from '@/types/database';
 import { formatPrice } from '@/lib/price';
 import { motion } from 'framer-motion';
