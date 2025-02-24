@@ -468,6 +468,11 @@ export default function Home() {
                           setSearchQuery(cardName);
                           handleSearch();
                         }}
+                        onSearch={(query) => {
+                          setSearchQuery(query);
+                          handleSearch();
+                        }}
+                        initialValue={searchQuery}
                       />
                     </div>
                     
@@ -478,9 +483,6 @@ export default function Home() {
                           onValueChange={(state) => setSelectedState(state.toLowerCase())}
                         />
                       </div>
-                      <Button className="h-10 px-8" onClick={handleSearch}>
-                        <Search className="h-5 w-5" />
-                      </Button>
                     </div>
                   </div>
 
@@ -492,6 +494,12 @@ export default function Home() {
                           setSearchQuery(cardName);
                           handleSearch();
                         }}
+                        onSearch={(query) => {
+                          setSearchQuery(query);
+                          handleSearch();
+                        }}
+                        initialValue={searchQuery}
+                        showSearchButton={true}
                       />
                     </div>
                     
@@ -502,12 +510,6 @@ export default function Home() {
                           onValueChange={(state) => setSelectedState(state.toLowerCase())}
                         />
                       </div>
-                      <Button 
-                        onClick={handleSearch}
-                        className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary text-primary-foreground shadow hover:bg-primary/90 px-4 py-2 h-12 ml-2"
-                      >
-                        <Search className="h-4 w-4" />
-                      </Button>
                     </div>
                   </div>
 
