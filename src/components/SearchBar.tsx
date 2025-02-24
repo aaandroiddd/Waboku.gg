@@ -55,9 +55,12 @@ export default function SearchBar({ showSearchButton = false, initialValue = "" 
   const handleSearch = async (query: string) => {
     if (query.trim()) {
       await recordSearch(query.trim());
+      // Preserve existing query parameters and update only the search query
+      const currentQuery = router.query;
       router.push({
         pathname: '/listings',
         query: { 
+          ...currentQuery,
           query: query.trim()
         }
       });
@@ -80,9 +83,11 @@ export default function SearchBar({ showSearchButton = false, initialValue = "" 
     
     if (searchTerm) {
       await recordSearch(searchTerm.trim());
+      const currentQuery = router.query;
       router.push({
         pathname: '/listings',
         query: { 
+          ...currentQuery,
           query: searchTerm.trim(),
           game: card.type
         }

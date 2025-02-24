@@ -164,7 +164,11 @@ export default function ListingsPage() {
   useEffect(() => {
     // Initialize filters from URL parameters
     const { query, state, game, condition, minPrice, maxPrice } = router.query;
-    if (query) setSearchQuery(query as string);
+    if (query) {
+      setSearchQuery(query as string);
+    } else {
+      setSearchQuery(""); // Reset search query when it's removed from URL
+    }
     if (state) setSelectedState(state as string);
     if (game) setSelectedGame(game as string);
     if (condition) setSelectedCondition(condition as string);

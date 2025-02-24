@@ -44,10 +44,8 @@ const CardSearchInput: React.FC<CardSearchInputProps> = ({
       return;
     }
 
-    if (normalizedTerm.trim()) {
-      if (onSearch) {
-        onSearch(normalizedTerm);
-      }
+    if (onSearch) {
+      onSearch(normalizedTerm.trim());
     }
   };
 
