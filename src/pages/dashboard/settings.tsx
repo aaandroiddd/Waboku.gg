@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic'
+import { LocationInput } from '@/components/LocationInput';
 import { AccountFeatures } from '@/components/AccountFeatures';
 import { AlertDialog, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -87,6 +88,10 @@ const SettingsPageContent = () => {
     youtube: "",
     twitter: "",
     facebook: "",
+    locationData: {
+      city: "",
+      state: ""
+    }
   });
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState(user?.photoURL || "");
@@ -466,66 +471,23 @@ const SettingsPageContent = () => {
 
               {/* Location Section */}
               <div className="space-y-2">
-                <Label htmlFor="location">Location</Label>
-                <div className="flex gap-2">
-                  <Input
-                    id="location"
-                    value={formData.location}
-                    onChange={(e) => setFormData(prev => ({ ...prev, location: e.target.value }))}
-                    placeholder="Your location (city, country)"
-                  />
-                  <Button 
-                    type="button"
-                    variant="outline"
-                    onClick={() => {
-                      if ('geolocation' in navigator) {
-                        navigator.geolocation.getCurrentPosition(
-                          async (position) => {
-                            try {
-                              const response = await fetch(
-                                `https://maps.googleapis.com/maps/api/geocode/json?latlng=${position.coords.latitude},${position.coords.longitude}&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}`
-                              );
-                              const data = await response.json();
-                              if (data.results && data.results[0]) {
-                                const addressComponents = data.results[0].address_components;
-                                const city = addressComponents.find(
-                                  (component: any) => component.types.includes('locality')
-                                )?.long_name;
-                                const state = addressComponents.find(
-                                  (component: any) => component.types.includes('administrative_area_level_1')
-                                )?.short_name;
-                                
-                                setFormData(prev => ({
-                                  ...prev,
-                                  location: `${city}, ${state}`,
-                                  locationData: {
-                                    latitude: position.coords.latitude,
-                                    longitude: position.coords.longitude,
-                                    city,
-                                    state
-                                  }
-                                }));
-                              }
-                            } catch (error) {
-                              console.error('Error getting location:', error);
-                              setError('Failed to get your location. Please try again or enter it manually.');
-                            }
-                          },
-                          (error) => {
-                            console.error('Geolocation error:', error);
-                            setError('Unable to get your location. Please enable location services or enter it manually.');
-                          }
-                        );
-                      } else {
-                        setError('Geolocation is not supported by your browser');
+                <LocationInput
+                  onLocationSelect={(city, state) => {
+                    setFormData(prev => ({
+                      ...prev,
+                      location: `${city}, ${state}`,
+                      locationData: {
+                        city,
+                        state
                       }
-                    }}
-                  >
-                    Use Current Location
-                  </Button>
-                </div>
+                    }));
+                  }}
+                  initialCity={formData.locationData?.city}
+                  initialState={formData.locationData?.state}
+                  error={error && error.includes('location') ? error : undefined}
+                />
                 <p className="text-xs text-muted-foreground">
-                  Help others find local trades. Click "Use Current Location" or enter manually.
+                  Help others find local trades. Search for your city or use the current location option.
                 </p>
               </div>
 
