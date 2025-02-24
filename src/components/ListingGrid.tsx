@@ -1,4 +1,5 @@
 import { Card, CardContent } from '@/components/ui/card';
+import { useLocation } from '@/hooks/useLocation';
 import { useGeolocation } from '@/hooks/useGeolocation';
 import { useFavorites } from '@/hooks/useFavorites';
 import { useAuth } from '@/contexts/AuthContext';
