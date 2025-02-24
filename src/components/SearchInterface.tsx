@@ -9,27 +9,24 @@ const SearchInterface = () => {
   const [debouncedQuery, setDebouncedQuery] = useState("");
 
   const handleSearch = useCallback(async (query: string) => {
+    if (!query) return;
+    
     setSearchQuery(query);
     setDebouncedQuery(query);
-    
+
     // Record the search term
     try {
-      const response = await fetch('/api/search/record', {
+      await fetch('/api/search/record', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ searchTerm: query }),
       });
-      
-      if (!response.ok) {
-        console.error('Failed to record search term');
-      }
     } catch (error) {
       console.error('Error recording search term:', error);
     }
 
-    // Implement your search logic here
     console.log('Searching:', { query, selectedState });
   }, [selectedState]);
 
@@ -62,7 +59,7 @@ const SearchInterface = () => {
         <div className="flex-1">
           <form onSubmit={(e) => {
             e.preventDefault();
-            handleSearch();
+            handleSearch(searchQuery);
           }} className="flex gap-4">
             <div className="flex-1">
               <CardSearchInput
