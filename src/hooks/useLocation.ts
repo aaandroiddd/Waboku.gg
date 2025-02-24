@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
-import { useProfile } from './useProfile';
+import { useAuth } from '@/contexts/AuthContext';
+import { doc, getDoc } from 'firebase/firestore';
+import { firebaseDb } from '@/lib/firebase';
 
 interface Location {
   latitude: number;
@@ -10,19 +12,24 @@ export const useLocation = () => {
   const [location, setLocation] = useState<Location | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const { userData } = useProfile();
+  const { user } = useAuth();
 
   useEffect(() => {
     const getUserLocation = async () => {
       try {
         // First try to get location from user settings if logged in
-        if (userData?.location?.latitude && userData?.location?.longitude) {
-          setLocation({
-            latitude: userData.location.latitude,
-            longitude: userData.location.longitude
-          });
-          setLoading(false);
-          return;
+        if (user?.uid) {
+          const userDoc = await getDoc(doc(firebaseDb, 'users', user.uid));
+          const userData = userDoc.data();
+          
+          if (userData?.location?.latitude && userData?.location?.longitude) {
+            setLocation({
+              latitude: userData.location.latitude,
+              longitude: userData.location.longitude
+            });
+            setLoading(false);
+            return;
+          }
         }
 
         // If no user location, try browser geolocation
@@ -53,7 +60,7 @@ export const useLocation = () => {
     };
 
     getUserLocation();
-  }, [userData]);
+  }, [user]);
 
   return { location, error, loading };
 };
