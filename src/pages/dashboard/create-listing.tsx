@@ -467,30 +467,58 @@ const CreateListingPage = () => {
                       </Tooltip>
                     </TooltipProvider>
                   </div>
-                  <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-8 text-center hover:border-gray-400 dark:hover:border-gray-500 transition-colors">
-                    <Input
-                      id="images"
-                      type="file"
-                      accept="image/jpeg,image/png,image/webp"
-                      multiple
-                      onChange={handleImageChange}
-                      className={`${errors.images ? "border-red-500" : ""} hidden`}
-                    />
-                    <label htmlFor="images" className="cursor-pointer">
-                      <div className="space-y-2">
-                        <div className="mx-auto w-12 h-12 rounded-full bg-muted flex items-center justify-center">
-                          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
-                          </svg>
+                  <div className="space-y-4">
+                    <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-8 text-center hover:border-gray-400 dark:hover:border-gray-500 transition-colors">
+                      <Input
+                        id="images"
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        multiple
+                        onChange={handleImageChange}
+                        className={`${errors.images ? "border-red-500" : ""} hidden`}
+                      />
+                      <label htmlFor="images" className="cursor-pointer">
+                        <div className="space-y-2">
+                          <div className="mx-auto w-12 h-12 rounded-full bg-muted flex items-center justify-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+                            </svg>
+                          </div>
+                          <div className="text-sm font-medium">
+                            Click to upload or drag and drop
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            JPG, PNG or WebP (max. 5MB per image)
+                          </p>
                         </div>
-                        <div className="text-sm font-medium">
-                          Click to upload or drag and drop
-                        </div>
-                        <p className="text-xs text-muted-foreground">
-                          JPG, PNG or WebP (max. 5MB per image)
-                        </p>
-                      </div>
-                    </label>
+                      </label>
+                    </div>
+                    <div className="text-sm text-muted-foreground bg-muted p-3 rounded-lg">
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 inline-block mr-2">
+                        <path fillRule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zm8.706-1.442c1.146-.573 2.437.463 2.126 1.706l-.709 2.836.042-.02a.75.75 0 01.67 1.34l-.04.022c-1.147.573-2.438-.463-2.127-1.706l.71-2.836-.042.02a.75.75 0 11-.671-1.34l.041-.022zM12 9a.75.75 0 100-1.5.75.75 0 000 1.5z" clipRule="evenodd" />
+                      </svg>
+                      Note: Images will be displayed in the listing in the order they are uploaded
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Checkbox 
+                        id="terms" 
+                        required
+                        onCheckedChange={(checked) => {
+                          if (typeof checked === 'boolean') {
+                            setFormData(prev => ({ ...prev, termsAccepted: checked }))
+                          }
+                        }}
+                      />
+                      <label
+                        htmlFor="terms"
+                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                      >
+                        I confirm that I own or have the rights to use these images and agree to the{" "}
+                        <Link href="/terms-of-use" className="text-primary hover:underline">
+                          Terms of Use
+                        </Link>
+                      </label>
+                    </div>
                   </div>
                   {errors.images && <p className="text-sm text-red-500">{errors.images}</p>}
                   {formData.images.length > 0 && (
