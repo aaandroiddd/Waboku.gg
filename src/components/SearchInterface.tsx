@@ -8,11 +8,30 @@ const SearchInterface = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
 
-  const handleSearch = useCallback(() => {
-    setDebouncedQuery(searchQuery);
+  const handleSearch = useCallback(async (query: string) => {
+    setSearchQuery(query);
+    setDebouncedQuery(query);
+    
+    // Record the search term
+    try {
+      const response = await fetch('/api/search/record', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ searchTerm: query }),
+      });
+      
+      if (!response.ok) {
+        console.error('Failed to record search term');
+      }
+    } catch (error) {
+      console.error('Error recording search term:', error);
+    }
+
     // Implement your search logic here
-    console.log('Searching:', { searchQuery, selectedState });
-  }, [searchQuery, selectedState]);
+    console.log('Searching:', { query, selectedState });
+  }, [selectedState]);
 
   return (
     <div className="flex flex-col max-w-2xl mx-auto pt-4 sm:pt-6 pb-4 sm:pb-8 px-4 sm:px-0">
