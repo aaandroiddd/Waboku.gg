@@ -300,11 +300,17 @@ export default function AccountStatus() {
                         timestamp: new Date().toISOString()
                       });
 
+                      // Always force a fresh token before making the request
+                      const freshToken = await user?.getIdToken(true);
+                      if (!freshToken) {
+                        throw new Error('Failed to obtain authentication token');
+                      }
+
                       const response = await fetch('/api/stripe/create-checkout', {
                         method: 'POST',
                         headers: {
                           'Content-Type': 'application/json',
-                          'Authorization': `Bearer ${idToken}`,
+                          'Authorization': `Bearer ${freshToken}`,
                         },
                         body: JSON.stringify({
                           timestamp: new Date().toISOString() // Add timestamp for tracking
