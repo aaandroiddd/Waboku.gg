@@ -40,7 +40,9 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  console.log(`[${new Date().toISOString()}] Search term recording request received`);
+  const timestamp = new Date().toISOString();
+  console.log(`[${timestamp}] Search term recording request received`);
+  console.log('Request body:', JSON.stringify(req.body));
   
   if (req.method !== 'POST') {
     console.log('Method not allowed:', req.method);
