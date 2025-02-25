@@ -1,17 +1,8 @@
 import * as admin from 'firebase-admin';
 
-interface FirebaseAdminServices {
-  db: admin.firestore.Firestore;
-  auth: admin.auth.Auth;
-  storage: admin.storage.Storage;
-  rtdb: admin.database.Database;
-  getFirestore: () => admin.firestore.Firestore;
-  firestore: typeof admin.firestore;
-}
+let firebaseAdmin: typeof admin | null = null;
 
-let firebaseAdmin: FirebaseAdminServices | null = null;
-
-export function getFirebaseAdmin(): FirebaseAdminServices {
+export function getFirebaseAdmin(): typeof admin {
   if (firebaseAdmin) {
     return firebaseAdmin;
   }
@@ -71,22 +62,6 @@ export function getFirebaseAdmin(): FirebaseAdminServices {
     }
   }
 
-  try {
-    firebaseAdmin = {
-      db: admin.firestore(),
-      auth: admin.auth(),
-      storage: admin.storage(),
-      rtdb: admin.database(),
-      getFirestore: () => admin.firestore(),
-      firestore: admin.firestore,
-    };
-
-    return firebaseAdmin;
-  } catch (error: any) {
-    console.error('[Firebase Admin] Error creating services:', {
-      message: error.message,
-      stack: error.stack
-    });
-    throw error;
-  }
+  firebaseAdmin = admin;
+  return firebaseAdmin;
 }
