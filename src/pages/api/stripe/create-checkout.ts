@@ -22,7 +22,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   console.info('[Create Checkout] Started:', {
     method: req.method,
     url: req.url,
-    headers: req.headers,
+    headers: {
+      ...req.headers,
+      authorization: req.headers.authorization ? '**present**' : '**missing**'
+    },
     timestamp: new Date().toISOString()
   });
 
@@ -34,15 +37,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     // Initialize Firebase Admin
     const admin = getFirebaseAdmin();
-    console.log('[Create Checkout] Firebase Admin initialized');
+    console.log('[Create Checkout] Firebase Admin initialized successfully');
     
     // Get the authorization header
     const authHeader = req.headers.authorization;
     if (!authHeader?.startsWith('Bearer ')) {
-      console.warn('[Create Checkout] No authorization header');
+      console.warn('[Create Checkout] Missing or invalid authorization header');
       return res.status(401).json({ 
         error: 'Unauthorized',
-        message: 'Please verify your email address before accessing subscription features.'
+        message: 'Missing or invalid authorization token',
+        code: 'AUTH_HEADER_MISSING'
       });
     }
 
@@ -55,13 +59,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const userId = decodedToken.uid;
       const userEmail = decodedToken.email;
 
-      console.log('[Create Checkout] Verified user:', { userId, userEmail });
+      console.log('[Create Checkout] Token verified successfully:', { 
+        userId,
+        email: userEmail,
+        emailVerified: decodedToken.email_verified
+      });
 
       if (!userEmail) {
         console.error('[Create Checkout] No user email found for user:', userId);
         return res.status(400).json({ 
           error: 'Missing email',
-          message: 'User email is required for subscription'
+          message: 'User email is required for subscription',
+          code: 'EMAIL_MISSING'
         });
       }
 
@@ -76,7 +85,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (currentSubscription?.status === 'active') {
         return res.status(400).json({ 
           error: 'Subscription exists',
-          message: 'You already have an active subscription'
+          message: 'You already have an active subscription',
+          code: 'SUBSCRIPTION_EXISTS'
         });
       }
 
@@ -128,34 +138,38 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     } catch (authError: any) {
       console.error('[Create Checkout] Auth error:', {
-        message: authError.message,
         code: authError.code,
+        message: authError.message,
         stack: authError.stack
       });
+      
       return res.status(401).json({ 
         error: 'Authentication failed',
-        message: 'Invalid authentication token'
+        message: authError.message || 'Invalid authentication token',
+        code: authError.code || 'AUTH_TOKEN_INVALID'
       });
     }
 
   } catch (error: any) {
-    console.error('[Create Checkout] Error:', {
+    console.error('[Create Checkout] Unhandled error:', {
       message: error.message,
-      code: error.code,
-      stack: error.stack
+      stack: error.stack,
+      code: error.code
     });
     
     // Handle Stripe-specific errors
     if (error.type?.startsWith('Stripe')) {
       return res.status(400).json({
         error: 'Payment processing error',
-        message: error.message
+        message: error.message,
+        code: error.code || 'STRIPE_ERROR'
       });
     }
 
     return res.status(500).json({ 
       error: 'Internal server error',
-      message: 'Failed to create checkout session. Please try again later.'
+      message: 'Failed to create checkout session. Please try again later.',
+      code: error.code || 'INTERNAL_ERROR'
     });
   }
 }

@@ -12,7 +12,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   console.info('[Subscription Check] Started:', {
     method: req.method,
     url: req.url,
-    headers: req.headers,
+    headers: {
+      ...req.headers,
+      authorization: req.headers.authorization ? '**present**' : '**missing**'
+    },
     timestamp: new Date().toISOString()
   });
 
@@ -24,15 +27,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     // Initialize Firebase Admin
     const admin = getFirebaseAdmin();
+    console.log('[Subscription Check] Firebase Admin initialized successfully');
     
     // Get the authorization header
     const authHeader = req.headers.authorization;
     if (!authHeader?.startsWith('Bearer ')) {
-      console.info('[Subscription Check] No authorization header - returning default free tier');
-      return res.status(200).json({ 
-        isPremium: false,
-        status: 'none',
-        tier: 'free'
+      console.warn('[Subscription Check] Missing or invalid authorization header');
+      return res.status(401).json({ 
+        error: 'Unauthorized',
+        message: 'Missing or invalid authorization token',
+        code: 'AUTH_HEADER_MISSING'
       });
     }
 
@@ -43,8 +47,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       // Verify the token and get user data
       const decodedToken = await admin.auth().verifyIdToken(idToken);
       const userId = decodedToken.uid;
+      const userEmail = decodedToken.email;
 
-      console.log('[Subscription Check] Verified user:', userId);
+      console.log('[Subscription Check] Token verified successfully:', { 
+        userId,
+        email: userEmail,
+        emailVerified: decodedToken.email_verified
+      });
 
       // Get subscription data from Realtime Database
       const realtimeDb = getDatabase();
@@ -79,10 +88,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             status: stripeSubscription.status,
             currentPeriodEnd: stripeSubscription.current_period_end
           });
-        } catch (stripeError) {
-          console.error('[Subscription Check] Stripe error:', stripeError);
+
+          console.log('[Subscription Check] Updated Stripe subscription status:', {
+            userId,
+            status: stripeSubscription.status,
+            currentPeriodEnd: stripeSubscription.current_period_end
+          });
+        } catch (stripeError: any) {
+          console.error('[Subscription Check] Stripe error:', {
+            code: stripeError.code,
+            message: stripeError.message,
+            type: stripeError.type
+          });
+          
           // If Stripe subscription not found, reset status
-          if ((stripeError as any).code === 'resource_missing') {
+          if (stripeError.code === 'resource_missing') {
             subscription.status = 'none';
             await userRef.child('subscription').update({
               status: 'none',
@@ -97,7 +117,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                       subscription.currentPeriodEnd && 
                       subscription.currentPeriodEnd > now;
 
-      console.log('[Subscription Check] Status:', {
+      console.log('[Subscription Check] Final status:', {
         userId,
         isActive,
         subscription: {
@@ -114,16 +134,31 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         currentPeriodEnd: subscription.currentPeriodEnd
       });
 
-    } catch (authError) {
-      console.error('[Subscription Check] Auth error:', authError);
-      return res.status(401).json({ error: 'Invalid authentication token' });
+    } catch (authError: any) {
+      console.error('[Subscription Check] Auth error:', {
+        code: authError.code,
+        message: authError.message,
+        stack: authError.stack
+      });
+      
+      return res.status(401).json({ 
+        error: 'Authentication failed',
+        message: authError.message || 'Invalid authentication token',
+        code: authError.code || 'AUTH_TOKEN_INVALID'
+      });
     }
 
-  } catch (error) {
-    console.error('[Subscription Check] Error:', error);
+  } catch (error: any) {
+    console.error('[Subscription Check] Unhandled error:', {
+      message: error.message,
+      stack: error.stack,
+      code: error.code
+    });
+    
     return res.status(500).json({ 
       error: 'Internal server error',
-      message: 'Failed to check subscription status'
+      message: 'Failed to check subscription status',
+      code: error.code || 'INTERNAL_ERROR'
     });
   }
 }
