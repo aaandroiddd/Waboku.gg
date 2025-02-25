@@ -52,6 +52,20 @@ const CardSearchInput: React.FC<CardSearchInputProps> = ({
       return;
     }
 
+    // Record the search term
+    try {
+      await fetch('/api/search/record', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ searchTerm: normalizedTerm }),
+      });
+    } catch (error) {
+      console.error('Failed to record search term:', error);
+      // Don't show error to user as this is analytics only
+    }
+
     if (onSearch) {
       setIsSearching(true);
       try {
