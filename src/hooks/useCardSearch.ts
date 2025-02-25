@@ -19,6 +19,24 @@ interface SearchResponse {
   data: CardResult[];
 }
 
+const recordSearchTerm = async (term: string) => {
+  try {
+    const response = await fetch('/api/search/record', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ searchTerm: term }),
+    });
+
+    if (!response.ok) {
+      console.error('Failed to record search term:', await response.text());
+    }
+  } catch (error) {
+    console.error('Error recording search term:', error);
+  }
+};
+
 const useCardSearch = () => {
   const [results, setResults] = useState<CardResult[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -35,6 +53,9 @@ const useCardSearch = () => {
       setError(null);
 
       try {
+        // Record the search term
+        await recordSearchTerm(query.trim());
+
         // Make parallel requests to all card game APIs
         const [mtgResponse, pokemonResponse, onePieceResponse, dragonBallResponse] = await Promise.allSettled([
           fetch(`/api/mtg/search?query=${encodeURIComponent(query)}`),
