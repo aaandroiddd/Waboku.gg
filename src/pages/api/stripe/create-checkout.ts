@@ -34,6 +34,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     // Initialize Firebase Admin
     const admin = getFirebaseAdmin();
+    console.log('[Create Checkout] Firebase Admin initialized');
     
     // Get the authorization header
     const authHeader = req.headers.authorization;
@@ -54,10 +55,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const userId = decodedToken.uid;
       const userEmail = decodedToken.email;
 
-      console.log('[Create Checkout] Verified user:', userId);
+      console.log('[Create Checkout] Verified user:', { userId, userEmail });
 
       if (!userEmail) {
-        return res.status(400).json({ error: 'User email is required' });
+        console.error('[Create Checkout] No user email found for user:', userId);
+        return res.status(400).json({ 
+          error: 'Missing email',
+          message: 'User email is required for subscription'
+        });
       }
 
       // Check if user already has an active subscription
@@ -66,12 +71,25 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const snapshot = await userRef.once('value');
       const currentSubscription = snapshot.val();
 
+      console.log('[Create Checkout] Current subscription status:', currentSubscription?.status);
+
       if (currentSubscription?.status === 'active') {
         return res.status(400).json({ 
           error: 'Subscription exists',
           message: 'You already have an active subscription'
         });
       }
+
+      // Preview environment handling
+      if (process.env.NEXT_PUBLIC_CO_DEV_ENV === 'preview') {
+        console.log('[Create Checkout] Preview environment detected, returning simulated success');
+        return res.status(200).json({ 
+          sessionUrl: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/account-status?session_id=preview_session`,
+          isPreview: true
+        });
+      }
+
+      console.log('[Create Checkout] Creating Stripe checkout session');
 
       // Create a Checkout Session
       const session = await stripe.checkout.sessions.create({
@@ -98,29 +116,46 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         },
       });
 
-      if (process.env.NEXT_PUBLIC_CO_DEV_ENV === 'preview') {
-        // For preview environment, return a simulated success URL
-        return res.status(200).json({ 
-          sessionUrl: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/account-status?session_id=preview_session`,
-          isPreview: true
-        });
-      }
+      console.log('[Create Checkout] Successfully created checkout session:', { 
+        sessionId: session.id,
+        url: session.url 
+      });
 
       return res.status(200).json({ 
         sessionUrl: session.url,
         isPreview: false
       });
 
-    } catch (authError) {
-      console.error('[Create Checkout] Auth error:', authError);
-      return res.status(401).json({ error: 'Invalid authentication token' });
+    } catch (authError: any) {
+      console.error('[Create Checkout] Auth error:', {
+        message: authError.message,
+        code: authError.code,
+        stack: authError.stack
+      });
+      return res.status(401).json({ 
+        error: 'Authentication failed',
+        message: 'Invalid authentication token'
+      });
     }
 
-  } catch (error) {
-    console.error('[Create Checkout] Error:', error);
+  } catch (error: any) {
+    console.error('[Create Checkout] Error:', {
+      message: error.message,
+      code: error.code,
+      stack: error.stack
+    });
+    
+    // Handle Stripe-specific errors
+    if (error.type?.startsWith('Stripe')) {
+      return res.status(400).json({
+        error: 'Payment processing error',
+        message: error.message
+      });
+    }
+
     return res.status(500).json({ 
       error: 'Internal server error',
-      message: 'Failed to create checkout session'
+      message: 'Failed to create checkout session. Please try again later.'
     });
   }
 }
