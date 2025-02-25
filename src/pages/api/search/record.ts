@@ -7,14 +7,17 @@ import { getDatabase } from 'firebase-admin/database';
 const initializeFirebaseAdmin = () => {
   try {
     if (!process.env.FIREBASE_PRIVATE_KEY || !process.env.FIREBASE_CLIENT_EMAIL) {
+      console.error('Missing Firebase Admin credentials');
       throw new Error('Missing Firebase Admin credentials');
     }
 
     if (!process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL) {
+      console.error('Missing Firebase Database URL');
       throw new Error('Missing Firebase Database URL');
     }
 
     if (getApps().length === 0) {
+      console.log('Initializing Firebase Admin...');
       initializeApp({
         credential: cert({
           projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
@@ -23,6 +26,7 @@ const initializeFirebaseAdmin = () => {
         }),
         databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL
       });
+      console.log('Firebase Admin initialized successfully');
     }
 
     return getDatabase();
@@ -36,7 +40,10 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
+  console.log(`[${new Date().toISOString()}] Search term recording request received`);
+  
   if (req.method !== 'POST') {
+    console.log('Method not allowed:', req.method);
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
@@ -71,13 +78,18 @@ export default async function handler(
     }
 
     // Initialize Firebase Admin and get Database instance
+    console.log('Initializing Firebase Admin...');
     const database = initializeFirebaseAdmin();
+    console.log('Firebase Admin initialized, attempting to record search term');
 
     // Record the search term in Firebase Realtime Database
     try {
       const searchRef = database.ref(`searchTerms/${normalizedTerm.toLowerCase()}`);
+      console.log('Getting current count for term...');
       const snapshot = await searchRef.once('value');
       const currentCount = snapshot.exists() ? snapshot.val().count || 0 : 0;
+      
+      console.log(`Current count for "${normalizedTerm}": ${currentCount}`);
       
       await searchRef.set({
         term: normalizedTerm,
@@ -85,9 +97,10 @@ export default async function handler(
         lastUpdated: Date.now()
       });
       
-      console.log(`Successfully recorded search term: ${normalizedTerm}`);
-    } catch (dbError) {
+      console.log(`Successfully recorded search term: ${normalizedTerm} (new count: ${currentCount + 1})`);
+    } catch (dbError: any) {
       console.error('Database error:', dbError);
+      console.error('Error stack:', dbError.stack);
       throw new Error(`Failed to record search term: ${dbError.message}`);
     }
 
@@ -95,8 +108,9 @@ export default async function handler(
       success: true,
       message: 'Search term recorded successfully'
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error processing search request:', error);
+    console.error('Error stack:', error.stack);
     return res.status(500).json({ 
       error: 'An error occurred while processing your request',
       details: process.env.NODE_ENV === 'development' ? error.message : undefined
