@@ -31,19 +31,14 @@ const initializeFirebaseAdmin = () => {
       console.log('Initializing Firebase Admin...');
       
       // Handle the private key properly
-      let privateKey = process.env.FIREBASE_PRIVATE_KEY;
+      const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n') || '';
       
-      // Check if the private key needs to be processed
-      if (privateKey?.includes('\\n')) {
-        console.log('Processing private key newlines...');
-        privateKey = privateKey.replace(/\\n/g, '\n');
-      }
-      
-      // Additional validation for private key format
-      if (!privateKey?.includes('BEGIN PRIVATE KEY') || !privateKey?.includes('END PRIVATE KEY')) {
-        console.error('Private key appears to be malformed');
-        throw new Error('Invalid private key format');
-      }
+      // Log private key format (safely)
+      console.log('Private key format check:', {
+        hasBeginMarker: privateKey.includes('BEGIN PRIVATE KEY'),
+        hasEndMarker: privateKey.includes('END PRIVATE KEY'),
+        length: privateKey.length
+      });
 
       const config = {
         credential: cert({
