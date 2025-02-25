@@ -6,33 +6,48 @@ import { getDatabase } from 'firebase-admin/database';
 
 const initializeFirebaseAdmin = () => {
   try {
-    if (!process.env.FIREBASE_PRIVATE_KEY || !process.env.FIREBASE_CLIENT_EMAIL) {
-      console.error('Missing Firebase Admin credentials');
-      throw new Error('Missing Firebase Admin credentials');
-    }
+    // Check for required environment variables
+    const requiredEnvVars = {
+      'FIREBASE_PRIVATE_KEY': process.env.FIREBASE_PRIVATE_KEY,
+      'FIREBASE_CLIENT_EMAIL': process.env.FIREBASE_CLIENT_EMAIL,
+      'NEXT_PUBLIC_FIREBASE_DATABASE_URL': process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL,
+      'NEXT_PUBLIC_FIREBASE_PROJECT_ID': process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID
+    };
 
-    if (!process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL) {
-      console.error('Missing Firebase Database URL');
-      throw new Error('Missing Firebase Database URL');
+    // Check all required environment variables
+    const missingVars = Object.entries(requiredEnvVars)
+      .filter(([_, value]) => !value)
+      .map(([key]) => key);
+
+    if (missingVars.length > 0) {
+      throw new Error(`Missing required environment variables: ${missingVars.join(', ')}`);
     }
 
     if (getApps().length === 0) {
       console.log('Initializing Firebase Admin...');
+      const privateKey = process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n');
+      
       initializeApp({
         credential: cert({
           projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
           clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-          privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+          privateKey: privateKey,
         }),
         databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL
       });
       console.log('Firebase Admin initialized successfully');
     }
 
-    return getDatabase();
+    const db = getDatabase();
+    // Verify database connection
+    if (!db) {
+      throw new Error('Failed to get database instance');
+    }
+    return db;
   } catch (error: any) {
     console.error('Firebase Admin initialization error:', error);
-    throw error;
+    console.error('Error stack:', error.stack);
+    throw new Error(`Firebase initialization failed: ${error.message}`);
   }
 };
 
@@ -42,7 +57,6 @@ export default async function handler(
 ) {
   const timestamp = new Date().toISOString();
   console.log(`[${timestamp}] Search term recording request received`);
-  console.log('Request body:', JSON.stringify(req.body));
   
   if (req.method !== 'POST') {
     console.log('Method not allowed:', req.method);
@@ -86,36 +100,43 @@ export default async function handler(
 
     // Record the search term in Firebase Realtime Database
     try {
-      const searchRef = database.ref(`searchTerms/${normalizedTerm.toLowerCase()}`);
+      const searchRef = database.ref('searchTerms').child(normalizedTerm.toLowerCase());
       console.log('Getting current count for term...');
+      
       const snapshot = await searchRef.once('value');
-      const currentCount = snapshot.exists() ? snapshot.val().count || 0 : 0;
+      const currentCount = snapshot.exists() ? snapshot.val()?.count || 0 : 0;
       
       console.log(`Current count for "${normalizedTerm}": ${currentCount}`);
       
-      await searchRef.set({
+      const updateData = {
         term: normalizedTerm,
         count: currentCount + 1,
         lastUpdated: Date.now()
-      });
-      
-      console.log(`Successfully recorded search term: ${normalizedTerm} (new count: ${currentCount + 1})`);
-    } catch (dbError: any) {
-      console.error('Database error:', dbError);
-      console.error('Error stack:', dbError.stack);
-      throw new Error(`Failed to record search term: ${dbError.message}`);
-    }
+      };
 
-    return res.status(200).json({ 
-      success: true,
-      message: 'Search term recorded successfully'
-    });
+      await searchRef.set(updateData);
+      console.log(`Successfully recorded search term: ${normalizedTerm} (new count: ${currentCount + 1})`);
+      
+      return res.status(200).json({ 
+        success: true,
+        message: 'Search term recorded successfully',
+        data: updateData
+      });
+    } catch (dbError: any) {
+      console.error('Database operation error:', dbError);
+      console.error('Error stack:', dbError.stack);
+      throw new Error(`Failed to record search term in database: ${dbError.message}`);
+    }
   } catch (error: any) {
     console.error('Error processing search request:', error);
     console.error('Error stack:', error.stack);
+    
+    // Send a more detailed error response
     return res.status(500).json({ 
       error: 'An error occurred while processing your request',
-      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      message: error.message,
+      timestamp: new Date().toISOString(),
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }
 }
