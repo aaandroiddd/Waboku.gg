@@ -34,19 +34,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   });
 
   if (req.method !== 'POST') {
-    console.warn('[Create Checkout] Invalid method:', req.method);
+    console.warn(`[Create Checkout ${requestId}] Invalid method:`, req.method);
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
   try {
-    // Initialize Firebase Admin
-    const admin = getFirebaseAdmin();
-    console.log('[Create Checkout] Firebase Admin initialized successfully');
-    
     // Get the authorization header
     const authHeader = req.headers.authorization;
     if (!authHeader?.startsWith('Bearer ')) {
-      console.warn('[Create Checkout] Missing or invalid authorization header');
+      console.warn(`[Create Checkout ${requestId}] Missing or invalid authorization header`);
       return res.status(401).json({ 
         error: 'Unauthorized',
         message: 'Missing or invalid authorization token',
@@ -58,10 +54,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const idToken = authHeader.split('Bearer ')[1];
     
     try {
+      // Initialize Firebase Admin and verify token
+      const admin = getFirebaseAdmin();
+      console.log(`[Create Checkout ${requestId}] Firebase Admin initialized successfully`);
+      
       // Verify the token and get user data
-      const decodedToken = await admin.auth().verifyIdToken(idToken);
+      const decodedToken = await admin.auth().verifyIdToken(idToken, true); // Force token refresh check
       const userId = decodedToken.uid;
       const userEmail = decodedToken.email;
+
+      console.log(`[Create Checkout ${requestId}] Token verified successfully:`, {
+        userId,
+        email: userEmail,
+        emailVerified: decodedToken.email_verified,
+        tokenIssued: new Date(decodedToken.iat * 1000).toISOString(),
+        tokenExpires: new Date(decodedToken.exp * 1000).toISOString()
+      });
 
       console.log('[Create Checkout] Token verified successfully:', { 
         userId,

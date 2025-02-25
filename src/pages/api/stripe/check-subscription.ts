@@ -9,30 +9,29 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 });
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  console.info('[Subscription Check] Started:', {
+  const requestId = Math.random().toString(36).substring(7);
+  console.info(`[Subscription Check ${requestId}] Started:`, {
     method: req.method,
     url: req.url,
     headers: {
       ...req.headers,
-      authorization: req.headers.authorization ? '**present**' : '**missing**'
+      authorization: req.headers.authorization 
+        ? `Bearer ${req.headers.authorization.split(' ')[1]?.substring(0, 5)}...${req.headers.authorization.split(' ')[1]?.slice(-5)}`
+        : '**missing**'
     },
     timestamp: new Date().toISOString()
   });
 
   if (req.method !== 'GET') {
-    console.warn('[Subscription Check] Invalid method:', req.method);
+    console.warn(`[Subscription Check ${requestId}] Invalid method:`, req.method);
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
   try {
-    // Initialize Firebase Admin
-    const admin = getFirebaseAdmin();
-    console.log('[Subscription Check] Firebase Admin initialized successfully');
-    
     // Get the authorization header
     const authHeader = req.headers.authorization;
     if (!authHeader?.startsWith('Bearer ')) {
-      console.warn('[Subscription Check] Missing or invalid authorization header');
+      console.warn(`[Subscription Check ${requestId}] Missing or invalid authorization header`);
       return res.status(401).json({ 
         error: 'Unauthorized',
         message: 'Missing or invalid authorization token',
@@ -44,10 +43,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const idToken = authHeader.split('Bearer ')[1];
     
     try {
+      // Initialize Firebase Admin and verify token
+      const admin = getFirebaseAdmin();
+      console.log(`[Subscription Check ${requestId}] Firebase Admin initialized successfully`);
+      
       // Verify the token and get user data
-      const decodedToken = await admin.auth().verifyIdToken(idToken);
+      const decodedToken = await admin.auth().verifyIdToken(idToken, true); // Force token refresh check
       const userId = decodedToken.uid;
       const userEmail = decodedToken.email;
+
+      console.log(`[Subscription Check ${requestId}] Token verified successfully:`, {
+        userId,
+        email: userEmail,
+        emailVerified: decodedToken.email_verified,
+        tokenIssued: new Date(decodedToken.iat * 1000).toISOString(),
+        tokenExpires: new Date(decodedToken.exp * 1000).toISOString()
+      });
 
       console.log('[Subscription Check] Token verified successfully:', { 
         userId,
