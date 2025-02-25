@@ -14,9 +14,20 @@ if (!process.env.STRIPE_PREMIUM_PRICE_ID) {
   throw new Error('Missing STRIPE_PREMIUM_PRICE_ID');
 }
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-  apiVersion: '2023-10-16',
-});
+let stripe: Stripe;
+try {
+  stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+    apiVersion: '2023-10-16',
+  });
+  console.log('[Create Checkout] Stripe initialized successfully');
+} catch (error: any) {
+  console.error('[Create Checkout] Failed to initialize Stripe:', {
+    error: error.message,
+    type: error.type,
+    code: error.code
+  });
+  throw error;
+}
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const requestId = Math.random().toString(36).substring(7);

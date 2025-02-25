@@ -4,9 +4,25 @@ import { getDatabase } from 'firebase-admin/database';
 import { getFirebaseAdmin } from '@/lib/firebase-admin';
 import Stripe from 'stripe';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2023-10-16',
-});
+if (!process.env.STRIPE_SECRET_KEY) {
+  console.error('[Subscription Check] Missing STRIPE_SECRET_KEY');
+  throw new Error('Missing STRIPE_SECRET_KEY');
+}
+
+let stripe: Stripe;
+try {
+  stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+    apiVersion: '2023-10-16',
+  });
+  console.log('[Subscription Check] Stripe initialized successfully');
+} catch (error: any) {
+  console.error('[Subscription Check] Failed to initialize Stripe:', {
+    error: error.message,
+    type: error.type,
+    code: error.code
+  });
+  throw error;
+}
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const requestId = Math.random().toString(36).substring(7);
