@@ -16,9 +16,16 @@ export function validateSearchTerm(term: string): boolean {
   if (cleanTerm.length > 100) return false;
 
   // Allow letters, numbers, spaces, and common TCG-related characters
-  const validCharacters = /^[a-zA-Z0-9\s\-',.:"()&]+$/;
+  const validCharacters = /^[a-zA-Z0-9\s\-',.:"()&\s.]+$/;
   if (!validCharacters.test(cleanTerm)) {
     console.log(`Invalid characters in search term: ${cleanTerm}`);
+    return false;
+  }
+
+  // Additional check for valid character name format (e.g., "D.")
+  const characterNameFormat = /^[a-zA-Z0-9\s\-',"()&]+(\s+[A-Z]\.)?\s*[a-zA-Z0-9\s\-',"()&]*$/;
+  if (!characterNameFormat.test(cleanTerm)) {
+    console.log(`Invalid character name format in search term: ${cleanTerm}`);
     return false;
   }
 
