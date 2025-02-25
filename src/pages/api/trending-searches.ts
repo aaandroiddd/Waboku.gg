@@ -92,40 +92,50 @@ export default async function handler(
     
     console.log('Fetching trending searches from Firebase...');
     
+    // Calculate timestamp for 24 hours ago
+    const twentyFourHoursAgo = Date.now() - (24 * 60 * 60 * 1000);
+    
     const snapshot = await database
       .ref('searchTerms')
-      .orderByChild('count')
-      .limitToLast(10)
+      .orderByChild('lastUpdated')
+      .startAt(twentyFourHoursAgo)
       .once('value');
     
     if (!snapshot.exists()) {
-      console.log('No trending searches found');
+      console.log('No trending searches found in the last 24 hours');
       cachedTrending = [];
       lastCacheTime = now;
       return res.status(200).json([]);
     }
 
-    const trending: any[] = [];
+    const searchCounts: { [key: string]: { term: string, count: number } } = {};
     
+    // Aggregate search counts from the last 24 hours
     snapshot.forEach((childSnapshot) => {
       const search = childSnapshot.val();
       if (search && search.term && validateSearchTerm(search.term)) {
-        trending.push({
-          term: search.term.charAt(0).toUpperCase() + search.term.slice(1),
-          count: search.count || 0
-        });
+        const normalizedTerm = search.term.toLowerCase();
+        if (!searchCounts[normalizedTerm]) {
+          searchCounts[normalizedTerm] = {
+            term: search.term.charAt(0).toUpperCase() + search.term.slice(1),
+            count: 0
+          };
+        }
+        searchCounts[normalizedTerm].count += 1;
       }
-      return false; // Required for TypeScript forEach
+      return false;
     });
 
-    // Sort by count in descending order
-    trending.sort((a, b) => b.count - a.count);
+    // Convert to array and sort by count
+    const trending = Object.values(searchCounts)
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 10); // Get top 10
 
     // Update cache
     cachedTrending = trending;
     lastCacheTime = now;
 
-    console.log(`Successfully fetched ${trending.length} trending searches`);
+    console.log(`Successfully fetched ${trending.length} trending searches from the last 24 hours`);
     return res.status(200).json(trending);
   } catch (error: any) {
     console.error('Error in trending-searches API:', {
