@@ -15,10 +15,6 @@ interface CardResult {
   };
 }
 
-interface SearchResponse {
-  data: CardResult[];
-}
-
 const recordSearchTerm = async (term: string) => {
   try {
     const response = await fetch('/api/search/record', {
@@ -55,42 +51,11 @@ const useCardSearch = () => {
       try {
         // Record the search term
         await recordSearchTerm(query.trim());
-
-        // Make parallel requests to all card game APIs
-        const [mtgResponse, pokemonResponse, onePieceResponse, dragonBallResponse] = await Promise.allSettled([
-          fetch(`/api/mtg/search?query=${encodeURIComponent(query)}`),
-          fetch(`/api/pokemon/search?query=${encodeURIComponent(query)}`),
-          fetch(`/api/one-piece/search?query=${encodeURIComponent(query)}`),
-          fetch(`/api/dragon-ball-fusion/search?query=${encodeURIComponent(query)}`),
-        ]);
-
-        const allResults: CardResult[] = [];
-
-        // Process MTG results
-        if (mtgResponse.status === 'fulfilled' && mtgResponse.value.ok) {
-          const data: SearchResponse = await mtgResponse.value.json();
-          allResults.push(...data.data);
-        }
-
-        // Process Pokemon results
-        if (pokemonResponse.status === 'fulfilled' && pokemonResponse.value.ok) {
-          const data: SearchResponse = await pokemonResponse.value.json();
-          allResults.push(...data.data);
-        }
-
-        // Process One Piece results
-        if (onePieceResponse.status === 'fulfilled' && onePieceResponse.value.ok) {
-          const data: SearchResponse = await onePieceResponse.value.json();
-          allResults.push(...data.data);
-        }
-
-        // Process Dragon Ball Fusion results
-        if (dragonBallResponse.status === 'fulfilled' && dragonBallResponse.value.ok) {
-          const data: SearchResponse = await dragonBallResponse.value.json();
-          allResults.push(...data.data);
-        }
-
-        setResults(allResults);
+        
+        // For now, we'll return an empty array as we've removed the external APIs
+        // This should be replaced with your actual search implementation
+        setResults([]);
+        
       } catch (error) {
         console.error('Error searching cards:', error);
         setError('Failed to search cards');
