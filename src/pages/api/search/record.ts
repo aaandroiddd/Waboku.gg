@@ -114,11 +114,19 @@ export default async function handler(
     console.log('Character test:', /^[a-zA-Z0-9\s\-',.:"()&]+$/.test(normalizedTerm));
     
     // Apply search term validation
-    if (!validateSearchTerm(normalizedTerm)) {
+    console.log('Starting validation for:', normalizedTerm);
+    const isValid = validateSearchTerm(normalizedTerm);
+    console.log('Validation result:', isValid);
+    
+    if (!isValid) {
       console.log(`Search term validation failed: "${normalizedTerm}"`);
       return res.status(400).json({ 
         error: 'Invalid search term',
-        message: 'Search term contains invalid characters or is inappropriate'
+        message: 'Search term contains invalid characters or is inappropriate',
+        details: {
+          term: normalizedTerm,
+          length: normalizedTerm.length
+        }
       });
     }
 
