@@ -14,10 +14,14 @@ const initializeFirebaseAdmin = () => {
       'NEXT_PUBLIC_FIREBASE_PROJECT_ID': process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID
     };
 
-    // Check all required environment variables
+    // Check all required environment variables and log their presence (not values)
     const missingVars = Object.entries(requiredEnvVars)
       .filter(([_, value]) => !value)
       .map(([key]) => key);
+
+    Object.keys(requiredEnvVars).forEach(key => {
+      console.log(`${key} is ${requiredEnvVars[key] ? 'present' : 'missing'}`);
+    });
 
     if (missingVars.length > 0) {
       throw new Error(`Missing required environment variables: ${missingVars.join(', ')}`);
@@ -25,16 +29,37 @@ const initializeFirebaseAdmin = () => {
 
     if (getApps().length === 0) {
       console.log('Initializing Firebase Admin...');
-      const privateKey = process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n');
       
-      initializeApp({
+      // Handle the private key properly
+      let privateKey = process.env.FIREBASE_PRIVATE_KEY;
+      
+      // Check if the private key needs to be processed
+      if (privateKey?.includes('\\n')) {
+        console.log('Processing private key newlines...');
+        privateKey = privateKey.replace(/\\n/g, '\n');
+      }
+      
+      // Additional validation for private key format
+      if (!privateKey?.includes('BEGIN PRIVATE KEY') || !privateKey?.includes('END PRIVATE KEY')) {
+        console.error('Private key appears to be malformed');
+        throw new Error('Invalid private key format');
+      }
+
+      const config = {
         credential: cert({
           projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
           clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
           privateKey: privateKey,
         }),
         databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL
+      };
+
+      console.log('Firebase config prepared (excluding sensitive data):', {
+        projectId: config.credential.projectId,
+        databaseURL: config.databaseURL
       });
+      
+      initializeApp(config);
       console.log('Firebase Admin initialized successfully');
     }
 
