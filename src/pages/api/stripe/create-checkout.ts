@@ -19,13 +19,17 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
 });
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  console.info('[Create Checkout] Started:', {
+  const requestId = Math.random().toString(36).substring(7);
+  console.info(`[Create Checkout ${requestId}] Started:`, {
     method: req.method,
     url: req.url,
     headers: {
       ...req.headers,
-      authorization: req.headers.authorization ? '**present**' : '**missing**'
+      authorization: req.headers.authorization 
+        ? `Bearer ${req.headers.authorization.split(' ')[1]?.substring(0, 5)}...${req.headers.authorization.split(' ')[1]?.slice(-5)}`
+        : '**missing**'
     },
+    body: req.body,
     timestamp: new Date().toISOString()
   });
 

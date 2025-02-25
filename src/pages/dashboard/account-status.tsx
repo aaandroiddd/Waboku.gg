@@ -292,13 +292,23 @@ export default function AccountStatus() {
                       console.log('Initiating checkout with token:', !!idToken);
                       
                       console.log('Attempting to create checkout session with token:', idToken?.substring(0, 10) + '...');
+                      // Log the token details (safely)
+                      console.log('Token details:', {
+                        length: idToken?.length,
+                        prefix: idToken?.substring(0, 5),
+                        suffix: idToken?.substring(idToken.length - 5),
+                        timestamp: new Date().toISOString()
+                      });
+
                       const response = await fetch('/api/stripe/create-checkout', {
                         method: 'POST',
                         headers: {
                           'Content-Type': 'application/json',
                           'Authorization': `Bearer ${idToken}`,
                         },
-                        body: JSON.stringify({}), // Add empty body for POST request
+                        body: JSON.stringify({
+                          timestamp: new Date().toISOString() // Add timestamp for tracking
+                        }),
                       });
                       
                       console.log('Checkout response status:', response.status);
