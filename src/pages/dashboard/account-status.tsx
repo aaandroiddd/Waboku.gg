@@ -291,6 +291,7 @@ export default function AccountStatus() {
 
                       console.log('Initiating checkout with token:', !!idToken);
                       
+                      console.log('Attempting to create checkout session with token:', idToken?.substring(0, 10) + '...');
                       const response = await fetch('/api/stripe/create-checkout', {
                         method: 'POST',
                         headers: {
@@ -299,6 +300,18 @@ export default function AccountStatus() {
                         },
                         body: JSON.stringify({}), // Add empty body for POST request
                       });
+                      
+                      console.log('Checkout response status:', response.status);
+                      if (!response.ok) {
+                        const errorText = await response.text();
+                        console.error('Checkout error response:', errorText);
+                        try {
+                          const errorJson = JSON.parse(errorText);
+                          throw new Error(errorJson.message || 'Failed to create checkout session');
+                        } catch (e) {
+                          throw new Error('Failed to create checkout session: ' + errorText);
+                        }
+                      }
 
                       if (response.status === 401) {
                         // Token might be expired, try to refresh and retry
