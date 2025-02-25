@@ -14,32 +14,21 @@ const initializeFirebaseAdmin = () => {
       'NEXT_PUBLIC_FIREBASE_PROJECT_ID': process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID
     };
 
-    // Check all required environment variables and log their presence (not values)
+    // Check all required environment variables
     const missingVars = Object.entries(requiredEnvVars)
       .filter(([_, value]) => !value)
       .map(([key]) => key);
 
-    Object.keys(requiredEnvVars).forEach(key => {
-      console.log(`${key} is ${requiredEnvVars[key] ? 'present' : 'missing'}`);
-    });
-
     if (missingVars.length > 0) {
+      console.error('Missing environment variables:', missingVars);
       throw new Error(`Missing required environment variables: ${missingVars.join(', ')}`);
     }
 
     if (getApps().length === 0) {
-      console.log('Initializing Firebase Admin...');
+      console.log('Initializing new Firebase Admin instance...');
       
-      // Handle the private key properly
-      const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n') || '';
+      const privateKey = process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n');
       
-      // Log private key format (safely)
-      console.log('Private key format check:', {
-        hasBeginMarker: privateKey.includes('BEGIN PRIVATE KEY'),
-        hasEndMarker: privateKey.includes('END PRIVATE KEY'),
-        length: privateKey.length
-      });
-
       const config = {
         credential: cert({
           projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
@@ -49,25 +38,22 @@ const initializeFirebaseAdmin = () => {
         databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL
       };
 
-      console.log('Firebase config prepared (excluding sensitive data):', {
-        projectId: config.credential.projectId,
-        databaseURL: config.databaseURL
-      });
-      
       initializeApp(config);
       console.log('Firebase Admin initialized successfully');
     }
 
     const db = getDatabase();
-    // Verify database connection
     if (!db) {
       throw new Error('Failed to get database instance');
     }
     return db;
   } catch (error: any) {
-    console.error('Firebase Admin initialization error:', error);
-    console.error('Error stack:', error.stack);
-    throw new Error(`Firebase initialization failed: ${error.message}`);
+    console.error('Firebase Admin initialization error:', {
+      message: error.message,
+      stack: error.stack,
+      timestamp: new Date().toISOString()
+    });
+    throw error;
   }
 };
 
@@ -78,6 +64,17 @@ export default async function handler(
   const timestamp = new Date().toISOString();
   console.log(`[${timestamp}] Search term recording request received`);
   
+  // Add CORS headers
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  
+  // Handle preflight request
+  if (req.method === 'OPTIONS') {
+    res.status(200).end();
+    return;
+  }
+
   if (req.method !== 'POST') {
     console.log('Method not allowed:', req.method);
     return res.status(405).json({ error: 'Method not allowed' });
@@ -95,38 +92,41 @@ export default async function handler(
     }
 
     const { searchTerm } = req.body;
-    console.log(`Received search term: ${searchTerm}`);
-
+    
     // Validate search term
     if (!searchTerm || typeof searchTerm !== 'string') {
-      console.log('Invalid search term format');
-      return res.status(400).json({ error: 'Invalid search term format' });
+      console.log('Invalid search term format:', searchTerm);
+      return res.status(400).json({ 
+        error: 'Invalid search term format',
+        message: 'Search term must be a non-empty string'
+      });
     }
+
+    console.log(`Processing search term: "${searchTerm}"`);
 
     // Normalize search term
     const normalizedTerm = normalizeSearchTerm(searchTerm);
-    console.log(`Normalized search term: ${normalizedTerm}`);
+    console.log(`Normalized search term: "${normalizedTerm}"`);
 
-    // Apply search term validation (including profanity check)
+    // Apply search term validation
     if (!validateSearchTerm(normalizedTerm)) {
-      console.log(`Search term validation failed: ${normalizedTerm}`);
-      return res.status(400).json({ error: 'Invalid or inappropriate search term' });
+      console.log(`Search term validation failed: "${normalizedTerm}"`);
+      return res.status(400).json({ 
+        error: 'Invalid search term',
+        message: 'Search term contains invalid characters or is inappropriate'
+      });
     }
 
     // Initialize Firebase Admin and get Database instance
     console.log('Initializing Firebase Admin...');
     const database = initializeFirebaseAdmin();
-    console.log('Firebase Admin initialized, attempting to record search term');
 
     // Record the search term in Firebase Realtime Database
     try {
       const searchRef = database.ref('searchTerms').child(normalizedTerm.toLowerCase());
-      console.log('Getting current count for term...');
       
       const snapshot = await searchRef.once('value');
       const currentCount = snapshot.exists() ? snapshot.val()?.count || 0 : 0;
-      
-      console.log(`Current count for "${normalizedTerm}": ${currentCount}`);
       
       const updateData = {
         term: normalizedTerm,
@@ -135,7 +135,7 @@ export default async function handler(
       };
 
       await searchRef.set(updateData);
-      console.log(`Successfully recorded search term: ${normalizedTerm} (new count: ${currentCount + 1})`);
+      console.log(`Successfully recorded search term: "${normalizedTerm}" (count: ${currentCount + 1})`);
       
       return res.status(200).json({ 
         success: true,
@@ -143,20 +143,24 @@ export default async function handler(
         data: updateData
       });
     } catch (dbError: any) {
-      console.error('Database operation error:', dbError);
-      console.error('Error stack:', dbError.stack);
+      console.error('Database operation error:', {
+        message: dbError.message,
+        stack: dbError.stack,
+        searchTerm: normalizedTerm
+      });
       throw new Error(`Failed to record search term in database: ${dbError.message}`);
     }
   } catch (error: any) {
-    console.error('Error processing search request:', error);
-    console.error('Error stack:', error.stack);
-    
-    // Send a more detailed error response
-    return res.status(500).json({ 
-      error: 'An error occurred while processing your request',
+    console.error('Error processing search request:', {
       message: error.message,
-      timestamp: new Date().toISOString(),
-      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      stack: error.stack,
+      timestamp: new Date().toISOString()
+    });
+    
+    return res.status(500).json({ 
+      error: 'Internal Server Error',
+      message: process.env.NODE_ENV === 'development' ? error.message : 'An error occurred while processing your request',
+      timestamp: new Date().toISOString()
     });
   }
 }

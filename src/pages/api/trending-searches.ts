@@ -11,19 +11,33 @@ let lastCacheTime = 0;
 const initializeFirebaseAdmin = () => {
   try {
     if (!process.env.FIREBASE_PRIVATE_KEY || !process.env.FIREBASE_CLIENT_EMAIL) {
+      console.error('Missing Firebase credentials:', {
+        hasPrivateKey: !!process.env.FIREBASE_PRIVATE_KEY,
+        hasClientEmail: !!process.env.FIREBASE_CLIENT_EMAIL
+      });
       throw new Error('Missing Firebase Admin credentials');
     }
 
     if (!process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL) {
+      console.error('Missing Firebase Database URL');
       throw new Error('Missing Firebase Database URL');
     }
 
     if (getApps().length === 0) {
+      const privateKey = process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n');
+      
+      console.log('Initializing Firebase Admin with config:', {
+        projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+        databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL,
+        hasPrivateKey: !!privateKey,
+        privateKeyLength: privateKey.length
+      });
+
       initializeApp({
         credential: cert({
           projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
           clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-          privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+          privateKey: privateKey,
         }),
         databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL
       });
@@ -44,6 +58,8 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
+  console.log('Trending searches API called at:', new Date().toISOString());
+  
   // Add CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
@@ -54,7 +70,6 @@ export default async function handler(
     res.status(200).end();
     return;
   }
-  console.log('Trending searches API called at:', new Date().toISOString());
   
   if (req.method !== 'GET') {
     console.error('Invalid method for trending-searches:', req.method);
@@ -76,7 +91,6 @@ export default async function handler(
     const database = initializeFirebaseAdmin();
     
     console.log('Fetching trending searches from Firebase...');
-    const twoDaysAgo = now - (48 * 60 * 60 * 1000);
     
     const snapshot = await database
       .ref('searchTerms')
@@ -95,10 +109,10 @@ export default async function handler(
     
     snapshot.forEach((childSnapshot) => {
       const search = childSnapshot.val();
-      if (validateSearchTerm(search.term)) {
+      if (search && search.term && validateSearchTerm(search.term)) {
         trending.push({
           term: search.term.charAt(0).toUpperCase() + search.term.slice(1),
-          count: search.count
+          count: search.count || 0
         });
       }
       return false; // Required for TypeScript forEach
