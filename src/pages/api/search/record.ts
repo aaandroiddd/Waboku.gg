@@ -107,7 +107,12 @@ export default async function handler(
     // Normalize search term
     const normalizedTerm = normalizeSearchTerm(searchTerm);
     console.log(`Normalized search term: "${normalizedTerm}"`);
-
+    
+    // Log the validation process
+    console.log('Starting search term validation...');
+    console.log('Term length:', normalizedTerm.length);
+    console.log('Character test:', /^[a-zA-Z0-9\s\-',.:"()&]+$/.test(normalizedTerm));
+    
     // Apply search term validation
     if (!validateSearchTerm(normalizedTerm)) {
       console.log(`Search term validation failed: "${normalizedTerm}"`);
