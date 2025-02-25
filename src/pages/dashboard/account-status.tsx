@@ -284,37 +284,23 @@ export default function AccountStatus() {
                         }
                       }
 
-                      const idToken = await user?.getIdToken(true); // Force token refresh
-                      if (!idToken) {
-                        throw new Error('Not authenticated');
+                      if (!user) {
+                        throw new Error('User not authenticated');
                       }
 
-                      console.log('Initiating checkout with token:', !!idToken);
-                      
-                      console.log('Attempting to create checkout session with token:', idToken?.substring(0, 10) + '...');
-                      // Log the token details (safely)
-                      console.log('Token details:', {
-                        length: idToken?.length,
-                        prefix: idToken?.substring(0, 5),
-                        suffix: idToken?.substring(idToken.length - 5),
+                      // Force token refresh and get a fresh token
+                      const freshToken = await user.getIdToken(true);
+                      console.log('Token obtained successfully:', {
+                        tokenLength: freshToken.length,
                         timestamp: new Date().toISOString()
                       });
-
-                      // Always force a fresh token before making the request
-                      const freshToken = await user?.getIdToken(true);
-                      if (!freshToken) {
-                        throw new Error('Failed to obtain authentication token');
-                      }
 
                       const response = await fetch('/api/stripe/create-checkout', {
                         method: 'POST',
                         headers: {
                           'Content-Type': 'application/json',
                           'Authorization': `Bearer ${freshToken}`,
-                        },
-                        body: JSON.stringify({
-                          timestamp: new Date().toISOString() // Add timestamp for tracking
-                        }),
+                        }
                       });
                       
                       console.log('Checkout response status:', response.status);
