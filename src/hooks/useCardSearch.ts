@@ -16,6 +16,7 @@ interface CardResult {
 }
 
 const recordSearchTerm = async (term: string) => {
+  console.log('Recording search term:', term);
   try {
     const response = await fetch('/api/search/record', {
       method: 'POST',
@@ -27,9 +28,14 @@ const recordSearchTerm = async (term: string) => {
 
     if (!response.ok) {
       console.error('Failed to record search term:', await response.text());
+      throw new Error('Failed to record search term');
     }
+
+    const data = await response.json();
+    console.log('Search term recorded successfully:', data);
   } catch (error) {
     console.error('Error recording search term:', error);
+    throw error;
   }
 };
 
@@ -49,7 +55,7 @@ const useCardSearch = () => {
       setError(null);
 
       try {
-        // Record the search term
+        // Record the search term first
         await recordSearchTerm(query.trim());
         
         // For now, we'll return an empty array as we've removed the external APIs

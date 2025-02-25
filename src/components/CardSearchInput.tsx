@@ -23,14 +23,20 @@ const CardSearchInput: React.FC<CardSearchInputProps> = ({
   isLoading = false
 }) => {
   const [searchTerm, setSearchTerm] = useState(initialValue);
+  const [isSearching, setIsSearching] = useState(false);
 
   useEffect(() => {
     setSearchTerm(initialValue);
   }, [initialValue]);
+
+  useEffect(() => {
+    setIsSearching(isLoading);
+  }, [isLoading]);
+
   const inputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
-  const handleSearch = (term: string = searchTerm) => {
+  const handleSearch = async (term: string = searchTerm) => {
     const normalizedTerm = normalizeSearchTerm(term);
     
     if (!normalizedTerm) {
@@ -47,7 +53,12 @@ const CardSearchInput: React.FC<CardSearchInputProps> = ({
     }
 
     if (onSearch) {
-      onSearch(normalizedTerm.trim());
+      setIsSearching(true);
+      try {
+        await onSearch(normalizedTerm.trim());
+      } finally {
+        setIsSearching(false);
+      }
     }
   };
 
@@ -65,7 +76,7 @@ const CardSearchInput: React.FC<CardSearchInputProps> = ({
   return (
     <div className="relative flex-1">
       <div className="relative flex items-center">
-        {isLoading ? (
+        {(isSearching || isLoading) ? (
           <Loader2 className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground animate-spin" />
         ) : (
           <Search 
@@ -81,15 +92,15 @@ const CardSearchInput: React.FC<CardSearchInputProps> = ({
           onKeyDown={handleKeyDown}
           value={searchTerm}
           className={`pl-9 pr-4 w-full ${showSearchButton ? 'rounded-r-none' : ''}`}
-          disabled={isLoading}
+          disabled={isSearching || isLoading}
         />
         {showSearchButton && (
           <Button 
             onClick={() => handleSearch(searchTerm)}
             className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary text-primary-foreground shadow hover:bg-primary/90 px-4 py-2 rounded-l-none h-12"
-            disabled={isLoading}
+            disabled={isSearching || isLoading}
           >
-            {isLoading ? <Loader2 className="animate-spin" /> : <Search className="h-4 w-4" />}
+            {(isSearching || isLoading) ? <Loader2 className="animate-spin" /> : <Search className="h-4 w-4" />}
           </Button>
         )}
       </div>
