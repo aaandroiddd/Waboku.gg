@@ -80,6 +80,7 @@ export function useFavorites() {
 
     try {
       if (favoriteIds.has(listing.id)) {
+        // Remove from favorites
         await deleteDoc(favoriteRef);
         setFavoriteIds(prev => {
           const newSet = new Set(prev);
@@ -87,7 +88,19 @@ export function useFavorites() {
           return newSet;
         });
         setFavorites(prev => prev.filter(f => f.id !== listing.id));
+        
+        // Update favorite count in the listing document (decrement)
+        const listingDoc = await getDoc(listingRef);
+        if (listingDoc.exists()) {
+          const currentData = listingDoc.data();
+          const currentCount = currentData.favoriteCount || 0;
+          await setDoc(listingRef, {
+            ...currentData,
+            favoriteCount: Math.max(0, currentCount - 1)
+          }, { merge: true });
+        }
       } else {
+        // Add to favorites
         await setDoc(favoriteRef, {
           listingRef,
           listingData: {
@@ -99,6 +112,17 @@ export function useFavorites() {
         });
         setFavoriteIds(prev => new Set([...prev, listing.id]));
         setFavorites(prev => [...prev, listing]);
+        
+        // Update favorite count in the listing document (increment)
+        const listingDoc = await getDoc(listingRef);
+        if (listingDoc.exists()) {
+          const currentData = listingDoc.data();
+          const currentCount = currentData.favoriteCount || 0;
+          await setDoc(listingRef, {
+            ...currentData,
+            favoriteCount: currentCount + 1
+          }, { merge: true });
+        }
       }
     } catch (err) {
       console.error('Error in toggleFavorite:', err);

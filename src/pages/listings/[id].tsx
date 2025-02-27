@@ -176,10 +176,23 @@ export default function ListingPage() {
 
     try {
       if (isFavorited) {
+        // Remove from favorites
         await deleteDoc(favoriteRef);
         setIsFavorited(false);
         toast.success('Removed from favorites');
+        
+        // Update favorite count in the listing document (decrement)
+        const listingDoc = await getDoc(listingRef);
+        if (listingDoc.exists()) {
+          const currentData = listingDoc.data();
+          const currentCount = currentData.favoriteCount || 0;
+          await setDoc(listingRef, {
+            ...currentData,
+            favoriteCount: Math.max(0, currentCount - 1)
+          }, { merge: true });
+        }
       } else {
+        // Add to favorites
         // Store the full listing data along with the reference
         await setDoc(favoriteRef, {
           listingRef,
@@ -192,6 +205,17 @@ export default function ListingPage() {
         });
         setIsFavorited(true);
         toast.success('Added to favorites');
+        
+        // Update favorite count in the listing document (increment)
+        const listingDoc = await getDoc(listingRef);
+        if (listingDoc.exists()) {
+          const currentData = listingDoc.data();
+          const currentCount = currentData.favoriteCount || 0;
+          await setDoc(listingRef, {
+            ...currentData,
+            favoriteCount: currentCount + 1
+          }, { merge: true });
+        }
       }
     } catch (error) {
       console.error('Error toggling favorite:', error);
