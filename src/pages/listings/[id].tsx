@@ -527,7 +527,11 @@ export default function ListingPage() {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={handleFavoriteToggle}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleFavoriteToggle(e);
+                        }}
                         className={`flex-1 sm:flex-none ${isFavorited ? "text-red-500" : ""}`}
                         type="button"
                       >
