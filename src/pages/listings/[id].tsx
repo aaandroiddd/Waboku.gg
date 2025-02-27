@@ -179,14 +179,10 @@ export default function ListingPage() {
       await toggleFavorite(listing, e);
       
       // Update local state based on the result
-      setIsFavorited(isFavorite(listing.id));
+      const newIsFavorited = isFavorite(listing.id);
+      setIsFavorited(newIsFavorited);
       
-      // Show appropriate toast message
-      if (isFavorite(listing.id)) {
-        toast.success('Added to favorites');
-      } else {
-        toast.success('Removed from favorites');
-      }
+      // Toast messages are now handled inside the toggleFavorite function
     } catch (error) {
       console.error('Error toggling favorite:', error);
       toast.error('Failed to update favorites');

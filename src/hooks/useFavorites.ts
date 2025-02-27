@@ -2,7 +2,8 @@ import { db } from '@/lib/firebase';
 import { Listing } from '@/types/database';
 import { useAuth } from '@/contexts/AuthContext';
 import { collection, doc, getDoc, getDocs, query, where, setDoc, deleteDoc } from 'firebase/firestore';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
+import { toast } from 'sonner';
 
 export function useFavorites() {
   const { user } = useAuth();
@@ -12,7 +13,7 @@ export function useFavorites() {
   const [error, setError] = useState<string | null>(null);
   const [pendingOperations, setPendingOperations] = useState<Set<string>>(new Set());
 
-  const fetchFavorites = async () => {
+  const fetchFavorites = useCallback(async () => {
     if (!user) {
       setFavorites([]);
       setFavoriteIds(new Set());
@@ -22,23 +23,31 @@ export function useFavorites() {
 
     try {
       setIsLoading(true);
+      setError(null);
+      
       const favoritesRef = collection(db, 'users', user.uid, 'favorites');
       const favoritesSnapshot = await getDocs(favoritesRef);
       
       const favoriteIdsSet = new Set<string>();
-      const favoritePromises = favoritesSnapshot.docs.map(async (doc) => {
-        const listingId = doc.id;
+      const favoritePromises = favoritesSnapshot.docs.map(async (favoriteDoc) => {
+        const listingId = favoriteDoc.id;
         favoriteIdsSet.add(listingId);
         
-        const listingDoc = await getDoc(doc.data().listingRef);
-        if (listingDoc.exists()) {
-          const data = listingDoc.data();
-          return {
-            id: listingDoc.id,
-            ...data,
-            createdAt: data.createdAt?.toDate(),
-            archivedAt: data.archivedAt?.toDate()
-          } as Listing;
+        try {
+          // Get the listing document directly using its ID
+          const listingDoc = await getDoc(doc(db, 'listings', listingId));
+          
+          if (listingDoc.exists()) {
+            const data = listingDoc.data();
+            return {
+              id: listingDoc.id,
+              ...data,
+              createdAt: data.createdAt?.toDate(),
+              archivedAt: data.archivedAt?.toDate()
+            } as Listing;
+          }
+        } catch (err) {
+          console.error(`Error fetching listing ${listingId}:`, err);
         }
         return null;
       });
@@ -52,7 +61,7 @@ export function useFavorites() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [user]);
 
   const toggleFavorite = async (listing: Listing, event?: React.MouseEvent) => {
     // Prevent event propagation if event is provided
@@ -61,20 +70,24 @@ export function useFavorites() {
       event.stopPropagation();
     }
     
-    if (!user) return;
+    if (!user) {
+      toast.error('Please sign in to save favorites');
+      return;
+    }
 
     // Prevent duplicate operations on the same listing
     if (pendingOperations.has(listing.id)) {
+      console.log('Operation already in progress for listing:', listing.id);
       return;
     }
 
     const favoriteRef = doc(db, 'users', user.uid, 'favorites', listing.id);
-    const listingRef = doc(db, 'listings', listing.id);
     const isFav = favoriteIds.has(listing.id);
 
     try {
-      // Optimistically update UI
+      // Mark operation as pending
       setPendingOperations(prev => new Set([...prev, listing.id]));
+      console.log(`${isFav ? 'Removing from' : 'Adding to'} favorites:`, listing.id);
       
       if (isFav) {
         // Optimistically remove from favorites
@@ -94,13 +107,18 @@ export function useFavorites() {
         
         // Then perform the actual operation
         await setDoc(favoriteRef, {
-          listingRef,
+          listingId: listing.id,  // Store the listing ID directly
           createdAt: new Date()
         });
       }
+      
+      // Show success toast
+      toast.success(isFav ? 'Removed from favorites' : 'Added to favorites');
+      
     } catch (err) {
       console.error('Error toggling favorite:', err);
       setError(err instanceof Error ? err.message : 'Failed to update favorite');
+      toast.error('Failed to update favorites');
       
       // Revert optimistic updates on error
       if (isFav) {
@@ -114,10 +132,8 @@ export function useFavorites() {
         });
         setFavorites(prev => prev.filter(f => f.id !== listing.id));
       }
-      
-      // Re-fetch favorites to ensure UI is in sync
-      await fetchFavorites();
     } finally {
+      // Remove from pending operations
       setPendingOperations(prev => {
         const newSet = new Set(prev);
         newSet.delete(listing.id);
@@ -126,13 +142,17 @@ export function useFavorites() {
     }
   };
 
-  const isFavorite = (listingId: string) => favoriteIds.has(listingId);
+  const isFavorite = useCallback((listingId: string) => {
+    return favoriteIds.has(listingId);
+  }, [favoriteIds]);
   
-  const isPending = (listingId: string) => pendingOperations.has(listingId);
+  const isPending = useCallback((listingId: string) => {
+    return pendingOperations.has(listingId);
+  }, [pendingOperations]);
 
   useEffect(() => {
     fetchFavorites();
-  }, [user]);
+  }, [user, fetchFavorites]);
 
   return {
     favorites,
