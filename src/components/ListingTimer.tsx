@@ -28,7 +28,8 @@ export function ListingTimer({ createdAt, archivedAt, accountTier, status, listi
     
     setIsProcessing(true);
     try {
-      const response = await fetch('/api/cleanup-inactive-listings', {
+      // Use the dedicated fix-expired endpoint for better reliability
+      const response = await fetch('/api/listings/fix-expired', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -74,6 +75,32 @@ export function ListingTimer({ createdAt, archivedAt, accountTier, status, listi
         variant: "destructive",
         duration: 5000,
       });
+      
+      // Fallback to the original cleanup endpoint if the fix-expired endpoint fails
+      try {
+        const fallbackResponse = await fetch('/api/cleanup-inactive-listings', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            listingId: listingId
+          }),
+        });
+        
+        if (fallbackResponse.ok) {
+          toast({
+            title: "Listing Processed",
+            description: "The listing has been processed using the fallback method.",
+            duration: 5000,
+          });
+          
+          // Refresh the page to update the UI
+          router.refresh();
+        }
+      } catch (fallbackError) {
+        console.error('Fallback cleanup also failed:', fallbackError);
+      }
     } finally {
       setIsProcessing(false);
     }
