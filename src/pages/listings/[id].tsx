@@ -199,15 +199,18 @@ export default function ListingPage() {
       } else {
         // Add to favorites
         // Store the full listing data along with the reference
+        const listingData = {
+          ...listing,
+          createdAt: listing.createdAt instanceof Date ? listing.createdAt : new Date(listing.createdAt),
+          id: listing.id
+        };
+        
         await setDoc(favoriteRef, {
           listingRef,
-          listingData: {
-            ...listing,
-            createdAt: listing.createdAt,
-            id: listing.id
-          },
+          listingData,
           createdAt: new Date()
         });
+        
         setIsFavorited(true);
         toast.success('Added to favorites');
         
