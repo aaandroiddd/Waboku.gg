@@ -527,7 +527,7 @@ export default function ListingPage() {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={(e) => handleFavoriteToggle(e)}
+                        onClick={handleFavoriteToggle}
                         className={`flex-1 sm:flex-none ${isFavorited ? "text-red-500" : ""}`}
                         type="button"
                       >
