@@ -157,7 +157,11 @@ export default function ListingPage() {
     setIsZoomDialogOpen(true);
   };
 
-  const handleFavoriteToggle = async () => {
+  const handleFavoriteToggle = async (e: React.MouseEvent) => {
+    // Prevent any default form submission or event propagation
+    e.preventDefault();
+    e.stopPropagation();
+    
     if (!user) {
       toast.error('Please sign up to save favorites');
       router.push('/auth/sign-up');
@@ -500,7 +504,7 @@ export default function ListingPage() {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={handleFavoriteToggle}
+                        onClick={(e) => handleFavoriteToggle(e)}
                         className={`flex-1 sm:flex-none ${isFavorited ? "text-red-500" : ""}`}
                         type="button"
                       >
