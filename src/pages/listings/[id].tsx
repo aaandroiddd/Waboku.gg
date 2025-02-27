@@ -59,6 +59,9 @@ export default function ListingPage() {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const { user } = useAuth();
 
+  // Get favorites functionality from the hook
+  const { toggleFavorite, isFavorite, initialized } = useFavorites();
+  
   useEffect(() => {
     let isMounted = true;
 
@@ -129,14 +132,6 @@ export default function ListingPage() {
           setListing(listingData);
           setLoading(false);
         }
-
-        if (user && isMounted) {
-          const favoriteRef = doc(db, 'users', user.uid, 'favorites', id);
-          const favoriteDoc = await getDoc(favoriteRef);
-          if (isMounted) {
-            setIsFavorited(favoriteDoc.exists());
-          }
-        }
       } catch (err: any) {
         console.error('Error fetching listing:', err);
         if (isMounted) {
@@ -152,16 +147,22 @@ export default function ListingPage() {
       isMounted = false;
     };
   }, [id, user]);
+  
+  // Add a separate effect to update the favorite status when the listing or favorites change
+  useEffect(() => {
+    if (listing && initialized && user) {
+      setIsFavorited(isFavorite(listing.id));
+    }
+  }, [listing, isFavorite, initialized, user]);
 
   const handleImageClick = (index: number) => {
     setCurrentImageIndex(index);
     setIsZoomDialogOpen(true);
   };
 
-  // Import useFavorites at the top of the file
-  const { toggleFavorite, isFavorite } = useFavorites();
+  // We already have the favorites functionality from above
   
-  const handleFavoriteToggle = async (e: React.MouseEvent) => {
+  const handleFavoriteToggle = (e: React.MouseEvent) => {
     // Prevent any default form submission or event propagation
     e.preventDefault();
     e.stopPropagation();
@@ -176,13 +177,12 @@ export default function ListingPage() {
     
     try {
       // Use the improved toggleFavorite function from our hook
-      await toggleFavorite(listing, e);
+      toggleFavorite(listing, e);
       
-      // Update local state based on the result
-      const newIsFavorited = isFavorite(listing.id);
-      setIsFavorited(newIsFavorited);
+      // Update local state based on the result - this will be updated by the optimistic UI update
+      setIsFavorited(!isFavorited);
       
-      // Toast messages are now handled inside the toggleFavorite function
+      // Toast messages are handled inside the toggleFavorite function
     } catch (error) {
       console.error('Error toggling favorite:', error);
       toast.error('Failed to update favorites');

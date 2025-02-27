@@ -190,11 +190,6 @@ export const ListingCard = memo(({ listing, isFavorite, onFavoriteClick, getCond
                       variants={buttonVariants}
                       whileHover="hover"
                       whileTap="tap"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        onFavoriteClick(e, listing);
-                      }}
                     >
                       <Button
                         variant="ghost"
@@ -204,6 +199,11 @@ export const ListingCard = memo(({ listing, isFavorite, onFavoriteClick, getCond
                           bg-black/50 hover:bg-black/75 transition-colors duration-200 rounded-full
                           ${isFavorite ? 'text-red-500 hover:text-red-600' : 'text-white hover:text-red-500'}
                         `}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          onFavoriteClick(e, listing);
+                        }}
                       >
                         <Heart 
                           className={`h-5 w-5 ${isFavorite ? 'fill-current' : ''}`}

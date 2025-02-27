@@ -12,6 +12,9 @@ export function useFavorites() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [pendingOperations, setPendingOperations] = useState<Set<string>>(new Set());
+  
+  // Add a state to track if the hook has been initialized
+  const [initialized, setInitialized] = useState(false);
 
   const fetchFavorites = useCallback(async () => {
     if (!user) {
@@ -151,7 +154,9 @@ export function useFavorites() {
   }, [pendingOperations]);
 
   useEffect(() => {
-    fetchFavorites();
+    fetchFavorites().then(() => {
+      setInitialized(true);
+    });
   }, [user, fetchFavorites]);
 
   return {
@@ -161,6 +166,7 @@ export function useFavorites() {
     toggleFavorite,
     isFavorite,
     isPending,
-    refresh: fetchFavorites
+    refresh: fetchFavorites,
+    initialized
   };
 }
