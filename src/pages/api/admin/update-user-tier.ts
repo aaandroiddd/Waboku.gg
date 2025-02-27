@@ -37,7 +37,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // Get user document
     console.log('Fetching user document...');
-    const userRef = admin.db.collection('users').doc(userId);
+    const db = admin.firestore();
+    const userRef = db.collection('users').doc(userId);
     const userDoc = await userRef.get();
 
     if (!userDoc.exists) {
