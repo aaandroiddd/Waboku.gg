@@ -514,7 +514,7 @@ export default function Home() {
                   </div>
 
                   {/* Trending Searches */}
-                  <div className="mt-4 bg-card/50 rounded-lg p-2">
+                  <div className="mt-4 rounded-lg p-2 bg-transparent">
                     <TrendingSearches />
                   </div>
                 </div>

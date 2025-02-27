@@ -41,87 +41,84 @@ export function TrendingSearches() {
     await refreshTrending();
   };
 
-  if (loading) {
-    return (
-      <motion.div 
-        className="flex items-center gap-2 py-2 text-muted-foreground"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-      >
-        <Loader2 className="h-4 w-4 animate-spin" />
-        <span className="text-sm">Loading trending searches...</span>
-      </motion.div>
-    );
-  }
-
-  if (error || !trendingSearches.length) {
-    return (
-      <motion.div 
-        className="flex items-center gap-2 py-2 text-muted-foreground"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-      >
-        <TrendingUp className="h-4 w-4" />
-        <span className="text-sm">Start searching to see trends</span>
-      </motion.div>
-    );
-  }
-
+  // Common container with fixed height to prevent layout shifts
   return (
-    <motion.div 
-      className="flex flex-wrap gap-2 items-center py-2"
-      initial="initial"
-      animate="animate"
-      exit="exit"
-    >
-      <div className="flex items-center gap-1 text-muted-foreground">
-        <TrendingUp className="h-4 w-4" />
-        <span className="text-sm">Trending:</span>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-6 w-6"
-          onClick={handleRefresh}
-          disabled={loading}
+    <div className="min-h-[48px] flex items-center">
+      {loading ? (
+        <motion.div 
+          className="flex items-center gap-2 text-muted-foreground"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
         >
-          <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-        </Button>
-      </div>
-      
-      {trendingSearches.slice(0, 3).map((search, index) => (
-        <motion.div
-          key={search.term}
-          custom={index}
-          variants={itemVariants}
-        >
-          <Button
-            variant="outline"
-            size="sm"
-            className="text-sm hover:bg-accent"
-            onClick={() => handleSearchClick(search.term)}
-          >
-            {search.term}
-          </Button>
+          <Loader2 className="h-4 w-4 animate-spin" />
+          <span className="text-sm">Loading trending searches...</span>
         </motion.div>
-      ))}
-
-      {trendingSearches.length > 3 && (
-        <motion.div
-          variants={itemVariants}
-          custom={3}
+      ) : error || !trendingSearches.length ? (
+        <motion.div 
+          className="flex items-center gap-2 text-muted-foreground"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
         >
-          <Button
-            variant="outline"
-            size="sm"
-            className="text-sm hover:bg-accent"
-            asChild
-          >
-            <Link href="/trending">...more</Link>
-          </Button>
+          <TrendingUp className="h-4 w-4" />
+          <span className="text-sm">Start searching to see trends</span>
+        </motion.div>
+      ) : (
+        <motion.div 
+          className="flex flex-wrap gap-2 items-center w-full"
+          initial="initial"
+          animate="animate"
+          exit="exit"
+        >
+          <div className="flex items-center gap-1 text-muted-foreground">
+            <TrendingUp className="h-4 w-4" />
+            <span className="text-sm">Trending:</span>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6"
+              onClick={handleRefresh}
+              disabled={loading}
+            >
+              <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+            </Button>
+          </div>
+          
+          {trendingSearches.slice(0, 3).map((search, index) => (
+            <motion.div
+              key={search.term}
+              custom={index}
+              variants={itemVariants}
+            >
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-sm hover:bg-accent"
+                onClick={() => handleSearchClick(search.term)}
+              >
+                {search.term}
+              </Button>
+            </motion.div>
+          ))}
+
+          {trendingSearches.length > 3 && (
+            <motion.div
+              variants={itemVariants}
+              custom={3}
+            >
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-sm hover:bg-accent"
+                asChild
+              >
+                <Link href="/trending">...more</Link>
+              </Button>
+            </motion.div>
+          )}
         </motion.div>
       )}
-    </motion.div>
+    </div>
   );
 }
