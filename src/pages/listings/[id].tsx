@@ -180,9 +180,13 @@ export default function ListingPage() {
     const listingRef = doc(db, 'listings', listing.id);
 
     try {
+      console.log(`Toggling favorite for listing ${listing.id}, current state: ${isFavorited ? 'favorited' : 'not favorited'}`);
+      
       if (isFavorited) {
         // Remove from favorites
         await deleteDoc(favoriteRef);
+        
+        // Update UI state immediately
         setIsFavorited(false);
         toast.success('Removed from favorites');
         
@@ -196,6 +200,8 @@ export default function ListingPage() {
             favoriteCount: Math.max(0, currentCount - 1)
           }, { merge: true });
         }
+        
+        console.log(`Successfully removed ${listing.id} from favorites`);
       } else {
         // Add to favorites
         // Store the full listing data along with the reference
@@ -211,6 +217,7 @@ export default function ListingPage() {
           createdAt: new Date()
         });
         
+        // Update UI state immediately
         setIsFavorited(true);
         toast.success('Added to favorites');
         
@@ -224,10 +231,23 @@ export default function ListingPage() {
             favoriteCount: currentCount + 1
           }, { merge: true });
         }
+        
+        console.log(`Successfully added ${listing.id} to favorites`);
       }
     } catch (error) {
       console.error('Error toggling favorite:', error);
       toast.error('Failed to update favorites');
+      
+      // Refresh the favorite status to ensure UI is in sync
+      if (user && listing) {
+        try {
+          const favoriteRef = doc(db, 'users', user.uid, 'favorites', listing.id);
+          const favoriteDoc = await getDoc(favoriteRef);
+          setIsFavorited(favoriteDoc.exists());
+        } catch (err) {
+          console.error('Error refreshing favorite status:', err);
+        }
+      }
     }
   };
 

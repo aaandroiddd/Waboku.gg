@@ -146,11 +146,22 @@ export function ListingGrid({
       return;
     }
 
-    if (isFavorite(listing.id)) {
+    // Check if the listing is already a favorite
+    const isCurrentlyFavorite = isFavorite(listing.id);
+    
+    if (isCurrentlyFavorite) {
+      // Show confirmation dialog before removing
       setSelectedListing(listing);
       setIsDialogOpen(true);
     } else {
-      toggleFavorite(listing);
+      // Add to favorites directly
+      toggleFavorite(listing)
+        .then(() => {
+          console.log('Successfully added to favorites:', listing.id);
+        })
+        .catch(error => {
+          console.error('Error adding to favorites:', error);
+        });
     }
   }, [user, isFavorite, toggleFavorite]);
 

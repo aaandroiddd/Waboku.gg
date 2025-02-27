@@ -73,15 +73,20 @@ export function useFavorites() {
   };
 
   const toggleFavorite = async (listing: Listing) => {
-    if (!user) return;
+    if (!user) return Promise.reject(new Error('User not authenticated'));
 
     const favoriteRef = doc(db, 'users', user.uid, 'favorites', listing.id);
     const listingRef = doc(db, 'listings', listing.id);
 
     try {
-      if (favoriteIds.has(listing.id)) {
+      const isCurrentlyFavorite = favoriteIds.has(listing.id);
+      console.log(`Toggle favorite for ${listing.id}, current state: ${isCurrentlyFavorite ? 'favorited' : 'not favorited'}`);
+      
+      if (isCurrentlyFavorite) {
         // Remove from favorites
         await deleteDoc(favoriteRef);
+        
+        // Update state
         setFavoriteIds(prev => {
           const newSet = new Set(prev);
           newSet.delete(listing.id);
@@ -99,17 +104,21 @@ export function useFavorites() {
             favoriteCount: Math.max(0, currentCount - 1)
           }, { merge: true });
         }
+        
+        console.log(`Successfully removed ${listing.id} from favorites`);
       } else {
         // Add to favorites
         await setDoc(favoriteRef, {
           listingRef,
           listingData: {
             ...listing,
-            createdAt: listing.createdAt,
+            createdAt: listing.createdAt instanceof Date ? listing.createdAt : new Date(listing.createdAt),
             id: listing.id
           },
           createdAt: new Date()
         });
+        
+        // Update state
         setFavoriteIds(prev => new Set([...prev, listing.id]));
         setFavorites(prev => [...prev, listing]);
         
@@ -123,12 +132,19 @@ export function useFavorites() {
             favoriteCount: currentCount + 1
           }, { merge: true });
         }
+        
+        console.log(`Successfully added ${listing.id} to favorites`);
       }
+      
+      return Promise.resolve();
     } catch (err) {
       console.error('Error in toggleFavorite:', err);
       setError(err instanceof Error ? err.message : 'Failed to update favorite');
+      
       // Re-fetch favorites to ensure UI is in sync even if there was an error
       await fetchFavorites();
+      
+      return Promise.reject(err);
     }
   };
 
