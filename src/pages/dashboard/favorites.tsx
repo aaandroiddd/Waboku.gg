@@ -6,6 +6,7 @@ import { ListingGrid } from '@/components/ListingGrid';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useEffect } from 'react';
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -18,7 +19,14 @@ const containerVariants = {
 };
 
 export default function FavoritesPage() {
-  const { favorites, isLoading, refresh } = useFavorites();
+  const { favorites, isLoading, refresh, initialized } = useFavorites();
+  
+  // Force refresh when the component mounts
+  useEffect(() => {
+    if (initialized) {
+      refresh();
+    }
+  }, [initialized, refresh]);
 
   return (
     <RouteGuard requireAuth>

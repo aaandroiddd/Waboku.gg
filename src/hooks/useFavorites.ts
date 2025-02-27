@@ -1,4 +1,4 @@
-import { db } from '@/lib/firebase';
+import { firebaseDb as db } from '@/lib/firebase';
 import { Listing } from '@/types/database';
 import { useAuth } from '@/contexts/AuthContext';
 import { collection, doc, getDoc, getDocs, query, where, setDoc, deleteDoc } from 'firebase/firestore';
