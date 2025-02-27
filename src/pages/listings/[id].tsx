@@ -16,6 +16,7 @@ import { Chat } from '@/components/Chat';
 import Image from 'next/image';
 import { ArrowLeft, Calendar, Heart, MapPin, MessageCircle, User, ZoomIn, Minus, Plus, RotateCw, X } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useFavorites } from '@/hooks/useFavorites';
 import { toast } from 'sonner';
 import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
 import { Footer } from '@/components/Footer';
@@ -157,6 +158,9 @@ export default function ListingPage() {
     setIsZoomDialogOpen(true);
   };
 
+  // Import useFavorites at the top of the file
+  const { toggleFavorite, isFavorite } = useFavorites();
+  
   const handleFavoriteToggle = async (e: React.MouseEvent) => {
     // Prevent any default form submission or event propagation
     e.preventDefault();
@@ -169,85 +173,23 @@ export default function ListingPage() {
     }
 
     if (!listing) return;
-
-    const { db } = getFirebaseServices();
-    if (!db) {
-      toast.error('Failed to update favorites');
-      return;
-    }
     
-    const favoriteRef = doc(db, 'users', user.uid, 'favorites', listing.id);
-    const listingRef = doc(db, 'listings', listing.id);
-
     try {
-      console.log(`Toggling favorite for listing ${listing.id}, current state: ${isFavorited ? 'favorited' : 'not favorited'}`);
+      // Use the improved toggleFavorite function from our hook
+      await toggleFavorite(listing, e);
       
-      if (isFavorited) {
-        // Remove from favorites
-        await deleteDoc(favoriteRef);
-        
-        // Update UI state immediately
-        setIsFavorited(false);
-        toast.success('Removed from favorites');
-        
-        // Update favorite count in the listing document (decrement)
-        const listingDoc = await getDoc(listingRef);
-        if (listingDoc.exists()) {
-          const currentData = listingDoc.data();
-          const currentCount = currentData.favoriteCount || 0;
-          await setDoc(listingRef, {
-            ...currentData,
-            favoriteCount: Math.max(0, currentCount - 1)
-          }, { merge: true });
-        }
-        
-        console.log(`Successfully removed ${listing.id} from favorites`);
-      } else {
-        // Add to favorites
-        // Store the full listing data along with the reference
-        const listingData = {
-          ...listing,
-          createdAt: listing.createdAt instanceof Date ? listing.createdAt : new Date(listing.createdAt),
-          id: listing.id
-        };
-        
-        await setDoc(favoriteRef, {
-          listingRef,
-          listingData,
-          createdAt: new Date()
-        });
-        
-        // Update UI state immediately
-        setIsFavorited(true);
+      // Update local state based on the result
+      setIsFavorited(isFavorite(listing.id));
+      
+      // Show appropriate toast message
+      if (isFavorite(listing.id)) {
         toast.success('Added to favorites');
-        
-        // Update favorite count in the listing document (increment)
-        const listingDoc = await getDoc(listingRef);
-        if (listingDoc.exists()) {
-          const currentData = listingDoc.data();
-          const currentCount = currentData.favoriteCount || 0;
-          await setDoc(listingRef, {
-            ...currentData,
-            favoriteCount: currentCount + 1
-          }, { merge: true });
-        }
-        
-        console.log(`Successfully added ${listing.id} to favorites`);
+      } else {
+        toast.success('Removed from favorites');
       }
     } catch (error) {
       console.error('Error toggling favorite:', error);
       toast.error('Failed to update favorites');
-      
-      // Refresh the favorite status to ensure UI is in sync
-      if (user && listing) {
-        try {
-          const favoriteRef = doc(db, 'users', user.uid, 'favorites', listing.id);
-          const favoriteDoc = await getDoc(favoriteRef);
-          setIsFavorited(favoriteDoc.exists());
-        } catch (err) {
-          console.error('Error refreshing favorite status:', err);
-        }
-      }
     }
   };
 

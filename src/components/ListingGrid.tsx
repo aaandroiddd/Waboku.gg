@@ -154,8 +154,8 @@ export function ListingGrid({
       setSelectedListing(listing);
       setIsDialogOpen(true);
     } else {
-      // Add to favorites directly
-      toggleFavorite(listing)
+      // Add to favorites directly, passing the event to prevent propagation
+      toggleFavorite(listing, e)
         .then(() => {
           console.log('Successfully added to favorites:', listing.id);
         })

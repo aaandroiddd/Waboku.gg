@@ -1,4 +1,4 @@
-import { firebaseDb as db } from '@/lib/firebase';
+import { db } from '@/lib/firebase';
 import { Listing } from '@/types/database';
 import { useAuth } from '@/contexts/AuthContext';
 import { collection, doc, getDoc, getDocs, query, where, setDoc, deleteDoc } from 'firebase/firestore';
@@ -10,6 +10,7 @@ export function useFavorites() {
   const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [pendingOperations, setPendingOperations] = useState<Set<string>>(new Set());
 
   const fetchFavorites = async () => {
     if (!user) {
@@ -20,6 +21,7 @@ export function useFavorites() {
     }
 
     try {
+      setIsLoading(true);
       const favoritesRef = collection(db, 'users', user.uid, 'favorites');
       const favoritesSnapshot = await getDocs(favoritesRef);
       
@@ -28,65 +30,54 @@ export function useFavorites() {
         const listingId = doc.id;
         favoriteIdsSet.add(listingId);
         
-        // First try to get the data from the stored listingData
-        const favoriteData = doc.data();
-        if (favoriteData.listingData) {
-          const listingData = favoriteData.listingData;
+        const listingDoc = await getDoc(doc.data().listingRef);
+        if (listingDoc.exists()) {
+          const data = listingDoc.data();
           return {
-            ...listingData,
-            createdAt: listingData.createdAt instanceof Date ? listingData.createdAt : listingData.createdAt.toDate(),
-            archivedAt: listingData.archivedAt instanceof Date ? listingData.archivedAt : listingData.archivedAt?.toDate()
+            id: listingDoc.id,
+            ...data,
+            createdAt: data.createdAt?.toDate(),
+            archivedAt: data.archivedAt?.toDate()
           } as Listing;
-        }
-        
-        // Fallback to fetching from the listing reference if listingData is not available
-        try {
-          const listingRef = doc(db, 'listings', listingId);
-          const listingDoc = await getDoc(listingRef);
-          if (listingDoc.exists()) {
-            const data = listingDoc.data();
-            return {
-              id: listingDoc.id,
-              ...data,
-              createdAt: data.createdAt?.toDate(),
-              archivedAt: data.archivedAt?.toDate()
-            } as Listing;
-          }
-        } catch (err) {
-          console.error('Error fetching listing:', err);
         }
         return null;
       });
 
-      const resolvedFavorites = (await Promise.all(favoritePromises))
-        .filter((f): f is Listing => f !== null)
-        // Filter out archived listings
-        .filter(listing => !listing.archivedAt && listing.status !== 'archived');
+      const resolvedFavorites = (await Promise.all(favoritePromises)).filter((f): f is Listing => f !== null);
       setFavorites(resolvedFavorites);
       setFavoriteIds(favoriteIdsSet);
     } catch (err) {
-      console.error('Error in fetchFavorites:', err);
+      console.error('Error fetching favorites:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch favorites');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const toggleFavorite = async (listing: Listing) => {
-    if (!user) return Promise.reject(new Error('User not authenticated'));
+  const toggleFavorite = async (listing: Listing, event?: React.MouseEvent) => {
+    // Prevent event propagation if event is provided
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+    
+    if (!user) return;
+
+    // Prevent duplicate operations on the same listing
+    if (pendingOperations.has(listing.id)) {
+      return;
+    }
 
     const favoriteRef = doc(db, 'users', user.uid, 'favorites', listing.id);
     const listingRef = doc(db, 'listings', listing.id);
+    const isFav = favoriteIds.has(listing.id);
 
     try {
-      const isCurrentlyFavorite = favoriteIds.has(listing.id);
-      console.log(`Toggle favorite for ${listing.id}, current state: ${isCurrentlyFavorite ? 'favorited' : 'not favorited'}`);
+      // Optimistically update UI
+      setPendingOperations(prev => new Set([...prev, listing.id]));
       
-      if (isCurrentlyFavorite) {
-        // Remove from favorites
-        await deleteDoc(favoriteRef);
-        
-        // Update state
+      if (isFav) {
+        // Optimistically remove from favorites
         setFavoriteIds(prev => {
           const newSet = new Set(prev);
           newSet.delete(listing.id);
@@ -94,61 +85,50 @@ export function useFavorites() {
         });
         setFavorites(prev => prev.filter(f => f.id !== listing.id));
         
-        // Update favorite count in the listing document (decrement)
-        const listingDoc = await getDoc(listingRef);
-        if (listingDoc.exists()) {
-          const currentData = listingDoc.data();
-          const currentCount = currentData.favoriteCount || 0;
-          await setDoc(listingRef, {
-            ...currentData,
-            favoriteCount: Math.max(0, currentCount - 1)
-          }, { merge: true });
-        }
-        
-        console.log(`Successfully removed ${listing.id} from favorites`);
+        // Then perform the actual operation
+        await deleteDoc(favoriteRef);
       } else {
-        // Add to favorites
-        await setDoc(favoriteRef, {
-          listingRef,
-          listingData: {
-            ...listing,
-            createdAt: listing.createdAt instanceof Date ? listing.createdAt : new Date(listing.createdAt),
-            id: listing.id
-          },
-          createdAt: new Date()
-        });
-        
-        // Update state
+        // Optimistically add to favorites
         setFavoriteIds(prev => new Set([...prev, listing.id]));
         setFavorites(prev => [...prev, listing]);
         
-        // Update favorite count in the listing document (increment)
-        const listingDoc = await getDoc(listingRef);
-        if (listingDoc.exists()) {
-          const currentData = listingDoc.data();
-          const currentCount = currentData.favoriteCount || 0;
-          await setDoc(listingRef, {
-            ...currentData,
-            favoriteCount: currentCount + 1
-          }, { merge: true });
-        }
-        
-        console.log(`Successfully added ${listing.id} to favorites`);
+        // Then perform the actual operation
+        await setDoc(favoriteRef, {
+          listingRef,
+          createdAt: new Date()
+        });
       }
-      
-      return Promise.resolve();
     } catch (err) {
-      console.error('Error in toggleFavorite:', err);
+      console.error('Error toggling favorite:', err);
       setError(err instanceof Error ? err.message : 'Failed to update favorite');
       
-      // Re-fetch favorites to ensure UI is in sync even if there was an error
-      await fetchFavorites();
+      // Revert optimistic updates on error
+      if (isFav) {
+        setFavoriteIds(prev => new Set([...prev, listing.id]));
+        setFavorites(prev => [...prev, listing]);
+      } else {
+        setFavoriteIds(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(listing.id);
+          return newSet;
+        });
+        setFavorites(prev => prev.filter(f => f.id !== listing.id));
+      }
       
-      return Promise.reject(err);
+      // Re-fetch favorites to ensure UI is in sync
+      await fetchFavorites();
+    } finally {
+      setPendingOperations(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(listing.id);
+        return newSet;
+      });
     }
   };
 
   const isFavorite = (listingId: string) => favoriteIds.has(listingId);
+  
+  const isPending = (listingId: string) => pendingOperations.has(listingId);
 
   useEffect(() => {
     fetchFavorites();
@@ -160,6 +140,7 @@ export function useFavorites() {
     error,
     toggleFavorite,
     isFavorite,
+    isPending,
     refresh: fetchFavorites
   };
 }
