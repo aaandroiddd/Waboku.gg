@@ -19,6 +19,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
 import { Footer } from '@/components/Footer';
+import { DistanceIndicator } from '@/components/DistanceIndicator';
 
 const getConditionColor = (condition: string) => {
   const colors: Record<string, string> = {
@@ -501,6 +502,7 @@ export default function ListingPage() {
                         size="sm"
                         onClick={handleFavoriteToggle}
                         className={`flex-1 sm:flex-none ${isFavorited ? "text-red-500" : ""}`}
+                        type="button"
                       >
                         <Heart className={`h-4 w-4 mr-2 ${isFavorited ? "fill-current" : ""}`} />
                         {isFavorited ? "Saved" : "Save"}
