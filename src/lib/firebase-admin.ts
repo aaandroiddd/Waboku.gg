@@ -1,6 +1,21 @@
 import * as admin from 'firebase-admin';
 
 let firebaseAdmin: typeof admin | null = null;
+let adminApp: admin.app.App | null = null;
+
+/**
+ * Initialize Firebase Admin app and return both the admin instance and the app
+ */
+export function initializeAdminApp() {
+  if (adminApp) {
+    return { admin: firebaseAdmin as typeof admin, app: adminApp };
+  }
+  
+  const admin = getFirebaseAdmin();
+  adminApp = admin.app();
+  
+  return { admin, app: adminApp };
+}
 
 export function getFirebaseAdmin(): typeof admin {
   if (firebaseAdmin) {

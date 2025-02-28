@@ -114,7 +114,7 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
             const endDate = subscriptionData.endDate ? new Date(subscriptionData.endDate) : null;
             const startDate = subscriptionData.startDate ? new Date(subscriptionData.startDate) : null;
             
-            // Enhanced premium status check
+            // Enhanced premium status check with better logging
             const isActivePremium = (
               subscriptionData.status === 'active' ||
               (subscriptionData.status === 'canceled' && endDate && endDate > now) ||
@@ -123,6 +123,17 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
               (subscriptionData.currentPlan === 'premium') || // Check for currentPlan set by admin
               (subscriptionData.stripeSubscriptionId?.includes('admin_')) // Check for admin-assigned subscription ID
             );
+            
+            console.log('Account tier determination:', {
+              uid: user.uid,
+              email: user.email,
+              currentTier: data.accountTier,
+              calculatedTier: isActivePremium ? 'premium' : 'free',
+              subscriptionStatus: subscriptionData.status,
+              hasStripeId: !!subscriptionData.stripeSubscriptionId,
+              isManuallyUpdated: !!subscriptionData.manuallyUpdated,
+              currentPlan: subscriptionData.currentPlan
+            });
             
             // Set subscription data with enhanced validation
             const currentStatus = (() => {

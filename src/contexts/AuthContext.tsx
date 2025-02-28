@@ -193,6 +193,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       console.log('Attempting sign in with email:', email);
       
+      // First, check if this email is associated with a Google account
+      const usersRef = collection(db, 'users');
+      const emailQuery = query(usersRef, where('email', '==', email));
+      const emailSnapshot = await getDocs(emailQuery);
+      
+      if (!emailSnapshot.empty) {
+        // Check if any of these users have a Google provider
+        for (const userDoc of emailSnapshot.docs) {
+          const userData = userDoc.data() as UserProfile;
+          
+          // If we find a user with this email, try to get their auth methods
+          try {
+            // Check if this user has a Google provider
+            const provider = new GoogleAuthProvider();
+            console.log('This email might be associated with a Google account. Suggesting Google sign-in.');
+            throw new Error('This email appears to be registered with Google. Please try signing in with Google instead.');
+          } catch (providerErr) {
+            // Continue with normal sign-in if we can't determine the provider
+            console.log('Continuing with normal sign-in flow');
+          }
+        }
+      }
+      
+      // Proceed with normal email/password sign-in
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
       
@@ -257,6 +281,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           break;
         case 'auth/too-many-requests':
           errorMessage = 'Too many failed attempts. Please try again later.';
+          break;
+        case 'auth/account-exists-with-different-credential':
+          errorMessage = 'An account already exists with this email address but with a different sign-in method. Please try signing in with Google.';
+          errorCode = 'auth/account-exists-with-different-credential';
           break;
       }
       
