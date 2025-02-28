@@ -132,8 +132,20 @@ export function PricingPlans() {
     setIsLoading(true);
     
     try {
-      // Get user token
-      const idToken = await user.getIdToken(true); // Force refresh token
+      // Store auth state in localStorage before any API calls
+      try {
+        // Store minimal info to help maintain session awareness
+        localStorage.setItem('waboku_auth_redirect', JSON.stringify({
+          uid: user.uid,
+          timestamp: Date.now()
+        }));
+        console.log('Stored auth redirect state in localStorage');
+      } catch (storageError) {
+        console.warn('Could not store auth state:', storageError);
+      }
+
+      // Get user token with force refresh to ensure it's fresh
+      const idToken = await user.getIdToken(true);
       if (!idToken) {
         throw new Error('Authentication error');
       }
@@ -143,6 +155,8 @@ export function PricingPlans() {
         description: "Please wait while we prepare your upgrade.",
       });
 
+      console.log('Making request to create checkout session');
+      
       // Create checkout session
       const response = await fetch('/api/stripe/create-checkout', {
         method: 'POST',
@@ -152,15 +166,55 @@ export function PricingPlans() {
         },
       });
 
-      const data = await response.json();
+      console.log('Received response from create-checkout:', response.status);
       
       if (!response.ok) {
-        console.error('Checkout error details:', data);
-        throw new Error(data.message || data.error || 'Failed to create checkout session');
+        const errorData = await response.json();
+        console.error('Checkout error details:', errorData);
+        
+        if (response.status === 401) {
+          // Try one more time with a fresh token
+          console.log('Authentication failed, trying again with fresh token');
+          const freshToken = await user.getIdToken(true);
+          
+          const retryResponse = await fetch('/api/stripe/create-checkout', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${freshToken}`,
+            },
+          });
+          
+          if (!retryResponse.ok) {
+            const retryErrorData = await retryResponse.json();
+            console.error('Retry checkout error details:', retryErrorData);
+            throw new Error(retryErrorData.message || retryErrorData.error || 'Failed to create checkout session after retry');
+          }
+          
+          const retryData = await retryResponse.json();
+          if (!retryData.sessionUrl) {
+            throw new Error('Invalid checkout session from retry');
+          }
+          
+          toast({
+            title: "Redirecting to secure checkout",
+            description: "You'll be redirected to Stripe to complete your payment.",
+          });
+          
+          // Add a small delay to ensure toast is shown
+          setTimeout(() => {
+            window.location.href = retryData.sessionUrl;
+          }, 1000);
+          
+          return;
+        }
+        
+        throw new Error(errorData.message || errorData.error || 'Failed to create checkout session');
       }
 
-      // Proceed with Stripe checkout regardless of environment
-
+      const data = await response.json();
+      console.log('Checkout session created successfully');
+      
       if (!data.sessionUrl) {
         throw new Error('Invalid checkout session');
       }
@@ -169,17 +223,6 @@ export function PricingPlans() {
         title: "Redirecting to secure checkout",
         description: "You'll be redirected to Stripe to complete your payment.",
       });
-
-      // Store auth state in localStorage before redirecting
-      try {
-        // Store minimal info to help maintain session awareness
-        localStorage.setItem('waboku_auth_redirect', JSON.stringify({
-          uid: user.uid,
-          timestamp: Date.now()
-        }));
-      } catch (storageError) {
-        console.warn('Could not store auth state:', storageError);
-      }
 
       // Use router for navigation if available, otherwise fallback to direct location change
       if (typeof window !== 'undefined' && window.location) {
@@ -197,6 +240,8 @@ export function PricingPlans() {
         errorMessage = 'Unable to connect to payment service. Please check your internet connection.';
       } else if (error.message.includes('Authentication')) {
         errorMessage = 'Your session has expired. Please sign in again.';
+      } else if (error.message.includes('e.auth is not a function')) {
+        errorMessage = 'Authentication service is temporarily unavailable. Please try again in a few minutes.';
       }
 
       toast({

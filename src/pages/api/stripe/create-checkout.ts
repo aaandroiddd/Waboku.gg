@@ -65,106 +65,103 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const idToken = authHeader.split('Bearer ')[1];
     
     try {
-      // Initialize Firebase Admin and verify token
+      // Initialize Firebase Admin
       const admin = getFirebaseAdmin();
       console.log(`[Create Checkout ${requestId}] Firebase Admin initialized successfully`);
       
       // Verify the token and get user data
-      const decodedToken = await admin.auth().verifyIdToken(idToken, true)
-        .catch(async (error) => {
-          console.error(`[Create Checkout ${requestId}] Token verification failed:`, {
-            error: error.message,
-            code: error.code
+      try {
+        // Verify the token and get user data
+        const decodedToken = await admin.auth().verifyIdToken(idToken, true);
+        const userId = decodedToken.uid;
+        const userEmail = decodedToken.email;
+
+        console.log(`[Create Checkout ${requestId}] Token verified successfully:`, {
+          userId,
+          email: userEmail,
+          emailVerified: decodedToken.email_verified,
+          tokenIssued: new Date(decodedToken.iat * 1000).toISOString(),
+          tokenExpires: new Date(decodedToken.exp * 1000).toISOString()
+        });
+
+        if (!userEmail) {
+          console.error('[Create Checkout] No user email found for user:', userId);
+          return res.status(400).json({ 
+            error: 'Missing email',
+            message: 'User email is required for subscription',
+            code: 'EMAIL_MISSING'
           });
-          throw error;
-        }); // Force token refresh check
-      const userId = decodedToken.uid;
-      const userEmail = decodedToken.email;
+        }
 
-      console.log(`[Create Checkout ${requestId}] Token verified successfully:`, {
-        userId,
-        email: userEmail,
-        emailVerified: decodedToken.email_verified,
-        tokenIssued: new Date(decodedToken.iat * 1000).toISOString(),
-        tokenExpires: new Date(decodedToken.exp * 1000).toISOString()
-      });
+        // Check if user already has an active subscription
+        const db = admin.database();
+        const userRef = db.ref(`users/${userId}/account/subscription`);
+        const snapshot = await userRef.once('value');
+        const currentSubscription = snapshot.val();
 
-      console.log('[Create Checkout] Token verified successfully:', { 
-        userId,
-        email: userEmail,
-        emailVerified: decodedToken.email_verified
-      });
+        console.log('[Create Checkout] Current subscription status:', currentSubscription?.status);
 
-      if (!userEmail) {
-        console.error('[Create Checkout] No user email found for user:', userId);
-        return res.status(400).json({ 
-          error: 'Missing email',
-          message: 'User email is required for subscription',
-          code: 'EMAIL_MISSING'
-        });
-      }
+        if (currentSubscription?.status === 'active') {
+          return res.status(400).json({ 
+            error: 'Subscription exists',
+            message: 'You already have an active subscription',
+            code: 'SUBSCRIPTION_EXISTS'
+          });
+        }
 
-      // Check if user already has an active subscription
-      const db = admin.database();
-      const userRef = db.ref(`users/${userId}/account/subscription`);
-      const snapshot = await userRef.once('value');
-      const currentSubscription = snapshot.val();
+        // Preview environment handling
+        if (process.env.NEXT_PUBLIC_CO_DEV_ENV === 'preview') {
+          console.log('[Create Checkout] Preview environment detected, returning simulated success');
+          return res.status(200).json({ 
+            sessionUrl: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/account-status?session_id=preview_session`,
+            isPreview: true
+          });
+        }
 
-      console.log('[Create Checkout] Current subscription status:', currentSubscription?.status);
+        console.log('[Create Checkout] Creating Stripe checkout session');
 
-      if (currentSubscription?.status === 'active') {
-        return res.status(400).json({ 
-          error: 'Subscription exists',
-          message: 'You already have an active subscription',
-          code: 'SUBSCRIPTION_EXISTS'
-        });
-      }
-
-      // Preview environment handling
-      if (process.env.NEXT_PUBLIC_CO_DEV_ENV === 'preview') {
-        console.log('[Create Checkout] Preview environment detected, returning simulated success');
-        return res.status(200).json({ 
-          sessionUrl: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/account-status?session_id=preview_session`,
-          isPreview: true
-        });
-      }
-
-      console.log('[Create Checkout] Creating Stripe checkout session');
-
-      // Create a Checkout Session
-      const session = await stripe.checkout.sessions.create({
-        payment_method_types: ['card'],
-        line_items: [
-          {
-            price: process.env.STRIPE_PREMIUM_PRICE_ID,
-            quantity: 1,
-          },
-        ],
-        mode: 'subscription',
-        success_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/account-status?session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/account-status`,
-        customer_email: userEmail,
-        metadata: {
-          userId: userId,
-        },
-        allow_promotion_codes: true,
-        billing_address_collection: 'auto',
-        subscription_data: {
+        // Create a Checkout Session
+        const session = await stripe.checkout.sessions.create({
+          payment_method_types: ['card'],
+          line_items: [
+            {
+              price: process.env.STRIPE_PREMIUM_PRICE_ID,
+              quantity: 1,
+            },
+          ],
+          mode: 'subscription',
+          success_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/account-status?session_id={CHECKOUT_SESSION_ID}`,
+          cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/account-status`,
+          customer_email: userEmail,
           metadata: {
             userId: userId,
           },
-        },
-      });
+          allow_promotion_codes: true,
+          billing_address_collection: 'auto',
+          subscription_data: {
+            metadata: {
+              userId: userId,
+            },
+          },
+        });
 
-      console.log('[Create Checkout] Successfully created checkout session:', { 
-        sessionId: session.id,
-        url: session.url 
-      });
+        console.log('[Create Checkout] Successfully created checkout session:', { 
+          sessionId: session.id,
+          url: session.url 
+        });
 
-      return res.status(200).json({ 
-        sessionUrl: session.url,
-        isPreview: false
-      });
+        return res.status(200).json({ 
+          sessionUrl: session.url,
+          isPreview: false
+        });
+      } catch (verifyError: any) {
+        console.error(`[Create Checkout ${requestId}] Token verification failed:`, {
+          error: verifyError.message,
+          code: verifyError.code,
+          stack: verifyError.stack
+        });
+        throw verifyError;
+      }
 
     } catch (authError: any) {
       console.error('[Create Checkout] Auth error:', {

@@ -83,7 +83,17 @@ export default function AccountStatus() {
           const storedAuth = localStorage.getItem('waboku_auth_redirect');
           if (storedAuth) {
             console.log('Found auth redirect state, user should be authenticated');
-            // We'll clear this in the AuthContext
+            
+            // Parse the stored auth data
+            const authData = JSON.parse(storedAuth);
+            console.log('Auth redirect data:', {
+              uid: authData.uid ? `${authData.uid.substring(0, 5)}...` : 'missing',
+              timestamp: authData.timestamp ? new Date(authData.timestamp).toISOString() : 'missing',
+              age: authData.timestamp ? `${Math.floor((Date.now() - authData.timestamp) / 1000 / 60)} minutes` : 'unknown'
+            });
+            
+            // Clear the stored auth state after checking
+            localStorage.removeItem('waboku_auth_redirect');
           }
         }
       } catch (error) {
@@ -95,6 +105,13 @@ export default function AccountStatus() {
       // Check auth state first
       checkAuthRedirect();
       
+      // Force token refresh to ensure we have the latest auth state
+      if (user) {
+        user.getIdToken(true)
+          .then(() => console.log('Token refreshed after checkout'))
+          .catch(err => console.error('Error refreshing token:', err));
+      }
+      
       toast({
         title: "Success!",
         description: "Your subscription has been processed. Your account will be upgraded shortly.",
@@ -103,7 +120,7 @@ export default function AccountStatus() {
       // Remove the query parameters from the URL without refreshing the page
       router.replace('/dashboard/account-status', undefined, { shallow: true });
     }
-  }, [session_id, upgrade, toast, router]);
+  }, [session_id, upgrade, toast, router, user]);
 
   const handleCancelSubscription = async () => {
     try {
