@@ -223,14 +223,44 @@ export default function AccountStatus() {
         throw new Error('No active subscription ID found');
       }
 
-      // Attempt to cancel
-      await cancelSubscription();
+      if (!user) {
+        throw new Error('User not authenticated');
+      }
+
+      // Get a fresh token
+      const idToken = await user.getIdToken(true);
+
+      // Make direct API call with all required data
+      const response = await fetch('/api/stripe/cancel-subscription', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${idToken}`
+        },
+        body: JSON.stringify({
+          subscriptionId: subscription.stripeSubscriptionId,
+          userId: user.uid
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || errorData.message || 'Failed to cancel subscription');
+      }
+
+      const data = await response.json();
+      console.log('Cancellation response:', data);
 
       // Show success message
       toast({
         title: "Subscription Canceled",
         description: "Your subscription will remain active until the end of the current billing period.",
       });
+
+      // Refresh the page after a short delay to show updated status
+      setTimeout(() => {
+        window.location.reload();
+      }, 2000);
     } catch (error: any) {
       console.error('Subscription cancellation failed:', {
         error: error.message,

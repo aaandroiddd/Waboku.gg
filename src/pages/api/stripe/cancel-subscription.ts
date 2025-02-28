@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { getApps, cert, initializeApp } from 'firebase-admin/app';
 import { getDatabase as getAdminDatabase } from 'firebase-admin/database';
+import { getAuth } from 'firebase-admin/auth';
 import Stripe from 'stripe';
 
 // Initialize Firebase Admin if it hasn't been initialized yet
@@ -55,7 +56,23 @@ export default async function handler(
   }
 
   try {
-    const { subscriptionId, userId } = req.body;
+    let { subscriptionId, userId } = req.body;
+
+    // Try to get userId from Authorization header if not provided in the request body
+    if (!userId && req.headers.authorization) {
+      try {
+        const token = req.headers.authorization.split('Bearer ')[1];
+        if (token) {
+          // Verify the token and get the user ID
+          const auth = getAuth();
+          const decodedToken = await auth.verifyIdToken(token);
+          userId = decodedToken.uid;
+          console.log('Retrieved userId from token:', userId);
+        }
+      } catch (authError) {
+        console.error('Error extracting user ID from token:', authError);
+      }
+    }
 
     // Detailed request logging
     console.log('Cancellation request received:', {
