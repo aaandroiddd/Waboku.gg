@@ -1,5 +1,6 @@
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { GameCategoryBadge } from '@/components/GameCategoryBadge';
 import { Button } from '@/components/ui/button';
 import { Heart } from 'lucide-react';
 import Link from 'next/link';
@@ -284,12 +285,16 @@ export const ListingCard = memo(({ listing, isFavorite, onFavoriteClick, getCond
                 <UserNameLink userId={listing.userId} initialUsername={listing.username} />
               </p>
               <div className="flex items-center gap-2 flex-wrap">
-                <motion.span 
-                  className="text-xs px-2 py-0.5 bg-secondary rounded-full"
-                  whileHover={{ scale: 1.05 }}
-                >
-                  {listing.game}
-                </motion.span>
+                <motion.div whileHover={{ scale: 1.05 }}>
+                  {listing.game && (
+                    <GameCategoryBadge 
+                      game={listing.game} 
+                      variant="secondary" 
+                      className="text-xs"
+                      onClick={(e) => e.stopPropagation()} // Prevent link navigation when clicking the badge
+                    />
+                  )}
+                </motion.div>
                 <motion.div whileHover={{ scale: 1.05 }}>
                   <Badge className={`${getConditionColor(listing.condition).base} ${getConditionColor(listing.condition).hover}`}>
                     {listing.condition}

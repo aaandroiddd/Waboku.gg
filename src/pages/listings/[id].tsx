@@ -8,6 +8,7 @@ import { getFirebaseServices } from '@/lib/firebase';
 import { Listing } from '@/types/database';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { GameCategoryBadge } from '@/components/GameCategoryBadge';
 import { Button } from '@/components/ui/button';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
 import { Separator } from '@/components/ui/separator';
@@ -378,7 +379,10 @@ export default function ListingPage() {
                 <div>
                   <h1 className="text-2xl md:text-3xl font-bold mb-3">{listing.title}</h1>
                   <div className="flex flex-wrap gap-2">
-                    <Badge variant="secondary" className="text-sm">{listing.game}</Badge>
+                    {/* Import and use the GameCategoryBadge component */}
+                    {listing.game && (
+                      <GameCategoryBadge game={listing.game} variant="secondary" className="text-sm" />
+                    )}
                     <Badge className={`text-sm ${getConditionColor(listing.condition)}`}>
                       {listing.condition}
                     </Badge>
