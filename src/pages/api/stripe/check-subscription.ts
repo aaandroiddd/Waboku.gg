@@ -75,15 +75,39 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const admin = getFirebaseAdmin();
       console.log(`[Subscription Check ${requestId}] Firebase Admin initialized successfully`);
       
+      // Log token details for debugging (safely)
+      console.log(`[Subscription Check ${requestId}] Verifying token:`, {
+        tokenLength: idToken.length,
+        tokenPrefix: idToken.substring(0, 5) + '...',
+        tokenSuffix: '...' + idToken.slice(-5),
+        timestamp: new Date().toISOString()
+      });
+      
       // Verify the token and get user data
-      const decodedToken = await admin.auth().verifyIdToken(idToken, true)
-        .catch(async (error) => {
-          console.error(`[Subscription Check ${requestId}] Token verification failed:`, {
-            error: error.message,
-            code: error.code
+      let decodedToken;
+      try {
+        decodedToken = await admin.auth().verifyIdToken(idToken, true);
+      } catch (error: any) {
+        console.error(`[Subscription Check ${requestId}] Token verification failed:`, {
+          error: error.message,
+          code: error.code,
+          type: error.type,
+          stack: error.stack?.split('\n').slice(0, 3).join('\n')
+        });
+        
+        // Try one more time without forcing token refresh
+        try {
+          console.log(`[Subscription Check ${requestId}] Retrying token verification without refresh check`);
+          decodedToken = await admin.auth().verifyIdToken(idToken, false);
+          console.log(`[Subscription Check ${requestId}] Retry succeeded`);
+        } catch (retryError: any) {
+          console.error(`[Subscription Check ${requestId}] Retry token verification also failed:`, {
+            error: retryError.message,
+            code: retryError.code
           });
-          throw error;
-        }); // Force token refresh check
+          throw retryError;
+        }
+      }
       const userId = decodedToken.uid;
       const userEmail = decodedToken.email;
 

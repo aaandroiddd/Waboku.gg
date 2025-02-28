@@ -259,7 +259,8 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
           'Authorization': `Bearer ${idToken}`
         },
         body: JSON.stringify({
-          subscriptionId: subscription.stripeSubscriptionId
+          subscriptionId: subscription.stripeSubscriptionId,
+          userId: user.uid // Add the userId to the request body
         })
       });
 

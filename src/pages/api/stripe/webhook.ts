@@ -109,6 +109,10 @@ export default async function handler(
         const userId = subscription.metadata.userId;
 
         if (!userId) {
+          console.error('[Stripe Webhook] No userId found in subscription metadata:', {
+            subscriptionId: subscription.id,
+            metadata: subscription.metadata
+          });
           throw new Error('No userId found in subscription metadata');
         }
 
@@ -116,26 +120,37 @@ export default async function handler(
         const currentPeriodEnd = new Date(subscription.current_period_end * 1000).toISOString();
         const currentPeriodStart = new Date(subscription.current_period_start * 1000).toISOString();
 
+        console.log('[Stripe Webhook] Processing subscription update:', {
+          userId,
+          subscriptionId: subscription.id,
+          status,
+          currentPeriodStart,
+          currentPeriodEnd
+        });
+
         // Update Firestore
         await firestoreDb.collection('users').doc(userId).set({
+          accountTier: status === 'active' ? 'premium' : 'free', // Add accountTier at the top level
           subscription: {
             currentPlan: status === 'active' ? 'premium' : 'free',
             startDate: currentPeriodStart,
             endDate: currentPeriodEnd,
-            status: status
+            status: status,
+            stripeSubscriptionId: subscription.id // Add the subscription ID
           }
         }, { merge: true });
 
-        // Update Realtime Database
+        // Update Realtime Database with more complete data
         await realtimeDb.ref(`users/${userId}/account`).update({
           tier: status === 'active' ? 'premium' : 'free',
           status: 'active',
           subscription: {
-            id: subscription.id,
+            stripeSubscriptionId: subscription.id, // Use consistent field name
             status: status,
             tier: status === 'active' ? 'premium' : 'free',
             startDate: currentPeriodStart,
             endDate: currentPeriodEnd,
+            renewalDate: currentPeriodEnd, // Add renewal date
             currentPeriodEnd: subscription.current_period_end,
             lastUpdated: Date.now()
           }
