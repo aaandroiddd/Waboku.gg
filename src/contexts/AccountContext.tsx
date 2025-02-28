@@ -116,12 +116,18 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
             
             // Enhanced premium status check with better logging
             const isActivePremium = (
+              // Stripe subscription checks
               subscriptionData.status === 'active' ||
               (subscriptionData.status === 'canceled' && endDate && endDate > now) ||
               (subscriptionData.stripeSubscriptionId && startDate && startDate <= now && !subscriptionData.status) ||
+              
+              // Admin-set premium status checks
               (data.accountTier === 'premium' && subscriptionData.manuallyUpdated) ||
               (subscriptionData.currentPlan === 'premium') || // Check for currentPlan set by admin
-              (subscriptionData.stripeSubscriptionId?.includes('admin_')) // Check for admin-assigned subscription ID
+              (subscriptionData.stripeSubscriptionId?.includes('admin_')) || // Check for admin-assigned subscription ID
+              
+              // Direct Firestore premium tier check
+              (data.accountTier === 'premium' && data.subscription?.manuallyUpdated === true)
             );
             
             console.log('Account tier determination:', {

@@ -48,23 +48,40 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const now = admin.firestore.FieldValue.serverTimestamp();
 
-    // Update user's subscription and account status
-    console.log('Updating user tier...');
+    // Update user's subscription and account status in Firestore
+    console.log('Updating user tier in Firestore...');
     const updateData = {
       accountTier: tier,
       lastUpdated: now,
       subscription: {
         currentPlan: tier,
+        tier: tier, // Explicitly set tier field
         status: tier === 'premium' ? 'active' : 'none',
         manuallyUpdated: true,
         lastManualUpdate: now,
         startDate: now,
         endDate: tier === 'premium' ? null : now,
-        stripeSubscriptionId: tier === 'premium' ? `admin_${userId}_${Date.now()}` : null
+        stripeSubscriptionId: tier === 'premium' ? `admin_${userId}_${Date.now()}` : null,
+        currentPeriodEnd: tier === 'premium' ? Math.floor(Date.now() / 1000) + 31536000 : Math.floor(Date.now() / 1000) // 1 year from now for premium
       }
     };
 
     await userRef.update(updateData);
+    
+    // Also update Realtime Database to ensure consistency
+    console.log('Syncing user tier to Realtime Database...');
+    const rtdb = admin.database();
+    const rtdbUserRef = rtdb.ref(`users/${userId}/account/subscription`);
+    
+    const rtdbUpdateData = {
+      tier: tier,
+      status: tier === 'premium' ? 'active' : 'none',
+      manuallyUpdated: true,
+      currentPeriodEnd: tier === 'premium' ? Math.floor(Date.now() / 1000) + 31536000 : Math.floor(Date.now() / 1000),
+      stripeSubscriptionId: tier === 'premium' ? updateData.subscription.stripeSubscriptionId : null
+    };
+    
+    await rtdbUserRef.update(rtdbUpdateData);
 
     console.log(`Successfully updated user ${userId} to ${tier} tier with data:`, updateData);
 

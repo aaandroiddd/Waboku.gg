@@ -96,8 +96,49 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const snapshot = await userRef.once('value');
       const accountData = snapshot.val();
 
+      // Also check Firestore for admin-set premium status
+      const firestore = admin.firestore();
+      const firestoreUserDoc = await firestore.collection('users').doc(userId).get();
+      const firestoreData = firestoreUserDoc.exists ? firestoreUserDoc.data() : null;
+      
+      console.log(`[Subscription Check ${requestId}] User data:`, {
+        userId,
+        hasRealtimeData: !!accountData,
+        hasFirestoreData: !!firestoreData,
+        realtimeSubscription: accountData?.subscription ? 'exists' : 'missing',
+        firestoreAccountTier: firestoreData?.accountTier || 'not set',
+        firestoreSubscription: firestoreData?.subscription ? 'exists' : 'missing'
+      });
+
+      // If admin has set premium status in Firestore, use that
+      if (firestoreData && firestoreData.accountTier === 'premium' && 
+          firestoreData.subscription && firestoreData.subscription.manuallyUpdated) {
+        console.log(`[Subscription Check ${requestId}] Using admin-set premium status from Firestore`);
+        
+        // Sync to Realtime Database if needed
+        if (!accountData || !accountData.subscription || accountData.subscription.tier !== 'premium') {
+          const subscriptionData = {
+            tier: 'premium',
+            status: 'active',
+            stripeSubscriptionId: firestoreData.subscription.stripeSubscriptionId || `admin_${userId}`,
+            currentPeriodEnd: Math.floor(Date.now() / 1000) + 31536000, // 1 year from now
+            manuallyUpdated: true
+          };
+          
+          await userRef.child('subscription').set(subscriptionData);
+          console.log(`[Subscription Check ${requestId}] Synced premium status to Realtime Database`);
+          
+          return res.status(200).json({
+            isPremium: true,
+            status: 'active',
+            tier: 'premium',
+            currentPeriodEnd: subscriptionData.currentPeriodEnd
+          });
+        }
+      }
+
       if (!accountData || !accountData.subscription) {
-        console.log('[Subscription Check] No subscription found:', { userId });
+        console.log(`[Subscription Check ${requestId}] No subscription found:`, { userId });
         return res.status(200).json({ 
           isPremium: false,
           status: 'none',
