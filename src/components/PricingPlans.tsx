@@ -133,7 +133,7 @@ export function PricingPlans() {
     
     try {
       // Get user token
-      const idToken = await user.getIdToken();
+      const idToken = await user.getIdToken(true); // Force refresh token
       if (!idToken) {
         throw new Error('Authentication error');
       }
@@ -170,10 +170,24 @@ export function PricingPlans() {
         description: "You'll be redirected to Stripe to complete your payment.",
       });
 
-      // Add a small delay to ensure toast is shown
-      setTimeout(() => {
-        window.location.href = data.sessionUrl;
-      }, 1000);
+      // Store auth state in localStorage before redirecting
+      try {
+        // Store minimal info to help maintain session awareness
+        localStorage.setItem('waboku_auth_redirect', JSON.stringify({
+          uid: user.uid,
+          timestamp: Date.now()
+        }));
+      } catch (storageError) {
+        console.warn('Could not store auth state:', storageError);
+      }
+
+      // Use router for navigation if available, otherwise fallback to direct location change
+      if (typeof window !== 'undefined' && window.location) {
+        // Add a small delay to ensure toast is shown
+        setTimeout(() => {
+          window.location.href = data.sessionUrl;
+        }, 1000);
+      }
 
     } catch (error: any) {
       console.error('Subscription error:', error);

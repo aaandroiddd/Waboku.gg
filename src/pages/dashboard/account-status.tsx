@@ -76,11 +76,30 @@ export default function AccountStatus() {
   const { session_id, upgrade } = router.query;
 
   useEffect(() => {
+    // Check for auth redirect state in localStorage
+    const checkAuthRedirect = () => {
+      try {
+        if (typeof window !== 'undefined' && window.localStorage) {
+          const storedAuth = localStorage.getItem('waboku_auth_redirect');
+          if (storedAuth) {
+            console.log('Found auth redirect state, user should be authenticated');
+            // We'll clear this in the AuthContext
+          }
+        }
+      } catch (error) {
+        console.error('Error checking auth redirect state:', error);
+      }
+    };
+    
     if (session_id || upgrade === 'success') {
+      // Check auth state first
+      checkAuthRedirect();
+      
       toast({
         title: "Success!",
         description: "Your subscription has been processed. Your account will be upgraded shortly.",
       });
+      
       // Remove the query parameters from the URL without refreshing the page
       router.replace('/dashboard/account-status', undefined, { shallow: true });
     }

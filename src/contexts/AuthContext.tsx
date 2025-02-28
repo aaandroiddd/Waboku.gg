@@ -65,7 +65,41 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const { auth, db } = getFirebaseServices();
 
   useEffect(() => {
+    // Check for stored auth redirect state
+    const checkStoredAuthState = async () => {
+      try {
+        if (typeof window !== 'undefined' && window.localStorage) {
+          const storedAuth = localStorage.getItem('waboku_auth_redirect');
+          if (storedAuth) {
+            const authData = JSON.parse(storedAuth);
+            const now = Date.now();
+            const storedTime = authData.timestamp;
+            
+            // Only use stored auth if it's less than 30 minutes old
+            if (now - storedTime < 30 * 60 * 1000) {
+              console.log('Found recent auth redirect state, checking if user is still authenticated');
+              
+              // If we have a stored UID but no current user, try to refresh auth state
+              if (authData.uid && !auth.currentUser) {
+                console.log('User should be authenticated, forcing auth state refresh');
+                // This will trigger the onAuthStateChanged listener
+                await auth.authStateReady();
+              }
+            }
+            
+            // Clear the stored auth state regardless
+            localStorage.removeItem('waboku_auth_redirect');
+          }
+        }
+      } catch (error) {
+        console.error('Error checking stored auth state:', error);
+      }
+    };
+    
+    checkStoredAuthState();
+    
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      console.log('Auth state changed:', user ? `User ${user.uid} authenticated` : 'No user');
       setUser(user);
       if (user) {
         try {
