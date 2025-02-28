@@ -119,7 +119,8 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
               subscriptionData.status === 'active' ||
               (subscriptionData.status === 'canceled' && endDate && endDate > now) ||
               (subscriptionData.stripeSubscriptionId && startDate && startDate <= now && !subscriptionData.status) ||
-              (data.accountTier === 'premium' && subscriptionData.manuallyUpdated)
+              (data.accountTier === 'premium' && subscriptionData.manuallyUpdated) ||
+              (subscriptionData.currentPlan === 'premium') // Check for currentPlan set by admin
             );
             
             // Set subscription data with enhanced validation

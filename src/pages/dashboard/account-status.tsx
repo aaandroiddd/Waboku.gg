@@ -203,11 +203,11 @@ export default function AccountStatus() {
               <Badge 
                 variant={accountTier === 'premium' ? 'default' : 'secondary'} 
                 className={`
-                  ${accountTier === 'premium' && subscription?.status === 'active' ? 'bg-gradient-to-r from-blue-500 to-purple-500' : ''}
+                  ${accountTier === 'premium' ? 'bg-gradient-to-r from-blue-500 to-purple-500' : ''}
                   ${subscription?.status === 'canceled' ? 'bg-gradient-to-r from-orange-500 to-red-500' : ''}
                 `}
               >
-                {accountTier === 'premium' && subscription?.status === 'active' ? 'Premium ⭐' : 
+                {accountTier === 'premium' ? 'Premium ⭐' : 
                  subscription?.status === 'canceled' ? 'Premium (Canceling)' : 'Free'}
               </Badge>
             </div>
@@ -219,8 +219,9 @@ export default function AccountStatus() {
           <div className="space-y-2">
             <div className="flex justify-between">
               <span className="text-muted-foreground">Status:</span>
-              <Badge variant={subscription.status === 'active' ? 'default' : 'secondary'}>
-                {subscription.status === 'active' ? 'Active' : 
+              <Badge variant={accountTier === 'premium' ? 'default' : 'secondary'}>
+                {accountTier === 'premium' && subscription.status !== 'active' ? 'Active (Admin)' : 
+                 subscription.status === 'active' ? 'Active' : 
                  subscription.status === 'canceled' ? 'Canceled' : 'No Active Subscription'}
               </Badge>
             </div>
