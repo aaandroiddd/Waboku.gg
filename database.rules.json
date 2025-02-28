@@ -51,6 +51,7 @@
           ".validate": "newData.isString() && newData.val().length >= 3 && newData.val().length <= 50"
         },
         "account": {
+          ".write": "auth != null && (auth.uid === $uid || auth.token.admin === true)",
           ".validate": "newData.hasChildren(['tier'])",
           "tier": {
             ".validate": "newData.isString() && (newData.val() === 'free' || newData.val() === 'premium' || newData.val() === 'admin')"
@@ -65,9 +66,10 @@
             ".validate": "!newData.exists() || newData.isString()"
           },
           "subscription": {
+            ".write": "auth != null && (auth.uid === $uid || auth.token.admin === true)",
             ".validate": "!newData.exists() || newData.hasChildren(['status'])",
             "status": {
-              ".validate": "newData.isString() && (newData.val() === 'active' || newData.val() === 'canceled' || newData.val() === 'canceling' || newData.val() === 'expired')"
+              ".validate": "newData.isString() && (newData.val() === 'active' || newData.val() === 'canceled' || newData.val() === 'canceling' || newData.val() === 'expired' || newData.val() === 'none')"
             },
             "stripeSubscriptionId": {
               ".validate": "!newData.exists() || newData.isString()"

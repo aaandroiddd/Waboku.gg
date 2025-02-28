@@ -130,6 +130,27 @@ export default async function handler(
           stripeSubscriptionId: subscriptionId
         });
         
+        // First check if the user exists in the database
+        const userSnapshot = await db.ref(`users/${userId}`).once('value');
+        if (!userSnapshot.exists()) {
+          console.error('User not found in database:', userId);
+          return res.status(404).json({
+            error: 'User not found in database',
+            code: 'USER_NOT_FOUND'
+          });
+        }
+        
+        // Check if account/subscription path exists
+        const accountSnapshot = await db.ref(`users/${userId}/account`).once('value');
+        if (!accountSnapshot.exists()) {
+          // Create account node if it doesn't exist
+          await db.ref(`users/${userId}/account`).set({
+            tier: 'free',
+            lastUpdated: Date.now()
+          });
+        }
+        
+        // Update the subscription data
         await userRef.update({
           status: 'canceling',
           endDate: endDate,
@@ -147,15 +168,36 @@ export default async function handler(
           path: `users/${userId}/account/subscription`
         });
         
-        // If we can't update the database but the Stripe cancellation was successful,
-        // we should still return a success response but note the database error
-        return res.status(200).json({ 
-          success: true,
-          message: 'Subscription canceled in Stripe but database update failed. Please refresh the page.',
-          endDate,
-          status: 'canceling',
-          databaseError: dbError.message
-        });
+        // Try an alternative approach if the first update fails
+        try {
+          console.log('Attempting alternative database update approach');
+          
+          // Try setting the entire subscription object
+          await db.ref(`users/${userId}/account/subscription`).set({
+            status: 'canceling',
+            endDate: endDate,
+            stripeSubscriptionId: subscriptionId,
+            canceledAt: new Date().toISOString(),
+            cancelAtPeriodEnd: true
+          });
+          
+          console.log('Alternative database update successful');
+        } catch (altError: any) {
+          console.error('Alternative database update also failed:', {
+            error: altError.message,
+            code: altError.code
+          });
+          
+          // If we can't update the database but the Stripe cancellation was successful,
+          // we should still return a success response but note the database error
+          return res.status(200).json({ 
+            success: true,
+            message: 'Subscription canceled in Stripe but database update failed. Please refresh the page.',
+            endDate,
+            status: 'canceling',
+            databaseError: dbError.message
+          });
+        }
       }
 
       console.log('Cancellation process completed successfully:', {

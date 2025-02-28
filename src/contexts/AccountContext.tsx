@@ -251,6 +251,12 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
     }
 
     try {
+      console.log('Initiating subscription cancellation:', {
+        subscriptionId: subscription.stripeSubscriptionId,
+        userId: user.uid,
+        currentStatus: subscription.status
+      });
+      
       const idToken = await user.getIdToken();
       const response = await fetch('/api/stripe/cancel-subscription', {
         method: 'POST',
@@ -260,21 +266,37 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
         },
         body: JSON.stringify({
           subscriptionId: subscription.stripeSubscriptionId,
-          userId: user.uid // Add the userId to the request body
+          userId: user.uid
         })
       });
 
+      const data = await response.json();
+      
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to cancel subscription');
+        console.error('Subscription cancellation API error:', data);
+        throw new Error(data.message || data.error || 'Failed to cancel subscription');
       }
 
-      const data = await response.json();
+      console.log('Subscription cancellation successful:', data);
+      
+      // Update local state with the new subscription status
       setSubscription(prev => ({
         ...prev,
-        status: 'canceled',
+        status: data.status || 'canceled',
         endDate: data.endDate
       }));
+      
+      // If there was a database error but Stripe cancellation was successful
+      if (data.databaseError) {
+        console.warn('Subscription canceled in Stripe but database update failed:', data.databaseError);
+        // We could show a warning to the user here if needed
+      }
+
+      // Update the account tier if needed
+      if (data.status === 'canceled' && accountTier === 'premium') {
+        // We'll keep premium until the end date, so no immediate change to accountTier
+        console.log('Subscription canceled but premium features remain until:', data.endDate);
+      }
 
       return data;
     } catch (error: any) {
