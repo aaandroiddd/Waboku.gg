@@ -72,7 +72,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       // Verify the token and get user data
       try {
         // Verify the token and get user data
-        const decodedToken = await admin.auth.verifyIdToken(idToken, true);
+        const decodedToken = await admin.auth().verifyIdToken(idToken, true);
         const userId = decodedToken.uid;
         const userEmail = decodedToken.email;
 
