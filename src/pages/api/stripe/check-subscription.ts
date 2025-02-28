@@ -4,24 +4,36 @@ import { getDatabase } from 'firebase-admin/database';
 import { getFirebaseAdmin } from '@/lib/firebase-admin';
 import Stripe from 'stripe';
 
-if (!process.env.STRIPE_SECRET_KEY) {
-  console.error('[Subscription Check] Missing STRIPE_SECRET_KEY');
-  throw new Error('Missing STRIPE_SECRET_KEY');
-}
+// Initialize Stripe with error handling
+const initializeStripe = () => {
+  if (!process.env.STRIPE_SECRET_KEY) {
+    console.error('[Subscription Check] Missing STRIPE_SECRET_KEY');
+    throw new Error('Missing STRIPE_SECRET_KEY');
+  }
 
+  try {
+    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+      apiVersion: '2023-10-16',
+    });
+    console.log('[Subscription Check] Stripe initialized successfully');
+    return stripe;
+  } catch (error: any) {
+    console.error('[Subscription Check] Failed to initialize Stripe:', {
+      error: error.message,
+      type: error.type,
+      code: error.code
+    });
+    throw error;
+  }
+};
+
+// Initialize Stripe outside the handler for better performance
 let stripe: Stripe;
 try {
-  stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-    apiVersion: '2023-10-16',
-  });
-  console.log('[Subscription Check] Stripe initialized successfully');
-} catch (error: any) {
-  console.error('[Subscription Check] Failed to initialize Stripe:', {
-    error: error.message,
-    type: error.type,
-    code: error.code
-  });
-  throw error;
+  stripe = initializeStripe();
+} catch (error) {
+  console.error('[Subscription Check] Stripe initialization failed at module level');
+  // We'll try again in the handler
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -112,27 +124,35 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       // If admin has set premium status in Firestore, use that
       if (firestoreData && firestoreData.accountTier === 'premium' && 
-          firestoreData.subscription && firestoreData.subscription.manuallyUpdated) {
+          (firestoreData.subscription?.manuallyUpdated || firestoreData.adminUpgraded)) {
         console.log(`[Subscription Check ${requestId}] Using admin-set premium status from Firestore`);
         
         // Sync to Realtime Database if needed
         if (!accountData || !accountData.subscription || accountData.subscription.tier !== 'premium') {
+          const currentDate = new Date();
+          const endDate = new Date();
+          endDate.setFullYear(currentDate.getFullYear() + 1); // Set end date to 1 year from now
+          
           const subscriptionData = {
             tier: 'premium',
             status: 'active',
-            stripeSubscriptionId: firestoreData.subscription.stripeSubscriptionId || `admin_${userId}`,
-            currentPeriodEnd: Math.floor(Date.now() / 1000) + 31536000, // 1 year from now
+            stripeSubscriptionId: firestoreData.subscription?.stripeSubscriptionId || `admin_${userId}`,
+            currentPeriodEnd: Math.floor(endDate.getTime() / 1000),
+            startDate: currentDate.toISOString(),
+            renewalDate: endDate.toISOString(),
             manuallyUpdated: true
           };
           
           await userRef.child('subscription').set(subscriptionData);
-          console.log(`[Subscription Check ${requestId}] Synced premium status to Realtime Database`);
+          console.log(`[Subscription Check ${requestId}] Synced premium status to Realtime Database with renewal date`);
           
           return res.status(200).json({
             isPremium: true,
             status: 'active',
             tier: 'premium',
-            currentPeriodEnd: subscriptionData.currentPeriodEnd
+            currentPeriodEnd: subscriptionData.currentPeriodEnd,
+            renewalDate: subscriptionData.renewalDate,
+            subscriptionId: subscriptionData.stripeSubscriptionId
           });
         }
       }
@@ -202,11 +222,33 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }
       });
 
+      // Check if this is an admin-assigned subscription
+      const isAdminAssigned = subscription.stripeSubscriptionId?.includes('admin_');
+      
+      // For admin-assigned subscriptions, ensure we have a renewal date
+      if (isAdminAssigned && (!subscription.renewalDate || !subscription.startDate)) {
+        const currentDate = new Date();
+        const endDate = new Date();
+        endDate.setFullYear(currentDate.getFullYear() + 1); // Set end date to 1 year from now
+        
+        // Update with renewal date
+        await userRef.child('subscription').update({
+          startDate: subscription.startDate || currentDate.toISOString(),
+          renewalDate: endDate.toISOString(),
+        });
+        
+        subscription.startDate = subscription.startDate || currentDate.toISOString();
+        subscription.renewalDate = endDate.toISOString();
+      }
+      
       return res.status(200).json({
         isPremium: isActive && subscription.tier === 'premium',
         status: subscription.status || 'none',
         tier: subscription.tier || 'free',
-        currentPeriodEnd: subscription.currentPeriodEnd
+        currentPeriodEnd: subscription.currentPeriodEnd,
+        renewalDate: subscription.renewalDate,
+        startDate: subscription.startDate,
+        subscriptionId: subscription.stripeSubscriptionId
       });
 
     } catch (authError: any) {

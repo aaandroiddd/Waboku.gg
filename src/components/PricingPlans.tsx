@@ -317,7 +317,7 @@ export function PricingPlans() {
       </Card>
 
       {/* Premium Plan */}
-      <Card className={`p-6 space-y-4 ${isPremium ? 'border-2 border-green-500' : 'border-2 border-primary'}`}>
+      <Card className={`p-6 space-y-4 ${isPremium ? 'border-2 border-green-500' : ''}`}>
         <div className="space-y-2">
           <h3 className="text-2xl font-bold">Premium ⭐</h3>
           <p className="text-gray-500 dark:text-gray-400">

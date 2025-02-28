@@ -149,10 +149,18 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
               return 'none';
             })();
 
+            // For admin-assigned subscriptions, ensure we have a renewal date
+            let renewalDate = subscriptionData.renewalDate;
+            if (subscriptionData.stripeSubscriptionId?.includes('admin_') && !renewalDate) {
+              const endDate = new Date();
+              endDate.setFullYear(endDate.getFullYear() + 1); // Set end date to 1 year from now
+              renewalDate = endDate.toISOString();
+            }
+
             const subscriptionDetails = {
               startDate: subscriptionData.startDate,
               endDate: subscriptionData.endDate,
-              renewalDate: subscriptionData.renewalDate,
+              renewalDate: renewalDate,
               status: currentStatus,
               stripeSubscriptionId: subscriptionData.stripeSubscriptionId
             };

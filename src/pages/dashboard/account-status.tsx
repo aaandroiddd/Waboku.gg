@@ -214,12 +214,12 @@ export default function AccountStatus() {
           </div>
         </div>
 
-        <Card className="p-6 mb-8">
+        <Card className="p-6 mb-8 border-2 border-primary">
           <h2 className="text-xl font-semibold mb-4">Subscription Details</h2>
           <div className="space-y-2">
             <div className="flex justify-between">
               <span className="text-muted-foreground">Status:</span>
-              <Badge variant={accountTier === 'premium' ? 'default' : 'secondary'}>
+              <Badge variant={accountTier === 'premium' ? 'default' : 'secondary'} className="bg-blue-500">
                 {accountTier === 'premium' && (subscription.status !== 'active' || subscription.stripeSubscriptionId?.includes('admin_')) ? 'Active (Admin)' : 
                  subscription.status === 'active' ? 'Active' : 
                  subscription.status === 'canceled' ? 'Canceled' : 'No Active Subscription'}
@@ -231,10 +231,13 @@ export default function AccountStatus() {
                 <span>{formatDate(subscription.startDate)}</span>
               </div>
             )}
-            {subscription.status === 'active' && (
+            {(subscription.status === 'active' || accountTier === 'premium') && (
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Next Renewal:</span>
-                <span>{formatDate(subscription.renewalDate)}</span>
+                <span>
+                  {subscription.renewalDate ? formatDate(subscription.renewalDate) : 
+                   (subscription.stripeSubscriptionId?.includes('admin_') ? 'N/A (Admin Upgraded)' : 'N/A')}
+                </span>
               </div>
             )}
             {subscription.status === 'canceled' && subscription.endDate && (
@@ -243,9 +246,14 @@ export default function AccountStatus() {
                 <span>{formatDate(subscription.endDate)}</span>
               </div>
             )}
-            {subscription.status === 'active' && (
+            {subscription.status === 'active' && !subscription.stripeSubscriptionId?.includes('admin_') && (
               <p className="text-sm text-muted-foreground mt-2">
                 Your subscription renews automatically every 30 days.
+              </p>
+            )}
+            {accountTier === 'premium' && subscription.stripeSubscriptionId?.includes('admin_') && (
+              <p className="text-sm text-muted-foreground mt-2">
+                Your account has been upgraded to premium by an administrator.
               </p>
             )}
             {subscription.status === 'canceled' && (
