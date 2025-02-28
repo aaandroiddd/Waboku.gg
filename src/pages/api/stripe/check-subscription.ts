@@ -76,7 +76,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       console.log(`[Subscription Check ${requestId}] Firebase Admin initialized successfully`);
       
       // Verify the token and get user data
-      const decodedToken = await admin.auth().verifyIdToken(idToken, true)
+      const decodedToken = await admin.auth.verifyIdToken(idToken, true)
         .catch(async (error) => {
           console.error(`[Subscription Check ${requestId}] Token verification failed:`, {
             error: error.message,
