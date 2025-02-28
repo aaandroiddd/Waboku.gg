@@ -220,7 +220,7 @@ export default function AccountStatus() {
             <div className="flex justify-between">
               <span className="text-muted-foreground">Status:</span>
               <Badge variant={accountTier === 'premium' ? 'default' : 'secondary'}>
-                {accountTier === 'premium' && subscription.status !== 'active' ? 'Active (Admin)' : 
+                {accountTier === 'premium' && (subscription.status !== 'active' || subscription.stripeSubscriptionId?.includes('admin_')) ? 'Active (Admin)' : 
                  subscription.status === 'active' ? 'Active' : 
                  subscription.status === 'canceled' ? 'Canceled' : 'No Active Subscription'}
               </Badge>
@@ -368,9 +368,14 @@ export default function AccountStatus() {
                 </Button>
               </div>
             )}
-            {subscription.status === 'none' && (
+            {subscription.status === 'none' && accountTier !== 'premium' && (
               <p className="text-sm text-muted-foreground mt-2">
                 You are currently on the free plan. Upgrade to premium to access additional features.
+              </p>
+            )}
+            {subscription.status === 'none' && accountTier === 'premium' && (
+              <p className="text-sm text-muted-foreground mt-2">
+                Your account has been upgraded to premium by an administrator. Enjoy all premium features!
               </p>
             )}
             
