@@ -360,7 +360,7 @@ export function PricingPlans() {
         </div>
         <Button 
           className="w-full" 
-          onClick={handleSubscribe}
+          onClick={isPremium ? undefined : handleSubscribe}
           disabled={premiumButtonState.disabled}
           variant={premiumButtonState.variant}
         >
