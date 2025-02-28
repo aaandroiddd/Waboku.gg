@@ -29,12 +29,29 @@ export function PricingPlans() {
       
       setIsCheckingStatus(true);
       try {
+        // First check if the profile data already indicates premium status
+        if (profile?.accountTier === 'premium' || 
+            profile?.account?.subscription?.currentPlan === 'premium' ||
+            profile?.account?.subscription?.status === 'active') {
+          console.log('Premium status detected from profile data:', {
+            accountTier: profile.accountTier,
+            subscriptionPlan: profile.account?.subscription?.currentPlan,
+            subscriptionStatus: profile.account?.subscription?.status
+          });
+          setIsPremium(true);
+          setSubscriptionId(profile.account?.subscription?.stripeSubscriptionId || 'admin_upgrade');
+          setIsCheckingStatus(false);
+          return;
+        }
+        
+        // If not, check with the API
         const response = await fetch('/api/stripe/check-subscription', {
           headers: {
             'Authorization': `Bearer ${await user.getIdToken()}`
           }
         });
         const data = await response.json();
+        console.log('Premium status from API:', data);
         setIsPremium(data.isPremium);
         setSubscriptionId(data.subscriptionId);
       } catch (error) {
@@ -47,7 +64,7 @@ export function PricingPlans() {
     };
     
     checkPremiumStatus();
-  }, [user]);
+  }, [user, profile]);
 
   const handleCancelSubscription = async () => {
     if (!user || !subscriptionId) {

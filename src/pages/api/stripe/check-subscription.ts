@@ -123,38 +123,43 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       });
 
       // If admin has set premium status in Firestore, use that
-      if (firestoreData && firestoreData.accountTier === 'premium' && 
-          (firestoreData.subscription?.manuallyUpdated || firestoreData.adminUpgraded)) {
-        console.log(`[Subscription Check ${requestId}] Using admin-set premium status from Firestore`);
+      if (firestoreData && 
+          (firestoreData.accountTier === 'premium' || 
+           firestoreData.subscription?.currentPlan === 'premium' || 
+           firestoreData.subscription?.status === 'active')) {
+        console.log(`[Subscription Check ${requestId}] Using admin-set premium status from Firestore:`, {
+          accountTier: firestoreData.accountTier,
+          subscriptionPlan: firestoreData.subscription?.currentPlan,
+          subscriptionStatus: firestoreData.subscription?.status,
+          manuallyUpdated: firestoreData.subscription?.manuallyUpdated
+        });
         
         // Sync to Realtime Database if needed
-        if (!accountData || !accountData.subscription || accountData.subscription.tier !== 'premium') {
-          const currentDate = new Date();
-          const endDate = new Date();
-          endDate.setFullYear(currentDate.getFullYear() + 1); // Set end date to 1 year from now
-          
-          const subscriptionData = {
-            tier: 'premium',
-            status: 'active',
-            stripeSubscriptionId: firestoreData.subscription?.stripeSubscriptionId || `admin_${userId}`,
-            currentPeriodEnd: Math.floor(endDate.getTime() / 1000),
-            startDate: currentDate.toISOString(),
-            renewalDate: endDate.toISOString(),
-            manuallyUpdated: true
-          };
-          
-          await userRef.child('subscription').set(subscriptionData);
-          console.log(`[Subscription Check ${requestId}] Synced premium status to Realtime Database with renewal date`);
-          
-          return res.status(200).json({
-            isPremium: true,
-            status: 'active',
-            tier: 'premium',
-            currentPeriodEnd: subscriptionData.currentPeriodEnd,
-            renewalDate: subscriptionData.renewalDate,
-            subscriptionId: subscriptionData.stripeSubscriptionId
-          });
-        }
+        const currentDate = new Date();
+        const endDate = new Date();
+        endDate.setFullYear(currentDate.getFullYear() + 1); // Set end date to 1 year from now
+        
+        const subscriptionData = {
+          tier: 'premium',
+          status: 'active',
+          stripeSubscriptionId: firestoreData.subscription?.stripeSubscriptionId || `admin_${userId}_${Date.now()}`,
+          currentPeriodEnd: Math.floor(endDate.getTime() / 1000),
+          startDate: firestoreData.subscription?.startDate || currentDate.toISOString(),
+          renewalDate: endDate.toISOString(),
+          manuallyUpdated: true
+        };
+        
+        await userRef.child('subscription').set(subscriptionData);
+        console.log(`[Subscription Check ${requestId}] Synced premium status to Realtime Database with renewal date`);
+        
+        return res.status(200).json({
+          isPremium: true,
+          status: 'active',
+          tier: 'premium',
+          currentPeriodEnd: subscriptionData.currentPeriodEnd,
+          renewalDate: subscriptionData.renewalDate,
+          subscriptionId: subscriptionData.stripeSubscriptionId
+        });
       }
 
       if (!accountData || !accountData.subscription) {
