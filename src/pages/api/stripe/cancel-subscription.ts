@@ -121,13 +121,42 @@ export default async function handler(
       const endDate = new Date(canceledSubscription.current_period_end * 1000).toISOString();
 
       // Update subscription status in Firebase
-      await userRef.update({
-        status: 'canceling',
-        endDate: endDate,
-        stripeSubscriptionId: subscriptionId,
-        canceledAt: new Date().toISOString(),
-        cancelAtPeriodEnd: true
-      });
+      try {
+        console.log('Attempting to update Firebase subscription data:', {
+          userId,
+          path: `users/${userId}/account/subscription`,
+          status: 'canceling',
+          endDate,
+          stripeSubscriptionId: subscriptionId
+        });
+        
+        await userRef.update({
+          status: 'canceling',
+          endDate: endDate,
+          stripeSubscriptionId: subscriptionId,
+          canceledAt: new Date().toISOString(),
+          cancelAtPeriodEnd: true
+        });
+        
+        console.log('Firebase subscription data updated successfully');
+      } catch (dbError: any) {
+        console.error('Firebase database update error:', {
+          error: dbError.message,
+          code: dbError.code,
+          userId,
+          path: `users/${userId}/account/subscription`
+        });
+        
+        // If we can't update the database but the Stripe cancellation was successful,
+        // we should still return a success response but note the database error
+        return res.status(200).json({ 
+          success: true,
+          message: 'Subscription canceled in Stripe but database update failed. Please refresh the page.',
+          endDate,
+          status: 'canceling',
+          databaseError: dbError.message
+        });
+      }
 
       console.log('Cancellation process completed successfully:', {
         userId,

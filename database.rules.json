@@ -64,6 +64,27 @@
           "subscriptionId": {
             ".validate": "!newData.exists() || newData.isString()"
           },
+          "subscription": {
+            ".validate": "!newData.exists() || newData.hasChildren(['status'])",
+            "status": {
+              ".validate": "newData.isString() && (newData.val() === 'active' || newData.val() === 'canceled' || newData.val() === 'canceling' || newData.val() === 'expired')"
+            },
+            "stripeSubscriptionId": {
+              ".validate": "!newData.exists() || newData.isString()"
+            },
+            "endDate": {
+              ".validate": "!newData.exists() || newData.isString()"
+            },
+            "canceledAt": {
+              ".validate": "!newData.exists() || newData.isString()"
+            },
+            "cancelAtPeriodEnd": {
+              ".validate": "!newData.exists() || newData.isBoolean()"
+            },
+            "$other": {
+              ".validate": true
+            }
+          },
           "lastUpdated": {
             ".validate": "newData.isNumber() && newData.val() <= now"
           },
