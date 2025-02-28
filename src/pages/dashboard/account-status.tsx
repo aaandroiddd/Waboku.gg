@@ -108,32 +108,55 @@ export default function AccountStatus() {
       // Force token refresh to ensure we have the latest auth state
       if (user) {
         user.getIdToken(true)
-          .then(() => {
+          .then(async () => {
             console.log('Token refreshed after checkout');
             
-            // Simulate a database update in preview mode
+            // For preview environment, update the database directly
             if (process.env.NEXT_PUBLIC_CO_DEV_ENV === 'preview' && user.uid) {
-              const db = getDatabase();
-              const userRef = ref(db, `users/${user.uid}/account`);
-              
-              // Set premium subscription data
-              set(userRef, {
-                tier: 'premium',
-                status: 'active',
-                subscription: {
-                  status: 'active',
+              try {
+                const db = getDatabase();
+                const userRef = ref(db, `users/${user.uid}/account`);
+                
+                // Set premium subscription data
+                await set(userRef, {
                   tier: 'premium',
-                  stripeSubscriptionId: `preview_${Date.now()}`,
-                  startDate: new Date().toISOString(),
-                  renewalDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-                  currentPeriodEnd: Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60,
-                  lastUpdated: Date.now()
-                }
-              }).then(() => {
+                  status: 'active',
+                  subscription: {
+                    status: 'active',
+                    tier: 'premium',
+                    stripeSubscriptionId: `preview_${Date.now()}`,
+                    startDate: new Date().toISOString(),
+                    renewalDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+                    currentPeriodEnd: Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60,
+                    lastUpdated: Date.now()
+                  }
+                });
+                
                 console.log('Preview mode: Updated subscription data');
-              }).catch(err => {
+                
+                // Force a reload of the account context to reflect the changes
+                if (typeof window !== 'undefined') {
+                  // Wait a moment for the database to update
+                  setTimeout(() => {
+                    window.location.reload();
+                  }, 1500);
+                }
+              } catch (err) {
                 console.error('Preview mode: Failed to update subscription data', err);
-              });
+              }
+            } else {
+              // For production, check if the subscription was updated
+              try {
+                // Wait a moment for the webhook to process
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                
+                // Force a reload to get the latest account data
+                if (typeof window !== 'undefined') {
+                  window.location.reload();
+                }
+              } catch (err) {
+                console.error('Failed to check subscription status:', err);
+              }
             }
           })
           .catch(err => console.error('Error refreshing token:', err));

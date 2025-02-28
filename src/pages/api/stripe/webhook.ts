@@ -85,20 +85,46 @@ export default async function handler(
           throw new Error('No userId found in session metadata');
         }
 
-        // Update user's subscription status immediately after successful checkout
+        console.log('[Stripe Webhook] Checkout completed, updating user account:', {
+          userId,
+          sessionId: session.id
+        });
+
+        // Get current date for subscription dates
+        const currentDate = new Date();
+        const renewalDate = new Date(currentDate);
+        renewalDate.setDate(currentDate.getDate() + 30); // 30 days from now
+
+        // Update user's subscription status immediately after successful checkout in Realtime DB
         await realtimeDb.ref(`users/${userId}/account`).update({
           tier: 'premium',
           status: 'active',
           subscription: {
-            status: 'processing',
+            status: 'active', // Changed from 'processing' to 'active' for immediate effect
             tier: 'premium',
+            startDate: currentDate.toISOString(),
+            renewalDate: renewalDate.toISOString(),
+            currentPeriodEnd: Math.floor(renewalDate.getTime() / 1000),
             lastUpdated: Date.now()
           }
         });
 
-        console.log('[Stripe Webhook] Checkout completed:', {
+        // Also update Firestore for consistency
+        await firestoreDb.collection('users').doc(userId).set({
+          accountTier: 'premium', // Top-level field for easier queries
+          subscription: {
+            currentPlan: 'premium',
+            status: 'active',
+            startDate: currentDate.toISOString(),
+            endDate: renewalDate.toISOString() // Using endDate for consistency
+          }
+        }, { merge: true });
+
+        console.log('[Stripe Webhook] User account updated to premium:', {
           userId,
-          sessionId: session.id
+          sessionId: session.id,
+          startDate: currentDate.toISOString(),
+          renewalDate: renewalDate.toISOString()
         });
         break;
       }

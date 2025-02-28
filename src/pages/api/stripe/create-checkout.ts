@@ -111,7 +111,42 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
         // Preview environment handling
         if (process.env.NEXT_PUBLIC_CO_DEV_ENV === 'preview') {
-          console.log('[Create Checkout] Preview environment detected, returning simulated success');
+          console.log('[Create Checkout] Preview environment detected, simulating checkout');
+          
+          try {
+            // Update user's subscription status directly in preview mode
+            await db.ref(`users/${userId}/account`).update({
+              tier: 'premium',
+              status: 'active',
+              subscription: {
+                status: 'active',
+                tier: 'premium',
+                stripeSubscriptionId: `preview_${Date.now()}`,
+                startDate: new Date().toISOString(),
+                renewalDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+                currentPeriodEnd: Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60,
+                lastUpdated: Date.now()
+              }
+            });
+            
+            // Also update in Firestore for consistency
+            const firestore = admin.firestore();
+            await firestore.collection('users').doc(userId).set({
+              accountTier: 'premium',
+              subscription: {
+                currentPlan: 'premium',
+                status: 'active',
+                stripeSubscriptionId: `preview_${Date.now()}`,
+                startDate: new Date().toISOString(),
+                renewalDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+              }
+            }, { merge: true });
+            
+            console.log('[Create Checkout] Preview mode: Updated subscription data for user:', userId);
+          } catch (previewError) {
+            console.error('[Create Checkout] Preview mode update failed:', previewError);
+          }
+          
           return res.status(200).json({ 
             sessionUrl: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/account-status?session_id=preview_session`,
             isPreview: true
