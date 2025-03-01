@@ -50,6 +50,22 @@ service firebase.storage {
                    && userId == request.auth.uid;
     }
 
+    // Message images
+    match /messages/{userId}/{filename} {
+      // Allow read access to message participants
+      allow read: if isAuthenticated();
+      
+      // Allow users to upload their own message images
+      allow create, update: if isAuthenticated()
+                           && userId == request.auth.uid
+                           && isValidSize()
+                           && isImageType();
+
+      // Allow users to delete their own message images
+      allow delete: if isAuthenticated()
+                   && userId == request.auth.uid;
+    }
+
     // Default rule - deny everything else
     match /{allPaths=**} {
       allow read, write: if request.auth != null;
