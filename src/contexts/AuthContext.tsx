@@ -698,6 +698,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const emailQuery = query(usersRef, where('email', '==', user.email));
       const emailSnapshot = await getDocs(emailQuery);
       
+      let needsProfileCompletion = false;
+      
       if (!emailSnapshot.empty) {
         const existingUserDoc = emailSnapshot.docs[0];
         const existingProfile = existingUserDoc.data() as UserProfile;
@@ -711,32 +713,47 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           avatarUrl: existingProfile.avatarUrl || user.photoURL || '',
         };
 
+        // Check if profile needs completion (missing username, bio, or location)
+        if (!existingProfile.profileCompleted && 
+            (!existingProfile.username || !existingProfile.location)) {
+          needsProfileCompletion = true;
+          updatedProfile.profileCompleted = false;
+        }
+
         // Update the profile with preserved data
         await setDoc(doc(db, 'users', existingUserDoc.id), updatedProfile, { merge: true });
         setProfile(updatedProfile as UserProfile);
-        return result;
+        
+        // Store the profile completion status for redirection
+        if (needsProfileCompletion) {
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('needs_profile_completion', 'true');
+          }
+        }
+        
+        return { ...result, needsProfileCompletion };
       }
 
       // If no profile exists, create a new one
       const profileDoc = await getDoc(doc(db, 'users', user.uid));
       
       if (!profileDoc.exists()) {
-        // Generate a unique username for new Google users
+        // Generate a temporary username for new Google users
         const baseUsername = user.email.split('@')[0];
-        let finalUsername = baseUsername;
+        let tempUsername = baseUsername;
         let counter = 1;
 
         while (true) {
-          const usernameDoc = await getDoc(doc(db, 'usernames', finalUsername));
+          const usernameDoc = await getDoc(doc(db, 'usernames', tempUsername));
           if (!usernameDoc.exists()) break;
-          finalUsername = `${baseUsername}${counter}`;
+          tempUsername = `${baseUsername}${counter}`;
           counter++;
         }
 
         const newProfile: UserProfile = {
           uid: user.uid,
           email: user.email,
-          username: finalUsername,
+          username: tempUsername,
           joinDate: new Date().toISOString(),
           totalSales: 0,
           rating: 0,
@@ -745,6 +762,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           avatarUrl: user.photoURL || '',
           isEmailVerified: user.emailVerified,
           verificationSentAt: null,
+          profileCompleted: false, // Mark as incomplete
           social: {
             youtube: '',
             twitter: '',
@@ -761,18 +779,47 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Create user profile
         await setDoc(doc(db, 'users', user.uid), newProfile);
 
-        // Create username document
-        await setDoc(doc(db, 'usernames', finalUsername), {
+        // Create temporary username document
+        await setDoc(doc(db, 'usernames', tempUsername), {
           uid: user.uid,
-          username: finalUsername,
-          createdAt: new Date().toISOString()
+          username: tempUsername,
+          createdAt: new Date().toISOString(),
+          isTemporary: true // Mark as temporary
         });
 
         setProfile(newProfile);
+        
+        // Store the profile completion status for redirection
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('needs_profile_completion', 'true');
+        }
+        
+        return { ...result, needsProfileCompletion: true };
       } else {
         // If profile exists but wasn't found by email query
         const existingProfile = profileDoc.data() as UserProfile;
+        
+        // Check if profile needs completion
+        if (!existingProfile.profileCompleted && 
+            (!existingProfile.username || !existingProfile.location)) {
+          needsProfileCompletion = true;
+          
+          // Update profile to mark as incomplete
+          await setDoc(doc(db, 'users', user.uid), {
+            ...existingProfile,
+            profileCompleted: false
+          }, { merge: true });
+          
+          existingProfile.profileCompleted = false;
+          
+          // Store the profile completion status for redirection
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('needs_profile_completion', 'true');
+          }
+        }
+        
         setProfile(existingProfile);
+        return { ...result, needsProfileCompletion };
       }
 
       return result;

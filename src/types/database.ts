@@ -66,6 +66,8 @@ export interface UserProfile {
   verificationSentAt?: string;
   accountTier: 'free' | 'premium';
   theme?: 'light' | 'dark' | 'system';
+  profileCompleted?: boolean;
+  lastSignIn?: string;
   subscription: {
     status: 'active' | 'inactive';
     stripeSubscriptionId?: string;

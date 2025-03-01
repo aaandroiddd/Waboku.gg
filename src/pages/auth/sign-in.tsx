@@ -212,7 +212,12 @@ function SignInComponent() {
                 try {
                   setAuthError(null);
                   setIsGoogleLoading(true);
-                  await signInWithGoogle();
+                  const result = await signInWithGoogle();
+                  
+                  // Check if profile completion is needed
+                  if (result && result.needsProfileCompletion) {
+                    router.push('/auth/complete-profile');
+                  }
                 } catch (err: any) {
                   const error = err instanceof Error ? err : new Error(err.message || "Failed to sign in with Google");
                   error.name = err.code || err.name || "auth/unknown";

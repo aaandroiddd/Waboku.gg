@@ -2,6 +2,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/router';
 import { useEffect, useState } from 'react';
 import { Skeleton } from './ui/skeleton';
+import LoadingScreen from './LoadingScreen';
 
 interface RouteGuardProps {
   children: React.ReactNode;
@@ -28,6 +29,18 @@ export function RouteGuard({ children, requireAuth = false }: RouteGuardProps) {
           setAuthorized(false);
           router.push('/auth/sign-in');
           return;
+        }
+
+        // Check if user needs to complete profile
+        if (requireAuth && user && typeof window !== 'undefined') {
+          const needsProfileCompletion = localStorage.getItem('needs_profile_completion');
+          
+          if (needsProfileCompletion === 'true' && 
+              router.pathname !== '/auth/complete-profile') {
+            setAuthorized(false);
+            router.push('/auth/complete-profile');
+            return;
+          }
         }
 
         // If user is logged in and tries to access auth pages
