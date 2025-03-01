@@ -216,7 +216,7 @@ export default function AccountStatus() {
 
           toast({
             title: "Subscription Canceled",
-            description: "Your subscription will remain active until " + endDate.toLocaleDateString(),
+            description: `Your premium features will remain active until ${endDate.toLocaleDateString()}.`,
           });
 
           // Refresh the page after a short delay to show updated status
@@ -266,10 +266,11 @@ export default function AccountStatus() {
       const data = await response.json();
       console.log('Cancellation response:', data);
 
-      // Show success message
+      // Show success message with end date
+      const endDateFormatted = data.endDate ? formatDate(data.endDate) : 'the end of your billing period';
       toast({
         title: "Subscription Canceled",
-        description: "Your subscription will remain active until the end of the current billing period.",
+        description: `Your premium features will remain active until ${endDateFormatted}.`,
       });
 
       // Refresh the page after a short delay to show updated status
@@ -387,11 +388,17 @@ export default function AccountStatus() {
                 Your account has been upgraded to premium by an administrator.
               </p>
             )}
-            {subscription.status === 'canceled' && (
+            {subscription.status === 'canceled' && subscription.endDate && (
               <div className="mt-4">
-                <p className="text-sm text-muted-foreground mb-4">
-                  Your subscription is canceled. You will lose access to premium features on {formatDate(subscription.endDate)}.
-                </p>
+                <div className="p-4 mb-4 border rounded-md bg-amber-50 dark:bg-amber-950 border-amber-200 dark:border-amber-800">
+                  <h3 className="text-base font-medium text-amber-800 dark:text-amber-300 mb-2">Subscription Canceled</h3>
+                  <p className="text-sm text-amber-700 dark:text-amber-400">
+                    Your premium features will remain active until <span className="font-semibold">{formatDate(subscription.endDate)}</span>.
+                  </p>
+                  <p className="text-sm text-amber-700 dark:text-amber-400 mt-2">
+                    After this date, your account will revert to the free tier.
+                  </p>
+                </div>
                 <Button 
                   onClick={async () => {
                     try {
@@ -527,8 +534,14 @@ export default function AccountStatus() {
                   <AlertDialogContent>
                     <AlertDialogHeader>
                       <AlertDialogTitle>Cancel Premium Subscription?</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        Your premium features will remain active until the end of your current billing period. After that, your account will revert to the free tier.
+                      <AlertDialogDescription className="space-y-2">
+                        <p>
+                          Your premium features will remain active until the end of your current billing period 
+                          {subscription.renewalDate ? ` (${formatDate(subscription.renewalDate)})` : ''}.
+                        </p>
+                        <p>
+                          After that date, your account will revert to the free tier.
+                        </p>
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
