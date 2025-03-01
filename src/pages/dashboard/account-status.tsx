@@ -196,26 +196,41 @@ export default function AccountStatus() {
 
       // Handle preview environment
       if (process.env.NEXT_PUBLIC_CO_DEV_ENV === 'preview') {
-        // Simulate cancellation by updating the subscription status
-        const db = getDatabase();
-        const userRef = ref(db, `users/${user?.uid}/account/subscription`);
-        const currentDate = new Date();
-        const endDate = new Date();
-        endDate.setDate(currentDate.getDate() + 30); // Set end date to 30 days from now
-        
-        await set(userRef, {
-          status: 'canceled',
-          startDate: currentDate.toISOString(),
-          endDate: endDate.toISOString(),
-          stripeSubscriptionId: 'preview-sub-canceled'
-        });
+        try {
+          // Simulate cancellation by updating the subscription status
+          const db = getDatabase();
+          const userRef = ref(db, `users/${user?.uid}/account/subscription`);
+          const currentDate = new Date();
+          const endDate = new Date();
+          endDate.setDate(currentDate.getDate() + 30); // Set end date to 30 days from now
+          
+          // Make sure we have all required fields to satisfy validation rules
+          await set(userRef, {
+            status: 'canceling', // Use 'canceling' instead of 'canceled' to match API behavior
+            startDate: subscription.startDate || currentDate.toISOString(),
+            endDate: endDate.toISOString(),
+            stripeSubscriptionId: subscription.stripeSubscriptionId || 'preview-sub-canceled',
+            canceledAt: currentDate.toISOString(),
+            cancelAtPeriodEnd: true
+          });
 
-        toast({
-          title: "Subscription Canceled",
-          description: "Your subscription will remain active until " + endDate.toLocaleDateString(),
-        });
+          toast({
+            title: "Subscription Canceled",
+            description: "Your subscription will remain active until " + endDate.toLocaleDateString(),
+          });
 
-        return;
+          // Refresh the page after a short delay to show updated status
+          setTimeout(() => {
+            window.location.reload();
+          }, 2000);
+          
+          return;
+        } catch (previewError: any) {
+          console.error('Preview mode update failed:', previewError);
+          
+          // If direct database update fails, fall back to API call
+          console.log('Falling back to API call for preview environment');
+        }
       }
 
       // Production flow

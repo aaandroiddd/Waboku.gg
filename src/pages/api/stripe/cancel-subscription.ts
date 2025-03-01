@@ -147,7 +147,7 @@ export default async function handler(
           });
         }
         
-        // Check if account/subscription path exists
+        // Check if account path exists
         const accountSnapshot = await db.ref(`users/${userId}/account`).once('value');
         if (!accountSnapshot.exists()) {
           // Create account node if it doesn't exist
@@ -157,14 +157,24 @@ export default async function handler(
           });
         }
         
-        // Update the subscription data
-        await userRef.update({
+        // Check if subscription data exists
+        const subscriptionSnapshot = await db.ref(`users/${userId}/account/subscription`).once('value');
+        const subscriptionData = subscriptionSnapshot.exists() ? subscriptionSnapshot.val() : {};
+        
+        // Prepare complete subscription data to ensure all required fields are present
+        const updatedSubscription = {
+          // Keep existing data
+          ...subscriptionData,
+          // Update with new cancellation data
           status: 'canceling',
           endDate: endDate,
           stripeSubscriptionId: subscriptionId,
           canceledAt: new Date().toISOString(),
           cancelAtPeriodEnd: true
-        });
+        };
+        
+        // Set the entire subscription object to ensure all required fields are present
+        await db.ref(`users/${userId}/account/subscription`).set(updatedSubscription);
         
         console.log('Firebase subscription data updated successfully');
       } catch (dbError: any) {
@@ -179,7 +189,13 @@ export default async function handler(
         try {
           console.log('Attempting alternative database update approach');
           
-          // Try setting the entire subscription object
+          // Try updating the account tier directly
+          await db.ref(`users/${userId}/account`).update({
+            tier: 'premium', // Keep as premium until end date
+            lastUpdated: Date.now()
+          });
+          
+          // Try setting minimal subscription data
           await db.ref(`users/${userId}/account/subscription`).set({
             status: 'canceling',
             endDate: endDate,

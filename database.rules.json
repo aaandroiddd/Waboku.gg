@@ -66,6 +66,7 @@
             ".validate": "!newData.exists() || newData.isString()"
           },
           "subscription": {
+            ".read": "auth != null && (auth.uid === $uid || auth.token.admin === true)",
             ".write": "auth != null && (auth.uid === $uid || auth.token.admin === true)",
             ".validate": "!newData.exists() || newData.hasChildren(['status'])",
             "status": {
