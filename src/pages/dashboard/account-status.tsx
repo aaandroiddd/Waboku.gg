@@ -7,6 +7,7 @@ import { useRouter } from 'next/router';
 import { Footer } from '@/components/Footer';
 import { useEffect } from 'react';
 import { getDatabase, ref, set } from 'firebase/database';
+import { getFirestore, doc, setDoc } from 'firebase/firestore';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/components/ui/use-toast';
 import { Card } from '@/components/ui/card';
@@ -114,25 +115,44 @@ export default function AccountStatus() {
             // For preview environment, update the database directly
             if (process.env.NEXT_PUBLIC_CO_DEV_ENV === 'preview' && user.uid) {
               try {
+                // Prepare subscription data
+                const currentDate = new Date();
+                const renewalDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+                const subscriptionId = `preview_${Date.now()}`;
+                
+                // Update Realtime Database
                 const db = getDatabase();
                 const userRef = ref(db, `users/${user.uid}/account`);
-                
-                // Set premium subscription data
                 await set(userRef, {
                   tier: 'premium',
                   status: 'active',
                   subscription: {
                     status: 'active',
                     tier: 'premium',
-                    stripeSubscriptionId: `preview_${Date.now()}`,
-                    startDate: new Date().toISOString(),
-                    renewalDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-                    currentPeriodEnd: Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60,
+                    stripeSubscriptionId: subscriptionId,
+                    startDate: currentDate.toISOString(),
+                    renewalDate: renewalDate.toISOString(),
+                    currentPeriodEnd: Math.floor(renewalDate.getTime() / 1000),
                     lastUpdated: Date.now()
                   }
                 });
                 
-                console.log('Preview mode: Updated subscription data');
+                // Update Firestore for consistency
+                const firestore = getFirestore();
+                const userDocRef = doc(firestore, 'users', user.uid);
+                await setDoc(userDocRef, {
+                  accountTier: 'premium',
+                  updatedAt: currentDate.toISOString(),
+                  subscription: {
+                    status: 'active',
+                    stripeSubscriptionId: subscriptionId,
+                    startDate: currentDate.toISOString(),
+                    renewalDate: renewalDate.toISOString(),
+                    currentPlan: 'premium'
+                  }
+                }, { merge: true });
+                
+                console.log('Preview mode: Updated subscription data in both databases');
                 
                 // Force a reload of the account context to reflect the changes
                 if (typeof window !== 'undefined') {
@@ -197,7 +217,12 @@ export default function AccountStatus() {
       // Handle preview environment
       if (process.env.NEXT_PUBLIC_CO_DEV_ENV === 'preview') {
         try {
-          // Simulate cancellation by updating the subscription status
+          // Prepare cancellation data
+          const currentDate = new Date();
+          const endDate = new Date();
+          endDate.setDate(currentDate.getDate() + 30); // Set end date to 30 days from now
+          
+          // Update Realtime Database
           const db = getDatabase();
           
           // First update the account tier
@@ -209,9 +234,6 @@ export default function AccountStatus() {
           
           // Then update the subscription details
           const userRef = ref(db, `users/${user?.uid}/account/subscription`);
-          const currentDate = new Date();
-          const endDate = new Date();
-          endDate.setDate(currentDate.getDate() + 30); // Set end date to 30 days from now
           
           // Make sure we have all required fields to satisfy validation rules
           await set(userRef, {
@@ -226,22 +248,23 @@ export default function AccountStatus() {
           });
 
           // Also update Firestore for consistency
-          if (typeof window !== 'undefined' && window.firebase) {
-            try {
-              const firestore = getFirestore();
-              await firestore.collection('users').doc(user?.uid).set({
-                accountTier: 'premium', // Keep as premium until end date
-                subscription: {
-                  status: 'canceled',
-                  endDate: endDate.toISOString(),
-                  canceledAt: currentDate.toISOString()
-                }
-              }, { merge: true });
-            } catch (firestoreError) {
-              console.error('Failed to update Firestore:', firestoreError);
-              // Continue even if Firestore update fails
+          const firestore = getFirestore();
+          const userDocRef = doc(firestore, 'users', user?.uid);
+          await setDoc(userDocRef, {
+            accountTier: 'premium', // Keep as premium until end date
+            updatedAt: currentDate.toISOString(),
+            subscription: {
+              status: 'canceled',
+              stripeSubscriptionId: subscription.stripeSubscriptionId || 'preview-sub-canceled',
+              startDate: subscription.startDate || currentDate.toISOString(),
+              endDate: endDate.toISOString(),
+              renewalDate: endDate.toISOString(),
+              canceledAt: currentDate.toISOString(),
+              currentPlan: 'premium'
             }
-          }
+          }, { merge: true });
+          
+          console.log('Preview mode: Updated subscription cancellation in both databases');
 
           toast({
             title: "Subscription Canceled",
@@ -441,15 +464,47 @@ export default function AccountStatus() {
                       if (process.env.NEXT_PUBLIC_CO_DEV_ENV === 'preview') {
                         // Simulate successful resubscription by directly updating Firebase
                         try {
+                          // Prepare subscription data
+                          const currentDate = new Date();
+                          const renewalDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+                          const subscriptionId = `preview_${Date.now()}`;
+                          const stripeCustomerId = 'test_customer_' + Math.random().toString(36).substr(2, 9);
+                          
+                          // Update Realtime Database
                           const db = getDatabase();
                           const userRef = ref(db, `users/${user?.uid}/account`);
                           await set(userRef, {
                             tier: 'premium',
                             status: 'active',
-                            stripeCustomerId: 'test_customer_' + Math.random().toString(36).substr(2, 9),
-                            subscriptionId: 'test_sub_' + Math.random().toString(36).substr(2, 9),
-                            lastUpdated: Date.now()
+                            stripeCustomerId: stripeCustomerId,
+                            lastUpdated: Date.now(),
+                            subscription: {
+                              status: 'active',
+                              tier: 'premium',
+                              stripeSubscriptionId: subscriptionId,
+                              startDate: currentDate.toISOString(),
+                              renewalDate: renewalDate.toISOString(),
+                              currentPeriodEnd: Math.floor(renewalDate.getTime() / 1000),
+                              lastUpdated: Date.now()
+                            }
                           });
+                          
+                          // Update Firestore for consistency
+                          const firestore = getFirestore();
+                          const userDocRef = doc(firestore, 'users', user?.uid);
+                          await setDoc(userDocRef, {
+                            accountTier: 'premium',
+                            updatedAt: currentDate.toISOString(),
+                            subscription: {
+                              status: 'active',
+                              stripeSubscriptionId: subscriptionId,
+                              startDate: currentDate.toISOString(),
+                              renewalDate: renewalDate.toISOString(),
+                              currentPlan: 'premium'
+                            }
+                          }, { merge: true });
+                          
+                          console.log('Preview mode: Updated resubscription data in both databases');
 
                           // Redirect to simulate the success flow
                           router.push('/dashboard/account-status?upgrade=success');

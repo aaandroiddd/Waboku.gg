@@ -1,7 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { getDatabase } from 'firebase-admin/database';
 import { getAuth } from 'firebase-admin/auth';
 import { getFirebaseAdmin } from '@/lib/firebase-admin';
+import { syncSubscriptionData, getSubscriptionData } from '@/lib/subscription-sync';
 import Stripe from 'stripe';
 
 // Initialize Stripe with more detailed configuration
@@ -22,6 +22,8 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
+  const requestId = Math.random().toString(36).substring(7);
+  
   // Get the origin from the request headers
   const origin = req.headers.origin;
 
@@ -56,10 +58,10 @@ export default async function handler(
           const auth = getAuth();
           const decodedToken = await auth.verifyIdToken(token);
           userId = decodedToken.uid;
-          console.log('Retrieved userId from token:', userId);
+          console.log(`[Cancel Subscription ${requestId}] Retrieved userId from token:`, userId);
         }
       } catch (authError) {
-        console.error('Error extracting user ID from token:', authError);
+        console.error(`[Cancel Subscription ${requestId}] Error extracting user ID from token:`, authError);
         return res.status(401).json({
           error: 'Authentication failed',
           message: 'Could not verify your identity. Please try again.',
@@ -72,7 +74,7 @@ export default async function handler(
     const isPreview = process.env.NEXT_PUBLIC_CO_DEV_ENV === 'preview';
     
     // Detailed request logging
-    console.log('Cancellation request received:', {
+    console.log(`[Cancel Subscription ${requestId}] Cancellation request received:`, {
       subscriptionId,
       userId,
       isPreview,
@@ -81,7 +83,7 @@ export default async function handler(
 
     // Validate required fields
     if (!subscriptionId) {
-      console.error('Missing subscription ID');
+      console.error(`[Cancel Subscription ${requestId}] Missing subscription ID`);
       return res.status(400).json({ 
         error: 'Subscription ID is required',
         code: 'MISSING_SUBSCRIPTION_ID'
@@ -89,24 +91,80 @@ export default async function handler(
     }
 
     if (!userId) {
-      console.error('Missing user ID');
+      console.error(`[Cancel Subscription ${requestId}] Missing user ID`);
       return res.status(400).json({ 
         error: 'User ID is required',
         code: 'MISSING_USER_ID'
       });
     }
 
-    // Use admin database instance for server operations
-    getFirebaseAdmin(); // Ensure Firebase Admin is initialized
-    const db = getDatabase();
-    const userRef = db.ref(`users/${userId}/account/subscription`);
+    // Get current subscription data
+    const { source, data: subscriptionData } = await getSubscriptionData(userId);
+    
+    console.log(`[Cancel Subscription ${requestId}] Retrieved subscription data from ${source}:`, {
+      userId,
+      accountTier: subscriptionData.accountTier,
+      status: subscriptionData.status,
+      stripeSubscriptionId: subscriptionData.stripeSubscriptionId ? 'exists' : 'missing'
+    });
+    
+    // Verify the subscription ID matches
+    if (subscriptionData.stripeSubscriptionId !== subscriptionId) {
+      console.error(`[Cancel Subscription ${requestId}] Subscription ID mismatch:`, {
+        providedId: subscriptionId,
+        storedId: subscriptionData.stripeSubscriptionId
+      });
+      
+      // If we have a stored ID but it doesn't match, use the stored one
+      if (subscriptionData.stripeSubscriptionId) {
+        console.log(`[Cancel Subscription ${requestId}] Using stored subscription ID instead:`, subscriptionData.stripeSubscriptionId);
+        subscriptionId = subscriptionData.stripeSubscriptionId;
+      }
+    }
     
     try {
+      // For admin-assigned subscriptions, handle differently
+      if (subscriptionId.includes('admin_')) {
+        console.log(`[Cancel Subscription ${requestId}] Canceling admin-assigned subscription:`, subscriptionId);
+        
+        // Calculate the end date (30 days from now)
+        const currentDate = new Date();
+        const endDate = new Date();
+        endDate.setDate(currentDate.getDate() + 30);
+        
+        // Update subscription data
+        const updatedSubscription = {
+          ...subscriptionData,
+          status: 'canceled',
+          endDate: endDate.toISOString(),
+          renewalDate: endDate.toISOString(),
+          canceledAt: currentDate.toISOString(),
+          cancelAtPeriodEnd: true
+        };
+        
+        // Sync the updated data to both databases
+        await syncSubscriptionData(userId, updatedSubscription);
+        
+        console.log(`[Cancel Subscription ${requestId}] Admin subscription canceled successfully:`, {
+          userId,
+          subscriptionId,
+          endDate: endDate.toISOString()
+        });
+        
+        return res.status(200).json({
+          success: true,
+          message: 'Admin-assigned subscription will be canceled at the end of the period',
+          endDate: endDate.toISOString(),
+          status: 'canceled'
+        });
+      }
+      
+      // For regular Stripe subscriptions, cancel through Stripe
       // First verify the subscription exists in Stripe
       const subscription = await stripe.subscriptions.retrieve(subscriptionId);
       
       if (!subscription) {
-        console.error('Subscription not found in Stripe:', subscriptionId);
+        console.error(`[Cancel Subscription ${requestId}] Subscription not found in Stripe:`, subscriptionId);
         return res.status(404).json({
           error: 'Subscription not found in Stripe',
           code: 'SUBSCRIPTION_NOT_FOUND'
@@ -114,20 +172,36 @@ export default async function handler(
       }
 
       if (subscription.status === 'canceled') {
-        console.log('Subscription already canceled in Stripe:', subscriptionId);
+        console.log(`[Cancel Subscription ${requestId}] Subscription already canceled in Stripe:`, subscriptionId);
+        
+        // Update our database to reflect this
+        const endDate = new Date(subscription.current_period_end * 1000).toISOString();
+        const updatedSubscription = {
+          ...subscriptionData,
+          status: 'canceled',
+          endDate: endDate,
+          renewalDate: endDate,
+          canceledAt: new Date().toISOString(),
+          cancelAtPeriodEnd: true
+        };
+        
+        // Sync the updated data to both databases
+        await syncSubscriptionData(userId, updatedSubscription);
+        
         return res.status(400).json({
           error: 'Subscription is already canceled',
-          code: 'ALREADY_CANCELED'
+          code: 'ALREADY_CANCELED',
+          endDate: endDate
         });
       }
 
       // Cancel the subscription in Stripe
-      console.log('Attempting to cancel Stripe subscription:', subscriptionId);
+      console.log(`[Cancel Subscription ${requestId}] Attempting to cancel Stripe subscription:`, subscriptionId);
       const canceledSubscription = await stripe.subscriptions.update(subscriptionId, {
         cancel_at_period_end: true
       });
 
-      console.log('Stripe subscription updated successfully:', {
+      console.log(`[Cancel Subscription ${requestId}] Stripe subscription updated successfully:`, {
         id: canceledSubscription.id,
         status: canceledSubscription.status,
         cancelAt: canceledSubscription.cancel_at
@@ -136,105 +210,35 @@ export default async function handler(
       // Calculate the end date from Stripe's response
       const endDate = new Date(canceledSubscription.current_period_end * 1000).toISOString();
 
-      // Update subscription status in Firebase
-      try {
-        console.log('Attempting to update Firebase subscription data:', {
-          userId,
-          path: `users/${userId}/account/subscription`,
-          status: 'canceling',
+      // Update subscription data
+      const updatedSubscription = {
+        ...subscriptionData,
+        status: 'canceled',
+        endDate: endDate,
+        renewalDate: endDate,
+        stripeSubscriptionId: subscriptionId,
+        canceledAt: new Date().toISOString(),
+        cancelAtPeriodEnd: true
+      };
+      
+      // Sync the updated data to both databases
+      const syncResult = await syncSubscriptionData(userId, updatedSubscription);
+      
+      if (!syncResult.success) {
+        console.error(`[Cancel Subscription ${requestId}] Database sync failed:`, syncResult.error);
+        
+        // If we can't update the database but the Stripe cancellation was successful,
+        // we should still return a success response but note the database error
+        return res.status(200).json({ 
+          success: true,
+          message: 'Subscription canceled in Stripe but database update failed. Please refresh the page.',
           endDate,
-          stripeSubscriptionId: subscriptionId
-        });
-        
-        // First check if the user exists in the database
-        const userSnapshot = await db.ref(`users/${userId}`).once('value');
-        if (!userSnapshot.exists()) {
-          console.error('User not found in database:', userId);
-          return res.status(404).json({
-            error: 'User not found in database',
-            code: 'USER_NOT_FOUND'
-          });
-        }
-        
-        // Check if account path exists
-        const accountSnapshot = await db.ref(`users/${userId}/account`).once('value');
-        if (!accountSnapshot.exists()) {
-          // Create account node if it doesn't exist
-          await db.ref(`users/${userId}/account`).set({
-            tier: 'free',
-            lastUpdated: Date.now()
-          });
-        }
-        
-        // Check if subscription data exists
-        const subscriptionSnapshot = await db.ref(`users/${userId}/account/subscription`).once('value');
-        const subscriptionData = subscriptionSnapshot.exists() ? subscriptionSnapshot.val() : {};
-        
-        // Prepare complete subscription data to ensure all required fields are present
-        const updatedSubscription = {
-          // Keep existing data
-          ...subscriptionData,
-          // Update with new cancellation data
           status: 'canceled',
-          endDate: endDate,
-          renewalDate: endDate, // Set renewal date to end date for canceled subscriptions
-          stripeSubscriptionId: subscriptionId,
-          canceledAt: new Date().toISOString(),
-          cancelAtPeriodEnd: true
-        };
-        
-        // Set the entire subscription object to ensure all required fields are present
-        await db.ref(`users/${userId}/account/subscription`).set(updatedSubscription);
-        
-        console.log('Firebase subscription data updated successfully');
-      } catch (dbError: any) {
-        console.error('Firebase database update error:', {
-          error: dbError.message,
-          code: dbError.code,
-          userId,
-          path: `users/${userId}/account/subscription`
+          databaseError: syncResult.error
         });
-        
-        // Try an alternative approach if the first update fails
-        try {
-          console.log('Attempting alternative database update approach');
-          
-          // Try updating the account tier directly
-          await db.ref(`users/${userId}/account`).update({
-            tier: 'premium', // Keep as premium until end date
-            lastUpdated: Date.now()
-          });
-          
-          // Try setting minimal subscription data
-          await db.ref(`users/${userId}/account/subscription`).set({
-            status: 'canceled',
-            endDate: endDate,
-            renewalDate: endDate, // Set renewal date to end date
-            stripeSubscriptionId: subscriptionId,
-            canceledAt: new Date().toISOString(),
-            cancelAtPeriodEnd: true
-          });
-          
-          console.log('Alternative database update successful');
-        } catch (altError: any) {
-          console.error('Alternative database update also failed:', {
-            error: altError.message,
-            code: altError.code
-          });
-          
-          // If we can't update the database but the Stripe cancellation was successful,
-          // we should still return a success response but note the database error
-          return res.status(200).json({ 
-            success: true,
-            message: 'Subscription canceled in Stripe but database update failed. Please refresh the page.',
-            endDate,
-            status: 'canceling',
-            databaseError: dbError.message
-          });
-        }
       }
 
-      console.log('Cancellation process completed successfully:', {
+      console.log(`[Cancel Subscription ${requestId}] Cancellation process completed successfully:`, {
         userId,
         subscriptionId,
         endDate
@@ -248,7 +252,7 @@ export default async function handler(
       });
 
     } catch (stripeError: any) {
-      console.error('Stripe operation error:', {
+      console.error(`[Cancel Subscription ${requestId}] Stripe operation error:`, {
         error: stripeError.message,
         code: stripeError.code,
         type: stripeError.type,
@@ -257,6 +261,35 @@ export default async function handler(
 
       // Handle specific Stripe errors
       if (stripeError.type === 'StripeInvalidRequestError') {
+        // If the subscription doesn't exist in Stripe but we have it in our database,
+        // update our database to reflect that it's canceled
+        if (stripeError.code === 'resource_missing' && subscriptionData.stripeSubscriptionId) {
+          console.log(`[Cancel Subscription ${requestId}] Subscription not found in Stripe, updating database:`, subscriptionId);
+          
+          const currentDate = new Date();
+          const endDate = new Date();
+          endDate.setDate(currentDate.getDate() + 30);
+          
+          const updatedSubscription = {
+            ...subscriptionData,
+            status: 'canceled',
+            endDate: endDate.toISOString(),
+            renewalDate: endDate.toISOString(),
+            canceledAt: currentDate.toISOString(),
+            cancelAtPeriodEnd: true
+          };
+          
+          // Sync the updated data to both databases
+          await syncSubscriptionData(userId, updatedSubscription);
+          
+          return res.status(200).json({
+            success: true,
+            message: 'Subscription not found in Stripe but marked as canceled in our system',
+            endDate: endDate.toISOString(),
+            status: 'canceled'
+          });
+        }
+        
         return res.status(400).json({
           error: 'Invalid subscription details',
           message: stripeError.message,

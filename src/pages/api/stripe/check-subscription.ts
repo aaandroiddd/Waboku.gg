@@ -1,7 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { getFirestore } from 'firebase-admin/firestore';
-import { getDatabase } from 'firebase-admin/database';
 import { getFirebaseAdmin } from '@/lib/firebase-admin';
+import { getSubscriptionData, syncSubscriptionData } from '@/lib/subscription-sync';
 import Stripe from 'stripe';
 
 // Initialize Stripe with error handling
@@ -140,69 +139,62 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         tokenExpires: new Date(decodedToken.exp * 1000).toISOString()
       });
 
-      // Get subscription data from Realtime Database
-      const realtimeDb = getDatabase();
-      const userRef = realtimeDb.ref(`users/${userId}/account`);
+      // Get subscription data using our utility function
+      const { source, data: subscriptionData } = await getSubscriptionData(userId);
       
-      const snapshot = await userRef.once('value');
-      const accountData = snapshot.val();
-
-      // Also check Firestore for admin-set premium status
-      const firestore = getFirestore();
-      const firestoreUserDoc = await firestore.collection('users').doc(userId).get();
-      const firestoreData = firestoreUserDoc.exists ? firestoreUserDoc.data() : null;
-      
-      console.log(`[Subscription Check ${requestId}] User data:`, {
+      console.log(`[Subscription Check ${requestId}] Retrieved subscription data from ${source}:`, {
         userId,
-        hasRealtimeData: !!accountData,
-        hasFirestoreData: !!firestoreData,
-        realtimeSubscription: accountData?.subscription ? 'exists' : 'missing',
-        firestoreAccountTier: firestoreData?.accountTier || 'not set',
-        firestoreSubscription: firestoreData?.subscription ? 'exists' : 'missing'
+        accountTier: subscriptionData.accountTier,
+        status: subscriptionData.status,
+        stripeSubscriptionId: subscriptionData.stripeSubscriptionId ? 'exists' : 'missing'
       });
 
-      // If admin has set premium status in Firestore, use that
-      if (firestoreData && 
-          (firestoreData.accountTier === 'premium' || 
-           firestoreData.subscription?.currentPlan === 'premium' || 
-           firestoreData.subscription?.status === 'active')) {
-        console.log(`[Subscription Check ${requestId}] Using admin-set premium status from Firestore:`, {
-          accountTier: firestoreData.accountTier,
-          subscriptionPlan: firestoreData.subscription?.currentPlan,
-          subscriptionStatus: firestoreData.subscription?.status,
-          manuallyUpdated: firestoreData.subscription?.manuallyUpdated
+      // If admin has set premium status, ensure it's properly synced
+      if (subscriptionData.accountTier === 'premium' && 
+          (subscriptionData.manuallyUpdated || 
+           (subscriptionData.stripeSubscriptionId && subscriptionData.stripeSubscriptionId.includes('admin_')))) {
+        
+        console.log(`[Subscription Check ${requestId}] Using admin-set premium status:`, {
+          accountTier: subscriptionData.accountTier,
+          subscriptionPlan: subscriptionData.currentPlan,
+          subscriptionStatus: subscriptionData.status,
+          manuallyUpdated: subscriptionData.manuallyUpdated
         });
         
-        // Sync to Realtime Database if needed
+        // Ensure admin subscription has proper dates
         const currentDate = new Date();
         const endDate = new Date();
         endDate.setFullYear(currentDate.getFullYear() + 1); // Set end date to 1 year from now
         
-        const subscriptionData = {
+        const updatedSubscription = {
+          ...subscriptionData,
           tier: 'premium',
+          currentPlan: 'premium',
           status: 'active',
-          stripeSubscriptionId: firestoreData.subscription?.stripeSubscriptionId || `admin_${userId}_${Date.now()}`,
+          stripeSubscriptionId: subscriptionData.stripeSubscriptionId || `admin_${userId}_${Date.now()}`,
           currentPeriodEnd: Math.floor(endDate.getTime() / 1000),
-          startDate: firestoreData.subscription?.startDate || currentDate.toISOString(),
+          startDate: subscriptionData.startDate || currentDate.toISOString(),
           renewalDate: endDate.toISOString(),
           manuallyUpdated: true
         };
         
-        await userRef.child('subscription').set(subscriptionData);
-        console.log(`[Subscription Check ${requestId}] Synced premium status to Realtime Database with renewal date`);
+        // Sync the updated data to both databases
+        await syncSubscriptionData(userId, updatedSubscription);
         
         return res.status(200).json({
           isPremium: true,
           status: 'active',
           tier: 'premium',
-          currentPeriodEnd: subscriptionData.currentPeriodEnd,
-          renewalDate: subscriptionData.renewalDate,
-          subscriptionId: subscriptionData.stripeSubscriptionId
+          currentPeriodEnd: updatedSubscription.currentPeriodEnd,
+          renewalDate: updatedSubscription.renewalDate,
+          startDate: updatedSubscription.startDate,
+          subscriptionId: updatedSubscription.stripeSubscriptionId
         });
       }
 
-      if (!accountData || !accountData.subscription) {
-        console.log(`[Subscription Check ${requestId}] No subscription found:`, { userId });
+      // If no subscription or free tier, return that info
+      if (!subscriptionData.stripeSubscriptionId || subscriptionData.status === 'none') {
+        console.log(`[Subscription Check ${requestId}] No active subscription found:`, { userId });
         return res.status(200).json({ 
           isPremium: false,
           status: 'none',
@@ -210,29 +202,34 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         });
       }
 
-      const { subscription } = accountData;
-      
       // If there's a Stripe subscription ID, verify with Stripe
       let stripeSubscription = null;
-      if (subscription.stripeSubscriptionId) {
+      if (subscriptionData.stripeSubscriptionId && !subscriptionData.stripeSubscriptionId.includes('admin_')) {
         try {
-          stripeSubscription = await stripe.subscriptions.retrieve(subscription.stripeSubscriptionId);
+          stripeSubscription = await stripe.subscriptions.retrieve(subscriptionData.stripeSubscriptionId);
           
           // Update subscription status from Stripe
-          subscription.status = stripeSubscription.status;
-          subscription.currentPeriodEnd = stripeSubscription.current_period_end;
-          
-          // Update the database with latest Stripe status
-          await userRef.child('subscription').update({
+          const updatedSubscription = {
+            ...subscriptionData,
             status: stripeSubscription.status,
-            currentPeriodEnd: stripeSubscription.current_period_end
-          });
+            currentPeriodEnd: stripeSubscription.current_period_end,
+            renewalDate: new Date(stripeSubscription.current_period_end * 1000).toISOString()
+          };
+          
+          // Sync the updated data to both databases
+          await syncSubscriptionData(userId, updatedSubscription);
 
-          console.log(`[Subscription Check ${requestId}] Updated Stripe subscription status:`, {
+          console.log(`[Subscription Check ${requestId}] Updated subscription with Stripe data:`, {
             userId,
             status: stripeSubscription.status,
             currentPeriodEnd: stripeSubscription.current_period_end
           });
+          
+          // Update local reference for response
+          subscriptionData.status = stripeSubscription.status;
+          subscriptionData.currentPeriodEnd = stripeSubscription.current_period_end;
+          subscriptionData.renewalDate = new Date(stripeSubscription.current_period_end * 1000).toISOString();
+          
         } catch (stripeError: any) {
           console.error(`[Subscription Check ${requestId}] Stripe error:`, {
             code: stripeError.code,
@@ -242,57 +239,68 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           
           // If Stripe subscription not found, reset status
           if (stripeError.code === 'resource_missing') {
-            subscription.status = 'none';
-            await userRef.child('subscription').update({
+            const resetSubscription = {
+              ...subscriptionData,
               status: 'none',
               stripeSubscriptionId: null
-            });
+            };
+            
+            // Sync the reset data to both databases
+            await syncSubscriptionData(userId, resetSubscription);
+            
+            // Update local reference for response
+            subscriptionData.status = 'none';
+            subscriptionData.stripeSubscriptionId = null;
           }
         }
       }
       
       const now = Date.now() / 1000;
-      const isActive = (subscription.status === 'active' || subscription.status === 'trialing') && 
-                      subscription.currentPeriodEnd && 
-                      subscription.currentPeriodEnd > now;
+      const isActive = (subscriptionData.status === 'active' || subscriptionData.status === 'trialing') && 
+                      subscriptionData.currentPeriodEnd && 
+                      subscriptionData.currentPeriodEnd > now;
 
       console.log(`[Subscription Check ${requestId}] Final status:`, {
         userId,
         isActive,
         subscription: {
-          status: subscription.status,
-          tier: subscription.tier,
-          currentPeriodEnd: subscription.currentPeriodEnd
+          status: subscriptionData.status,
+          tier: subscriptionData.accountTier || subscriptionData.currentPlan,
+          currentPeriodEnd: subscriptionData.currentPeriodEnd
         }
       });
 
       // Check if this is an admin-assigned subscription
-      const isAdminAssigned = subscription.stripeSubscriptionId?.includes('admin_');
+      const isAdminAssigned = subscriptionData.stripeSubscriptionId?.includes('admin_');
       
       // For admin-assigned subscriptions, ensure we have a renewal date
-      if (isAdminAssigned && (!subscription.renewalDate || !subscription.startDate)) {
+      if (isAdminAssigned && (!subscriptionData.renewalDate || !subscriptionData.startDate)) {
         const currentDate = new Date();
         const endDate = new Date();
         endDate.setFullYear(currentDate.getFullYear() + 1); // Set end date to 1 year from now
         
-        // Update with renewal date
-        await userRef.child('subscription').update({
-          startDate: subscription.startDate || currentDate.toISOString(),
+        const updatedSubscription = {
+          ...subscriptionData,
+          startDate: subscriptionData.startDate || currentDate.toISOString(),
           renewalDate: endDate.toISOString(),
-        });
+        };
         
-        subscription.startDate = subscription.startDate || currentDate.toISOString();
-        subscription.renewalDate = endDate.toISOString();
+        // Sync the updated data to both databases
+        await syncSubscriptionData(userId, updatedSubscription);
+        
+        // Update local reference for response
+        subscriptionData.startDate = updatedSubscription.startDate;
+        subscriptionData.renewalDate = updatedSubscription.renewalDate;
       }
       
       return res.status(200).json({
-        isPremium: isActive && subscription.tier === 'premium',
-        status: subscription.status || 'none',
-        tier: subscription.tier || 'free',
-        currentPeriodEnd: subscription.currentPeriodEnd,
-        renewalDate: subscription.renewalDate,
-        startDate: subscription.startDate,
-        subscriptionId: subscription.stripeSubscriptionId
+        isPremium: isActive && (subscriptionData.accountTier === 'premium' || subscriptionData.currentPlan === 'premium'),
+        status: subscriptionData.status || 'none',
+        tier: subscriptionData.accountTier || subscriptionData.currentPlan || 'free',
+        currentPeriodEnd: subscriptionData.currentPeriodEnd,
+        renewalDate: subscriptionData.renewalDate,
+        startDate: subscriptionData.startDate,
+        subscriptionId: subscriptionData.stripeSubscriptionId
       });
 
     } catch (authError: any) {
