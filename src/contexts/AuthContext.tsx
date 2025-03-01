@@ -14,6 +14,7 @@ import {
   signInWithPopup
 } from 'firebase/auth';
 import { doc, setDoc, getDoc, deleteDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { ref, get, update, remove } from 'firebase/database';
 import { getFirebaseServices } from '@/lib/firebase';
 import { UserProfile } from '@/types/database';
 
@@ -465,6 +466,66 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             await deleteDoc(currentUsernameDoc);
           }
         }
+
+        // Delete user's favorites
+        console.log('Deleting user favorites:', user.uid);
+        const favoritesRef = collection(db, 'users', user.uid, 'favorites');
+        const favoritesSnapshot = await getDocs(favoritesRef);
+        const favoritesDeletePromises = favoritesSnapshot.docs.map(doc => deleteDoc(doc.ref));
+        await Promise.all(favoritesDeletePromises);
+
+        // Delete user's messages from Realtime Database
+        console.log('Deleting user messages:', user.uid);
+        const { firebaseDb, realtimeDb } = getFirebaseServices();
+        
+        // Get all chats where user is a participant
+        const chatsRef = ref(realtimeDb, 'chats');
+        const chatsSnapshot = await get(chatsRef);
+        const chatsData = chatsSnapshot.val();
+        
+        if (chatsData) {
+          const userChatIds = Object.entries(chatsData)
+            .filter(([_, chat]: [string, any]) => chat.participants && chat.participants[user.uid])
+            .map(([chatId]) => chatId);
+          
+          // For each chat, either delete it completely or mark as deleted by this user
+          for (const chatId of userChatIds) {
+            const chatRef = ref(realtimeDb, `chats/${chatId}`);
+            const chatData = chatsData[chatId];
+            
+            // If only two participants and one is the current user, delete the entire chat
+            const participants = Object.keys(chatData.participants || {});
+            if (participants.length <= 2) {
+              // Delete the entire chat and its messages
+              await remove(ref(realtimeDb, `chats/${chatId}`));
+              await remove(ref(realtimeDb, `messages/${chatId}`));
+            } else {
+              // Mark as deleted for current user and remove from participants
+              const updates: Record<string, any> = {
+                [`chats/${chatId}/deletedBy/${user.uid}`]: true
+              };
+              delete updates[`chats/${chatId}/participants/${user.uid}`];
+              await update(ref(realtimeDb), updates);
+            }
+          }
+        }
+
+        // Delete user's order history
+        console.log('Deleting user order history:', user.uid);
+        // Delete orders where user is buyer
+        const buyerOrdersRef = collection(db, 'orders');
+        const buyerOrdersQuery = query(buyerOrdersRef, where('buyerId', '==', user.uid));
+        const buyerOrdersSnapshot = await getDocs(buyerOrdersQuery);
+        const buyerOrdersDeletePromises = buyerOrdersSnapshot.docs.map(doc => deleteDoc(doc.ref));
+        
+        // Delete orders where user is seller
+        const sellerOrdersRef = collection(db, 'orders');
+        const sellerOrdersQuery = query(sellerOrdersRef, where('sellerId', '==', user.uid));
+        const sellerOrdersSnapshot = await getDocs(sellerOrdersQuery);
+        const sellerOrdersDeletePromises = sellerOrdersSnapshot.docs.map(doc => deleteDoc(doc.ref));
+        
+        // Wait for all order deletions to complete
+        await Promise.all([...buyerOrdersDeletePromises, ...sellerOrdersDeletePromises]);
 
         // Delete user profile
         console.log('Deleting user profile:', user.uid);
