@@ -121,10 +121,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
               subscription: {
                 status: 'active',
                 tier: 'premium',
+                billingPeriod: 'monthly', // Explicitly set to monthly
                 stripeSubscriptionId: `preview_${Date.now()}`,
                 startDate: new Date().toISOString(),
-                renewalDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-                currentPeriodEnd: Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60,
+                renewalDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days from now
+                currentPeriodEnd: Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60, // 30 days from now in seconds
                 lastUpdated: Date.now()
               }
             });
@@ -136,9 +137,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
               subscription: {
                 currentPlan: 'premium',
                 status: 'active',
+                billingPeriod: 'monthly', // Explicitly set to monthly
                 stripeSubscriptionId: `preview_${Date.now()}`,
                 startDate: new Date().toISOString(),
-                renewalDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+                renewalDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() // 30 days from now
               }
             }, { merge: true });
             
@@ -170,13 +172,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           customer_email: userEmail,
           metadata: {
             userId: userId,
+            billingPeriod: 'monthly'
           },
           allow_promotion_codes: true,
           billing_address_collection: 'auto',
           subscription_data: {
             metadata: {
               userId: userId,
+              billingPeriod: 'monthly'
             },
+            // Ensure the subscription is monthly
+            trial_period_days: null,
+            billing_cycle_anchor: null
           },
         });
 

@@ -206,9 +206,10 @@ export default function AccountStatus() {
           
           // Make sure we have all required fields to satisfy validation rules
           await set(userRef, {
-            status: 'canceling', // Use 'canceling' instead of 'canceled' to match API behavior
+            status: 'canceled', // Changed from 'canceling' to 'canceled'
             startDate: subscription.startDate || currentDate.toISOString(),
             endDate: endDate.toISOString(),
+            renewalDate: endDate.toISOString(), // Set renewal date to end date
             stripeSubscriptionId: subscription.stripeSubscriptionId || 'preview-sub-canceled',
             canceledAt: currentDate.toISOString(),
             cancelAtPeriodEnd: true

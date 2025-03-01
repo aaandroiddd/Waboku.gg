@@ -282,8 +282,9 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
       // Update local state with the new subscription status
       setSubscription(prev => ({
         ...prev,
-        status: data.status || 'canceled',
-        endDate: data.endDate
+        status: 'canceled', // Explicitly set to 'canceled' instead of using data.status
+        endDate: data.endDate,
+        renewalDate: data.endDate // Set renewal date to end date for canceled subscriptions
       }));
       
       // If there was a database error but Stripe cancellation was successful
@@ -292,11 +293,12 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
         // We could show a warning to the user here if needed
       }
 
-      // Update the account tier if needed
-      if (data.status === 'canceled' && accountTier === 'premium') {
-        // We'll keep premium until the end date, so no immediate change to accountTier
-        console.log('Subscription canceled but premium features remain until:', data.endDate);
-      }
+      // Force a reload to ensure all components reflect the updated subscription status
+      setTimeout(() => {
+        if (typeof window !== 'undefined') {
+          window.location.reload();
+        }
+      }, 1500);
 
       return data;
     } catch (error: any) {

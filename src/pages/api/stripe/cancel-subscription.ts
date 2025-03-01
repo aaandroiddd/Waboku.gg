@@ -166,8 +166,9 @@ export default async function handler(
           // Keep existing data
           ...subscriptionData,
           // Update with new cancellation data
-          status: 'canceling',
+          status: 'canceled',
           endDate: endDate,
+          renewalDate: endDate, // Set renewal date to end date for canceled subscriptions
           stripeSubscriptionId: subscriptionId,
           canceledAt: new Date().toISOString(),
           cancelAtPeriodEnd: true
@@ -197,8 +198,9 @@ export default async function handler(
           
           // Try setting minimal subscription data
           await db.ref(`users/${userId}/account/subscription`).set({
-            status: 'canceling',
+            status: 'canceled',
             endDate: endDate,
+            renewalDate: endDate, // Set renewal date to end date
             stripeSubscriptionId: subscriptionId,
             canceledAt: new Date().toISOString(),
             cancelAtPeriodEnd: true
@@ -233,7 +235,7 @@ export default async function handler(
         success: true,
         message: 'Subscription will be canceled at the end of the billing period',
         endDate,
-        status: 'canceling'
+        status: 'canceled'
       });
 
     } catch (stripeError: any) {
