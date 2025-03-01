@@ -8,10 +8,13 @@ import { Button } from "@/components/ui/button";
 import { ReloadIcon } from "@radix-ui/react-icons";
 
 interface LocationInputProps {
-  onLocationSelect: (city: string, state: string) => void;
+  onLocationSelect?: (city: string, state: string) => void;
+  onChange?: (location: string) => void;
+  value?: string;
   initialCity?: string;
   initialState?: string;
   error?: string;
+  placeholder?: string;
 }
 
 declare global {
@@ -38,8 +41,16 @@ const US_STATES = [
   ['WI', 'Wisconsin'], ['WY', 'Wyoming']
 ];
 
-export function LocationInput({ onLocationSelect, initialCity, initialState, error }: LocationInputProps) {
-  const [searchValue, setSearchValue] = useState(initialCity ? `${initialCity}, ${initialState}` : '');
+export function LocationInput({ 
+  onLocationSelect, 
+  onChange, 
+  value, 
+  initialCity, 
+  initialState, 
+  error, 
+  placeholder = "Search for your city..." 
+}: LocationInputProps) {
+  const [searchValue, setSearchValue] = useState(value || (initialCity ? `${initialCity}, ${initialState}` : ''));
   const [isGoogleLoaded, setIsGoogleLoaded] = useState(false);
   const [googleLoadError, setGoogleLoadError] = useState(false);
   const [useFallback, setUseFallback] = useState(false);
@@ -85,8 +96,16 @@ export function LocationInput({ onLocationSelect, initialCity, initialState, err
             }
 
             if (city && state) {
-              setSearchValue(`${city}, ${state}`);
-              onLocationSelect(city, state);
+              const locationString = `${city}, ${state}`;
+              setSearchValue(locationString);
+              
+              // Call the appropriate callback based on which was provided
+              if (onLocationSelect) {
+                onLocationSelect(city, state);
+              }
+              if (onChange) {
+                onChange(locationString);
+              }
             }
           }
         });
@@ -99,8 +118,16 @@ export function LocationInput({ onLocationSelect, initialCity, initialState, err
 
   const handleFallbackSubmit = () => {
     if (fallbackCity && fallbackState) {
-      onLocationSelect(fallbackCity, fallbackState);
-      setSearchValue(`${fallbackCity}, ${fallbackState}`);
+      const locationString = `${fallbackCity}, ${fallbackState}`;
+      setSearchValue(locationString);
+      
+      // Call the appropriate callback based on which was provided
+      if (onLocationSelect) {
+        onLocationSelect(fallbackCity, fallbackState);
+      }
+      if (onChange) {
+        onChange(locationString);
+      }
     }
   };
 
@@ -120,6 +147,13 @@ export function LocationInput({ onLocationSelect, initialCity, initialState, err
     };
     document.head.appendChild(script);
   };
+
+  // Update searchValue when value prop changes
+  useEffect(() => {
+    if (value !== undefined) {
+      setSearchValue(value);
+    }
+  }, [value]);
 
   useEffect(() => {
     // Check if Google Maps is already loaded and we're not in fallback mode
@@ -225,8 +259,14 @@ export function LocationInput({ onLocationSelect, initialCity, initialState, err
           ref={inputRef}
           type="text"
           value={searchValue}
-          onChange={(e) => setSearchValue(e.target.value)}
-          placeholder="Search for your city..."
+          onChange={(e) => {
+            const newValue = e.target.value;
+            setSearchValue(newValue);
+            if (onChange) {
+              onChange(newValue);
+            }
+          }}
+          placeholder={placeholder}
           className={`h-12 ${error ? "border-red-500" : ""}`}
         />
         {error && <p className="text-sm text-red-500">{error}</p>}
