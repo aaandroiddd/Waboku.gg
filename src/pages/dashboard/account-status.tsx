@@ -199,6 +199,15 @@ export default function AccountStatus() {
         try {
           // Simulate cancellation by updating the subscription status
           const db = getDatabase();
+          
+          // First update the account tier
+          await set(ref(db, `users/${user?.uid}/account`), {
+            tier: 'premium', // Keep as premium until end date
+            status: 'active',
+            lastUpdated: Date.now()
+          });
+          
+          // Then update the subscription details
           const userRef = ref(db, `users/${user?.uid}/account/subscription`);
           const currentDate = new Date();
           const endDate = new Date();
@@ -206,14 +215,33 @@ export default function AccountStatus() {
           
           // Make sure we have all required fields to satisfy validation rules
           await set(userRef, {
-            status: 'canceled', // Changed from 'canceling' to 'canceled'
+            status: 'canceled',
             startDate: subscription.startDate || currentDate.toISOString(),
             endDate: endDate.toISOString(),
             renewalDate: endDate.toISOString(), // Set renewal date to end date
             stripeSubscriptionId: subscription.stripeSubscriptionId || 'preview-sub-canceled',
             canceledAt: currentDate.toISOString(),
-            cancelAtPeriodEnd: true
+            cancelAtPeriodEnd: true,
+            tier: 'premium' // Add tier information
           });
+
+          // Also update Firestore for consistency
+          if (typeof window !== 'undefined' && window.firebase) {
+            try {
+              const firestore = getFirestore();
+              await firestore.collection('users').doc(user?.uid).set({
+                accountTier: 'premium', // Keep as premium until end date
+                subscription: {
+                  status: 'canceled',
+                  endDate: endDate.toISOString(),
+                  canceledAt: currentDate.toISOString()
+                }
+              }, { merge: true });
+            } catch (firestoreError) {
+              console.error('Failed to update Firestore:', firestoreError);
+              // Continue even if Firestore update fails
+            }
+          }
 
           toast({
             title: "Subscription Canceled",

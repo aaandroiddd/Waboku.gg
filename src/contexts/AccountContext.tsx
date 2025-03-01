@@ -254,10 +254,37 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
       console.log('Initiating subscription cancellation:', {
         subscriptionId: subscription.stripeSubscriptionId,
         userId: user.uid,
-        currentStatus: subscription.status
+        currentStatus: subscription.status,
+        environment: process.env.NEXT_PUBLIC_CO_DEV_ENV || 'production'
       });
       
-      const idToken = await user.getIdToken();
+      // Special handling for preview environment
+      if (process.env.NEXT_PUBLIC_CO_DEV_ENV === 'preview') {
+        console.log('Preview environment detected, using direct database update');
+        
+        // For preview environment, we'll update the local state directly
+        // The actual database update will be handled in the account-status.tsx page
+        const endDate = new Date();
+        endDate.setDate(endDate.getDate() + 30); // 30 days from now
+        
+        setSubscription(prev => ({
+          ...prev,
+          status: 'canceled',
+          endDate: endDate.toISOString(),
+          renewalDate: endDate.toISOString()
+        }));
+        
+        return {
+          success: true,
+          message: 'Subscription will be canceled at the end of the billing period',
+          endDate: endDate.toISOString(),
+          status: 'canceled',
+          isPreview: true
+        };
+      }
+      
+      // Production flow
+      const idToken = await user.getIdToken(true); // Force token refresh
       const response = await fetch('/api/stripe/cancel-subscription', {
         method: 'POST',
         headers: {

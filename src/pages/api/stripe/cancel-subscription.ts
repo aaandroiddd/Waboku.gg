@@ -60,13 +60,22 @@ export default async function handler(
         }
       } catch (authError) {
         console.error('Error extracting user ID from token:', authError);
+        return res.status(401).json({
+          error: 'Authentication failed',
+          message: 'Could not verify your identity. Please try again.',
+          code: 'AUTH_ERROR'
+        });
       }
     }
 
+    // Check for preview environment
+    const isPreview = process.env.NEXT_PUBLIC_CO_DEV_ENV === 'preview';
+    
     // Detailed request logging
     console.log('Cancellation request received:', {
       subscriptionId,
       userId,
+      isPreview,
       timestamp: new Date().toISOString()
     });
 
