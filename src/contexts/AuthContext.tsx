@@ -417,12 +417,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           provider.setCustomParameters({
             prompt: 'select_account'
           });
+          console.log('Attempting to reauthenticate Google user before account deletion');
           const result = await signInWithPopup(auth, provider);
           
           // Verify that the reauthentication was with the same account
           if (result.user.uid !== user.uid) {
             throw new Error('Please sign in with the same Google account you want to delete');
           }
+          console.log('Google user successfully reauthenticated');
         } catch (reauthError: any) {
           console.error('Reauthentication error:', reauthError);
           if (reauthError.code === 'auth/popup-closed-by-user') {
@@ -442,6 +444,46 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Get user profile first
         const profileDoc = await getDoc(doc(db, 'users', user.uid));
         const userProfile = profileDoc.exists() ? profileDoc.data() as UserProfile : null;
+
+        // Check if user has an active subscription and cancel it first
+        if (userProfile?.subscription?.status === 'active' || 
+            userProfile?.subscription?.status === 'trialing' ||
+            userProfile?.accountTier === 'premium') {
+          
+          console.log('User has an active subscription, attempting to cancel it first');
+          const subscriptionId = userProfile?.subscription?.stripeSubscriptionId;
+          
+          if (subscriptionId) {
+            try {
+              // Make API call to cancel subscription
+              const response = await fetch('/api/stripe/cancel-subscription', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${await user.getIdToken()}`
+                },
+                body: JSON.stringify({
+                  subscriptionId,
+                  userId: user.uid
+                })
+              });
+              
+              const result = await response.json();
+              
+              if (!response.ok && !result.success) {
+                console.error('Failed to cancel subscription:', result);
+                // Continue with account deletion even if subscription cancellation fails
+                console.log('Proceeding with account deletion despite subscription cancellation failure');
+              } else {
+                console.log('Subscription successfully canceled');
+              }
+            } catch (subscriptionError) {
+              console.error('Error canceling subscription:', subscriptionError);
+              // Continue with account deletion even if subscription cancellation fails
+              console.log('Proceeding with account deletion despite subscription cancellation error');
+            }
+          }
+        }
 
         // Find and delete ALL username documents (both active and archived) associated with this user
         const usernamesCollection = collection(db, 'usernames');
