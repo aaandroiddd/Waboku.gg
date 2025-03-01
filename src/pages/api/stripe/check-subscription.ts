@@ -14,6 +14,8 @@ const initializeStripe = () => {
   try {
     const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
       apiVersion: '2023-10-16',
+      maxNetworkRetries: 3,
+      timeout: 20000
     });
     console.log('[Subscription Check] Stripe initialized successfully');
     return stripe;
@@ -41,18 +43,37 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   console.info(`[Subscription Check ${requestId}] Started:`, {
     method: req.method,
     url: req.url,
-    headers: {
-      ...req.headers,
-      authorization: req.headers.authorization 
-        ? `Bearer ${req.headers.authorization.split(' ')[1]?.substring(0, 5)}...${req.headers.authorization.split(' ')[1]?.slice(-5)}`
-        : '**missing**'
-    },
     timestamp: new Date().toISOString()
   });
+
+  // Set CORS headers
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  
+  // Handle preflight request
+  if (req.method === 'OPTIONS') {
+    res.status(200).end();
+    return;
+  }
 
   if (req.method !== 'GET') {
     console.warn(`[Subscription Check ${requestId}] Invalid method:`, req.method);
     return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  // Initialize Stripe if not already initialized
+  if (!stripe) {
+    try {
+      stripe = initializeStripe();
+    } catch (error: any) {
+      console.error(`[Subscription Check ${requestId}] Failed to initialize Stripe:`, error.message);
+      return res.status(500).json({ 
+        error: 'Internal server error',
+        message: 'Payment service unavailable',
+        code: 'STRIPE_INIT_FAILED'
+      });
+    }
   }
 
   try {
@@ -119,12 +140,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         tokenExpires: new Date(decodedToken.exp * 1000).toISOString()
       });
 
-      console.log('[Subscription Check] Token verified successfully:', { 
-        userId,
-        email: userEmail,
-        emailVerified: decodedToken.email_verified
-      });
-
       // Get subscription data from Realtime Database
       const realtimeDb = getDatabase();
       const userRef = realtimeDb.ref(`users/${userId}/account`);
@@ -133,7 +148,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const accountData = snapshot.val();
 
       // Also check Firestore for admin-set premium status
-      const firestore = admin.firestore();
+      const firestore = getFirestore();
       const firestoreUserDoc = await firestore.collection('users').doc(userId).get();
       const firestoreData = firestoreUserDoc.exists ? firestoreUserDoc.data() : null;
       
@@ -213,13 +228,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             currentPeriodEnd: stripeSubscription.current_period_end
           });
 
-          console.log('[Subscription Check] Updated Stripe subscription status:', {
+          console.log(`[Subscription Check ${requestId}] Updated Stripe subscription status:`, {
             userId,
             status: stripeSubscription.status,
             currentPeriodEnd: stripeSubscription.current_period_end
           });
         } catch (stripeError: any) {
-          console.error('[Subscription Check] Stripe error:', {
+          console.error(`[Subscription Check ${requestId}] Stripe error:`, {
             code: stripeError.code,
             message: stripeError.message,
             type: stripeError.type
@@ -241,7 +256,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                       subscription.currentPeriodEnd && 
                       subscription.currentPeriodEnd > now;
 
-      console.log('[Subscription Check] Final status:', {
+      console.log(`[Subscription Check ${requestId}] Final status:`, {
         userId,
         isActive,
         subscription: {
@@ -281,7 +296,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       });
 
     } catch (authError: any) {
-      console.error('[Subscription Check] Auth error:', {
+      console.error(`[Subscription Check ${requestId}] Auth error:`, {
         code: authError.code,
         message: authError.message,
         stack: authError.stack
@@ -295,7 +310,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
   } catch (error: any) {
-    console.error('[Subscription Check] Unhandled error:', {
+    console.error(`[Subscription Check ${requestId}] Unhandled error:`, {
       message: error.message,
       stack: error.stack,
       code: error.code

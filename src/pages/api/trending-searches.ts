@@ -1,58 +1,11 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { initializeApp, getApps, cert } from 'firebase-admin/app';
 import { getDatabase } from 'firebase-admin/database';
 import { validateSearchTerm } from '@/lib/search-validation';
+import { getFirebaseAdmin } from '@/lib/firebase-admin';
 
 const CACHE_DURATION = 30 * 1000; // 30 seconds cache
 let cachedTrending: any = null;
 let lastCacheTime = 0;
-
-// Initialize Firebase Admin for server-side
-const initializeFirebaseAdmin = () => {
-  try {
-    if (!process.env.FIREBASE_PRIVATE_KEY || !process.env.FIREBASE_CLIENT_EMAIL) {
-      console.error('Missing Firebase credentials:', {
-        hasPrivateKey: !!process.env.FIREBASE_PRIVATE_KEY,
-        hasClientEmail: !!process.env.FIREBASE_CLIENT_EMAIL
-      });
-      throw new Error('Missing Firebase Admin credentials');
-    }
-
-    if (!process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL) {
-      console.error('Missing Firebase Database URL');
-      throw new Error('Missing Firebase Database URL');
-    }
-
-    if (getApps().length === 0) {
-      const privateKey = process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n');
-      
-      console.log('Initializing Firebase Admin with config:', {
-        projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-        databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL,
-        hasPrivateKey: !!privateKey,
-        privateKeyLength: privateKey.length
-      });
-
-      initializeApp({
-        credential: cert({
-          projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-          clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-          privateKey: privateKey,
-        }),
-        databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL
-      });
-    }
-
-    return getDatabase();
-  } catch (error: any) {
-    console.error('Firebase Admin initialization error:', {
-      message: error.message,
-      stack: error.stack,
-      timestamp: new Date().toISOString()
-    });
-    throw error;
-  }
-};
 
 export default async function handler(
   req: NextApiRequest,
@@ -88,7 +41,9 @@ export default async function handler(
 
   try {
     console.log('Initializing Firebase Admin...');
-    const database = initializeFirebaseAdmin();
+    // Use the centralized Firebase Admin initialization
+    getFirebaseAdmin();
+    const database = getDatabase();
     
     console.log('Fetching trending searches from Firebase...');
     

@@ -1,20 +1,8 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { getApps, cert, initializeApp } from 'firebase-admin/app';
-import { getDatabase as getAdminDatabase } from 'firebase-admin/database';
+import { getDatabase } from 'firebase-admin/database';
 import { getAuth } from 'firebase-admin/auth';
+import { getFirebaseAdmin } from '@/lib/firebase-admin';
 import Stripe from 'stripe';
-
-// Initialize Firebase Admin if it hasn't been initialized yet
-if (!getApps().length) {
-  initializeApp({
-    credential: cert({
-      projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-    }),
-    databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL,
-  });
-}
 
 // Initialize Stripe with more detailed configuration
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
@@ -64,6 +52,7 @@ export default async function handler(
         const token = req.headers.authorization.split('Bearer ')[1];
         if (token) {
           // Verify the token and get the user ID
+          getFirebaseAdmin(); // Initialize Firebase Admin
           const auth = getAuth();
           const decodedToken = await auth.verifyIdToken(token);
           userId = decodedToken.uid;
@@ -99,7 +88,8 @@ export default async function handler(
     }
 
     // Use admin database instance for server operations
-    const db = getAdminDatabase();
+    getFirebaseAdmin(); // Ensure Firebase Admin is initialized
+    const db = getDatabase();
     const userRef = db.ref(`users/${userId}/account/subscription`);
     
     try {
