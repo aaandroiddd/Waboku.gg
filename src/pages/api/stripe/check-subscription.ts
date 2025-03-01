@@ -50,6 +50,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   
+  // Add caching headers to reduce frequent calls
+  res.setHeader('Cache-Control', 'public, max-age=300, s-maxage=300'); // Cache for 5 minutes
+  res.setHeader('Surrogate-Control', 'max-age=300'); // Cache for CDN
+  
   // Handle preflight request
   if (req.method === 'OPTIONS') {
     res.status(200).end();

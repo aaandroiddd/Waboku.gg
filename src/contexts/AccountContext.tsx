@@ -44,11 +44,21 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     let isMounted = true;
+    let checkInterval: NodeJS.Timeout | null = null;
+    let lastCheckTime = 0;
 
     const checkSubscriptionStatus = async () => {
       if (!user) return null;
       
+      // Prevent checking too frequently (at most once every 5 minutes)
+      const now = Date.now();
+      if (now - lastCheckTime < 5 * 60 * 1000) {
+        console.log('Skipping subscription check - checked recently');
+        return null;
+      }
+      
       try {
+        lastCheckTime = now;
         const idToken = await user.getIdToken();
         const response = await fetch('/api/stripe/check-subscription', {
           headers: {
@@ -206,6 +216,9 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
 
     return () => {
       isMounted = false;
+      if (checkInterval) {
+        clearInterval(checkInterval);
+      }
     };
   }, [user]);
 

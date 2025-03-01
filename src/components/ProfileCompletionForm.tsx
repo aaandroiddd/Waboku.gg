@@ -49,6 +49,11 @@ export default function ProfileCompletionForm() {
         profileCompleted: true
       } as Partial<UserProfile>);
 
+      // Clear the profile completion flag from localStorage
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('needs_profile_completion');
+      }
+
       // Redirect to dashboard after successful completion
       router.push('/dashboard');
     } catch (err: any) {
