@@ -44,42 +44,27 @@ const SettingsPageContent = () => {
     }
 
     setIsDeletingAccount(true);
+    setError("");
+    
     try {
-      // Delete all user's listings - try both userId and uid fields
-      const listingsRef = collection(db, 'listings');
-      const qUserId = query(listingsRef, where('userId', '==', user.uid));
-      const qUid = query(listingsRef, where('uid', '==', user.uid));
+      // Use the deleteAccount method from AuthContext which handles:
+      // 1. Subscription cancellation for premium users
+      // 2. Reauthentication for Google OAuth users
+      // 3. Deletion of all user data (listings, profile, messages, etc.)
+      // 4. Proper error handling
+      await deleteAccount();
       
-      // Get listings with userId
-      const querySnapshotUserId = await getDocs(qUserId);
-      const deletePromisesUserId = querySnapshotUserId.docs.map(doc => deleteDoc(doc.ref));
-      
-      // Get listings with uid
-      const querySnapshotUid = await getDocs(qUid);
-      const deletePromisesUid = querySnapshotUid.docs.map(doc => deleteDoc(doc.ref));
-      
-      // Execute all deletions
-      await Promise.all([...deletePromisesUserId, ...deletePromisesUid]);
-
-      console.log(`Deleted ${querySnapshotUserId.size + querySnapshotUid.size} listings`);
-
-      // Delete user profile
-      await deleteDoc(doc(db, 'users', user.uid));
-
-      // Delete user authentication
-      await user.delete();
-
-      // Redirect to home page
+      // Redirect to home page on success
       router.push('/');
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error deleting account:', err);
-      setError('Failed to delete account. Please try again.');
+      setError(err.message || 'Failed to delete account. Please try again.');
+      setShowDeleteDialog(false);
     } finally {
       setIsDeletingAccount(false);
-      setShowDeleteDialog(false);
     }
   };
-  const { user, updateProfile } = useAuth();
+  const { user, updateProfile, deleteAccount } = useAuth();
   const [formData, setFormData] = useState({
     username: user?.displayName || "",
     bio: "",
