@@ -50,85 +50,115 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     let completedBatches = 0;
     
     // Step 1: Archive expired active listings
+    const now = new Date();
+    
+    // Get all active listings
     const activeListingsSnapshot = await db.collection('listings')
       .where('status', '==', 'active')
       .get();
 
     console.log(`[Archive Expired] Processing ${activeListingsSnapshot.size} active listings`);
     
+    // Process each listing in parallel for better performance
     const processPromises = activeListingsSnapshot.docs.map(async (doc) => {
       try {
         const data = doc.data();
         if (!data) {
           console.warn(`[Archive Expired] Empty listing data for ${doc.id}`);
-          return;
+          return null;
         }
 
         const createdAt = data.createdAt?.toDate() || new Date();
+        
+        // Get user data to determine account tier
         const userRef = db.collection('users').doc(data.userId);
         const userDoc = await userRef.get();
         
         const userData = userDoc.data();
         if (!userData) {
           console.warn(`[Archive Expired] No user data found for listing ${doc.id}, userId: ${data.userId}`);
-          return;
+          return null;
         }
         
         const accountTier = userData.accountTier || 'free';
         const tierDuration = ACCOUNT_TIERS[accountTier]?.listingDuration || ACCOUNT_TIERS.free.listingDuration;
         
+        // Calculate expiration time based on tier duration
         const expirationTime = new Date(createdAt.getTime() + (tierDuration * 60 * 60 * 1000));
         
-        if (new Date() > expirationTime) {
-          batch = createNewBatchIfNeeded(db, batch, batchOperations);
-          
-          const now = Timestamp.now();
-          const sevenDaysFromNow = new Date();
+        // Check if listing has expired
+        if (now > expirationTime) {
+          // Prepare data for archiving
+          const sevenDaysFromNow = new Date(now);
           sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
           
-          batch.update(doc.ref, {
-            status: 'archived',
-            archivedAt: now,
-            originalCreatedAt: data.createdAt,
-            expirationReason: 'tier_duration_exceeded',
-            expiresAt: Timestamp.fromDate(sevenDaysFromNow),
-            // Store previous state
-            previousStatus: data.status,
-            previousExpiresAt: data.expiresAt
-          });
-          
-          batchOperations++;
-          totalArchived++;
-          
-          if (batchOperations >= BATCH_SIZE) {
-            await batch.commit();
-            completedBatches++;
-            console.log(`[Archive Expired] Committed batch ${completedBatches} with ${batchOperations} operations`);
-            batch = db.batch();
-            batchOperations = 0;
-          }
-          
-          console.log(`[Archive Expired] Marked listing ${doc.id} for archival`, {
+          return {
+            docRef: doc.ref,
+            updateData: {
+              status: 'archived',
+              archivedAt: Timestamp.now(),
+              originalCreatedAt: data.createdAt,
+              expirationReason: 'tier_duration_exceeded',
+              expiresAt: Timestamp.fromDate(sevenDaysFromNow),
+              // Store previous state
+              previousStatus: data.status,
+              previousExpiresAt: data.expiresAt
+            },
+            listingId: doc.id,
             userId: data.userId,
             accountTier,
             createdAt: createdAt.toISOString(),
             expirationTime: expirationTime.toISOString()
-          });
+          };
         }
+        
+        return null; // Not expired
       } catch (error) {
         logError('Processing active listing', error, {
           listingId: doc.id,
           data: doc.data()
         });
+        return null;
       }
     });
 
-    await Promise.all(processPromises);
+    // Wait for all processing to complete
+    const processedListings = (await Promise.all(processPromises)).filter(Boolean);
+    
+    console.log(`[Archive Expired] Found ${processedListings.length} expired listings to archive`);
+    
+    // Apply updates in batches
+    for (const listing of processedListings) {
+      if (!listing) continue;
+      
+      batch = createNewBatchIfNeeded(db, batch, batchOperations);
+      batch.update(listing.docRef, listing.updateData);
+      
+      batchOperations++;
+      totalArchived++;
+      
+      if (batchOperations >= BATCH_SIZE) {
+        await batch.commit();
+        completedBatches++;
+        console.log(`[Archive Expired] Committed batch ${completedBatches} with ${batchOperations} operations`);
+        batch = db.batch();
+        batchOperations = 0;
+      }
+      
+      console.log(`[Archive Expired] Marked listing ${listing.listingId} for archival`, {
+        userId: listing.userId,
+        accountTier: listing.accountTier,
+        createdAt: listing.createdAt,
+        expirationTime: listing.expirationTime
+      });
+    }
 
     // Step 2: Archive inactive listings older than 7 days
+    const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    
     const inactiveSnapshot = await db.collection('listings')
       .where('status', '==', 'inactive')
-      .where('updatedAt', '<', Timestamp.fromDate(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)))
+      .where('updatedAt', '<', Timestamp.fromDate(sevenDaysAgo))
       .get();
 
     console.log(`[Archive Expired] Processing ${inactiveSnapshot.size} inactive listings`);
@@ -143,13 +173,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
         batch = createNewBatchIfNeeded(db, batch, batchOperations);
         
-        const now = Timestamp.now();
-        const sevenDaysFromNow = new Date();
+        const sevenDaysFromNow = new Date(now);
         sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
         
         batch.update(doc.ref, {
           status: 'archived',
-          archivedAt: now,
+          archivedAt: Timestamp.now(),
           originalCreatedAt: data.createdAt,
           expirationReason: 'inactive_timeout',
           expiresAt: Timestamp.fromDate(sevenDaysFromNow)
@@ -177,8 +206,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         });
       }
     });
-
-    // Removed deletion of archived listings as it's handled by cleanup-archived.ts
     
     // Commit any remaining changes
     if (batchOperations > 0) {

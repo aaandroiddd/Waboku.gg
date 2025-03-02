@@ -17,25 +17,24 @@ interface ListingTimerProps {
 export function ListingTimer({ createdAt, archivedAt, accountTier, status, listingId }: ListingTimerProps) {
   const [timeLeft, setTimeLeft] = useState<number>(0);
   const [progress, setProgress] = useState<number>(0);
-  const [hasTriggeredCleanup, setHasTriggeredCleanup] = useState(false);
   const [isExpired, setIsExpired] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const { toast } = useToast();
   const router = useRouter();
 
-  const triggerCleanup = useCallback(async () => {
-    if (isProcessing) return;
+  // This function is now only used as a fallback if the server-side process fails
+  const triggerManualCleanup = useCallback(async () => {
+    if (isProcessing || !listingId) return;
     
     setIsProcessing(true);
     try {
-      // Use the dedicated fix-expired endpoint for better reliability
       const response = await fetch('/api/listings/fix-expired', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          listingId: listingId // Pass the specific listing ID
+          listingId: listingId
         }),
       });
       
@@ -46,61 +45,38 @@ export function ListingTimer({ createdAt, archivedAt, accountTier, status, listi
 
       const data = await response.json();
       
-      if (status === 'active') {
+      if (data.status === 'archived' && status === 'active') {
         toast({
           title: "Listing Archived",
           description: "The listing has been moved to archived status.",
           duration: 5000,
         });
-      } else if (status === 'archived') {
+        
+        // If we're on the listing page, redirect to listings
+        if (router.pathname.includes('/listings/[id]')) {
+          router.push('/listings');
+        } else {
+          // If we're on any other page, refresh to update the UI
+          router.refresh();
+        }
+      } else if (data.status === 'deleted' && status === 'archived') {
         toast({
           title: "Listing Deleted",
           description: "The archived listing has been permanently deleted.",
           duration: 5000,
         });
-      }
-
-      // If we're on the listing page, redirect to listings
-      if (router.pathname.includes('/listings/[id]')) {
-        router.push('/listings');
-      } else {
-        // If we're on any other page, refresh to update the UI
+        
+        // Refresh the page to update the UI
         router.refresh();
       }
     } catch (error) {
-      console.error('Error triggering cleanup:', error);
+      console.error('Error triggering manual cleanup:', error);
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to process the listing. Please try again later.",
+        description: error instanceof Error ? error.message : "Failed to process the listing. The system will automatically handle this soon.",
         variant: "destructive",
         duration: 5000,
       });
-      
-      // Fallback to the original cleanup endpoint if the fix-expired endpoint fails
-      try {
-        const fallbackResponse = await fetch('/api/cleanup-inactive-listings', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            listingId: listingId
-          }),
-        });
-        
-        if (fallbackResponse.ok) {
-          toast({
-            title: "Listing Processed",
-            description: "The listing has been processed using the fallback method.",
-            duration: 5000,
-          });
-          
-          // Refresh the page to update the UI
-          router.refresh();
-        }
-      } catch (fallbackError) {
-        console.error('Fallback cleanup also failed:', fallbackError);
-      }
     } finally {
       setIsProcessing(false);
     }
@@ -177,13 +153,10 @@ export function ListingTimer({ createdAt, archivedAt, accountTier, status, listi
       setTimeLeft(remaining);
       setProgress(progressValue);
 
-      // Handle both active and archived listings expiration
-      if (remaining === 0 && !hasTriggeredCleanup) {
+      // Only set UI state to expired, but don't trigger cleanup automatically
+      // The server-side cron job will handle the actual archiving/deletion
+      if (remaining === 0) {
         setIsExpired(true);
-        setHasTriggeredCleanup(true);
-        if (status === 'active' || status === 'archived') {
-          triggerCleanup();
-        }
       }
     };
 
@@ -191,7 +164,7 @@ export function ListingTimer({ createdAt, archivedAt, accountTier, status, listi
     const timer = setInterval(calculateTimeLeft, 1000);
 
     return () => clearInterval(timer);
-  }, [createdAt, archivedAt, accountTier, status, hasTriggeredCleanup, triggerCleanup]);
+  }, [createdAt, archivedAt, accountTier, status]);
 
   const formatTimeLeft = () => {
     const days = Math.floor(timeLeft / (1000 * 60 * 60 * 24));
@@ -207,18 +180,24 @@ export function ListingTimer({ createdAt, archivedAt, accountTier, status, listi
     }
   };
 
-  // Removed getProgressColor as we're using a different approach for visualization
-
   if (isExpired && status === 'active') {
     return (
       <div className="flex flex-col gap-2">
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
-            {isProcessing ? "Archiving listing..." : "Listing expired"}
+            {isProcessing ? "Processing..." : "Listing expired"}
           </AlertDescription>
         </Alert>
         <div className="h-2 w-full bg-red-500 rounded-full" />
+        {!isProcessing && listingId && (
+          <button 
+            onClick={triggerManualCleanup}
+            className="text-xs text-blue-600 hover:text-blue-800 underline mt-1"
+          >
+            Click to refresh status
+          </button>
+        )}
       </div>
     );
   }
