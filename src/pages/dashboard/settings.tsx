@@ -87,6 +87,12 @@ const SettingsPageContent = () => {
 
   // Load user data when component mounts
   useEffect(() => {
+    // Import the token manager functions
+    const loadTokenManager = async () => {
+      const { refreshAuthToken, validateUserSession } = await import('@/lib/auth-token-manager');
+      return { refreshAuthToken, validateUserSession };
+    };
+
     const loadUserData = async (retryCount = 0) => {
       if (!user?.uid) {
         console.log('No user UID found, redirecting to sign-in');
@@ -100,66 +106,69 @@ const SettingsPageContent = () => {
         
         console.log(`Attempting to load user data (attempt ${retryCount + 1}/5)...`);
         
-        // First check if user auth is still valid
-        try {
-          console.log('Reloading user auth state...');
-          await user.reload();
-          console.log('User auth state reloaded successfully');
-        } catch (reloadError: any) {
-          console.warn('User reload error:', reloadError);
-          // If this is a network error, we should retry
-          if (reloadError.code === 'auth/network-request-failed' && retryCount < 4) {
-            console.log('Network error during auth reload, retrying...');
-            setIsLoading(false);
-            
-            // Exponential backoff for retries
-            const delay = Math.min(1000 * Math.pow(2, retryCount), 10000);
-            await new Promise(resolve => setTimeout(resolve, delay));
-            
-            return loadUserData(retryCount + 1);
-          }
-        }
+        // Load token manager functions
+        const { refreshAuthToken, validateUserSession } = await loadTokenManager();
         
-        // Add a small delay to ensure Firebase auth state is fully updated
-        await new Promise(resolve => setTimeout(resolve, 800));
+        // Validate user session first
+        const isSessionValid = await validateUserSession(user);
+        if (!isSessionValid && retryCount < 2) {
+          console.log('User session invalid, attempting to refresh...');
+          // Try to refresh the token before giving up
+          await refreshAuthToken(user);
+          
+          // Wait a moment and retry
+          const delay = Math.min(1000 * Math.pow(2, retryCount), 5000);
+          await new Promise(resolve => setTimeout(resolve, delay));
+          
+          return loadUserData(retryCount + 1);
+        } else if (!isSessionValid) {
+          console.error('User session invalid after multiple attempts');
+          setError("Your session has expired. Please sign in again.");
+          router.push('/auth/sign-in');
+          return;
+        }
         
         // Get current auth state
         const currentUser = auth.currentUser;
         
         // If user is not authenticated, redirect to sign in
         if (!currentUser) {
-          console.error('User not authenticated after reload');
-          
-          // Try to get a fresh token before giving up
-          if (retryCount < 4) {
-            console.log('Attempting to refresh authentication...');
-            
-            // Force a longer delay before retry
-            const delay = Math.min(1500 * Math.pow(2, retryCount), 15000);
-            await new Promise(resolve => setTimeout(resolve, delay));
-            
-            return loadUserData(retryCount + 1);
-          }
-          
+          console.error('User not authenticated after validation');
           setError("Your session has expired. Please sign in again.");
           router.push('/auth/sign-in');
           return;
         }
         
-        // Verify the user ID matches
-        if (currentUser.uid !== user.uid) {
-          console.error('User ID mismatch after reload');
-          setError("Authentication error. Please sign in again.");
-          router.push('/auth/sign-in');
-          return;
-        }
+        // Refresh token before fetching data
+        await refreshAuthToken(currentUser);
         
         try {
           console.log('Fetching user document from Firestore...');
-          // Try to get user document
-          const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
+          // Try to get user document with retries
+          let userDoc = null;
+          let fetchError = null;
           
-          if (userDoc.exists()) {
+          for (let i = 0; i < 3; i++) {
+            try {
+              userDoc = await getDoc(doc(db, 'users', currentUser.uid));
+              fetchError = null;
+              break;
+            } catch (error) {
+              console.error(`Firestore fetch attempt ${i + 1} failed:`, error);
+              fetchError = error;
+              
+              // Refresh token and wait before retry
+              await refreshAuthToken(currentUser);
+              await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, i)));
+            }
+          }
+          
+          // If all retries failed, throw the last error
+          if (fetchError) {
+            throw fetchError;
+          }
+          
+          if (userDoc && userDoc.exists()) {
             console.log('User document found in Firestore');
             const userData = userDoc.data();
             setFormData({
@@ -203,7 +212,23 @@ const SettingsPageContent = () => {
               }
             };
             
-            await setDoc(doc(db, 'users', currentUser.uid), basicProfile);
+            // Try to create the user document with retries
+            let createSuccess = false;
+            for (let i = 0; i < 3; i++) {
+              try {
+                await setDoc(doc(db, 'users', currentUser.uid), basicProfile);
+                createSuccess = true;
+                break;
+              } catch (error) {
+                console.error(`Profile creation attempt ${i + 1} failed:`, error);
+                await refreshAuthToken(currentUser);
+                await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, i)));
+              }
+            }
+            
+            if (!createSuccess) {
+              throw new Error('Failed to create user profile after multiple attempts');
+            }
             
             setFormData({
               username: currentUser.displayName || "",
@@ -238,12 +263,7 @@ const SettingsPageContent = () => {
             await new Promise(resolve => setTimeout(resolve, delay));
             
             // Try to get a fresh token before retrying
-            try {
-              await currentUser.getIdToken(true);
-              console.log('Successfully refreshed auth token');
-            } catch (tokenError) {
-              console.warn('Failed to refresh token:', tokenError);
-            }
+            await refreshAuthToken(currentUser);
             
             // Retry with incremented count
             return loadUserData(retryCount + 1);
@@ -386,6 +406,9 @@ const SettingsPageContent = () => {
     setIsLoading(true);
 
     try {
+      // Import token manager for token refresh
+      const { refreshAuthToken } = await import('@/lib/auth-token-manager');
+      
       // Basic validation
       if (formData.username.length < 3 || formData.username.length > 20) {
         throw new Error("Username must be between 3 and 20 characters");
@@ -395,30 +418,82 @@ const SettingsPageContent = () => {
         throw new Error("Username can only contain letters, numbers, and underscores");
       }
 
+      // Refresh token before making any changes
+      if (user) {
+        await refreshAuthToken(user);
+      }
+
       let photoURL = user?.photoURL;
       if (avatarFile) {
         try {
           photoURL = await uploadAvatar(avatarFile);
         } catch (error: any) {
           console.error('Avatar upload error:', error);
-          throw new Error("Failed to upload profile picture. Please try again.");
+          
+          // Try to refresh token and retry upload once
+          if (user) {
+            try {
+              console.log('Refreshing token and retrying avatar upload...');
+              await refreshAuthToken(user);
+              photoURL = await uploadAvatar(avatarFile);
+            } catch (retryError) {
+              console.error('Avatar upload retry failed:', retryError);
+              throw new Error("Failed to upload profile picture. Please try again.");
+            }
+          } else {
+            throw new Error("Failed to upload profile picture. Please try again.");
+          }
         }
       }
 
       // Update profile with all user data
-      await updateProfile({
-        username: formData.username,
-        photoURL,
-        bio: formData.bio,
-        contact: formData.contact,
-        location: formData.location,
-        theme: theme,
-        social: {
-          youtube: formData.youtube || '',
-          twitter: formData.twitter || '',
-          facebook: formData.facebook || ''
+      try {
+        await updateProfile({
+          username: formData.username,
+          photoURL,
+          bio: formData.bio,
+          contact: formData.contact,
+          location: formData.location,
+          theme: theme,
+          social: {
+            youtube: formData.youtube || '',
+            twitter: formData.twitter || '',
+            facebook: formData.facebook || ''
+          }
+        });
+      } catch (profileError: any) {
+        console.error('Profile update error:', profileError);
+        
+        // If this looks like an auth error, try refreshing token and retrying
+        if (profileError.message?.includes('auth') || 
+            profileError.code?.includes('auth') || 
+            profileError.message?.includes('permission')) {
+          
+          if (user) {
+            console.log('Refreshing token and retrying profile update...');
+            await refreshAuthToken(user);
+            
+            // Retry the update
+            await updateProfile({
+              username: formData.username,
+              photoURL,
+              bio: formData.bio,
+              contact: formData.contact,
+              location: formData.location,
+              theme: theme,
+              social: {
+                youtube: formData.youtube || '',
+                twitter: formData.twitter || '',
+                facebook: formData.facebook || ''
+              }
+            });
+          } else {
+            throw profileError;
+          }
+        } else {
+          throw profileError;
         }
-      });
+      }
 
       setSuccess("Profile updated successfully!");
       
@@ -426,7 +501,17 @@ const SettingsPageContent = () => {
       setAvatarFile(null);
     } catch (err: any) {
       console.error('Profile update error:', err);
-      setError(err.message || "An unexpected error occurred. Please try again.");
+      
+      // Provide more specific error messages
+      if (err.code === 'storage/unauthorized' || err.message?.includes('permission')) {
+        setError("You don't have permission to update your profile. Please try signing out and back in.");
+      } else if (err.code === 'auth/requires-recent-login' || err.message?.includes('recent')) {
+        setError("For security reasons, please sign out and sign back in to update your profile.");
+      } else if (err.code?.includes('network') || err.message?.includes('network')) {
+        setError("Network error. Please check your internet connection and try again.");
+      } else {
+        setError(err.message || "An unexpected error occurred. Please try again.");
+      }
     } finally {
       setIsLoading(false);
     }

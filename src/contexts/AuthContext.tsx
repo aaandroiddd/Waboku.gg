@@ -99,18 +99,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     
     checkStoredAuthState();
     
-    // Function to refresh token periodically
+    // Function to refresh token periodically with improved error handling
     const setupTokenRefresh = (user: User) => {
-      // Calculate when to refresh the token (every 30 minutes)
-      const refreshInterval = 30 * 60 * 1000; // 30 minutes
+      // Calculate when to refresh the token (every 25 minutes to be safe)
+      const refreshInterval = 25 * 60 * 1000; // 25 minutes
       
       // Set up interval to refresh token
       const intervalId = setInterval(async () => {
         try {
           console.log('Attempting to refresh auth token...');
           if (auth.currentUser) {
-            await auth.currentUser.getIdToken(true);
-            console.log('Auth token refreshed successfully');
+            // Import the token manager for better refresh handling
+            const { refreshAuthToken } = await import('@/lib/auth-token-manager');
+            const token = await refreshAuthToken(auth.currentUser);
+            
+            if (token) {
+              console.log('Auth token refreshed successfully');
+            } else {
+              console.warn('Token refresh failed, will retry on next interval');
+            }
           } else {
             console.warn('No current user found for token refresh');
             clearInterval(intervalId);
