@@ -122,19 +122,25 @@ export default function AccountStatus() {
                 
                 // Update Realtime Database
                 const db = getDatabase();
+                
+                // First update the account tier and other required fields
                 const userRef = ref(db, `users/${user.uid}/account`);
                 await set(userRef, {
                   tier: 'premium',
                   status: 'active',
-                  subscription: {
-                    status: 'active',
-                    tier: 'premium',
-                    stripeSubscriptionId: subscriptionId, // Use a regular subscription ID, not admin
-                    startDate: currentDate.toISOString(),
-                    renewalDate: renewalDate.toISOString(),
-                    currentPeriodEnd: Math.floor(renewalDate.getTime() / 1000),
-                    lastUpdated: Date.now()
-                  }
+                  lastUpdated: Date.now()
+                });
+                
+                // Then update the subscription details separately
+                const subscriptionRef = ref(db, `users/${user.uid}/account/subscription`);
+                await set(subscriptionRef, {
+                  status: 'active',
+                  tier: 'premium',
+                  stripeSubscriptionId: subscriptionId, // Use a regular subscription ID, not admin
+                  startDate: currentDate.toISOString(),
+                  renewalDate: renewalDate.toISOString(),
+                  currentPeriodEnd: Math.floor(renewalDate.getTime() / 1000),
+                  lastUpdated: Date.now()
                 });
                 
                 // Update Firestore for consistency
@@ -471,21 +477,26 @@ export default function AccountStatus() {
                           
                           // Update Realtime Database
                           const db = getDatabase();
+                          
+                          // First update the account tier and other required fields
                           const userRef = ref(db, `users/${user?.uid}/account`);
                           await set(userRef, {
                             tier: 'premium',
                             status: 'active',
                             stripeCustomerId: stripeCustomerId,
-                            lastUpdated: Date.now(),
-                            subscription: {
-                              status: 'active',
-                              tier: 'premium',
-                              stripeSubscriptionId: subscriptionId,
-                              startDate: currentDate.toISOString(),
-                              renewalDate: renewalDate.toISOString(),
-                              currentPeriodEnd: Math.floor(renewalDate.getTime() / 1000),
-                              lastUpdated: Date.now()
-                            }
+                            lastUpdated: Date.now()
+                          });
+                          
+                          // Then update the subscription details separately
+                          const subscriptionRef = ref(db, `users/${user?.uid}/account/subscription`);
+                          await set(subscriptionRef, {
+                            status: 'active',
+                            tier: 'premium',
+                            stripeSubscriptionId: subscriptionId,
+                            startDate: currentDate.toISOString(),
+                            renewalDate: renewalDate.toISOString(),
+                            currentPeriodEnd: Math.floor(renewalDate.getTime() / 1000),
+                            lastUpdated: Date.now()
                           });
                           
                           // Update Firestore for consistency
