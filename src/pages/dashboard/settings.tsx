@@ -89,8 +89,36 @@ const SettingsPageContent = () => {
   useEffect(() => {
     // Import the token manager functions
     const loadTokenManager = async () => {
-      const { refreshAuthToken, validateUserSession } = await import('@/lib/auth-token-manager');
-      return { refreshAuthToken, validateUserSession };
+      const { refreshAuthToken, validateUserSession, storeAuthState } = await import('@/lib/auth-token-manager');
+      return { refreshAuthToken, validateUserSession, storeAuthState };
+    };
+
+    // Setup periodic token refresh to prevent expiration
+    let tokenRefreshInterval: NodeJS.Timeout | null = null;
+    
+    const setupTokenRefresh = async (userId: string) => {
+      if (tokenRefreshInterval) {
+        clearInterval(tokenRefreshInterval);
+      }
+      
+      // Store current auth state
+      const { storeAuthState } = await loadTokenManager();
+      storeAuthState(userId);
+      
+      // Set up a token refresh every 25 minutes (token expires in 60 minutes)
+      tokenRefreshInterval = setInterval(async () => {
+        if (auth.currentUser) {
+          const { refreshAuthToken } = await loadTokenManager();
+          console.log('Performing scheduled token refresh...');
+          await refreshAuthToken(auth.currentUser);
+        } else {
+          // Clear interval if user is no longer authenticated
+          if (tokenRefreshInterval) {
+            clearInterval(tokenRefreshInterval);
+            tokenRefreshInterval = null;
+          }
+        }
+      }, 25 * 60 * 1000); // 25 minutes
     };
 
     const loadUserData = async (retryCount = 0) => {
@@ -108,6 +136,9 @@ const SettingsPageContent = () => {
         
         // Load token manager functions
         const { refreshAuthToken, validateUserSession } = await loadTokenManager();
+        
+        // Setup token refresh interval
+        await setupTokenRefresh(user.uid);
         
         // Validate user session first
         const isSessionValid = await validateUserSession(user);
@@ -139,7 +170,8 @@ const SettingsPageContent = () => {
           return;
         }
         
-        // Refresh token before fetching data
+        // Get a fresh token before fetching data, but don't force refresh if not needed
+        // This helps prevent rate limiting issues with Firebase Auth
         await refreshAuthToken(currentUser);
         
         try {
@@ -157,9 +189,15 @@ const SettingsPageContent = () => {
               console.error(`Firestore fetch attempt ${i + 1} failed:`, error);
               fetchError = error;
               
-              // Refresh token and wait before retry
-              await refreshAuthToken(currentUser);
-              await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, i)));
+              // Only force token refresh if we get a permission error
+              if (error.code === 'permission-denied') {
+                await refreshAuthToken(currentUser);
+              }
+              
+              // Add jitter to prevent thundering herd
+              const baseDelay = 1000 * Math.pow(2, i);
+              const jitter = Math.random() * 500;
+              await new Promise(resolve => setTimeout(resolve, baseDelay + jitter));
             }
           }
           
@@ -221,7 +259,12 @@ const SettingsPageContent = () => {
                 break;
               } catch (error) {
                 console.error(`Profile creation attempt ${i + 1} failed:`, error);
-                await refreshAuthToken(currentUser);
+                
+                // Only force token refresh if we get a permission error
+                if (error.code === 'permission-denied') {
+                  await refreshAuthToken(currentUser);
+                }
+                
                 await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, i)));
               }
             }
@@ -258,12 +301,15 @@ const SettingsPageContent = () => {
             console.log(`Retrying data load after Firestore error (attempt ${retryCount + 1}/5)...`);
             setIsLoading(false);
             
-            // Exponential backoff for retries
-            const delay = Math.min(1500 * Math.pow(2, retryCount), 15000);
-            await new Promise(resolve => setTimeout(resolve, delay));
+            // Exponential backoff for retries with jitter
+            const baseDelay = Math.min(1500 * Math.pow(2, retryCount), 15000);
+            const jitter = Math.random() * 1000;
+            await new Promise(resolve => setTimeout(resolve, baseDelay + jitter));
             
-            // Try to get a fresh token before retrying
-            await refreshAuthToken(currentUser);
+            // Try to get a fresh token before retrying, but only if permission-denied
+            if (firestoreError.code === 'permission-denied') {
+              await refreshAuthToken(currentUser);
+            }
             
             // Retry with incremented count
             return loadUserData(retryCount + 1);
@@ -322,9 +368,10 @@ const SettingsPageContent = () => {
           console.log(`Retrying data load after unknown error (attempt ${retryCount + 1}/5)...`);
           setIsLoading(false);
           
-          // Exponential backoff for retries
-          const delay = Math.min(2000 * Math.pow(2, retryCount), 20000);
-          await new Promise(resolve => setTimeout(resolve, delay));
+          // Exponential backoff for retries with jitter
+          const baseDelay = Math.min(2000 * Math.pow(2, retryCount), 20000);
+          const jitter = Math.random() * 1000;
+          await new Promise(resolve => setTimeout(resolve, baseDelay + jitter));
           
           // Retry with incremented count
           return loadUserData(retryCount + 1);
@@ -335,6 +382,13 @@ const SettingsPageContent = () => {
     };
 
     loadUserData();
+    
+    // Clean up token refresh interval on unmount
+    return () => {
+      if (tokenRefreshInterval) {
+        clearInterval(tokenRefreshInterval);
+      }
+    };
   }, [user?.uid, setTheme, router]);
 
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
