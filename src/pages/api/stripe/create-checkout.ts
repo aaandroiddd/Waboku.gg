@@ -117,6 +117,28 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           });
         }
         
+        // If subscription is canceled, clear it from the database before creating a new one
+        if (currentSubscription?.status === 'canceled' || accountData?.subscription?.status === 'canceled') {
+          console.log('[Create Checkout] Clearing canceled subscription before creating new one:', {
+            userId,
+            subscriptionId: currentSubscription?.stripeSubscriptionId
+          });
+          
+          // Clear the subscription status in Realtime Database
+          try {
+            // Update subscription fields to indicate it's being replaced
+            await userRef.update({
+              status: 'replaced',
+              lastUpdated: Date.now()
+            });
+            
+            console.log('[Create Checkout] Cleared canceled subscription status');
+          } catch (clearError) {
+            console.error('[Create Checkout] Error clearing canceled subscription:', clearError);
+            // Continue anyway as this is not critical
+          }
+        }
+        
         // If we get here, either there's no subscription or it's canceled, so allow checkout
 
         // Preview environment handling
@@ -201,10 +223,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             metadata: {
               userId: userId,
               billingPeriod: 'monthly'
-            },
-            // Ensure the subscription is monthly
-            trial_period_days: null,
-            billing_cycle_anchor: null
+            }
+            // Removed conflicting parameters that were causing errors
           },
         });
 

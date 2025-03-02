@@ -466,6 +466,24 @@ export default function AccountStatus() {
 
                       // For testing purposes in preview environment
                       if (process.env.NEXT_PUBLIC_CO_DEV_ENV === 'preview') {
+                        // First, clear the canceled subscription status
+                        try {
+                          const db = getDatabase();
+                          const subscriptionRef = ref(db, `users/${user?.uid}/account/subscription`);
+                          
+                          // Mark the subscription as replaced
+                          await set(subscriptionRef, {
+                            ...subscription,
+                            status: 'replaced',
+                            lastUpdated: Date.now()
+                          });
+                          
+                          console.log('Preview mode: Cleared canceled subscription status');
+                        } catch (clearError) {
+                          console.error('Preview mode: Error clearing canceled subscription:', clearError);
+                          // Continue anyway as this is not critical
+                        }
+                        
                         // Simulate successful resubscription by directly updating Firebase
                         try {
                           // Prepare subscription data
@@ -535,6 +553,23 @@ export default function AccountStatus() {
                         tokenLength: freshToken.length,
                         timestamp: new Date().toISOString()
                       });
+
+                      // First, clear the canceled subscription status via a separate API call
+                      try {
+                        // Update the subscription status in the database to indicate it's being replaced
+                        const db = getDatabase();
+                        const subscriptionRef = ref(db, `users/${user.uid}/account/subscription`);
+                        await set(subscriptionRef, {
+                          ...subscription,
+                          status: 'replaced',
+                          lastUpdated: Date.now()
+                        });
+                        
+                        console.log('Cleared canceled subscription status before resubscribing');
+                      } catch (clearError) {
+                        console.error('Error clearing canceled subscription:', clearError);
+                        // Continue anyway as this is not critical
+                      }
 
                       const response = await fetch('/api/stripe/create-checkout', {
                         method: 'POST',
