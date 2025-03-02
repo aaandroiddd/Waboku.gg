@@ -17,21 +17,32 @@ export async function syncSubscriptionData(userId: string, subscriptionData: any
     const firestore = getFirestore();
     const realtimeDb = getDatabase();
     
+    // Ensure we have valid subscription data
+    if (!subscriptionData) {
+      console.error(`[Subscription Sync] Invalid subscription data for user ${userId}`);
+      return {
+        success: false,
+        error: 'Invalid subscription data',
+        message: 'Cannot sync invalid subscription data'
+      };
+    }
+    
     // Format the subscription data for Firestore
     const firestoreData = {
       accountTier: subscriptionData.tier || subscriptionData.currentPlan || 'free',
       updatedAt: new Date().toISOString(),
       subscription: {
         status: subscriptionData.status || 'none',
-        stripeSubscriptionId: subscriptionData.stripeSubscriptionId,
-        startDate: subscriptionData.startDate,
-        endDate: subscriptionData.endDate,
-        renewalDate: subscriptionData.renewalDate || subscriptionData.currentPeriodEnd 
-          ? new Date(subscriptionData.currentPeriodEnd * 1000).toISOString() 
-          : undefined,
-        currentPlan: subscriptionData.tier || subscriptionData.currentPlan,
+        stripeSubscriptionId: subscriptionData.stripeSubscriptionId || null,
+        startDate: subscriptionData.startDate || new Date().toISOString(),
+        endDate: subscriptionData.endDate || null,
+        renewalDate: subscriptionData.renewalDate || 
+          (subscriptionData.currentPeriodEnd ? new Date(subscriptionData.currentPeriodEnd * 1000).toISOString() : null),
+        currentPlan: subscriptionData.tier || subscriptionData.currentPlan || 'free',
         manuallyUpdated: subscriptionData.manuallyUpdated || false,
-        lastManualUpdate: subscriptionData.manuallyUpdated ? new Date().toISOString() : undefined
+        lastManualUpdate: subscriptionData.manuallyUpdated ? new Date().toISOString() : null,
+        canceledAt: subscriptionData.canceledAt || null,
+        cancelAtPeriodEnd: subscriptionData.cancelAtPeriodEnd || false
       }
     };
     

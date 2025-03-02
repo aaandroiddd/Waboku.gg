@@ -124,8 +124,8 @@ export default async function handler(
     
     try {
       // For admin-assigned subscriptions, handle differently
-      if (subscriptionId.includes('admin_')) {
-        console.log(`[Cancel Subscription ${requestId}] Canceling admin-assigned subscription:`, subscriptionId);
+      if (subscriptionId.includes('admin_') || !subscriptionId.startsWith('sub_')) {
+        console.log(`[Cancel Subscription ${requestId}] Canceling admin-assigned or non-standard subscription:`, subscriptionId);
         
         // Calculate the end date (30 days from now)
         const currentDate = new Date();
@@ -145,7 +145,7 @@ export default async function handler(
         // Sync the updated data to both databases
         await syncSubscriptionData(userId, updatedSubscription);
         
-        console.log(`[Cancel Subscription ${requestId}] Admin subscription canceled successfully:`, {
+        console.log(`[Cancel Subscription ${requestId}] Non-standard subscription canceled successfully:`, {
           userId,
           subscriptionId,
           endDate: endDate.toISOString()
@@ -153,7 +153,7 @@ export default async function handler(
         
         return res.status(200).json({
           success: true,
-          message: 'Admin-assigned subscription will be canceled at the end of the period',
+          message: 'Subscription will be canceled at the end of the period',
           endDate: endDate.toISOString(),
           status: 'canceled'
         });
