@@ -16,6 +16,12 @@ export default function AuthMethodsHelper() {
       setError('Please enter an email address');
       return;
     }
+    
+    // Check if Firebase API key is configured
+    if (!process.env.NEXT_PUBLIC_FIREBASE_API_KEY) {
+      setError('Authentication service is currently unavailable. Please try again later.');
+      return;
+    }
 
     setIsLoading(true);
     setError(null);

@@ -807,6 +807,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signInWithGoogle = async () => {
     try {
+      // Validate Firebase API key before attempting sign-in
+      if (!process.env.NEXT_PUBLIC_FIREBASE_API_KEY) {
+        throw new Error('Firebase API key is missing. Please check your environment configuration.');
+      }
+      
       const provider = new GoogleAuthProvider();
       
       // Before signing in with popup, check if email exists

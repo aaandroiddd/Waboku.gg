@@ -15,10 +15,11 @@ const AuthError: React.FC<AuthErrorProps> = ({ error, errorCode, onClose }) => {
     // Check for API key errors
     if (error.message?.includes('HTTP error! status: 400') || 
         error.message?.includes('API key') ||
-        error.message?.includes('configuration error')) {
+        error.message?.includes('configuration error') ||
+        error.name === 'auth/configuration-error') {
       return {
-        title: "Service Unavailable",
-        description: "Authentication service is currently unavailable. Please try again later or contact support.",
+        title: "Authentication Service Error",
+        description: "There's an issue with the authentication service configuration. Please try again later or contact support if the problem persists.",
         code: "AUTH_CONFIG_ERROR"
       };
     }

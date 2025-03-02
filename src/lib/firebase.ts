@@ -34,6 +34,11 @@ console.log('Firebase config:', {
   databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL || 'missing'
 });
 
+// Validate Firebase API key
+if (!process.env.NEXT_PUBLIC_FIREBASE_API_KEY) {
+  console.error('Firebase API key is missing in environment variables');
+}
+
 // Initialize Firebase services
 let app: FirebaseApp;
 let auth: Auth;

@@ -39,6 +39,11 @@ export function getFirebaseAdmin(): typeof admin {
         databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL,
         storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
       };
+      
+      // Check if API key is configured (for client-side auth)
+      if (!process.env.NEXT_PUBLIC_FIREBASE_API_KEY) {
+        console.warn('[Firebase Admin] NEXT_PUBLIC_FIREBASE_API_KEY is missing - client-side auth may fail');
+      }
 
       const missingVars = Object.entries(requiredEnvVars)
         .filter(([_, value]) => !value)

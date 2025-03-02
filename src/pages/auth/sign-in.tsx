@@ -67,6 +67,13 @@ function SignInComponent() {
     setIsLoading(true);
 
     try {
+      // Check if Firebase API key is configured
+      if (!process.env.NEXT_PUBLIC_FIREBASE_API_KEY) {
+        throw Object.assign(new Error("Authentication configuration error. Please contact support."), {
+          name: "auth/configuration-error"
+        });
+      }
+      
       if (!email || !password) {
         throw Object.assign(new Error("Please enter both email and password"), {
           name: "auth/missing-fields"

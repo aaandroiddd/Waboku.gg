@@ -2,14 +2,38 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import { getAuth } from 'firebase-admin/auth';
 import { getFirestore } from 'firebase-admin/firestore';
 import { initializeAdminApp } from '@/lib/firebase-admin';
+import { rateLimit } from '@/lib/rate-limit';
+
+// Rate limiting to prevent abuse
+const limiter = rateLimit({
+  interval: 60 * 1000, // 60 seconds
+  uniqueTokenPerInterval: 500, // Max 500 users per interval
+});
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   // Only allow POST requests
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
+  
+  try {
+    // Apply rate limiting - 5 requests per minute per IP
+    const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
+    await limiter.check(res, 5, clientIp as string);
+  } catch (error) {
+    return res.status(429).json({ message: 'Rate limit exceeded. Please try again later.' });
+  }
 
   try {
+    // Validate Firebase configuration
+    if (!process.env.FIREBASE_PRIVATE_KEY || !process.env.FIREBASE_CLIENT_EMAIL) {
+      console.error('Firebase admin configuration is incomplete');
+      return res.status(500).json({ 
+        error: 'Authentication service configuration error',
+        message: 'Authentication service is currently unavailable. Please try again later.'
+      });
+    }
+    
     // Initialize Firebase Admin
     const { app } = initializeAdminApp();
     const auth = getAuth(app);
