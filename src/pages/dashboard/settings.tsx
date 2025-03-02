@@ -87,7 +87,7 @@ const SettingsPageContent = () => {
 
   // Load user data when component mounts
   useEffect(() => {
-    const loadUserData = async () => {
+    const loadUserData = async (retryCount = 0) => {
       if (!user?.uid) {
         router.push('/auth/sign-in');
         return;
@@ -98,68 +98,140 @@ const SettingsPageContent = () => {
         setError("");
         
         // First check if user auth is still valid
-        await user.reload();
+        try {
+          await user.reload();
+        } catch (reloadError: any) {
+          console.warn('User reload error:', reloadError);
+          // Continue anyway - we'll handle auth issues below
+        }
         
         // Add a small delay to ensure Firebase auth state is fully updated
         await new Promise(resolve => setTimeout(resolve, 500));
         
-        // Double check if user is still authenticated after reload
-        if (!auth.currentUser) {
-          throw new Error('auth/user-not-authenticated');
+        // Get current auth state
+        const currentUser = auth.currentUser;
+        
+        // If user is not authenticated, redirect to sign in
+        if (!currentUser) {
+          console.error('User not authenticated after reload');
+          setError("Your session has expired. Please sign in again.");
+          router.push('/auth/sign-in');
+          return;
         }
         
-        const userDoc = await getDoc(doc(db, 'users', user.uid));
-        if (userDoc.exists()) {
-          const userData = userDoc.data();
-          setFormData({
-            username: user.displayName || "",
-            bio: userData.bio || "",
-            contact: userData.contact || "",
-            location: userData.location || "",
-            youtube: userData.social?.youtube || "",
-            twitter: userData.social?.twitter || "",
-            facebook: userData.social?.facebook || "",
-          });
+        // Verify the user ID matches
+        if (currentUser.uid !== user.uid) {
+          console.error('User ID mismatch after reload');
+          setError("Authentication error. Please sign in again.");
+          router.push('/auth/sign-in');
+          return;
+        }
+        
+        try {
+          // Try to get user document
+          const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
+          
+          if (userDoc.exists()) {
+            const userData = userDoc.data();
+            setFormData({
+              username: currentUser.displayName || "",
+              bio: userData.bio || "",
+              contact: userData.contact || "",
+              location: userData.location || "",
+              youtube: userData.social?.youtube || "",
+              twitter: userData.social?.twitter || "",
+              facebook: userData.social?.facebook || "",
+              locationData: {
+                city: userData.locationData?.city || "",
+                state: userData.locationData?.state || ""
+              }
+            });
 
-          // Set theme from user preferences if it exists
-          if (userData.theme) {
-            setTheme(userData.theme);
-          }
-        } else {
-          console.log('Creating new user profile for:', user.uid);
-          // If no user document exists, create one with basic data
-          const basicProfile = {
-            uid: user.uid,
-            email: user.email,
-            username: user.displayName || user.email?.split('@')[0] || "",
-            joinDate: new Date().toISOString(),
-            bio: "",
-            contact: "",
-            location: "",
-            social: {
+            // Set theme from user preferences if it exists
+            if (userData.theme) {
+              setTheme(userData.theme);
+            }
+            
+            // Set avatar preview if available
+            if (currentUser.photoURL) {
+              setAvatarPreview(currentUser.photoURL);
+            }
+          } else {
+            console.log('Creating new user profile for:', currentUser.uid);
+            // If no user document exists, create one with basic data
+            const basicProfile = {
+              uid: currentUser.uid,
+              email: currentUser.email,
+              username: currentUser.displayName || currentUser.email?.split('@')[0] || "",
+              joinDate: new Date().toISOString(),
+              bio: "",
+              contact: "",
+              location: "",
+              social: {
+                youtube: "",
+                twitter: "",
+                facebook: ""
+              }
+            };
+            
+            await setDoc(doc(db, 'users', currentUser.uid), basicProfile);
+            
+            setFormData({
+              username: currentUser.displayName || "",
+              bio: "",
+              contact: "",
+              location: "",
               youtube: "",
               twitter: "",
-              facebook: ""
-            }
-          };
+              facebook: "",
+              locationData: {
+                city: "",
+                state: ""
+              }
+            });
+          }
+        } catch (firestoreError: any) {
+          console.error('Firestore error:', firestoreError);
           
-          await setDoc(doc(db, 'users', user.uid), basicProfile);
+          // If this is a permission error or not found, we might need to retry
+          if (retryCount < 3 && 
+              (firestoreError.code === 'permission-denied' || 
+               firestoreError.code === 'not-found' ||
+               firestoreError.code === 'unavailable' ||
+               firestoreError.code === 'resource-exhausted')) {
+            
+            console.log(`Retrying data load (attempt ${retryCount + 1}/3)...`);
+            setIsLoading(false);
+            
+            // Wait a bit longer between retries
+            await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1)));
+            
+            // Retry with incremented count
+            return loadUserData(retryCount + 1);
+          }
           
-          setFormData({
-            username: user.displayName || "",
-            bio: "",
-            contact: "",
-            location: "",
-            youtube: "",
-            twitter: "",
-            facebook: "",
-          });
+          // Handle specific Firestore errors
+          if (firestoreError.code === 'permission-denied') {
+            setError("You don't have permission to access this data. Please sign in again.");
+          } else if (firestoreError.code === 'not-found') {
+            setError("Your profile data could not be found. Please try signing out and back in.");
+          } else {
+            setError(`Database error: ${firestoreError.message || 'Unknown error'}`);
+          }
         }
       } catch (err: any) {
         console.error('Error loading user data:', err);
         
+        // If we've already retried several times, give up
+        if (retryCount >= 3) {
+          console.error('Maximum retries reached, giving up');
+          setError("Failed to load user data after multiple attempts. Please try signing out and back in.");
+          return;
+        }
+        
         // More specific error messages based on the error type
-        if (err.message === 'auth/user-not-authenticated') {
+        if (err.message === 'auth/user-not-authenticated' || 
+            err.code === 'auth/user-not-authenticated') {
           setError("Your session has expired. Please sign in again.");
           router.push('/auth/sign-in');
           return;
@@ -167,10 +239,8 @@ const SettingsPageContent = () => {
         
         if (err.code === 'permission-denied') {
           setError("You don't have permission to access this data. Please sign in again.");
-          router.push('/auth/sign-in');
         } else if (err.code === 'not-found') {
           setError("Your profile data could not be found. Please try signing out and back in.");
-          router.push('/auth/sign-in');
         } else if (err.name === 'FirebaseError') {
           switch (err.code) {
             case 'auth/network-request-failed':
@@ -188,7 +258,16 @@ const SettingsPageContent = () => {
           }
         } else {
           console.error('Unknown error:', err);
-          setError("Failed to load user data. Please try refreshing the page or sign in again.");
+          
+          // For unknown errors, retry after a delay
+          console.log(`Retrying data load (attempt ${retryCount + 1}/3)...`);
+          setIsLoading(false);
+          
+          // Wait a bit longer between retries
+          await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1)));
+          
+          // Retry with incremented count
+          return loadUserData(retryCount + 1);
         }
       } finally {
         setIsLoading(false);

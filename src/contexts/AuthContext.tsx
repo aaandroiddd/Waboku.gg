@@ -102,18 +102,74 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       console.log('Auth state changed:', user ? `User ${user.uid} authenticated` : 'No user');
       setUser(user);
+      
       if (user) {
         try {
-          const profileDoc = await getDoc(doc(db, 'users', user.uid));
-          if (profileDoc.exists()) {
-            setProfile(profileDoc.data() as UserProfile);
+          // Attempt to fetch user profile with retries
+          let profileData = null;
+          let retryCount = 0;
+          const maxRetries = 3;
+          
+          while (retryCount < maxRetries) {
+            try {
+              const profileDoc = await getDoc(doc(db, 'users', user.uid));
+              
+              if (profileDoc.exists()) {
+                profileData = profileDoc.data() as UserProfile;
+                break; // Success, exit retry loop
+              } else if (retryCount === maxRetries - 1) {
+                // On last retry, create a basic profile if none exists
+                console.log('No profile found after retries, creating basic profile');
+                const basicProfile = {
+                  uid: user.uid,
+                  email: user.email!,
+                  username: user.displayName || user.email!.split('@')[0],
+                  joinDate: new Date().toISOString(),
+                  totalSales: 0,
+                  rating: 0,
+                  bio: '',
+                  location: '',
+                  avatarUrl: user.photoURL || '',
+                  isEmailVerified: user.emailVerified,
+                  verificationSentAt: null,
+                  social: {
+                    youtube: '',
+                    twitter: '',
+                    facebook: ''
+                  },
+                  accountTier: 'free',
+                  subscription: {
+                    status: 'inactive',
+                    currentPlan: 'free',
+                    startDate: new Date().toISOString()
+                  }
+                };
+                
+                await setDoc(doc(db, 'users', user.uid), basicProfile);
+                profileData = basicProfile;
+              }
+            } catch (fetchError) {
+              console.error(`Error fetching profile (attempt ${retryCount + 1}/${maxRetries}):`, fetchError);
+              
+              // Wait longer between retries
+              await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1)));
+            }
+            
+            retryCount++;
+          }
+          
+          if (profileData) {
+            setProfile(profileData);
+          } else {
+            console.error('Failed to fetch or create user profile after multiple attempts');
           }
         } catch (err) {
-          console.error('Error fetching user profile:', err);
+          console.error('Error in profile fetch/creation process:', err);
         }
       } else {
         setProfile(null);
       }
+      
       setIsLoading(false);
     });
 
