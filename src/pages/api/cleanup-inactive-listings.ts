@@ -91,7 +91,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     console.log('[Cleanup Inactive Listings] Initializing Firebase Admin');
-    const { db } = getFirebaseAdmin();
+    // Get Firebase admin instance
+    const admin = getFirebaseAdmin();
+    
+    // Explicitly initialize Firestore
+    if (!admin.firestore) {
+      console.error('[Cleanup Inactive Listings] Firestore not available on admin instance');
+      return res.status(500).json({ 
+        error: 'Failed to initialize Firestore',
+        details: 'Firestore not available on admin instance'
+      });
+    }
+    
+    const db = admin.firestore();
+    console.log('[Cleanup Inactive Listings] Firestore initialized successfully');
+    
     let totalArchived = 0;
     let totalDeleted = 0;
     

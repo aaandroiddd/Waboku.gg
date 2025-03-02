@@ -91,7 +91,45 @@ export const ActiveListings = ({
         duration: 3000,
       });
       
-      // Process each expired listing
+      // First try to use the cleanup-inactive-listings endpoint with no specific listing ID
+      try {
+        console.log('Calling cleanup-inactive-listings endpoint');
+        const cleanupResponse = await fetch('/api/cleanup-inactive-listings', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          // No specific listing ID, let the endpoint handle all expired listings
+          body: JSON.stringify({}),
+        });
+        
+        if (cleanupResponse.ok) {
+          const result = await cleanupResponse.json();
+          console.log('Cleanup response:', result);
+          processed = result.details?.archived || 0;
+          
+          // If successful, no need to process individual listings
+          if (processed > 0) {
+            toast({
+              title: "Listings Processed",
+              description: `Successfully processed ${processed} expired listings.`,
+              duration: 5000,
+            });
+            
+            // Refresh the page to update the UI
+            window.location.reload();
+            return;
+          }
+        } else {
+          console.error('Cleanup endpoint failed, falling back to individual processing');
+          const errorText = await cleanupResponse.text();
+          console.error('Cleanup error:', errorText);
+        }
+      } catch (cleanupError) {
+        console.error('Error calling cleanup endpoint:', cleanupError);
+      }
+      
+      // Fallback: Process each expired listing individually
       for (const listingId of expiredListings) {
         if (!listingId) {
           console.error("Attempted to process a listing with no ID");
@@ -106,7 +144,7 @@ export const ActiveListings = ({
             headers: {
               'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ listingId: listingId }),
+            body: JSON.stringify({ listingId }),
           });
           
           if (response.ok) {
