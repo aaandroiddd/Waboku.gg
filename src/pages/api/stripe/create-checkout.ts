@@ -124,20 +124,27 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           console.log('[Create Checkout] Preview environment detected, simulating checkout');
           
           try {
+            // Generate a unique subscription ID for preview mode
+            const previewSubscriptionId = `preview_${Date.now()}`;
+            const currentDate = new Date();
+            const renewalDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days from now
+            
             // Update user's subscription status directly in preview mode
-            await db.ref(`users/${userId}/account`).update({
-              tier: 'premium',
+            // Update tier and status separately to comply with validation rules
+            await db.ref(`users/${userId}/account/tier`).set('premium');
+            await db.ref(`users/${userId}/account/status`).set('active');
+            
+            // Update subscription fields separately
+            const subscriptionRef = db.ref(`users/${userId}/account/subscription`);
+            await subscriptionRef.update({
               status: 'active',
-              subscription: {
-                status: 'active',
-                tier: 'premium',
-                billingPeriod: 'monthly', // Explicitly set to monthly
-                stripeSubscriptionId: `preview_${Date.now()}`,
-                startDate: new Date().toISOString(),
-                renewalDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days from now
-                currentPeriodEnd: Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60, // 30 days from now in seconds
-                lastUpdated: Date.now()
-              }
+              tier: 'premium',
+              billingPeriod: 'monthly',
+              stripeSubscriptionId: previewSubscriptionId,
+              startDate: currentDate.toISOString(),
+              renewalDate: renewalDate.toISOString(),
+              currentPeriodEnd: Math.floor(renewalDate.getTime() / 1000),
+              lastUpdated: Date.now()
             });
             
             // Also update in Firestore for consistency
@@ -147,10 +154,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
               subscription: {
                 currentPlan: 'premium',
                 status: 'active',
-                billingPeriod: 'monthly', // Explicitly set to monthly
-                stripeSubscriptionId: `preview_${Date.now()}`,
-                startDate: new Date().toISOString(),
-                renewalDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() // 30 days from now
+                billingPeriod: 'monthly',
+                stripeSubscriptionId: previewSubscriptionId,
+                startDate: currentDate.toISOString(),
+                renewalDate: renewalDate.toISOString()
               }
             }, { merge: true });
             

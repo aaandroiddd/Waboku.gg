@@ -96,17 +96,19 @@ export default async function handler(
         renewalDate.setDate(currentDate.getDate() + 30); // 30 days from now
 
         // Update user's subscription status immediately after successful checkout in Realtime DB
-        await realtimeDb.ref(`users/${userId}/account`).update({
+        // Update tier and status separately to comply with validation rules
+        await realtimeDb.ref(`users/${userId}/account/tier`).set('premium');
+        await realtimeDb.ref(`users/${userId}/account/status`).set('active');
+        
+        // Update subscription fields separately
+        const subscriptionRef = realtimeDb.ref(`users/${userId}/account/subscription`);
+        await subscriptionRef.update({
+          status: 'active', // Changed from 'processing' to 'active' for immediate effect
           tier: 'premium',
-          status: 'active',
-          subscription: {
-            status: 'active', // Changed from 'processing' to 'active' for immediate effect
-            tier: 'premium',
-            startDate: currentDate.toISOString(),
-            renewalDate: renewalDate.toISOString(),
-            currentPeriodEnd: Math.floor(renewalDate.getTime() / 1000),
-            lastUpdated: Date.now()
-          }
+          startDate: currentDate.toISOString(),
+          renewalDate: renewalDate.toISOString(),
+          currentPeriodEnd: Math.floor(renewalDate.getTime() / 1000),
+          lastUpdated: Date.now()
         });
 
         // Also update Firestore for consistency
@@ -166,20 +168,24 @@ export default async function handler(
           }
         }, { merge: true });
 
-        // Update Realtime Database with more complete data
-        await realtimeDb.ref(`users/${userId}/account`).update({
-          tier: status === 'active' ? 'premium' : 'free',
-          status: 'active',
-          subscription: {
-            stripeSubscriptionId: subscription.id, // Use consistent field name
-            status: status,
-            tier: status === 'active' ? 'premium' : 'free',
-            startDate: currentPeriodStart,
-            endDate: currentPeriodEnd,
-            renewalDate: currentPeriodEnd, // Add renewal date
-            currentPeriodEnd: subscription.current_period_end,
-            lastUpdated: Date.now()
-          }
+        // Update Realtime Database with more complete data - update fields separately
+        const tier = status === 'active' ? 'premium' : 'free';
+        
+        // Update tier and status separately to comply with validation rules
+        await realtimeDb.ref(`users/${userId}/account/tier`).set(tier);
+        await realtimeDb.ref(`users/${userId}/account/status`).set('active');
+        
+        // Update subscription fields separately
+        const subscriptionRef = realtimeDb.ref(`users/${userId}/account/subscription`);
+        await subscriptionRef.update({
+          stripeSubscriptionId: subscription.id,
+          status: status,
+          tier: tier,
+          startDate: currentPeriodStart,
+          endDate: currentPeriodEnd,
+          renewalDate: currentPeriodEnd,
+          currentPeriodEnd: subscription.current_period_end,
+          lastUpdated: Date.now()
         });
         
         console.log('[Stripe Webhook] Updated subscription status:', {
@@ -210,15 +216,16 @@ export default async function handler(
           }
         }, { merge: true });
 
-        // Update Realtime Database
-        await realtimeDb.ref(`users/${userId}/account`).update({
+        // Update Realtime Database - update fields separately
+        await realtimeDb.ref(`users/${userId}/account/tier`).set('free');
+        
+        // Update subscription fields separately
+        const subscriptionRef = realtimeDb.ref(`users/${userId}/account/subscription`);
+        await subscriptionRef.update({
+          status: 'inactive',
           tier: 'free',
-          subscription: {
-            status: 'inactive',
-            tier: 'free',
-            endDate: endDate,
-            lastUpdated: Date.now()
-          }
+          endDate: endDate,
+          lastUpdated: Date.now()
         });
         
         console.log('[Stripe Webhook] Subscription deleted:', {

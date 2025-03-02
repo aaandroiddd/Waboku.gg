@@ -142,7 +142,8 @@ export default async function handler(
           cancelAtPeriodEnd: true
         };
         
-        // Sync the updated data to both databases
+        // Sync the updated data to both databases using our improved sync function
+        // This will update fields separately to comply with validation rules
         await syncSubscriptionData(userId, updatedSubscription);
         
         console.log(`[Cancel Subscription ${requestId}] Non-standard subscription canceled successfully:`, {

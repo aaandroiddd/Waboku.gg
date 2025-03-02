@@ -68,8 +68,16 @@ export async function syncSubscriptionData(userId: string, subscriptionData: any
     await firestore.collection('users').doc(userId).set(firestoreData, { merge: true });
     console.log(`[Subscription Sync] Updated Firestore for user ${userId}`);
     
-    // Update Realtime Database (secondary source)
-    await realtimeDb.ref(`users/${userId}/account`).update(realtimeData);
+    // Update Realtime Database (secondary source) - update fields separately to comply with validation rules
+    await realtimeDb.ref(`users/${userId}/account/tier`).set(realtimeData.tier);
+    await realtimeDb.ref(`users/${userId}/account/status`).set(realtimeData.status);
+    await realtimeDb.ref(`users/${userId}/account/lastUpdated`).set(realtimeData.lastUpdated);
+    
+    // Update subscription fields separately
+    if (realtimeData.subscription) {
+      await realtimeDb.ref(`users/${userId}/account/subscription`).update(realtimeData.subscription);
+    }
+    
     console.log(`[Subscription Sync] Updated Realtime Database for user ${userId}`);
     
     return {
