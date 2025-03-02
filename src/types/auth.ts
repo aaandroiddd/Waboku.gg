@@ -9,7 +9,8 @@ export type AuthErrorCode =
   | "auth/too-many-requests"
   | "auth/popup-closed-by-user"
   | "auth/requires-recent-login"
-  | "auth/invalid-credential";
+  | "auth/invalid-credential"
+  | "AUTH_CONFIG_ERROR";
 
 export interface AuthErrorProps {
   error: Error | null;

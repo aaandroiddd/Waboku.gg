@@ -6,6 +6,12 @@ export async function refreshAuthToken(user: User | null): Promise<string | null
     console.log('No user available for token refresh');
     return null;
   }
+  
+  // Check if Firebase API key is properly configured
+  if (!process.env.NEXT_PUBLIC_FIREBASE_API_KEY) {
+    console.error('Firebase API key is missing or invalid');
+    return null;
+  }
 
   let retryCount = 0;
   const maxRetries = 5; // Increased from 3 to 5 for more resilience

@@ -94,6 +94,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       } catch (error) {
         console.error('Error checking stored auth state:', error);
+        
+        // Check if this is an API key error
+        if (error instanceof Error && 
+            (error.message.includes('API key') || 
+             error.message.includes('invalid key') || 
+             error.message.includes('status: 400'))) {
+          console.error('Firebase API key error detected. This may indicate an invalid or missing API key.');
+          setError('Authentication configuration error. Please contact support.');
+        }
       }
     };
     
