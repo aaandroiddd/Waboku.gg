@@ -150,12 +150,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             const previewSubscriptionId = `preview_${Date.now()}`;
             const currentDate = new Date();
             const renewalDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days from now
-            
-            // Update user's subscription status directly in preview mode
-            // Update account fields individually to avoid validation issues
-            await db.ref(`users/${userId}/account/tier`).set('premium');
-            await db.ref(`users/${userId}/account/status`).set('active');
-            await db.ref(`users/${userId}/account/lastUpdated`).set(Date.now());
+            const stripeCustomerId = `cus_preview_${userId.substring(0, 8)}`;
             
             // Create a complete subscription object
             const subscriptionData = {
@@ -169,14 +164,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
               lastUpdated: Date.now()
             };
             
-            // Update subscription fields
-            const subscriptionRef = db.ref(`users/${userId}/account/subscription`);
-            await subscriptionRef.set(subscriptionData);
+            // Update the entire account object at once to ensure consistency
+            await db.ref(`users/${userId}/account`).set({
+              tier: 'premium',
+              status: 'active',
+              lastUpdated: Date.now(),
+              stripeCustomerId: stripeCustomerId,
+              subscription: subscriptionData
+            });
+            
+            console.log('[Create Checkout] Preview mode: Updated account data in Realtime Database');
             
             // Also update in Firestore for consistency
             const firestore = admin.firestore();
             await firestore.collection('users').doc(userId).set({
               accountTier: 'premium',
+              updatedAt: currentDate.toISOString(),
               subscription: {
                 currentPlan: 'premium',
                 status: 'active',
@@ -187,7 +190,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
               }
             }, { merge: true });
             
-            console.log('[Create Checkout] Preview mode: Updated subscription data for user:', userId);
+            console.log('[Create Checkout] Preview mode: Updated subscription data in Firestore for user:', userId);
           } catch (previewError) {
             console.error('[Create Checkout] Preview mode update failed:', previewError);
           }

@@ -466,6 +466,8 @@ export default function AccountStatus() {
 
                       // For testing purposes in preview environment
                       if (process.env.NEXT_PUBLIC_CO_DEV_ENV === 'preview') {
+                        console.log('Preview mode: Starting resubscription process');
+                        
                         // First, clear the canceled subscription status
                         try {
                           const db = getDatabase();
@@ -490,19 +492,11 @@ export default function AccountStatus() {
                           const currentDate = new Date();
                           const renewalDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
                           const subscriptionId = `preview_${Date.now()}`;
-                          const stripeCustomerId = 'test_customer_' + Math.random().toString(36).substr(2, 9);
                           
                           // Update Realtime Database
                           const db = getDatabase();
                           
-                          // Update account fields individually to avoid validation issues
-                          await set(ref(db, `users/${user?.uid}/account/tier`), 'premium');
-                          await set(ref(db, `users/${user?.uid}/account/status`), 'active');
-                          await set(ref(db, `users/${user?.uid}/account/stripeCustomerId`), stripeCustomerId);
-                          await set(ref(db, `users/${user?.uid}/account/lastUpdated`), Date.now());
-                          
-                          // Then update the subscription details separately
-                          // First create a complete subscription object
+                          // Create a complete subscription object first
                           const subscriptionData = {
                             status: 'active',
                             tier: 'premium',
@@ -510,12 +504,20 @@ export default function AccountStatus() {
                             startDate: currentDate.toISOString(),
                             renewalDate: renewalDate.toISOString(),
                             currentPeriodEnd: Math.floor(renewalDate.getTime() / 1000),
-                            lastUpdated: Date.now()
+                            lastUpdated: Date.now(),
+                            billingPeriod: 'monthly'
                           };
                           
-                          // Update subscription fields individually
-                          const subscriptionRef = ref(db, `users/${user?.uid}/account/subscription`);
-                          await set(subscriptionRef, subscriptionData);
+                          // Update account fields
+                          await set(ref(db, `users/${user?.uid}/account`), {
+                            tier: 'premium',
+                            status: 'active',
+                            lastUpdated: Date.now(),
+                            subscription: subscriptionData,
+                            stripeCustomerId: user?.uid ? `cus_preview_${user.uid.substring(0, 8)}` : 'cus_preview'
+                          });
+                          
+                          console.log('Preview mode: Updated account data in Realtime Database');
                           
                           // Update Firestore for consistency
                           const firestore = getFirestore();
@@ -528,14 +530,23 @@ export default function AccountStatus() {
                               stripeSubscriptionId: subscriptionId,
                               startDate: currentDate.toISOString(),
                               renewalDate: renewalDate.toISOString(),
-                              currentPlan: 'premium'
+                              currentPlan: 'premium',
+                              billingPeriod: 'monthly'
                             }
                           }, { merge: true });
                           
-                          console.log('Preview mode: Updated resubscription data in both databases');
+                          console.log('Preview mode: Updated resubscription data in Firestore');
 
+                          // Show success message
+                          toast({
+                            title: "Success!",
+                            description: "Your subscription has been reactivated in preview mode.",
+                          });
+                          
                           // Redirect to simulate the success flow
-                          router.push('/dashboard/account-status?upgrade=success');
+                          setTimeout(() => {
+                            router.push('/dashboard/account-status?upgrade=success');
+                          }, 1000);
                           return;
                         } catch (error) {
                           console.error('Preview mode update failed:', error);
