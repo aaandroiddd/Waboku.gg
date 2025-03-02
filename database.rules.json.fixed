@@ -4,7 +4,6 @@
       "$uid": {
         ".read": "auth != null && (auth.uid === $uid || root.child('users').child(auth.uid).child('account').child('tier').val() === 'admin')",
         ".write": "auth != null && (auth.uid === $uid || auth.token.admin === true)",
-        ".delete": "auth != null && auth.uid === $uid",
         "email": {
           ".validate": "newData.isString() && newData.val().matches(/^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+[A-Za-z]{2,}$/)"
         },
@@ -39,7 +38,6 @@
       "$uid": {
         ".read": "auth != null && auth.uid === $uid",
         ".write": "auth != null && auth.uid === $uid",
-        ".delete": "auth != null && auth.uid === $uid",
         "$listingId": {
           ".validate": "newData.hasChildren(['createdAt'])",
           "createdAt": {
@@ -84,7 +82,6 @@
       "$listingId": {
         ".read": "auth != null",
         ".write": "auth != null && (!data.exists() || data.child('userId').val() === auth.uid)",
-        ".delete": "auth != null && data.child('userId').val() === auth.uid",
         ".validate": "newData.hasChildren(['userId', 'title', 'price', 'status', 'createdAt'])",
         "userId": {
           ".validate": "newData.val() === auth.uid"
@@ -109,7 +106,6 @@
       "$chatId": {
         ".read": "auth != null && (root.child('chats').child($chatId).child('participants').child(auth.uid).exists() || !root.child('chats').child($chatId).exists())",
         ".write": "auth != null && (root.child('chats').child($chatId).child('participants').child(auth.uid).exists() || !root.child('chats').child($chatId).exists())",
-        ".delete": "auth != null && root.child('chats').child($chatId).child('participants').child(auth.uid).exists()",
         "$messageId": {
           ".validate": "newData.hasChildren(['senderId', 'receiverId', 'content', 'timestamp', 'type']) && (!data.exists() || data.child('senderId').val() === auth.uid)",
           "senderId": {
@@ -145,7 +141,6 @@
       "$chatId": {
         ".read": "auth != null && data.child('participants').child(auth.uid).exists()",
         ".write": "auth != null && (!data.exists() || data.child('participants').child(auth.uid).exists())",
-        ".delete": "auth != null && data.child('participants').child(auth.uid).exists()",
         ".validate": "newData.hasChildren(['participants', 'createdAt'])",
         "participants": {
           ".validate": "newData.hasChildren()",
@@ -196,7 +191,6 @@
       "$uid": {
         ".read": "auth != null",
         ".write": "auth != null && auth.uid == $uid",
-        ".delete": "auth != null && auth.uid == $uid",
         ".validate": "newData.hasChildren(['status', 'lastSeen'])",
         "status": {
           ".validate": "newData.isString() && newData.val().length <= 100 && (newData.val() === 'online' || newData.val() === 'away' || newData.val() === 'offline' || newData.val() === 'busy')"
@@ -215,7 +209,6 @@
         "$uid": {
           ".read": "auth != null && root.child('chats').child($chatId).child('participants').child(auth.uid).exists()",
           ".write": "auth != null && auth.uid == $uid && root.child('chats').child($chatId).child('participants').child(auth.uid).exists()",
-          ".delete": "auth != null && auth.uid == $uid",
           ".validate": "newData.isBoolean()"
         }
       }
@@ -226,7 +219,6 @@
       "$uid": {
         ".read": "auth != null",
         ".write": "auth != null && auth.uid == $uid",
-        ".delete": "auth != null && auth.uid == $uid",
         ".validate": "newData.isNumber() && newData.val() <= now"
       }
     },
