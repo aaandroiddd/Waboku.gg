@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { useTrendingSearches } from '@/hooks/useTrendingSearches';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/router';
@@ -29,6 +30,7 @@ const itemVariants = {
 export function TrendingSearches() {
   const { trendingSearches, loading, error, refreshTrending } = useTrendingSearches();
   const router = useRouter();
+  const [refreshAttempt, setRefreshAttempt] = useState(0);
 
   const handleSearchClick = (term: string) => {
     router.push({
@@ -38,8 +40,25 @@ export function TrendingSearches() {
   };
 
   const handleRefresh = async () => {
-    await refreshTrending();
+    setRefreshAttempt(prev => prev + 1);
+    try {
+      await refreshTrending();
+    } catch (err) {
+      console.error('Error refreshing trending searches:', err);
+    }
   };
+  
+  // Auto-retry on error, but only once
+  useEffect(() => {
+    if (error && refreshAttempt < 1) {
+      const timer = setTimeout(() => {
+        console.log('Auto-retrying trending searches fetch due to error');
+        handleRefresh();
+      }, 3000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [error, refreshAttempt]);
 
   // Common container with fixed height to prevent layout shifts
   return (

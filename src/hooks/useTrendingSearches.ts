@@ -19,8 +19,12 @@ export function useTrendingSearches() {
   const fetchWithRetry = async (retries = MAX_RETRIES, delay = INITIAL_RETRY_DELAY): Promise<TrendingSearch[]> => {
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+      const timeoutId = setTimeout(() => {
+        console.log('Trending searches request timeout reached, aborting');
+        controller.abort();
+      }, 10000); // Increased to 10 second timeout
 
+      console.log('Fetching trending searches...');
       const response = await fetch('/api/trending-searches', {
         signal: controller.signal,
         headers: {
@@ -30,6 +34,7 @@ export function useTrendingSearches() {
       });
 
       clearTimeout(timeoutId);
+      console.log('Trending searches response received:', response.status);
       
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: 'Unknown error occurred' }));
@@ -37,6 +42,7 @@ export function useTrendingSearches() {
       }
       
       const data = await response.json();
+      console.log('Trending searches data parsed successfully');
       
       if (!Array.isArray(data)) {
         throw new Error('Invalid response format');
@@ -45,13 +51,22 @@ export function useTrendingSearches() {
       setError(null);
       return data;
     } catch (error: any) {
-      console.error(`Attempt failed. Retries left: ${retries}`, error);
+      console.error(`Trending searches attempt failed. Retries left: ${retries}`, error);
       
       if (error.name === 'AbortError') {
-        throw new Error('Request timed out');
+        console.error('Trending searches request was aborted due to timeout');
+        if (retries > 0) {
+          console.log(`Retrying trending searches fetch (${retries} attempts left)...`);
+          // Exponential backoff
+          const nextDelay = delay * 2;
+          await new Promise(resolve => setTimeout(resolve, delay));
+          return fetchWithRetry(retries - 1, nextDelay);
+        }
+        throw new Error('Trending searches request timed out after multiple attempts');
       }
       
       if (retries > 0) {
+        console.log(`Retrying trending searches fetch (${retries} attempts left)...`);
         // Exponential backoff
         const nextDelay = delay * 2;
         await new Promise(resolve => setTimeout(resolve, delay));

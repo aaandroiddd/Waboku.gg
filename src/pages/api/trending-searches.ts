@@ -11,21 +11,27 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  console.log('Trending searches API called at:', new Date().toISOString());
+  const requestId = Math.random().toString(36).substring(2, 15);
+  console.log(`[${requestId}] Trending searches API called at:`, new Date().toISOString());
   
   // Add CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   
+  // Set a longer timeout for the response
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('Keep-Alive', 'timeout=10');
+  
   // Handle preflight request
   if (req.method === 'OPTIONS') {
+    console.log(`[${requestId}] Handling OPTIONS request`);
     res.status(200).end();
     return;
   }
   
   if (req.method !== 'GET') {
-    console.error('Invalid method for trending-searches:', req.method);
+    console.error(`[${requestId}] Invalid method for trending-searches:`, req.method);
     return res.status(405).json({ 
       error: 'Method not allowed',
       message: 'Only GET requests are supported'
