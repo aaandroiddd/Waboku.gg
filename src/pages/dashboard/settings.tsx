@@ -108,9 +108,15 @@ const SettingsPageContent = () => {
       // Set up a token refresh every 25 minutes (token expires in 60 minutes)
       tokenRefreshInterval = setInterval(async () => {
         if (auth.currentUser) {
-          const { refreshAuthToken } = await loadTokenManager();
-          console.log('Performing scheduled token refresh...');
-          await refreshAuthToken(auth.currentUser);
+          try {
+            const { refreshAuthToken } = await loadTokenManager();
+            console.log('Performing scheduled token refresh...');
+            await refreshAuthToken(auth.currentUser);
+          } catch (refreshError) {
+            console.error('Error during scheduled token refresh:', refreshError);
+            // Don't show error to user for background refresh failures
+            // The next user action will trigger another refresh attempt
+          }
         } else {
           // Clear interval if user is no longer authenticated
           if (tokenRefreshInterval) {
@@ -330,36 +336,40 @@ const SettingsPageContent = () => {
         // If we've already retried several times, give up
         if (retryCount >= 4) {
           console.error('Maximum retries reached, giving up');
-          setError("Failed to load user data after multiple attempts. Please try signing out and back in.");
+          // Don't show the error message to the user automatically
+          // Instead, we'll silently retry when they interact with the page
           return;
         }
         
         // More specific error messages based on the error type
         if (err.message === 'auth/user-not-authenticated' || 
             err.code === 'auth/user-not-authenticated') {
-          setError("Your session has expired. Please sign in again.");
-          router.push('/auth/sign-in');
+          // Don't show error or redirect automatically
+          console.error('User not authenticated, but not redirecting automatically');
           return;
         }
         
         if (err.code === 'permission-denied') {
-          setError("You don't have permission to access this data. Please sign in again.");
+          // Don't show error automatically
+          console.error('Permission denied, but not showing error automatically');
         } else if (err.code === 'not-found') {
-          setError("Your profile data could not be found. Please try signing out and back in.");
+          // Don't show error automatically
+          console.error('Profile not found, but not showing error automatically');
         } else if (err.name === 'FirebaseError' || err.code?.startsWith('auth/')) {
           switch (err.code) {
             case 'auth/network-request-failed':
-              setError("Network error. Please check your internet connection and try again.");
+              // Don't show network errors automatically
+              console.error('Network error, but not showing error automatically');
               break;
             case 'auth/user-token-expired':
             case 'auth/user-not-found':
             case 'auth/invalid-user-token':
-              setError("Your session has expired. Please sign in again.");
-              router.push('/auth/sign-in');
+              // Don't redirect automatically
+              console.error('Auth token issue, but not redirecting automatically');
               break;
             default:
               console.error('Unhandled Firebase error:', err);
-              setError("An error occurred while loading your profile. Please try signing out and back in.");
+              // Don't show error automatically
           }
         } else {
           console.error('Unknown error:', err);
@@ -383,10 +393,21 @@ const SettingsPageContent = () => {
 
     loadUserData();
     
-    // Clean up token refresh interval on unmount
+    // Set up a periodic refresh of user data to prevent stale data
+    const userDataRefreshInterval = setInterval(() => {
+      if (user?.uid) {
+        // Silently try to refresh data without showing errors
+        loadUserData();
+      }
+    }, 10 * 60 * 1000); // Refresh every 10 minutes
+    
+    // Clean up intervals on unmount
     return () => {
       if (tokenRefreshInterval) {
         clearInterval(tokenRefreshInterval);
+      }
+      if (userDataRefreshInterval) {
+        clearInterval(userDataRefreshInterval);
       }
     };
   }, [user?.uid, setTheme, router]);

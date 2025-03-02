@@ -58,19 +58,57 @@ export async function refreshAuthToken(user: User | null): Promise<string | null
     } catch (error) {
       console.error(`Token refresh error (attempt ${retryCount + 1}/${maxRetries}):`, error);
       
-      // Exponential backoff with jitter to prevent thundering herd
-      const baseDelay = Math.min(1000 * Math.pow(2, retryCount), 10000);
-      const jitter = Math.random() * 1000; // Add up to 1 second of random jitter
-      const delay = baseDelay + jitter;
+      // Check if this is a network error or a Firebase Auth error
+      const errorMessage = error.message || '';
+      const isNetworkError = errorMessage.includes('network') || 
+                             errorMessage.includes('timeout') || 
+                             errorMessage.includes('connection');
       
-      console.log(`Waiting ${Math.round(delay)}ms before next token refresh attempt...`);
-      await new Promise(resolve => setTimeout(resolve, delay));
-      
-      retryCount++;
+      // For network errors, we'll retry with longer delays
+      // For auth errors, we might not be able to recover without user intervention
+      if (isNetworkError || retryCount < 2) {
+        // Exponential backoff with jitter to prevent thundering herd
+        const baseDelay = Math.min(1000 * Math.pow(2, retryCount), 10000);
+        const jitter = Math.random() * 1000; // Add up to 1 second of random jitter
+        const delay = baseDelay + jitter;
+        
+        console.log(`Waiting ${Math.round(delay)}ms before next token refresh attempt...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        
+        retryCount++;
+      } else {
+        // For non-network errors after a couple of retries, we'll try to get a non-forced token
+        // This might work if the token is still valid but there's an issue with the refresh
+        try {
+          console.log('Attempting to get current token without forcing refresh...');
+          const currentToken = await user.getIdToken(false);
+          console.log('Successfully retrieved current token without forcing refresh');
+          
+          // Store the access time, but not as a full refresh
+          try {
+            localStorage.setItem(`waboku_token_access_${user.uid}`, now.toString());
+          } catch (e) {
+            console.warn('Could not store token access time in localStorage');
+          }
+          
+          return currentToken;
+        } catch (nonForceError) {
+          console.error('Failed to get current token without forcing refresh:', nonForceError);
+          
+          // If we've exhausted all retries, we'll return null
+          if (retryCount >= maxRetries - 1) {
+            break;
+          }
+          
+          // Otherwise, continue with the retry loop
+          retryCount++;
+        }
+      }
     }
   }
 
   console.error('Failed to refresh auth token after multiple attempts');
+  // Return null but don't throw an error - the calling code should handle this gracefully
   return null;
 }
 
