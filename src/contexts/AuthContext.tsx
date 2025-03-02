@@ -99,23 +99,82 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     
     checkStoredAuthState();
     
+    // Function to refresh token periodically
+    const setupTokenRefresh = (user: User) => {
+      // Calculate when to refresh the token (every 30 minutes)
+      const refreshInterval = 30 * 60 * 1000; // 30 minutes
+      
+      // Set up interval to refresh token
+      const intervalId = setInterval(async () => {
+        try {
+          console.log('Attempting to refresh auth token...');
+          if (auth.currentUser) {
+            await auth.currentUser.getIdToken(true);
+            console.log('Auth token refreshed successfully');
+          } else {
+            console.warn('No current user found for token refresh');
+            clearInterval(intervalId);
+          }
+        } catch (error) {
+          console.error('Error refreshing token:', error);
+        }
+      }, refreshInterval);
+      
+      // Store the interval ID so we can clear it later
+      return intervalId;
+    };
+    
+    let tokenRefreshInterval: NodeJS.Timeout | null = null;
+    
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       console.log('Auth state changed:', user ? `User ${user.uid} authenticated` : 'No user');
+      
+      // Clear any existing token refresh interval
+      if (tokenRefreshInterval) {
+        clearInterval(tokenRefreshInterval);
+        tokenRefreshInterval = null;
+      }
+      
       setUser(user);
       
       if (user) {
+        // Set up token refresh for the authenticated user
+        tokenRefreshInterval = setupTokenRefresh(user);
+        
         try {
+          // Force token refresh immediately to ensure we have a fresh token
+          try {
+            await user.getIdToken(true);
+            console.log('Initial token refresh successful');
+          } catch (tokenError) {
+            console.warn('Initial token refresh failed:', tokenError);
+            // Continue anyway - we'll retry in the profile fetch
+          }
+          
           // Attempt to fetch user profile with retries
           let profileData = null;
           let retryCount = 0;
-          const maxRetries = 3;
+          const maxRetries = 5; // Increased from 3 to 5
           
           while (retryCount < maxRetries) {
             try {
+              console.log(`Attempting to fetch user profile (attempt ${retryCount + 1}/${maxRetries})...`);
+              
+              // Try to refresh token before each attempt if we've had failures
+              if (retryCount > 0) {
+                try {
+                  await user.getIdToken(true);
+                  console.log(`Refreshed token for retry attempt ${retryCount + 1}`);
+                } catch (refreshError) {
+                  console.warn(`Token refresh failed on retry ${retryCount + 1}:`, refreshError);
+                }
+              }
+              
               const profileDoc = await getDoc(doc(db, 'users', user.uid));
               
               if (profileDoc.exists()) {
                 profileData = profileDoc.data() as UserProfile;
+                console.log('User profile found successfully');
                 break; // Success, exit retry loop
               } else if (retryCount === maxRetries - 1) {
                 // On last retry, create a basic profile if none exists
@@ -147,12 +206,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 
                 await setDoc(doc(db, 'users', user.uid), basicProfile);
                 profileData = basicProfile;
+                console.log('Basic profile created successfully');
               }
             } catch (fetchError) {
               console.error(`Error fetching profile (attempt ${retryCount + 1}/${maxRetries}):`, fetchError);
               
-              // Wait longer between retries
-              await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1)));
+              // Exponential backoff for retries
+              const delay = Math.min(1000 * Math.pow(2, retryCount), 10000);
+              console.log(`Waiting ${delay}ms before next retry...`);
+              await new Promise(resolve => setTimeout(resolve, delay));
             }
             
             retryCount++;
@@ -162,6 +224,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setProfile(profileData);
           } else {
             console.error('Failed to fetch or create user profile after multiple attempts');
+            // Even if we failed to get the profile, we'll still consider the user authenticated
+            // This prevents being stuck in a loading state
           }
         } catch (err) {
           console.error('Error in profile fetch/creation process:', err);
@@ -173,7 +237,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setIsLoading(false);
     });
 
-    return () => unsubscribe();
+    return () => {
+      unsubscribe();
+      if (tokenRefreshInterval) {
+        clearInterval(tokenRefreshInterval);
+      }
+    };
   }, []);
 
   const signUp = async (email: string, password: string, username: string) => {

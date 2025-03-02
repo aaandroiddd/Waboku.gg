@@ -89,6 +89,7 @@ const SettingsPageContent = () => {
   useEffect(() => {
     const loadUserData = async (retryCount = 0) => {
       if (!user?.uid) {
+        console.log('No user UID found, redirecting to sign-in');
         router.push('/auth/sign-in');
         return;
       }
@@ -97,16 +98,30 @@ const SettingsPageContent = () => {
         setIsLoading(true);
         setError("");
         
+        console.log(`Attempting to load user data (attempt ${retryCount + 1}/5)...`);
+        
         // First check if user auth is still valid
         try {
+          console.log('Reloading user auth state...');
           await user.reload();
+          console.log('User auth state reloaded successfully');
         } catch (reloadError: any) {
           console.warn('User reload error:', reloadError);
-          // Continue anyway - we'll handle auth issues below
+          // If this is a network error, we should retry
+          if (reloadError.code === 'auth/network-request-failed' && retryCount < 4) {
+            console.log('Network error during auth reload, retrying...');
+            setIsLoading(false);
+            
+            // Exponential backoff for retries
+            const delay = Math.min(1000 * Math.pow(2, retryCount), 10000);
+            await new Promise(resolve => setTimeout(resolve, delay));
+            
+            return loadUserData(retryCount + 1);
+          }
         }
         
         // Add a small delay to ensure Firebase auth state is fully updated
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise(resolve => setTimeout(resolve, 800));
         
         // Get current auth state
         const currentUser = auth.currentUser;
@@ -114,6 +129,18 @@ const SettingsPageContent = () => {
         // If user is not authenticated, redirect to sign in
         if (!currentUser) {
           console.error('User not authenticated after reload');
+          
+          // Try to get a fresh token before giving up
+          if (retryCount < 4) {
+            console.log('Attempting to refresh authentication...');
+            
+            // Force a longer delay before retry
+            const delay = Math.min(1500 * Math.pow(2, retryCount), 15000);
+            await new Promise(resolve => setTimeout(resolve, delay));
+            
+            return loadUserData(retryCount + 1);
+          }
+          
           setError("Your session has expired. Please sign in again.");
           router.push('/auth/sign-in');
           return;
@@ -128,10 +155,12 @@ const SettingsPageContent = () => {
         }
         
         try {
+          console.log('Fetching user document from Firestore...');
           // Try to get user document
           const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
           
           if (userDoc.exists()) {
+            console.log('User document found in Firestore');
             const userData = userDoc.data();
             setFormData({
               username: currentUser.displayName || "",
@@ -157,7 +186,7 @@ const SettingsPageContent = () => {
               setAvatarPreview(currentUser.photoURL);
             }
           } else {
-            console.log('Creating new user profile for:', currentUser.uid);
+            console.log('No user document found, creating new profile for:', currentUser.uid);
             // If no user document exists, create one with basic data
             const basicProfile = {
               uid: currentUser.uid,
@@ -194,17 +223,27 @@ const SettingsPageContent = () => {
           console.error('Firestore error:', firestoreError);
           
           // If this is a permission error or not found, we might need to retry
-          if (retryCount < 3 && 
+          if (retryCount < 4 && 
               (firestoreError.code === 'permission-denied' || 
                firestoreError.code === 'not-found' ||
                firestoreError.code === 'unavailable' ||
-               firestoreError.code === 'resource-exhausted')) {
+               firestoreError.code === 'resource-exhausted' ||
+               firestoreError.code === 'deadline-exceeded')) {
             
-            console.log(`Retrying data load (attempt ${retryCount + 1}/3)...`);
+            console.log(`Retrying data load after Firestore error (attempt ${retryCount + 1}/5)...`);
             setIsLoading(false);
             
-            // Wait a bit longer between retries
-            await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1)));
+            // Exponential backoff for retries
+            const delay = Math.min(1500 * Math.pow(2, retryCount), 15000);
+            await new Promise(resolve => setTimeout(resolve, delay));
+            
+            // Try to get a fresh token before retrying
+            try {
+              await currentUser.getIdToken(true);
+              console.log('Successfully refreshed auth token');
+            } catch (tokenError) {
+              console.warn('Failed to refresh token:', tokenError);
+            }
             
             // Retry with incremented count
             return loadUserData(retryCount + 1);
@@ -223,7 +262,7 @@ const SettingsPageContent = () => {
         console.error('Error loading user data:', err);
         
         // If we've already retried several times, give up
-        if (retryCount >= 3) {
+        if (retryCount >= 4) {
           console.error('Maximum retries reached, giving up');
           setError("Failed to load user data after multiple attempts. Please try signing out and back in.");
           return;
@@ -241,7 +280,7 @@ const SettingsPageContent = () => {
           setError("You don't have permission to access this data. Please sign in again.");
         } else if (err.code === 'not-found') {
           setError("Your profile data could not be found. Please try signing out and back in.");
-        } else if (err.name === 'FirebaseError') {
+        } else if (err.name === 'FirebaseError' || err.code?.startsWith('auth/')) {
           switch (err.code) {
             case 'auth/network-request-failed':
               setError("Network error. Please check your internet connection and try again.");
@@ -260,11 +299,12 @@ const SettingsPageContent = () => {
           console.error('Unknown error:', err);
           
           // For unknown errors, retry after a delay
-          console.log(`Retrying data load (attempt ${retryCount + 1}/3)...`);
+          console.log(`Retrying data load after unknown error (attempt ${retryCount + 1}/5)...`);
           setIsLoading(false);
           
-          // Wait a bit longer between retries
-          await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1)));
+          // Exponential backoff for retries
+          const delay = Math.min(2000 * Math.pow(2, retryCount), 20000);
+          await new Promise(resolve => setTimeout(resolve, delay));
           
           // Retry with incremented count
           return loadUserData(retryCount + 1);

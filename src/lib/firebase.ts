@@ -34,35 +34,95 @@ let database: Database;
 
 function initializeFirebase() {
   try {
+    // Validate Firebase config
+    if (!firebaseConfig.apiKey || !firebaseConfig.projectId) {
+      console.error('Firebase configuration is incomplete:', 
+        Object.keys(firebaseConfig).filter(key => !firebaseConfig[key as keyof typeof firebaseConfig]));
+      throw new Error('Firebase configuration is incomplete. Check your environment variables.');
+    }
+
     // Check if Firebase is already initialized
     if (!getApps().length) {
+      console.log('Initializing Firebase app...');
       app = initializeApp(firebaseConfig);
     } else {
+      console.log('Firebase app already initialized, reusing existing app');
       app = getApps()[0];
     }
 
-    // Initialize services
-    auth = getAuth(app);
-    db = getFirestore(app);
-    database = getDatabase(app);
+    // Initialize services with better error handling
+    try {
+      auth = getAuth(app);
+      console.log('Firebase Auth initialized successfully');
+    } catch (authError) {
+      console.error('Failed to initialize Firebase Auth:', authError);
+      throw new Error('Authentication service initialization failed');
+    }
+
+    try {
+      db = getFirestore(app);
+      console.log('Firestore initialized successfully');
+    } catch (dbError) {
+      console.error('Failed to initialize Firestore:', dbError);
+      throw new Error('Database service initialization failed');
+    }
+
+    try {
+      database = getDatabase(app);
+      console.log('Realtime Database initialized successfully');
+    } catch (rtdbError) {
+      console.error('Failed to initialize Realtime Database:', rtdbError);
+      throw new Error('Realtime Database service initialization failed');
+    }
 
     // Only initialize storage in browser environment
     if (typeof window !== 'undefined') {
-      storage = getStorage(app);
+      try {
+        storage = getStorage(app);
+        console.log('Firebase Storage initialized successfully');
+      } catch (storageError) {
+        console.error('Failed to initialize Firebase Storage:', storageError);
+        // Non-critical, continue without storage
+      }
     }
 
     // Set persistence only in browser environment
     if (typeof window !== 'undefined') {
       setPersistence(auth, browserLocalPersistence)
+        .then(() => {
+          console.log('Firebase Auth persistence set to LOCAL');
+        })
         .catch(error => {
           console.error('Error setting auth persistence:', error);
+          // Non-critical, continue without persistence
         });
     }
 
     return { app, auth, db, storage, database };
   } catch (error) {
     console.error('Error initializing Firebase:', error);
-    throw error;
+    
+    // Provide more helpful error messages based on the error
+    if (error instanceof Error) {
+      if (error.message.includes('API key')) {
+        console.error('Firebase API key is invalid or missing');
+      } else if (error.message.includes('project')) {
+        console.error('Firebase project ID is invalid or missing');
+      } else if (error.message.includes('network')) {
+        console.error('Network error while initializing Firebase - check your internet connection');
+      }
+    }
+    
+    // Return a partially initialized object to prevent complete app failure
+    // This allows the app to at least render something instead of crashing completely
+    return { 
+      app: app || null, 
+      auth: auth || null, 
+      db: db || null, 
+      storage: storage || null, 
+      database: database || null,
+      initializationError: error
+    };
   }
 }
 
