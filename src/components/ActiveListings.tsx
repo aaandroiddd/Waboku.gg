@@ -93,20 +93,29 @@ export const ActiveListings = ({
       
       // Process each expired listing
       for (const listingId of expiredListings) {
+        if (!listingId) {
+          console.error("Attempted to process a listing with no ID");
+          errors++;
+          continue;
+        }
+        
         try {
+          console.log(`Processing expired listing: ${listingId}`);
           const response = await fetch('/api/listings/fix-expired', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ listingId }),
+            body: JSON.stringify({ listingId: listingId }),
           });
           
           if (response.ok) {
             processed++;
+            console.log(`Successfully processed listing: ${listingId}`);
           } else {
             errors++;
-            console.error(`Failed to process listing ${listingId}:`, await response.text());
+            const errorText = await response.text();
+            console.error(`Failed to process listing ${listingId}:`, errorText);
           }
         } catch (error) {
           errors++;

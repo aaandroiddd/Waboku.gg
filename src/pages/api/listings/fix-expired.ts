@@ -19,11 +19,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
+  // Log the request body to help debug
+  console.log('[Fix Expired] Request body:', req.body);
+  
   const { listingId } = req.body;
   
   if (!listingId) {
+    console.error('[Fix Expired] Missing listing ID in request body');
     return res.status(400).json({ error: 'Listing ID is required' });
   }
+  
+  console.log(`[Fix Expired] Processing listing ID: ${listingId}`);
 
   try {
     console.log(`[Fix Expired] Processing listing: ${listingId}`);
