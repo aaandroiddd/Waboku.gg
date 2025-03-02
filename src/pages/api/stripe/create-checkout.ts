@@ -101,24 +101,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
         console.log('[Create Checkout] Current subscription status:', currentSubscription?.status);
 
+        // Get the full account data to check for canceled status
+        const accountRef = db.ref(`users/${userId}/account`);
+        const accountSnapshot = await accountRef.once('value');
+        const accountData = accountSnapshot.val();
+        
+        console.log('[Create Checkout] Account subscription status:', accountData?.subscription?.status);
+
         // Only block if the subscription is active and not canceled
-        if (currentSubscription?.status === 'active' && currentSubscription?.status !== 'canceled') {
-          // Check if this is a resubscription attempt for a canceled subscription
-          const accountRef = db.ref(`users/${userId}/account`);
-          const accountSnapshot = await accountRef.once('value');
-          const accountData = accountSnapshot.val();
-          
-          // If the subscription is marked as canceled in the account data, allow resubscription
-          if (accountData?.subscription?.status === 'canceled') {
-            console.log('[Create Checkout] Allowing resubscription for canceled subscription');
-          } else {
-            return res.status(400).json({ 
-              error: 'Subscription exists',
-              message: 'You already have an active subscription',
-              code: 'SUBSCRIPTION_EXISTS'
-            });
-          }
+        if (currentSubscription?.status === 'active' && accountData?.subscription?.status !== 'canceled') {
+          return res.status(400).json({ 
+            error: 'Subscription exists',
+            message: 'You already have an active subscription',
+            code: 'SUBSCRIPTION_EXISTS'
+          });
         }
+        
+        // If we get here, either there's no subscription or it's canceled, so allow checkout
 
         // Preview environment handling
         if (process.env.NEXT_PUBLIC_CO_DEV_ENV === 'preview') {
