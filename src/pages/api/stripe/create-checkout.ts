@@ -101,12 +101,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
         console.log('[Create Checkout] Current subscription status:', currentSubscription?.status);
 
-        if (currentSubscription?.status === 'active') {
-          return res.status(400).json({ 
-            error: 'Subscription exists',
-            message: 'You already have an active subscription',
-            code: 'SUBSCRIPTION_EXISTS'
-          });
+        // Only block if the subscription is active and not canceled
+        if (currentSubscription?.status === 'active' && currentSubscription?.status !== 'canceled') {
+          // Check if this is a resubscription attempt for a canceled subscription
+          const accountRef = db.ref(`users/${userId}/account`);
+          const accountSnapshot = await accountRef.once('value');
+          const accountData = accountSnapshot.val();
+          
+          // If the subscription is marked as canceled in the account data, allow resubscription
+          if (accountData?.subscription?.status === 'canceled') {
+            console.log('[Create Checkout] Allowing resubscription for canceled subscription');
+          } else {
+            return res.status(400).json({ 
+              error: 'Subscription exists',
+              message: 'You already have an active subscription',
+              code: 'SUBSCRIPTION_EXISTS'
+            });
+          }
         }
 
         // Preview environment handling

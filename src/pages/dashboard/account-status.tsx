@@ -129,7 +129,7 @@ export default function AccountStatus() {
                   subscription: {
                     status: 'active',
                     tier: 'premium',
-                    stripeSubscriptionId: subscriptionId,
+                    stripeSubscriptionId: subscriptionId, // Use a regular subscription ID, not admin
                     startDate: currentDate.toISOString(),
                     renewalDate: renewalDate.toISOString(),
                     currentPeriodEnd: Math.floor(renewalDate.getTime() / 1000),
@@ -145,7 +145,7 @@ export default function AccountStatus() {
                   updatedAt: currentDate.toISOString(),
                   subscription: {
                     status: 'active',
-                    stripeSubscriptionId: subscriptionId,
+                    stripeSubscriptionId: subscriptionId, // Use a regular subscription ID, not admin
                     startDate: currentDate.toISOString(),
                     renewalDate: renewalDate.toISOString(),
                     currentPlan: 'premium'
@@ -154,13 +154,11 @@ export default function AccountStatus() {
                 
                 console.log('Preview mode: Updated subscription data in both databases');
                 
-                // Force a reload of the account context to reflect the changes
-                if (typeof window !== 'undefined') {
-                  // Wait a moment for the database to update
-                  setTimeout(() => {
-                    window.location.reload();
-                  }, 1500);
-                }
+                // Don't reload the page, just update the UI
+                toast({
+                  title: "Success!",
+                  description: "Your subscription has been processed. Your account has been upgraded to premium.",
+                });
               } catch (err) {
                 console.error('Preview mode: Failed to update subscription data', err);
               }
@@ -170,22 +168,23 @@ export default function AccountStatus() {
                 // Wait a moment for the webhook to process
                 await new Promise(resolve => setTimeout(resolve, 2000));
                 
-                // Force a reload to get the latest account data
-                if (typeof window !== 'undefined') {
-                  window.location.reload();
-                }
+                // Don't force a page reload, just update the UI
+                toast({
+                  title: "Success!",
+                  description: "Your subscription has been processed. Your account has been upgraded to premium.",
+                });
               } catch (err) {
                 console.error('Failed to check subscription status:', err);
               }
             }
           })
           .catch(err => console.error('Error refreshing token:', err));
+      } else {
+        toast({
+          title: "Success!",
+          description: "Your subscription has been processed. Your account will be upgraded shortly.",
+        });
       }
-      
-      toast({
-        title: "Success!",
-        description: "Your subscription has been processed. Your account will be upgraded shortly.",
-      });
       
       // Remove the query parameters from the URL without refreshing the page
       router.replace('/dashboard/account-status', undefined, { shallow: true });

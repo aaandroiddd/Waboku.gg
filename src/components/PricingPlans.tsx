@@ -381,9 +381,9 @@ export function PricingPlans() {
 
     if (isCanceled && !isExpired) {
       return {
-        text: "Subscription Ending Soon",
-        disabled: true,
-        variant: "outline" as const
+        text: "Resubscribe",
+        disabled: false,
+        variant: "default" as const
       };
     }
 
