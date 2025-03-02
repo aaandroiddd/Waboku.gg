@@ -630,147 +630,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       try {
-        // Get user profile first
-        const profileDoc = await getDoc(doc(db, 'users', user.uid));
-        const userProfile = profileDoc.exists() ? profileDoc.data() as UserProfile : null;
-
-        // Check if user has an active subscription and cancel it first
-        if (userProfile?.subscription?.status === 'active' || 
-            userProfile?.subscription?.status === 'trialing' ||
-            userProfile?.accountTier === 'premium') {
-          
-          console.log('User has an active subscription, attempting to cancel it first');
-          const subscriptionId = userProfile?.subscription?.stripeSubscriptionId;
-          
-          if (subscriptionId) {
-            try {
-              // Make API call to cancel subscription
-              const response = await fetch('/api/stripe/cancel-subscription', {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  'Authorization': `Bearer ${await user.getIdToken()}`
-                },
-                body: JSON.stringify({
-                  subscriptionId,
-                  userId: user.uid
-                })
-              });
-              
-              const result = await response.json();
-              
-              if (!response.ok && !result.success) {
-                console.error('Failed to cancel subscription:', result);
-                // Continue with account deletion even if subscription cancellation fails
-                console.log('Proceeding with account deletion despite subscription cancellation failure');
-              } else {
-                console.log('Subscription successfully canceled');
-              }
-            } catch (subscriptionError) {
-              console.error('Error canceling subscription:', subscriptionError);
-              // Continue with account deletion even if subscription cancellation fails
-              console.log('Proceeding with account deletion despite subscription cancellation error');
-            }
-          }
-        }
-
-        // Find and delete ALL username documents (both active and archived) associated with this user
-        const usernamesCollection = collection(db, 'usernames');
-        const usernamesQuery = query(usernamesCollection, where('uid', '==', user.uid));
-        const usernamesDocs = await getDocs(usernamesQuery);
+        // Get a fresh token
+        const token = await user.getIdToken(true);
         
-        // Delete all username documents in parallel
-        const deletePromises = usernamesDocs.docs.map(async (doc) => {
-          console.log('Deleting username document:', doc.id, 'Status:', doc.data().status || 'active');
-          return deleteDoc(doc.ref);
+        // Call the server-side API to handle account deletion
+        const response = await fetch('/api/users/delete-account', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          }
         });
-
-        // Wait for all username deletions to complete
-        await Promise.all(deletePromises);
-
-        // If we have the current username from profile and it wasn't found in the query
-        if (userProfile?.username) {
-          const currentUsernameDoc = doc(db, 'usernames', userProfile.username);
-          const currentUsernameSnapshot = await getDoc(currentUsernameDoc);
-          if (currentUsernameSnapshot.exists()) {
-            console.log('Deleting current username document:', userProfile.username);
-            await deleteDoc(currentUsernameDoc);
-          }
+        
+        const result = await response.json();
+        
+        if (!response.ok || !result.success) {
+          console.error('Failed to delete account:', result);
+          throw new Error(result.message || 'Failed to delete account data. Please try again.');
         }
-
-        // Delete user's favorites
-        console.log('Deleting user favorites:', user.uid);
-        const favoritesRef = collection(db, 'users', user.uid, 'favorites');
-        const favoritesSnapshot = await getDocs(favoritesRef);
-        const favoritesDeletePromises = favoritesSnapshot.docs.map(doc => deleteDoc(doc.ref));
-        await Promise.all(favoritesDeletePromises);
-
-        // Delete user's messages from Realtime Database
-        console.log('Deleting user messages:', user.uid);
-        const { firebaseDb, realtimeDb } = getFirebaseServices();
         
-        // Get all chats where user is a participant
-        const chatsRef = ref(realtimeDb, 'chats');
-        const chatsSnapshot = await get(chatsRef);
-        const chatsData = chatsSnapshot.val();
-        
-        if (chatsData) {
-          const userChatIds = Object.entries(chatsData)
-            .filter(([_, chat]: [string, any]) => chat.participants && chat.participants[user.uid])
-            .map(([chatId]) => chatId);
-          
-          // For each chat, either delete it completely or mark as deleted by this user
-          for (const chatId of userChatIds) {
-            const chatRef = ref(realtimeDb, `chats/${chatId}`);
-            const chatData = chatsData[chatId];
-            
-            // If only two participants and one is the current user, delete the entire chat
-            const participants = Object.keys(chatData.participants || {});
-            if (participants.length <= 2) {
-              // Delete the entire chat and its messages
-              await remove(ref(realtimeDb, `chats/${chatId}`));
-              await remove(ref(realtimeDb, `messages/${chatId}`));
-            } else {
-              // Mark as deleted for current user and remove from participants
-              const updates: Record<string, any> = {
-                [`chats/${chatId}/deletedBy/${user.uid}`]: true
-              };
-              delete updates[`chats/${chatId}/participants/${user.uid}`];
-              await update(ref(realtimeDb), updates);
-            }
-          }
-        }
-
-        // Delete user's order history
-        console.log('Deleting user order history:', user.uid);
-        // Delete orders where user is buyer
-        const buyerOrdersRef = collection(db, 'orders');
-        const buyerOrdersQuery = query(buyerOrdersRef, where('buyerId', '==', user.uid));
-        const buyerOrdersSnapshot = await getDocs(buyerOrdersQuery);
-        const buyerOrdersDeletePromises = buyerOrdersSnapshot.docs.map(doc => deleteDoc(doc.ref));
-        
-        // Delete orders where user is seller
-        const sellerOrdersRef = collection(db, 'orders');
-        const sellerOrdersQuery = query(sellerOrdersRef, where('sellerId', '==', user.uid));
-        const sellerOrdersSnapshot = await getDocs(sellerOrdersQuery);
-        const sellerOrdersDeletePromises = sellerOrdersSnapshot.docs.map(doc => deleteDoc(doc.ref));
-        
-        // Wait for all order deletions to complete
-        await Promise.all([...buyerOrdersDeletePromises, ...sellerOrdersDeletePromises]);
-
-        // Delete user profile
-        console.log('Deleting user profile:', user.uid);
-        await deleteDoc(doc(db, 'users', user.uid));
-
-        // Delete user authentication last
-        console.log('Deleting user authentication:', user.uid);
-        await deleteUser(user);
-        
+        console.log('Account deleted successfully via API');
         setUser(null);
         setProfile(null);
       } catch (deleteError: any) {
         console.error('Error during deletion process:', deleteError);
-        throw new Error('Failed to delete account data. Please try again.');
+        throw new Error(deleteError.message || 'Failed to delete account data. Please try again.');
       }
     } catch (err: any) {
       console.error('Error deleting account:', err);

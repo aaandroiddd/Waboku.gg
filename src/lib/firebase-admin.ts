@@ -17,6 +17,13 @@ export function initializeAdminApp() {
   return { admin, app: adminApp };
 }
 
+/**
+ * Initialize Firebase Admin and return the admin instance
+ */
+export function initAdmin(): typeof admin {
+  return getFirebaseAdmin();
+}
+
 export function getFirebaseAdmin(): typeof admin {
   if (firebaseAdmin) {
     return firebaseAdmin;
