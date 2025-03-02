@@ -1,5 +1,40 @@
 {
   "rules": {
+    "users": {
+      "$uid": {
+        ".read": "auth != null && (auth.uid === $uid || root.child('users').child(auth.uid).child('account').child('tier').val() === 'admin')",
+        ".write": "auth != null && (auth.uid === $uid || auth.token.admin === true)",
+        ".delete": "auth != null && auth.uid === $uid",
+        "email": {
+          ".validate": "newData.isString() && newData.val().matches(/^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+[A-Za-z]{2,}$/)"
+        },
+        "displayName": {
+          ".validate": "newData.isString() && newData.val().length >= 3 && newData.val().length <= 50"
+        },
+        "account": {
+          ".validate": "newData.hasChildren(['tier'])",
+          "tier": {
+            ".validate": "newData.isString() && (newData.val() === 'free' || newData.val() === 'premium' || newData.val() === 'admin')"
+          },
+          "status": {
+            ".validate": "newData.isString() && newData.val().length <= 100"
+          },
+          "stripeCustomerId": {
+            ".validate": "!newData.exists() || newData.isString()"
+          },
+          "subscriptionId": {
+            ".validate": "!newData.exists() || newData.isString()"
+          },
+          "lastUpdated": {
+            ".validate": "newData.isNumber() && newData.val() <= now"
+          },
+          "$other": {
+            ".validate": false
+          }
+        }
+      }
+    },
+
     "favorites": {
       "$uid": {
         ".read": "auth != null && auth.uid === $uid",
@@ -13,6 +48,7 @@
         }
       }
     },
+
     "searchTerms": {
       ".read": true,
       ".write": true,
@@ -27,6 +63,7 @@
         }
       }
     },
+
     "searches": {
       ".read": true,
       ".write": "auth != null",
@@ -41,69 +78,11 @@
         }
       }
     },
-    "users": {
-      "$uid": {
-        ".read": "auth != null && (auth.uid === $uid || root.child('users').child(auth.uid).child('account').child('tier').val() === 'admin')",
-        ".write": "auth != null && (auth.uid === $uid || auth.token.admin === true)",
-        ".delete": "auth != null && auth.uid === $uid",
-        "email": {
-          ".validate": "newData.isString() && newData.val().matches(/^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+[A-Za-z]{2,}$/)"
-        },
-        "displayName": {
-          ".validate": "newData.isString() && newData.val().length >= 3 && newData.val().length <= 50"
-        },
-        "account": {
-          ".write": "auth != null && (auth.uid === $uid || auth.token.admin === true)",
-          ".validate": "newData.hasChildren(['tier'])",
-          "tier": {
-            ".validate": "newData.isString() && (newData.val() === 'free' || newData.val() === 'premium' || newData.val() === 'admin')"
-          },
-          "status": {
-            ".validate": "newData.isString() && newData.val().length <= 100"
-          },
-          "stripeCustomerId": {
-            ".validate": "!newData.exists() || newData.isString()"
-          },
-          "subscriptionId": {
-            ".validate": "!newData.exists() || newData.isString()"
-          },
-          "subscription": {
-            ".read": "auth != null && (auth.uid === $uid || auth.token.admin === true)",
-            ".write": "auth != null && (auth.uid === $uid || auth.token.admin === true)",
-            ".validate": "!newData.exists() || newData.hasChildren(['status'])",
-            "status": {
-              ".validate": "newData.isString() && (newData.val() === 'active' || newData.val() === 'canceled' || newData.val() === 'canceling' || newData.val() === 'expired' || newData.val() === 'none')"
-            },
-            "stripeSubscriptionId": {
-              ".validate": "!newData.exists() || newData.isString()"
-            },
-            "endDate": {
-              ".validate": "!newData.exists() || newData.isString()"
-            },
-            "canceledAt": {
-              ".validate": "!newData.exists() || newData.isString()"
-            },
-            "cancelAtPeriodEnd": {
-              ".validate": "!newData.exists() || newData.isBoolean()"
-            },
-            "$other": {
-              ".validate": true
-            }
-          },
-          "lastUpdated": {
-            ".validate": "newData.isNumber() && newData.val() <= now"
-          },
-          "$other": {
-            ".validate": false
-          }
-        }
-      }
-    },
 
     "listings": {
       ".indexOn": ["createdAt", "userId", "status"],
       "$listingId": {
-        ".read": true,
+        ".read": "auth != null",
         ".write": "auth != null && (!data.exists() || data.child('userId').val() === auth.uid)",
         ".delete": "auth != null && data.child('userId').val() === auth.uid",
         ".validate": "newData.hasChildren(['userId', 'title', 'price', 'status', 'createdAt'])",
@@ -126,35 +105,33 @@
     },
 
     "messages": {
-      ".read": "auth != null",
-      ".write": "auth != null",
       ".indexOn": ["timestamp", "chatId"],
       "$chatId": {
-        ".read": "auth != null",
-        ".write": "auth != null",
-        ".delete": "auth != null",
+        ".read": "auth != null && (root.child('chats').child($chatId).child('participants').child(auth.uid).exists() || !root.child('chats').child($chatId).exists())",
+        ".write": "auth != null && (root.child('chats').child($chatId).child('participants').child(auth.uid).exists() || !root.child('chats').child($chatId).exists())",
+        ".delete": "auth != null && root.child('chats').child($chatId).child('participants').child(auth.uid).exists()",
         "$messageId": {
-          ".validate": "newData.hasChildren(['senderId', 'receiverId', 'content', 'timestamp'])",
+          ".validate": "newData.hasChildren(['senderId', 'receiverId', 'content', 'timestamp', 'type']) && (!data.exists() || data.child('senderId').val() === auth.uid)",
           "senderId": {
             ".validate": "newData.val() === auth.uid"
           },
           "receiverId": {
-            ".validate": "newData.isString() && newData.val() !== auth.uid"
+            ".validate": "newData.isString() && root.child('chats').child($chatId).child('participants').child(newData.val()).exists()"
           },
           "content": {
             ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 2000"
           },
-          "timestamp": {
-            ".validate": "newData.isNumber() && newData.val() <= now"
-          },
           "type": {
-            ".validate": "!newData.exists() || (newData.isString() && (newData.val() === 'text' || newData.val() === 'image' || newData.val() === 'system'))"
+            ".validate": "newData.isString() && (newData.val() === 'text' || newData.val() === 'image' || newData.val() === 'system')"
+          },
+          "timestamp": {
+            ".validate": "newData.isNumber() && newData.val() <= now && (!data.exists() || newData.val() > data.val())"
+          },
+          "listingId": {
+            ".validate": "!newData.exists() || (newData.isString() && root.child('listings').child(newData.val()).exists())"
           },
           "read": {
             ".validate": "newData.isBoolean()"
-          },
-          "listingId": {
-            ".validate": "!newData.exists() || newData.isString()"
           },
           "$other": {
             ".validate": false
@@ -164,26 +141,25 @@
     },
 
     "chats": {
-      ".read": "auth != null",
-      ".write": "auth != null",
       ".indexOn": ["createdAt", "participants"],
       "$chatId": {
-        ".read": "auth != null",
+        ".read": "auth != null && data.child('participants').child(auth.uid).exists()",
         ".write": "auth != null && (!data.exists() || data.child('participants').child(auth.uid).exists())",
         ".delete": "auth != null && data.child('participants').child(auth.uid).exists()",
-        ".validate": "newData.hasChildren(['participants'])",
+        ".validate": "newData.hasChildren(['participants', 'createdAt'])",
         "participants": {
+          ".validate": "newData.hasChildren()",
           "$uid": {
-            ".validate": "newData.isBoolean()"
+            ".validate": "newData.isBoolean() && root.child('users').child($uid).exists()"
           }
         },
         "deletedBy": {
           "$uid": {
-            ".validate": "auth != null && $uid === auth.uid"
+            ".validate": "auth != null && $uid === auth.uid && root.child('chats').child($chatId).child('participants').child($uid).exists()"
           }
         },
         "lastMessage": {
-          ".validate": "!newData.exists() || newData.hasChildren(['senderId', 'content', 'timestamp'])",
+          ".validate": "newData.hasChildren(['senderId', 'receiverId', 'content', 'timestamp', 'type'])",
           "senderId": {
             ".validate": "newData.isString()"
           },
@@ -194,20 +170,23 @@
             ".validate": "newData.isString() && newData.val().length <= 2000"
           },
           "type": {
-            ".validate": "!newData.exists() || (newData.isString() && (newData.val() === 'text' || newData.val() === 'image' || newData.val() === 'system'))"
+            ".validate": "newData.isString() && (newData.val() === 'text' || newData.val() === 'image' || newData.val() === 'system')"
           },
           "timestamp": {
             ".validate": "newData.isNumber() && newData.val() <= now"
           }
         },
         "listingId": {
-          ".validate": "!newData.exists() || newData.isString()"
+          ".validate": "!newData.exists() || (newData.isString() && root.child('listings').child(newData.val()).exists())"
         },
         "listingTitle": {
-          ".validate": "!newData.exists() || newData.isString()"
+          ".validate": "!newData.exists() || (newData.isString() && newData.val().length <= 200)"
         },
         "createdAt": {
-          ".validate": "!newData.exists() || (newData.isNumber() && newData.val() <= now)"
+          ".validate": "newData.isNumber() && (!data.exists() || data.val() === newData.val()) && newData.val() <= now"
+        },
+        "$other": {
+          ".validate": false
         }
       }
     },
@@ -234,8 +213,8 @@
     "typing": {
       "$chatId": {
         "$uid": {
-          ".read": "auth != null",
-          ".write": "auth != null && auth.uid == $uid",
+          ".read": "auth != null && root.child('chats').child($chatId).child('participants').child(auth.uid).exists()",
+          ".write": "auth != null && auth.uid == $uid && root.child('chats').child($chatId).child('participants').child(auth.uid).exists()",
           ".delete": "auth != null && auth.uid == $uid",
           ".validate": "newData.isBoolean()"
         }
