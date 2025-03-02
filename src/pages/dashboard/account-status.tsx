@@ -123,25 +123,26 @@ export default function AccountStatus() {
                 // Update Realtime Database
                 const db = getDatabase();
                 
-                // First update the account tier and other required fields
-                const userRef = ref(db, `users/${user.uid}/account`);
-                await set(userRef, {
-                  tier: 'premium',
-                  status: 'active',
-                  lastUpdated: Date.now()
-                });
+                // Update account fields individually to avoid validation issues
+                await set(ref(db, `users/${user.uid}/account/tier`), 'premium');
+                await set(ref(db, `users/${user.uid}/account/status`), 'active');
+                await set(ref(db, `users/${user.uid}/account/lastUpdated`), Date.now());
                 
                 // Then update the subscription details separately
-                const subscriptionRef = ref(db, `users/${user.uid}/account/subscription`);
-                await set(subscriptionRef, {
+                // First create a complete subscription object
+                const subscriptionData = {
                   status: 'active',
                   tier: 'premium',
-                  stripeSubscriptionId: subscriptionId, // Use a regular subscription ID, not admin
+                  stripeSubscriptionId: subscriptionId,
                   startDate: currentDate.toISOString(),
                   renewalDate: renewalDate.toISOString(),
                   currentPeriodEnd: Math.floor(renewalDate.getTime() / 1000),
                   lastUpdated: Date.now()
-                });
+                };
+                
+                // Update subscription fields
+                const subscriptionRef = ref(db, `users/${user.uid}/account/subscription`);
+                await set(subscriptionRef, subscriptionData);
                 
                 // Update Firestore for consistency
                 const firestore = getFirestore();
@@ -230,12 +231,10 @@ export default function AccountStatus() {
           // Update Realtime Database
           const db = getDatabase();
           
-          // First update the account tier
-          await set(ref(db, `users/${user?.uid}/account`), {
-            tier: 'premium', // Keep as premium until end date
-            status: 'active',
-            lastUpdated: Date.now()
-          });
+          // Update account fields individually to avoid validation issues
+          await set(ref(db, `users/${user?.uid}/account/tier`), 'premium'); // Keep as premium until end date
+          await set(ref(db, `users/${user?.uid}/account/status`), 'active');
+          await set(ref(db, `users/${user?.uid}/account/lastUpdated`), Date.now());
           
           // Then update the subscription details
           const userRef = ref(db, `users/${user?.uid}/account/subscription`);
@@ -478,18 +477,15 @@ export default function AccountStatus() {
                           // Update Realtime Database
                           const db = getDatabase();
                           
-                          // First update the account tier and other required fields
-                          const userRef = ref(db, `users/${user?.uid}/account`);
-                          await set(userRef, {
-                            tier: 'premium',
-                            status: 'active',
-                            stripeCustomerId: stripeCustomerId,
-                            lastUpdated: Date.now()
-                          });
+                          // Update account fields individually to avoid validation issues
+                          await set(ref(db, `users/${user?.uid}/account/tier`), 'premium');
+                          await set(ref(db, `users/${user?.uid}/account/status`), 'active');
+                          await set(ref(db, `users/${user?.uid}/account/stripeCustomerId`), stripeCustomerId);
+                          await set(ref(db, `users/${user?.uid}/account/lastUpdated`), Date.now());
                           
                           // Then update the subscription details separately
-                          const subscriptionRef = ref(db, `users/${user?.uid}/account/subscription`);
-                          await set(subscriptionRef, {
+                          // First create a complete subscription object
+                          const subscriptionData = {
                             status: 'active',
                             tier: 'premium',
                             stripeSubscriptionId: subscriptionId,
@@ -497,7 +493,11 @@ export default function AccountStatus() {
                             renewalDate: renewalDate.toISOString(),
                             currentPeriodEnd: Math.floor(renewalDate.getTime() / 1000),
                             lastUpdated: Date.now()
-                          });
+                          };
+                          
+                          // Update subscription fields individually
+                          const subscriptionRef = ref(db, `users/${user?.uid}/account/subscription`);
+                          await set(subscriptionRef, subscriptionData);
                           
                           // Update Firestore for consistency
                           const firestore = getFirestore();

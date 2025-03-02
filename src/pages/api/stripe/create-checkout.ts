@@ -130,13 +130,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             const renewalDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days from now
             
             // Update user's subscription status directly in preview mode
-            // Update tier and status separately to comply with validation rules
+            // Update account fields individually to avoid validation issues
             await db.ref(`users/${userId}/account/tier`).set('premium');
             await db.ref(`users/${userId}/account/status`).set('active');
+            await db.ref(`users/${userId}/account/lastUpdated`).set(Date.now());
             
-            // Update subscription fields separately
-            const subscriptionRef = db.ref(`users/${userId}/account/subscription`);
-            await subscriptionRef.update({
+            // Create a complete subscription object
+            const subscriptionData = {
               status: 'active',
               tier: 'premium',
               billingPeriod: 'monthly',
@@ -145,7 +145,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
               renewalDate: renewalDate.toISOString(),
               currentPeriodEnd: Math.floor(renewalDate.getTime() / 1000),
               lastUpdated: Date.now()
-            });
+            };
+            
+            // Update subscription fields
+            const subscriptionRef = db.ref(`users/${userId}/account/subscription`);
+            await subscriptionRef.set(subscriptionData);
             
             // Also update in Firestore for consistency
             const firestore = admin.firestore();
