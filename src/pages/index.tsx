@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
 import { TrendingSearches } from "@/components/TrendingSearches";
+import { checkAndClearStaleAuthData, clearStoredAuthData } from "@/lib/auth-token-manager";
 import {
   Command,
   CommandEmpty,
@@ -218,6 +219,15 @@ export default function Home() {
   const { latitude, longitude, loading: geoLoading } = useGeolocation();
 
   useEffect(() => {
+    // Check for and clear stale auth data on page load
+    // This helps prevent issues with corrupted auth state
+    if (typeof window !== 'undefined') {
+      const staleDataFound = checkAndClearStaleAuthData();
+      if (staleDataFound) {
+        console.log('Stale authentication data was found and cleared');
+      }
+    }
+
     async function fetchListings() {
       if (typeof window === 'undefined') return;
       

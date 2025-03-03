@@ -181,3 +181,118 @@ export function clearAuthState() {
     console.error('Error clearing auth state:', error);
   }
 }
+
+/**
+ * Clears any stored authentication data from localStorage
+ */
+export const clearStoredAuthData = (): void => {
+  try {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      // Clear auth redirect state
+      localStorage.removeItem('waboku_auth_redirect');
+      localStorage.removeItem('waboku_auth_state');
+      
+      // Clear any token refresh timestamps
+      const keysToRemove: string[] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && (
+          key.startsWith('waboku_last_token_refresh_') || 
+          key.startsWith('waboku_token_access_')
+        )) {
+          keysToRemove.push(key);
+        }
+      }
+      
+      // Remove the keys in a separate loop to avoid issues with changing localStorage during iteration
+      keysToRemove.forEach(key => localStorage.removeItem(key));
+      
+      // Clear profile completion flag
+      localStorage.removeItem('needs_profile_completion');
+    }
+  } catch (e) {
+    console.warn('Error clearing stored auth data:', e);
+  }
+};
+
+/**
+ * Checks if there are any stale auth tokens or data in localStorage
+ * @returns true if stale data was found and cleared, false otherwise
+ */
+export const checkAndClearStaleAuthData = (): boolean => {
+  try {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      let staleDataFound = false;
+      
+      // Check for auth redirect state
+      const storedAuth = localStorage.getItem('waboku_auth_redirect');
+      if (storedAuth) {
+        try {
+          const authData = JSON.parse(storedAuth);
+          const now = Date.now();
+          const storedTime = authData.timestamp || 0;
+          
+          // If stored auth is more than 30 minutes old, it's stale
+          if (now - storedTime > 30 * 60 * 1000) {
+            localStorage.removeItem('waboku_auth_redirect');
+            staleDataFound = true;
+          }
+        } catch (e) {
+          // If we can't parse the data, it's corrupted, so remove it
+          localStorage.removeItem('waboku_auth_redirect');
+          staleDataFound = true;
+        }
+      }
+      
+      // Check for auth state
+      const storedState = localStorage.getItem('waboku_auth_state');
+      if (storedState) {
+        try {
+          const stateData = JSON.parse(storedState);
+          const now = Date.now();
+          const storedTime = stateData.timestamp || 0;
+          
+          // If stored state is more than 24 hours old, it's stale
+          if (now - storedTime > 24 * 60 * 60 * 1000) {
+            localStorage.removeItem('waboku_auth_state');
+            staleDataFound = true;
+          }
+        } catch (e) {
+          // If we can't parse the data, it's corrupted, so remove it
+          localStorage.removeItem('waboku_auth_state');
+          staleDataFound = true;
+        }
+      }
+      
+      // Check for token refresh timestamps
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && (
+          key.startsWith('waboku_last_token_refresh_') || 
+          key.startsWith('waboku_token_access_')
+        )) {
+          try {
+            const timestamp = parseInt(localStorage.getItem(key) || '0', 10);
+            const now = Date.now();
+            
+            // If timestamp is more than 24 hours old, it's stale
+            if (now - timestamp > 24 * 60 * 60 * 1000) {
+              localStorage.removeItem(key);
+              staleDataFound = true;
+            }
+          } catch (e) {
+            // If we can't parse the timestamp, it's corrupted, so remove it
+            localStorage.removeItem(key);
+            staleDataFound = true;
+          }
+        }
+      }
+      
+      return staleDataFound;
+    }
+  } catch (e) {
+    console.warn('Error checking for stale auth data:', e);
+  }
+  
+  return false;
+};

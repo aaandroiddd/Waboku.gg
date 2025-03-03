@@ -17,6 +17,12 @@ import { doc, setDoc, getDoc, deleteDoc, collection, query, where, getDocs } fro
 import { ref, get, update, remove } from 'firebase/database';
 import { getFirebaseServices } from '@/lib/firebase';
 import { UserProfile } from '@/types/database';
+import { 
+  refreshAuthToken, 
+  validateUserSession, 
+  clearStoredAuthData, 
+  checkAndClearStaleAuthData 
+} from '@/lib/auth-token-manager';
 
 interface AuthContextType {
   user: User | null;
@@ -507,6 +513,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signOut = async () => {
     try {
       await firebaseSignOut(auth);
+      // Clear all stored auth data from localStorage
+      clearStoredAuthData();
       setUser(null);
       setProfile(null);
     } catch (err: any) {

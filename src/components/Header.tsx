@@ -11,11 +11,12 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { Menu, LayoutDashboard, Heart, MessageSquare, Settings, Store, LogOut } from "lucide-react";
+import { Menu, LayoutDashboard, Heart, MessageSquare, Settings, Store, LogOut, RefreshCw } from "lucide-react";
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
 import { SignOutDialog } from "./SignOutDialog";
+import { ClearBrowserDataButton } from "./ClearBrowserDataButton";
 
 // Dynamically import the auth-dependent navigation component
 const AuthNav = dynamic(() => import("./AuthNav"), {
@@ -67,6 +68,14 @@ export default function Header() {
           >
             <ThemeToggle />
           </motion.div>
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.25 }}
+            className="flex items-center"
+          >
+            <ClearBrowserDataButton />
+          </motion.div>
           {!isAuthPage && (
             <motion.div
               initial={{ opacity: 0 }}
@@ -108,6 +117,10 @@ export default function Header() {
                 >
                   Browse Listings
                 </Link>
+                
+                <div className="px-2 py-1">
+                  <ClearBrowserDataButton className="w-full" />
+                </div>
 
                 {user ? (
                   <>
