@@ -418,10 +418,10 @@ export default function ListingPage() {
                   <div className="flex items-center text-muted-foreground text-sm">
                     <MapPin className="h-4 w-4 mr-1" />
                     <span>{listing.city}, {listing.state}</span>
-                    {listing.latitude && listing.longitude && (
+                    {listing.location?.latitude && listing.location?.longitude && (
                       <DistanceIndicator 
-                        targetLat={listing.latitude} 
-                        targetLon={listing.longitude} 
+                        targetLat={listing.location.latitude} 
+                        targetLon={listing.location.longitude} 
                       />
                     )}
                   </div>

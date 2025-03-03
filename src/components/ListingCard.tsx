@@ -311,7 +311,38 @@ export const ListingCard = memo(({ listing, isFavorite, onFavoriteClick, getCond
               </div>
               <div className="flex items-center justify-between text-xs">
                 <span className="text-muted-foreground">{listing.city}, {listing.state}</span>
-                <DistanceIndicator distance={calculatedDistance} />
+                {calculatedDistance !== null && (
+                  <span className={`flex items-center gap-1 font-medium ${
+                    calculatedDistance <= 5 
+                      ? 'text-green-500 dark:text-green-400'
+                      : calculatedDistance <= 20
+                      ? 'text-blue-500 dark:text-blue-400'
+                      : calculatedDistance <= 50
+                      ? 'text-yellow-500 dark:text-yellow-400'
+                      : 'text-muted-foreground'
+                  }`}>
+                    <svg 
+                      className={`w-3 h-3 ${
+                        calculatedDistance <= 5 && 'animate-pulse'
+                      }`} 
+                      viewBox="0 0 24 24" 
+                      fill="none" 
+                      stroke="currentColor" 
+                      strokeWidth="2"
+                    >
+                      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                      <circle cx="12" cy="10" r="3" />
+                    </svg>
+                    {calculatedDistance < 1 
+                      ? 'Less than 1 mile!' 
+                      : calculatedDistance <= 5 
+                      ? `${calculatedDistance.toFixed(1)} mi - Very Close!`
+                      : calculatedDistance <= 20
+                      ? `${calculatedDistance.toFixed(1)} mi - Nearby`
+                      : `${calculatedDistance.toFixed(1)} mi`
+                    }
+                  </span>
+                )}
               </div>
             </motion.div>
           </CardContent>
