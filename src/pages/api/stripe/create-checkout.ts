@@ -108,8 +108,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         
         console.log('[Create Checkout] Account subscription status:', accountData?.subscription?.status);
 
-        // Only block if the subscription is active and not canceled
-        if (currentSubscription?.status === 'active' && accountData?.subscription?.status !== 'canceled') {
+        // Check if the subscription is canceled
+        const isCanceled = currentSubscription?.status === 'canceled' || accountData?.subscription?.status === 'canceled';
+        
+        // Only block if the subscription is active and NOT canceled
+        if (currentSubscription?.status === 'active' && !isCanceled) {
           return res.status(400).json({ 
             error: 'Subscription exists',
             message: 'You already have an active subscription',

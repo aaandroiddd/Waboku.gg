@@ -570,11 +570,16 @@ export default function AccountStatus() {
                         // Update the subscription status in the database to indicate it's being replaced
                         const db = getDatabase();
                         const subscriptionRef = ref(db, `users/${user.uid}/account/subscription`);
-                        await set(subscriptionRef, {
-                          ...subscription,
+                        
+                        // Make a copy of the subscription object and update the status
+                        const updatedSubscription = {
+                          ...(subscription || {}),
                           status: 'replaced',
                           lastUpdated: Date.now()
-                        });
+                        };
+                        
+                        // Set the entire object to ensure all required fields are present
+                        await set(subscriptionRef, updatedSubscription);
                         
                         console.log('Cleared canceled subscription status before resubscribing');
                       } catch (clearError) {
@@ -582,6 +587,10 @@ export default function AccountStatus() {
                         // Continue anyway as this is not critical
                       }
 
+                      // Add a small delay to ensure the database update completes
+                      await new Promise(resolve => setTimeout(resolve, 500));
+
+                      // Now make the API call to create a new checkout session
                       const response = await fetch('/api/stripe/create-checkout', {
                         method: 'POST',
                         headers: {
@@ -622,12 +631,16 @@ export default function AccountStatus() {
                           throw new Error(errorData.message || 'Failed to create checkout session after token refresh');
                         }
 
-                        return retryResponse.json();
-                      }
-
-                      if (!response.ok) {
-                        const errorData = await response.json();
-                        throw new Error(errorData.message || 'Failed to create checkout session');
+                        const retryData = await retryResponse.json();
+                        
+                        if (retryData.isPreview) {
+                          // For preview environment, use Next.js router
+                          router.push(retryData.sessionUrl);
+                        } else {
+                          // Use client-side redirect for production Stripe checkout
+                          window.location.assign(retryData.sessionUrl);
+                        }
+                        return;
                       }
 
                       const data = await response.json();
