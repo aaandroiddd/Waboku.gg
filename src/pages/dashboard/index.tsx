@@ -310,6 +310,7 @@ const DashboardComponent = () => {
               <ListingsSearchBar
                 value={searchQuery}
                 onChange={setSearchQuery}
+                onSearch={() => {}} // Empty function since we're handling search directly
                 placeholder="Search your listings..."
               />
               <div className="h-6 w-px bg-border hidden sm:block" />
@@ -336,7 +337,7 @@ const DashboardComponent = () => {
                 </SelectContent>
               </Select>
               <select
-                className="border rounded-md px-2 py-1"
+                className="border rounded-md px-2 py-1 bg-background text-foreground"
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value as 'date' | 'price' | 'title')}
               >
