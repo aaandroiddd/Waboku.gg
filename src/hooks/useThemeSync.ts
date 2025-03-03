@@ -9,7 +9,14 @@ export function useThemeSync() {
   useEffect(() => {
     // Set theme from profile when profile is loaded and theme exists
     if (profile?.theme) {
-      setTheme(profile.theme);
+      // Make sure the theme is valid
+      const validThemes = ['light', 'dark', 'midnight', 'system'];
+      if (validThemes.includes(profile.theme)) {
+        setTheme(profile.theme);
+      } else {
+        // If theme is not valid, use system theme
+        setTheme('system');
+      }
     } else if (!theme && resolvedTheme) {
       // If no profile theme, use system theme as default
       setTheme('system');

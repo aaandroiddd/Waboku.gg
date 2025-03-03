@@ -9,6 +9,7 @@ export function ThemeProvider({ children, ...props }: ThemeProviderProps) {
       enableSystem
       disableTransitionOnChange
       forcedTheme={props.forcedTheme}
+      themes={['light', 'dark', 'midnight', 'system']}
       {...props}
     >
       {children}
