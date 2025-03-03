@@ -11,12 +11,15 @@ import Image from 'next/image';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { Loader2 } from 'lucide-react';
+import { useOffers } from '@/hooks/useOffers';
+import { OfferCard } from '@/components/OfferCard';
 
 export default function OrdersPage() {
   const { user } = useAuth();
   const [purchases, setPurchases] = useState<Order[]>([]);
   const [sales, setSales] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
+  const { receivedOffers, sentOffers, loading: offersLoading } = useOffers();
 
   useEffect(() => {
     async function fetchOrders() {
@@ -45,12 +48,14 @@ export default function OrdersPage() {
         ]);
 
         const purchasesData = purchasesSnapshot.docs.map(doc => ({
+          id: doc.id,
           ...doc.data(),
           createdAt: doc.data().createdAt.toDate(),
           updatedAt: doc.data().updatedAt.toDate(),
         })) as Order[];
 
         const salesData = salesSnapshot.docs.map(doc => ({
+          id: doc.id,
           ...doc.data(),
           createdAt: doc.data().createdAt.toDate(),
           updatedAt: doc.data().updatedAt.toDate(),
@@ -121,7 +126,7 @@ export default function OrdersPage() {
     </Card>
   );
 
-  if (loading) {
+  if (loading || offersLoading) {
     return (
       <DashboardLayout>
         <div className="flex items-center justify-center min-h-[400px]">
@@ -135,7 +140,7 @@ export default function OrdersPage() {
     <DashboardLayout>
       <Card>
         <CardHeader>
-          <CardTitle>Orders</CardTitle>
+          <CardTitle>Orders & Offers</CardTitle>
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="purchases">
@@ -145,6 +150,12 @@ export default function OrdersPage() {
               </TabsTrigger>
               <TabsTrigger value="sales">
                 Sales ({sales.length})
+              </TabsTrigger>
+              <TabsTrigger value="received-offers">
+                Received Offers ({receivedOffers.length})
+              </TabsTrigger>
+              <TabsTrigger value="sent-offers">
+                Sent Offers ({sentOffers.length})
               </TabsTrigger>
             </TabsList>
             <TabsContent value="purchases" className="mt-4">
@@ -166,6 +177,28 @@ export default function OrdersPage() {
               ) : (
                 sales.map((order) => (
                   <OrderCard key={order.id} order={order} />
+                ))
+              )}
+            </TabsContent>
+            <TabsContent value="received-offers" className="mt-4">
+              {receivedOffers.length === 0 ? (
+                <p className="text-center text-muted-foreground py-8">
+                  You haven't received any offers yet.
+                </p>
+              ) : (
+                receivedOffers.map((offer) => (
+                  <OfferCard key={offer.id} offer={offer} type="received" />
+                ))
+              )}
+            </TabsContent>
+            <TabsContent value="sent-offers" className="mt-4">
+              {sentOffers.length === 0 ? (
+                <p className="text-center text-muted-foreground py-8">
+                  You haven't sent any offers yet.
+                </p>
+              ) : (
+                sentOffers.map((offer) => (
+                  <OfferCard key={offer.id} offer={offer} type="sent" />
                 ))
               )}
             </TabsContent>

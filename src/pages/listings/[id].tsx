@@ -14,6 +14,7 @@ import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious
 import { Separator } from '@/components/ui/separator';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Chat } from '@/components/Chat';
+import { MakeOfferDialog } from '@/components/MakeOfferDialog';
 import Image from 'next/image';
 import { ArrowLeft, Calendar, Heart, MapPin, MessageCircle, User, ZoomIn, Minus, Plus, RotateCw, X } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
@@ -58,6 +59,7 @@ export default function ListingPage() {
   };
   const [isFavorited, setIsFavorited] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
+  const [isOfferDialogOpen, setIsOfferDialogOpen] = useState(false);
   const { user } = useAuth();
 
   // Get favorites functionality from the hook
@@ -300,6 +302,21 @@ export default function ListingPage() {
     );
   }
 
+  const handleMakeOffer = () => {
+    if (!user) {
+      toast.error('Please sign in to make an offer');
+      router.push('/auth/sign-in');
+      return;
+    }
+
+    if (user.uid === listing?.userId) {
+      toast.error('You cannot make an offer on your own listing');
+      return;
+    }
+
+    setIsOfferDialogOpen(true);
+  };
+
   return (
     <div className="min-h-screen flex flex-col">
       <div className="container mx-auto p-4 flex-1">
@@ -456,15 +473,26 @@ export default function ListingPage() {
                     Listed on {listing.createdAt.toLocaleDateString()}
                   </div>
                   <div className="flex flex-col sm:flex-row w-full sm:w-auto gap-2">
-                    <Button
-                      variant="default"
-                      size="lg"
-                      onClick={handleBuyNow}
-                      className="flex-1 bg-green-600 hover:bg-green-700 text-white"
-                      disabled={user?.uid === listing.userId}
-                    >
-                      Buy Now - {formatPrice(listing.price)}
-                    </Button>
+                    <div className="flex flex-col sm:flex-row gap-2">
+                      <Button
+                        variant="default"
+                        size="lg"
+                        onClick={handleBuyNow}
+                        className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                        disabled={user?.uid === listing.userId}
+                      >
+                        Buy Now - {formatPrice(listing.price)}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="lg"
+                        onClick={handleMakeOffer}
+                        className="flex-1 border-blue-500 text-blue-500 hover:bg-blue-500/10"
+                        disabled={user?.uid === listing.userId}
+                      >
+                        Make Offer
+                      </Button>
+                    </div>
                     <div className="flex space-x-2">
                       <Button
                         variant="outline"
@@ -608,6 +636,18 @@ export default function ListingPage() {
           )}
         </DialogContent>
       </Dialog>
+
+      {listing && (
+        <MakeOfferDialog
+          open={isOfferDialogOpen}
+          onOpenChange={setIsOfferDialogOpen}
+          listingId={listing.id}
+          sellerId={listing.userId}
+          listingTitle={listing.title}
+          listingPrice={listing.price}
+          listingImageUrl={listing.imageUrls[0] || ''}
+        />
+      )}
     </div>
   );
 }
