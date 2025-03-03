@@ -332,6 +332,37 @@ export default function ListingPage() {
         <Card className="max-w-6xl mx-auto bg-black/[0.2] dark:bg-black/40 backdrop-blur-md border-muted">
           <CardContent className="p-4 md:p-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8">
+              {/* Mobile title - only visible on small screens */}
+              <div className="md:hidden space-y-4 mb-4">
+                <div>
+                  <h1 className="text-2xl font-bold mb-3">{listing.title}</h1>
+                  <div className="flex flex-wrap gap-2">
+                    {listing.game && (
+                      <GameCategoryBadge game={listing.game} variant="secondary" className="text-sm" />
+                    )}
+                    <Badge className={`text-sm ${getConditionColor(listing.condition)}`}>
+                      {listing.condition}
+                    </Badge>
+                    {listing.isGraded && (
+                      <Badge variant="outline" className="bg-blue-500 text-white text-sm flex items-center gap-1">
+                        <svg 
+                          viewBox="0 0 24 24" 
+                          className="w-4 h-4" 
+                          fill="none" 
+                          stroke="currentColor" 
+                          strokeWidth="2"
+                        >
+                          <path d="M12 2L2 7L12 12L22 7L12 2Z" />
+                          <path d="M2 17L12 22L22 17" />
+                          <path d="M2 12L12 17L22 12" />
+                        </svg>
+                        {listing.gradingCompany} {listing.gradeLevel}
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+              </div>
+
               <div className="space-y-4 md:space-y-6 order-1 md:order-2">
                 <div className="relative">
                   <Carousel 
@@ -393,10 +424,10 @@ export default function ListingPage() {
               </div>
 
               <div className="space-y-4 md:space-y-6 order-2 md:order-1">
-                <div>
-                  <h1 className="text-2xl md:text-3xl font-bold mb-3">{listing.title}</h1>
+                {/* Desktop title - hidden on mobile */}
+                <div className="hidden md:block">
+                  <h1 className="text-3xl font-bold mb-3">{listing.title}</h1>
                   <div className="flex flex-wrap gap-2">
-                    {/* Import and use the GameCategoryBadge component */}
                     {listing.game && (
                       <GameCategoryBadge game={listing.game} variant="secondary" className="text-sm" />
                     )}
@@ -472,52 +503,57 @@ export default function ListingPage() {
                     <Calendar className="h-4 w-4 mr-2" />
                     Listed on {listing.createdAt.toLocaleDateString()}
                   </div>
-                  <div className="flex flex-col sm:flex-row w-full sm:w-auto gap-2">
-                    <div className="flex flex-col sm:flex-row gap-2">
-                      <Button
-                        variant="default"
-                        size="lg"
-                        onClick={handleBuyNow}
-                        className="flex-1 bg-green-600 hover:bg-green-700 text-white"
-                        disabled={user?.uid === listing.userId}
-                      >
-                        Buy Now - {formatPrice(listing.price)}
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="lg"
-                        onClick={handleMakeOffer}
-                        className="flex-1 border-blue-500 text-blue-500 hover:bg-blue-500/10"
-                        disabled={user?.uid === listing.userId}
-                      >
-                        Make Offer
-                      </Button>
-                    </div>
-                    <div className="flex space-x-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          handleFavoriteToggle(e);
-                        }}
-                        className={`flex-1 sm:flex-none ${isFavorited ? "text-red-500" : ""}`}
-                        type="button"
-                      >
-                        <Heart className={`h-4 w-4 mr-2 ${isFavorited ? "fill-current" : ""}`} />
-                        {isFavorited ? "Saved" : "Save"}
-                      </Button>
-                      <Button
-                        variant="default"
-                        size="sm"
-                        onClick={handleMessage}
-                        className="flex-1 sm:flex-none"
-                      >
-                        <MessageCircle className="h-4 w-4 mr-2" />
-                        Message
-                      </Button>
-                    </div>
+                </div>
+                
+                {/* Action buttons section - reorganized for better layout */}
+                <div className="flex flex-col gap-3">
+                  {/* Save and Message buttons - always on top */}
+                  <div className="flex gap-2 w-full">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleFavoriteToggle(e);
+                      }}
+                      className={`flex-1 ${isFavorited ? "text-red-500" : ""}`}
+                      type="button"
+                    >
+                      <Heart className={`h-4 w-4 mr-2 ${isFavorited ? "fill-current" : ""}`} />
+                      {isFavorited ? "Saved" : "Save"}
+                    </Button>
+                    <Button
+                      variant="default"
+                      size="sm"
+                      onClick={handleMessage}
+                      className="flex-1"
+                    >
+                      <MessageCircle className="h-4 w-4 mr-2" />
+                      Message
+                    </Button>
+                  </div>
+                  
+                  {/* Buy Now and Make Offer buttons */}
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <Button
+                      variant="default"
+                      size="lg"
+                      onClick={handleBuyNow}
+                      className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                      disabled={user?.uid === listing.userId}
+                    >
+                      Buy Now - {formatPrice(listing.price)}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="lg"
+                      onClick={handleMakeOffer}
+                      className="flex-1 border-blue-500 text-blue-500 hover:bg-blue-500/10"
+                      disabled={user?.uid === listing.userId}
+                    >
+                      Make Offer
+                    </Button>
                   </div>
                 </div>
               </div>
