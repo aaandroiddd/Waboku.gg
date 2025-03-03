@@ -3,6 +3,7 @@ import { useRouter } from 'next/router';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
+import { useAccount } from '@/contexts/AccountContext';
 import { Logo } from '@/components/Logo';
 import { useState } from 'react';
 import { SignOutDialog } from '@/components/SignOutDialog';
@@ -15,6 +16,7 @@ interface DashboardSidebarProps {
 export function DashboardSidebar({ onNavigate }: DashboardSidebarProps) {
   const router = useRouter();
   const { user, signOut, isEmailVerified } = useAuth();
+  const { accountTier, features } = useAccount();
   const [showSignOutDialog, setShowSignOutDialog] = useState(false);
 
   const handleSignOut = async () => {
@@ -22,7 +24,8 @@ export function DashboardSidebar({ onNavigate }: DashboardSidebarProps) {
     router.push('/');
   };
 
-  const navigation = [
+  // Base navigation items
+  const baseNavigation = [
     {
       name: 'Dashboard',
       href: '/dashboard',
@@ -100,6 +103,30 @@ export function DashboardSidebar({ onNavigate }: DashboardSidebarProps) {
       ),
     },
   ];
+
+  // Premium-only navigation items
+  const premiumNavItems = [
+    {
+      name: 'Analytics',
+      href: '/dashboard/analytics',
+      icon: (
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M3 3v18h18" />
+          <path d="m19 9-5 5-4-4-3 3" />
+        </svg>
+      ),
+      premium: true,
+    }
+  ];
+
+  // Combine navigation items based on account tier
+  const navigation = [...baseNavigation];
+  
+  // Add premium features if user has premium account
+  if (accountTier === 'premium') {
+    // Insert Analytics after Dashboard
+    navigation.splice(1, 0, ...premiumNavItems);
+  }
 
   const handleNavigate = (href: string) => {
     router.push(href);
