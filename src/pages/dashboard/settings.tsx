@@ -19,6 +19,7 @@ import { Separator } from "@/components/ui/separator";
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { doc, getDoc, deleteDoc, collection, query, where, getDocs, setDoc } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase';
+import { ClearBrowserDataButton } from '@/components/ClearBrowserDataButton';
 
 const DashboardLayout = dynamic(
   () => import('@/components/dashboard/DashboardLayout').then(mod => mod.DashboardLayout),
@@ -806,6 +807,29 @@ const SettingsPageContent = () => {
                 )}
               </Button>
             </form>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Troubleshooting Section */}
+      <div className="container mx-auto p-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Troubleshooting</CardTitle>
+            <CardDescription>
+              Tools to help resolve common issues with your account
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div>
+                <h3 className="text-lg font-medium mb-2">Fix Browser Data</h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  If you're experiencing login issues or other unexpected behavior, clearing your browser's authentication data may help. This will sign you out and clear any cached authentication information.
+                </p>
+                <ClearBrowserDataButton variant="outline" size="default" className="w-full sm:w-auto" />
+              </div>
+            </div>
           </CardContent>
         </Card>
       </div>
