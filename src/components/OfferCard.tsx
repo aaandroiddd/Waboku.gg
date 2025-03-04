@@ -54,15 +54,27 @@ export function OfferCard({ offer, type, onCounterOffer }: OfferCardProps) {
     }
   };
 
+  // Ensure we have valid data for the offer
+  const safeOffer = {
+    ...offer,
+    listingSnapshot: {
+      title: offer.listingSnapshot?.title || 'Unknown Listing',
+      price: offer.listingSnapshot?.price || 0,
+      imageUrl: offer.listingSnapshot?.imageUrl || '',
+    },
+    createdAt: offer.createdAt instanceof Date ? offer.createdAt : new Date(),
+    status: offer.status || 'pending'
+  };
+
   return (
     <Card className="mb-4">
       <CardContent className="pt-6">
         <div className="flex flex-col md:flex-row gap-4">
           <div className="relative w-24 h-24 md:w-32 md:h-32 cursor-pointer" onClick={handleViewListing}>
-            {offer.listingSnapshot.imageUrl ? (
+            {safeOffer.listingSnapshot.imageUrl ? (
               <Image
-                src={offer.listingSnapshot.imageUrl}
-                alt={offer.listingSnapshot.title}
+                src={safeOffer.listingSnapshot.imageUrl}
+                alt={safeOffer.listingSnapshot.title}
                 fill
                 className="object-cover rounded-lg"
               />
@@ -74,35 +86,35 @@ export function OfferCard({ offer, type, onCounterOffer }: OfferCardProps) {
           </div>
           <div className="flex-1">
             <h3 className="font-semibold text-lg mb-2 cursor-pointer hover:text-primary" onClick={handleViewListing}>
-              {offer.listingSnapshot.title}
+              {safeOffer.listingSnapshot.title}
             </h3>
             <div className="space-y-2">
               <p className="text-muted-foreground">
                 {type === 'received' ? 'From: ' : 'To: '}
-                <UserNameLink userId={type === 'received' ? offer.buyerId : offer.sellerId} />
+                <UserNameLink userId={type === 'received' ? safeOffer.buyerId : safeOffer.sellerId} />
               </p>
               <p className="text-muted-foreground">
-                Date: {format(offer.createdAt, 'PPP')}
+                Date: {format(safeOffer.createdAt, 'PPP')}
               </p>
               <div className="flex flex-col sm:flex-row sm:items-center gap-2">
                 <div>
                   <span className="text-muted-foreground">Listing Price: </span>
-                  <span>{formatPrice(offer.listingSnapshot.price)}</span>
+                  <span>{formatPrice(safeOffer.listingSnapshot.price)}</span>
                 </div>
                 <div>
                   <span className="text-muted-foreground">Offer: </span>
-                  <span className="font-semibold">{formatPrice(offer.amount)}</span>
+                  <span className="font-semibold">{formatPrice(safeOffer.amount)}</span>
                 </div>
               </div>
               <Badge
-                variant={getStatusBadgeVariant(offer.status)}
+                variant={getStatusBadgeVariant(safeOffer.status)}
               >
-                {offer.status.charAt(0).toUpperCase() + offer.status.slice(1)}
+                {safeOffer.status.charAt(0).toUpperCase() + safeOffer.status.slice(1)}
               </Badge>
               
-              {offer.counterOffer && (
+              {safeOffer.counterOffer && (
                 <div className="mt-2 p-2 bg-muted rounded-md">
-                  <p className="text-sm font-medium">Counter Offer: {formatPrice(offer.counterOffer)}</p>
+                  <p className="text-sm font-medium">Counter Offer: {formatPrice(safeOffer.counterOffer)}</p>
                 </div>
               )}
             </div>

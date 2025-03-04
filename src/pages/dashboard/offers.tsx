@@ -32,17 +32,29 @@ const OffersComponent = () => {
 
   const loading = authLoading || offersLoading;
 
-  // Add a retry mechanism for initial data loading
+  // Add a retry mechanism for initial data loading with multiple attempts
   useEffect(() => {
-    if (offersError) {
-      // Wait for 2 seconds and try to refresh offers
-      const timer = setTimeout(() => {
-        if (user) {  // Only refresh if we have a user
-          fetchOffers();
-        }
-      }, 2000);
-      return () => clearTimeout(timer);
-    }
+    let retryCount = 0;
+    const maxRetries = 3;
+    
+    const attemptFetch = () => {
+      if (offersError && retryCount < maxRetries) {
+        // Increase retry delay with each attempt (exponential backoff)
+        const delay = Math.pow(2, retryCount) * 1000;
+        console.log(`Retrying offers fetch (attempt ${retryCount + 1}/${maxRetries}) in ${delay}ms`);
+        
+        const timer = setTimeout(() => {
+          if (user) {  // Only refresh if we have a user
+            retryCount++;
+            fetchOffers();
+          }
+        }, delay);
+        
+        return () => clearTimeout(timer);
+      }
+    };
+    
+    return attemptFetch();
   }, [offersError, user, fetchOffers]);
 
   useEffect(() => {
