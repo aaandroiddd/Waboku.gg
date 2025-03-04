@@ -20,68 +20,90 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const token = authHeader.split('Bearer ')[1];
     
-    // Verify the token and get the user
-    const admin = getFirebaseAdmin();
-    const auth = getAuth(admin);
-    const db = getFirestore(admin);
-    const decodedToken = await auth.verifyIdToken(token);
-    const userId = decodedToken.uid;
-    
-    console.log(`Fetching offers for user: ${userId}`);
+    try {
+      // Verify the token and get the user
+      console.log('Initializing Firebase Admin...');
+      const admin = getFirebaseAdmin();
+      console.log('Getting Auth and Firestore instances...');
+      const auth = getAuth(admin);
+      const db = getFirestore(admin);
+      
+      console.log('Verifying token...');
+      const decodedToken = await auth.verifyIdToken(token);
+      const userId = decodedToken.uid;
+      
+      console.log(`Fetching offers for user: ${userId}`);
 
-    // Fetch received offers (where user is the seller)
-    const receivedOffersSnapshot = await db
-      .collection('offers')
-      .where('sellerId', '==', userId)
-      .orderBy('createdAt', 'desc')
-      .get();
-    
-    // Fetch sent offers (where user is the buyer)
-    const sentOffersSnapshot = await db
-      .collection('offers')
-      .where('buyerId', '==', userId)
-      .orderBy('createdAt', 'desc')
-      .get();
+      try {
+        // Fetch received offers (where user is the seller)
+        const receivedOffersSnapshot = await db
+          .collection('offers')
+          .where('sellerId', '==', userId)
+          .orderBy('createdAt', 'desc')
+          .get();
+        
+        // Fetch sent offers (where user is the buyer)
+        const sentOffersSnapshot = await db
+          .collection('offers')
+          .where('buyerId', '==', userId)
+          .orderBy('createdAt', 'desc')
+          .get();
 
-    // Process the offers data
-    const receivedOffers = receivedOffersSnapshot.docs.map(doc => {
-      const data = doc.data();
-      return {
-        id: doc.id,
-        ...data,
-        createdAt: data.createdAt?.toDate() || new Date(),
-        updatedAt: data.updatedAt?.toDate() || new Date(),
-        // Ensure listingSnapshot has all required fields
-        listingSnapshot: {
-          title: data.listingSnapshot?.title || 'Unknown Listing',
-          price: data.listingSnapshot?.price || 0,
-          imageUrl: data.listingSnapshot?.imageUrl || '',
-        }
-      };
-    });
+        // Process the offers data
+        const receivedOffers = receivedOffersSnapshot.docs.map(doc => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            ...data,
+            createdAt: data.createdAt?.toDate() || new Date(),
+            updatedAt: data.updatedAt?.toDate() || new Date(),
+            // Ensure listingSnapshot has all required fields
+            listingSnapshot: {
+              title: data.listingSnapshot?.title || 'Unknown Listing',
+              price: data.listingSnapshot?.price || 0,
+              imageUrl: data.listingSnapshot?.imageUrl || '',
+            }
+          };
+        });
 
-    const sentOffers = sentOffersSnapshot.docs.map(doc => {
-      const data = doc.data();
-      return {
-        id: doc.id,
-        ...data,
-        createdAt: data.createdAt?.toDate() || new Date(),
-        updatedAt: data.updatedAt?.toDate() || new Date(),
-        // Ensure listingSnapshot has all required fields
-        listingSnapshot: {
-          title: data.listingSnapshot?.title || 'Unknown Listing',
-          price: data.listingSnapshot?.price || 0,
-          imageUrl: data.listingSnapshot?.imageUrl || '',
-        }
-      };
-    });
+        const sentOffers = sentOffersSnapshot.docs.map(doc => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            ...data,
+            createdAt: data.createdAt?.toDate() || new Date(),
+            updatedAt: data.updatedAt?.toDate() || new Date(),
+            // Ensure listingSnapshot has all required fields
+            listingSnapshot: {
+              title: data.listingSnapshot?.title || 'Unknown Listing',
+              price: data.listingSnapshot?.price || 0,
+              imageUrl: data.listingSnapshot?.imageUrl || '',
+            }
+          };
+        });
 
-    console.log(`Found ${receivedOffers.length} received offers and ${sentOffers.length} sent offers`);
-    
-    return res.status(200).json({
-      receivedOffers,
-      sentOffers
-    });
+        console.log(`Found ${receivedOffers.length} received offers and ${sentOffers.length} sent offers`);
+        
+        return res.status(200).json({
+          receivedOffers,
+          sentOffers
+        });
+      } catch (queryError: any) {
+        console.error('Error querying Firestore:', queryError);
+        return res.status(500).json({ 
+          error: 'Failed to query offers from Firestore',
+          message: queryError.message,
+          code: queryError.code
+        });
+      }
+    } catch (authError: any) {
+      console.error('Error with Firebase Admin or authentication:', authError);
+      return res.status(500).json({ 
+        error: 'Failed to authenticate or initialize Firebase',
+        message: authError.message,
+        code: authError.code
+      });
+    }
   } catch (error: any) {
     console.error('Error fetching offers:', error);
     return res.status(500).json({ 

@@ -21,6 +21,7 @@ export function useOffers() {
       
       // First try to fetch using client-side Firebase
       try {
+        console.log('Attempting to fetch offers using client-side Firebase...');
         const { db } = getFirebaseServices();
         
         // Fetch received offers (where user is the seller)
@@ -42,6 +43,7 @@ export function useOffers() {
         let sentOffersData: Offer[] = [];
 
         try {
+          console.log('Fetching received offers...');
           const receivedOffersSnapshot = await getDocs(receivedOffersQuery);
           receivedOffersData = receivedOffersSnapshot.docs.map(doc => {
             const data = doc.data();
@@ -58,12 +60,14 @@ export function useOffers() {
               }
             } as Offer;
           });
+          console.log(`Found ${receivedOffersData.length} received offers`);
         } catch (receivedErr: any) {
           console.error('Error fetching received offers:', receivedErr);
           // Continue with the rest of the function, we'll still try to fetch sent offers
         }
 
         try {
+          console.log('Fetching sent offers...');
           const sentOffersSnapshot = await getDocs(sentOffersQuery);
           sentOffersData = sentOffersSnapshot.docs.map(doc => {
             const data = doc.data();
@@ -80,43 +84,70 @@ export function useOffers() {
               }
             } as Offer;
           });
+          console.log(`Found ${sentOffersData.length} sent offers`);
         } catch (sentErr: any) {
           console.error('Error fetching sent offers:', sentErr);
           // Continue with the function, we'll still set whatever data we have
         }
 
-        // If we have data from both queries, use it
+        // If we have data from either query, use it
         if (receivedOffersData.length > 0 || sentOffersData.length > 0) {
+          console.log('Using client-side fetched data');
           setReceivedOffers(receivedOffersData);
           setSentOffers(sentOffersData);
           return; // Exit early if we have data
+        } else {
+          console.log('No offers found via client-side, will try API endpoint');
         }
-      } catch (clientErr) {
+      } catch (clientErr: any) {
         console.error('Error in client-side Firebase fetch:', clientErr);
+        console.log('Falling back to API endpoint due to client-side error');
         // Fall through to API fetch
       }
       
       // If client-side fetch failed or returned no data, try the API endpoint
-      console.log('Falling back to API endpoint for offers');
-      const token = await user.getIdToken();
-      const response = await fetch('/api/offers/get-offers', {
-        headers: {
-          'Authorization': `Bearer ${token}`
+      console.log('Fetching offers via API endpoint...');
+      try {
+        const token = await user.getIdToken();
+        console.log('Got auth token, making API request...');
+        
+        const response = await fetch('/api/offers/get-offers', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          let errorData;
+          try {
+            errorData = JSON.parse(errorText);
+          } catch (e) {
+            errorData = { error: 'Invalid JSON response', message: errorText };
+          }
+          
+          console.error('API error response:', {
+            status: response.status,
+            statusText: response.statusText,
+            data: errorData
+          });
+          
+          throw new Error(errorData.message || `API error: ${response.status} ${response.statusText}`);
         }
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to fetch offers from API');
+        
+        const data = await response.json();
+        console.log(`API returned ${data.receivedOffers?.length || 0} received offers and ${data.sentOffers?.length || 0} sent offers`);
+        
+        setReceivedOffers(data.receivedOffers || []);
+        setSentOffers(data.sentOffers || []);
+      } catch (apiErr: any) {
+        console.error('Error fetching from API endpoint:', apiErr);
+        throw apiErr; // Re-throw to be caught by the outer catch block
       }
-      
-      const data = await response.json();
-      setReceivedOffers(data.receivedOffers);
-      setSentOffers(data.sentOffers);
-      
     } catch (err: any) {
       console.error('Error in fetchOffers main function:', err);
-      setError('Failed to load offers. Please try again later.');
+      setError(`Failed to load offers: ${err.message || 'Unknown error'}`);
+      toast.error('Could not load your offers. Please try again later.');
     } finally {
       setLoading(false);
     }
