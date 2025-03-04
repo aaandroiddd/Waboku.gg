@@ -2,6 +2,7 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import { getFirebaseServices } from '@/lib/firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { getAuth } from 'firebase-admin/auth';
+import { getFirestore } from 'firebase-admin/firestore';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -35,18 +36,27 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: 'You cannot make an offer on your own listing' });
     }
 
-    // Create the offer
-    const { db } = getFirebaseServices();
-    const offerRef = await addDoc(collection(db, 'offers'), {
+    // Create the offer using admin SDK to bypass security rules
+    // This is safe because we've already verified the user's identity with the token
+    const adminDb = getFirestore(admin);
+    
+    // Log the operation for debugging
+    console.log(`Creating offer for listing ${listingId} by buyer ${userId} to seller ${sellerId}`);
+    
+    const offerData = {
       listingId,
       buyerId: userId,
       sellerId,
       amount,
       status: 'pending',
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
+      createdAt: new Date(),
+      updatedAt: new Date(),
       listingSnapshot
-    });
+    };
+    
+    const offerRef = await adminDb.collection('offers').add(offerData);
+    
+    console.log(`Successfully created offer with ID: ${offerRef.id}`);
 
     return res.status(201).json({ 
       success: true, 
