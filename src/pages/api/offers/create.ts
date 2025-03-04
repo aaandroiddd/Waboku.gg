@@ -55,6 +55,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     });
   } catch (error) {
     console.error('Error creating offer:', error);
-    return res.status(500).json({ error: 'Failed to create offer' });
+    
+    // Provide more detailed error information
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Error details:', errorMessage);
+    
+    // Check for specific Firebase errors
+    if (errorMessage.includes('PERMISSION_DENIED')) {
+      return res.status(403).json({ 
+        error: 'Permission denied. You may not have the necessary permissions to create an offer.',
+        details: errorMessage
+      });
+    }
+    
+    return res.status(500).json({ 
+      error: 'Failed to create offer',
+      details: errorMessage
+    });
   }
 }

@@ -137,6 +137,25 @@ service cloud.firestore {
         (resource.data.buyerId == request.auth.uid || resource.data.sellerId == request.auth.uid);
     }
 
+    // Offers collection rules
+    match /offers/{offerId} {
+      // Allow users to read offers where they are either the buyer or seller
+      allow read: if isAuthenticated() && 
+        (resource.data.buyerId == request.auth.uid || resource.data.sellerId == request.auth.uid);
+      
+      // Allow users to create offers if they are authenticated and buyerId matches the authenticated user
+      allow create: if isAuthenticated() && 
+        request.resource.data.buyerId == request.auth.uid;
+      
+      // Allow users to update offers if they are authenticated and they are either the buyer or seller
+      allow update: if isAuthenticated() && 
+        (resource.data.buyerId == request.auth.uid || resource.data.sellerId == request.auth.uid);
+      
+      // Allow users to delete offers if they are authenticated and they are either the buyer or seller
+      allow delete: if isAuthenticated() && 
+        (resource.data.buyerId == request.auth.uid || resource.data.sellerId == request.auth.uid);
+    }
+
     // Default rule - deny everything else
     match /{document=**} {
       allow read, write: if false;
