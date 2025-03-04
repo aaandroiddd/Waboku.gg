@@ -13,13 +13,27 @@ import { format } from 'date-fns';
 import { Loader2 } from 'lucide-react';
 import { useOffers } from '@/hooks/useOffers';
 import { OfferCard } from '@/components/OfferCard';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/button';
+import { useToast } from '@/components/ui/use-toast';
 
 export default function OrdersPage() {
+  const { toast } = useToast();
   const { user } = useAuth();
   const [purchases, setPurchases] = useState<Order[]>([]);
   const [sales, setSales] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
-  const { receivedOffers, sentOffers, loading: offersLoading } = useOffers();
+  const { receivedOffers, sentOffers, loading: offersLoading, makeCounterOffer } = useOffers();
+  
+  const [counterOfferDialog, setCounterOfferDialog] = useState({
+    isOpen: false,
+    offerId: '',
+    originalAmount: 0,
+    counterAmount: '',
+    listingTitle: '',
+  });
 
   useEffect(() => {
     async function fetchOrders() {
@@ -136,11 +150,49 @@ export default function OrdersPage() {
     );
   }
 
+  const handleCounterOffer = (offerId: string, originalAmount: number, listingTitle: string) => {
+    setCounterOfferDialog({
+      isOpen: true,
+      offerId,
+      originalAmount,
+      counterAmount: originalAmount.toString(),
+      listingTitle,
+    });
+  };
+
+  const submitCounterOffer = async () => {
+    const amount = parseFloat(counterOfferDialog.counterAmount);
+    
+    if (isNaN(amount) || amount <= 0) {
+      toast({
+        title: "Invalid amount",
+        description: "Please enter a valid amount",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      await makeCounterOffer(counterOfferDialog.offerId, amount);
+      setCounterOfferDialog({ ...counterOfferDialog, isOpen: false });
+      toast({
+        title: "Counter offer sent",
+        description: "Your counter offer has been sent successfully",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to send counter offer",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <DashboardLayout>
       <Card>
         <CardHeader>
-          <CardTitle>Orders & Offers</CardTitle>
+          <CardTitle>Orders & Offers Management</CardTitle>
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="purchases">
@@ -187,7 +239,16 @@ export default function OrdersPage() {
                 </p>
               ) : (
                 receivedOffers.map((offer) => (
-                  <OfferCard key={offer.id} offer={offer} type="received" />
+                  <OfferCard 
+                    key={offer.id} 
+                    offer={offer} 
+                    type="received" 
+                    onCounterOffer={() => handleCounterOffer(
+                      offer.id, 
+                      offer.amount, 
+                      offer.listingSnapshot.title
+                    )}
+                  />
                 ))
               )}
             </TabsContent>
@@ -205,6 +266,49 @@ export default function OrdersPage() {
           </Tabs>
         </CardContent>
       </Card>
+
+      {/* Counter Offer Dialog */}
+      <Dialog open={counterOfferDialog.isOpen} onOpenChange={(open) => setCounterOfferDialog({ ...counterOfferDialog, isOpen: open })}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Make Counter Offer</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="listing">Listing</Label>
+              <div className="text-sm text-muted-foreground">{counterOfferDialog.listingTitle}</div>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="originalOffer">Original Offer</Label>
+              <div className="text-sm font-medium">{formatPrice(counterOfferDialog.originalAmount)}</div>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="counterAmount">Your Counter Offer</Label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                <Input
+                  id="counterAmount"
+                  type="number"
+                  step="0.01"
+                  min="0.01"
+                  value={counterOfferDialog.counterAmount}
+                  onChange={(e) => setCounterOfferDialog({ ...counterOfferDialog, counterAmount: e.target.value })}
+                  className="pl-7"
+                  required
+                />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setCounterOfferDialog({ ...counterOfferDialog, isOpen: false })}>
+              Cancel
+            </Button>
+            <Button type="button" onClick={submitCounterOffer}>
+              Send Counter Offer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 }
