@@ -33,7 +33,7 @@ export function getFirebaseAdmin(): typeof admin {
     try {
       // Validate required environment variables
       const requiredEnvVars = {
-        projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+        projectId: process.env.FIREBASE_PROJECT_ID || process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
         clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
         privateKey: process.env.FIREBASE_PRIVATE_KEY,
         storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
@@ -55,7 +55,7 @@ export function getFirebaseAdmin(): typeof admin {
 
       // Log initialization attempt
       console.log('[Firebase Admin] Initializing with config:', {
-        projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+        projectId: process.env.FIREBASE_PROJECT_ID || process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
         clientEmail: process.env.FIREBASE_CLIENT_EMAIL?.substring(0, 10) + '...',
         databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL || '(not provided)',
         storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
@@ -75,7 +75,7 @@ export function getFirebaseAdmin(): typeof admin {
 
       // Create the credential object
       const credential = admin.credential.cert({
-        projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+        projectId: process.env.FIREBASE_PROJECT_ID || process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
         clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
         privateKey: privateKey,
       });
