@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { getFirebaseServices } from '@/lib/firebase';
-import { collection, query, where, orderBy, getDocs, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, query, where, orderBy, getDocs, doc, updateDoc, serverTimestamp, getDoc } from 'firebase/firestore';
 import { Offer } from '@/types/offer';
 import { toast } from 'sonner';
 
@@ -64,7 +64,7 @@ export function useOffers() {
     }
   };
 
-  const updateOfferStatus = async (offerId: string, status: 'accepted' | 'declined' | 'expired') => {
+  const updateOfferStatus = async (offerId: string, status: 'accepted' | 'declined' | 'expired' | 'countered') => {
     if (!user) return;
 
     try {
@@ -76,8 +76,14 @@ export function useOffers() {
         updatedAt: serverTimestamp()
       });
 
-      // Update local state
+      // Update local state for both received and sent offers
       setReceivedOffers(prev => 
+        prev.map(offer => 
+          offer.id === offerId ? { ...offer, status, updatedAt: new Date() } : offer
+        )
+      );
+      
+      setSentOffers(prev => 
         prev.map(offer => 
           offer.id === offerId ? { ...offer, status, updatedAt: new Date() } : offer
         )
@@ -88,6 +94,51 @@ export function useOffers() {
     } catch (err: any) {
       console.error(`Error ${status} offer:`, err);
       toast.error(`Failed to ${status} offer. Please try again.`);
+      return false;
+    }
+  };
+  
+  const makeCounterOffer = async (offerId: string, counterAmount: number) => {
+    if (!user) return;
+    
+    try {
+      const { db } = getFirebaseServices();
+      const offerRef = doc(db, 'offers', offerId);
+      
+      // Get the current offer to verify the user is the seller
+      const offerSnap = await getDoc(offerRef);
+      if (!offerSnap.exists()) {
+        throw new Error('Offer not found');
+      }
+      
+      const offerData = offerSnap.data();
+      if (offerData.sellerId !== user.uid) {
+        throw new Error('You are not authorized to make a counter offer');
+      }
+      
+      // Update the offer with counter offer amount and change status
+      await updateDoc(offerRef, {
+        counterOffer: counterAmount,
+        status: 'countered',
+        updatedAt: serverTimestamp()
+      });
+      
+      // Update local state
+      setReceivedOffers(prev => 
+        prev.map(offer => 
+          offer.id === offerId ? { 
+            ...offer, 
+            counterOffer: counterAmount, 
+            status: 'countered', 
+            updatedAt: new Date() 
+          } : offer
+        )
+      );
+      
+      return true;
+    } catch (err: any) {
+      console.error('Error making counter offer:', err);
+      toast.error(err.message || 'Failed to make counter offer');
       return false;
     }
   };
@@ -108,6 +159,7 @@ export function useOffers() {
     loading,
     error,
     fetchOffers,
-    updateOfferStatus
+    updateOfferStatus,
+    makeCounterOffer
   };
 }

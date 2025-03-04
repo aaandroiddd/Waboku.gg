@@ -4,7 +4,8 @@ export interface Offer {
   buyerId: string;
   sellerId: string;
   amount: number;
-  status: 'pending' | 'accepted' | 'declined' | 'expired';
+  counterOffer?: number;
+  status: 'pending' | 'accepted' | 'declined' | 'expired' | 'countered';
   createdAt: Date;
   updatedAt: Date;
   listingSnapshot: {
