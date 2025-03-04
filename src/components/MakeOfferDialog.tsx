@@ -85,8 +85,8 @@ export function MakeOfferDialog({
       toast.success('Your offer has been sent!');
       onOpenChange(false);
       
-      // Redirect to offers dashboard
-      router.push('/dashboard/offers');
+      // Redirect to orders dashboard
+      router.push('/dashboard/orders');
     } catch (error: any) {
       console.error('Error creating offer:', error);
       toast.error(error.message || 'Failed to send offer. Please try again.');
