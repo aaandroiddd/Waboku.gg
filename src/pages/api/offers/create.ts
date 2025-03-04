@@ -12,7 +12,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     FIREBASE_PROJECT_ID: !!process.env.FIREBASE_PROJECT_ID,
     NEXT_PUBLIC_FIREBASE_PROJECT_ID: !!process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
     FIREBASE_CLIENT_EMAIL: !!process.env.FIREBASE_CLIENT_EMAIL,
-    FIREBASE_PRIVATE_KEY: !!process.env.FIREBASE_PRIVATE_KEY,
+    FIREBASE_PRIVATE_KEY: !!process.env.FIREBASE_PRIVATE_KEY?.substring(0, 5) + '...',
     NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: !!process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
   });
   
@@ -42,7 +42,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         message: adminInitError.message,
         stack: adminInitError.stack,
         code: adminInitError.code,
-        name: adminInitError.name
+        name: adminInitError.name,
+        // Additional debugging info
+        envVars: {
+          hasProjectId: !!process.env.FIREBASE_PROJECT_ID,
+          hasPublicProjectId: !!process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+          hasClientEmail: !!process.env.FIREBASE_CLIENT_EMAIL,
+          hasPrivateKey: !!process.env.FIREBASE_PRIVATE_KEY,
+          privateKeyLength: process.env.FIREBASE_PRIVATE_KEY ? process.env.FIREBASE_PRIVATE_KEY.length : 0,
+          privateKeyStart: process.env.FIREBASE_PRIVATE_KEY ? process.env.FIREBASE_PRIVATE_KEY.substring(0, 10) + '...' : 'undefined'
+        }
       });
       return res.status(500).json({ 
         error: 'Failed to initialize Firebase Admin',
@@ -63,7 +72,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       console.error('Error getting Auth or Firestore instance:', {
         message: instanceError.message,
         stack: instanceError.stack,
-        code: instanceError.code
+        code: instanceError.code,
+        name: instanceError.name
       });
       return res.status(500).json({
         error: 'Failed to initialize Firebase services',
@@ -81,7 +91,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       console.error('Token verification error:', {
         message: tokenError.message,
         code: tokenError.code,
-        stack: tokenError.stack
+        stack: tokenError.stack,
+        name: tokenError.name
       });
       return res.status(401).json({ 
         error: 'Invalid authentication token',
@@ -106,8 +117,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     });
 
     // Validate the request body
-    if (!listingId || !sellerId || !amount) {
-      console.error('Missing required fields in request body');
+    if (!listingId || !sellerId || amount === undefined || amount === null) {
+      console.error('Missing required fields in request body:', { 
+        hasListingId: !!listingId, 
+        hasSellerId: !!sellerId, 
+        amount: amount 
+      });
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
@@ -125,11 +140,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Create the offer using admin SDK to bypass security rules
     console.log(`Creating offer for listing ${listingId} by buyer ${userId} to seller ${sellerId}`);
     
+    // Ensure amount is a valid number
+    const numericAmount = Number(amount);
+    if (isNaN(numericAmount) || numericAmount <= 0) {
+      console.error('Invalid amount value:', amount);
+      return res.status(400).json({ error: 'Offer amount must be a positive number' });
+    }
+    
     const offerData = {
       listingId,
       buyerId: userId,
       sellerId,
-      amount: Number(amount), // Ensure amount is a number
+      amount: numericAmount,
       status: 'pending',
       createdAt: FieldValue.serverTimestamp(),
       updatedAt: FieldValue.serverTimestamp(),
@@ -142,10 +164,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     
     try {
       // Verify Firestore connection by checking if we can access the collection
-      const testQuery = await db.collection('offers').limit(1).get();
-      console.log(`Firestore connection test: able to query offers collection (${testQuery.size} results)`);
+      console.log('Testing Firestore connection...');
+      try {
+        const testQuery = await db.collection('offers').limit(1).get();
+        console.log(`Firestore connection test: able to query offers collection (${testQuery.size} results)`);
+      } catch (testError: any) {
+        console.error('Firestore connection test failed:', {
+          message: testError.message,
+          code: testError.code,
+          name: testError.name
+        });
+        throw testError; // Re-throw to be caught by the outer catch block
+      }
       
       // Now add the document
+      console.log('Adding offer document to Firestore...');
       const offerRef = await db.collection('offers').add(offerData);
       console.log(`Successfully created offer with ID: ${offerRef.id}`);
 
@@ -159,7 +192,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         message: firestoreError.message,
         code: firestoreError.code,
         stack: firestoreError.stack,
-        name: firestoreError.name
+        name: firestoreError.name,
+        // Additional context
+        operation: 'db.collection(offers).add',
+        offerData: {
+          listingId: offerData.listingId,
+          buyerId: offerData.buyerId,
+          sellerId: offerData.sellerId,
+          amount: offerData.amount,
+          status: offerData.status
+        }
       });
       
       // Check for specific Firestore errors
@@ -175,6 +217,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       } else if (firestoreError.code === 'unavailable') {
         errorDetails = 'Firestore service is currently unavailable. Please try again later.';
         statusCode = 503;
+      } else if (firestoreError.code === 'not-found') {
+        errorDetails = 'The specified Firestore collection does not exist.';
+        statusCode = 404;
       }
       
       return res.status(statusCode).json({ 
@@ -188,7 +233,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       message: error.message,
       stack: error.stack,
       name: error.name,
-      code: error.code
+      code: error.code,
+      // Additional context
+      requestBody: req.body ? {
+        hasListingId: !!req.body.listingId,
+        hasSellerId: !!req.body.sellerId,
+        hasAmount: req.body.amount !== undefined,
+        hasListingSnapshot: !!req.body.listingSnapshot
+      } : 'No request body'
     });
     
     return res.status(500).json({ 

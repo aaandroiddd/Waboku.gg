@@ -35,10 +35,12 @@ export function MakeOfferDialog({
   const { user } = useAuth();
   const router = useRouter();
 
-  // Reset error when dialog opens/closes
+  // Reset error and form when dialog opens/closes
   const handleOpenChange = (open: boolean) => {
     if (!open) {
       setError(null);
+      // Reset offer amount to listing price when dialog closes
+      setOfferAmount(listingPrice.toString());
     }
     onOpenChange(open);
   };
@@ -71,6 +73,18 @@ export function MakeOfferDialog({
       // Get the auth token
       const token = await user.getIdToken();
       
+      // Prepare the request payload
+      const payload = {
+        listingId,
+        sellerId,
+        amount,
+        listingSnapshot: {
+          title: listingTitle || 'Unknown Listing',
+          price: listingPrice || 0,
+          imageUrl: listingImageUrl || ''
+        }
+      };
+      
       console.log('Sending offer request with data:', {
         listingId,
         sellerId,
@@ -78,23 +92,35 @@ export function MakeOfferDialog({
         hasListingSnapshot: !!listingTitle && !!listingImageUrl
       });
       
-      const response = await fetch('/api/offers/create', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          listingId,
-          sellerId,
-          amount,
-          listingSnapshot: {
-            title: listingTitle || 'Unknown Listing',
-            price: listingPrice || 0,
-            imageUrl: listingImageUrl || ''
+      // Make the API request with retry logic
+      let response;
+      let retryCount = 0;
+      const maxRetries = 2;
+      
+      while (retryCount <= maxRetries) {
+        try {
+          response = await fetch('/api/offers/create', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(payload),
+          });
+          break; // If successful, exit the retry loop
+        } catch (fetchError) {
+          retryCount++;
+          if (retryCount > maxRetries) {
+            throw new Error('Network error while creating offer. Please check your connection and try again.');
           }
-        }),
-      });
+          // Wait before retrying (exponential backoff)
+          await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
+        }
+      }
+      
+      if (!response) {
+        throw new Error('Failed to connect to the server. Please try again later.');
+      }
 
       let data;
       try {
@@ -162,11 +188,17 @@ export function MakeOfferDialog({
                   step="0.01"
                   min="0.01"
                   value={offerAmount}
-                  onChange={(e) => setOfferAmount(e.target.value)}
+                  onChange={(e) => {
+                    setOfferAmount(e.target.value);
+                    // Clear error when user changes the input
+                    if (error) setError(null);
+                  }}
                   className="pl-7"
                   required
+                  disabled={isSubmitting}
                 />
               </div>
+              <p className="text-xs text-muted-foreground">Enter the amount you want to offer for this item</p>
             </div>
             
             {error && (
@@ -177,10 +209,18 @@ export function MakeOfferDialog({
             )}
           </div>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={() => onOpenChange(false)}
+              disabled={isSubmitting}
+            >
               Cancel
             </Button>
-            <Button type="submit" disabled={isSubmitting}>
+            <Button 
+              type="submit" 
+              disabled={isSubmitting}
+            >
               {isSubmitting ? 'Sending...' : 'Send Offer'}
             </Button>
           </DialogFooter>
