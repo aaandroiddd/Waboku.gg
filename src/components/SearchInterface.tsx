@@ -63,6 +63,7 @@ const SearchInterface = () => {
             onSelect={setSearchQuery}
             onSearch={handleSearch}
             isLoading={isLoading}
+            showSearchButton={true}
           />
         </div>
         

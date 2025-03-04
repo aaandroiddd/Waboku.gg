@@ -94,7 +94,7 @@ const CardSearchInput: React.FC<CardSearchInputProps> = ({
           <Loader2 className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground animate-spin" />
         ) : (
           <Search 
-            className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer transition-colors" 
+            className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-primary hover:text-primary/90 cursor-pointer transition-colors" 
             onClick={() => handleSearch(searchTerm)}
           />
         )}

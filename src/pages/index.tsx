@@ -483,6 +483,7 @@ export default function Home() {
                           handleSearch();
                         }}
                         initialValue={searchQuery}
+                        showSearchButton={true}
                       />
                     </div>
                     
