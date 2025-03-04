@@ -92,12 +92,7 @@ const CardSearchInput: React.FC<CardSearchInputProps> = ({
       <div className="relative flex items-center">
         {(isSearching || isLoading) ? (
           <Loader2 className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground animate-spin" />
-        ) : (
-          <Search 
-            className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-primary hover:text-primary/90 cursor-pointer transition-colors" 
-            onClick={() => handleSearch(searchTerm)}
-          />
-        )}
+        ) : null}
         <Input
           ref={inputRef}
           type="text"
@@ -105,7 +100,7 @@ const CardSearchInput: React.FC<CardSearchInputProps> = ({
           onChange={handleChange}
           onKeyDown={handleKeyDown}
           value={searchTerm}
-          className={`pl-9 pr-4 w-full ${showSearchButton ? 'rounded-r-none' : ''}`}
+          className={`${(isSearching || isLoading) ? 'pl-9' : 'pl-4'} pr-4 w-full ${showSearchButton ? 'rounded-r-none' : ''}`}
           disabled={isSearching || isLoading}
         />
         {showSearchButton && (
