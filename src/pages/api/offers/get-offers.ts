@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getFirebaseAdmin } from '@/lib/firebase-admin';
 import { getAuth } from 'firebase-admin/auth';
+import { getFirestore } from 'firebase-admin/firestore';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   console.log('GET /api/offers/get-offers START');
@@ -20,7 +21,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const token = authHeader.split('Bearer ')[1];
     
     // Verify the token and get the user
-    const { auth, db } = getFirebaseAdmin();
+    const admin = getFirebaseAdmin();
+    const auth = getAuth(admin);
+    const db = getFirestore(admin);
     const decodedToken = await auth.verifyIdToken(token);
     const userId = decodedToken.uid;
     
