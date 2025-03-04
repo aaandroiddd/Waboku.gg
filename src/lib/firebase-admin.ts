@@ -50,7 +50,7 @@ export function getFirebaseAdmin(): typeof admin {
         .map(([key]) => key);
 
       if (missingVars.length > 0) {
-        console.error('Missing required Firebase Admin environment variables:', missingVars);
+        console.error('[Firebase Admin] Missing required environment variables:', missingVars);
         throw new Error(`Missing required environment variables: ${missingVars.join(', ')}`);
       }
 
@@ -62,11 +62,19 @@ export function getFirebaseAdmin(): typeof admin {
         storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
       });
 
-      const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n');
+      // Handle private key properly - it might be encoded with escaped newlines
+      let privateKey = process.env.FIREBASE_PRIVATE_KEY;
       if (!privateKey) {
-        throw new Error('Invalid FIREBASE_PRIVATE_KEY format');
+        throw new Error('[Firebase Admin] Invalid FIREBASE_PRIVATE_KEY - value is empty or undefined');
+      }
+      
+      // Replace escaped newlines with actual newlines if needed
+      if (privateKey.includes('\\n')) {
+        privateKey = privateKey.replace(/\\n/g, '\n');
+        console.log('[Firebase Admin] Processed private key with escaped newlines');
       }
 
+      // Initialize the app with the credentials
       admin.initializeApp({
         credential: admin.credential.cert({
           projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
@@ -87,6 +95,8 @@ export function getFirebaseAdmin(): typeof admin {
       });
       throw error;
     }
+  } else {
+    console.log('[Firebase Admin] Using existing Firebase Admin app');
   }
 
   firebaseAdmin = admin;

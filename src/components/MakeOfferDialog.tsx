@@ -29,11 +29,13 @@ export function MakeOfferDialog({
 }: MakeOfferDialogProps) {
   const [offerAmount, setOfferAmount] = useState<string>(listingPrice.toString());
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const { user } = useAuth();
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
     
     if (!user) {
       toast.error('Please sign in to make an offer');
@@ -59,6 +61,13 @@ export function MakeOfferDialog({
       // Get the auth token
       const token = await user.getIdToken();
       
+      console.log('Sending offer request with data:', {
+        listingId,
+        sellerId,
+        amount,
+        hasListingSnapshot: !!listingTitle && !!listingImageUrl
+      });
+      
       const response = await fetch('/api/offers/create', {
         method: 'POST',
         headers: {
@@ -70,16 +79,18 @@ export function MakeOfferDialog({
           sellerId,
           amount,
           listingSnapshot: {
-            title: listingTitle,
-            price: listingPrice,
-            imageUrl: listingImageUrl
+            title: listingTitle || 'Unknown Listing',
+            price: listingPrice || 0,
+            imageUrl: listingImageUrl || ''
           }
         }),
       });
 
+      const data = await response.json();
+      
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to create offer');
+        console.error('Error response from server:', data);
+        throw new Error(data.error || data.details || 'Failed to create offer');
       }
 
       toast.success('Your offer has been sent!');
@@ -89,7 +100,9 @@ export function MakeOfferDialog({
       router.push('/dashboard/orders');
     } catch (error: any) {
       console.error('Error creating offer:', error);
-      toast.error(error.message || 'Failed to send offer. Please try again.');
+      const errorMessage = error.message || 'Failed to send offer. Please try again.';
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setIsSubmitting(false);
     }
@@ -127,6 +140,12 @@ export function MakeOfferDialog({
                 />
               </div>
             </div>
+            
+            {error && (
+              <div className="text-sm text-red-500 mt-2">
+                Error: {error}
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
