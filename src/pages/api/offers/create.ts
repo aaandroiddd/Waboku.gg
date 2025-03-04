@@ -8,6 +8,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   console.log('POST /api/offers/create START');
   
   if (req.method !== 'POST') {
+    console.log('Method not allowed:', req.method);
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
@@ -30,7 +31,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     } catch (adminInitError: any) {
       console.error('Firebase Admin initialization error:', {
         message: adminInitError.message,
-        stack: adminInitError.stack
+        stack: adminInitError.stack,
+        code: adminInitError.code,
+        name: adminInitError.name
       });
       return res.status(500).json({ 
         error: 'Failed to initialize Firebase Admin',
@@ -40,18 +43,36 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     
     // Get Auth and Firestore instances
     console.log('Getting Auth and Firestore instances...');
-    const auth = getAuth(admin);
-    const db = getFirestore(admin);
+    let auth;
+    let db;
+    
+    try {
+      auth = getAuth(admin);
+      db = getFirestore(admin);
+      console.log('Successfully got Auth and Firestore instances');
+    } catch (instanceError: any) {
+      console.error('Error getting Auth or Firestore instance:', {
+        message: instanceError.message,
+        stack: instanceError.stack,
+        code: instanceError.code
+      });
+      return res.status(500).json({
+        error: 'Failed to initialize Firebase services',
+        details: instanceError.message
+      });
+    }
     
     // Verify the token
     console.log('Verifying token...');
     let decodedToken;
     try {
       decodedToken = await auth.verifyIdToken(token);
+      console.log('Token verified successfully');
     } catch (tokenError: any) {
       console.error('Token verification error:', {
         message: tokenError.message,
-        code: tokenError.code
+        code: tokenError.code,
+        stack: tokenError.stack
       });
       return res.status(401).json({ 
         error: 'Invalid authentication token',
@@ -111,6 +132,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     };
     
     try {
+      // Verify Firestore connection by checking if we can access the collection
+      const testQuery = await db.collection('offers').limit(1).get();
+      console.log(`Firestore connection test: able to query offers collection (${testQuery.size} results)`);
+      
+      // Now add the document
       const offerRef = await db.collection('offers').add(offerData);
       console.log(`Successfully created offer with ID: ${offerRef.id}`);
 
@@ -123,11 +149,28 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       console.error('Error adding document to Firestore:', {
         message: firestoreError.message,
         code: firestoreError.code,
-        stack: firestoreError.stack
+        stack: firestoreError.stack,
+        name: firestoreError.name
       });
-      return res.status(500).json({ 
+      
+      // Check for specific Firestore errors
+      let errorDetails = firestoreError.message;
+      let statusCode = 500;
+      
+      if (firestoreError.code === 'permission-denied') {
+        errorDetails = 'Permission denied. The service account may not have write access to the Firestore collection.';
+        statusCode = 403;
+      } else if (firestoreError.code === 'resource-exhausted') {
+        errorDetails = 'Resource quota exceeded. Please try again later.';
+        statusCode = 429;
+      } else if (firestoreError.code === 'unavailable') {
+        errorDetails = 'Firestore service is currently unavailable. Please try again later.';
+        statusCode = 503;
+      }
+      
+      return res.status(statusCode).json({ 
         error: 'Failed to create offer in database',
-        message: firestoreError.message,
+        message: errorDetails,
         code: firestoreError.code
       });
     }

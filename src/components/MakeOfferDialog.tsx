@@ -7,6 +7,8 @@ import { formatPrice } from '@/lib/price';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/router';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { AlertCircle } from 'lucide-react';
 
 interface MakeOfferDialogProps {
   open: boolean;
@@ -33,6 +35,14 @@ export function MakeOfferDialog({
   const { user } = useAuth();
   const router = useRouter();
 
+  // Reset error when dialog opens/closes
+  const handleOpenChange = (open: boolean) => {
+    if (!open) {
+      setError(null);
+    }
+    onOpenChange(open);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -51,7 +61,7 @@ export function MakeOfferDialog({
     const amount = parseFloat(offerAmount);
     
     if (isNaN(amount) || amount <= 0) {
-      toast.error('Please enter a valid amount');
+      setError('Please enter a valid amount greater than 0');
       return;
     }
 
@@ -86,11 +96,29 @@ export function MakeOfferDialog({
         }),
       });
 
-      const data = await response.json();
+      let data;
+      try {
+        data = await response.json();
+      } catch (parseError) {
+        console.error('Failed to parse response:', parseError);
+        throw new Error('Server returned an invalid response. Please try again.');
+      }
       
       if (!response.ok) {
         console.error('Error response from server:', data);
-        throw new Error(data.error || data.details || 'Failed to create offer');
+        
+        // Handle specific error codes
+        if (response.status === 401) {
+          throw new Error('Authentication error. Please sign in again.');
+        } else if (response.status === 403) {
+          throw new Error('You do not have permission to perform this action.');
+        } else if (response.status === 429) {
+          throw new Error('Too many requests. Please try again later.');
+        } else if (response.status >= 500) {
+          throw new Error('Server error. Our team has been notified. Please try again later.');
+        }
+        
+        throw new Error(data.error || data.message || data.details || 'Failed to create offer');
       }
 
       toast.success('Your offer has been sent!');
@@ -109,7 +137,7 @@ export function MakeOfferDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Make an Offer</DialogTitle>
@@ -142,9 +170,10 @@ export function MakeOfferDialog({
             </div>
             
             {error && (
-              <div className="text-sm text-red-500 mt-2">
-                Error: {error}
-              </div>
+              <Alert variant="destructive" className="mt-2">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription className="ml-2">{error}</AlertDescription>
+              </Alert>
             )}
           </div>
           <DialogFooter>

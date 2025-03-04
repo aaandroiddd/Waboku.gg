@@ -36,7 +36,6 @@ export function getFirebaseAdmin(): typeof admin {
         projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
         clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
         privateKey: process.env.FIREBASE_PRIVATE_KEY,
-        databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL,
         storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
       };
       
@@ -58,7 +57,7 @@ export function getFirebaseAdmin(): typeof admin {
       console.log('[Firebase Admin] Initializing with config:', {
         projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
         clientEmail: process.env.FIREBASE_CLIENT_EMAIL?.substring(0, 10) + '...',
-        databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL,
+        databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL || '(not provided)',
         storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
       });
 
@@ -74,17 +73,26 @@ export function getFirebaseAdmin(): typeof admin {
         console.log('[Firebase Admin] Processed private key with escaped newlines');
       }
 
-      // Initialize the app with the credentials
-      admin.initializeApp({
-        credential: admin.credential.cert({
-          projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-          clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-          privateKey: privateKey,
-        }),
-        databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL,
-        storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+      // Create the credential object
+      const credential = admin.credential.cert({
+        projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+        clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+        privateKey: privateKey,
       });
 
+      // Prepare the initialization options
+      const options: admin.AppOptions = {
+        credential: credential,
+        storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+      };
+
+      // Add databaseURL only if it exists
+      if (process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL) {
+        options.databaseURL = process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL;
+      }
+
+      // Initialize the app with the credentials
+      admin.initializeApp(options);
       console.log('[Firebase Admin] Successfully initialized');
     } catch (error: any) {
       console.error('[Firebase Admin] Initialization error:', {
