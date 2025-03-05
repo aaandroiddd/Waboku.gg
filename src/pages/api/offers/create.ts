@@ -1,8 +1,8 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { getFirebaseAdmin } from '@/lib/firebase-admin';
+import * as admin from 'firebase-admin';
 import { getAuth } from 'firebase-admin/auth';
-import { getFirestore } from 'firebase-admin/firestore';
-import { FieldValue } from 'firebase-admin/firestore';
+import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   console.log('POST /api/offers/create START');
@@ -35,10 +35,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     
     // Initialize Firebase Admin
     console.log('Initializing Firebase Admin...');
-    let admin;
+    let firebaseAdminInstance;
     try {
-      admin = getFirebaseAdmin();
-      console.log('Firebase Admin initialized successfully');
+      firebaseAdminInstance = getFirebaseAdmin();
+      console.log('Firebase Admin initialized successfully', {
+        isAdmin: !!firebaseAdminInstance,
+        adminType: typeof firebaseAdminInstance,
+        hasApps: Array.isArray(firebaseAdminInstance?.apps),
+        appsLength: firebaseAdminInstance?.apps?.length || 0
+      });
     } catch (adminInitError: any) {
       console.error('Firebase Admin initialization error:', {
         message: adminInitError.message,
@@ -67,8 +72,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     let db;
     
     try {
-      auth = getAuth(admin);
-      db = getFirestore(admin);
+      // Use the default app instead of passing admin directly
+      auth = getAuth();
+      db = getFirestore();
       console.log('Successfully got Auth and Firestore instances');
     } catch (instanceError: any) {
       console.error('Error getting Auth or Firestore instance:', {
