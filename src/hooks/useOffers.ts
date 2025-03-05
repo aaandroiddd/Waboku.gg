@@ -59,7 +59,9 @@ export function useOffers() {
                   title: data.listingSnapshot?.title || 'Unknown Listing',
                   price: data.listingSnapshot?.price || 0,
                   imageUrl: data.listingSnapshot?.imageUrl || '',
-                }
+                },
+                // Ensure cleared property is properly typed
+                cleared: data.cleared === true
               } as Offer;
             })
             // Filter out cleared offers
@@ -86,7 +88,9 @@ export function useOffers() {
                   title: data.listingSnapshot?.title || 'Unknown Listing',
                   price: data.listingSnapshot?.price || 0,
                   imageUrl: data.listingSnapshot?.imageUrl || '',
-                }
+                },
+                // Ensure cleared property is properly typed
+                cleared: data.cleared === true
               } as Offer;
             })
             // Filter out cleared offers

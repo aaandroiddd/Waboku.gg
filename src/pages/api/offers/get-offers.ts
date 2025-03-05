@@ -50,37 +50,47 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           .get();
 
         // Process the offers data
-        const receivedOffers = receivedOffersSnapshot.docs.map(doc => {
-          const data = doc.data();
-          return {
-            id: doc.id,
-            ...data,
-            createdAt: data.createdAt?.toDate() || new Date(),
-            updatedAt: data.updatedAt?.toDate() || new Date(),
-            // Ensure listingSnapshot has all required fields
-            listingSnapshot: {
-              title: data.listingSnapshot?.title || 'Unknown Listing',
-              price: data.listingSnapshot?.price || 0,
-              imageUrl: data.listingSnapshot?.imageUrl || '',
-            }
-          };
-        });
+        const receivedOffers = receivedOffersSnapshot.docs
+          .map(doc => {
+            const data = doc.data();
+            return {
+              id: doc.id,
+              ...data,
+              createdAt: data.createdAt?.toDate() || new Date(),
+              updatedAt: data.updatedAt?.toDate() || new Date(),
+              // Ensure listingSnapshot has all required fields
+              listingSnapshot: {
+                title: data.listingSnapshot?.title || 'Unknown Listing',
+                price: data.listingSnapshot?.price || 0,
+                imageUrl: data.listingSnapshot?.imageUrl || '',
+              },
+              // Ensure cleared property is properly typed
+              cleared: data.cleared === true
+            };
+          })
+          // Filter out cleared offers
+          .filter(offer => !offer.cleared);
 
-        const sentOffers = sentOffersSnapshot.docs.map(doc => {
-          const data = doc.data();
-          return {
-            id: doc.id,
-            ...data,
-            createdAt: data.createdAt?.toDate() || new Date(),
-            updatedAt: data.updatedAt?.toDate() || new Date(),
-            // Ensure listingSnapshot has all required fields
-            listingSnapshot: {
-              title: data.listingSnapshot?.title || 'Unknown Listing',
-              price: data.listingSnapshot?.price || 0,
-              imageUrl: data.listingSnapshot?.imageUrl || '',
-            }
-          };
-        });
+        const sentOffers = sentOffersSnapshot.docs
+          .map(doc => {
+            const data = doc.data();
+            return {
+              id: doc.id,
+              ...data,
+              createdAt: data.createdAt?.toDate() || new Date(),
+              updatedAt: data.updatedAt?.toDate() || new Date(),
+              // Ensure listingSnapshot has all required fields
+              listingSnapshot: {
+                title: data.listingSnapshot?.title || 'Unknown Listing',
+                price: data.listingSnapshot?.price || 0,
+                imageUrl: data.listingSnapshot?.imageUrl || '',
+              },
+              // Ensure cleared property is properly typed
+              cleared: data.cleared === true
+            };
+          })
+          // Filter out cleared offers
+          .filter(offer => !offer.cleared);
 
         console.log(`Found ${receivedOffers.length} received offers and ${sentOffers.length} sent offers`);
         
