@@ -5,7 +5,8 @@ export interface Offer {
   sellerId: string;
   amount: number;
   counterOffer?: number;
-  status: 'pending' | 'accepted' | 'declined' | 'expired' | 'countered';
+  status: 'pending' | 'accepted' | 'declined' | 'expired' | 'countered' | 'cancelled';
+  cleared?: boolean;
   createdAt: Date;
   updatedAt: Date;
   listingSnapshot: {

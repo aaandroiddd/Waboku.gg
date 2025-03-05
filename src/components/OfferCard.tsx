@@ -6,10 +6,13 @@ import { formatPrice } from '@/lib/price';
 import { format } from 'date-fns';
 import Image from 'next/image';
 import { UserNameLink } from '@/components/UserNameLink';
-import { Check, X, RefreshCw, Send } from 'lucide-react';
+import { Check, X, RefreshCw, Send, Trash2, XCircle } from 'lucide-react';
 import { useOffers } from '@/hooks/useOffers';
 import { useState } from 'react';
 import { useRouter } from 'next/router';
+import { CancelOfferDialog } from '@/components/CancelOfferDialog';
+import { ClearOfferDialog } from '@/components/ClearOfferDialog';
+import { toast } from 'sonner';
 
 interface OfferCardProps {
   offer: Offer;
@@ -18,9 +21,11 @@ interface OfferCardProps {
 }
 
 export function OfferCard({ offer, type, onCounterOffer }: OfferCardProps) {
-  const { updateOfferStatus } = useOffers();
+  const { updateOfferStatus, cancelOffer, clearOffer, createOrderFromOffer } = useOffers();
   const [isUpdating, setIsUpdating] = useState(false);
   const router = useRouter();
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [clearDialogOpen, setClearDialogOpen] = useState(false);
 
   const handleAccept = async () => {
     setIsUpdating(true);
@@ -160,6 +165,15 @@ export function OfferCard({ offer, type, onCounterOffer }: OfferCardProps) {
               >
                 View Listing
               </Button>
+              <Button 
+                variant="outline" 
+                className="border-red-500 text-red-500 hover:bg-red-500/10"
+                onClick={() => setCancelDialogOpen(true)}
+                disabled={isUpdating}
+              >
+                <XCircle className="mr-2 h-4 w-4" />
+                Cancel Offer
+              </Button>
             </div>
           )}
           
@@ -192,7 +206,7 @@ export function OfferCard({ offer, type, onCounterOffer }: OfferCardProps) {
             </div>
           )}
           
-          {(offer.status === 'accepted' || offer.status === 'declined' || offer.status === 'expired') && (
+          {(offer.status === 'accepted' || offer.status === 'declined' || offer.status === 'expired' || offer.status === 'cancelled') && (
             <div className="flex flex-col gap-2 mt-2 md:mt-0">
               <Button 
                 variant="outline" 
@@ -209,8 +223,74 @@ export function OfferCard({ offer, type, onCounterOffer }: OfferCardProps) {
                   Make New Offer
                 </Button>
               )}
+              {type === 'sent' && (
+                <Button 
+                  variant="outline"
+                  onClick={() => setClearDialogOpen(true)}
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Clear Offer
+                </Button>
+              )}
+              {type === 'received' && offer.status === 'accepted' && (
+                <Button 
+                  variant="default"
+                  className="bg-green-600 hover:bg-green-700"
+                  onClick={async () => {
+                    setIsUpdating(true);
+                    const success = await createOrderFromOffer(offer.id);
+                    setIsUpdating(false);
+                    if (success) {
+                      toast.success('Offer moved to sales', {
+                        description: 'The accepted offer has been converted to a sale'
+                      });
+                    }
+                  }}
+                  disabled={isUpdating}
+                >
+                  <Send className="mr-2 h-4 w-4" />
+                  Move to Sales
+                </Button>
+              )}
+              {type === 'received' && (offer.status === 'declined' || offer.status === 'expired' || offer.status === 'cancelled') && (
+                <Button 
+                  variant="outline"
+                  onClick={() => setClearDialogOpen(true)}
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Clear Offer
+                </Button>
+              )}
             </div>
           )}
+          
+          {/* Cancel Offer Dialog */}
+          <CancelOfferDialog
+            open={cancelDialogOpen}
+            onOpenChange={setCancelDialogOpen}
+            offerId={offer.id}
+            listingTitle={safeOffer.listingSnapshot.title}
+            onCancelled={() => {
+              // This will be called after successful cancellation
+              toast.success('Offer cancelled successfully', {
+                description: 'The offer has been removed from your dashboard'
+              });
+            }}
+          />
+          
+          {/* Clear Offer Dialog */}
+          <ClearOfferDialog
+            open={clearDialogOpen}
+            onOpenChange={setClearDialogOpen}
+            offerId={offer.id}
+            listingTitle={safeOffer.listingSnapshot.title}
+            onCleared={() => {
+              // This will be called after successful clearing
+              toast.success('Offer cleared successfully', {
+                description: 'The offer has been removed from your dashboard'
+              });
+            }}
+          />
         </div>
       </CardContent>
     </Card>

@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { getFirebaseServices } from '@/lib/firebase';
-import { collection, query, where, orderBy, getDocs, doc, updateDoc, serverTimestamp, getDoc } from 'firebase/firestore';
+import { collection, query, where, orderBy, getDocs, doc, updateDoc, serverTimestamp, getDoc, addDoc } from 'firebase/firestore';
 import { Offer } from '@/types/offer';
+import { Order } from '@/types/order';
 import { toast } from 'sonner';
 
 export function useOffers() {
@@ -45,22 +46,25 @@ export function useOffers() {
         try {
           console.log('Fetching received offers...');
           const receivedOffersSnapshot = await getDocs(receivedOffersQuery);
-          receivedOffersData = receivedOffersSnapshot.docs.map(doc => {
-            const data = doc.data();
-            return {
-              id: doc.id,
-              ...data,
-              createdAt: data.createdAt?.toDate() || new Date(),
-              updatedAt: data.updatedAt?.toDate() || new Date(),
-              // Ensure listingSnapshot has all required fields
-              listingSnapshot: {
-                title: data.listingSnapshot?.title || 'Unknown Listing',
-                price: data.listingSnapshot?.price || 0,
-                imageUrl: data.listingSnapshot?.imageUrl || '',
-              }
-            } as Offer;
-          });
-          console.log(`Found ${receivedOffersData.length} received offers`);
+          receivedOffersData = receivedOffersSnapshot.docs
+            .map(doc => {
+              const data = doc.data();
+              return {
+                id: doc.id,
+                ...data,
+                createdAt: data.createdAt?.toDate() || new Date(),
+                updatedAt: data.updatedAt?.toDate() || new Date(),
+                // Ensure listingSnapshot has all required fields
+                listingSnapshot: {
+                  title: data.listingSnapshot?.title || 'Unknown Listing',
+                  price: data.listingSnapshot?.price || 0,
+                  imageUrl: data.listingSnapshot?.imageUrl || '',
+                }
+              } as Offer;
+            })
+            // Filter out cleared offers
+            .filter(offer => !offer.cleared);
+          console.log(`Found ${receivedOffersData.length} received offers (excluding cleared)`);
         } catch (receivedErr: any) {
           console.error('Error fetching received offers:', receivedErr);
           // Continue with the rest of the function, we'll still try to fetch sent offers
@@ -69,22 +73,25 @@ export function useOffers() {
         try {
           console.log('Fetching sent offers...');
           const sentOffersSnapshot = await getDocs(sentOffersQuery);
-          sentOffersData = sentOffersSnapshot.docs.map(doc => {
-            const data = doc.data();
-            return {
-              id: doc.id,
-              ...data,
-              createdAt: data.createdAt?.toDate() || new Date(),
-              updatedAt: data.updatedAt?.toDate() || new Date(),
-              // Ensure listingSnapshot has all required fields
-              listingSnapshot: {
-                title: data.listingSnapshot?.title || 'Unknown Listing',
-                price: data.listingSnapshot?.price || 0,
-                imageUrl: data.listingSnapshot?.imageUrl || '',
-              }
-            } as Offer;
-          });
-          console.log(`Found ${sentOffersData.length} sent offers`);
+          sentOffersData = sentOffersSnapshot.docs
+            .map(doc => {
+              const data = doc.data();
+              return {
+                id: doc.id,
+                ...data,
+                createdAt: data.createdAt?.toDate() || new Date(),
+                updatedAt: data.updatedAt?.toDate() || new Date(),
+                // Ensure listingSnapshot has all required fields
+                listingSnapshot: {
+                  title: data.listingSnapshot?.title || 'Unknown Listing',
+                  price: data.listingSnapshot?.price || 0,
+                  imageUrl: data.listingSnapshot?.imageUrl || '',
+                }
+              } as Offer;
+            })
+            // Filter out cleared offers
+            .filter(offer => !offer.cleared);
+          console.log(`Found ${sentOffersData.length} sent offers (excluding cleared)`);
         } catch (sentErr: any) {
           console.error('Error fetching sent offers:', sentErr);
           // Continue with the function, we'll still set whatever data we have
@@ -273,6 +280,156 @@ export function useOffers() {
     }
   }, [user, fetchOffers]);
 
+  const cancelOffer = async (offerId: string) => {
+    if (!user) return false;
+    
+    try {
+      const { db } = getFirebaseServices();
+      const offerRef = doc(db, 'offers', offerId);
+      
+      // Get the current offer to verify the user is the buyer
+      const offerSnap = await getDoc(offerRef);
+      if (!offerSnap.exists()) {
+        throw new Error('Offer not found');
+      }
+      
+      const offerData = offerSnap.data();
+      if (offerData.buyerId !== user.uid) {
+        throw new Error('You are not authorized to cancel this offer');
+      }
+      
+      // Update the offer status to cancelled
+      await updateDoc(offerRef, {
+        status: 'cancelled',
+        updatedAt: serverTimestamp()
+      });
+      
+      // Update local state
+      setSentOffers(prev => 
+        prev.filter(offer => offer.id !== offerId)
+      );
+      
+      return true;
+    } catch (err: any) {
+      console.error('Error cancelling offer:', err);
+      toast.error(err.message || 'Failed to cancel offer');
+      return false;
+    }
+  };
+
+  const clearOffer = async (offerId: string) => {
+    if (!user) return false;
+    
+    try {
+      const { db } = getFirebaseServices();
+      const offerRef = doc(db, 'offers', offerId);
+      
+      // Get the current offer to verify the user is involved
+      const offerSnap = await getDoc(offerRef);
+      if (!offerSnap.exists()) {
+        throw new Error('Offer not found');
+      }
+      
+      const offerData = offerSnap.data();
+      if (offerData.buyerId !== user.uid && offerData.sellerId !== user.uid) {
+        throw new Error('You are not authorized to clear this offer');
+      }
+      
+      // Update the offer with cleared flag
+      await updateDoc(offerRef, {
+        cleared: true,
+        updatedAt: serverTimestamp()
+      });
+      
+      // Update local state based on user role
+      if (offerData.buyerId === user.uid) {
+        setSentOffers(prev => 
+          prev.filter(offer => offer.id !== offerId)
+        );
+      } else {
+        setReceivedOffers(prev => 
+          prev.filter(offer => offer.id !== offerId)
+        );
+      }
+      
+      return true;
+    } catch (err: any) {
+      console.error('Error clearing offer:', err);
+      toast.error(err.message || 'Failed to clear offer');
+      return false;
+    }
+  };
+
+  const createOrderFromOffer = async (offerId: string) => {
+    if (!user) return false;
+    
+    try {
+      const { db } = getFirebaseServices();
+      const offerRef = doc(db, 'offers', offerId);
+      
+      // Get the current offer
+      const offerSnap = await getDoc(offerRef);
+      if (!offerSnap.exists()) {
+        throw new Error('Offer not found');
+      }
+      
+      const offerData = offerSnap.data();
+      
+      // Verify the user is the seller
+      if (offerData.sellerId !== user.uid) {
+        throw new Error('Only the seller can create an order from an offer');
+      }
+      
+      // Verify the offer is accepted
+      if (offerData.status !== 'accepted') {
+        throw new Error('Only accepted offers can be converted to orders');
+      }
+      
+      // Create a placeholder shipping address (this would normally come from the buyer)
+      const placeholderAddress = {
+        name: 'To be provided by buyer',
+        line1: 'Address pending',
+        city: 'TBD',
+        state: 'TBD',
+        postal_code: 'TBD',
+        country: 'TBD'
+      };
+      
+      // Create the order
+      const orderData = {
+        listingId: offerData.listingId,
+        buyerId: offerData.buyerId,
+        sellerId: offerData.sellerId,
+        amount: offerData.amount,
+        status: 'pending',
+        shippingAddress: placeholderAddress,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+        listingSnapshot: offerData.listingSnapshot,
+        offerId: offerId // Reference to the original offer
+      };
+      
+      await addDoc(collection(db, 'orders'), orderData);
+      
+      // Mark the offer as cleared
+      await updateDoc(offerRef, {
+        cleared: true,
+        updatedAt: serverTimestamp()
+      });
+      
+      // Update local state
+      setReceivedOffers(prev => 
+        prev.filter(offer => offer.id !== offerId)
+      );
+      
+      return true;
+    } catch (err: any) {
+      console.error('Error creating order from offer:', err);
+      toast.error(err.message || 'Failed to create order from offer');
+      return false;
+    }
+  };
+
   return {
     receivedOffers,
     sentOffers,
@@ -280,6 +437,9 @@ export function useOffers() {
     error,
     fetchOffers,
     updateOfferStatus,
-    makeCounterOffer
+    makeCounterOffer,
+    cancelOffer,
+    clearOffer,
+    createOrderFromOffer
   };
 }
