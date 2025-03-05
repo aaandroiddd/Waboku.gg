@@ -168,7 +168,10 @@ export function MakeOfferDialog({
         throw new Error(data.error || data.message || data.details || 'Failed to create offer');
       }
 
-      toast.success('Your offer has been sent!');
+      toast.success('Your offer has been sent successfully!', {
+        description: 'You can view your offer in your dashboard',
+        duration: 5000
+      });
       onOpenChange(false);
       
       // Redirect to offers dashboard

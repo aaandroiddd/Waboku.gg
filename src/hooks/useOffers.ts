@@ -169,20 +169,47 @@ export function useOffers() {
         updatedAt: serverTimestamp()
       });
 
-      // Update local state for both received and sent offers
-      setReceivedOffers(prev => 
-        prev.map(offer => 
-          offer.id === offerId ? { ...offer, status, updatedAt: new Date() } : offer
-        )
-      );
+      // For declined offers, remove them from the dashboard
+      if (status === 'declined') {
+        setReceivedOffers(prev => 
+          prev.filter(offer => offer.id !== offerId)
+        );
+        
+        setSentOffers(prev => 
+          prev.filter(offer => offer.id !== offerId)
+        );
+        
+        toast.success('Offer declined', {
+          description: 'The offer has been declined and removed from your dashboard'
+        });
+      } else {
+        // Update local state for both received and sent offers
+        setReceivedOffers(prev => 
+          prev.map(offer => 
+            offer.id === offerId ? { ...offer, status, updatedAt: new Date() } : offer
+          )
+        );
+        
+        setSentOffers(prev => 
+          prev.map(offer => 
+            offer.id === offerId ? { ...offer, status, updatedAt: new Date() } : offer
+          )
+        );
+        
+        // Show appropriate toast message based on status
+        if (status === 'accepted') {
+          toast.success('Offer accepted', {
+            description: 'The offer has been accepted successfully'
+          });
+        } else if (status === 'countered') {
+          toast.success('Counter offer sent', {
+            description: 'Your counter offer has been sent to the buyer'
+          });
+        } else if (status === 'expired') {
+          toast.info('Offer marked as expired');
+        }
+      }
       
-      setSentOffers(prev => 
-        prev.map(offer => 
-          offer.id === offerId ? { ...offer, status, updatedAt: new Date() } : offer
-        )
-      );
-
-      toast.success(`Offer ${status} successfully`);
       return true;
     } catch (err: any) {
       console.error(`Error ${status} offer:`, err);

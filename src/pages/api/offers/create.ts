@@ -155,6 +155,31 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: 'Offer amount must be a positive number' });
     }
     
+    // Check if the user already has an active offer for this listing
+    try {
+      console.log(`Checking for existing offers from buyer ${userId} for listing ${listingId}`);
+      const existingOffersQuery = await db.collection('offers')
+        .where('buyerId', '==', userId)
+        .where('listingId', '==', listingId)
+        .where('status', '==', 'pending')
+        .get();
+      
+      if (!existingOffersQuery.empty) {
+        console.log(`Found existing pending offer from buyer ${userId} for listing ${listingId}`);
+        return res.status(400).json({ 
+          error: 'You already have an active offer for this listing',
+          message: 'You can only have one active offer per listing at a time'
+        });
+      }
+    } catch (checkError: any) {
+      console.error('Error checking for existing offers:', {
+        message: checkError.message,
+        code: checkError.code,
+        stack: checkError.stack
+      });
+      // Continue with offer creation even if check fails
+    }
+    
     const offerData = {
       listingId,
       buyerId: userId,
