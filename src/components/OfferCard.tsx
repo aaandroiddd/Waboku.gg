@@ -271,8 +271,7 @@ export function OfferCard({ offer, type, onCounterOffer }: OfferCardProps) {
             offerId={offer.id}
             listingTitle={safeOffer.listingSnapshot.title}
             onCancelled={() => {
-              // This will be called after successful cancellation
-              // The toast is now handled in the useOffers hook
+              // This is now handled by the custom event
             }}
           />
           
@@ -283,8 +282,7 @@ export function OfferCard({ offer, type, onCounterOffer }: OfferCardProps) {
             offerId={offer.id}
             listingTitle={safeOffer.listingSnapshot.title}
             onCleared={() => {
-              // This will be called after successful clearing
-              // The toast is now handled in the useOffers hook
+              // This is now handled by the custom event in the dialog component
             }}
           />
         </div>

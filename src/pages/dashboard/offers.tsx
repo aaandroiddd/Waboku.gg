@@ -21,8 +21,42 @@ const OffersComponent = () => {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
   const [error, setError] = useState<string | null>(null);
-  const { receivedOffers, sentOffers, loading: offersLoading, error: offersError, fetchOffers, updateOfferStatus, makeCounterOffer } = useOffers();
+  const { receivedOffers: initialReceivedOffers, sentOffers: initialSentOffers, loading: offersLoading, error: offersError, fetchOffers, updateOfferStatus, makeCounterOffer } = useOffers();
   const [isRefreshing, setIsRefreshing] = useState(false);
+  
+  // Create local state to manage offers that can be updated immediately on UI
+  const [receivedOffers, setReceivedOffers] = useState(initialReceivedOffers);
+  const [sentOffers, setSentOffers] = useState(initialSentOffers);
+  
+  // Update local state when the hook data changes
+  useEffect(() => {
+    setReceivedOffers(initialReceivedOffers);
+  }, [initialReceivedOffers]);
+  
+  useEffect(() => {
+    setSentOffers(initialSentOffers);
+  }, [initialSentOffers]);
+  
+  // Listen for offer cleared events
+  useEffect(() => {
+    const handleOfferCleared = (event: CustomEvent) => {
+      const { offerId, type } = event.detail;
+      
+      if (type === 'sent') {
+        setSentOffers(prev => prev.filter(offer => offer.id !== offerId));
+      } else if (type === 'received') {
+        setReceivedOffers(prev => prev.filter(offer => offer.id !== offerId));
+      }
+    };
+    
+    // Add event listener
+    window.addEventListener('offerCleared', handleOfferCleared as EventListener);
+    
+    // Clean up
+    return () => {
+      window.removeEventListener('offerCleared', handleOfferCleared as EventListener);
+    };
+  }, []);
   
   const [counterOfferDialog, setCounterOfferDialog] = useState({
     isOpen: false,

@@ -36,7 +36,17 @@ export function ClearOfferDialog({
       const success = await clearOffer(offerId);
       
       if (success) {
+        // Call the onCleared callback to notify parent component
         onCleared();
+        
+        // Dispatch a custom event to update the UI immediately
+        // We don't know if this is a sent or received offer, so we'll let the parent component handle that
+        const event = new CustomEvent('offerCleared', { 
+          detail: { offerId: offerId, type: 'unknown' } 
+        });
+        window.dispatchEvent(event);
+        
+        // Close the dialog
         onOpenChange(false);
       } else {
         throw new Error('Failed to clear offer');

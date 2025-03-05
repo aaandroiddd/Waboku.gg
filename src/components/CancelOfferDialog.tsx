@@ -36,7 +36,14 @@ export function CancelOfferDialog({
       const success = await cancelOffer(offerId);
       
       if (success) {
+        // Call the onCancelled callback to notify parent component
         onCancelled();
+        // Dispatch an event to update the UI immediately
+        const event = new CustomEvent('offerCleared', { 
+          detail: { offerId: offerId, type: 'sent' } 
+        });
+        window.dispatchEvent(event);
+        // Close the dialog
         onOpenChange(false);
       } else {
         throw new Error('Failed to cancel offer');
