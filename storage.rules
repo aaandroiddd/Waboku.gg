@@ -65,6 +65,20 @@ service firebase.storage {
       allow delete: if isAuthenticated()
                    && userId == request.auth.uid;
     }
+    
+    // Chat images
+    match /chat-images/{chatId}/{filename} {
+      // Allow read access to chat participants
+      allow read: if isAuthenticated();
+      
+      // Allow users to upload chat images
+      allow create, update: if isAuthenticated()
+                           && isValidSize()
+                           && isImageType();
+
+      // Allow users to delete their own chat images
+      allow delete: if isAuthenticated();
+    }
 
     // Default rule - deny everything else
     match /{allPaths=**} {

@@ -32,6 +32,8 @@ import { useRouter } from 'next/router';
 import { useProfile } from '@/hooks/useProfile';
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { getDatabase, ref as dbRef, remove, set } from 'firebase/database';
+import { getDoc, doc } from 'firebase/firestore';
+import { firebaseDb, getFirebaseServices } from '@/lib/firebase';
 
 interface ChatProps {
   chatId?: string;
@@ -200,7 +202,14 @@ export function Chat({
   }, [messages, chatId, user?.uid, markAsRead]);
 
   const handleImageUpload = async (file: File) => {
-    if (!user) return;
+    if (!user) {
+      toast({
+        title: "Error",
+        description: "You must be signed in to upload images",
+        variant: "destructive"
+      });
+      return;
+    }
 
     const maxSize = 5 * 1024 * 1024; // 5MB
     if (file.size > maxSize) {
@@ -214,16 +223,62 @@ export function Chat({
 
     setIsUploading(true);
     try {
+      // Get a reference to the storage service
       const storage = getStorage();
-      const imageRef = storageRef(storage, `chat-images/${chatId}/${Date.now()}_${file.name}`);
-      await uploadBytes(imageRef, file);
+      console.log("Storage initialized:", !!storage);
+      
+      // Create a unique filename
+      const fileName = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+      
+      // Create a storage reference
+      const chatFolder = chatId || 'new-chat';
+      const imagePath = `chat-images/${chatFolder}/${fileName}`;
+      console.log("Uploading to path:", imagePath);
+      
+      const imageRef = storageRef(storage, imagePath);
+      
+      // Upload the file
+      console.log("Starting upload...");
+      const snapshot = await uploadBytes(imageRef, file);
+      console.log("Upload complete:", snapshot.metadata.name);
+      
+      // Get the download URL
       const imageUrl = await getDownloadURL(imageRef);
+      console.log("Download URL obtained");
+      
+      // Send the message with the image URL
       await sendMessage(`![Image](${imageUrl})`, receiverId, listingId, listingTitle);
+      
+      toast({
+        title: "Success",
+        description: "Image uploaded successfully",
+      });
     } catch (error) {
       console.error('Error uploading image:', error);
+      
+      // Provide more detailed error information
+      let errorMessage = "Failed to upload image. Please try again.";
+      
+      if (error instanceof Error) {
+        // Check for specific Firebase Storage errors
+        if (error.message.includes("storage/unauthorized")) {
+          errorMessage = "You don't have permission to upload images. Please check your account status.";
+        } else if (error.message.includes("storage/quota-exceeded")) {
+          errorMessage = "Storage quota exceeded. Please try again later.";
+        } else if (error.message.includes("storage/canceled")) {
+          errorMessage = "Upload was canceled. Please try again.";
+        } else if (error.message.includes("storage/invalid-format")) {
+          errorMessage = "Invalid file format. Please upload a valid image file.";
+        } else if (error.message.includes("network")) {
+          errorMessage = "Network error. Please check your internet connection and try again.";
+        }
+        
+        console.error("Detailed error:", error.message);
+      }
+      
       toast({
         title: "Error",
-        description: "Failed to upload image. Please try again.",
+        description: errorMessage,
         variant: "destructive"
       });
     } finally {
