@@ -5,7 +5,7 @@ import { useRouter } from 'next/router';
 import { useAuth } from '@/contexts/AuthContext';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
 import { useOffers } from '@/hooks/useOffers';
@@ -14,6 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { formatPrice } from '@/lib/price';
+import { RefreshCw } from 'lucide-react';
 
 const OffersComponent = () => {
   const { toast } = useToast();
@@ -21,6 +22,7 @@ const OffersComponent = () => {
   const { user, loading: authLoading } = useAuth();
   const [error, setError] = useState<string | null>(null);
   const { receivedOffers, sentOffers, loading: offersLoading, error: offersError, fetchOffers, updateOfferStatus, makeCounterOffer } = useOffers();
+  const [isRefreshing, setIsRefreshing] = useState(false);
   
   const [counterOfferDialog, setCounterOfferDialog] = useState({
     isOpen: false,
@@ -101,6 +103,27 @@ const OffersComponent = () => {
     }
   };
 
+  const handleRefresh = async () => {
+    if (isRefreshing) return;
+    
+    try {
+      setIsRefreshing(true);
+      await fetchOffers();
+      toast({
+        title: "Refreshed",
+        description: "Your offers have been refreshed",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: "Failed to refresh offers. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
   if (loading) {
     return (
       <DashboardLayout>
@@ -117,13 +140,31 @@ const OffersComponent = () => {
         <div className="min-h-screen flex items-center justify-center">
           <div className="text-center">
             <h2 className="text-2xl font-bold text-red-600 mb-4">Error</h2>
-            <p className="text-gray-600">{error || offersError}</p>
-            <Button
-              className="mt-4"
-              onClick={() => router.push('/auth/sign-in')}
-            >
-              Return to Sign In
-            </Button>
+            <p className="text-gray-600 mb-4">{error || offersError}</p>
+            <div className="flex gap-4 justify-center">
+              <Button
+                variant="outline"
+                onClick={handleRefresh}
+                disabled={isRefreshing}
+              >
+                {isRefreshing ? (
+                  <>
+                    <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                    Refreshing...
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="mr-2 h-4 w-4" />
+                    Try Again
+                  </>
+                )}
+              </Button>
+              <Button
+                onClick={() => router.push('/dashboard')}
+              >
+                Return to Dashboard
+              </Button>
+            </div>
           </div>
         </div>
       </DashboardLayout>
@@ -151,16 +192,34 @@ const OffersComponent = () => {
     <DashboardLayout>
       <Card className="mb-6">
         <CardHeader>
-          <CardTitle>Offers Dashboard</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-muted-foreground">
+          <div className="flex justify-between items-center">
+            <CardTitle>Offers Dashboard</CardTitle>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+            >
+              {isRefreshing ? (
+                <>
+                  <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                  Refreshing...
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                  Refresh
+                </>
+              )}
+            </Button>
+          </div>
+          <CardDescription>
             Manage your received and sent offers for listings
-          </p>
-        </CardContent>
+          </CardDescription>
+        </CardHeader>
       </Card>
 
-      <Tabs defaultValue="received" className="space-y-4">
+      <Tabs defaultValue={router.query.tab === 'sent' ? 'sent' : 'received'} className="space-y-4">
         <TabsList>
           <TabsTrigger value="received">Received Offers</TabsTrigger>
           <TabsTrigger value="sent">Sent Offers</TabsTrigger>
@@ -168,7 +227,7 @@ const OffersComponent = () => {
 
         <TabsContent value="received" className="space-y-4">
           {receivedOffers.length === 0 ? (
-            <div className="text-center py-12">
+            <div className="text-center py-12 border rounded-lg bg-background">
               <h3 className="text-lg font-medium mb-2">No offers received</h3>
               <p className="text-muted-foreground">
                 When someone makes an offer on your listings, they will appear here.
@@ -194,7 +253,7 @@ const OffersComponent = () => {
 
         <TabsContent value="sent" className="space-y-4">
           {sentOffers.length === 0 ? (
-            <div className="text-center py-12">
+            <div className="text-center py-12 border rounded-lg bg-background">
               <h3 className="text-lg font-medium mb-2">No offers sent</h3>
               <p className="text-muted-foreground">
                 When you make an offer on a listing, it will appear here.

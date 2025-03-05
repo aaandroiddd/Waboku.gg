@@ -23,10 +23,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     try {
       // Verify the token and get the user
       console.log('Initializing Firebase Admin...');
-      const admin = getFirebaseAdmin();
+      getFirebaseAdmin(); // Initialize Firebase Admin
       console.log('Getting Auth and Firestore instances...');
-      const auth = getAuth(admin);
-      const db = getFirestore(admin);
+      const auth = getAuth();
+      const db = getFirestore();
       
       console.log('Verifying token...');
       const decodedToken = await auth.verifyIdToken(token);

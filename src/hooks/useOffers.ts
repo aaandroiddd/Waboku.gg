@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { getFirebaseServices } from '@/lib/firebase';
 import { collection, query, where, orderBy, getDocs, doc, updateDoc, serverTimestamp, getDoc } from 'firebase/firestore';
@@ -12,7 +12,7 @@ export function useOffers() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchOffers = async () => {
+  const fetchOffers = useCallback(async () => {
     if (!user) return;
 
     try {
@@ -118,12 +118,16 @@ export function useOffers() {
         });
         
         if (!response.ok) {
-          const errorText = await response.text();
           let errorData;
           try {
-            errorData = JSON.parse(errorText);
+            const errorText = await response.text();
+            try {
+              errorData = JSON.parse(errorText);
+            } catch (e) {
+              errorData = { error: 'Invalid JSON response', message: errorText };
+            }
           } catch (e) {
-            errorData = { error: 'Invalid JSON response', message: errorText };
+            errorData = { error: 'Could not read error response', message: 'Unknown error' };
           }
           
           console.error('API error response:', {
@@ -132,7 +136,7 @@ export function useOffers() {
             data: errorData
           });
           
-          throw new Error(errorData.message || `API error: ${response.status} ${response.statusText}`);
+          throw new Error(errorData?.message || `API error: ${response.status} ${response.statusText}`);
         }
         
         const data = await response.json();
@@ -151,7 +155,7 @@ export function useOffers() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
 
   const updateOfferStatus = async (offerId: string, status: 'accepted' | 'declined' | 'expired' | 'countered') => {
     if (!user) return;
@@ -240,7 +244,7 @@ export function useOffers() {
       setSentOffers([]);
       setLoading(false);
     }
-  }, [user]);
+  }, [user, fetchOffers]);
 
   return {
     receivedOffers,
