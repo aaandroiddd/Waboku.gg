@@ -4,6 +4,8 @@ import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { useOffers } from '@/hooks/useOffers';
+import { getFirebaseServices } from '@/lib/firebase';
+import { doc, getDoc } from 'firebase/firestore';
 
 interface ClearOfferDialogProps {
   open: boolean;
@@ -39,10 +41,24 @@ export function ClearOfferDialog({
         // Call the onCleared callback to notify parent component
         onCleared();
         
+        // Get the offer type from the useOffers hook to determine if it's a sent or received offer
+        const { db } = getFirebaseServices();
+        const offerRef = doc(db, 'offers', offerId);
+        const offerSnap = await getDoc(offerRef);
+        
+        let offerType = 'unknown';
+        if (offerSnap.exists()) {
+          const offerData = offerSnap.data();
+          if (offerData.buyerId === user.uid) {
+            offerType = 'sent';
+          } else if (offerData.sellerId === user.uid) {
+            offerType = 'received';
+          }
+        }
+        
         // Dispatch a custom event to update the UI immediately
-        // We don't know if this is a sent or received offer, so we'll let the parent component handle that
         const event = new CustomEvent('offerCleared', { 
-          detail: { offerId: offerId, type: 'unknown' } 
+          detail: { offerId: offerId, type: offerType } 
         });
         window.dispatchEvent(event);
         

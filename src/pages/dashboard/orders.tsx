@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { getFirebaseServices } from '@/lib/firebase';
 import { collection, query, where, orderBy, getDocs } from 'firebase/firestore';
@@ -25,7 +25,7 @@ export default function OrdersPage() {
   const [purchases, setPurchases] = useState<Order[]>([]);
   const [sales, setSales] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
-  const { receivedOffers, sentOffers, loading: offersLoading, makeCounterOffer } = useOffers();
+  const { receivedOffers, sentOffers, loading: offersLoading, makeCounterOffer, fetchOffers } = useOffers();
   
   const [counterOfferDialog, setCounterOfferDialog] = useState({
     isOpen: false,
@@ -34,6 +34,32 @@ export default function OrdersPage() {
     counterAmount: '',
     listingTitle: '',
   });
+  
+  // Handle offer cleared events
+  const handleOfferCleared = useCallback((event: CustomEvent) => {
+    const { offerId, type } = event.detail;
+    console.log(`Offer cleared event received: ${offerId}, type: ${type}`);
+    
+    // Update the UI immediately by filtering out the cleared offer
+    if (type === 'sent' || type === 'unknown') {
+      setSentOffers(prev => prev.filter(offer => offer.id !== offerId));
+    }
+    
+    if (type === 'received' || type === 'unknown') {
+      setReceivedOffers(prev => prev.filter(offer => offer.id !== offerId));
+    }
+  }, []);
+
+  // Set up event listener for offer cleared events
+  useEffect(() => {
+    // Add event listener for offer cleared events
+    window.addEventListener('offerCleared', handleOfferCleared as EventListener);
+    
+    // Clean up event listener when component unmounts
+    return () => {
+      window.removeEventListener('offerCleared', handleOfferCleared as EventListener);
+    };
+  }, [handleOfferCleared]);
 
   useEffect(() => {
     async function fetchOrders() {
