@@ -309,6 +309,11 @@ export function useOffers() {
         prev.filter(offer => offer.id !== offerId)
       );
       
+      // Show success toast
+      toast.success('Offer cancelled successfully', {
+        description: 'The offer has been removed from your dashboard'
+      });
+      
       return true;
     } catch (err: any) {
       console.error('Error cancelling offer:', err);
@@ -351,6 +356,11 @@ export function useOffers() {
           prev.filter(offer => offer.id !== offerId)
         );
       }
+      
+      // Show success toast
+      toast.success('Offer cleared successfully', {
+        description: 'The offer has been removed from your dashboard'
+      });
       
       return true;
     } catch (err: any) {

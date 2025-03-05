@@ -3,8 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
-import { getFirebaseServices } from '@/lib/firebase';
-import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { useOffers } from '@/hooks/useOffers';
 
 interface ClearOfferDialogProps {
   open: boolean;
@@ -23,6 +22,7 @@ export function ClearOfferDialog({
 }: ClearOfferDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { user } = useAuth();
+  const { clearOffer } = useOffers();
 
   const handleClear = async () => {
     if (!user) {
@@ -33,20 +33,14 @@ export function ClearOfferDialog({
     setIsSubmitting(true);
 
     try {
-      const { db } = getFirebaseServices();
-      const offerRef = doc(db, 'offers', offerId);
+      const success = await clearOffer(offerId);
       
-      await updateDoc(offerRef, {
-        cleared: true,
-        updatedAt: serverTimestamp()
-      });
-
-      toast.success('Offer cleared successfully', {
-        description: 'The offer has been removed from your dashboard'
-      });
-      
-      onCleared();
-      onOpenChange(false);
+      if (success) {
+        onCleared();
+        onOpenChange(false);
+      } else {
+        throw new Error('Failed to clear offer');
+      }
     } catch (error: any) {
       console.error('Error clearing offer:', error);
       toast.error('Failed to clear offer. Please try again.');

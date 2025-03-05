@@ -3,8 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
-import { getFirebaseServices } from '@/lib/firebase';
-import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { useOffers } from '@/hooks/useOffers';
 
 interface CancelOfferDialogProps {
   open: boolean;
@@ -23,6 +22,7 @@ export function CancelOfferDialog({
 }: CancelOfferDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { user } = useAuth();
+  const { cancelOffer } = useOffers();
 
   const handleCancel = async () => {
     if (!user) {
@@ -33,20 +33,14 @@ export function CancelOfferDialog({
     setIsSubmitting(true);
 
     try {
-      const { db } = getFirebaseServices();
-      const offerRef = doc(db, 'offers', offerId);
+      const success = await cancelOffer(offerId);
       
-      await updateDoc(offerRef, {
-        status: 'cancelled',
-        updatedAt: serverTimestamp()
-      });
-
-      toast.success('Offer cancelled successfully', {
-        description: 'The offer has been removed from your dashboard'
-      });
-      
-      onCancelled();
-      onOpenChange(false);
+      if (success) {
+        onCancelled();
+        onOpenChange(false);
+      } else {
+        throw new Error('Failed to cancel offer');
+      }
     } catch (error: any) {
       console.error('Error cancelling offer:', error);
       toast.error('Failed to cancel offer. Please try again.');

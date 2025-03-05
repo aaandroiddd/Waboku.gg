@@ -272,9 +272,7 @@ export function OfferCard({ offer, type, onCounterOffer }: OfferCardProps) {
             listingTitle={safeOffer.listingSnapshot.title}
             onCancelled={() => {
               // This will be called after successful cancellation
-              toast.success('Offer cancelled successfully', {
-                description: 'The offer has been removed from your dashboard'
-              });
+              // The toast is now handled in the useOffers hook
             }}
           />
           
@@ -286,9 +284,7 @@ export function OfferCard({ offer, type, onCounterOffer }: OfferCardProps) {
             listingTitle={safeOffer.listingSnapshot.title}
             onCleared={() => {
               // This will be called after successful clearing
-              toast.success('Offer cleared successfully', {
-                description: 'The offer has been removed from your dashboard'
-              });
+              // The toast is now handled in the useOffers hook
             }}
           />
         </div>
