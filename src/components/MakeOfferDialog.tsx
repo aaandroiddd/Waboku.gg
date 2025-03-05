@@ -95,10 +95,11 @@ export function MakeOfferDialog({
       // Make the API request with retry logic
       let response;
       let retryCount = 0;
-      const maxRetries = 2;
+      const maxRetries = 3; // Increased from 2 to 3
       
       while (retryCount <= maxRetries) {
         try {
+          console.log(`Attempt ${retryCount + 1} to send offer request...`);
           response = await fetch('/api/offers/create', {
             method: 'POST',
             headers: {
@@ -107,14 +108,34 @@ export function MakeOfferDialog({
             },
             body: JSON.stringify(payload),
           });
-          break; // If successful, exit the retry loop
+          
+          // If we get a 500 error, retry
+          if (response.status >= 500) {
+            console.log(`Server error (${response.status}), will retry...`);
+            retryCount++;
+            if (retryCount > maxRetries) {
+              console.error(`Max retries (${maxRetries}) reached with server error ${response.status}`);
+              break; // Exit the loop but continue processing the response
+            }
+            // Wait before retrying (exponential backoff)
+            const delay = 1000 * Math.pow(2, retryCount);
+            console.log(`Waiting ${delay}ms before retry ${retryCount}...`);
+            await new Promise(resolve => setTimeout(resolve, delay));
+            continue;
+          }
+          
+          // For non-500 errors or success, break the loop
+          break;
         } catch (fetchError) {
+          console.error('Network error during fetch:', fetchError);
           retryCount++;
           if (retryCount > maxRetries) {
             throw new Error('Network error while creating offer. Please check your connection and try again.');
           }
           // Wait before retrying (exponential backoff)
-          await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
+          const delay = 1000 * Math.pow(2, retryCount);
+          console.log(`Network error, waiting ${delay}ms before retry ${retryCount}...`);
+          await new Promise(resolve => setTimeout(resolve, delay));
         }
       }
       

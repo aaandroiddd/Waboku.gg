@@ -13,7 +13,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     NEXT_PUBLIC_FIREBASE_PROJECT_ID: !!process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
     FIREBASE_CLIENT_EMAIL: !!process.env.FIREBASE_CLIENT_EMAIL,
     FIREBASE_PRIVATE_KEY: !!process.env.FIREBASE_PRIVATE_KEY?.substring(0, 5) + '...',
+    FIREBASE_PRIVATE_KEY_LENGTH: process.env.FIREBASE_PRIVATE_KEY?.length || 0,
     NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: !!process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+    NEXT_PUBLIC_FIREBASE_DATABASE_URL: !!process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL,
   });
   
   if (req.method !== 'POST') {

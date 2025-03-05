@@ -81,6 +81,28 @@ export function getFirebaseAdmin(): typeof admin {
         processedPrivateKey = processedPrivateKey.replace(/\\n/g, '\n');
         console.log('[Firebase Admin] Processed private key with escaped newlines');
       }
+      
+      // Check if the private key has the correct format
+      if (!processedPrivateKey.startsWith('-----BEGIN PRIVATE KEY-----') || 
+          !processedPrivateKey.endsWith('-----END PRIVATE KEY-----\n')) {
+        console.warn('[Firebase Admin] Private key may not be in the correct format');
+        
+        // Try to fix common issues with the private key format
+        if (!processedPrivateKey.startsWith('-----BEGIN PRIVATE KEY-----')) {
+          processedPrivateKey = '-----BEGIN PRIVATE KEY-----\n' + processedPrivateKey;
+        }
+        
+        if (!processedPrivateKey.endsWith('-----END PRIVATE KEY-----\n')) {
+          if (processedPrivateKey.includes('-----END PRIVATE KEY-----')) {
+            // Ensure it ends with a newline
+            processedPrivateKey = processedPrivateKey.replace('-----END PRIVATE KEY-----', '-----END PRIVATE KEY-----\n');
+          } else {
+            processedPrivateKey = processedPrivateKey + '\n-----END PRIVATE KEY-----\n';
+          }
+        }
+        
+        console.log('[Firebase Admin] Attempted to fix private key format');
+      }
 
       try {
         // Create the credential object
