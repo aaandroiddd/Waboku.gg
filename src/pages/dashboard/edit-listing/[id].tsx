@@ -95,8 +95,11 @@ const EditListingPage = () => {
       if (!id || !user) return;
 
       try {
+        console.log('Fetching listing with ID:', id);
         const listingDoc = await getDoc(doc(db, 'listings', id as string));
+        
         if (!listingDoc.exists()) {
+          console.error('Listing document does not exist');
           toast({
             title: 'Error',
             description: 'Listing not found',
@@ -107,9 +110,11 @@ const EditListingPage = () => {
         }
 
         const listingData = listingDoc.data();
+        console.log('Raw listing data:', listingData);
         
         // Check if the current user owns this listing
         if (listingData.userId !== user.uid) {
+          console.error('User does not own this listing');
           toast({
             title: 'Error',
             description: 'You do not have permission to edit this listing',
@@ -119,29 +124,60 @@ const EditListingPage = () => {
           return;
         }
 
+        // Safely convert Firestore timestamps to Date objects
+        let createdAt = new Date();
+        let expiresAt = new Date();
+        
+        try {
+          // Check if createdAt exists and is a Firestore timestamp
+          if (listingData.createdAt && typeof listingData.createdAt.toDate === 'function') {
+            createdAt = listingData.createdAt.toDate();
+          } else if (listingData.createdAt) {
+            // Handle if it's already a Date or a timestamp number
+            createdAt = new Date(listingData.createdAt);
+          }
+          
+          // Check if expiresAt exists and is a Firestore timestamp
+          if (listingData.expiresAt && typeof listingData.expiresAt.toDate === 'function') {
+            expiresAt = listingData.expiresAt.toDate();
+          } else if (listingData.expiresAt) {
+            // Handle if it's already a Date or a timestamp number
+            expiresAt = new Date(listingData.expiresAt);
+          }
+        } catch (timestampError) {
+          console.error('Error converting timestamps:', timestampError);
+          // Use current date as fallback
+        }
+
         // Create a proper listing object with the ID
         const listing = {
           id: listingDoc.id,
           ...listingData,
-          createdAt: listingData.createdAt?.toDate() || new Date(),
-          expiresAt: listingData.expiresAt?.toDate() || new Date(),
+          createdAt,
+          expiresAt,
+          // Ensure numeric values are properly typed
+          price: typeof listingData.price === 'number' ? listingData.price : parseFloat(listingData.price) || 0,
+          quantity: typeof listingData.quantity === 'number' ? listingData.quantity : parseInt(listingData.quantity) || 1,
+          gradeLevel: listingData.gradeLevel ? parseFloat(listingData.gradeLevel) : undefined,
         } as Listing;
 
+        console.log('Processed listing object:', listing);
         setListing(listing);
+        
         setFormData({
-          title: listing.title,
+          title: listing.title || '',
           description: listing.description || '',
           price: listing.price.toString(),
           condition: listing.condition || '',
           game: listing.game || '',
           city: listing.city || '',
           state: listing.state || '',
-          isGraded: listing.isGraded || false,
+          isGraded: Boolean(listing.isGraded),
           gradeLevel: listing.gradeLevel,
           gradingCompany: listing.gradingCompany,
           quantity: listing.quantity || 1,
-          imageUrls: listing.imageUrls || [],
-          coverImageIndex: listing.coverImageIndex || 0,
+          imageUrls: Array.isArray(listing.imageUrls) ? listing.imageUrls : [],
+          coverImageIndex: typeof listing.coverImageIndex === 'number' ? listing.coverImageIndex : 0,
         });
       } catch (error) {
         console.error('Error fetching listing:', error);
