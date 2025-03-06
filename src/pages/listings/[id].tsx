@@ -174,6 +174,8 @@ export default function ListingPage() {
           userId: data.userId || '',
           username: data.username || 'Unknown User',
           createdAt: createdAt,
+          // Handle expiresAt field which is required by the Listing type
+          expiresAt: data.expiresAt ? convertTimestamp(data.expiresAt) : new Date(createdAt.getTime() + (data.isPremium ? 30 : 2) * 24 * 60 * 60 * 1000),
           status: data.status || 'active',
           isGraded: Boolean(data.isGraded),
           gradeLevel: data.gradeLevel ? Number(data.gradeLevel) : undefined,
