@@ -6,6 +6,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { ReloadIcon } from "@radix-ui/react-icons";
 import { Textarea } from "@/components/ui/textarea";
+import { containsExplicitContent } from "@/util/string";
 
 interface LocationInputProps {
   onLocationSelect?: (city: string, state: string) => void;
@@ -30,7 +31,7 @@ export function LocationInput({
   value, 
   initialCity, 
   initialState, 
-  error, 
+  error: externalError, 
   placeholder = "Search for your location..." 
 }: LocationInputProps) {
   const [searchValue, setSearchValue] = useState(value || (initialCity && initialState ? `${initialCity}, ${initialState}` : ''));
@@ -38,6 +39,7 @@ export function LocationInput({
   const [googleLoadError, setGoogleLoadError] = useState(false);
   const [useFallback, setUseFallback] = useState(false);
   const [manualLocation, setManualLocation] = useState(initialCity && initialState ? `${initialCity}, ${initialState}` : '');
+  const [error, setError] = useState<string | undefined>(externalError);
   const autocompleteRef = useRef<any>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -113,6 +115,12 @@ export function LocationInput({
 
   const handleFallbackSubmit = () => {
     if (manualLocation.trim()) {
+      // Check for explicit content before submitting
+      if (containsExplicitContent(manualLocation)) {
+        setError("Location contains inappropriate content");
+        return;
+      }
+      
       setSearchValue(manualLocation);
       
       // Extract city and state-like information from manual input
@@ -153,6 +161,11 @@ export function LocationInput({
       setSearchValue(value);
     }
   }, [value]);
+  
+  // Update error state when external error changes
+  useEffect(() => {
+    setError(externalError);
+  }, [externalError]);
 
   useEffect(() => {
     // Check if Google Maps is already loaded and we're not in fallback mode
@@ -193,7 +206,36 @@ export function LocationInput({
           <Label>Enter your location *</Label>
           <Textarea
             value={manualLocation}
-            onChange={(e) => setManualLocation(e.target.value)}
+            onChange={(e) => {
+              const newValue = e.target.value;
+              setManualLocation(newValue);
+              
+              // Check for explicit content
+              if (containsExplicitContent(newValue)) {
+                setError("Location contains inappropriate content");
+                return;
+              } else {
+                setError(undefined);
+              }
+              
+              // Auto-update location as user types
+              if (newValue.trim()) {
+                setSearchValue(newValue);
+                
+                // Extract city and state-like information from manual input
+                const parts = newValue.split(',').map(part => part.trim());
+                const city = parts[0] || '';
+                const state = parts.length > 1 ? parts[1] : '';
+                
+                // Call the appropriate callback based on which was provided
+                if (onLocationSelect) {
+                  onLocationSelect(city, state);
+                }
+                if (onChange) {
+                  onChange(newValue);
+                }
+              }
+            }}
             placeholder="Enter your full location (e.g., City, Region, Country)"
             className={error ? "border-red-500" : ""}
           />
@@ -202,14 +244,7 @@ export function LocationInput({
           </p>
         </div>
 
-        <div className="flex justify-between items-center gap-2">
-          <Button 
-            onClick={handleFallbackSubmit}
-            disabled={!manualLocation.trim()}
-          >
-            Set Location
-          </Button>
-          
+        <div className="flex justify-end items-center gap-2">
           {!googleLoadError && (
             <Button 
               variant="outline"
@@ -247,8 +282,27 @@ export function LocationInput({
           onChange={(e) => {
             const newValue = e.target.value;
             setSearchValue(newValue);
+            
+            // Check for explicit content
+            if (containsExplicitContent(newValue)) {
+              setError("Location contains inappropriate content");
+              return;
+            } else {
+              setError(undefined);
+            }
+            
             if (onChange) {
               onChange(newValue);
+            }
+            
+            // Extract city and state-like information from manual input
+            const parts = newValue.split(',').map(part => part.trim());
+            const city = parts[0] || '';
+            const state = parts.length > 1 ? parts[1] : '';
+            
+            // Call onLocationSelect with the parsed city and state
+            if (onLocationSelect && city) {
+              onLocationSelect(city, state);
             }
           }}
           placeholder={placeholder}
