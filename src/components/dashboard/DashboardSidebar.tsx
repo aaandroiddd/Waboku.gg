@@ -135,8 +135,8 @@ export function DashboardSidebar({ onNavigate }: DashboardSidebarProps) {
   
   // Add premium features if user has premium account
   if (accountTier === 'premium') {
-    // Insert Analytics after Dashboard
-    navigation.splice(1, 0, ...premiumNavItems);
+    // Insert Analytics after Create Listing (index 2)
+    navigation.splice(2, 0, ...premiumNavItems);
   }
 
   const handleNavigate = (href: string) => {
