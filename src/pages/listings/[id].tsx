@@ -142,17 +142,13 @@ export default function ListingPage() {
         // Check if the listing has expired based on expiresAt field
         const now = Date.now();
         
-        // Only check expiration if we have a valid expiresAt date
-        if (data.expiresAt && typeof data.expiresAt.toDate === 'function') {
-          const expiresAt = data.expiresAt.toDate();
-          if (now > expiresAt.getTime()) {
-            throw new Error('This listing has expired and is no longer available');
-          }
-        } else if (!data.isPremium) {
-          // Fallback to creation date + 48 hours for non-premium listings without expiresAt
-          const FORTY_EIGHT_HOURS = 48 * 60 * 60 * 1000; // 48 hours in milliseconds
-          if ((now - createdAt.getTime()) > FORTY_EIGHT_HOURS) {
-            throw new Error('This listing has expired and is no longer available');
+        // Only check expiration if we have a valid expiresAt date and the listing is not active
+        if (data.status !== 'active') {
+          if (data.expiresAt && typeof data.expiresAt.toDate === 'function') {
+            const expiresAt = data.expiresAt.toDate();
+            if (now > expiresAt.getTime()) {
+              throw new Error('This listing has expired and is no longer available');
+            }
           }
         }
         

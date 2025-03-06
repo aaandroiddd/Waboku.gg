@@ -106,7 +106,7 @@ const EditListingPage = () => {
           return;
         }
 
-        const listingData = listingDoc.data() as Listing;
+        const listingData = listingDoc.data();
         
         // Check if the current user owns this listing
         if (listingData.userId !== user.uid) {
@@ -119,21 +119,29 @@ const EditListingPage = () => {
           return;
         }
 
-        setListing(listingData);
+        // Create a proper listing object with the ID
+        const listing = {
+          id: listingDoc.id,
+          ...listingData,
+          createdAt: listingData.createdAt?.toDate() || new Date(),
+          expiresAt: listingData.expiresAt?.toDate() || new Date(),
+        } as Listing;
+
+        setListing(listing);
         setFormData({
-          title: listingData.title,
-          description: listingData.description || '',
-          price: listingData.price.toString(),
-          condition: listingData.condition || '',
-          game: listingData.game || '',
-          city: listingData.city || '',
-          state: listingData.state || '',
-          isGraded: listingData.isGraded || false,
-          gradeLevel: listingData.gradeLevel,
-          gradingCompany: listingData.gradingCompany,
-          quantity: listingData.quantity || 1,
-          imageUrls: listingData.imageUrls || [],
-          coverImageIndex: listingData.coverImageIndex || 0,
+          title: listing.title,
+          description: listing.description || '',
+          price: listing.price.toString(),
+          condition: listing.condition || '',
+          game: listing.game || '',
+          city: listing.city || '',
+          state: listing.state || '',
+          isGraded: listing.isGraded || false,
+          gradeLevel: listing.gradeLevel,
+          gradingCompany: listing.gradingCompany,
+          quantity: listing.quantity || 1,
+          imageUrls: listing.imageUrls || [],
+          coverImageIndex: listing.coverImageIndex || 0,
         });
       } catch (error) {
         console.error('Error fetching listing:', error);
