@@ -103,39 +103,77 @@ export default function ListingPage() {
           throw new Error('This listing has been archived and is no longer available');
         }
         
+        // Safely convert Firestore timestamp to Date with better error handling
+        const convertTimestamp = (timestamp: any): Date => {
+          try {
+            if (!timestamp) return new Date();
+            
+            // Handle Firestore timestamp objects
+            if (timestamp && typeof timestamp.toDate === 'function') {
+              return timestamp.toDate();
+            }
+            
+            // Handle JavaScript Date objects
+            if (timestamp instanceof Date) {
+              return timestamp;
+            }
+            
+            // Handle numeric timestamps (milliseconds since epoch)
+            if (typeof timestamp === 'number') {
+              return new Date(timestamp);
+            }
+            
+            // Handle string timestamps
+            if (typeof timestamp === 'string') {
+              return new Date(timestamp);
+            }
+            
+            // Default fallback
+            return new Date();
+          } catch (error) {
+            console.error('Error converting timestamp:', error, timestamp);
+            return new Date();
+          }
+        };
+        
+        // Get created timestamp with robust error handling
+        const createdAt = convertTimestamp(data.createdAt);
+        
         // Check if the listing has expired based on creation date
         const now = Date.now();
         const FORTY_EIGHT_HOURS = 48 * 60 * 60 * 1000; // 48 hours in milliseconds
-        const createdAt = data.createdAt && typeof data.createdAt.toDate === 'function' 
-          ? data.createdAt.toDate().getTime() 
-          : data.createdAt instanceof Date 
-            ? data.createdAt.getTime() 
-            : 0;
         
-        if (!data.isPremium && (now - createdAt) > FORTY_EIGHT_HOURS) {
+        if (!data.isPremium && (now - createdAt.getTime()) > FORTY_EIGHT_HOURS) {
           throw new Error('This listing has expired and is no longer available');
         }
         
-        // Safely convert Firestore timestamp to Date
-        const convertTimestamp = (timestamp: any): Date => {
-          if (!timestamp) return new Date();
-          if (typeof timestamp.toDate === 'function') return timestamp.toDate();
-          if (timestamp instanceof Date) return timestamp;
-          return new Date();
-        };
+        // Process location data safely
+        let locationData = undefined;
+        if (data.location) {
+          try {
+            locationData = {
+              latitude: typeof data.location.latitude === 'number' ? data.location.latitude : undefined,
+              longitude: typeof data.location.longitude === 'number' ? data.location.longitude : undefined
+            };
+          } catch (error) {
+            console.error('Error processing location data:', error);
+          }
+        }
         
+        // Create listing object with careful type handling
         const listingData: Listing = {
           id: listingDoc.id,
           title: data.title || 'Untitled Listing',
           description: data.description || '',
-          price: data.price ?? 0,
+          price: typeof data.price === 'number' ? data.price : 
+                 typeof data.price === 'string' ? parseFloat(data.price) : 0,
           condition: data.condition || 'unknown',
           game: data.game || 'other',
           imageUrls: Array.isArray(data.imageUrls) ? data.imageUrls : [],
-          coverImageIndex: data.coverImageIndex || 0,
+          coverImageIndex: typeof data.coverImageIndex === 'number' ? data.coverImageIndex : 0,
           userId: data.userId || '',
           username: data.username || 'Unknown User',
-          createdAt: convertTimestamp(data.createdAt),
+          createdAt: createdAt,
           status: data.status || 'active',
           isGraded: Boolean(data.isGraded),
           gradeLevel: data.gradeLevel ? Number(data.gradeLevel) : undefined,
@@ -145,7 +183,7 @@ export default function ListingPage() {
           favoriteCount: typeof data.favoriteCount === 'number' ? data.favoriteCount : 0,
           quantity: data.quantity ? Number(data.quantity) : undefined,
           cardName: data.cardName || undefined,
-          location: data.location || undefined
+          location: locationData
         };
 
         if (isMounted) {
@@ -155,7 +193,7 @@ export default function ListingPage() {
       } catch (err: any) {
         console.error('Error fetching listing:', err);
         if (isMounted) {
-          setError('Failed to load listing. Please try again later.');
+          setError(err.message || 'Failed to load listing. Please try again later.');
           setLoading(false);
         }
       }
