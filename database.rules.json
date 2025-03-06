@@ -34,49 +34,6 @@
       }
     },
 
-    "favorites": {
-      "$uid": {
-        ".read": "auth != null && auth.uid === $uid",
-        ".write": "auth != null && auth.uid === $uid",
-        "$listingId": {
-          ".validate": "newData.hasChildren(['createdAt'])",
-          "createdAt": {
-            ".validate": "newData.isNumber() && newData.val() <= now"
-          }
-        }
-      }
-    },
-
-    "searchTerms": {
-      ".read": true,
-      ".write": true,
-      ".indexOn": ["count", "lastUpdated"],
-      "$termId": {
-        ".validate": "newData.hasChildren(['term', 'count'])",
-        "term": {
-          ".validate": "newData.isString() && newData.val().length >= 2 && newData.val().length <= 50"
-        },
-        "count": {
-          ".validate": "newData.isNumber() && newData.val() >= 0"
-        }
-      }
-    },
-
-    "searches": {
-      ".read": true,
-      ".write": "auth != null",
-      ".indexOn": ["timestamp"],
-      "$searchId": {
-        ".validate": "newData.hasChildren(['term', 'timestamp'])",
-        "term": {
-          ".validate": "newData.isString() && newData.val().length >= 2 && newData.val().length <= 50"
-        },
-        "timestamp": {
-          ".validate": "newData.isNumber() && newData.val() <= now"
-        }
-      }
-    },
-
     "listings": {
       ".indexOn": ["createdAt", "userId", "status"],
       "$listingId": {
@@ -102,6 +59,8 @@
     },
 
     "messages": {
+      ".read": "auth != null",
+      ".write": "auth != null",
       ".indexOn": ["timestamp", "chatId"],
       "$chatId": {
         ".read": "auth != null",
@@ -109,7 +68,7 @@
         "$messageId": {
           ".validate": "newData.hasChildren(['senderId', 'receiverId', 'content', 'timestamp', 'type'])",
           "senderId": {
-            ".validate": "newData.val() === auth.uid || !data.exists()"
+            ".validate": "newData.val() === auth.uid"
           },
           "receiverId": {
             ".validate": "newData.isString()"
@@ -128,16 +87,20 @@
           },
           "read": {
             ".validate": "newData.isBoolean()"
-          }
+          },
+          ".write": "auth != null && (data.child('senderId').val() === auth.uid || data.child('receiverId').val() === auth.uid)"
         }
       }
     },
 
     "chats": {
+      ".read": "auth != null",
+      ".write": "auth != null",
       ".indexOn": ["createdAt", "participants"],
       "$chatId": {
         ".read": "auth != null",
         ".write": "auth != null",
+        ".validate": "newData.hasChildren(['participants', 'createdAt'])",
         "participants": {
           "$uid": {
             ".validate": "newData.isBoolean()"
@@ -169,10 +132,10 @@
           ".validate": "!newData.exists() || newData.isString()"
         },
         "listingTitle": {
-          ".validate": "!newData.exists() || (newData.isString() && newData.val().length <= 200)"
+          ".validate": "!newData.exists() || newData.isString()"
         },
         "createdAt": {
-          ".validate": "newData.isNumber() && newData.val() <= now"
+          ".validate": "newData.isNumber() && (!data.exists() || data.val() === newData.val()) && newData.val() <= now"
         }
       }
     },
