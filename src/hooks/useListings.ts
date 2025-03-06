@@ -30,6 +30,54 @@ interface UseListingsProps {
 }
 
 export function useListings({ userId, searchQuery, showOnlyActive = false }: UseListingsProps = {}) {
+  const [listings, setListings] = useState<Listing[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const { user } = useAuth();
+
+  const updateListing = async (listingId: string, updateData: Partial<Listing>) => {
+    if (!user) throw new Error('Must be logged in to update a listing');
+
+    try {
+      console.log('Updating listing:', listingId, updateData);
+      const { db } = await getFirebaseServices();
+      const listingRef = doc(db, 'listings', listingId);
+      
+      // First verify the listing exists and belongs to the user
+      const listingSnap = await getDoc(listingRef);
+      if (!listingSnap.exists()) {
+        throw new Error('Listing not found');
+      }
+      
+      const listingData = listingSnap.data();
+      if (listingData.userId !== user.uid) {
+        throw new Error('You do not have permission to update this listing');
+      }
+
+      // Add updatedAt timestamp
+      const dataToUpdate = {
+        ...updateData,
+        updatedAt: new Date()
+      };
+      
+      // Update the listing
+      await updateDoc(listingRef, dataToUpdate);
+      
+      // Update local state
+      setListings(prevListings => 
+        prevListings.map(listing => 
+          listing.id === listingId 
+            ? { ...listing, ...dataToUpdate } 
+            : listing
+        )
+      );
+
+      return true;
+    } catch (error: any) {
+      console.error('Error updating listing:', error);
+      throw new Error(error.message || 'Error updating listing');
+    }
+  };
   const permanentlyDeleteListing = async (listingId: string) => {
     if (!user) throw new Error('Must be logged in to delete a listing');
 
@@ -122,11 +170,6 @@ export function useListings({ userId, searchQuery, showOnlyActive = false }: Use
   const restoreListing = async (listingId: string) => {
     return updateListingStatus(listingId, 'active');
   };
-  const [listings, setListings] = useState<Listing[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const { user } = useAuth();
-
   const updateListingStatus = async (listingId: string, status: 'active' | 'inactive' | 'archived') => {
     if (!user) throw new Error('Must be logged in to update a listing');
 
@@ -595,6 +638,7 @@ const fetchListings = async () => {
     error, 
     createListing, 
     fetchListing, 
+    updateListing,
     updateListingStatus,
     permanentlyDeleteListing,
     deleteListing,

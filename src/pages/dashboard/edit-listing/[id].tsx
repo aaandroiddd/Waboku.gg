@@ -107,7 +107,7 @@ const EditListingPage = () => {
         }
         
         // Get Firebase services with error handling
-        const { db } = getFirebaseServices();
+        const { db } = await import('@/lib/firebase').then(module => module.getFirebaseServices());
         if (!db) {
           throw new Error('Database not initialized');
         }
@@ -292,7 +292,12 @@ const EditListingPage = () => {
     setIsSubmitting(true);
 
     try {
-      const listingRef = doc(db, 'listings', id as string);
+      // Import the useListings hook and use the updateListing function
+      const { updateListing } = await import('@/hooks/useListings').then(module => {
+        // Create a new instance of the hook
+        return module.useListings();
+      });
+
       const updateData = {
         title: formData.title,
         description: formData.description,
@@ -304,7 +309,6 @@ const EditListingPage = () => {
         isGraded: formData.isGraded,
         quantity: formData.quantity,
         coverImageIndex: formData.coverImageIndex,
-        updatedAt: new Date(),
       };
 
       // Only include grading info if isGraded is true
@@ -315,18 +319,19 @@ const EditListingPage = () => {
         });
       }
 
-      await updateDoc(listingRef, updateData);
+      // Use the updateListing function from the hook
+      await updateListing(id as string, updateData);
 
       toast({
         title: 'Success',
         description: 'Listing updated successfully',
       });
       router.push('/dashboard');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating listing:', error);
       toast({
         title: 'Error',
-        description: 'Failed to update listing',
+        description: error.message || 'Failed to update listing',
         variant: 'destructive',
       });
     } finally {
