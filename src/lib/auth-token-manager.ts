@@ -219,6 +219,68 @@ export const clearStoredAuthData = (): void => {
  * Checks if there are any stale auth tokens or data in localStorage
  * @returns true if stale data was found and cleared, false otherwise
  */
+/**
+ * Gets the current user's auth token with optional force refresh
+ * @param forceRefresh Whether to force a token refresh
+ * @returns The auth token or null if not available
+ */
+export async function getAuthToken(forceRefresh: boolean = false): Promise<string | null> {
+  try {
+    // Check if we're in a browser environment
+    if (typeof window === 'undefined') {
+      console.warn('getAuthToken called in non-browser environment');
+      return null;
+    }
+    
+    // Import Firebase auth dynamically to avoid SSR issues
+    const { getAuth } = await import('firebase/auth');
+    const auth = getAuth();
+    
+    if (!auth) {
+      console.error('Firebase auth not initialized');
+      return null;
+    }
+    
+    const currentUser = auth.currentUser;
+    if (!currentUser) {
+      console.log('No user is currently signed in');
+      return null;
+    }
+    
+    // Add retry logic for token fetch
+    let attempts = 0;
+    const maxAttempts = 3;
+    
+    while (attempts < maxAttempts) {
+      try {
+        const token = await currentUser.getIdToken(forceRefresh);
+        return token;
+      } catch (tokenError: any) {
+        attempts++;
+        console.warn(`Token fetch attempt ${attempts} failed:`, tokenError.message);
+        
+        // If this is a network error, wait and retry
+        if (tokenError.code === 'auth/network-request-failed' && attempts < maxAttempts) {
+          // Exponential backoff: 1s, 2s, 4s
+          const delay = Math.pow(2, attempts - 1) * 1000;
+          console.log(`Waiting ${delay}ms before retry...`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+        } else if (attempts >= maxAttempts) {
+          console.error('Max token fetch attempts reached');
+          return null;
+        } else {
+          throw tokenError;
+        }
+      }
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('Error getting auth token:', error);
+    return null;
+  }
+}
+
 export const checkAndClearStaleAuthData = (): boolean => {
   try {
     if (typeof window !== 'undefined' && window.localStorage) {

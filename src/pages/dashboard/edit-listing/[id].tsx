@@ -106,6 +106,12 @@ const EditListingPage = () => {
           throw new Error('Invalid listing ID format');
         }
         
+        // Get Firebase services with error handling
+        const { db } = getFirebaseServices();
+        if (!db) {
+          throw new Error('Database not initialized');
+        }
+        
         const listingRef = doc(db, 'listings', id as string);
         console.log('Listing reference created for path:', `listings/${id}`);
         
@@ -124,6 +130,10 @@ const EditListingPage = () => {
         }
 
         const listingData = listingDoc.data();
+        if (!listingData) {
+          throw new Error('Listing data is empty');
+        }
+        
         console.log('Raw listing data keys:', Object.keys(listingData));
         
         // Check if the current user owns this listing
@@ -138,51 +148,45 @@ const EditListingPage = () => {
           return;
         }
 
-        // Safely convert Firestore timestamps to Date objects
-        let createdAt = new Date();
-        let expiresAt = new Date();
-        let updatedAt = new Date();
-        
-        try {
-          // Process timestamps with detailed logging
-          console.log('Processing timestamps - createdAt type:', typeof listingData.createdAt);
-          
-          // Check if createdAt exists and is a Firestore timestamp
-          if (listingData.createdAt && typeof listingData.createdAt.toDate === 'function') {
-            createdAt = listingData.createdAt.toDate();
-            console.log('Converted createdAt from Firestore timestamp');
-          } else if (listingData.createdAt) {
-            // Handle if it's already a Date or a timestamp number
-            createdAt = new Date(listingData.createdAt);
-            console.log('Converted createdAt from date/number');
+        // Helper function to safely convert timestamps
+        const convertTimestamp = (timestamp: any): Date => {
+          try {
+            if (!timestamp) return new Date();
+            
+            // Handle Firestore timestamp objects
+            if (timestamp && typeof timestamp.toDate === 'function') {
+              return timestamp.toDate();
+            }
+            
+            // Handle JavaScript Date objects
+            if (timestamp instanceof Date) {
+              return timestamp;
+            }
+            
+            // Handle numeric timestamps (milliseconds since epoch)
+            if (typeof timestamp === 'number') {
+              return new Date(timestamp);
+            }
+            
+            // Handle string timestamps
+            if (typeof timestamp === 'string') {
+              return new Date(timestamp);
+            }
+            
+            // Default fallback
+            return new Date();
+          } catch (error) {
+            console.error('Error converting timestamp:', error, timestamp);
+            return new Date();
           }
-          
-          // Check if expiresAt exists and is a Firestore timestamp
-          console.log('Processing timestamps - expiresAt type:', typeof listingData.expiresAt);
-          if (listingData.expiresAt && typeof listingData.expiresAt.toDate === 'function') {
-            expiresAt = listingData.expiresAt.toDate();
-            console.log('Converted expiresAt from Firestore timestamp');
-          } else if (listingData.expiresAt) {
-            // Handle if it's already a Date or a timestamp number
-            expiresAt = new Date(listingData.expiresAt);
-            console.log('Converted expiresAt from date/number');
-          }
-          
-          // Process updatedAt if it exists
-          if (listingData.updatedAt && typeof listingData.updatedAt.toDate === 'function') {
-            updatedAt = listingData.updatedAt.toDate();
-          } else if (listingData.updatedAt) {
-            updatedAt = new Date(listingData.updatedAt);
-          }
-        } catch (timestampError) {
-          console.error('Error converting timestamps:', timestampError);
-          // Use current date as fallback
-        }
+        };
 
-        // Process numeric values with detailed logging
-        console.log('Processing numeric values - price type:', typeof listingData.price, 'value:', listingData.price);
-        console.log('Processing numeric values - quantity type:', typeof listingData.quantity, 'value:', listingData.quantity);
+        // Safely convert Firestore timestamps to Date objects
+        const createdAt = convertTimestamp(listingData.createdAt);
+        const expiresAt = convertTimestamp(listingData.expiresAt);
+        const updatedAt = convertTimestamp(listingData.updatedAt);
         
+        // Process numeric values with better error handling
         const price = typeof listingData.price === 'number' 
           ? listingData.price 
           : (listingData.price ? parseFloat(String(listingData.price)) : 0);
@@ -251,6 +255,8 @@ const EditListingPage = () => {
             errorMessage = 'Listing could not be found';
           } else if (error.message.includes('network') || error.message.includes('connection')) {
             errorMessage = 'Network error. Please check your connection and try again';
+          } else if (error.message.includes('Database not initialized')) {
+            errorMessage = 'Database connection error. Please try again later';
           }
         }
         
@@ -268,7 +274,7 @@ const EditListingPage = () => {
     };
 
     fetchListing();
-  }, [id, user, router, toast, db]);
+  }, [id, user, router, toast]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
