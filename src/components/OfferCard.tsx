@@ -104,11 +104,11 @@ export function OfferCard({ offer, type, onCounterOffer }: OfferCardProps) {
               <div className="flex flex-col sm:flex-row sm:items-center gap-2">
                 <div>
                   <span className="text-muted-foreground">Listing Price: </span>
-                  <span className="text-amber-400">{formatPrice(safeOffer.listingSnapshot.price)}</span>
+                  <span className="dark:text-amber-400 text-amber-600">{formatPrice(safeOffer.listingSnapshot.price)}</span>
                 </div>
                 <div>
                   <span className="text-muted-foreground">Offer: </span>
-                  <span className="font-semibold text-yellow-300">{formatPrice(safeOffer.amount)}</span>
+                  <span className="font-semibold dark:text-yellow-300 text-yellow-600">{formatPrice(safeOffer.amount)}</span>
                 </div>
               </div>
               <Badge
