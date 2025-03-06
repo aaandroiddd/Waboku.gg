@@ -430,7 +430,12 @@ const fetchListings = async () => {
             id: doc.id,
             ...data,
             createdAt: data.createdAt?.toDate() || new Date(),
-            expiresAt: data.expiresAt?.toDate() || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+            expiresAt: data.expiresAt?.toDate() || (() => {
+              // Create a default expiration date if none exists
+              const defaultExpiry = new Date();
+              defaultExpiry.setDate(defaultExpiry.getDate() + 30); // 30 days from now
+              return defaultExpiry;
+            })(),
             price: Number(data.price) || 0,
             imageUrls: Array.isArray(data.imageUrls) ? data.imageUrls : [],
             isGraded: Boolean(data.isGraded),
