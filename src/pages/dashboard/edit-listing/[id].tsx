@@ -3,6 +3,7 @@ import { useRouter } from 'next/router';
 import dynamic from 'next/dynamic';
 import { validateTextContent } from "@/util/string";
 import { useAuth } from '@/contexts/AuthContext';
+import { useListings } from '@/hooks/useListings';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -12,8 +13,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from "@/components/ui/switch";
 import { useToast } from '@/components/ui/use-toast';
-import { doc, getDoc, updateDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { doc, getDoc } from 'firebase/firestore';
 import { Listing } from '@/types/database';
 import { LocationInput } from "@/components/LocationInput";
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
@@ -276,6 +276,9 @@ const EditListingPage = () => {
     fetchListing();
   }, [id, user, router, toast]);
 
+  // Use the useListings hook at the component level
+  const { updateListing } = useListings();
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!id || !user) return;
@@ -292,12 +295,6 @@ const EditListingPage = () => {
     setIsSubmitting(true);
 
     try {
-      // Import the useListings hook and use the updateListing function
-      const { updateListing } = await import('@/hooks/useListings').then(module => {
-        // Create a new instance of the hook
-        return module.useListings();
-      });
-
       const updateData = {
         title: formData.title,
         description: formData.description,
