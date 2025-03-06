@@ -92,14 +92,28 @@ const EditListingPage = () => {
 
   useEffect(() => {
     const fetchListing = async () => {
-      if (!id || !user) return;
+      if (!id || !user) {
+        console.log('Missing ID or user, cannot fetch listing');
+        setLoading(false);
+        return;
+      }
 
       try {
         console.log('Fetching listing with ID:', id);
-        const listingDoc = await getDoc(doc(db, 'listings', id as string));
+        
+        // Validate ID format before querying
+        if (typeof id !== 'string' || id.trim() === '') {
+          throw new Error('Invalid listing ID format');
+        }
+        
+        const listingRef = doc(db, 'listings', id as string);
+        console.log('Listing reference created for path:', `listings/${id}`);
+        
+        const listingDoc = await getDoc(listingRef);
+        console.log('Listing document fetch result - exists:', listingDoc.exists());
         
         if (!listingDoc.exists()) {
-          console.error('Listing document does not exist');
+          console.error('Listing document does not exist for ID:', id);
           toast({
             title: 'Error',
             description: 'Listing not found',
@@ -110,11 +124,11 @@ const EditListingPage = () => {
         }
 
         const listingData = listingDoc.data();
-        console.log('Raw listing data:', listingData);
+        console.log('Raw listing data keys:', Object.keys(listingData));
         
         // Check if the current user owns this listing
         if (listingData.userId !== user.uid) {
-          console.error('User does not own this listing');
+          console.error('User does not own this listing. Listing user:', listingData.userId, 'Current user:', user.uid);
           toast({
             title: 'Error',
             description: 'You do not have permission to edit this listing',
@@ -127,27 +141,63 @@ const EditListingPage = () => {
         // Safely convert Firestore timestamps to Date objects
         let createdAt = new Date();
         let expiresAt = new Date();
+        let updatedAt = new Date();
         
         try {
+          // Process timestamps with detailed logging
+          console.log('Processing timestamps - createdAt type:', typeof listingData.createdAt);
+          
           // Check if createdAt exists and is a Firestore timestamp
           if (listingData.createdAt && typeof listingData.createdAt.toDate === 'function') {
             createdAt = listingData.createdAt.toDate();
+            console.log('Converted createdAt from Firestore timestamp');
           } else if (listingData.createdAt) {
             // Handle if it's already a Date or a timestamp number
             createdAt = new Date(listingData.createdAt);
+            console.log('Converted createdAt from date/number');
           }
           
           // Check if expiresAt exists and is a Firestore timestamp
+          console.log('Processing timestamps - expiresAt type:', typeof listingData.expiresAt);
           if (listingData.expiresAt && typeof listingData.expiresAt.toDate === 'function') {
             expiresAt = listingData.expiresAt.toDate();
+            console.log('Converted expiresAt from Firestore timestamp');
           } else if (listingData.expiresAt) {
             // Handle if it's already a Date or a timestamp number
             expiresAt = new Date(listingData.expiresAt);
+            console.log('Converted expiresAt from date/number');
+          }
+          
+          // Process updatedAt if it exists
+          if (listingData.updatedAt && typeof listingData.updatedAt.toDate === 'function') {
+            updatedAt = listingData.updatedAt.toDate();
+          } else if (listingData.updatedAt) {
+            updatedAt = new Date(listingData.updatedAt);
           }
         } catch (timestampError) {
           console.error('Error converting timestamps:', timestampError);
           // Use current date as fallback
         }
+
+        // Process numeric values with detailed logging
+        console.log('Processing numeric values - price type:', typeof listingData.price, 'value:', listingData.price);
+        console.log('Processing numeric values - quantity type:', typeof listingData.quantity, 'value:', listingData.quantity);
+        
+        const price = typeof listingData.price === 'number' 
+          ? listingData.price 
+          : (listingData.price ? parseFloat(String(listingData.price)) : 0);
+          
+        const quantity = typeof listingData.quantity === 'number' 
+          ? listingData.quantity 
+          : (listingData.quantity ? parseInt(String(listingData.quantity), 10) : 1);
+          
+        const gradeLevel = listingData.gradeLevel 
+          ? (typeof listingData.gradeLevel === 'number' 
+              ? listingData.gradeLevel 
+              : parseFloat(String(listingData.gradeLevel)))
+          : undefined;
+          
+        console.log('Processed numeric values - price:', price, 'quantity:', quantity, 'gradeLevel:', gradeLevel);
 
         // Create a proper listing object with the ID
         const listing = {
@@ -155,15 +205,22 @@ const EditListingPage = () => {
           ...listingData,
           createdAt,
           expiresAt,
-          // Ensure numeric values are properly typed
-          price: typeof listingData.price === 'number' ? listingData.price : parseFloat(listingData.price) || 0,
-          quantity: typeof listingData.quantity === 'number' ? listingData.quantity : parseInt(listingData.quantity) || 1,
-          gradeLevel: listingData.gradeLevel ? parseFloat(listingData.gradeLevel) : undefined,
+          updatedAt,
+          price,
+          quantity,
+          gradeLevel,
+          // Ensure arrays are properly handled
+          imageUrls: Array.isArray(listingData.imageUrls) ? listingData.imageUrls : [],
+          // Ensure boolean values are properly typed
+          isGraded: Boolean(listingData.isGraded),
+          // Ensure numeric index is properly typed
+          coverImageIndex: typeof listingData.coverImageIndex === 'number' ? listingData.coverImageIndex : 0,
         } as Listing;
 
-        console.log('Processed listing object:', listing);
+        console.log('Processed listing object ID:', listing.id);
         setListing(listing);
         
+        // Set form data with proper type handling and fallbacks
         setFormData({
           title: listing.title || '',
           description: listing.description || '',
@@ -179,20 +236,39 @@ const EditListingPage = () => {
           imageUrls: Array.isArray(listing.imageUrls) ? listing.imageUrls : [],
           coverImageIndex: typeof listing.coverImageIndex === 'number' ? listing.coverImageIndex : 0,
         });
+        
+        console.log('Form data initialized successfully');
       } catch (error) {
         console.error('Error fetching listing:', error);
+        // Provide more detailed error message based on the error type
+        let errorMessage = 'Failed to fetch listing details';
+        
+        if (error instanceof Error) {
+          console.error('Error details:', error.message);
+          if (error.message.includes('permission-denied') || error.message.includes('Permission')) {
+            errorMessage = 'You do not have permission to access this listing';
+          } else if (error.message.includes('not-found') || error.message.includes('exist')) {
+            errorMessage = 'Listing could not be found';
+          } else if (error.message.includes('network') || error.message.includes('connection')) {
+            errorMessage = 'Network error. Please check your connection and try again';
+          }
+        }
+        
         toast({
           title: 'Error',
-          description: 'Failed to fetch listing details',
+          description: errorMessage,
           variant: 'destructive',
         });
+        
+        // Redirect to dashboard on error
+        router.push('/dashboard');
       } finally {
         setLoading(false);
       }
     };
 
     fetchListing();
-  }, [id, user, router, toast]);
+  }, [id, user, router, toast, db]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

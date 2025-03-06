@@ -198,9 +198,18 @@ export function useListings({ userId, searchQuery, showOnlyActive = false }: Use
 
   const fetchListing = async (listingId: string): Promise<Listing> => {
     try {
+      console.log('Fetching listing with ID:', listingId);
+      
+      if (!listingId || typeof listingId !== 'string' || listingId.trim() === '') {
+        throw new Error('Invalid listing ID');
+      }
+      
       const { db } = await getFirebaseServices();
       const listingRef = doc(db, 'listings', listingId);
+      console.log('Created listing reference for path:', `listings/${listingId}`);
+      
       const listingSnap = await getDoc(listingRef);
+      console.log('Listing document fetch result - exists:', listingSnap.exists());
       
       if (!listingSnap.exists()) {
         throw new Error('Listing not found');
@@ -211,18 +220,90 @@ export function useListings({ userId, searchQuery, showOnlyActive = false }: Use
         throw new Error('Listing data is empty');
       }
       
-      // Check if the listing is archived
-      if (data.status === 'archived' || data.archivedAt) {
-        throw new Error('This listing has been archived and is no longer available');
+      console.log('Raw listing data keys:', Object.keys(data));
+      
+      // Process timestamps with detailed logging
+      let createdAt = new Date();
+      let expiresAt = new Date();
+      let updatedAt = new Date();
+      
+      try {
+        console.log('Processing timestamps - createdAt type:', typeof data.createdAt);
+        
+        // Check if createdAt exists and is a Firestore timestamp
+        if (data.createdAt && typeof data.createdAt.toDate === 'function') {
+          createdAt = data.createdAt.toDate();
+          console.log('Converted createdAt from Firestore timestamp');
+        } else if (data.createdAt) {
+          // Handle if it's already a Date or a timestamp number
+          createdAt = new Date(data.createdAt);
+          console.log('Converted createdAt from date/number');
+        }
+        
+        // Check if expiresAt exists and is a Firestore timestamp
+        console.log('Processing timestamps - expiresAt type:', typeof data.expiresAt);
+        if (data.expiresAt && typeof data.expiresAt.toDate === 'function') {
+          expiresAt = data.expiresAt.toDate();
+          console.log('Converted expiresAt from Firestore timestamp');
+        } else if (data.expiresAt) {
+          // Handle if it's already a Date or a timestamp number
+          expiresAt = new Date(data.expiresAt);
+          console.log('Converted expiresAt from date/number');
+        } else {
+          // Create a default expiration date if none exists
+          expiresAt = new Date();
+          expiresAt.setDate(expiresAt.getDate() + 30); // 30 days from now
+          console.log('Created default expiresAt');
+        }
+        
+        // Process updatedAt if it exists
+        if (data.updatedAt && typeof data.updatedAt.toDate === 'function') {
+          updatedAt = data.updatedAt.toDate();
+        } else if (data.updatedAt) {
+          updatedAt = new Date(data.updatedAt);
+        }
+      } catch (timestampError) {
+        console.error('Error converting timestamps:', timestampError);
+        // Use current date as fallback
       }
-      return {
+      
+      // Process numeric values with detailed logging
+      console.log('Processing numeric values - price type:', typeof data.price, 'value:', data.price);
+      console.log('Processing numeric values - quantity type:', typeof data.quantity, 'value:', data.quantity);
+      
+      const price = typeof data.price === 'number' 
+        ? data.price 
+        : (data.price ? parseFloat(String(data.price)) : 0);
+        
+      const quantity = typeof data.quantity === 'number' 
+        ? data.quantity 
+        : (data.quantity ? parseInt(String(data.quantity), 10) : 1);
+        
+      const gradeLevel = data.gradeLevel 
+        ? (typeof data.gradeLevel === 'number' 
+            ? data.gradeLevel 
+            : parseFloat(String(data.gradeLevel)))
+        : undefined;
+        
+      console.log('Processed numeric values - price:', price, 'quantity:', quantity, 'gradeLevel:', gradeLevel);
+      
+      // Create a proper listing object with the ID
+      const listing = {
         id: listingSnap.id,
         ...data,
-        createdAt: data.createdAt?.toDate() || new Date(),
-        price: Number(data.price) || 0,
+        createdAt,
+        expiresAt,
+        updatedAt,
+        price,
+        quantity,
+        gradeLevel,
+        // Ensure arrays are properly handled
         imageUrls: Array.isArray(data.imageUrls) ? data.imageUrls : [],
+        // Ensure boolean values are properly typed
         isGraded: Boolean(data.isGraded),
-        gradeLevel: data.gradeLevel ? Number(data.gradeLevel) : undefined,
+        // Ensure numeric index is properly typed
+        coverImageIndex: typeof data.coverImageIndex === 'number' ? data.coverImageIndex : 0,
+        // Ensure string values have fallbacks
         status: data.status || 'active',
         condition: data.condition || 'Not specified',
         game: data.game || 'Not specified',
@@ -230,6 +311,9 @@ export function useListings({ userId, searchQuery, showOnlyActive = false }: Use
         state: data.state || 'Unknown',
         gradingCompany: data.gradingCompany || undefined
       } as Listing;
+      
+      console.log('Processed listing object ID:', listing.id);
+      return listing;
     } catch (error: any) {
       console.error('Error fetching listing:', error);
       throw new Error(error.message || 'Error fetching listing');
