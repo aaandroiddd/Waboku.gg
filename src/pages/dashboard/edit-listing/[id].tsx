@@ -58,7 +58,7 @@ const EditListingPage = () => {
   const validateForm = () => {
     const newErrors: typeof errors = {};
 
-    if (!formData.city || !formData.state) {
+    if (!formData.city) {
       newErrors.location = "Location is required";
     }
 

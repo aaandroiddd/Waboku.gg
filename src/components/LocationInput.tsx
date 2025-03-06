@@ -3,9 +3,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Script from 'next/script';
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { ReloadIcon } from "@radix-ui/react-icons";
+import { Textarea } from "@/components/ui/textarea";
 
 interface LocationInputProps {
   onLocationSelect?: (city: string, state: string) => void;
@@ -24,23 +24,6 @@ declare global {
   }
 }
 
-// US states for fallback mode
-const US_STATES = [
-  ['AL', 'Alabama'], ['AK', 'Alaska'], ['AZ', 'Arizona'], ['AR', 'Arkansas'],
-  ['CA', 'California'], ['CO', 'Colorado'], ['CT', 'Connecticut'], ['DE', 'Delaware'],
-  ['FL', 'Florida'], ['GA', 'Georgia'], ['HI', 'Hawaii'], ['ID', 'Idaho'],
-  ['IL', 'Illinois'], ['IN', 'Indiana'], ['IA', 'Iowa'], ['KS', 'Kansas'],
-  ['KY', 'Kentucky'], ['LA', 'Louisiana'], ['ME', 'Maine'], ['MD', 'Maryland'],
-  ['MA', 'Massachusetts'], ['MI', 'Michigan'], ['MN', 'Minnesota'], ['MS', 'Mississippi'],
-  ['MO', 'Missouri'], ['MT', 'Montana'], ['NE', 'Nebraska'], ['NV', 'Nevada'],
-  ['NH', 'New Hampshire'], ['NJ', 'New Jersey'], ['NM', 'New Mexico'], ['NY', 'New York'],
-  ['NC', 'North Carolina'], ['ND', 'North Dakota'], ['OH', 'Ohio'], ['OK', 'Oklahoma'],
-  ['OR', 'Oregon'], ['PA', 'Pennsylvania'], ['RI', 'Rhode Island'], ['SC', 'South Carolina'],
-  ['SD', 'South Dakota'], ['TN', 'Tennessee'], ['TX', 'Texas'], ['UT', 'Utah'],
-  ['VT', 'Vermont'], ['VA', 'Virginia'], ['WA', 'Washington'], ['WV', 'West Virginia'],
-  ['WI', 'Wisconsin'], ['WY', 'Wyoming']
-];
-
 export function LocationInput({ 
   onLocationSelect, 
   onChange, 
@@ -48,14 +31,13 @@ export function LocationInput({
   initialCity, 
   initialState, 
   error, 
-  placeholder = "Search for your city..." 
+  placeholder = "Search for your location..." 
 }: LocationInputProps) {
-  const [searchValue, setSearchValue] = useState(value || (initialCity ? `${initialCity}, ${initialState}` : ''));
+  const [searchValue, setSearchValue] = useState(value || (initialCity && initialState ? `${initialCity}, ${initialState}` : ''));
   const [isGoogleLoaded, setIsGoogleLoaded] = useState(false);
   const [googleLoadError, setGoogleLoadError] = useState(false);
   const [useFallback, setUseFallback] = useState(false);
-  const [fallbackCity, setFallbackCity] = useState(initialCity || '');
-  const [fallbackState, setFallbackState] = useState(initialState || '');
+  const [manualLocation, setManualLocation] = useState(initialCity && initialState ? `${initialCity}, ${initialState}` : '');
   const autocompleteRef = useRef<any>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -70,7 +52,7 @@ export function LocationInput({
       if (inputRef.current && window.google) {
         const options = {
           types: ['(cities)'],
-          componentRestrictions: { country: 'us' },
+          // Removed country restriction to allow global locations
           fields: ['address_components', 'formatted_address', 'geometry', 'name'],
         };
 
@@ -85,6 +67,7 @@ export function LocationInput({
           if (place.address_components) {
             let city = '';
             let state = '';
+            let country = '';
             
             for (const component of place.address_components) {
               if (component.types.includes('locality')) {
@@ -93,15 +76,27 @@ export function LocationInput({
               if (component.types.includes('administrative_area_level_1')) {
                 state = component.short_name;
               }
+              if (component.types.includes('country')) {
+                country = component.long_name;
+              }
             }
 
+            // Create a location string that includes country information when not in the US
+            let locationString = '';
             if (city && state) {
-              const locationString = `${city}, ${state}`;
+              locationString = `${city}, ${state}`;
+            } else if (city && country) {
+              locationString = `${city}, ${country}`;
+            } else if (place.formatted_address) {
+              locationString = place.formatted_address;
+            }
+
+            if (locationString) {
               setSearchValue(locationString);
               
-              // Call the appropriate callback based on which was provided
+              // For backward compatibility, still pass city and state to onLocationSelect
               if (onLocationSelect) {
-                onLocationSelect(city, state);
+                onLocationSelect(city || locationString, state || country || '');
               }
               if (onChange) {
                 onChange(locationString);
@@ -117,16 +112,20 @@ export function LocationInput({
   };
 
   const handleFallbackSubmit = () => {
-    if (fallbackCity && fallbackState) {
-      const locationString = `${fallbackCity}, ${fallbackState}`;
-      setSearchValue(locationString);
+    if (manualLocation.trim()) {
+      setSearchValue(manualLocation);
+      
+      // Extract city and state-like information from manual input
+      const parts = manualLocation.split(',').map(part => part.trim());
+      const city = parts[0] || '';
+      const state = parts.length > 1 ? parts[1] : '';
       
       // Call the appropriate callback based on which was provided
       if (onLocationSelect) {
-        onLocationSelect(fallbackCity, fallbackState);
+        onLocationSelect(city, state);
       }
       if (onChange) {
-        onChange(locationString);
+        onChange(manualLocation);
       }
     }
   };
@@ -191,36 +190,22 @@ export function LocationInput({
         )}
         
         <div className="space-y-2">
-          <Label>City *</Label>
-          <Input
-            type="text"
-            value={fallbackCity}
-            onChange={(e) => setFallbackCity(e.target.value)}
-            placeholder="Enter city name"
+          <Label>Enter your location *</Label>
+          <Textarea
+            value={manualLocation}
+            onChange={(e) => setManualLocation(e.target.value)}
+            placeholder="Enter your full location (e.g., City, Region, Country)"
             className={error ? "border-red-500" : ""}
           />
-        </div>
-
-        <div className="space-y-2">
-          <Label>State *</Label>
-          <Select value={fallbackState} onValueChange={setFallbackState}>
-            <SelectTrigger className={error ? "border-red-500" : ""}>
-              <SelectValue placeholder="Select state" />
-            </SelectTrigger>
-            <SelectContent>
-              {US_STATES.map(([code, name]) => (
-                <SelectItem key={code} value={code}>
-                  {name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <p className="text-sm text-muted-foreground">
+            Please enter your location in the format: City, Region/State, Country (if applicable)
+          </p>
         </div>
 
         <div className="flex justify-between items-center gap-2">
           <Button 
             onClick={handleFallbackSubmit}
-            disabled={!fallbackCity || !fallbackState}
+            disabled={!manualLocation.trim()}
           >
             Set Location
           </Button>
@@ -230,7 +215,7 @@ export function LocationInput({
               variant="outline"
               onClick={() => {
                 setUseFallback(false);
-                setSearchValue(fallbackCity && fallbackState ? `${fallbackCity}, ${fallbackState}` : '');
+                setSearchValue(manualLocation || '');
               }}
             >
               Switch to search
@@ -269,6 +254,9 @@ export function LocationInput({
           placeholder={placeholder}
           className={`h-12 ${error ? "border-red-500" : ""}`}
         />
+        <p className="text-sm text-muted-foreground">
+          Search for your location worldwide (city, region, country)
+        </p>
         {error && <p className="text-sm text-red-500">{error}</p>}
         <div className="flex justify-between">
           <Button 

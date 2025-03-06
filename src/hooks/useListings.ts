@@ -447,7 +447,9 @@ export function useListings({ userId, searchQuery, showOnlyActive = false }: Use
         isGraded: Boolean(cleanListingData.isGraded),
         ...(cardReference ? { cardReference } : {}),
         // Add location data if available
-        ...(latitude !== null && longitude !== null ? { latitude, longitude } : {})
+        ...(latitude !== null && longitude !== null ? { latitude, longitude } : {}),
+        // Ensure state is set even if empty for backward compatibility
+        state: cleanListingData.state || ''
       };
 
       // Only add grading fields if the card is graded
