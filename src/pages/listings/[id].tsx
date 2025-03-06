@@ -94,6 +94,10 @@ export default function ListingPage() {
 
         const data = listingDoc.data();
         
+        if (!data) {
+          throw new Error('Listing data is empty');
+        }
+        
         // Check if the listing is archived or expired
         if (data.status === 'archived' || data.archivedAt) {
           throw new Error('This listing has been archived and is no longer available');
@@ -102,11 +106,23 @@ export default function ListingPage() {
         // Check if the listing has expired based on creation date
         const now = Date.now();
         const FORTY_EIGHT_HOURS = 48 * 60 * 60 * 1000; // 48 hours in milliseconds
-        const createdAt = data.createdAt?.toDate().getTime() || 0;
+        const createdAt = data.createdAt && typeof data.createdAt.toDate === 'function' 
+          ? data.createdAt.toDate().getTime() 
+          : data.createdAt instanceof Date 
+            ? data.createdAt.getTime() 
+            : 0;
         
         if (!data.isPremium && (now - createdAt) > FORTY_EIGHT_HOURS) {
           throw new Error('This listing has expired and is no longer available');
         }
+        
+        // Safely convert Firestore timestamp to Date
+        const convertTimestamp = (timestamp: any): Date => {
+          if (!timestamp) return new Date();
+          if (typeof timestamp.toDate === 'function') return timestamp.toDate();
+          if (timestamp instanceof Date) return timestamp;
+          return new Date();
+        };
         
         const listingData: Listing = {
           id: listingDoc.id,
@@ -119,7 +135,7 @@ export default function ListingPage() {
           coverImageIndex: data.coverImageIndex || 0,
           userId: data.userId || '',
           username: data.username || 'Unknown User',
-          createdAt: data.createdAt?.toDate() || new Date(),
+          createdAt: convertTimestamp(data.createdAt),
           status: data.status || 'active',
           isGraded: Boolean(data.isGraded),
           gradeLevel: data.gradeLevel ? Number(data.gradeLevel) : undefined,
@@ -128,7 +144,8 @@ export default function ListingPage() {
           state: data.state || 'Unknown',
           favoriteCount: typeof data.favoriteCount === 'number' ? data.favoriteCount : 0,
           quantity: data.quantity ? Number(data.quantity) : undefined,
-          cardName: data.cardName || undefined
+          cardName: data.cardName || undefined,
+          location: data.location || undefined
         };
 
         if (isMounted) {
