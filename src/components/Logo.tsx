@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 
@@ -8,7 +8,7 @@ interface LogoProps {
   alwaysShowFull?: boolean;
 }
 
-export const Logo: React.FC<LogoProps> = ({ className, href = '/', alwaysShowFull = false }) => {
+export const Logo = memo(({ className, href = '/', alwaysShowFull = false }: LogoProps) => {
   const router = useRouter();
   const isDashboard = router.pathname.startsWith('/dashboard');
 
@@ -43,4 +43,6 @@ export const Logo: React.FC<LogoProps> = ({ className, href = '/', alwaysShowFul
   ) : (
     LogoContent
   );
-};
+});
+
+Logo.displayName = 'Logo';

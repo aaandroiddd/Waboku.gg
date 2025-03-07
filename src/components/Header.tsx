@@ -11,9 +11,8 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { Menu, LayoutDashboard, Heart, MessageSquare, Settings, Store, LogOut, RefreshCw } from "lucide-react";
+import { Menu, LayoutDashboard, Heart, MessageSquare, Settings, Store, LogOut } from "lucide-react";
 import { useState } from "react";
-import { motion } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
 import { SignOutDialog } from "./SignOutDialog";
 
@@ -41,41 +40,23 @@ export default function Header() {
   };
 
   return (
-    <motion.header 
-      initial={{ y: -100 }}
-      animate={{ y: 0 }}
-      transition={{ type: "spring", stiffness: 100, damping: 20 }}
-      className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60"
-    >
+    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto px-4 h-12 flex items-center justify-between gap-4">
-        <motion.div
-          whileHover={{ scale: 1.05 }}
-          transition={{ type: "spring", stiffness: 400, damping: 10 }}
-        >
+        <div>
           <Link href="/" className="flex items-center">
             <Logo />
           </Link>
-        </motion.div>
+        </div>
 
         {/* Desktop Navigation */}
         <nav className="hidden md:flex items-center space-x-4">
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.2 }}
-            className="flex items-center"
-          >
+          <div className="flex items-center">
             <ThemeToggle />
-          </motion.div>
+          </div>
           {!isAuthPage && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.3 }}
-              className="flex items-center"
-            >
+            <div className="flex items-center">
               <AuthNav />
-            </motion.div>
+            </div>
           )}
         </nav>
 
@@ -187,6 +168,6 @@ export default function Header() {
         onConfirm={handleSignOut}
         onCancel={() => setShowSignOutDialog(false)}
       />
-    </motion.header>
+    </header>
   );
 }

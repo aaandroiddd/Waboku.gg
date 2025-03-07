@@ -11,6 +11,7 @@ import { useEffect, useState, memo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAccount } from '@/contexts/AccountContext';
 import { AnimatePresence } from 'framer-motion';
+import Head from 'next/head';
 
 const LoadingScreen = dynamic(() => import('@/components/LoadingScreen').then(mod => ({ default: mod.LoadingScreen })), {
   ssr: false
@@ -85,24 +86,38 @@ export default function App({ Component, pageProps }: AppProps) {
   }, [router]);
 
   return (
-    <ThemeProvider
-      attribute="class"
-      defaultTheme="system"
-      enableSystem
-      disableTransitionOnChange
-    >
-      <AuthProvider>
-        <AccountProvider>
-          <RouteGuard requireAuth={requireAuth}>
-            <MainContent 
-              Component={Component}
-              pageProps={pageProps}
-              pathname={router.pathname}
-              isLoading={isLoading}
-            />
-          </RouteGuard>
-        </AccountProvider>
-      </AuthProvider>
-    </ThemeProvider>
-  );
+    <>
+      <Head>
+        {/* Preload critical assets */}
+        <link rel="preload" href="/images/tcg-bg.svg" as="image" />
+        
+        {/* Font optimization */}
+        <link
+          rel="preload"
+          href="/fonts/inter-var.woff2"
+          as="font"
+          type="font/woff2"
+          crossOrigin="anonymous"
+        />
+      </Head>
+      <ThemeProvider
+        attribute="class"
+        defaultTheme="system"
+        enableSystem
+        disableTransitionOnChange
+      >
+        <AuthProvider>
+          <AccountProvider>
+            <RouteGuard requireAuth={requireAuth}>
+              <MainContent 
+                Component={Component}
+                pageProps={pageProps}
+                pathname={router.pathname}
+                isLoading={isLoading}
+              />
+            </RouteGuard>
+          </AccountProvider>
+        </AuthProvider>
+      </ThemeProvider>
+    </>);
 }

@@ -22,19 +22,8 @@
   background-size: cover;
   background-position: center;
   opacity: 0.1;
-  animation: pulse 8s ease-in-out infinite;
+  will-change: opacity;
   pointer-events: none;
-}
-
-@keyframes pulse {
-  0%, 100% {
-    opacity: 0.1;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 0.15;
-    transform: scale(1.02);
-  }
 }
 
 .dark .hero-background {
