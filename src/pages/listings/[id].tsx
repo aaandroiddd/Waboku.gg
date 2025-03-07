@@ -692,7 +692,7 @@ export default function ListingPage() {
                                 <Button
                                   variant="outline"
                                   size="icon"
-                                  onClick={zoomOut}
+                                  onClick={() => zoomOut()}
                                   className="h-8 w-8"
                                 >
                                   <Minus className="h-4 w-4" />
@@ -700,7 +700,7 @@ export default function ListingPage() {
                                 <Button
                                   variant="outline"
                                   size="icon"
-                                  onClick={zoomIn}
+                                  onClick={() => zoomIn()}
                                   className="h-8 w-8"
                                 >
                                   <Plus className="h-4 w-4" />
@@ -708,7 +708,7 @@ export default function ListingPage() {
                                 <Button
                                   variant="outline"
                                   size="icon"
-                                  onClick={resetTransform}
+                                  onClick={() => resetTransform()}
                                   className="h-8 w-8"
                                 >
                                   <RotateCw className="h-4 w-4" />
