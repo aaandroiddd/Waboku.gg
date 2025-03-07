@@ -12,12 +12,13 @@ export default async function handler(
   res: NextApiResponse
 ) {
   const requestId = Math.random().toString(36).substring(2, 15);
-  console.log(`[${requestId}] Trending searches API called at:`, new Date().toISOString());
+  console.info(`[${requestId}] Trending searches API called at:`, new Date().toISOString());
   
   // Add CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.setHeader('Content-Type', 'application/json');
   
   // Set a longer timeout for the response
   res.setHeader('Connection', 'keep-alive');
@@ -25,7 +26,7 @@ export default async function handler(
   
   // Handle preflight request
   if (req.method === 'OPTIONS') {
-    console.log(`[${requestId}] Handling OPTIONS request`);
+    console.info(`[${requestId}] Handling OPTIONS request`);
     res.status(200).end();
     return;
   }
@@ -37,6 +38,8 @@ export default async function handler(
       message: 'Only GET requests are supported'
     });
   }
+  
+  console.info(`[${requestId}] Processing GET request for trending searches`);
 
   // Check if we have a valid cache
   const now = Date.now();

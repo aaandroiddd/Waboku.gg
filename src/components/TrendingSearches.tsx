@@ -52,13 +52,20 @@ export function TrendingSearches() {
   useEffect(() => {
     if (error && refreshAttempt < 1) {
       const timer = setTimeout(() => {
-        console.log('Auto-retrying trending searches fetch due to error');
+        console.log('Auto-retrying trending searches fetch due to error:', error);
         handleRefresh();
       }, 3000);
       
       return () => clearTimeout(timer);
     }
   }, [error, refreshAttempt]);
+  
+  // Log errors for debugging
+  useEffect(() => {
+    if (error) {
+      console.error('TrendingSearches component encountered an error:', error);
+    }
+  }, [error]);
 
   // Common container with fixed height to prevent layout shifts
   return (

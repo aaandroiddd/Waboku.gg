@@ -22,12 +22,22 @@ export function useTrendingSearches() {
       const timeoutId = setTimeout(() => {
         console.log('Trending searches request timeout reached, aborting');
         controller.abort();
-      }, 10000); // Increased to 10 second timeout
+      }, 10000); // 10 second timeout
 
       console.log('Fetching trending searches...');
-      const response = await fetch('/api/trending-searches', {
+      
+      // Use absolute URL with origin to avoid path resolution issues
+      const apiUrl = typeof window !== 'undefined' 
+        ? `${window.location.origin}/api/trending-searches` 
+        : '/api/trending-searches';
+      
+      console.log(`Using API URL: ${apiUrl}`);
+      
+      const response = await fetch(apiUrl, {
         signal: controller.signal,
+        method: 'GET',
         headers: {
+          'Accept': 'application/json',
           'Cache-Control': 'no-cache',
           'Pragma': 'no-cache'
         }
@@ -37,21 +47,38 @@ export function useTrendingSearches() {
       console.log('Trending searches response received:', response.status);
       
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ message: 'Unknown error occurred' }));
-        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+        let errorMessage = `HTTP error! status: ${response.status}`;
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorMessage;
+        } catch (parseError) {
+          console.error('Failed to parse error response:', parseError);
+        }
+        throw new Error(errorMessage);
       }
       
-      const data = await response.json();
-      console.log('Trending searches data parsed successfully');
+      let data;
+      try {
+        data = await response.json();
+        console.log('Trending searches data parsed successfully');
+      } catch (parseError) {
+        console.error('Failed to parse response JSON:', parseError);
+        throw new Error('Invalid JSON response from trending searches API');
+      }
       
       if (!Array.isArray(data)) {
-        throw new Error('Invalid response format');
+        console.error('Invalid data format received:', data);
+        throw new Error('Invalid response format - expected an array');
       }
 
       setError(null);
       return data;
     } catch (error: any) {
-      console.error(`Trending searches attempt failed. Retries left: ${retries}`, error);
+      console.error(`Trending searches attempt failed. Retries left: ${retries}`, {
+        message: error.message,
+        name: error.name,
+        stack: error.stack
+      });
       
       if (error.name === 'AbortError') {
         console.error('Trending searches request was aborted due to timeout');
