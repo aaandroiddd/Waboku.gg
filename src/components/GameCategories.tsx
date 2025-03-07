@@ -14,7 +14,7 @@ export const GAME_MAPPING = {
   "Pokemon": "pokemon",
   "Magic: The Gathering": "mtg",
   "Yu-Gi-Oh!": "yugioh",
-  "One Piece Card Game": "onepiece",
+  "One Piece": "onepiece",
   "Disney Lorcana": "lorcana",
   "Digimon": "digimon",
 } as const
@@ -38,7 +38,7 @@ export const GAME_NAME_MAPPING = {
 }
 
 export const OTHER_GAME_MAPPING = {
-  "Dragon Ball Super Card Game": "dbs",
+  "Dragon Ball Super": "dbs",
   "Flesh and Blood": "flesh-and-blood",
   "Star Wars: Unlimited": "star-wars",
   "Union Arena": "union-arena",
