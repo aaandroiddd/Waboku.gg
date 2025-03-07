@@ -547,7 +547,15 @@ export default function ListingPage() {
                   
                   <div>
                     <h2 className="text-lg font-semibold mb-2">Description</h2>
-                    <p className="text-muted-foreground whitespace-pre-wrap text-sm md:text-base">{listing.description}</p>
+                    {/* Dynamically import MarkdownContent to avoid SSR issues */}
+                    {(() => {
+                      const MarkdownContent = dynamic(() => import('@/components/MarkdownContent').then(mod => mod.MarkdownContent), {
+                        ssr: false,
+                        loading: () => <p className="text-muted-foreground whitespace-pre-wrap text-sm md:text-base">{listing.description}</p>
+                      });
+                      
+                      return <MarkdownContent content={listing.description} className="text-muted-foreground text-sm md:text-base" />;
+                    })()}
                   </div>
 
                   {listing.quantity && parseInt(listing.quantity) > 0 && (

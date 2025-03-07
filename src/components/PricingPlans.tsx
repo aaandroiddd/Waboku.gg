@@ -473,6 +473,10 @@ export function PricingPlans() {
             <Check className="w-4 h-4 text-green-500" />
             <span>Ad-free experience</span>
           </div>
+          <div className="flex items-center gap-2">
+            <Check className="w-4 h-4 text-green-500" />
+            <span>Markdown formatting in listings</span>
+          </div>
         </div>
         <Button 
           className="w-full" 

@@ -22,6 +22,8 @@ import { HelpCircle } from "lucide-react";
 import { LocationInput } from "@/components/LocationInput";
 import { validateTextContent } from "@/util/string";
 import CardSearchInput from "@/components/CardSearchInput";
+import { MarkdownEditor } from "@/components/MarkdownEditor";
+import { useAccount } from "@/contexts/AccountContext";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const MAX_TITLE_LENGTH = 100;
@@ -287,23 +289,35 @@ const CreateListingPage = () => {
 
                 <div className="space-y-2">
                   <Label htmlFor="description">Description</Label>
-                  <Textarea
-                    id="description"
-                    value={formData.description}
-                    maxLength={MAX_DESCRIPTION_LENGTH}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    placeholder="Provide detailed information about your card"
-                    className={`min-h-[120px] ${errors.description ? "border-red-500" : ""}`}
-                  />
-                  <div className="flex justify-between text-sm">
-                    {errors.description ? (
-                      <p className="text-red-500">{errors.description}</p>
-                    ) : (
-                      <p className="text-muted-foreground">
-                        {formData.description.length}/{MAX_DESCRIPTION_LENGTH} characters
-                      </p>
-                    )}
-                  </div>
+                  {/* Use the account context to check if user is premium */}
+                  {useAccount().accountTier === 'premium' ? (
+                    <MarkdownEditor
+                      value={formData.description}
+                      onChange={(value) => setFormData({ ...formData, description: value })}
+                      maxLength={MAX_DESCRIPTION_LENGTH}
+                      error={errors.description}
+                    />
+                  ) : (
+                    <>
+                      <Textarea
+                        id="description"
+                        value={formData.description}
+                        maxLength={MAX_DESCRIPTION_LENGTH}
+                        onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                        placeholder="Provide detailed information about your card"
+                        className={`min-h-[120px] ${errors.description ? "border-red-500" : ""}`}
+                      />
+                      <div className="flex justify-between text-sm">
+                        {errors.description ? (
+                          <p className="text-red-500">{errors.description}</p>
+                        ) : (
+                          <p className="text-muted-foreground">
+                            {formData.description.length}/{MAX_DESCRIPTION_LENGTH} characters
+                          </p>
+                        )}
+                      </div>
+                    </>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">

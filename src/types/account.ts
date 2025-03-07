@@ -8,6 +8,7 @@ export interface AccountLimits {
   hasBulkListingTools: boolean;
   hasPriceHistory: boolean;
   hasAds: boolean;
+  hasMarkdownSupport: boolean;
 }
 
 export interface SubscriptionDetails {
@@ -34,7 +35,8 @@ export const ACCOUNT_TIERS: Record<AccountTier, AccountFeatures> = {
     hasPriorityMessaging: false,
     hasBulkListingTools: false,
     hasPriceHistory: false,
-    hasAds: true
+    hasAds: true,
+    hasMarkdownSupport: false
   },
   premium: {
     tier: 'premium',
@@ -46,6 +48,7 @@ export const ACCOUNT_TIERS: Record<AccountTier, AccountFeatures> = {
     hasPriorityMessaging: true,
     hasBulkListingTools: true,
     hasPriceHistory: true,
-    hasAds: false
+    hasAds: false,
+    hasMarkdownSupport: true
   }
 };
