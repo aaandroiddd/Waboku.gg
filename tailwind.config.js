@@ -9,6 +9,50 @@ const config = {
       fontFamily: {
         sans: ['var(--font-sans)'],
       },
+      typography: {
+        DEFAULT: {
+          css: {
+            maxWidth: '100%',
+            color: 'inherit',
+            a: {
+              color: 'var(--primary)',
+              '&:hover': {
+                color: 'var(--primary-foreground)',
+              },
+            },
+            strong: {
+              color: 'inherit',
+            },
+            h1: {
+              color: 'inherit',
+            },
+            h2: {
+              color: 'inherit',
+            },
+            h3: {
+              color: 'inherit',
+            },
+            h4: {
+              color: 'inherit',
+            },
+            code: {
+              color: 'inherit',
+              backgroundColor: 'var(--muted)',
+              borderRadius: '0.25rem',
+              paddingLeft: '0.25rem',
+              paddingRight: '0.25rem',
+              paddingTop: '0.125rem',
+              paddingBottom: '0.125rem',
+            },
+            pre: {
+              backgroundColor: 'var(--muted)',
+              color: 'inherit',
+              borderRadius: '0.25rem',
+              padding: '0.75rem 1rem',
+            },
+          },
+        },
+      },
   		colors: {
   			primary: {
   				'100': '#e6f5e6',
@@ -85,7 +129,10 @@ const config = {
   		}
   	}
   },
-  plugins: [require("tailwindcss-animate")],
+  plugins: [
+    require("tailwindcss-animate"),
+    require('@tailwindcss/typography'),
+  ],
 }
 
 module.exports = config

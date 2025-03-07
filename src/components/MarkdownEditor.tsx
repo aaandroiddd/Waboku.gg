@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
@@ -19,6 +19,8 @@ import {
   TooltipTrigger
 } from '@/components/ui/tooltip';
 import { Card } from '@/components/ui/card';
+import { MarkdownContent } from './MarkdownContent';
+import { useMediaQuery } from '@/hooks/useMediaQuery';
 
 interface MarkdownEditorProps {
   value: string;
@@ -38,6 +40,7 @@ export function MarkdownEditor({
   className = ''
 }: MarkdownEditorProps) {
   const [activeTab, setActiveTab] = useState<string>('edit');
+  const isMobile = useMediaQuery('(max-width: 768px)');
 
   const insertMarkdown = (prefix: string, suffix: string = '') => {
     const textarea = document.getElementById('markdown-textarea') as HTMLTextAreaElement;
@@ -101,6 +104,188 @@ export function MarkdownEditor({
 ![Image alt text](https://example.com/image.jpg) = \`![Image alt text](https://example.com/image.jpg)\`
   `;
 
+  // Render toolbar based on screen size
+  const renderToolbar = () => {
+    if (isMobile) {
+      return (
+        <div className="flex flex-wrap gap-1 mb-2">
+          <Button 
+            variant="outline" 
+            size="sm"
+            className="h-8 w-8" 
+            onClick={handleBold}
+          >
+            <Bold className="h-4 w-4" />
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm"
+            className="h-8 w-8" 
+            onClick={handleItalic}
+          >
+            <Italic className="h-4 w-4" />
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm"
+            className="h-8 w-8" 
+            onClick={handleHeading}
+          >
+            <Heading2 className="h-4 w-4" />
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm"
+            className="h-8 w-8" 
+            onClick={handleBulletList}
+          >
+            <List className="h-4 w-4" />
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm"
+            className="h-8 w-8" 
+            onClick={handleNumberedList}
+          >
+            <ListOrdered className="h-4 w-4" />
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm"
+            className="h-8 w-8" 
+            onClick={handleLink}
+          >
+            <LinkIcon className="h-4 w-4" />
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm"
+            className="h-8 w-8" 
+            onClick={handleImage}
+          >
+            <ImageIcon className="h-4 w-4" />
+          </Button>
+        </div>
+      );
+    }
+
+    return (
+      <div className="flex space-x-1">
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button 
+                variant="outline" 
+                size="icon" 
+                className="h-8 w-8" 
+                onClick={handleBold}
+              >
+                <Bold className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Bold</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+        
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button 
+                variant="outline" 
+                size="icon" 
+                className="h-8 w-8" 
+                onClick={handleItalic}
+              >
+                <Italic className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Italic</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+        
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button 
+                variant="outline" 
+                size="icon" 
+                className="h-8 w-8" 
+                onClick={handleHeading}
+              >
+                <Heading2 className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Heading</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+        
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button 
+                variant="outline" 
+                size="icon" 
+                className="h-8 w-8" 
+                onClick={handleBulletList}
+              >
+                <List className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Bullet List</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+        
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button 
+                variant="outline" 
+                size="icon" 
+                className="h-8 w-8" 
+                onClick={handleNumberedList}
+              >
+                <ListOrdered className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Numbered List</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+        
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button 
+                variant="outline" 
+                size="icon" 
+                className="h-8 w-8" 
+                onClick={handleLink}
+              >
+                <LinkIcon className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Insert Link</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+        
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button 
+                variant="outline" 
+                size="icon" 
+                className="h-8 w-8" 
+                onClick={handleImage}
+              >
+                <ImageIcon className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Insert Image</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      </div>
+    );
+  };
+
   return (
     <div className={`space-y-2 ${className}`}>
       <Tabs defaultValue="edit" value={activeTab} onValueChange={setActiveTab}>
@@ -111,124 +296,15 @@ export function MarkdownEditor({
             <TabsTrigger value="guide">Guide</TabsTrigger>
           </TabsList>
           
-          {activeTab === 'edit' && (
-            <div className="flex space-x-1">
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button 
-                      variant="outline" 
-                      size="icon" 
-                      className="h-8 w-8" 
-                      onClick={handleBold}
-                    >
-                      <Bold className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>Bold</TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-              
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button 
-                      variant="outline" 
-                      size="icon" 
-                      className="h-8 w-8" 
-                      onClick={handleItalic}
-                    >
-                      <Italic className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>Italic</TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-              
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button 
-                      variant="outline" 
-                      size="icon" 
-                      className="h-8 w-8" 
-                      onClick={handleHeading}
-                    >
-                      <Heading2 className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>Heading</TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-              
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button 
-                      variant="outline" 
-                      size="icon" 
-                      className="h-8 w-8" 
-                      onClick={handleBulletList}
-                    >
-                      <List className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>Bullet List</TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-              
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button 
-                      variant="outline" 
-                      size="icon" 
-                      className="h-8 w-8" 
-                      onClick={handleNumberedList}
-                    >
-                      <ListOrdered className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>Numbered List</TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-              
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button 
-                      variant="outline" 
-                      size="icon" 
-                      className="h-8 w-8" 
-                      onClick={handleLink}
-                    >
-                      <LinkIcon className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>Insert Link</TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-              
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button 
-                      variant="outline" 
-                      size="icon" 
-                      className="h-8 w-8" 
-                      onClick={handleImage}
-                    >
-                      <ImageIcon className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>Insert Image</TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </div>
-          )}
+          {activeTab === 'edit' && renderToolbar()}
         </div>
         
         <TabsContent value="edit" className="mt-0">
+          {activeTab === 'edit' && isMobile && (
+            <div className="mb-2 text-xs text-muted-foreground">
+              Use the buttons above to format your text
+            </div>
+          )}
           <Textarea
             id="markdown-textarea"
             value={value}
@@ -240,14 +316,9 @@ export function MarkdownEditor({
         </TabsContent>
         
         <TabsContent value="preview" className="mt-0">
-          <Card className="p-4 min-h-[120px] prose dark:prose-invert max-w-none">
+          <Card className="p-4 min-h-[120px] overflow-auto">
             {value ? (
-              <div className="markdown-preview">
-                {/* This div will be replaced with ReactMarkdown in the listing display */}
-                {value.split('\n').map((line, i) => (
-                  <p key={i}>{line}</p>
-                ))}
-              </div>
+              <MarkdownContent content={value} />
             ) : (
               <div className="text-muted-foreground italic">
                 Preview will appear here...
@@ -257,10 +328,8 @@ export function MarkdownEditor({
         </TabsContent>
         
         <TabsContent value="guide" className="mt-0">
-          <Card className="p-4 min-h-[120px] prose dark:prose-invert max-w-none text-sm">
-            <div className="markdown-guide whitespace-pre-wrap">
-              {markdownGuide}
-            </div>
+          <Card className="p-4 min-h-[120px] overflow-auto text-sm">
+            <MarkdownContent content={markdownGuide} />
           </Card>
         </TabsContent>
       </Tabs>
