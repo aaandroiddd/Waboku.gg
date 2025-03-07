@@ -410,9 +410,7 @@ export default function Home() {
             <div className="hero-background animated-bg">
               <div className="animated-bg-overlay"></div>
             </div>
-            <div className="relative z-10">
-              <AnimatedBackground />
-            </div>
+            <AnimatedBackground className="absolute inset-0" />
             
             <div className="relative container mx-auto px-4 py-16 sm:py-20 md:py-24 lg:py-32">
               <div className="text-center max-w-3xl mx-auto space-y-6 sm:space-y-8">
