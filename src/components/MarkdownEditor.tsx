@@ -108,63 +108,118 @@ export function MarkdownEditor({
   const renderToolbar = () => {
     if (isMobile) {
       return (
-        <div className="flex flex-wrap gap-1 mb-2">
-          <Button 
-            variant="outline" 
-            size="sm"
-            className="h-8 w-8" 
-            onClick={handleBold}
-          >
-            <Bold className="h-4 w-4" />
-          </Button>
-          <Button 
-            variant="outline" 
-            size="sm"
-            className="h-8 w-8" 
-            onClick={handleItalic}
-          >
-            <Italic className="h-4 w-4" />
-          </Button>
-          <Button 
-            variant="outline" 
-            size="sm"
-            className="h-8 w-8" 
-            onClick={handleHeading}
-          >
-            <Heading2 className="h-4 w-4" />
-          </Button>
-          <Button 
-            variant="outline" 
-            size="sm"
-            className="h-8 w-8" 
-            onClick={handleBulletList}
-          >
-            <List className="h-4 w-4" />
-          </Button>
-          <Button 
-            variant="outline" 
-            size="sm"
-            className="h-8 w-8" 
-            onClick={handleNumberedList}
-          >
-            <ListOrdered className="h-4 w-4" />
-          </Button>
-          <Button 
-            variant="outline" 
-            size="sm"
-            className="h-8 w-8" 
-            onClick={handleLink}
-          >
-            <LinkIcon className="h-4 w-4" />
-          </Button>
-          <Button 
-            variant="outline" 
-            size="sm"
-            className="h-8 w-8" 
-            onClick={handleImage}
-          >
-            <ImageIcon className="h-4 w-4" />
-          </Button>
+        <div className="flex overflow-x-auto space-x-1 mb-2 pb-1">
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  className="h-8 w-8 flex-shrink-0" 
+                  onClick={handleBold}
+                >
+                  <Bold className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Bold</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  className="h-8 w-8 flex-shrink-0" 
+                  onClick={handleItalic}
+                >
+                  <Italic className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Italic</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  className="h-8 w-8 flex-shrink-0" 
+                  onClick={handleHeading}
+                >
+                  <Heading2 className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Heading</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  className="h-8 w-8 flex-shrink-0" 
+                  onClick={handleBulletList}
+                >
+                  <List className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Bullet List</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  className="h-8 w-8 flex-shrink-0" 
+                  onClick={handleNumberedList}
+                >
+                  <ListOrdered className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Numbered List</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  className="h-8 w-8 flex-shrink-0" 
+                  onClick={handleLink}
+                >
+                  <LinkIcon className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Insert Link</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  className="h-8 w-8 flex-shrink-0" 
+                  onClick={handleImage}
+                >
+                  <ImageIcon className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Insert Image</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </div>
       );
     }
