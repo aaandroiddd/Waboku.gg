@@ -454,10 +454,10 @@ export default function ListingPage() {
                                     alt={`${listing.title} - Image ${index + 1}`}
                                     fill
                                     className="object-contain rounded-lg"
-                                    sizes="(max-width: 768px) 90vw, (max-width: 1200px) 50vw, 33vw"
+                                    sizes="(max-width: 640px) 90vw, (max-width: 768px) 70vw, (max-width: 1024px) 50vw, 600px"
                                     priority={index === 0}
                                     loading={index === 0 ? "eager" : "lazy"}
-                                    quality={100}
+                                    quality={85}
                                     onError={(e) => {
                                       const target = e.target as HTMLImageElement;
                                       target.src = '/images/rect.png';

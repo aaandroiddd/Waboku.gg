@@ -81,7 +81,10 @@ export function OfferCard({ offer, type, onCounterOffer }: OfferCardProps) {
                 src={safeOffer.listingSnapshot.imageUrl}
                 alt={safeOffer.listingSnapshot.title}
                 fill
+                sizes="(max-width: 640px) 96px, 128px"
                 className="object-cover rounded-lg"
+                loading="lazy"
+                quality={80}
               />
             ) : (
               <div className="w-full h-full bg-muted rounded-lg flex items-center justify-center">

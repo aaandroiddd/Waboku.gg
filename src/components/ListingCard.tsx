@@ -258,9 +258,10 @@ export const ListingCard = memo(({ listing, isFavorite, onFavoriteClick, getCond
                     alt={listing.title}
                     className="rounded-lg object-cover"
                     fill
-                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                    sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
                     priority={false}
-                    quality={85}
+                    quality={80}
+                    loading="lazy"
                     onError={(e) => {
                       const target = e.target as HTMLImageElement;
                       target.src = '/images/rect.png';

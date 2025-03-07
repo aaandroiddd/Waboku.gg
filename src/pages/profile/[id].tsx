@@ -117,11 +117,14 @@ const ProfileContent = ({ userId }: { userId: string | null }) => {
               <div className="w-full md:w-1/4 flex flex-col gap-4">
                 <div className="relative w-full aspect-square rounded-lg overflow-hidden bg-secondary">
                   {profile.avatarUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
+                    <Image
                       src={profile.avatarUrl}
                       alt={profile.username || 'User avatar'}
-                      className="w-full h-full object-cover"
+                      fill
+                      sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, 25vw"
+                      className="object-cover"
+                      loading="eager"
+                      quality={80}
                       onError={(e) => {
                         const target = e.target as HTMLImageElement;
                         target.src = '/images/default-avatar.svg';
@@ -132,7 +135,7 @@ const ProfileContent = ({ userId }: { userId: string | null }) => {
                       src="/images/default-avatar.svg"
                       alt="Default avatar"
                       fill
-                      sizes="(max-width: 768px) 100vw, 25vw"
+                      sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, 25vw"
                       priority
                       className="object-cover"
                     />
