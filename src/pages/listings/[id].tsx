@@ -658,6 +658,7 @@ export default function ListingPage() {
                   {listing.imageUrls.map((url, index) => (
                     <CarouselItem key={index} className="h-full flex items-center justify-center">
                       <TransformWrapper
+                        key={`transform-wrapper-${index}`}
                         initialScale={1}
                         minScale={0.5}
                         maxScale={4}
@@ -670,7 +671,7 @@ export default function ListingPage() {
                         initialPositionY={0}
                         panning={{ disabled: false }}
                       >
-                        {({ zoomIn, zoomOut, resetTransform }) => (
+                        {({ zoomIn, zoomOut, resetTransform, state }) => (
                           <>
                             <TransformComponent 
                               wrapperClass="!w-full !h-full !flex !items-center !justify-center" 
@@ -692,7 +693,10 @@ export default function ListingPage() {
                                 <Button
                                   variant="outline"
                                   size="icon"
-                                  onClick={() => zoomOut()}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    zoomOut();
+                                  }}
                                   className="h-8 w-8"
                                 >
                                   <Minus className="h-4 w-4" />
@@ -700,7 +704,10 @@ export default function ListingPage() {
                                 <Button
                                   variant="outline"
                                   size="icon"
-                                  onClick={() => zoomIn()}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    zoomIn();
+                                  }}
                                   className="h-8 w-8"
                                 >
                                   <Plus className="h-4 w-4" />
@@ -708,7 +715,10 @@ export default function ListingPage() {
                                 <Button
                                   variant="outline"
                                   size="icon"
-                                  onClick={() => resetTransform()}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    resetTransform();
+                                  }}
                                   className="h-8 w-8"
                                 >
                                   <RotateCw className="h-4 w-4" />
