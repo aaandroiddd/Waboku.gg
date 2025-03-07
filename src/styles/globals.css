@@ -26,6 +26,50 @@
   pointer-events: none;
 }
 
+.animated-bg {
+  position: relative;
+}
+
+.animated-bg-overlay {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 50% 50%, transparent 0%, var(--background) 70%);
+  z-index: 1;
+}
+
+@keyframes float-up {
+  0% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-in {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+.animate-title {
+  animation: fade-in 0.8s ease-out forwards, float-up 6s ease-in-out infinite;
+  animation-delay: 0.2s, 1s;
+  opacity: 0;
+}
+
+.animate-subtitle {
+  animation: fade-in 0.8s ease-out forwards;
+  animation-delay: 0.4s;
+  opacity: 0;
+}
+
 .dark .hero-background {
   background: 
     linear-gradient(217deg, rgba(0, 140, 255, 0.07), rgba(0, 140, 255, 0) 70.71%),

@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
 import { TrendingSearches } from "@/components/TrendingSearches";
 import { checkAndClearStaleAuthData } from "@/lib/auth-token-manager";
+import AnimatedBackground from "@/components/AnimatedBackground";
 import {
   Command,
   CommandEmpty,
@@ -405,16 +406,21 @@ export default function Home() {
 
           {/* Hero Section */}
           <div className="relative overflow-hidden">
-            {/* Static Background */}
-            <div className="hero-background"></div>
+            {/* Animated Background */}
+            <div className="hero-background animated-bg">
+              <div className="animated-bg-overlay"></div>
+            </div>
+            <div className="relative z-10">
+              <AnimatedBackground />
+            </div>
             
             <div className="relative container mx-auto px-4 py-16 sm:py-20 md:py-24 lg:py-32">
               <div className="text-center max-w-3xl mx-auto space-y-6 sm:space-y-8">
                 <div className="space-y-4 sm:space-y-6 pt-8 sm:pt-12 md:pt-16">
-                  <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight glow-text">
+                  <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight glow-text animate-title">
                     Your Local TCG Marketplace
                   </h1>
-                  <p className="text-base sm:text-lg md:text-xl glow-text-subtle">
+                  <p className="text-base sm:text-lg md:text-xl glow-text-subtle animate-subtitle">
                     {randomSubtitle}
                   </p>
                 </div>
