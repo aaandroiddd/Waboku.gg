@@ -22,6 +22,7 @@ import { useFavorites } from '@/hooks/useFavorites';
 import { toast } from 'sonner';
 import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
 import { Footer } from '@/components/Footer';
+import dynamic from 'next/dynamic';
 import { DistanceIndicator } from '@/components/DistanceIndicator';
 
 const getConditionColor = (condition: string) => {
