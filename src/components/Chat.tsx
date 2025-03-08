@@ -390,38 +390,84 @@ export function Chat({
   // Track user profiles for messages
   const [userProfiles, setUserProfiles] = useState<Record<string, any>>({});
 
-  // Fetch user profiles for messages
+  // Profile cache with expiration
+  const profileCacheRef = useRef<Record<string, {
+    data: { username: string; avatarUrl: string | null };
+    timestamp: number;
+  }>>({});
+  
+  // Cache expiration time (5 minutes)
+  const CACHE_EXPIRATION = 5 * 60 * 1000;
+  
+  // Fetch user profiles for messages with improved caching and retry logic
   useEffect(() => {
     const fetchUserProfiles = async () => {
       const uniqueUserIds = [...new Set(messages.map(msg => msg.senderId))];
       const profiles: Record<string, any> = {};
       
       for (const userId of uniqueUserIds) {
-        if (!userProfiles[userId]) {
-          try {
-            const userDoc = await getDoc(doc(firebaseDb, 'users', userId));
+        // Skip if we already have this profile in state
+        if (userProfiles[userId]) continue;
+        
+        // Check cache first
+        const cachedProfile = profileCacheRef.current[userId];
+        if (cachedProfile && Date.now() - cachedProfile.timestamp < CACHE_EXPIRATION) {
+          profiles[userId] = cachedProfile.data;
+          continue;
+        }
+        
+        try {
+          // First attempt
+          const userDoc = await getDoc(doc(firebaseDb, 'users', userId));
+          
+          if (userDoc.exists()) {
             const userData = userDoc.data();
             profiles[userId] = {
               username: userData?.displayName || userData?.username || 'Anonymous User',
               avatarUrl: userData?.avatarUrl || userData?.photoURL || null,
             };
-          } catch (err) {
-            console.error(`Error fetching profile for ${userId}:`, err);
-            profiles[userId] = {
-              username: 'Anonymous User',
-              avatarUrl: null,
-            };
+          } else {
+            // Retry after a short delay
+            await new Promise(resolve => setTimeout(resolve, 500));
+            const retryDoc = await getDoc(doc(firebaseDb, 'users', userId));
+            
+            if (retryDoc.exists()) {
+              const userData = retryDoc.data();
+              profiles[userId] = {
+                username: userData?.displayName || userData?.username || 'Anonymous User',
+                avatarUrl: userData?.avatarUrl || userData?.photoURL || null,
+              };
+            } else {
+              profiles[userId] = {
+                username: 'Anonymous User',
+                avatarUrl: null,
+              };
+            }
           }
+          
+          // Update cache
+          profileCacheRef.current[userId] = {
+            data: profiles[userId],
+            timestamp: Date.now()
+          };
+        } catch (err) {
+          console.error(`Error fetching profile for ${userId}:`, err);
+          profiles[userId] = {
+            username: 'Anonymous User',
+            avatarUrl: null,
+          };
         }
       }
       
-      setUserProfiles(prev => ({ ...prev, ...profiles }));
+      if (Object.keys(profiles).length > 0) {
+        setUserProfiles(prev => ({ ...prev, ...profiles }));
+      }
     };
 
     if (messages.length > 0) {
       fetchUserProfiles();
     }
-  }, [messages]);
+  }, [messages, userProfiles]);
 
   return (
     <>

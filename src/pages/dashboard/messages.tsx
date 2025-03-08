@@ -1,5 +1,5 @@
 import { useRouter } from 'next/router';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { getDatabase, ref, onValue, get } from 'firebase/database';
 import { doc, getDoc } from 'firebase/firestore';
 import { db, getFirebaseServices } from '@/lib/firebase';
@@ -51,21 +51,61 @@ export default function MessagesPage() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  // Cache for user profiles to avoid repeated fetches
+  const profileCache = useRef<Record<string, {
+    data: { username: string; avatarUrl: string | null };
+    timestamp: number;
+  }>>({});
+  
+  // Cache expiration time (5 minutes)
+  const CACHE_EXPIRATION = 5 * 60 * 1000;
+
   const fetchUserProfile = async (userId: string) => {
     if (!userId) return null;
     
     try {
       setProfilesLoading(prev => ({ ...prev, [userId]: true }));
+      
+      // Check cache first
+      const cachedProfile = profileCache.current[userId];
+      if (cachedProfile && Date.now() - cachedProfile.timestamp < CACHE_EXPIRATION) {
+        console.log(`Using cached profile for ${userId}`);
+        return cachedProfile.data;
+      }
+      
+      // Try to get from Firestore
       const userDoc = await getDoc(doc(db, 'users', userId));
       
+      let result;
       if (userDoc.exists()) {
         const userData = userDoc.data();
-        return {
+        result = {
           username: userData.displayName || userData.username || 'Unknown User',
           avatarUrl: userData.avatarUrl || userData.photoURL || null
         };
+      } else {
+        // If document doesn't exist, try a second attempt after a short delay
+        await new Promise(resolve => setTimeout(resolve, 500));
+        const retryDoc = await getDoc(doc(db, 'users', userId));
+        
+        if (retryDoc.exists()) {
+          const userData = retryDoc.data();
+          result = {
+            username: userData.displayName || userData.username || 'Unknown User',
+            avatarUrl: userData.avatarUrl || userData.photoURL || null
+          };
+        } else {
+          result = { username: 'Unknown User', avatarUrl: null };
+        }
       }
-      return { username: 'Unknown User', avatarUrl: null };
+      
+      // Update cache
+      profileCache.current[userId] = {
+        data: result,
+        timestamp: Date.now()
+      };
+      
+      return result;
     } catch (err) {
       console.error(`Error fetching profile for ${userId}:`, err);
       return { username: 'Unknown User', avatarUrl: null };
