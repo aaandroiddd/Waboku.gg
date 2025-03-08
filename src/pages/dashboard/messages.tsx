@@ -10,6 +10,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft } from 'lucide-react';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
+import { UserNameLink } from '@/components/UserNameLink';
 
 interface ChatPreview {
   id: string;
@@ -315,10 +316,13 @@ export default function MessagesPage() {
                       >
                         <div className="text-left w-full space-y-1.5">
                           <div className="font-medium">
-                            {profilesLoading[otherParticipant.id] ? (
-                              <Skeleton className="h-4 w-24" />
+                            {otherParticipant.id ? (
+                              <UserNameLink 
+                                userId={otherParticipant.id} 
+                                initialUsername={otherParticipant.name !== 'Unknown User' ? otherParticipant.name : undefined}
+                              />
                             ) : (
-                              otherParticipant.name
+                              <span>Unknown User</span>
                             )}
                           </div>
                           {chat.subject && (
