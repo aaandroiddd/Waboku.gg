@@ -656,78 +656,90 @@ export default function ListingPage() {
                 </div>
                 <CarouselContent className="h-full">
                   {listing.imageUrls.map((url, index) => (
-                    <CarouselItem key={index} className="h-full flex items-center justify-center">
-                      <TransformWrapper
-                        key={`transform-wrapper-${index}`}
-                        initialScale={1}
-                        minScale={0.5}
-                        maxScale={4}
-                        centerOnInit={true}
-                        alignmentAnimation={{ sizeX: 0, sizeY: 0 }}
-                        limitToBounds={true}
-                        centerZoomedOut={true}
-                        doubleClick={{ mode: "reset" }}
-                        initialPositionX={0}
-                        initialPositionY={0}
-                        panning={{ disabled: false }}
-                      >
-                        {({ zoomIn, zoomOut, resetTransform, state }) => (
-                          <>
-                            <TransformComponent 
-                              wrapperClass="!w-full !h-full !flex !items-center !justify-center" 
-                              contentClass="!w-full !h-full !flex !items-center !justify-center"
-                            >
-                              <div className="relative w-full h-full flex items-center justify-center p-4">
-                                <img
-                                  src={url}
-                                  alt={`${listing.title} - Image ${index + 1}`}
-                                  className="max-w-full max-h-[80vh] w-auto h-auto object-contain"
-                                  loading="eager"
-                                />
+                    <CarouselItem key={`carousel-item-${index}`} className="h-full flex items-center justify-center">
+                      {index === currentImageIndex && (
+                        <TransformWrapper
+                          key={`transform-wrapper-${currentImageIndex}-${index}`}
+                          initialScale={1}
+                          minScale={0.5}
+                          maxScale={4}
+                          centerOnInit={true}
+                          alignmentAnimation={{ sizeX: 0, sizeY: 0 }}
+                          limitToBounds={true}
+                          centerZoomedOut={true}
+                          doubleClick={{ mode: "reset" }}
+                          initialPositionX={0}
+                          initialPositionY={0}
+                          panning={{ disabled: false }}
+                        >
+                          {({ zoomIn, zoomOut, resetTransform, state }) => (
+                            <>
+                              <TransformComponent 
+                                wrapperClass="!w-full !h-full !flex !items-center !justify-center" 
+                                contentClass="!w-full !h-full !flex !items-center !justify-center"
+                              >
+                                <div className="relative w-full h-full flex items-center justify-center p-4">
+                                  <img
+                                    src={url}
+                                    alt={`${listing.title} - Image ${index + 1}`}
+                                    className="max-w-full max-h-[80vh] w-auto h-auto object-contain"
+                                    loading="eager"
+                                  />
+                                </div>
+                              </TransformComponent>
+                              <div 
+                                className="absolute bottom-4 left-1/2 transform -translate-x-1/2 z-10 bg-background/90 rounded-lg p-2 backdrop-blur-sm shadow-lg"
+                              >
+                                <div className="flex items-center gap-2">
+                                  <Button
+                                    variant="outline"
+                                    size="icon"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      zoomOut();
+                                    }}
+                                    className="h-8 w-8"
+                                  >
+                                    <Minus className="h-4 w-4" />
+                                  </Button>
+                                  <Button
+                                    variant="outline"
+                                    size="icon"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      zoomIn();
+                                    }}
+                                    className="h-8 w-8"
+                                  >
+                                    <Plus className="h-4 w-4" />
+                                  </Button>
+                                  <Button
+                                    variant="outline"
+                                    size="icon"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      resetTransform();
+                                    }}
+                                    className="h-8 w-8"
+                                  >
+                                    <RotateCw className="h-4 w-4" />
+                                  </Button>
+                                </div>
                               </div>
-                            </TransformComponent>
-                            <div 
-                              className="absolute bottom-4 left-1/2 transform -translate-x-1/2 z-10 bg-background/90 rounded-lg p-2 backdrop-blur-sm shadow-lg"
-                            >
-                              <div className="flex items-center gap-2">
-                                <Button
-                                  variant="outline"
-                                  size="icon"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    zoomOut();
-                                  }}
-                                  className="h-8 w-8"
-                                >
-                                  <Minus className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  variant="outline"
-                                  size="icon"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    zoomIn();
-                                  }}
-                                  className="h-8 w-8"
-                                >
-                                  <Plus className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  variant="outline"
-                                  size="icon"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    resetTransform();
-                                  }}
-                                  className="h-8 w-8"
-                                >
-                                  <RotateCw className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            </div>
-                          </>
-                        )}
-                      </TransformWrapper>
+                            </>
+                          )}
+                        </TransformWrapper>
+                      )}
+                      {index !== currentImageIndex && (
+                        <div className="relative w-full h-full flex items-center justify-center p-4">
+                          <img
+                            src={url}
+                            alt={`${listing.title} - Image ${index + 1}`}
+                            className="max-w-full max-h-[80vh] w-auto h-auto object-contain"
+                            loading="lazy"
+                          />
+                        </div>
+                      )}
                     </CarouselItem>
                   ))}
                 </CarouselContent>
