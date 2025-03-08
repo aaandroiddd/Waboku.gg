@@ -1,41 +1,60 @@
 import Link from 'next/link';
 import { useUserData } from '@/hooks/useUserData';
 import { Skeleton } from './ui/skeleton';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 
 interface UserNameLinkProps {
   userId: string;
   initialUsername?: string;
   className?: string;
+  showSkeleton?: boolean;
 }
 
-export function UserNameLink({ userId, initialUsername, className = '' }: UserNameLinkProps) {
-  const { userData, loading } = useUserData(userId);
-  const [retryCount, setRetryCount] = useState(0);
+export function UserNameLink({ 
+  userId, 
+  initialUsername, 
+  className = '',
+  showSkeleton = true
+}: UserNameLinkProps) {
+  const { userData, loading, error } = useUserData(userId);
   const [displayName, setDisplayName] = useState(initialUsername || 'Loading...');
-  
+  const [loadingState, setLoadingState] = useState<'initial' | 'loading' | 'success' | 'error'>(
+    initialUsername ? 'success' : 'initial'
+  );
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+
   useEffect(() => {
-    // Update display name when userData changes
+    // Clear any existing timeout when component unmounts or dependencies change
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, [userId]);
+
+  useEffect(() => {
+    // Update loading state
+    if (loading) {
+      setLoadingState('loading');
+    } else if (error) {
+      setLoadingState('error');
+    } else if (userData) {
+      setLoadingState('success');
+    }
+
+    // Update display name based on available data
     if (userData?.username) {
       setDisplayName(userData.username);
-    } else if (!loading && !userData?.username && initialUsername) {
+    } else if (!loading && initialUsername) {
       setDisplayName(initialUsername);
     } else if (!loading && !userData?.username && !initialUsername) {
-      // If we still don't have a username after loading, and no initial username was provided
-      if (retryCount < 2) {
-        // Retry fetching user data up to 2 times with increasing delays
-        const timer = setTimeout(() => {
-          setRetryCount(prev => prev + 1);
-        }, 1000 * (retryCount + 1));
-        
-        return () => clearTimeout(timer);
-      } else {
-        setDisplayName('Unknown User');
-      }
+      // If we still don't have a username after loading completes
+      setDisplayName('Unknown User');
     }
-  }, [userData, loading, initialUsername, retryCount]);
+  }, [userData, loading, error, initialUsername]);
 
-  if (loading && !initialUsername) {
+  // Show skeleton during initial loading if no initialUsername is provided
+  if (loadingState === 'loading' && !initialUsername && showSkeleton) {
     return <Skeleton className="h-4 w-24 inline-block" />;
   }
 
@@ -47,7 +66,7 @@ export function UserNameLink({ userId, initialUsername, className = '' }: UserNa
   return (
     <Link
       href={`/profile/${userId}`}
-      className={`hover:text-primary hover:underline ${className}`}
+      className={`hover:text-primary hover:underline transition-colors ${className}`}
       onClick={(e) => e.stopPropagation()}
     >
       {displayName}

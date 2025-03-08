@@ -387,87 +387,149 @@ export function Chat({
 
   if (!user) return null;
 
-  // Track user profiles for messages
-  const [userProfiles, setUserProfiles] = useState<Record<string, any>>({});
-
-  // Profile cache with expiration
+  // Global cache for user profiles with longer expiration (10 minutes)
+  const CACHE_EXPIRATION = 10 * 60 * 1000;
+  const MAX_RETRIES = 3;
+  
+  // Use a ref for the cache to persist between renders
   const profileCacheRef = useRef<Record<string, {
     data: { username: string; avatarUrl: string | null };
     timestamp: number;
   }>>({});
   
-  // Cache expiration time (5 minutes)
-  const CACHE_EXPIRATION = 5 * 60 * 1000;
+  // Track user profiles for messages
+  const [userProfiles, setUserProfiles] = useState<Record<string, any>>({});
+  const [profileLoadingStates, setProfileLoadingStates] = useState<Record<string, boolean>>({});
   
   // Fetch user profiles for messages with improved caching and retry logic
   useEffect(() => {
-    const fetchUserProfiles = async () => {
-      const uniqueUserIds = [...new Set(messages.map(msg => msg.senderId))];
-      const profiles: Record<string, any> = {};
+    if (messages.length === 0) return;
+    
+    const uniqueUserIds = [...new Set(messages.map(msg => msg.senderId))];
+    
+    // Initialize loading states for new user IDs
+    const newLoadingStates: Record<string, boolean> = {};
+    uniqueUserIds.forEach(userId => {
+      if (profileLoadingStates[userId] === undefined) {
+        newLoadingStates[userId] = true;
+      }
+    });
+    
+    if (Object.keys(newLoadingStates).length > 0) {
+      setProfileLoadingStates(prev => ({ ...prev, ...newLoadingStates }));
+    }
+    
+    // Function to fetch a single user profile with retry logic
+    const fetchUserProfile = async (userId: string, retryCount = 0) => {
+      // Skip if we already have this profile in state and it's not loading
+      if (userProfiles[userId] && !profileLoadingStates[userId]) return;
       
-      for (const userId of uniqueUserIds) {
-        // Skip if we already have this profile in state
-        if (userProfiles[userId]) continue;
+      // Check cache first
+      const cachedProfile = profileCacheRef.current[userId];
+      if (cachedProfile && Date.now() - cachedProfile.timestamp < CACHE_EXPIRATION) {
+        setUserProfiles(prev => ({
+          ...prev,
+          [userId]: cachedProfile.data
+        }));
+        setProfileLoadingStates(prev => ({
+          ...prev,
+          [userId]: false
+        }));
+        return;
+      }
+      
+      try {
+        console.log(`Fetching profile for ${userId}, attempt ${retryCount + 1}`);
+        const userDoc = await getDoc(doc(firebaseDb, 'users', userId));
         
-        // Check cache first
-        const cachedProfile = profileCacheRef.current[userId];
-        if (cachedProfile && Date.now() - cachedProfile.timestamp < CACHE_EXPIRATION) {
-          profiles[userId] = cachedProfile.data;
-          continue;
-        }
-        
-        try {
-          // First attempt
-          const userDoc = await getDoc(doc(firebaseDb, 'users', userId));
-          
-          if (userDoc.exists()) {
-            const userData = userDoc.data();
-            profiles[userId] = {
-              username: userData?.displayName || userData?.username || 'Anonymous User',
-              avatarUrl: userData?.avatarUrl || userData?.photoURL || null,
-            };
-          } else {
-            // Retry after a short delay
-            await new Promise(resolve => setTimeout(resolve, 500));
-            const retryDoc = await getDoc(doc(firebaseDb, 'users', userId));
-            
-            if (retryDoc.exists()) {
-              const userData = retryDoc.data();
-              profiles[userId] = {
-                username: userData?.displayName || userData?.username || 'Anonymous User',
-                avatarUrl: userData?.avatarUrl || userData?.photoURL || null,
-              };
-            } else {
-              profiles[userId] = {
-                username: 'Anonymous User',
-                avatarUrl: null,
-              };
-            }
-          }
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+          const profile = {
+            username: userData?.displayName || userData?.username || 'Unknown User',
+            avatarUrl: userData?.avatarUrl || userData?.photoURL || null,
+          };
           
           // Update cache
           profileCacheRef.current[userId] = {
-            data: profiles[userId],
+            data: profile,
             timestamp: Date.now()
           };
-        } catch (err) {
-          console.error(`Error fetching profile for ${userId}:`, err);
-          profiles[userId] = {
-            username: 'Anonymous User',
+          
+          // Update state
+          setUserProfiles(prev => ({
+            ...prev,
+            [userId]: profile
+          }));
+          setProfileLoadingStates(prev => ({
+            ...prev,
+            [userId]: false
+          }));
+        } else if (retryCount < MAX_RETRIES) {
+          // Retry with exponential backoff
+          const delay = Math.pow(2, retryCount) * 500; // 500ms, 1s, 2s, etc.
+          console.log(`User data not found for ${userId}, retrying in ${delay}ms (attempt ${retryCount + 1}/${MAX_RETRIES})`);
+          
+          setTimeout(() => {
+            fetchUserProfile(userId, retryCount + 1);
+          }, delay);
+        } else {
+          // Max retries reached, set fallback data
+          const fallbackData = {
+            username: 'Unknown User',
             avatarUrl: null,
           };
+          
+          // Cache the fallback with shorter expiration (1 minute)
+          profileCacheRef.current[userId] = {
+            data: fallbackData,
+            timestamp: Date.now() - (CACHE_EXPIRATION - 60000) // Will expire in 1 minute
+          };
+          
+          // Update state
+          setUserProfiles(prev => ({
+            ...prev,
+            [userId]: fallbackData
+          }));
+          setProfileLoadingStates(prev => ({
+            ...prev,
+            [userId]: false
+          }));
+        }
+      } catch (err) {
+        console.error(`Error fetching profile for ${userId}:`, err);
+        
+        if (retryCount < MAX_RETRIES) {
+          // Retry with exponential backoff
+          const delay = Math.pow(2, retryCount) * 500;
+          console.log(`Error fetching profile for ${userId}, retrying in ${delay}ms (attempt ${retryCount + 1}/${MAX_RETRIES})`);
+          
+          setTimeout(() => {
+            fetchUserProfile(userId, retryCount + 1);
+          }, delay);
+        } else {
+          // Max retries reached, set fallback data
+          const fallbackData = {
+            username: 'Unknown User',
+            avatarUrl: null,
+          };
+          
+          setUserProfiles(prev => ({
+            ...prev,
+            [userId]: fallbackData
+          }));
+          setProfileLoadingStates(prev => ({
+            ...prev,
+            [userId]: false
+          }));
         }
       }
-      
-      if (Object.keys(profiles).length > 0) {
-        setUserProfiles(prev => ({ ...prev, ...profiles }));
-      }
     };
-
-    if (messages.length > 0) {
-      fetchUserProfiles();
-    }
-  }, [messages, userProfiles]);
+    
+    // Fetch profiles for all unique user IDs
+    uniqueUserIds.forEach(userId => {
+      fetchUserProfile(userId);
+    });
+  }, [messages]);
 
   return (
     <>
