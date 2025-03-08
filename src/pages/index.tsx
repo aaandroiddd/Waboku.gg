@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { motion } from "framer-motion";
 import { useRouter } from "next/router";
 import { StateSelect } from "@/components/StateSelect";
 import SearchBar from "@/components/SearchBar";
@@ -406,11 +407,13 @@ export default function Home() {
 
           {/* Hero Section */}
           <div className="relative overflow-hidden">
-            {/* Animated Background */}
-            <div className="hero-background animated-bg">
-              <div className="animated-bg-overlay"></div>
-            </div>
-            <AnimatedBackground className="absolute inset-0" />
+            {/* Original Background Animation */}
+            <motion.div 
+              className="hero-background"
+              variants={heroBackgroundVariants}
+              initial="hidden"
+              animate="visible"
+            />
             
             <div className="relative container mx-auto px-4 py-16 sm:py-20 md:py-24 lg:py-32">
               <div className="text-center max-w-3xl mx-auto space-y-6 sm:space-y-8">
