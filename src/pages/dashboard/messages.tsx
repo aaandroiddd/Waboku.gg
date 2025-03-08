@@ -158,6 +158,14 @@ export default function MessagesPage() {
     const otherParticipantId = Object.keys(chat.participants).find(id => id !== user?.uid);
     if (!otherParticipantId) return { id: '', name: 'Unknown User' };
 
+    // If we don't have this user's profile yet and it's not already loading, trigger a fetch
+    if (!participantProfiles[otherParticipantId] && !profilesLoading[otherParticipantId]) {
+      // Use a setTimeout to avoid blocking the render
+      setTimeout(() => {
+        fetchUserProfile(otherParticipantId);
+      }, 0);
+    }
+
     const profile = participantProfiles[otherParticipantId];
     const isLoading = profilesLoading[otherParticipantId];
     
