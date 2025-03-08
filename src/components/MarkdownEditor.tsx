@@ -10,7 +10,9 @@ import {
   Heading2, 
   Link as LinkIcon, 
   Image as ImageIcon,
-  HelpCircle
+  HelpCircle,
+  ChevronUp,
+  ChevronDown
 } from 'lucide-react';
 import { 
   Tooltip,
@@ -40,6 +42,7 @@ export function MarkdownEditor({
   className = ''
 }: MarkdownEditorProps) {
   const [activeTab, setActiveTab] = useState<string>('edit');
+  const [toolbarExpanded, setToolbarExpanded] = useState(true);
   const isMobile = useMediaQuery('(max-width: 768px)');
 
   const insertMarkdown = (prefix: string, suffix: string = '') => {
@@ -106,133 +109,15 @@ export function MarkdownEditor({
 
   // Render toolbar based on screen size
   const renderToolbar = () => {
-    if (isMobile) {
-      return (
-        <div className="flex overflow-x-auto space-x-1 mb-2 pb-1">
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  className="h-8 w-8 flex-shrink-0" 
-                  onClick={handleBold}
-                >
-                  <Bold className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Bold</TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-          
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  className="h-8 w-8 flex-shrink-0" 
-                  onClick={handleItalic}
-                >
-                  <Italic className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Italic</TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-          
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  className="h-8 w-8 flex-shrink-0" 
-                  onClick={handleHeading}
-                >
-                  <Heading2 className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Heading</TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-          
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  className="h-8 w-8 flex-shrink-0" 
-                  onClick={handleBulletList}
-                >
-                  <List className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Bullet List</TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-          
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  className="h-8 w-8 flex-shrink-0" 
-                  onClick={handleNumberedList}
-                >
-                  <ListOrdered className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Numbered List</TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-          
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  className="h-8 w-8 flex-shrink-0" 
-                  onClick={handleLink}
-                >
-                  <LinkIcon className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Insert Link</TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-          
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  className="h-8 w-8 flex-shrink-0" 
-                  onClick={handleImage}
-                >
-                  <ImageIcon className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Insert Image</TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        </div>
-      );
-    }
-
-    return (
-      <div className="flex space-x-1">
+    const toolbarButtons = (
+      <>
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
               <Button 
                 variant="outline" 
-                size="icon" 
-                className="h-8 w-8" 
+                size="sm"
+                className="h-8 w-8 flex-shrink-0" 
                 onClick={handleBold}
               >
                 <Bold className="h-4 w-4" />
@@ -247,8 +132,8 @@ export function MarkdownEditor({
             <TooltipTrigger asChild>
               <Button 
                 variant="outline" 
-                size="icon" 
-                className="h-8 w-8" 
+                size="sm"
+                className="h-8 w-8 flex-shrink-0" 
                 onClick={handleItalic}
               >
                 <Italic className="h-4 w-4" />
@@ -263,8 +148,8 @@ export function MarkdownEditor({
             <TooltipTrigger asChild>
               <Button 
                 variant="outline" 
-                size="icon" 
-                className="h-8 w-8" 
+                size="sm"
+                className="h-8 w-8 flex-shrink-0" 
                 onClick={handleHeading}
               >
                 <Heading2 className="h-4 w-4" />
@@ -279,8 +164,8 @@ export function MarkdownEditor({
             <TooltipTrigger asChild>
               <Button 
                 variant="outline" 
-                size="icon" 
-                className="h-8 w-8" 
+                size="sm"
+                className="h-8 w-8 flex-shrink-0" 
                 onClick={handleBulletList}
               >
                 <List className="h-4 w-4" />
@@ -295,8 +180,8 @@ export function MarkdownEditor({
             <TooltipTrigger asChild>
               <Button 
                 variant="outline" 
-                size="icon" 
-                className="h-8 w-8" 
+                size="sm"
+                className="h-8 w-8 flex-shrink-0" 
                 onClick={handleNumberedList}
               >
                 <ListOrdered className="h-4 w-4" />
@@ -311,8 +196,8 @@ export function MarkdownEditor({
             <TooltipTrigger asChild>
               <Button 
                 variant="outline" 
-                size="icon" 
-                className="h-8 w-8" 
+                size="sm"
+                className="h-8 w-8 flex-shrink-0" 
                 onClick={handleLink}
               >
                 <LinkIcon className="h-4 w-4" />
@@ -327,8 +212,8 @@ export function MarkdownEditor({
             <TooltipTrigger asChild>
               <Button 
                 variant="outline" 
-                size="icon" 
-                className="h-8 w-8" 
+                size="sm"
+                className="h-8 w-8 flex-shrink-0" 
                 onClick={handleImage}
               >
                 <ImageIcon className="h-4 w-4" />
@@ -337,6 +222,40 @@ export function MarkdownEditor({
             <TooltipContent>Insert Image</TooltipContent>
           </Tooltip>
         </TooltipProvider>
+      </>
+    );
+
+    if (isMobile) {
+      return (
+        <div className="relative">
+          {activeTab === 'edit' && (
+            <div className="absolute bottom-0 left-0 right-0 bg-background border-t border-border z-10 p-2">
+              <div className="flex justify-between items-center mb-1">
+                <span className="text-xs text-muted-foreground">Formatting Tools</span>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="h-6 w-6 p-0" 
+                  onClick={() => setToolbarExpanded(!toolbarExpanded)}
+                >
+                  {toolbarExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
+                </Button>
+              </div>
+              
+              {toolbarExpanded && (
+                <div className="flex flex-wrap gap-1 justify-center">
+                  {toolbarButtons}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    return (
+      <div className="flex space-x-1">
+        {toolbarButtons}
       </div>
     );
   };
@@ -351,23 +270,21 @@ export function MarkdownEditor({
             <TabsTrigger value="guide">Guide</TabsTrigger>
           </TabsList>
           
-          {activeTab === 'edit' && renderToolbar()}
+          {activeTab === 'edit' && !isMobile && renderToolbar()}
         </div>
         
         <TabsContent value="edit" className="mt-0">
-          {activeTab === 'edit' && isMobile && (
-            <div className="mb-2 text-xs text-muted-foreground">
-              Use the buttons above to format your text
-            </div>
-          )}
-          <Textarea
-            id="markdown-textarea"
-            value={value}
-            onChange={(e) => onChange(e.target.value)}
-            placeholder={placeholder}
-            maxLength={maxLength}
-            className={`min-h-[120px] ${error ? "border-red-500" : ""}`}
-          />
+          <div className="relative">
+            <Textarea
+              id="markdown-textarea"
+              value={value}
+              onChange={(e) => onChange(e.target.value)}
+              placeholder={placeholder}
+              maxLength={maxLength}
+              className={`min-h-[180px] ${isMobile ? 'pb-16' : 'min-h-[120px]'} ${error ? "border-red-500" : ""}`}
+            />
+            {isMobile && renderToolbar()}
+          </div>
         </TabsContent>
         
         <TabsContent value="preview" className="mt-0">
