@@ -6,11 +6,34 @@ import { PageTransition } from "@/components/PageTransition";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { SearchIcon, PlusCircle } from "lucide-react";
-import { MAIN_GAME_CATEGORIES, OTHER_GAME_CATEGORIES, GAME_MAPPING, OTHER_GAME_MAPPING } from "@/components/GameCategories";
 import { useAuth } from "@/contexts/AuthContext";
 
+// Define the game mappings directly in this file to avoid circular dependencies
+export const MAIN_GAME_MAPPING = {
+  "Pokemon": "pokemon",
+  "Magic: The Gathering": "mtg",
+  "Yu-Gi-Oh!": "yugioh",
+  "One Piece": "onepiece",
+  "Disney Lorcana": "lorcana",
+  "Digimon": "digimon",
+} as const;
+
+export const OTHER_GAME_MAPPING = {
+  "Dragon Ball Super": "dbs",
+  "Flesh and Blood": "flesh-and-blood",
+  "Star Wars: Unlimited": "star-wars",
+  "Union Arena": "union-arena",
+  "Universus": "universus",
+  "Vanguard": "vanguard",
+  "Weiss Schwarz": "weiss",
+  "Accessories": "accessories",
+} as const;
+
+export const MAIN_GAME_CATEGORIES = Object.keys(MAIN_GAME_MAPPING);
+export const OTHER_GAME_CATEGORIES = Object.keys(OTHER_GAME_MAPPING);
+
 // Game category icons (simplified for now)
-const GAME_ICONS: Record<string, React.ReactNode> = {
+const GAME_ICONS: Record<string, string> = {
   "pokemon": "🔴",
   "mtg": "🧙",
   "yugioh": "👑",
@@ -70,7 +93,7 @@ export default function WantedBoardPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
             {/* Main Game Categories */}
             {MAIN_GAME_CATEGORIES.map((category) => {
-              const gameKey = GAME_MAPPING[category];
+              const gameKey = MAIN_GAME_MAPPING[category as keyof typeof MAIN_GAME_MAPPING];
               return (
                 <Card 
                   key={category}
@@ -109,7 +132,7 @@ export default function WantedBoardPage() {
 
             {/* Other Game Categories */}
             {OTHER_GAME_CATEGORIES.map((category) => {
-              const gameKey = OTHER_GAME_MAPPING[category];
+              const gameKey = OTHER_GAME_MAPPING[category as keyof typeof OTHER_GAME_MAPPING];
               return (
                 <Card 
                   key={category}
