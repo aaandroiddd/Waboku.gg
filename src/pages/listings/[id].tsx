@@ -268,7 +268,8 @@ export default function ListingPage() {
     }
 
     try {
-      const response = await fetch('/api/stripe/create-buy-now-session', {
+      // Use the new Connect API endpoint
+      const response = await fetch('/api/stripe/connect/create-buy-now-session', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -281,8 +282,18 @@ export default function ListingPage() {
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to create checkout session');
+        const errorData = await response.json();
+        
+        // Handle specific error codes
+        if (errorData.code === 'seller_not_connected') {
+          toast.error('The seller has not set up their payment account yet. Please try another listing or contact the seller.');
+          return;
+        } else if (errorData.code === 'seller_not_active') {
+          toast.error('The seller\'s payment account is not fully set up yet. Please try another listing or contact the seller.');
+          return;
+        }
+        
+        throw new Error(errorData.error || 'Failed to create checkout session');
       }
 
       const { sessionId } = await response.json();
