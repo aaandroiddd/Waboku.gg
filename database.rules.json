@@ -2,7 +2,7 @@
   "rules": {
     "wantedPosts": {
       ".indexOn": ["createdAt", "userId", "game"],
-      ".read": "auth != null",
+      ".read": true,
       ".write": "auth != null",
       "$postId": {
         ".read": "auth != null",

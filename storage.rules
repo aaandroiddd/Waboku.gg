@@ -80,9 +80,22 @@ service firebase.storage {
       allow delete: if isAuthenticated();
     }
 
+    // Wanted post images
+    match /wanted-posts/{userId}/{filename} {
+      // Allow read access to anyone for wanted post images
+      allow read: if true;
+      
+      // Allow write access to authenticated users
+      allow write: if request.auth != null
+                  && userId == request.auth.uid
+                  && request.resource.size < 5 * 1024 * 1024
+                  && request.resource.contentType.matches('image/.*');
+    }
+
     // Default rule - deny everything else
     match /{allPaths=**} {
-      allow read, write: if request.auth != null;
+      allow read: if true;
+      allow write: if request.auth != null;
     }
   }
 }

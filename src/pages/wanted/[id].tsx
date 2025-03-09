@@ -251,7 +251,9 @@ export default function WantedPostDetailPage() {
                     <p>
                       {wantedPost.isPriceNegotiable 
                         ? "Price Negotiable" 
-                        : `$${wantedPost.priceRange.min} - $${wantedPost.priceRange.max}`
+                        : wantedPost.priceRange && wantedPost.priceRange.min && wantedPost.priceRange.max
+                          ? `$${wantedPost.priceRange.min} - $${wantedPost.priceRange.max}`
+                          : "Price not specified"
                       }
                     </p>
                   </div>
@@ -275,7 +277,10 @@ export default function WantedPostDetailPage() {
                   className="flex items-center gap-1"
                   onClick={() => {
                     navigator.clipboard.writeText(window.location.href);
-                    alert("Link copied to clipboard!");
+                    toast({
+                      title: "Link copied",
+                      description: "Post link copied to clipboard",
+                    });
                   }}
                 >
                   <Share2 className="h-4 w-4" />
@@ -298,51 +303,73 @@ export default function WantedPostDetailPage() {
                 <CardContent className="p-6">
                   <h3 className="text-lg font-medium mb-4">Posted by</h3>
                   
-                  <div className="flex items-center gap-3 mb-4">
-                    <Avatar>
-                      <AvatarImage src={wantedPost.user.avatar} />
-                      <AvatarFallback>
-                        {wantedPost.user.name.substring(0, 2).toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                    
-                    <div>
-                      <div className="font-medium">{wantedPost.user.name}</div>
-                      <div className="text-sm text-muted-foreground">
-                        Member since {new Date(wantedPost.user.joinedDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short' })}
+                  {posterData ? (
+                    <>
+                      <div className="flex items-center gap-3 mb-4">
+                        <Avatar>
+                          <AvatarImage src={posterData.avatar || wantedPost.userAvatar} />
+                          <AvatarFallback>
+                            {(posterData.name || wantedPost.userName || "User").substring(0, 2).toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                        
+                        <div>
+                          <div className="font-medium">{posterData.name || wantedPost.userName || "Anonymous User"}</div>
+                          <div className="text-sm text-muted-foreground">
+                            Member since {new Date(posterData.joinedDate || Date.now()).toLocaleDateString(undefined, { year: 'numeric', month: 'short' })}
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  </div>
-                  
-                  <div className="mb-6">
-                    <div className="flex items-center gap-1 mb-1">
-                      <div className="font-medium">{wantedPost.user.rating}</div>
-                      <div className="text-sm text-muted-foreground">
-                        ({wantedPost.user.totalRatings} ratings)
+                      
+                      <div className="mb-6">
+                        <div className="flex items-center gap-1 mb-1">
+                          <div className="font-medium">{posterData.rating || 0}</div>
+                          <div className="text-sm text-muted-foreground">
+                            ({posterData.totalRatings || 0} ratings)
+                          </div>
+                        </div>
+                        
+                        <div className="flex">
+                          {[...Array(5)].map((_, i) => (
+                            <svg
+                              key={i}
+                              className={`w-4 h-4 ${
+                                i < Math.floor(posterData.rating || 0)
+                                  ? "text-yellow-400"
+                                  : i < (posterData.rating || 0)
+                                  ? "text-yellow-200"
+                                  : "text-gray-300"
+                              }`}
+                              aria-hidden="true"
+                              xmlns="http://www.w3.org/2000/svg"
+                              fill="currentColor"
+                              viewBox="0 0 22 20"
+                            >
+                              <path d="M20.924 7.625a1.523 1.523 0 0 0-1.238-1.044l-5.051-.734-2.259-4.577a1.534 1.534 0 0 0-2.752 0L7.365 5.847l-5.051.734A1.535 1.535 0 0 0 1.463 9.2l3.656 3.563-.863 5.031a1.532 1.532 0 0 0 2.226 1.616L11 17.033l4.518 2.375a1.534 1.534 0 0 0 2.226-1.617l-.863-5.03L20.537 9.2a1.523 1.523 0 0 0 .387-1.575Z" />
+                            </svg>
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                    
-                    <div className="flex">
-                      {[...Array(5)].map((_, i) => (
-                        <svg
-                          key={i}
-                          className={`w-4 h-4 ${
-                            i < Math.floor(wantedPost.user.rating)
-                              ? "text-yellow-400"
-                              : i < wantedPost.user.rating
-                              ? "text-yellow-200"
-                              : "text-gray-300"
-                          }`}
-                          aria-hidden="true"
-                          xmlns="http://www.w3.org/2000/svg"
-                          fill="currentColor"
-                          viewBox="0 0 22 20"
-                        >
-                          <path d="M20.924 7.625a1.523 1.523 0 0 0-1.238-1.044l-5.051-.734-2.259-4.577a1.534 1.534 0 0 0-2.752 0L7.365 5.847l-5.051.734A1.535 1.535 0 0 0 1.463 9.2l3.656 3.563-.863 5.031a1.532 1.532 0 0 0 2.226 1.616L11 17.033l4.518 2.375a1.534 1.534 0 0 0 2.226-1.617l-.863-5.03L20.537 9.2a1.523 1.523 0 0 0 .387-1.575Z" />
-                        </svg>
-                      ))}
-                    </div>
-                  </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="flex items-center gap-3 mb-4">
+                        <Avatar>
+                          <AvatarImage src={wantedPost.userAvatar} />
+                          <AvatarFallback>
+                            {(wantedPost.userName || "User").substring(0, 2).toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                        
+                        <div>
+                          <div className="font-medium">{wantedPost.userName || "Anonymous User"}</div>
+                          <div className="text-sm text-muted-foreground">
+                            Member
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  )}
                   
                   <Button 
                     className="w-full flex items-center gap-2"
@@ -363,7 +390,7 @@ export default function WantedPostDetailPage() {
           <DialogHeader>
             <DialogTitle>Contact About Wanted Post</DialogTitle>
             <DialogDescription>
-              Send a message to {wantedPost.user.name} about their wanted post.
+              Send a message to {posterData?.name || wantedPost.userName || "the poster"} about their wanted post.
             </DialogDescription>
           </DialogHeader>
           
