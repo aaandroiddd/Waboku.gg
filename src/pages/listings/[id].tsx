@@ -268,7 +268,13 @@ export default function ListingPage() {
     }
 
     try {
-      // Use the new Connect API endpoint
+      // Make sure we have the user's email
+      if (!user.email) {
+        toast.error('Your account email is missing. Please update your profile.');
+        return;
+      }
+
+      // Use the Connect API endpoint with proper parameters
       const response = await fetch('/api/stripe/connect/create-buy-now-session', {
         method: 'POST',
         headers: {
