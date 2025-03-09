@@ -193,27 +193,68 @@ export default function CreateWantedPostPage() {
       } catch (hookError) {
         console.error("Error using hook to create post:", hookError);
         
-        // If the hook fails, try using the test API endpoint
+        // If the hook fails, try using the API endpoint
         console.log("Trying alternative method via API...");
         
-        // First test if we can write to the database
-        const testResponse = await fetch('/api/debug/test-database-write', {
-          method: 'GET'
-        });
-        
-        const testResult = await testResponse.json();
-        console.log("Database write test result:", testResult);
-        
-        if (testResult.success) {
-          // If the test was successful, we know the database is working
-          // but there might be an issue with the hook
-          setError("There was an issue with the form submission. Please try again later.");
-        } else {
-          // If the test failed, there's a database connection issue
-          setError("Database connection error. Please try again later.");
+        try {
+          // Get the user's ID token
+          const token = await user?.getIdToken();
+          
+          if (!token) {
+            throw new Error("Not authenticated");
+          }
+          
+          // Call the API endpoint
+          const response = await fetch('/api/wanted/create', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(postData)
+          });
+          
+          const result = await response.json();
+          console.log("API result:", result);
+          
+          if (result.success && result.postId) {
+            console.log("Post created successfully via API with ID:", result.postId);
+            
+            // Redirect to the newly created post with success parameter
+            router.push({
+              pathname: `/wanted/${result.postId}`,
+              query: { success: "created" }
+            });
+          } else {
+            throw new Error(result.message || "Failed to create post via API");
+          }
+        } catch (apiError) {
+          console.error("Error creating post via API:", apiError);
+          
+          // If both methods fail, try the test endpoint as a last resort
+          try {
+            const testResponse = await fetch('/api/debug/test-database-write', {
+              method: 'GET'
+            });
+            
+            const testResult = await testResponse.json();
+            console.log("Database write test result:", testResult);
+            
+            if (testResult.success) {
+              // If the test was successful, we know the database is working
+              // but there might be an issue with the hook and API
+              setError("There was an issue with the form submission. Please try again later.");
+            } else {
+              // If the test failed, there's a database connection issue
+              setError("Database connection error. Please try again later.");
+            }
+          } catch (testError) {
+            console.error("Error testing database:", testError);
+            setError("Failed to create wanted post. Please try again later.");
+          }
+          
+          setIsSubmitting(false);
         }
-        
-        setIsSubmitting(false);
       }
     } catch (err) {
       console.error("Error creating wanted post:", err);
