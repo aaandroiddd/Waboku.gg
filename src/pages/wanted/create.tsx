@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import { PageTransition } from "@/components/PageTransition";
-import { Header } from "@/components/Header";
+import Header from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWantedPosts, WantedPostCondition } from "@/hooks/useWantedPosts";
@@ -15,7 +15,7 @@ import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { LocationInput } from "@/components/LocationInput";
 import { MAIN_GAME_CATEGORIES, OTHER_GAME_CATEGORIES, GAME_MAPPING, OTHER_GAME_MAPPING } from "@/lib/game-mappings";
-import { CardSearchInput } from "@/components/CardSearchInput";
+import CardSearchInput from "@/components/CardSearchInput";
 import { MarkdownEditor } from "@/components/MarkdownEditor";
 import { AlertCircle, ArrowLeft } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";

@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import { PageTransition } from "@/components/PageTransition";
-import { Header } from "@/components/Header";
+import Header from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { useWantedPosts, WantedPost } from "@/hooks/useWantedPosts";
 import { Button } from "@/components/ui/button";

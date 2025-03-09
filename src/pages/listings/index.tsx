@@ -44,8 +44,8 @@ import {
 import { Slider } from "@/components/ui/slider";
 import { Checkbox } from "@/components/ui/checkbox";
 
-// Import game mappings from GameCategories
-import { GAME_MAPPING, OTHER_GAME_MAPPING, GAME_NAME_MAPPING } from '@/components/GameCategories';
+// Import game mappings from centralized file
+import { GAME_MAPPING, OTHER_GAME_MAPPING, GAME_NAME_MAPPING } from '@/lib/game-mappings';
 
 const games = [
   { value: "all", label: "All Categories" },

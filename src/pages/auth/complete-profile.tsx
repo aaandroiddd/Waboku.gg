@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { useAuth } from '@/contexts/AuthContext';
 import ProfileCompletionForm from '@/components/ProfileCompletionForm';
-import LoadingScreen from '@/components/LoadingScreen';
+import { LoadingScreen } from '@/components/LoadingScreen';
 
 export default function CompleteProfilePage() {
   const { user, profile, isLoading } = useAuth();

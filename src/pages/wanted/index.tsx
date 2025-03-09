@@ -3,7 +3,7 @@ import { useRouter } from "next/router";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { PageTransition } from "@/components/PageTransition";
-import { Header } from "@/components/Header";
+import Header from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { SearchIcon, PlusCircle } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
