@@ -1,6 +1,6 @@
 import { useRouter } from 'next/router';
 import { Badge, BadgeProps } from '@/components/ui/badge';
-import { GAME_NAME_MAPPING } from '@/components/GameCategories';
+import { GAME_NAME_MAPPING } from '@/lib/game-mappings';
 
 interface GameCategoryBadgeProps extends BadgeProps {
   game: string;

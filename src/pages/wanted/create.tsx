@@ -14,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { LocationInput } from "@/components/LocationInput";
-import { MAIN_GAME_CATEGORIES, OTHER_GAME_CATEGORIES, GAME_MAPPING, OTHER_GAME_MAPPING } from "@/components/GameCategories";
+import { MAIN_GAME_CATEGORIES, OTHER_GAME_CATEGORIES, GAME_MAPPING, OTHER_GAME_MAPPING } from "@/lib/game-mappings";
 import { CardSearchInput } from "@/components/CardSearchInput";
 import { MarkdownEditor } from "@/components/MarkdownEditor";
 import { AlertCircle, ArrowLeft } from "lucide-react";

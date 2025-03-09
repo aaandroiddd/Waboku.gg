@@ -10,7 +10,7 @@ import { PlusCircle, Filter, MapPin, Calendar } from "lucide-react";
 import { GameCategoryBadge } from "@/components/GameCategoryBadge";
 import { useAuth } from "@/contexts/AuthContext";
 import { Skeleton } from "@/components/ui/skeleton";
-import { GAME_NAME_MAPPING } from "@/components/GameCategories";
+import { GAME_NAME_MAPPING } from "@/lib/game-mappings";
 import { StateSelect } from "@/components/StateSelect";
 import { useWantedPosts, WantedPost } from "@/hooks/useWantedPosts";
 

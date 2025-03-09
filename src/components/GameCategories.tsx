@@ -8,50 +8,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { ChevronDown } from "lucide-react"
-
-// Game categories mapping to ensure consistent values
-export const GAME_MAPPING = {
-  "Pokemon": "pokemon",
-  "Magic: The Gathering": "mtg",
-  "Yu-Gi-Oh!": "yugioh",
-  "One Piece": "onepiece",
-  "Disney Lorcana": "lorcana",
-  "Digimon": "digimon",
-} as const
-
-// Mapping for game name variations to handle different formats and cases
-export const GAME_NAME_MAPPING = {
-  "pokemon": ["pokemon", "Pokemon", "POKEMON", "Pokemon TCG"],
-  "mtg": ["mtg", "Magic: The Gathering", "MTG", "Magic", "magic the gathering"],
-  "yugioh": ["yugioh", "Yu-Gi-Oh!", "Yu-Gi-Oh", "YuGiOh"],
-  "onepiece": ["onepiece", "One Piece", "One Piece Card Game", "ONEPIECE"],
-  "lorcana": ["lorcana", "Disney Lorcana", "Lorcana"],
-  "digimon": ["digimon", "Digimon Card Game", "DIGIMON"],
-  "dbs": ["dbs", "Dragon Ball Super", "Dragon Ball Super Card Game"],
-  "flesh-and-blood": ["flesh-and-blood", "Flesh and Blood", "FAB"],
-  "star-wars": ["star-wars", "Star Wars: Unlimited", "Star Wars"],
-  "union-arena": ["union-arena", "Union Arena"],
-  "universus": ["universus", "Universus"],
-  "vanguard": ["vanguard", "Cardfight Vanguard", "Vanguard"],
-  "weiss": ["weiss", "Weiss Schwarz", "Weiss"],
-  "accessories": ["accessories", "Accessories", "ACCESSORIES", "TCG Accessories"]
-}
-
-export const OTHER_GAME_MAPPING = {
-  "Dragon Ball Super": "dbs",
-  "Flesh and Blood": "flesh-and-blood",
-  "Star Wars: Unlimited": "star-wars",
-  "Union Arena": "union-arena",
-  "Universus": "universus",
-  "Vanguard": "vanguard",
-  "Weiss Schwarz": "weiss",
-  "Accessories": "accessories",
-} as const
-
-export const MAIN_GAME_CATEGORIES = Object.keys(GAME_MAPPING) as (keyof typeof GAME_MAPPING)[]
-export const OTHER_GAME_CATEGORIES = Object.keys(OTHER_GAME_MAPPING) as (keyof typeof OTHER_GAME_MAPPING)[]
-
-export type GameCategory = keyof typeof GAME_MAPPING | keyof typeof OTHER_GAME_MAPPING
+import { 
+  GAME_MAPPING, 
+  OTHER_GAME_MAPPING, 
+  MAIN_GAME_CATEGORIES, 
+  OTHER_GAME_CATEGORIES,
+  GameCategory
+} from "@/lib/game-mappings"
 
 const container = {
   hidden: { opacity: 0 },
