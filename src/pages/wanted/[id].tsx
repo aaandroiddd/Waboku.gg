@@ -18,7 +18,7 @@ import { ArrowLeft, Calendar, MapPin, MessageSquare, Flag, Share2 } from "lucide
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/use-toast";
 import { get, ref } from "firebase/database";
-import { database } from "@/lib/firebase";
+import { firebaseDatabase as database } from "@/lib/firebase";
 
 export default function WantedPostDetailPage() {
   const router = useRouter();
