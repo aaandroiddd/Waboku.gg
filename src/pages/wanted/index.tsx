@@ -20,6 +20,10 @@ export default function WantedBoardPage() {
   const { user } = useAuth();
   
   const handleCategoryClick = (category: string) => {
+    if (!user) {
+      router.push(`/auth/sign-in?redirect=/wanted/create?game=${category}`);
+      return;
+    }
     router.push({
       pathname: "/wanted/create",
       query: { game: category },
