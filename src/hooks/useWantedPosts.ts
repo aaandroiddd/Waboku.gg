@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { ref, push, set, get, query, orderByChild, equalTo, remove, update } from 'firebase/database';
-import { database } from '@/lib/firebase';
+import { firebaseDatabase as database } from '@/lib/firebase';
 
 export type WantedPostCondition = 
   | 'any'

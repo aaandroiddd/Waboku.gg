@@ -27,6 +27,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     console.log('Creating wanted post via simple API with admin SDK...');
     
+    // Log Firebase configuration
+    console.log('Firebase Admin Configuration:', {
+      projectId: process.env.FIREBASE_PROJECT_ID ? 'set' : 'missing',
+      clientEmail: process.env.FIREBASE_CLIENT_EMAIL ? 'set' : 'missing',
+      privateKey: process.env.FIREBASE_PRIVATE_KEY ? 'set' : 'missing',
+      databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL ? 'set' : 'missing'
+    });
+    
     // Use admin SDK to write to the database
     const adminDb = getDatabase(firebaseAdmin);
     

@@ -52,7 +52,9 @@ export function WantedPostsSection() {
                 userId: user.uid,
                 postsCount: posts.length,
                 hasError: !!error,
-                errorMessage: error || null
+                errorMessage: error || null,
+                databaseURL: !!process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL,
+                retryCount
               }, 
               level: 'info' 
             }),
@@ -71,6 +73,7 @@ export function WantedPostsSection() {
       // If there's an error and we haven't retried too many times, retry
       if (retryCount < 3) {
         const timer = setTimeout(() => {
+          console.log(`Retrying to fetch posts (attempt ${retryCount + 1}/3)...`);
           setRetryCount(prev => prev + 1);
           // This will cause the component to re-render and the useWantedPosts hook to re-fetch
         }, 2000);

@@ -13,7 +13,7 @@ import {
   Firestore
 } from 'firebase/firestore';
 import { getStorage, FirebaseStorage } from 'firebase/storage';
-import { getDatabase, Database } from 'firebase/database';
+import { getDatabase, Database, ref, onValue } from 'firebase/database';
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,

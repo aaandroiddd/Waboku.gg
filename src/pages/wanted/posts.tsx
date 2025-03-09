@@ -12,7 +12,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { GAME_NAME_MAPPING } from "@/lib/game-mappings";
 import { StateSelect } from "@/components/StateSelect";
 import { useWantedPosts, WantedPost } from "@/hooks/useWantedPosts";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 // Helper function to get the display name for a game category
 const getGameDisplayName = (gameKey: string): string => {
@@ -36,6 +36,42 @@ export default function AllWantedPostsPage() {
     game: game as string | undefined,
     state: selectedState || undefined
   });
+  
+  // Log for debugging
+  useEffect(() => {
+    console.log("Wanted Posts Page - Posts loaded:", wantedPosts.length);
+    console.log("Wanted Posts Page - Loading state:", isLoading);
+    console.log("Wanted Posts Page - Error state:", error);
+    
+    // Log to server for debugging
+    const logData = async () => {
+      try {
+        await fetch('/api/debug/log', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ 
+            message: "Wanted Posts Page - Data state", 
+            data: { 
+              postsCount: wantedPosts.length,
+              isLoading,
+              hasError: !!error,
+              errorMessage: error || null,
+              game: game || 'all',
+              state: selectedState || 'all',
+              databaseURL: !!process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL
+            }, 
+            level: 'info' 
+          }),
+        });
+      } catch (e) {
+        console.error('Failed to send log to server:', e);
+      }
+    };
+    
+    logData();
+  }, [wantedPosts, isLoading, error, game, selectedState]);
 
   const handleCreateWanted = () => {
     if (!user) {
