@@ -17,6 +17,7 @@ import { ListingTimer } from "@/components/ListingTimer";
 import { ListingList } from "@/components/ListingList";
 import { DeleteListingDialog } from "@/components/DeleteListingDialog";
 import { ListingsSearchBar } from "@/components/ListingsSearchBar";
+import { WantedPostsSection } from "@/components/dashboard/WantedPostsSection";
 import { useListings } from '@/hooks/useListings';
 import { useProfile } from '@/hooks/useProfile';
 import { Listing } from '@/types/database';
@@ -281,6 +282,11 @@ const DashboardComponent = () => {
       </Card>
 
       {/* Tabs Section */}
+      {/* Wanted Posts Section */}
+      <div className="mb-8">
+        <WantedPostsSection />
+      </div>
+
       <Tabs defaultValue="active" className="space-y-4">
         <TabsList>
           <TabsTrigger value="active">Active Listings</TabsTrigger>

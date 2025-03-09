@@ -50,6 +50,14 @@ export default function Header() {
 
         {/* Desktop Navigation */}
         <nav className="hidden md:flex items-center space-x-4">
+          <div className="flex items-center space-x-4 mr-4">
+            <Link href="/listings" className="text-sm font-medium hover:text-primary">
+              Browse Listings
+            </Link>
+            <Link href="/wanted" className="text-sm font-medium hover:text-primary">
+              Wanted Board
+            </Link>
+          </div>
           <div className="flex items-center">
             <ThemeToggle />
           </div>
@@ -89,9 +97,14 @@ export default function Header() {
                 >
                   Browse Listings
                 </Link>
+                <Link 
+                  href="/wanted" 
+                  className="flex items-center gap-2 px-2 py-2 hover:bg-accent rounded-md transition-colors"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  Wanted Board
+                </Link>
                 
-
-
                 {user ? (
                   <>
                     <div className="pt-2 pb-2">
