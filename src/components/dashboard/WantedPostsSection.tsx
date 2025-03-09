@@ -23,11 +23,61 @@ import {
 export function WantedPostsSection() {
   const router = useRouter();
   const { user } = useAuth();
-  const { posts, isLoading, deleteWantedPost } = useWantedPosts({ userId: user?.uid });
+  const [retryCount, setRetryCount] = useState(0);
+  const { posts, isLoading, error, deleteWantedPost } = useWantedPosts({ 
+    userId: user?.uid 
+  });
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [postToDelete, setPostToDelete] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const { toast } = useToast();
+  
+  // Log for debugging
+  useEffect(() => {
+    if (user) {
+      console.log("WantedPostsSection - Current user:", user.uid);
+      console.log("WantedPostsSection - Posts loaded:", posts.length);
+      
+      // Log to server for debugging
+      const logData = async () => {
+        try {
+          await fetch('/api/debug/log', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ 
+              message: "WantedPostsSection - User and posts data", 
+              data: { 
+                userId: user.uid,
+                postsCount: posts.length,
+                hasError: !!error,
+                errorMessage: error || null
+              }, 
+              level: 'info' 
+            }),
+          });
+        } catch (e) {
+          console.error('Failed to send log to server:', e);
+        }
+      };
+      
+      logData();
+    }
+    
+    if (error) {
+      console.error("WantedPostsSection - Error loading posts:", error);
+      
+      // If there's an error and we haven't retried too many times, retry
+      if (retryCount < 3) {
+        const timer = setTimeout(() => {
+          setRetryCount(prev => prev + 1);
+          // This will cause the component to re-render and the useWantedPosts hook to re-fetch
+        }, 2000);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [user, posts, error, retryCount]);
 
   const handleCreateClick = () => {
     router.push("/wanted/create");
