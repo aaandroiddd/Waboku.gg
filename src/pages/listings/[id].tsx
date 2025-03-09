@@ -46,6 +46,7 @@ export default function ListingPage() {
   const [error, setError] = useState<string | null>(null);
   const [isZoomDialogOpen, setIsZoomDialogOpen] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [sellerHasActiveStripeAccount, setSellerHasActiveStripeAccount] = useState(false);
 
   useEffect(() => {
     if (listing?.coverImageIndex !== undefined) {
@@ -66,6 +67,33 @@ export default function ListingPage() {
   // Get favorites functionality from the hook
   const { toggleFavorite, isFavorite, initialized } = useFavorites();
   
+  // Effect to check if the seller has an active Stripe Connect account
+  useEffect(() => {
+    if (!listing || !listing.userId) return;
+    
+    async function checkSellerStripeStatus() {
+      try {
+        const { db } = getFirebaseServices();
+        if (!db) return;
+        
+        const sellerDoc = await getDoc(doc(db, 'users', listing.userId));
+        if (!sellerDoc.exists()) return;
+        
+        const sellerData = sellerDoc.data();
+        // Check if seller has completed Stripe Connect onboarding
+        setSellerHasActiveStripeAccount(
+          !!sellerData.stripeConnectAccountId && 
+          sellerData.stripeConnectStatus === 'active'
+        );
+      } catch (error) {
+        console.error('Error checking seller Stripe status:', error);
+        setSellerHasActiveStripeAccount(false);
+      }
+    }
+    
+    checkSellerStripeStatus();
+  }, [listing]);
+
   useEffect(() => {
     let isMounted = true;
 
@@ -646,15 +674,27 @@ export default function ListingPage() {
                   
                   {/* Buy Now and Make Offer buttons */}
                   <div className="flex flex-col sm:flex-row gap-2">
-                    <Button
-                      variant="default"
-                      size="lg"
-                      onClick={handleBuyNow}
-                      className="flex-1 bg-green-600 hover:bg-green-700 text-white"
-                      disabled={user?.uid === listing.userId}
-                    >
-                      Buy Now - {formatPrice(listing.price)}
-                    </Button>
+                    {sellerHasActiveStripeAccount ? (
+                      <Button
+                        variant="default"
+                        size="lg"
+                        onClick={handleBuyNow}
+                        className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                        disabled={user?.uid === listing.userId}
+                      >
+                        Buy Now - {formatPrice(listing.price)}
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="outline"
+                        size="lg"
+                        className="flex-1 bg-gray-200 text-gray-500 hover:bg-gray-200 cursor-not-allowed"
+                        disabled={true}
+                        title="Seller has not set up payment processing yet"
+                      >
+                        Buy Now Unavailable
+                      </Button>
+                    )}
                     <Button
                       variant="outline"
                       size="lg"
