@@ -54,20 +54,34 @@ export default function SearchBar({ showSearchButton = false, initialValue = "",
   const { recordSearch } = useTrendingSearches();
 
   const handleSearch = async (query: string) => {
+    // If query has content, record it
     if (query.trim()) {
       await recordSearch(query.trim());
-      // Preserve existing query parameters and update only the search query
-      const currentQuery = router.query;
-      router.push({
-        pathname: '/listings',
-        query: { 
-          ...currentQuery,
-          query: query.trim(),
-          // Include the selected state in the search query
-          ...(selectedState !== 'all' && { state: selectedState })
-        }
-      });
     }
+    
+    // Preserve existing query parameters and update only the search query
+    const currentQuery = router.query;
+    
+    // Create new query object
+    const newQuery: any = { ...currentQuery };
+    
+    // If query has content, add it to the query params
+    if (query.trim()) {
+      newQuery.query = query.trim();
+    } else {
+      // If query is empty, remove it from query params to show all listings
+      delete newQuery.query;
+    }
+    
+    // Include the selected state in the search query if not "all"
+    if (selectedState !== 'all') {
+      newQuery.state = selectedState;
+    }
+    
+    router.push({
+      pathname: '/listings',
+      query: newQuery
+    });
   };
 
   const handleCardSelect = async (card: any) => {

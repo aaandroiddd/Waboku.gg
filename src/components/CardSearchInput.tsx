@@ -41,11 +41,8 @@ const CardSearchInput: React.FC<CardSearchInputProps> = ({
   const handleSearch = async (term: string = searchTerm) => {
     const normalizedTerm = normalizeSearchTerm(term);
     
-    if (!normalizedTerm) {
-      return;
-    }
-
-    if (!validateSearchTerm(normalizedTerm)) {
+    // If search term is empty, still proceed with search to show all listings
+    if (normalizedTerm && !validateSearchTerm(normalizedTerm)) {
       toast({
         title: "Invalid search term",
         description: "Please enter a valid search term using letters and numbers.",
@@ -54,24 +51,27 @@ const CardSearchInput: React.FC<CardSearchInputProps> = ({
       return;
     }
 
-    // Record the search term
-    try {
-      await fetch('/api/search/record', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ searchTerm: normalizedTerm }),
-      });
-    } catch (error) {
-      console.error('Failed to record search term:', error);
-      // Don't show error to user as this is analytics only
+    // Only record the search term if it's not empty
+    if (normalizedTerm) {
+      try {
+        await fetch('/api/search/record', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ searchTerm: normalizedTerm }),
+        });
+      } catch (error) {
+        console.error('Failed to record search term:', error);
+        // Don't show error to user as this is analytics only
+      }
     }
 
     if (onSearch) {
       setIsSearching(true);
       try {
-        await onSearch(normalizedTerm.trim());
+        // Pass the normalized term (which might be empty) to show all listings
+        await onSearch(normalizedTerm ? normalizedTerm.trim() : "");
       } finally {
         setIsSearching(false);
       }

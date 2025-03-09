@@ -366,17 +366,38 @@ export default function Home() {
   const router = useRouter();
 
   const handleSearch = () => {
+    // Create query object
+    const queryParams: any = {};
+    
+    // Only add parameters that have values
+    if (searchQuery) {
+      queryParams.query = searchQuery;
+    }
+    
+    if (selectedState !== 'all') {
+      queryParams.state = selectedState;
+    }
+    
+    if (selectedGame !== 'all') {
+      queryParams.game = selectedGame;
+    }
+    
+    if (selectedCondition !== 'all') {
+      queryParams.condition = selectedCondition;
+    }
+    
+    if (priceRange[0] !== 0) {
+      queryParams.minPrice = priceRange[0];
+    }
+    
+    if (priceRange[1] !== 1000) {
+      queryParams.maxPrice = priceRange[1];
+    }
+    
     // Redirect to listings page with search parameters
     router.push({
       pathname: '/listings',
-      query: {
-        ...(searchQuery && { query: searchQuery }),
-        ...(selectedState !== 'all' && { state: selectedState }),
-        ...(selectedGame !== 'all' && { game: selectedGame }),
-        ...(selectedCondition !== 'all' && { condition: selectedCondition }),
-        ...(priceRange[0] !== 0 && { minPrice: priceRange[0] }),
-        ...(priceRange[1] !== 1000 && { maxPrice: priceRange[1] }),
-      },
+      query: queryParams,
     });
   };
 
