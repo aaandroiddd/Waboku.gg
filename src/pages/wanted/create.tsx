@@ -197,6 +197,43 @@ export default function CreateWantedPostPage() {
         console.log("Trying alternative method via API...");
         
         try {
+          // Try the simple API endpoint first
+          console.log("Trying simple API endpoint...");
+          
+          // Add user info to the post data
+          const enhancedPostData = {
+            ...postData,
+            userId: user?.uid || 'anonymous',
+            userName: user?.displayName || 'Anonymous User',
+            userAvatar: user?.photoURL || undefined
+          };
+          
+          // Call the simple API endpoint
+          const simpleResponse = await fetch('/api/wanted/create-simple', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(enhancedPostData)
+          });
+          
+          const simpleResult = await simpleResponse.json();
+          console.log("Simple API result:", simpleResult);
+          
+          if (simpleResult.success && simpleResult.postId) {
+            console.log("Post created successfully via simple API with ID:", simpleResult.postId);
+            
+            // Redirect to the newly created post with success parameter
+            router.push({
+              pathname: `/wanted/${simpleResult.postId}`,
+              query: { success: "created" }
+            });
+            return;
+          }
+          
+          // If simple API fails, try the authenticated API
+          console.log("Simple API failed, trying authenticated API...");
+          
           // Get the user's ID token
           const token = await user?.getIdToken();
           
@@ -204,7 +241,7 @@ export default function CreateWantedPostPage() {
             throw new Error("Not authenticated");
           }
           
-          // Call the API endpoint
+          // Call the authenticated API endpoint
           const response = await fetch('/api/wanted/create', {
             method: 'POST',
             headers: {
@@ -215,10 +252,10 @@ export default function CreateWantedPostPage() {
           });
           
           const result = await response.json();
-          console.log("API result:", result);
+          console.log("Authenticated API result:", result);
           
           if (result.success && result.postId) {
-            console.log("Post created successfully via API with ID:", result.postId);
+            console.log("Post created successfully via authenticated API with ID:", result.postId);
             
             // Redirect to the newly created post with success parameter
             router.push({
@@ -231,7 +268,7 @@ export default function CreateWantedPostPage() {
         } catch (apiError) {
           console.error("Error creating post via API:", apiError);
           
-          // If both methods fail, try the test endpoint as a last resort
+          // If all API methods fail, try the test endpoint as a last resort
           try {
             const testResponse = await fetch('/api/debug/test-database-write', {
               method: 'GET'
