@@ -60,20 +60,86 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
       try {
         lastCheckTime = now;
         const idToken = await user.getIdToken();
-        const response = await fetch('/api/stripe/check-subscription', {
-          headers: {
-            'Authorization': `Bearer ${idToken}`
+        
+        // Add timeout and retry logic for better network resilience
+        let attempts = 0;
+        const maxAttempts = 3;
+        
+        while (attempts < maxAttempts) {
+          try {
+            console.log(`Attempting to check subscription status (attempt ${attempts + 1}/${maxAttempts})...`);
+            
+            // Use AbortController to implement timeout
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+            
+            const response = await fetch('/api/stripe/check-subscription', {
+              headers: {
+                'Authorization': `Bearer ${idToken}`
+              },
+              signal: controller.signal
+            });
+            
+            // Clear the timeout
+            clearTimeout(timeoutId);
+            
+            if (!response.ok) {
+              const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
+              console.warn(`Subscription check failed with status ${response.status}:`, errorData);
+              
+              // For 401 errors, we might need a new token
+              if (response.status === 401) {
+                // Try to get a fresh token for the next attempt
+                if (attempts < maxAttempts - 1) {
+                  console.log('Auth error detected, refreshing token for next attempt');
+                  await user.getIdToken(true);
+                }
+              }
+              
+              throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            console.log('Subscription check successful:', {
+              isPremium: data.isPremium,
+              status: data.status,
+              tier: data.tier
+            });
+            
+            return data;
+          } catch (fetchError: any) {
+            attempts++;
+            
+            // If this is our last attempt, rethrow the error
+            if (attempts >= maxAttempts) {
+              console.error('Max subscription check attempts reached');
+              throw fetchError;
+            }
+            
+            // For network errors, wait before retrying
+            const isNetworkError = fetchError.name === 'AbortError' || 
+                                  fetchError.message.includes('network') ||
+                                  fetchError.message.includes('fetch');
+            
+            if (isNetworkError) {
+              const delay = Math.min(1000 * Math.pow(2, attempts), 5000);
+              console.log(`Network error, waiting ${delay}ms before retry...`);
+              await new Promise(resolve => setTimeout(resolve, delay));
+            }
           }
-        });
-
-        if (!response.ok) {
-          throw new Error('Failed to check subscription status');
         }
-
-        return await response.json();
+        
+        // This should never be reached due to the throw in the loop
+        return null;
       } catch (error) {
         console.error('Error checking subscription status:', error);
-        return null;
+        // Return a default object instead of null to prevent UI errors
+        return {
+          isPremium: false,
+          status: 'error',
+          tier: 'free',
+          error: true
+        };
       }
     };
 

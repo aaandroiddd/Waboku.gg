@@ -253,23 +253,59 @@ export async function getAuthToken(forceRefresh: boolean = false): Promise<strin
     
     while (attempts < maxAttempts) {
       try {
-        const token = await currentUser.getIdToken(forceRefresh);
+        // Use a timeout promise to prevent hanging
+        const tokenPromise = currentUser.getIdToken(forceRefresh);
+        const timeoutPromise = new Promise<null>((_, reject) => {
+          setTimeout(() => reject(new Error('Token fetch timeout')), 10000); // 10 second timeout
+        });
+        
+        // Race the token fetch against the timeout
+        const token = await Promise.race([tokenPromise, timeoutPromise]) as string;
+        
+        // Store the successful token fetch time
+        try {
+          const lastRefreshKey = `waboku_last_token_refresh_${currentUser.uid}`;
+          localStorage.setItem(lastRefreshKey, Date.now().toString());
+        } catch (e) {
+          console.warn('Could not store token refresh time in localStorage');
+        }
+        
         return token;
       } catch (tokenError: any) {
         attempts++;
         console.warn(`Token fetch attempt ${attempts} failed:`, tokenError.message);
         
-        // If this is a network error, wait and retry
-        if (tokenError.code === 'auth/network-request-failed' && attempts < maxAttempts) {
-          // Exponential backoff: 1s, 2s, 4s
-          const delay = Math.pow(2, attempts - 1) * 1000;
-          console.log(`Waiting ${delay}ms before retry...`);
+        // If this is a network error or timeout, wait and retry
+        const isNetworkError = tokenError.code === 'auth/network-request-failed' || 
+                              tokenError.message.includes('timeout') ||
+                              tokenError.message.includes('network');
+        
+        if (isNetworkError && attempts < maxAttempts) {
+          // Exponential backoff with jitter: ~1s, ~2s, ~4s
+          const baseDelay = Math.pow(2, attempts - 1) * 1000;
+          const jitter = Math.random() * 500; // Add up to 500ms of random jitter
+          const delay = baseDelay + jitter;
+          
+          console.log(`Waiting ${Math.round(delay)}ms before retry...`);
           await new Promise(resolve => setTimeout(resolve, delay));
         } else if (attempts >= maxAttempts) {
           console.error('Max token fetch attempts reached');
+          
+          // On final attempt, try to get a non-forced token as fallback
+          if (forceRefresh) {
+            try {
+              console.log('Attempting to get current token without forcing refresh as fallback...');
+              return await currentUser.getIdToken(false);
+            } catch (fallbackError) {
+              console.error('Fallback token fetch also failed:', fallbackError);
+              return null;
+            }
+          }
           return null;
         } else {
-          throw tokenError;
+          // For non-network errors that we can't recover from
+          console.error('Non-recoverable token fetch error:', tokenError);
+          return null;
         }
       }
     }
