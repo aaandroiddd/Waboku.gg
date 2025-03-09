@@ -17,6 +17,7 @@ export const OTHER_GAME_MAPPING = {
   "Vanguard": "vanguard",
   "Weiss Schwarz": "weiss",
   "Accessories": "accessories",
+  "Other": "other",
 } as const;
 
 export const MAIN_GAME_CATEGORIES = Object.keys(GAME_MAPPING) as (keyof typeof GAME_MAPPING)[];
@@ -39,7 +40,8 @@ export const GAME_NAME_MAPPING = {
   "universus": ["universus", "Universus"],
   "vanguard": ["vanguard", "Cardfight Vanguard", "Vanguard"],
   "weiss": ["weiss", "Weiss Schwarz", "Weiss"],
-  "accessories": ["accessories", "Accessories", "ACCESSORIES", "TCG Accessories"]
+  "accessories": ["accessories", "Accessories", "ACCESSORIES", "TCG Accessories"],
+  "other": ["other", "Other", "OTHER", "Miscellaneous", "Other TCG"]
 };
 
 // Game category icons
@@ -58,4 +60,5 @@ export const GAME_ICONS: Record<string, string> = {
   "vanguard": "🛡️",
   "weiss": "🃏",
   "accessories": "🎒",
+  "other": "🃏",
 };
