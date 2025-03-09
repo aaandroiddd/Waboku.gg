@@ -48,17 +48,32 @@ let database: Database;
 
 function initializeFirebase() {
   try {
-    // Validate Firebase config
-    if (!firebaseConfig.apiKey || !firebaseConfig.projectId) {
-      console.error('Firebase configuration is incomplete:', 
-        Object.keys(firebaseConfig).filter(key => !firebaseConfig[key as keyof typeof firebaseConfig]));
+    // Validate Firebase config with detailed logging
+    console.log('Validating Firebase configuration...');
+    
+    // Check for required config values
+    const missingConfigValues = Object.entries(firebaseConfig)
+      .filter(([key, value]) => !value)
+      .map(([key]) => key);
+    
+    if (missingConfigValues.length > 0) {
+      console.error('Firebase configuration is incomplete. Missing values for:', missingConfigValues);
+      
+      // Log specific missing values that are critical
+      if (!firebaseConfig.apiKey) console.error('CRITICAL: Firebase API key is missing');
+      if (!firebaseConfig.projectId) console.error('CRITICAL: Firebase project ID is missing');
+      if (!firebaseConfig.databaseURL) console.error('CRITICAL: Firebase database URL is missing - Realtime Database will not work');
+      
       throw new Error('Firebase configuration is incomplete. Check your environment variables.');
     }
+    
+    console.log('Firebase configuration validated successfully');
 
     // Check if Firebase is already initialized
     if (!getApps().length) {
-      console.log('Initializing Firebase app...');
+      console.log('Initializing new Firebase app...');
       app = initializeApp(firebaseConfig);
+      console.log('Firebase app initialized successfully');
     } else {
       console.log('Firebase app already initialized, reusing existing app');
       app = getApps()[0];
@@ -66,6 +81,7 @@ function initializeFirebase() {
 
     // Initialize services with better error handling
     try {
+      console.log('Initializing Firebase Auth...');
       auth = getAuth(app);
       console.log('Firebase Auth initialized successfully');
     } catch (authError) {
@@ -74,6 +90,7 @@ function initializeFirebase() {
     }
 
     try {
+      console.log('Initializing Firestore...');
       db = getFirestore(app);
       console.log('Firestore initialized successfully');
     } catch (dbError) {
@@ -82,10 +99,24 @@ function initializeFirebase() {
     }
 
     try {
+      console.log('Initializing Realtime Database with URL:', 
+        firebaseConfig.databaseURL ? 
+        `${firebaseConfig.databaseURL.substring(0, 8)}...` : 'missing');
+      
+      if (!firebaseConfig.databaseURL) {
+        console.error('CRITICAL: Firebase database URL is missing. Realtime Database will not work properly.');
+        throw new Error('Firebase Realtime Database URL is missing. Check your environment variables.');
+      }
+      
       database = getDatabase(app);
       console.log('Realtime Database initialized successfully');
     } catch (rtdbError) {
       console.error('Failed to initialize Realtime Database:', rtdbError);
+      console.error('Realtime Database error details:', {
+        message: rtdbError instanceof Error ? rtdbError.message : 'Unknown error',
+        name: rtdbError instanceof Error ? rtdbError.name : 'Unknown error type',
+        stack: rtdbError instanceof Error ? rtdbError.stack : 'No stack trace'
+      });
       throw new Error('Realtime Database service initialization failed');
     }
 
