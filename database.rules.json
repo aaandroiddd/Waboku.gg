@@ -2,6 +2,8 @@
   "rules": {
     "wantedPosts": {
       ".indexOn": ["createdAt", "userId", "game"],
+      ".read": "auth != null",
+      ".write": "auth != null",
       "$postId": {
         ".read": "auth != null",
         ".write": "auth != null && (!data.exists() || data.child('userId').val() === auth.uid)",
