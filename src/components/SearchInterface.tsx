@@ -25,11 +25,22 @@ const SearchInterface = () => {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ searchTerm: query }),
+        body: JSON.stringify({ 
+          searchTerm: query,
+          state: selectedState !== '' ? selectedState : undefined
+        }),
       });
 
-      // Perform the actual search
-      const response = await fetch(`/api/one-piece/search?query=${encodeURIComponent(query)}`);
+      // Perform the actual search with state filter if selected
+      const searchParams = new URLSearchParams({
+        query: query
+      });
+      
+      if (selectedState && selectedState !== '') {
+        searchParams.append('state', selectedState);
+      }
+      
+      const response = await fetch(`/api/one-piece/search?${searchParams.toString()}`);
       
       if (!response.ok) {
         throw new Error('Search failed');

@@ -46,9 +46,10 @@ type Card = PokemonCard | MtgCard | OnePieceCard;
 interface SearchBarProps {
   showSearchButton?: boolean;
   initialValue?: string;
+  selectedState?: string;
 }
 
-export default function SearchBar({ showSearchButton = false, initialValue = "" }: SearchBarProps) {
+export default function SearchBar({ showSearchButton = false, initialValue = "", selectedState = "all" }: SearchBarProps) {
   const router = useRouter();
   const { recordSearch } = useTrendingSearches();
 
@@ -61,7 +62,9 @@ export default function SearchBar({ showSearchButton = false, initialValue = "" 
         pathname: '/listings',
         query: { 
           ...currentQuery,
-          query: query.trim()
+          query: query.trim(),
+          // Include the selected state in the search query
+          ...(selectedState !== 'all' && { state: selectedState })
         }
       });
     }
@@ -89,7 +92,9 @@ export default function SearchBar({ showSearchButton = false, initialValue = "" 
         query: { 
           ...currentQuery,
           query: searchTerm.trim(),
-          game: card.type
+          game: card.type,
+          // Include the selected state in the search query
+          ...(selectedState !== 'all' && { state: selectedState })
         }
       });
     }

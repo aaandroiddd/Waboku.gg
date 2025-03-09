@@ -9,6 +9,7 @@ interface CardSearchInputProps {
   placeholder?: string;
   onSelect?: (cardName: string) => void;
   onSearch?: (query: string) => void;
+  onCardSelect?: (card: any) => void;
   showSearchButton?: boolean;
   initialValue?: string;
   isLoading?: boolean;
@@ -18,6 +19,7 @@ const CardSearchInput: React.FC<CardSearchInputProps> = ({
   placeholder = "Search cards...",
   onSelect,
   onSearch,
+  onCardSelect,
   showSearchButton = false,
   initialValue = "",
   isLoading = false

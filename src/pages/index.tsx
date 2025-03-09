@@ -442,6 +442,7 @@ export default function Home() {
                         }}
                         initialValue={searchQuery}
                         showSearchButton={true}
+                        selectedState={selectedState}
                       />
                     </div>
                     
@@ -469,6 +470,7 @@ export default function Home() {
                         }}
                         initialValue={searchQuery}
                         showSearchButton={true}
+                        selectedState={selectedState}
                       />
                     </div>
                     
