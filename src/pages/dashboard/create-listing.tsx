@@ -18,12 +18,13 @@ import { useListings } from "@/hooks/useListings";
 import { useProfile } from "@/hooks/useProfile";
 import { Progress } from "@/components/ui/progress";
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
-import { HelpCircle } from "lucide-react";
+import { HelpCircle, AlertCircle } from "lucide-react";
 import { LocationInput } from "@/components/LocationInput";
 import { validateTextContent } from "@/util/string";
 import CardSearchInput from "@/components/CardSearchInput";
 import { MarkdownEditor } from "@/components/MarkdownEditor";
 import { useAccount } from "@/contexts/AccountContext";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const MAX_TITLE_LENGTH = 100;
@@ -46,6 +47,7 @@ const CreateListingPage = () => {
   const { profile } = useProfile(user?.uid);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [stripeConnectStatus, setStripeConnectStatus] = useState<'none' | 'pending' | 'active' | 'error'>('none');
 
   const [formData, setFormData] = useState({
     title: "",
@@ -205,6 +207,38 @@ const CreateListingPage = () => {
     }
   }, [user, loading, router]);
 
+  // Check Stripe Connect status
+  useEffect(() => {
+    if (!user) return;
+
+    const checkStripeConnectStatus = async () => {
+      try {
+        // Get the auth token
+        const token = await user.getIdToken(true);
+        
+        const response = await fetch('/api/stripe/connect/account-status', {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to check account status');
+        }
+
+        const data = await response.json();
+        setStripeConnectStatus(data.status);
+      } catch (error) {
+        console.error('Error checking Stripe Connect status:', error);
+        setStripeConnectStatus('error');
+      }
+    };
+
+    checkStripeConnectStatus();
+  }, [user]);
+
   // Initialize location from profile
   useEffect(() => {
     if (profile && profile.city && profile.state) {
@@ -226,6 +260,24 @@ const CreateListingPage = () => {
         <div className="flex justify-center items-center">
           <h1 className="text-3xl font-bold">Create New Listing</h1>
         </div>
+        
+        {stripeConnectStatus !== 'active' && (
+          <Alert variant="warning" className="bg-yellow-500/10 border-yellow-500 text-yellow-700 dark:text-yellow-500">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Stripe Connect Required</AlertTitle>
+            <AlertDescription>
+              <p>You need to set up Stripe Connect to receive payments from buyers.</p>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="mt-2 bg-yellow-500/20 hover:bg-yellow-500/30 border-yellow-500/50"
+                onClick={() => router.push('/dashboard/connect-account')}
+              >
+                Set Up Stripe Connect
+              </Button>
+            </AlertDescription>
+          </Alert>
+        )}
 
         <Card className="transition-all duration-300 hover:shadow-lg">
           <CardContent className="pt-6">

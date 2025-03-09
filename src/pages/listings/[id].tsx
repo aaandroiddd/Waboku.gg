@@ -292,10 +292,32 @@ export default function ListingPage() {
         
         // Handle specific error codes
         if (errorData.code === 'seller_not_connected') {
-          toast.error('The seller has not set up their payment account yet. Please try another listing or contact the seller.');
+          // If the current user is the seller, offer to set up Stripe Connect
+          if (user.uid === listing?.userId) {
+            toast.error('You need to set up your Stripe Connect account to receive payments', {
+              action: {
+                label: 'Set Up Now',
+                onClick: () => router.push('/dashboard/connect-account')
+              },
+              duration: 5000
+            });
+          } else {
+            toast.error('The seller has not set up their payment account yet. Please try another listing or contact the seller.');
+          }
           return;
         } else if (errorData.code === 'seller_not_active') {
-          toast.error('The seller\'s payment account is not fully set up yet. Please try another listing or contact the seller.');
+          // If the current user is the seller, offer to complete Stripe Connect setup
+          if (user.uid === listing?.userId) {
+            toast.error('Your Stripe Connect account setup is incomplete', {
+              action: {
+                label: 'Complete Setup',
+                onClick: () => router.push('/dashboard/connect-account')
+              },
+              duration: 5000
+            });
+          } else {
+            toast.error('The seller\'s payment account is not fully set up yet. Please try another listing or contact the seller.');
+          }
           return;
         }
         

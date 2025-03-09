@@ -7,6 +7,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { CheckCircle, AlertCircle, ExternalLink, ArrowRight } from 'lucide-react';
+import { StripeConnectGuide } from '@/components/StripeConnectGuide';
 
 export default function ConnectAccount() {
   const { user } = useAuth();
@@ -21,10 +22,14 @@ export default function ConnectAccount() {
 
     const checkConnectAccount = async () => {
       try {
+        // Get the auth token
+        const token = await user.getIdToken(true);
+        
         const response = await fetch('/api/stripe/connect/account-status', {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
           },
         });
 
@@ -60,10 +65,14 @@ export default function ConnectAccount() {
 
     setLoading(true);
     try {
+      // Get the auth token
+      const token = await user.getIdToken(true);
+      
       const response = await fetch('/api/stripe/connect/create-account', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         },
       });
 
@@ -91,10 +100,14 @@ export default function ConnectAccount() {
 
     setLoading(true);
     try {
+      // Get the auth token
+      const token = await user.getIdToken(true);
+      
       const response = await fetch('/api/stripe/connect/update-account', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         },
       });
 
@@ -145,80 +158,84 @@ export default function ConnectAccount() {
           </Alert>
         )}
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Stripe Connect</CardTitle>
-            <CardDescription>
-              Connect your Stripe account to receive payments directly from buyers on our platform.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <h3 className="font-medium">Benefits of Stripe Connect</h3>
-                  <ul className="list-disc pl-5 space-y-1 text-sm text-muted-foreground">
-                    <li>Receive payments directly to your bank account</li>
-                    <li>Secure payment processing</li>
-                    <li>Automatic payouts on a schedule you choose</li>
-                    <li>Detailed reporting and transaction history</li>
-                  </ul>
-                </div>
-                <div className="space-y-2">
-                  <h3 className="font-medium">How it works</h3>
-                  <ul className="list-disc pl-5 space-y-1 text-sm text-muted-foreground">
-                    <li>Complete the Stripe onboarding process</li>
-                    <li>Verify your identity and banking information</li>
-                    <li>Start selling cards and receiving payments</li>
-                    <li>Platform fee: 10% of each transaction</li>
-                  </ul>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Stripe Connect</CardTitle>
+              <CardDescription>
+                Connect your Stripe account to receive payments directly from buyers on our platform.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-4">
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <h3 className="font-medium">Benefits of Stripe Connect</h3>
+                    <ul className="list-disc pl-5 space-y-1 text-sm text-muted-foreground">
+                      <li>Receive payments directly to your bank account</li>
+                      <li>Secure payment processing</li>
+                      <li>Automatic payouts on a schedule you choose</li>
+                      <li>Detailed reporting and transaction history</li>
+                    </ul>
+                  </div>
+                  <div className="space-y-2">
+                    <h3 className="font-medium">How it works</h3>
+                    <ul className="list-disc pl-5 space-y-1 text-sm text-muted-foreground">
+                      <li>Complete the Stripe onboarding process</li>
+                      <li>Verify your identity and banking information</li>
+                      <li>Start selling cards and receiving payments</li>
+                      <li>Platform fee: 10% of each transaction</li>
+                    </ul>
+                  </div>
                 </div>
               </div>
-            </div>
-          </CardContent>
-          <CardFooter className="flex flex-col space-y-4 sm:flex-row sm:space-y-0 sm:space-x-4 sm:justify-between">
-            {accountStatus === 'none' && (
-              <Button
-                onClick={handleCreateConnectAccount}
-                disabled={loading}
-                className="w-full sm:w-auto"
-              >
-                {loading ? 'Setting up...' : 'Set Up Stripe Connect'}
-                {!loading && <ArrowRight className="ml-2 h-4 w-4" />}
-              </Button>
-            )}
+            </CardContent>
+            <CardFooter className="flex flex-col space-y-4 sm:flex-row sm:space-y-0 sm:space-x-4 sm:justify-between">
+              {accountStatus === 'none' && (
+                <Button
+                  onClick={handleCreateConnectAccount}
+                  disabled={loading}
+                  className="w-full sm:w-auto"
+                >
+                  {loading ? 'Setting up...' : 'Set Up Stripe Connect'}
+                  {!loading && <ArrowRight className="ml-2 h-4 w-4" />}
+                </Button>
+              )}
 
-            {accountStatus === 'pending' && (
-              <Button
-                onClick={handleUpdateConnectAccount}
-                disabled={loading}
-                className="w-full sm:w-auto"
-              >
-                {loading ? 'Loading...' : 'Complete Onboarding'}
-                {!loading && <ArrowRight className="ml-2 h-4 w-4" />}
-              </Button>
-            )}
+              {accountStatus === 'pending' && (
+                <Button
+                  onClick={handleUpdateConnectAccount}
+                  disabled={loading}
+                  className="w-full sm:w-auto"
+                >
+                  {loading ? 'Loading...' : 'Complete Onboarding'}
+                  {!loading && <ArrowRight className="ml-2 h-4 w-4" />}
+                </Button>
+              )}
 
-            {accountStatus === 'active' && (
+              {accountStatus === 'active' && (
+                <Button
+                  onClick={handleUpdateConnectAccount}
+                  variant="outline"
+                  className="w-full sm:w-auto"
+                >
+                  Update Account Details
+                  <ExternalLink className="ml-2 h-4 w-4" />
+                </Button>
+              )}
+
               <Button
-                onClick={handleUpdateConnectAccount}
                 variant="outline"
+                onClick={() => router.push('/dashboard')}
                 className="w-full sm:w-auto"
               >
-                Update Account Details
-                <ExternalLink className="ml-2 h-4 w-4" />
+                Back to Dashboard
               </Button>
-            )}
-
-            <Button
-              variant="outline"
-              onClick={() => router.push('/dashboard')}
-              className="w-full sm:w-auto"
-            >
-              Back to Dashboard
-            </Button>
-          </CardFooter>
-        </Card>
+            </CardFooter>
+          </Card>
+          
+          <StripeConnectGuide accountStatus={accountStatus} />
+        </div>
       </div>
     </DashboardLayout>
   );
