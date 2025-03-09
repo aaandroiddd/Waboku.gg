@@ -1,5 +1,58 @@
 {
   "rules": {
+    "wantedPosts": {
+      ".indexOn": ["createdAt", "userId", "game"],
+      "$postId": {
+        ".read": "auth != null",
+        ".write": "auth != null && (!data.exists() || data.child('userId').val() === auth.uid)",
+        ".validate": "newData.hasChildren(['userId', 'title', 'game', 'location', 'createdAt'])",
+        "userId": {
+          ".validate": "newData.val() === auth.uid"
+        },
+        "title": {
+          ".validate": "newData.isString() && newData.val().length >= 3 && newData.val().length <= 200"
+        },
+        "description": {
+          ".validate": "newData.isString() && newData.val().length <= 500"
+        },
+        "game": {
+          ".validate": "newData.isString() && newData.val().length > 0"
+        },
+        "cardName": {
+          ".validate": "!newData.exists() || newData.isString()"
+        },
+        "condition": {
+          ".validate": "newData.isString() && (newData.val() === 'any' || newData.val() === 'near_mint' || newData.val() === 'lightly_played' || newData.val() === 'moderately_played' || newData.val() === 'heavily_played' || newData.val() === 'damaged')"
+        },
+        "isPriceNegotiable": {
+          ".validate": "newData.isBoolean()"
+        },
+        "priceRange": {
+          "min": {
+            ".validate": "newData.isNumber() && newData.val() >= 0"
+          },
+          "max": {
+            ".validate": "newData.isNumber() && newData.val() >= newData.parent().child('min').val()"
+          }
+        },
+        "location": {
+          ".validate": "newData.isString() && newData.val().length > 0"
+        },
+        "detailedDescription": {
+          ".validate": "!newData.exists() || newData.isString()"
+        },
+        "createdAt": {
+          ".validate": "newData.isNumber() && (!data.exists() || data.val() === newData.val()) && newData.val() <= now"
+        },
+        "userName": {
+          ".validate": "newData.isString()"
+        },
+        "userAvatar": {
+          ".validate": "!newData.exists() || newData.isString()"
+        }
+      }
+    },
+    
     "users": {
       "$uid": {
         ".read": "auth != null && (auth.uid === $uid || root.child('users').child(auth.uid).child('account').child('tier').val() === 'admin')",

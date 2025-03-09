@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { ref, push, set, get, query, orderByChild, equalTo, remove, update } from 'firebase/database';
+import { database } from '@/lib/firebase';
 
 export type WantedPostCondition = 
   | 'any'
@@ -23,7 +25,7 @@ export interface WantedPost {
   };
   location: string;
   detailedDescription?: string;
-  createdAt: string;
+  createdAt: number;
   userId: string;
   userName: string;
   userAvatar?: string;
@@ -48,75 +50,43 @@ export function useWantedPosts(options: WantedPostsOptions = {}) {
       setError(null);
 
       try {
-        // In a real implementation, this would fetch data from Firebase
-        // based on the provided options (game, state, userId, etc.)
-        
-        // Simulate API call
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        // Mock data for demonstration
-        const mockPosts: WantedPost[] = [
-          {
-            id: 'wanted1',
-            title: 'Looking for Charizard VMAX Rainbow Rare',
-            description: 'Searching for Charizard VMAX Rainbow Rare from Darkness Ablaze in NM/M condition.',
-            game: 'pokemon',
-            cardName: 'Charizard VMAX Rainbow Rare',
-            condition: 'near_mint',
-            isPriceNegotiable: true,
-            location: 'Seattle, WA',
-            createdAt: new Date().toISOString(),
-            userId: 'user123',
-            userName: 'CardCollector42',
-          },
-          {
-            id: 'wanted2',
-            title: 'Wanted: Liliana of the Veil',
-            description: 'Looking for Liliana of the Veil from Innistrad, any condition.',
-            game: 'mtg',
-            cardName: 'Liliana of the Veil',
-            condition: 'any',
-            isPriceNegotiable: false,
-            priceRange: {
-              min: 50,
-              max: 100,
-            },
-            location: 'Portland, OR',
-            createdAt: new Date(Date.now() - 86400000).toISOString(), // 1 day ago
-            userId: 'user456',
-            userName: 'MTGFanatic',
-          },
-          {
-            id: 'wanted3',
-            title: 'Blue-Eyes White Dragon - Original Art',
-            description: 'Searching for original art Blue-Eyes White Dragon in good condition.',
-            game: 'yugioh',
-            cardName: 'Blue-Eyes White Dragon',
-            condition: 'lightly_played',
-            isPriceNegotiable: true,
-            location: 'Los Angeles, CA',
-            createdAt: new Date(Date.now() - 172800000).toISOString(), // 2 days ago
-            userId: 'user789',
-            userName: 'DuelistKing',
-          },
-        ];
-        
-        // Filter based on options
-        let filteredPosts = [...mockPosts];
-        
-        if (options.game) {
-          filteredPosts = filteredPosts.filter(post => post.game === options.game);
+        let postsRef = ref(database, 'wantedPosts');
+        let postsQuery = postsRef;
+
+        // Apply filters based on options
+        if (options.userId) {
+          postsQuery = query(postsRef, orderByChild('userId'), equalTo(options.userId));
+        } else if (options.game) {
+          postsQuery = query(postsRef, orderByChild('game'), equalTo(options.game));
         }
+
+        const snapshot = await get(postsQuery);
+        const fetchedPosts: WantedPost[] = [];
+
+        if (snapshot.exists()) {
+          snapshot.forEach((childSnapshot) => {
+            const post = {
+              id: childSnapshot.key as string,
+              ...childSnapshot.val()
+            };
+            fetchedPosts.push(post);
+          });
+        }
+
+        // Apply additional filters that can't be done at the database level
+        let filteredPosts = [...fetchedPosts];
         
         if (options.state) {
-          filteredPosts = filteredPosts.filter(post => post.location.includes(options.state));
+          filteredPosts = filteredPosts.filter(post => 
+            post.location.toLowerCase().includes(options.state!.toLowerCase())
+          );
         }
         
-        if (options.userId) {
-          filteredPosts = filteredPosts.filter(post => post.userId === options.userId);
-        }
+        // Sort by createdAt (newest first)
+        filteredPosts.sort((a, b) => b.createdAt - a.createdAt);
         
-        if (options.limit) {
+        // Apply limit if specified
+        if (options.limit && filteredPosts.length > options.limit) {
           filteredPosts = filteredPosts.slice(0, options.limit);
         }
         
@@ -138,27 +108,33 @@ export function useWantedPosts(options: WantedPostsOptions = {}) {
     }
 
     try {
-      // In a real implementation, this would save to Firebase
-      console.log('Creating wanted post:', postData);
+      // Create a reference to the wanted posts collection
+      const postsRef = ref(database, 'wantedPosts');
       
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Generate a new post ID
+      const newPostRef = push(postsRef);
+      const newPostId = newPostRef.key as string;
       
-      // Generate a mock ID
-      const newPostId = 'wanted' + Date.now();
+      // Create timestamp
+      const timestamp = Date.now();
       
       // Create the new post object
-      const newPost: WantedPost = {
+      const newPost = {
         ...postData,
-        id: newPostId,
-        createdAt: new Date().toISOString(),
+        createdAt: timestamp,
         userId: user.uid,
         userName: user.displayName || 'Anonymous User',
         userAvatar: user.photoURL || undefined,
       };
       
+      // Save to Firebase
+      await set(newPostRef, newPost);
+      
       // Update local state
-      setPosts(prevPosts => [newPost, ...prevPosts]);
+      setPosts(prevPosts => [{
+        ...newPost,
+        id: newPostId
+      } as WantedPost, ...prevPosts]);
       
       return newPostId;
     } catch (err) {
@@ -173,11 +149,23 @@ export function useWantedPosts(options: WantedPostsOptions = {}) {
     }
 
     try {
-      // In a real implementation, this would delete from Firebase
-      console.log('Deleting wanted post:', postId);
+      // Get the post to verify ownership
+      const postRef = ref(database, `wantedPosts/${postId}`);
+      const snapshot = await get(postRef);
       
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      if (!snapshot.exists()) {
+        throw new Error('Post not found');
+      }
+      
+      const post = snapshot.val();
+      
+      // Verify the user owns this post
+      if (post.userId !== user.uid) {
+        throw new Error('You do not have permission to delete this post');
+      }
+      
+      // Delete the post
+      await remove(postRef);
       
       // Update local state
       setPosts(prevPosts => prevPosts.filter(post => post.id !== postId));
@@ -186,6 +174,65 @@ export function useWantedPosts(options: WantedPostsOptions = {}) {
     } catch (err) {
       console.error('Error deleting wanted post:', err);
       throw new Error('Failed to delete wanted post. Please try again.');
+    }
+  };
+
+  const updateWantedPost = async (postId: string, updates: Partial<Omit<WantedPost, 'id' | 'createdAt' | 'userId' | 'userName' | 'userAvatar'>>) => {
+    if (!user) {
+      throw new Error('User must be authenticated to update a wanted post');
+    }
+
+    try {
+      // Get the post to verify ownership
+      const postRef = ref(database, `wantedPosts/${postId}`);
+      const snapshot = await get(postRef);
+      
+      if (!snapshot.exists()) {
+        throw new Error('Post not found');
+      }
+      
+      const post = snapshot.val();
+      
+      // Verify the user owns this post
+      if (post.userId !== user.uid) {
+        throw new Error('You do not have permission to update this post');
+      }
+      
+      // Update the post
+      await update(postRef, updates);
+      
+      // Update local state
+      setPosts(prevPosts => 
+        prevPosts.map(post => 
+          post.id === postId 
+            ? { ...post, ...updates } 
+            : post
+        )
+      );
+      
+      return true;
+    } catch (err) {
+      console.error('Error updating wanted post:', err);
+      throw new Error('Failed to update wanted post. Please try again.');
+    }
+  };
+
+  const getWantedPost = async (postId: string): Promise<WantedPost | null> => {
+    try {
+      const postRef = ref(database, `wantedPosts/${postId}`);
+      const snapshot = await get(postRef);
+      
+      if (!snapshot.exists()) {
+        return null;
+      }
+      
+      return {
+        id: postId,
+        ...snapshot.val()
+      };
+    } catch (err) {
+      console.error('Error fetching wanted post:', err);
+      return null;
     }
   };
 
@@ -200,6 +247,8 @@ export function useWantedPosts(options: WantedPostsOptions = {}) {
     error,
     createWantedPost,
     deleteWantedPost,
+    updateWantedPost,
+    getWantedPost,
     getUserWantedPosts,
   };
 }

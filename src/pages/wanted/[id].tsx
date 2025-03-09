@@ -16,48 +16,103 @@ import { MarkdownContent } from "@/components/MarkdownContent";
 import { useAuth } from "@/contexts/AuthContext";
 import { ArrowLeft, Calendar, MapPin, MessageSquare, Flag, Share2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useToast } from "@/components/ui/use-toast";
+import { get, ref } from "firebase/database";
+import { database } from "@/lib/firebase";
 
 export default function WantedPostDetailPage() {
   const router = useRouter();
   const { id } = router.query;
   const { user } = useAuth();
+  const { toast } = useToast();
+  const { getWantedPost } = useWantedPosts();
   
   const [isLoading, setIsLoading] = useState(true);
-  const [wantedPost, setWantedPost] = useState<any>(null);
+  const [wantedPost, setWantedPost] = useState<WantedPost | null>(null);
   const [messageDialogOpen, setMessageDialogOpen] = useState(false);
   const [message, setMessage] = useState("");
   const [isSending, setIsSending] = useState(false);
+  const [posterData, setPosterData] = useState<any>(null);
 
-  // Simulate loading data
+  // Check if we were redirected from post creation
   useEffect(() => {
-    if (router.isReady && id) {
-      // In a real implementation, this would fetch data from Firebase
-      setTimeout(() => {
-        // Mock data for demonstration
-        setWantedPost({
-          id: id,
-          title: "Looking for Charizard VMAX Rainbow Rare",
-          description: "Searching for Charizard VMAX Rainbow Rare from Darkness Ablaze in NM/M condition.",
-          game: "pokemon",
-          condition: "near_mint",
-          isPriceNegotiable: true,
-          priceRange: null,
-          location: "Seattle, WA",
-          createdAt: new Date().toISOString(),
-          detailedDescription: "# Charizard VMAX Rainbow Rare\n\nI'm looking for the Charizard VMAX Rainbow Rare (Secret) from Sword & Shield: Darkness Ablaze.\n\n## Condition Requirements\n- Near Mint or Mint condition only\n- No whitening on edges\n- Centered well\n\nWilling to negotiate on price for the right card. Local meetup preferred but can discuss shipping options.\n\nPlease message me if you have this card available!",
-          user: {
-            id: "user123",
-            name: "CardCollector42",
-            avatar: null,
-            joinedDate: "2023-05-15T00:00:00.000Z",
-            rating: 4.8,
-            totalRatings: 15
-          }
-        });
-        setIsLoading(false);
-      }, 1000);
+    if (router.query.success === 'created') {
+      toast({
+        title: "Wanted post created!",
+        description: "Your wanted post has been successfully created.",
+        duration: 5000,
+      });
+      
+      // Clean up the URL
+      router.replace(`/wanted/${id}`, undefined, { shallow: true });
     }
-  }, [router.isReady, id]);
+  }, [router.query.success, id, router, toast]);
+
+  // Load the wanted post data
+  useEffect(() => {
+    const loadWantedPost = async () => {
+      if (router.isReady && id) {
+        setIsLoading(true);
+        try {
+          const postData = await getWantedPost(id as string);
+          
+          if (postData) {
+            setWantedPost(postData);
+            
+            // Fetch additional user data if needed
+            try {
+              const userRef = ref(database, `users/${postData.userId}`);
+              const userSnapshot = await get(userRef);
+              
+              if (userSnapshot.exists()) {
+                const userData = userSnapshot.val();
+                setPosterData({
+                  id: postData.userId,
+                  name: postData.userName,
+                  avatar: postData.userAvatar,
+                  joinedDate: userData.createdAt || Date.now() - 86400000 * 30, // fallback to 30 days ago
+                  rating: userData.rating || 4.5,
+                  totalRatings: userData.totalRatings || 0
+                });
+              } else {
+                // Fallback user data if not found
+                setPosterData({
+                  id: postData.userId,
+                  name: postData.userName,
+                  avatar: postData.userAvatar,
+                  joinedDate: Date.now() - 86400000 * 30, // 30 days ago
+                  rating: 4.5,
+                  totalRatings: 0
+                });
+              }
+            } catch (error) {
+              console.error("Error fetching user data:", error);
+              // Fallback user data on error
+              setPosterData({
+                id: postData.userId,
+                name: postData.userName,
+                avatar: postData.userAvatar,
+                joinedDate: Date.now() - 86400000 * 30,
+                rating: 4.5,
+                totalRatings: 0
+              });
+            }
+          }
+        } catch (error) {
+          console.error("Error loading wanted post:", error);
+          toast({
+            title: "Error",
+            description: "Failed to load the wanted post. Please try again.",
+            variant: "destructive",
+          });
+        } finally {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    loadWantedPost();
+  }, [router.isReady, id, getWantedPost, toast]);
 
   const handleSendMessage = async () => {
     if (!message.trim()) return;

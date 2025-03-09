@@ -1,13 +1,14 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { GameCategoryBadge } from "@/components/GameCategoryBadge";
-import { Calendar, MapPin, PlusCircle, Pencil, Trash2 } from "lucide-react";
+import { Calendar, MapPin, PlusCircle, Pencil, Trash2, ExternalLink } from "lucide-react";
 import { useWantedPosts, WantedPost } from "@/hooks/useWantedPosts";
 import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/components/ui/use-toast";
 import { 
   AlertDialog,
   AlertDialogAction,
@@ -26,6 +27,7 @@ export function WantedPostsSection() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [postToDelete, setPostToDelete] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const { toast } = useToast();
 
   const handleCreateClick = () => {
     router.push("/wanted/create");
@@ -123,6 +125,15 @@ export function WantedPostsSection() {
                         }
                       </div>
                       <div className="flex gap-2">
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          className="flex items-center gap-1"
+                          onClick={() => router.push(`/wanted/${post.id}`)}
+                        >
+                          <ExternalLink className="h-3 w-3" />
+                          View
+                        </Button>
                         <Button 
                           variant="outline" 
                           size="sm"

@@ -20,6 +20,7 @@ import { MarkdownEditor } from "@/components/MarkdownEditor";
 import { AlertCircle, ArrowLeft } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { RouteGuard } from "@/components/RouteGuard";
+import { useToast } from "@/components/ui/use-toast";
 
 // Combine all game categories for the dropdown
 const ALL_GAME_CATEGORIES = [
@@ -43,10 +44,12 @@ const CONDITION_OPTIONS = [
   { label: "Damaged", value: "damaged" }
 ];
 
-export default function CreateWantedPostPage() {
+export default function EditWantedPostPage() {
   const router = useRouter();
+  const { id } = router.query;
   const { user } = useAuth();
-  const { game } = router.query;
+  const { toast } = useToast();
+  const { getWantedPost, updateWantedPost } = useWantedPosts();
   
   const [formData, setFormData] = useState({
     title: "",
@@ -61,18 +64,67 @@ export default function CreateWantedPostPage() {
     detailedDescription: ""
   });
   
+  const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
 
-  // Set the game category from URL query if available
+  // Load the wanted post data
   useEffect(() => {
-    if (router.isReady && game) {
-      setFormData(prev => ({
-        ...prev,
-        game: game as string
-      }));
-    }
-  }, [router.isReady, game]);
+    const loadWantedPost = async () => {
+      if (router.isReady && id) {
+        setIsLoading(true);
+        try {
+          const postData = await getWantedPost(id as string);
+          
+          if (!postData) {
+            toast({
+              title: "Post not found",
+              description: "The wanted post you're trying to edit doesn't exist.",
+              variant: "destructive",
+            });
+            router.push("/dashboard");
+            return;
+          }
+          
+          // Check if the user owns this post
+          if (postData.userId !== user?.uid) {
+            toast({
+              title: "Unauthorized",
+              description: "You don't have permission to edit this post.",
+              variant: "destructive",
+            });
+            router.push("/dashboard");
+            return;
+          }
+          
+          // Populate form data
+          setFormData({
+            title: postData.title,
+            description: postData.description || "",
+            game: postData.game,
+            cardName: postData.cardName || "",
+            condition: postData.condition,
+            priceMin: postData.priceRange ? postData.priceRange.min.toString() : "",
+            priceMax: postData.priceRange ? postData.priceRange.max.toString() : "",
+            location: postData.location,
+            isPriceNegotiable: postData.isPriceNegotiable,
+            detailedDescription: postData.detailedDescription || ""
+          });
+        } catch (error) {
+          console.error("Error loading wanted post:", error);
+          toast({
+            title: "Error",
+            description: "Failed to load the wanted post. Please try again.",
+            variant: "destructive",
+          });
+        } finally {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    loadWantedPost();
+  }, [router.isReady, id, user, getWantedPost, router, toast]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -99,8 +151,7 @@ export default function CreateWantedPostPage() {
   const handleCardSelect = (cardName: string) => {
     setFormData(prev => ({
       ...prev,
-      cardName,
-      title: cardName // Auto-fill title with card name
+      cardName
     }));
   };
 
@@ -117,9 +168,6 @@ export default function CreateWantedPostPage() {
       detailedDescription: content
     }));
   };
-
-  // Use our custom hook
-  const { createWantedPost } = useWantedPosts();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -176,20 +224,42 @@ export default function CreateWantedPostPage() {
         detailedDescription: formData.detailedDescription || undefined
       };
       
-      // Use our hook to create the post
-      const postId = await createWantedPost(postData);
+      // Update the post
+      await updateWantedPost(id as string, postData);
       
-      // Redirect to the newly created post with success parameter
-      router.push({
-        pathname: `/wanted/${postId}`,
-        query: { success: "created" }
+      // Show success message
+      toast({
+        title: "Post updated",
+        description: "Your wanted post has been successfully updated.",
       });
+      
+      // Redirect to the post
+      router.push(`/wanted/${id}`);
     } catch (err) {
-      console.error("Error creating wanted post:", err);
-      setError("Failed to create wanted post. Please try again.");
+      console.error("Error updating wanted post:", err);
+      setError("Failed to update wanted post. Please try again.");
       setIsSubmitting(false);
     }
   };
+
+  if (isLoading) {
+    return (
+      <PageTransition>
+        <Header />
+        <main className="container mx-auto px-4 py-8">
+          <div className="max-w-3xl mx-auto">
+            <div className="animate-pulse">
+              <div className="h-8 w-32 bg-muted rounded mb-6"></div>
+              <div className="h-10 w-3/4 bg-muted rounded mb-2"></div>
+              <div className="h-6 w-1/2 bg-muted rounded mb-8"></div>
+              <div className="h-[600px] w-full bg-muted rounded"></div>
+            </div>
+          </div>
+        </main>
+        <Footer />
+      </PageTransition>
+    );
+  }
 
   return (
     <RouteGuard>
@@ -206,9 +276,9 @@ export default function CreateWantedPostPage() {
               Back
             </Button>
             
-            <h1 className="text-3xl font-bold mb-2">Create Wanted Post</h1>
+            <h1 className="text-3xl font-bold mb-2">Edit Wanted Post</h1>
             <p className="text-muted-foreground mb-8">
-              Let the community know what cards or accessories you're looking for
+              Update your wanted post details
             </p>
             
             {error && (
@@ -223,7 +293,7 @@ export default function CreateWantedPostPage() {
                 <CardHeader>
                   <CardTitle>Post Details</CardTitle>
                   <CardDescription>
-                    Provide information about what you're looking for
+                    Update information about what you're looking for
                   </CardDescription>
                 </CardHeader>
                 
@@ -256,6 +326,7 @@ export default function CreateWantedPostPage() {
                           onCardSelect={handleCardSelect}
                           placeholder="Search for a specific card"
                           className="w-full"
+                          initialValue={formData.cardName}
                         />
                         <p className="text-sm text-muted-foreground mt-1">
                           Search for a specific card or leave blank for accessories/other items
@@ -393,7 +464,7 @@ export default function CreateWantedPostPage() {
                     Cancel
                   </Button>
                   <Button type="submit" disabled={isSubmitting}>
-                    {isSubmitting ? "Creating..." : "Create Wanted Post"}
+                    {isSubmitting ? "Saving..." : "Save Changes"}
                   </Button>
                 </CardFooter>
               </Card>
