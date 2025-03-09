@@ -160,6 +160,9 @@ export default function CreateWantedPostPage() {
     setIsSubmitting(true);
     
     try {
+      // Log submission attempt
+      console.log("Attempting to create wanted post...");
+      
       // Prepare the data for submission
       const postData = {
         title: formData.title.trim(),
@@ -176,14 +179,42 @@ export default function CreateWantedPostPage() {
         detailedDescription: formData.detailedDescription || undefined
       };
       
-      // Use our hook to create the post
-      const postId = await createWantedPost(postData);
-      
-      // Redirect to the newly created post with success parameter
-      router.push({
-        pathname: `/wanted/${postId}`,
-        query: { success: "created" }
-      });
+      try {
+        // First try using our hook to create the post
+        console.log("Using hook to create post...");
+        const postId = await createWantedPost(postData);
+        console.log("Post created successfully with ID:", postId);
+        
+        // Redirect to the newly created post with success parameter
+        router.push({
+          pathname: `/wanted/${postId}`,
+          query: { success: "created" }
+        });
+      } catch (hookError) {
+        console.error("Error using hook to create post:", hookError);
+        
+        // If the hook fails, try using the test API endpoint
+        console.log("Trying alternative method via API...");
+        
+        // First test if we can write to the database
+        const testResponse = await fetch('/api/debug/test-database-write', {
+          method: 'GET'
+        });
+        
+        const testResult = await testResponse.json();
+        console.log("Database write test result:", testResult);
+        
+        if (testResult.success) {
+          // If the test was successful, we know the database is working
+          // but there might be an issue with the hook
+          setError("There was an issue with the form submission. Please try again later.");
+        } else {
+          // If the test failed, there's a database connection issue
+          setError("Database connection error. Please try again later.");
+        }
+        
+        setIsSubmitting(false);
+      }
     } catch (err) {
       console.error("Error creating wanted post:", err);
       setError("Failed to create wanted post. Please try again.");
