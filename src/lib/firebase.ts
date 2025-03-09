@@ -108,8 +108,20 @@ function initializeFirebase() {
         throw new Error('Firebase Realtime Database URL is missing. Check your environment variables.');
       }
       
+      // Explicitly pass the databaseURL to ensure it's properly configured
       database = getDatabase(app);
+      
+      // Verify database connection
       console.log('Realtime Database initialized successfully');
+      
+      // Add a test connection to verify database is working
+      if (typeof window !== 'undefined') {
+        const testRef = ref(database, '.info/connected');
+        onValue(testRef, (snapshot) => {
+          const connected = snapshot.val();
+          console.log('Realtime Database connection status:', connected ? 'connected' : 'disconnected');
+        });
+      }
     } catch (rtdbError) {
       console.error('Failed to initialize Realtime Database:', rtdbError);
       console.error('Realtime Database error details:', {

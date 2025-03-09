@@ -52,36 +52,70 @@ export function useWantedPosts(options: WantedPostsOptions = {}) {
       try {
         console.log("Fetching wanted posts with options:", options);
         
-        // Log Firebase database status
+        // Log Firebase database status and connection details
         console.log("Database initialized:", !!database);
         
+        // Verify database connection
+        if (!database) {
+          await logToServer('Database not initialized when fetching wanted posts', {
+            databaseExists: !!database,
+            databaseURL: !!process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL
+          }, 'error');
+          throw new Error('Database not initialized');
+        }
+        
+        // Create reference to wantedPosts collection
         let postsRef = ref(database, 'wantedPosts');
+        await logToServer('Created posts reference', { path: 'wantedPosts' }, 'info');
+        
         let postsQuery = postsRef;
 
         // Apply filters based on options
         if (options.userId) {
           postsQuery = query(postsRef, orderByChild('userId'), equalTo(options.userId));
+          await logToServer('Applied userId filter', { userId: options.userId }, 'info');
         } else if (options.game) {
           postsQuery = query(postsRef, orderByChild('game'), equalTo(options.game));
+          await logToServer('Applied game filter', { game: options.game }, 'info');
         }
 
         console.log("Executing database query...");
+        await logToServer('Executing database query', { 
+          hasUserId: !!options.userId,
+          hasGame: !!options.game,
+          hasState: !!options.state
+        }, 'info');
+        
         const snapshot = await get(postsQuery);
         console.log("Query completed, snapshot exists:", snapshot.exists());
+        await logToServer('Query completed', { snapshotExists: snapshot.exists() }, 'info');
         
         const fetchedPosts: WantedPost[] = [];
 
         if (snapshot.exists()) {
           snapshot.forEach((childSnapshot) => {
-            const post = {
-              id: childSnapshot.key as string,
-              ...childSnapshot.val()
-            };
-            fetchedPosts.push(post);
+            try {
+              const postData = childSnapshot.val();
+              // Validate post data has required fields
+              if (!postData || !postData.title || !postData.game || !postData.location) {
+                console.warn('Skipping invalid post data:', childSnapshot.key);
+                return; // Skip this post
+              }
+              
+              const post = {
+                id: childSnapshot.key as string,
+                ...postData
+              };
+              fetchedPosts.push(post);
+            } catch (postError) {
+              console.error('Error processing post:', childSnapshot.key, postError);
+            }
           });
           console.log(`Found ${fetchedPosts.length} posts in database`);
+          await logToServer('Posts found in database', { count: fetchedPosts.length }, 'info');
         } else {
           console.log("No posts found in database");
+          await logToServer('No posts found in database', {}, 'info');
         }
 
         // Apply additional filters that can't be done at the database level
@@ -92,6 +126,10 @@ export function useWantedPosts(options: WantedPostsOptions = {}) {
             post.location.toLowerCase().includes(options.state!.toLowerCase())
           );
           console.log(`After state filter: ${filteredPosts.length} posts`);
+          await logToServer('Applied state filter', { 
+            state: options.state,
+            countAfterFilter: filteredPosts.length 
+          }, 'info');
         }
         
         // Sort by createdAt (newest first)
@@ -101,12 +139,25 @@ export function useWantedPosts(options: WantedPostsOptions = {}) {
         if (options.limit && filteredPosts.length > options.limit) {
           filteredPosts = filteredPosts.slice(0, options.limit);
           console.log(`After limit: ${filteredPosts.length} posts`);
+          await logToServer('Applied limit', { 
+            limit: options.limit,
+            finalCount: filteredPosts.length 
+          }, 'info');
         }
         
-        console.log("Final posts to display:", filteredPosts);
+        console.log("Final posts to display:", filteredPosts.length);
+        await logToServer('Final posts to display', { 
+          count: filteredPosts.length,
+          firstPostId: filteredPosts.length > 0 ? filteredPosts[0].id : null
+        }, 'info');
+        
         setPosts(filteredPosts);
       } catch (err) {
         console.error('Error fetching wanted posts:', err);
+        await logToServer('Error fetching wanted posts', { 
+          error: err instanceof Error ? err.message : 'Unknown error',
+          stack: err instanceof Error ? err.stack : null
+        }, 'error');
         setError('Failed to load wanted posts. Please try again.');
       } finally {
         setIsLoading(false);
