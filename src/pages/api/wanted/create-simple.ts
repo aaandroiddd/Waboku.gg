@@ -38,6 +38,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Get the post data from the request
     const postData = req.body;
     
+    // Log the received data
+    console.log('Received post data:', JSON.stringify(postData, null, 2));
+    
     // Validate required fields
     if (!postData.title || !postData.game || !postData.location) {
       console.error('Missing required fields', { 
@@ -50,6 +53,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     
     // Create a reference to the wanted posts collection
     const postsRef = adminDb.ref('wantedPosts');
+    console.log('Created posts reference to path:', 'wantedPosts');
     
     // Generate a new post ID
     const newPostRef = postsRef.push();
@@ -73,10 +77,33 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       userAvatar: postData.userAvatar || undefined,
     };
     
+    // Log the post object being saved
+    console.log('Post object to save:', JSON.stringify(newPost, null, 2));
+    
     // Save to Firebase using admin SDK
     console.log('Saving post to Firebase with admin SDK...');
-    await newPostRef.set(newPost);
-    console.log('Post saved successfully');
+    try {
+      await newPostRef.set(newPost);
+      console.log('Post saved successfully with ID:', newPostId);
+    } catch (saveError) {
+      console.error('Error during database save operation:', saveError);
+      throw saveError;
+    }
+    
+    // Verify the post was saved by reading it back
+    try {
+      const savedPostRef = adminDb.ref(`wantedPosts/${newPostId}`);
+      const snapshot = await savedPostRef.get();
+      
+      if (snapshot.exists()) {
+        console.log('Post verification successful - post exists in database');
+      } else {
+        console.error('Post verification failed - post not found in database after save');
+      }
+    } catch (verifyError) {
+      console.error('Error verifying post was saved:', verifyError);
+      // Continue anyway since the post might have been saved
+    }
     
     return res.status(200).json({ 
       success: true, 

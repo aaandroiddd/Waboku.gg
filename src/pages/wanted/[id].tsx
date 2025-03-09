@@ -54,9 +54,11 @@ export default function WantedPostDetailPage() {
       if (router.isReady && id) {
         setIsLoading(true);
         try {
+          console.log("Loading wanted post with ID:", id);
           const postData = await getWantedPost(id as string);
           
           if (postData) {
+            console.log("Post data loaded successfully:", postData);
             setWantedPost(postData);
             
             // Fetch additional user data if needed
@@ -97,6 +99,8 @@ export default function WantedPostDetailPage() {
                 totalRatings: 0
               });
             }
+          } else {
+            console.error("Post data not found for ID:", id);
           }
         } catch (error) {
           console.error("Error loading wanted post:", error);

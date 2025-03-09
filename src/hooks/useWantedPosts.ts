@@ -50,6 +50,11 @@ export function useWantedPosts(options: WantedPostsOptions = {}) {
       setError(null);
 
       try {
+        console.log("Fetching wanted posts with options:", options);
+        
+        // Log Firebase database status
+        console.log("Database initialized:", !!database);
+        
         let postsRef = ref(database, 'wantedPosts');
         let postsQuery = postsRef;
 
@@ -60,7 +65,10 @@ export function useWantedPosts(options: WantedPostsOptions = {}) {
           postsQuery = query(postsRef, orderByChild('game'), equalTo(options.game));
         }
 
+        console.log("Executing database query...");
         const snapshot = await get(postsQuery);
+        console.log("Query completed, snapshot exists:", snapshot.exists());
+        
         const fetchedPosts: WantedPost[] = [];
 
         if (snapshot.exists()) {
@@ -71,6 +79,9 @@ export function useWantedPosts(options: WantedPostsOptions = {}) {
             };
             fetchedPosts.push(post);
           });
+          console.log(`Found ${fetchedPosts.length} posts in database`);
+        } else {
+          console.log("No posts found in database");
         }
 
         // Apply additional filters that can't be done at the database level
@@ -80,6 +91,7 @@ export function useWantedPosts(options: WantedPostsOptions = {}) {
           filteredPosts = filteredPosts.filter(post => 
             post.location.toLowerCase().includes(options.state!.toLowerCase())
           );
+          console.log(`After state filter: ${filteredPosts.length} posts`);
         }
         
         // Sort by createdAt (newest first)
@@ -88,8 +100,10 @@ export function useWantedPosts(options: WantedPostsOptions = {}) {
         // Apply limit if specified
         if (options.limit && filteredPosts.length > options.limit) {
           filteredPosts = filteredPosts.slice(0, options.limit);
+          console.log(`After limit: ${filteredPosts.length} posts`);
         }
         
+        console.log("Final posts to display:", filteredPosts);
         setPosts(filteredPosts);
       } catch (err) {
         console.error('Error fetching wanted posts:', err);
