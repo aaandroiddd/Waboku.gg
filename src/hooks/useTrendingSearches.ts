@@ -7,12 +7,21 @@ interface TrendingSearch {
   count: number;
 }
 
-const REFRESH_INTERVAL = 30 * 1000; // 30 seconds
-const MAX_RETRIES = 3;
+// Fallback data in case of errors
+const FALLBACK_TRENDING = [
+  { term: "Charizard", count: 42 },
+  { term: "Pikachu", count: 38 },
+  { term: "Black Lotus", count: 35 },
+  { term: "Mox Pearl", count: 30 },
+  { term: "Jace", count: 28 }
+];
+
+const REFRESH_INTERVAL = 60 * 1000; // 60 seconds (increased from 30)
+const MAX_RETRIES = 2; // Reduced from 3 to avoid excessive retries
 const INITIAL_RETRY_DELAY = 1000; // 1 second
 
 export function useTrendingSearches() {
-  const [trendingSearches, setTrendingSearches] = useState<TrendingSearch[]>([]);
+  const [trendingSearches, setTrendingSearches] = useState<TrendingSearch[]>(FALLBACK_TRENDING);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -20,81 +29,48 @@ export function useTrendingSearches() {
     try {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => {
-        console.log('Trending searches request timeout reached, aborting');
         controller.abort();
-      }, 10000); // 10 second timeout
+      }, 5000); // 5 second timeout (reduced from 10)
 
-      console.log('Fetching trending searches...');
-      
       // Use absolute URL with origin to avoid path resolution issues
       const apiUrl = typeof window !== 'undefined' 
         ? `${window.location.origin}/api/trending-searches` 
         : '/api/trending-searches';
-      
-      console.log(`Using API URL: ${apiUrl}`);
       
       const response = await fetch(apiUrl, {
         signal: controller.signal,
         method: 'GET',
         headers: {
           'Accept': 'application/json',
-          'Cache-Control': 'no-cache',
-          'Pragma': 'no-cache'
+          'Cache-Control': 'no-cache'
         }
       });
 
       clearTimeout(timeoutId);
-      console.log('Trending searches response received:', response.status);
       
       if (!response.ok) {
-        let errorMessage = `HTTP error! status: ${response.status}`;
-        try {
-          const errorData = await response.json();
-          errorMessage = errorData.message || errorMessage;
-        } catch (parseError) {
-          console.error('Failed to parse error response:', parseError);
-        }
-        throw new Error(errorMessage);
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
       
-      let data;
-      try {
-        data = await response.json();
-        console.log('Trending searches data parsed successfully');
-      } catch (parseError) {
-        console.error('Failed to parse response JSON:', parseError);
-        throw new Error('Invalid JSON response from trending searches API');
-      }
+      const data = await response.json();
       
       if (!Array.isArray(data)) {
-        console.error('Invalid data format received:', data);
         throw new Error('Invalid response format - expected an array');
       }
 
       setError(null);
       return data;
     } catch (error: any) {
-      console.error(`Trending searches attempt failed. Retries left: ${retries}`, {
-        message: error.message,
-        name: error.name,
-        stack: error.stack
-      });
-      
       if (error.name === 'AbortError') {
-        console.error('Trending searches request was aborted due to timeout');
         if (retries > 0) {
-          console.log(`Retrying trending searches fetch (${retries} attempts left)...`);
-          // Exponential backoff
           const nextDelay = delay * 2;
           await new Promise(resolve => setTimeout(resolve, delay));
           return fetchWithRetry(retries - 1, nextDelay);
         }
-        throw new Error('Trending searches request timed out after multiple attempts');
+        throw new Error('Request timed out');
       }
       
       if (retries > 0) {
-        console.log(`Retrying trending searches fetch (${retries} attempts left)...`);
-        // Exponential backoff
         const nextDelay = delay * 2;
         await new Promise(resolve => setTimeout(resolve, delay));
         return fetchWithRetry(retries - 1, nextDelay);
@@ -113,9 +89,9 @@ export function useTrendingSearches() {
     } catch (error: any) {
       console.error('Error fetching trending searches:', error);
       setError(error.message);
-      // Keep the old data if available
+      // Use fallback data if we don't have any data
       if (trendingSearches.length === 0) {
-        setTrendingSearches([]); // Only set empty array if we don't have any data
+        setTrendingSearches(FALLBACK_TRENDING);
       }
     } finally {
       setLoading(false);
@@ -149,7 +125,7 @@ export function useTrendingSearches() {
     
     try {
       if (!database) {
-        throw new Error('Firebase Realtime Database is not initialized');
+        return; // Silently fail if database is not initialized
       }
 
       const searchTermRef = ref(database, `searchTerms/${term.trim().toLowerCase()}`);
