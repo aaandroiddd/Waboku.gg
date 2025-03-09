@@ -58,7 +58,7 @@ export default function WantedBoardPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
             {/* Main Game Categories */}
             {MAIN_GAME_CATEGORIES.map((category) => {
-              const gameKey = MAIN_GAME_MAPPING[category as keyof typeof MAIN_GAME_MAPPING];
+              const gameKey = GAME_MAPPING[category as keyof typeof GAME_MAPPING];
               return (
                 <Card 
                   key={category}
