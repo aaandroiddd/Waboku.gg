@@ -1,8 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { getFirebaseServices } from '@/lib/firebase';
-import { ref, push, set } from 'firebase/database';
-import { getAuth } from 'firebase-admin/auth';
 import admin from 'firebase-admin';
+import { getAuth } from 'firebase-admin/auth';
+import { getDatabase } from 'firebase-admin/database';
 
 // Initialize Firebase Admin if not already initialized
 let firebaseAdmin: admin.app.App;
@@ -16,7 +15,8 @@ try {
   };
 
   firebaseAdmin = admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount as admin.ServiceAccount)
+    credential: admin.credential.cert(serviceAccount as admin.ServiceAccount),
+    databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL
   });
 }
 
@@ -26,7 +26,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    console.log('Creating wanted post via API...');
+    console.log('Creating wanted post via API with admin SDK...');
     
     // Get the auth token from the request
     const authHeader = req.headers.authorization;
@@ -37,12 +37,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     
     const token = authHeader.split(' ')[1];
     
-    // Get the database from Firebase services
-    const { database } = getFirebaseServices();
+    // Use admin SDK to write to the database
+    const adminDb = getDatabase(firebaseAdmin);
     
-    if (!database) {
-      console.error('Database not initialized');
-      return res.status(500).json({ error: 'Database not initialized' });
+    if (!adminDb) {
+      console.error('Admin database not initialized');
+      return res.status(500).json({ error: 'Admin database not initialized' });
     }
     
     // Verify the token using Firebase Admin
@@ -72,10 +72,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
     
     // Create a reference to the wanted posts collection
-    const postsRef = ref(database, 'wantedPosts');
+    const postsRef = adminDb.ref('wantedPosts');
     
     // Generate a new post ID
-    const newPostRef = push(postsRef);
+    const newPostRef = postsRef.push();
     if (!newPostRef || !newPostRef.key) {
       console.error('Could not generate post ID');
       return res.status(500).json({ error: 'Failed to generate post ID' });
@@ -96,9 +96,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       userAvatar: user.photoURL || undefined,
     };
     
-    // Save to Firebase
-    console.log('Saving post to Firebase...');
-    await set(newPostRef, newPost);
+    // Save to Firebase using admin SDK
+    console.log('Saving post to Firebase with admin SDK...');
+    await newPostRef.set(newPost);
     console.log('Post saved successfully');
     
     return res.status(200).json({ 
