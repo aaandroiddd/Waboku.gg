@@ -104,16 +104,46 @@ export function useWantedPosts(options: WantedPostsOptions = {}) {
 
   const createWantedPost = async (postData: Omit<WantedPost, 'id' | 'createdAt' | 'userId' | 'userName' | 'userAvatar'>) => {
     if (!user) {
+      console.error('Create wanted post failed: User not authenticated');
       throw new Error('User must be authenticated to create a wanted post');
     }
 
+    // Validate required fields
+    if (!postData.title || !postData.game || !postData.location) {
+      console.error('Create wanted post failed: Missing required fields', { 
+        hasTitle: !!postData.title, 
+        hasGame: !!postData.game, 
+        hasLocation: !!postData.location 
+      });
+      throw new Error('Missing required fields for wanted post');
+    }
+
     try {
+      console.log('Creating wanted post with data:', {
+        title: postData.title,
+        game: postData.game,
+        condition: postData.condition,
+        location: postData.location
+      });
+
+      // Validate database is initialized
+      if (!database) {
+        console.error('Create wanted post failed: Firebase database not initialized');
+        throw new Error('Database connection error. Please try again later.');
+      }
+
       // Create a reference to the wanted posts collection
       const postsRef = ref(database, 'wantedPosts');
       
       // Generate a new post ID
       const newPostRef = push(postsRef);
+      if (!newPostRef || !newPostRef.key) {
+        console.error('Create wanted post failed: Could not generate post ID');
+        throw new Error('Failed to generate post ID. Please try again.');
+      }
+      
       const newPostId = newPostRef.key as string;
+      console.log('Generated new post ID:', newPostId);
       
       // Create timestamp
       const timestamp = Date.now();
@@ -128,7 +158,9 @@ export function useWantedPosts(options: WantedPostsOptions = {}) {
       };
       
       // Save to Firebase
+      console.log('Saving post to Firebase...');
       await set(newPostRef, newPost);
+      console.log('Post saved successfully');
       
       // Update local state
       setPosts(prevPosts => [{
@@ -138,7 +170,24 @@ export function useWantedPosts(options: WantedPostsOptions = {}) {
       
       return newPostId;
     } catch (err) {
+      // Detailed error logging
       console.error('Error creating wanted post:', err);
+      
+      // Log specific error details
+      if (err instanceof Error) {
+        console.error('Error details:', {
+          message: err.message,
+          stack: err.stack,
+          name: err.name
+        });
+      }
+      
+      // Check for Firebase permission errors
+      if (err instanceof Error && err.message.includes('permission_denied')) {
+        console.error('Firebase permission denied error. Check database rules.');
+        throw new Error('You do not have permission to create posts. Please check your account status.');
+      }
+      
       throw new Error('Failed to create wanted post. Please try again.');
     }
   };
