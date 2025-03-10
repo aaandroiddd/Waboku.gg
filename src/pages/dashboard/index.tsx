@@ -72,12 +72,68 @@ const DashboardComponent = () => {
 
   const handleShare = (listingId: string) => {
     const url = `${window.location.origin}/listings/${listingId}`;
-    navigator.clipboard.writeText(url);
-    toast({
-      title: "Link copied!",
-      description: "The listing URL has been copied to your clipboard.",
-      duration: 3000,
-    });
+    
+    // Try to use the Clipboard API with fallback
+    try {
+      navigator.clipboard.writeText(url).then(() => {
+        toast({
+          title: "Link copied!",
+          description: "The listing URL has been copied to your clipboard.",
+          duration: 3000,
+        });
+      }).catch(err => {
+        console.error("Clipboard write failed:", err);
+        // Fallback: Create a temporary input element
+        fallbackCopyToClipboard(url);
+      });
+    } catch (err) {
+      console.error("Clipboard API error:", err);
+      // Fallback: Create a temporary input element
+      fallbackCopyToClipboard(url);
+    }
+  };
+  
+  // Fallback method for copying to clipboard
+  const fallbackCopyToClipboard = (text: string) => {
+    try {
+      // Create temporary input element
+      const textArea = document.createElement("textarea");
+      textArea.value = text;
+      
+      // Make the textarea out of viewport
+      textArea.style.position = "fixed";
+      textArea.style.left = "-999999px";
+      textArea.style.top = "-999999px";
+      document.body.appendChild(textArea);
+      
+      // Select and copy
+      textArea.focus();
+      textArea.select();
+      
+      const successful = document.execCommand('copy');
+      document.body.removeChild(textArea);
+      
+      if (successful) {
+        toast({
+          title: "Link copied!",
+          description: "The listing URL has been copied to your clipboard.",
+          duration: 3000,
+        });
+      } else {
+        toast({
+          title: "Copy failed",
+          description: "Please manually copy this URL: " + text,
+          duration: 5000,
+        });
+      }
+    } catch (err) {
+      console.error("Fallback clipboard method failed:", err);
+      toast({
+        title: "Copy failed",
+        description: "Please manually copy this URL: " + text,
+        duration: 5000,
+      });
+    }
   };
 
   const handleViewListing = (listingId: string) => {
