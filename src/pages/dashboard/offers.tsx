@@ -227,8 +227,8 @@ const OffersComponent = () => {
       <div className="mb-8 space-y-3">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Offers Dashboard</h1>
-            <p className="text-muted-foreground mt-1">
+            <h1 className="text-3xl font-bold tracking-tight pl-5">Offers Dashboard</h1>
+            <p className="text-muted-foreground mt-1 pl-5">
               Manage your received and sent offers for listings
             </p>
           </div>

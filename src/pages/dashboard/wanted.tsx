@@ -50,8 +50,8 @@ const WantedDashboardPage = () => {
     <DashboardLayout>
       <div className="space-y-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold tracking-tight">Wanted Posts</h1>
-          <p className="text-muted-foreground mt-1">
+          <h1 className="text-3xl font-bold tracking-tight pl-5">Wanted Posts</h1>
+          <p className="text-muted-foreground mt-1 pl-5">
             Manage your wanted posts for cards and accessories you're looking to buy or trade for.
           </p>
         </div>

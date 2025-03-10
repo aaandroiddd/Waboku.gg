@@ -130,8 +130,8 @@ export default function ConnectAccount() {
     <DashboardLayout>
       <div className="container mx-auto py-6 space-y-6">
         <div className="flex flex-col space-y-2">
-          <h1 className="text-3xl font-bold tracking-tight">Seller Account</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-3xl font-bold tracking-tight pl-5">Seller Account</h1>
+          <p className="text-muted-foreground pl-5">
             Set up your Stripe Connect account to receive payments from buyers
           </p>
         </div>
