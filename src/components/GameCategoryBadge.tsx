@@ -1,6 +1,7 @@
 import { useRouter } from 'next/router';
 import { Badge, BadgeProps } from '@/components/ui/badge';
-import { GAME_NAME_MAPPING } from '@/lib/game-mappings';
+import { GAME_NAME_MAPPING, GAME_ICONS } from '@/lib/game-mappings';
+import { BadgeTooltip } from '@/components/BadgeTooltip';
 
 interface GameCategoryBadgeProps extends BadgeProps {
   game: string;
@@ -40,14 +41,20 @@ export function GameCategoryBadge({ game, className, variant = 'secondary', ...p
     }
   };
 
+  const gameCategory = findGameCategory(game);
+  const gameIcon = gameCategory ? GAME_ICONS[gameCategory] || '🃏' : '🃏';
+  const tooltipContent = `Click to browse all ${game} listings`;
+
   return (
-    <Badge 
-      variant={variant} 
-      className={`cursor-pointer hover:opacity-80 ${className || ''}`} 
-      onClick={handleClick}
-      {...props}
-    >
-      {game}
-    </Badge>
+    <BadgeTooltip content={tooltipContent}>
+      <Badge 
+        variant={variant} 
+        className={`cursor-pointer hover:opacity-80 ${className || ''}`} 
+        onClick={handleClick}
+        {...props}
+      >
+        {game}
+      </Badge>
+    </BadgeTooltip>
   );
 }

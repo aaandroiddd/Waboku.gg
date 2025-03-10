@@ -3,6 +3,7 @@ import { getFirestore, doc, onSnapshot } from 'firebase/firestore';
 import { Badge } from '@/components/ui/badge';
 import { getFirebaseServices } from '@/lib/firebase';
 import { CreditCard } from 'lucide-react';
+import { BadgeTooltip } from '@/components/BadgeTooltip';
 
 interface StripeSellerBadgeProps {
   className?: string;
@@ -49,12 +50,14 @@ export function StripeSellerBadge({ className, userId }: StripeSellerBadgeProps)
   if (isLoading || !hasStripeAccount) return null;
 
   return (
-    <Badge 
-      variant="secondary"
-      className={`bg-purple-500/10 hover:bg-purple-500/20 text-purple-500 border-purple-500/20 ${className}`}
-    >
-      <CreditCard className="h-3 w-3 mr-1" />
-      Verified Seller
-    </Badge>
+    <BadgeTooltip content="This seller has connected their Stripe account and can accept secure payments">
+      <Badge 
+        variant="secondary"
+        className={`bg-purple-500/10 hover:bg-purple-500/20 text-purple-500 border-purple-500/20 ${className}`}
+      >
+        <CreditCard className="h-3 w-3 mr-1" />
+        Verified Seller
+      </Badge>
+    </BadgeTooltip>
   );
 }
