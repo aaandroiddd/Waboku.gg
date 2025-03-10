@@ -68,6 +68,34 @@ export function useWantedPosts(options: WantedPostsOptions = {}) {
         let postsRef = ref(database, 'wanted/posts');
         await logToServer('Created posts reference', { path: 'wanted/posts' }, 'info');
         
+        // Check if the path exists by doing a direct get first
+        const pathCheckSnapshot = await get(postsRef);
+        await logToServer('Path check result', { 
+          pathExists: pathCheckSnapshot.exists(),
+          path: 'wanted/posts'
+        }, 'info');
+        
+        // If path doesn't exist, try the old path as fallback
+        if (!pathCheckSnapshot.exists()) {
+          console.log("Path 'wanted/posts' doesn't exist, trying fallback path...");
+          await logToServer('Trying fallback path', { fallbackPath: 'wantedPosts' }, 'info');
+          
+          // Try the old path as fallback
+          postsRef = ref(database, 'wantedPosts');
+          const fallbackSnapshot = await get(postsRef);
+          
+          await logToServer('Fallback path check result', { 
+            fallbackPathExists: fallbackSnapshot.exists(),
+            fallbackPath: 'wantedPosts'
+          }, 'info');
+          
+          // If neither path exists, we'll continue with the new path but there will be no results
+          if (!fallbackSnapshot.exists()) {
+            console.log("Neither 'wanted/posts' nor 'wantedPosts' paths exist in the database");
+            await logToServer('No wanted posts paths exist in database', {}, 'warn');
+          }
+        }
+        
         let postsQuery = postsRef;
 
         // Apply filters based on options
@@ -83,12 +111,16 @@ export function useWantedPosts(options: WantedPostsOptions = {}) {
         await logToServer('Executing database query', { 
           hasUserId: !!options.userId,
           hasGame: !!options.game,
-          hasState: !!options.state
+          hasState: !!options.state,
+          path: postsRef.toString()
         }, 'info');
         
         const snapshot = await get(postsQuery);
         console.log("Query completed, snapshot exists:", snapshot.exists());
-        await logToServer('Query completed', { snapshotExists: snapshot.exists() }, 'info');
+        await logToServer('Query completed', { 
+          snapshotExists: snapshot.exists(),
+          path: postsRef.toString()
+        }, 'info');
         
         const fetchedPosts: WantedPost[] = [];
 
@@ -112,10 +144,26 @@ export function useWantedPosts(options: WantedPostsOptions = {}) {
             }
           });
           console.log(`Found ${fetchedPosts.length} posts in database`);
-          await logToServer('Posts found in database', { count: fetchedPosts.length }, 'info');
+          await logToServer('Posts found in database', { 
+            count: fetchedPosts.length,
+            path: postsRef.toString()
+          }, 'info');
         } else {
           console.log("No posts found in database");
-          await logToServer('No posts found in database', {}, 'info');
+          await logToServer('No posts found in database', { path: postsRef.toString() }, 'info');
+          
+          // Make a direct API call to check and potentially create a test post
+          try {
+            const checkResponse = await fetch('/api/wanted/check-posts');
+            const checkResult = await checkResponse.json();
+            console.log("Check posts API result:", checkResult);
+            await logToServer('Check posts API result', checkResult, 'info');
+          } catch (apiError) {
+            console.error("Error calling check-posts API:", apiError);
+            await logToServer('Error calling check-posts API', {
+              error: apiError instanceof Error ? apiError.message : String(apiError)
+            }, 'error');
+          }
         }
 
         // Apply additional filters that can't be done at the database level

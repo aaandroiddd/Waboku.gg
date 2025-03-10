@@ -50,6 +50,31 @@ export default function BrowseWantedPage() {
     return game as string;
   };
 
+  const [isMigrating, setIsMigrating] = useState(false);
+  const [migrationResult, setMigrationResult] = useState<any>(null);
+
+  const handleMigratePosts = async () => {
+    try {
+      setIsMigrating(true);
+      const response = await fetch('/api/wanted/migrate-posts');
+      const result = await response.json();
+      console.log('Migration result:', result);
+      setMigrationResult(result);
+      
+      // Refresh the page after migration
+      if (result.migratedCount > 0) {
+        setTimeout(() => {
+          window.location.reload();
+        }, 2000);
+      }
+    } catch (error) {
+      console.error('Error migrating posts:', error);
+      setMigrationResult({ error: error instanceof Error ? error.message : 'Unknown error' });
+    } finally {
+      setIsMigrating(false);
+    }
+  };
+
   return (
     <PageTransition>
       <Header />
@@ -64,14 +89,40 @@ export default function BrowseWantedPage() {
                 Browse cards and accessories that other collectors are looking for
               </p>
             </div>
-            <Button 
-              onClick={handleCreateWanted}
-              className="flex items-center gap-2"
-            >
-              <PlusCircle className="h-4 w-4" />
-              Create Wanted Post
-            </Button>
+            <div className="flex flex-col sm:flex-row gap-2">
+              {error && (
+                <Button 
+                  onClick={handleMigratePosts}
+                  variant="outline"
+                  disabled={isMigrating}
+                  className="flex items-center gap-2"
+                >
+                  {isMigrating ? 'Migrating...' : 'Fix Data Structure'}
+                </Button>
+              )}
+              <Button 
+                onClick={handleCreateWanted}
+                className="flex items-center gap-2"
+              >
+                <PlusCircle className="h-4 w-4" />
+                Create Wanted Post
+              </Button>
+            </div>
           </div>
+          
+          {migrationResult && (
+            <div className={`p-4 mb-6 rounded-lg ${migrationResult.error ? 'bg-destructive/10' : 'bg-green-100 dark:bg-green-900/20'}`}>
+              <h3 className="font-medium mb-1">
+                {migrationResult.error ? 'Migration Error' : 'Migration Complete'}
+              </h3>
+              <p className="text-sm">
+                {migrationResult.error 
+                  ? `Error: ${migrationResult.error}` 
+                  : `Successfully migrated ${migrationResult.migratedCount} posts. ${migrationResult.migratedCount > 0 ? 'Refreshing page...' : ''}`
+                }
+              </p>
+            </div>
+          )}
 
           <div className="flex flex-col md:flex-row gap-6 mb-8">
             <div className="w-full md:w-64 flex-shrink-0">
