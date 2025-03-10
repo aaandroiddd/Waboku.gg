@@ -55,7 +55,11 @@ export function useFavorites() {
         return null;
       });
 
-      const resolvedFavorites = (await Promise.all(favoritePromises)).filter((f): f is Listing => f !== null);
+      // Filter out null values and archived listings
+      const resolvedFavorites = (await Promise.all(favoritePromises))
+        .filter((f): f is Listing => f !== null)
+        .filter(listing => listing.status !== 'archived');
+      
       setFavorites(resolvedFavorites);
       setFavoriteIds(favoriteIdsSet);
     } catch (err) {

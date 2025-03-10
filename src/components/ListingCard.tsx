@@ -209,6 +209,29 @@ export const ListingCard = memo(({ listing, isFavorite, onFavoriteClick, getCond
                       </Button>
                     </motion.div>
                     
+                    {/* Archived Badge */}
+                    {listing.status === 'archived' && (
+                      <motion.div 
+                        className="flex-shrink-0"
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: 0.2 }}
+                      >
+                        <span className="px-2 py-1 bg-red-500/90 text-white rounded-md font-semibold flex items-center gap-1 text-xs sm:text-sm whitespace-nowrap">
+                          <svg 
+                            viewBox="0 0 24 24" 
+                            className="w-3 h-3 sm:w-4 sm:h-4" 
+                            fill="none" 
+                            stroke="currentColor" 
+                            strokeWidth="2"
+                          >
+                            <path d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          <span>Archived</span>
+                        </span>
+                      </motion.div>
+                    )}
+                    
                     {/* Graded Badge */}
                     {listing.isGraded && (
                       <motion.div 

@@ -89,8 +89,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         // Check if listing has expired
         if (now > expirationTime) {
           // Prepare data for archiving
+          // Set expiration to exactly 7 days from now for consistent cleanup
           const sevenDaysFromNow = new Date(now);
           sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
+          // Set time to midnight UTC for consistent batch processing
+          sevenDaysFromNow.setUTCHours(0, 0, 0, 0);
           
           return {
             docRef: doc.ref,
