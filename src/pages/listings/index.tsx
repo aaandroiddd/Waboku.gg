@@ -11,7 +11,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useRouter } from 'next/router';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Search, MapPin, Filter, Check, LayoutGrid, List } from 'lucide-react';
+import { Search, MapPin, Filter, Check, LayoutGrid, List, X } from 'lucide-react';
 import { useListings } from '@/hooks/useListings';
 import {
   Select,
@@ -124,6 +124,7 @@ export default function ListingsPage() {
   const router = useRouter();
   const [stateOpen, setStateOpen] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
+  const [showWantedBanner, setShowWantedBanner] = useState(true);
 
   // Search states
   const [searchQuery, setSearchQuery] = useState("");
@@ -519,15 +520,26 @@ export default function ListingsPage() {
             </div>
 
 
-            {/* Wanted Board link above search results */}
-            <div className="mb-6 p-4 bg-muted rounded-lg text-center">
-              <p className="text-sm md:text-base">
-                Can't find what you're looking for? 
-                <Link href="/wanted" className="ml-2 text-primary hover:underline font-medium">
-                  Click here to view the Wanted Board
-                </Link>
-              </p>
-            </div>
+            {/* Wanted Board banner with close button */}
+            {showWantedBanner && (
+              <div className="mb-6 p-4 bg-muted rounded-lg flex justify-between items-center">
+                <p className="text-sm md:text-base">
+                  Can't find what you're looking for? 
+                  <Link href="/wanted" className="ml-2 text-primary hover:underline font-medium">
+                    Click here to view the Wanted Board
+                  </Link>
+                </p>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="h-8 w-8 p-0" 
+                  onClick={() => setShowWantedBanner(false)}
+                >
+                  <span className="sr-only">Close</span>
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
 
             {error ? (
               <Alert variant="destructive" className="mb-8">
