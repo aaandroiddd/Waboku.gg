@@ -261,7 +261,8 @@ const CreateListingPage = () => {
           <h1 className="text-3xl font-bold">Create New Listing</h1>
         </div>
         
-        {stripeConnectStatus !== 'active' && (
+        {/* Only show Stripe Connect notice if status is confirmed as not active */}
+        {stripeConnectStatus !== 'none' && stripeConnectStatus !== 'active' && (
           <Alert variant="warning" className="bg-yellow-500/10 border-yellow-500 text-yellow-700 dark:text-yellow-500">
             <AlertCircle className="h-4 w-4" />
             <AlertTitle>Stripe Connect Required</AlertTitle>
