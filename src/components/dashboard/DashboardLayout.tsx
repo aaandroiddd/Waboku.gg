@@ -1,7 +1,7 @@
 import { ReactNode, useState, useEffect } from 'react';
 import { DashboardSidebar } from './DashboardSidebar';
 import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/sheet';
 import { Footer } from '../Footer';
 import { VerificationStatus } from '../VerificationStatus';
 import { SellerBadge } from '../SellerBadge';
@@ -116,6 +116,7 @@ export const DashboardLayout = ({ children }: { children: ReactNode }) => {
             </Button>
           </SheetTrigger>
           <SheetContent side="left" className="p-0 w-72">
+            <SheetTitle className="sr-only">Dashboard Navigation</SheetTitle>
             <DashboardSidebar onNavigate={() => setIsSidebarOpen(false)} />
           </SheetContent>
         </Sheet>

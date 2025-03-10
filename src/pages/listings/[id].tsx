@@ -713,6 +713,7 @@ export default function ListingPage() {
 
         <Dialog open={isZoomDialogOpen} onOpenChange={setIsZoomDialogOpen}>
           <DialogContent className="max-w-[95vw] max-h-[95vh] w-full h-full p-0 overflow-hidden">
+            <DialogTitle className="sr-only">Image Viewer</DialogTitle>
             <Button
               variant="ghost"
               size="icon"
