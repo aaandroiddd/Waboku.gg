@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Textarea } from "@/components/ui/textarea";
 import { GameCategoryBadge } from "@/components/GameCategoryBadge";
 import { MarkdownContent } from "@/components/MarkdownContent";
+import { UserNameLink } from "@/components/UserNameLink";
 import { useAuth } from "@/contexts/AuthContext";
 import { ArrowLeft, Calendar, MapPin, MessageSquare, Flag, Share2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -405,7 +406,15 @@ export default function WantedPostDetailPage() {
                         </Avatar>
                         
                         <div>
-                          <div className="font-medium">{posterData.name || wantedPost.userName || "Anonymous User"}</div>
+                          {posterData?.id ? (
+  <UserNameLink 
+    userId={posterData.id} 
+    initialUsername={posterData.name || wantedPost.userName || "Anonymous User"} 
+    className="font-medium"
+  />
+) : (
+  <div className="font-medium">{posterData?.name || wantedPost.userName || "Anonymous User"}</div>
+)}
                           <div className="text-sm text-muted-foreground">
                             Member since {new Date(posterData.joinedDate || Date.now()).toLocaleDateString(undefined, { year: 'numeric', month: 'short' })}
                           </div>

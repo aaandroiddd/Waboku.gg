@@ -6,8 +6,9 @@ import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { PlusCircle, Filter, MapPin, Calendar } from "lucide-react";
+import { PlusCircle, Filter, MapPin, Calendar, User } from "lucide-react";
 import { GameCategoryBadge } from "@/components/GameCategoryBadge";
+import { UserNameLink } from "@/components/UserNameLink";
 import { useAuth } from "@/contexts/AuthContext";
 import { Skeleton } from "@/components/ui/skeleton";
 import { GAME_NAME_MAPPING } from "@/lib/game-mappings";
@@ -258,7 +259,18 @@ function WantedPostCard({ post }: { post: WantedPost }) {
               <MapPin className="h-3 w-3 mr-1" />
               <span className="mr-3">{post.location}</span>
               <Calendar className="h-3 w-3 mr-1" />
-              <span>{new Date(post.createdAt).toLocaleDateString()}</span>
+              <span className="mr-3">{new Date(post.createdAt).toLocaleDateString()}</span>
+              {post.userId && (
+                <>
+                  <User className="h-3 w-3 mr-1" />
+                  <UserNameLink 
+                    userId={post.userId} 
+                    initialUsername={post.userName || "Anonymous User"} 
+                    className="text-sm"
+                    showSkeleton={false}
+                  />
+                </>
+              )}
             </div>
           </div>
           
