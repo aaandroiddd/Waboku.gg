@@ -62,6 +62,23 @@ export default function WantedPostDetailPage() {
             databaseURL: !!process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL
           });
           
+          // Import the utility function to check and migrate wanted posts if needed
+          const { checkAndMigrateWantedPosts } = await import('@/lib/wanted-posts-utils');
+          
+          // Check if migration is needed and perform it if necessary
+          try {
+            console.log("Checking if wanted posts need migration...");
+            const migrationResult = await checkAndMigrateWantedPosts();
+            console.log("Migration check result:", migrationResult);
+            
+            if (migrationResult.migrated) {
+              console.log("Wanted posts were migrated successfully");
+            }
+          } catch (migrationError) {
+            console.error("Error checking/migrating wanted posts:", migrationError);
+            // Continue with post loading even if migration check fails
+          }
+          
           // Fetch the post data with enhanced error handling
           const postData = await getWantedPost(id as string);
           
@@ -126,6 +143,23 @@ export default function WantedPostDetailPage() {
             }
           } else {
             console.error("Post data not found for ID:", id);
+            
+            // Try to create a test post if none was found
+            try {
+              console.log("Attempting to create a test post via API...");
+              const checkResponse = await fetch('/api/wanted/check-posts');
+              const checkResult = await checkResponse.json();
+              console.log("Check posts API result:", checkResult);
+              
+              if (checkResult.postId) {
+                // Redirect to the newly created test post
+                router.push(`/wanted/${checkResult.postId}`);
+                return;
+              }
+            } catch (apiError) {
+              console.error("Error calling check-posts API:", apiError);
+            }
+            
             // Show toast for not found post
             toast({
               title: "Post Not Found",
@@ -155,7 +189,7 @@ export default function WantedPostDetailPage() {
     };
 
     loadWantedPost();
-  }, [router.isReady, id, getWantedPost, toast]);
+  }, [router.isReady, id, getWantedPost, toast, router]);
 
   const handleSendMessage = async () => {
     if (!message.trim()) return;

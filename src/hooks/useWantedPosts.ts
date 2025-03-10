@@ -434,18 +434,90 @@ export function useWantedPosts(options: WantedPostsOptions = {}) {
         throw new Error('Database not initialized');
       }
       
-      // Create reference to the specific post
+      // First try the new path structure
       const postRef = ref(database, `wanted/posts/${postId}`);
-      console.log(`Created post reference for path: wanted/posts/${postId}`);
+      console.log(`Trying new path structure: wanted/posts/${postId}`);
       
       // Fetch the post data
       console.log('Executing get() for post data...');
-      const snapshot = await get(postRef);
+      let snapshot = await get(postRef);
       console.log(`Post data fetch complete, exists: ${snapshot.exists()}`);
       
+      // If not found, try the old path structure
       if (!snapshot.exists()) {
-        console.log(`No post found with ID: ${postId}`);
-        await logToServer('Wanted post not found', { postId }, 'warn');
+        console.log(`Post not found at new path, trying legacy path: wantedPosts/${postId}`);
+        await logToServer('Post not found at new path, trying legacy path', { 
+          postId, 
+          newPath: `wanted/posts/${postId}`,
+          legacyPath: `wantedPosts/${postId}`
+        }, 'info');
+        
+        const legacyPostRef = ref(database, `wantedPosts/${postId}`);
+        snapshot = await get(legacyPostRef);
+        console.log(`Legacy path fetch complete, exists: ${snapshot.exists()}`);
+        
+        // If still not found, try direct path without subfolder
+        if (!snapshot.exists()) {
+          console.log(`Post not found at legacy path, trying direct path: wanted/${postId}`);
+          await logToServer('Post not found at legacy path, trying direct path', { 
+            postId, 
+            directPath: `wanted/${postId}`
+          }, 'info');
+          
+          const directPostRef = ref(database, `wanted/${postId}`);
+          snapshot = await get(directPostRef);
+          console.log(`Direct path fetch complete, exists: ${snapshot.exists()}`);
+        }
+      }
+      
+      // If still not found after trying all paths
+      if (!snapshot.exists()) {
+        console.log(`No post found with ID: ${postId} after trying all path variations`);
+        await logToServer('Wanted post not found in any path location', { 
+          postId,
+          pathsChecked: [
+            `wanted/posts/${postId}`,
+            `wantedPosts/${postId}`,
+            `wanted/${postId}`
+          ]
+        }, 'warn');
+        
+        // Try to fetch all wanted posts to see what's available
+        try {
+          console.log('Attempting to list all wanted posts to debug...');
+          const allPostsRef = ref(database, 'wanted/posts');
+          const allPostsSnapshot = await get(allPostsRef);
+          
+          if (allPostsSnapshot.exists()) {
+            const postKeys = Object.keys(allPostsSnapshot.val());
+            console.log(`Found ${postKeys.length} posts in wanted/posts path`);
+            await logToServer('Found posts in wanted/posts path', { 
+              count: postKeys.length,
+              firstFewKeys: postKeys.slice(0, 3)
+            }, 'info');
+          } else {
+            console.log('No posts found in wanted/posts path');
+            
+            // Check legacy path
+            const legacyAllPostsRef = ref(database, 'wantedPosts');
+            const legacyAllPostsSnapshot = await get(legacyAllPostsRef);
+            
+            if (legacyAllPostsSnapshot.exists()) {
+              const postKeys = Object.keys(legacyAllPostsSnapshot.val());
+              console.log(`Found ${postKeys.length} posts in wantedPosts path`);
+              await logToServer('Found posts in wantedPosts path', { 
+                count: postKeys.length,
+                firstFewKeys: postKeys.slice(0, 3)
+              }, 'info');
+            } else {
+              console.log('No posts found in wantedPosts path either');
+              await logToServer('No posts found in any path', {}, 'warn');
+            }
+          }
+        } catch (listError) {
+          console.error('Error listing all posts:', listError);
+        }
+        
         return null;
       }
       
