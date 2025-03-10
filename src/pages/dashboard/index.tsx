@@ -283,37 +283,7 @@ const DashboardComponent = () => {
       </Card>
 
       {/* Tabs Section */}
-      {/* Wanted Posts Section */}
-      <div className="mb-8">
-        {user ? (
-          <>
-            <WantedPostsSection />
-            <div className="mt-6">
-              <WantedPostsDebugger />
-            </div>
-          </>
-        ) : (
-          <Card>
-            <CardHeader>
-              <CardTitle>Your Wanted Posts</CardTitle>
-              <CardDescription>
-                Sign in to view your wanted posts
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-12 bg-muted/30 rounded-lg">
-                <h3 className="text-xl font-medium mb-2">Please sign in</h3>
-                <p className="text-muted-foreground mb-6">
-                  You need to be signed in to view your wanted posts
-                </p>
-                <Button onClick={() => router.push('/auth/sign-in')}>
-                  Sign In
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-      </div>
+
 
       <Tabs defaultValue="active" className="space-y-4">
         <TabsList>

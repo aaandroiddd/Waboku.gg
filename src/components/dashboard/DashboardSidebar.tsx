@@ -49,6 +49,18 @@ export function DashboardSidebar({ onNavigate }: DashboardSidebarProps) {
       ),
     },
     {
+      name: 'Wanted',
+      href: '/dashboard/wanted',
+      icon: (
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M19.071 4.929a10 10 0 1 0 0 14.142" />
+          <path d="M12 8v4l3 3" />
+          <path d="M9 15 3 21" />
+          <path d="M14 16.5 21 21" />
+        </svg>
+      ),
+    },
+    {
       name: 'Orders',
       href: '/dashboard/orders',
       icon: (
