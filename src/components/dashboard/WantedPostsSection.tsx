@@ -135,9 +135,6 @@ export function WantedPostsSection() {
     <Card>
       <CardHeader>
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div>
-            <CardTitle>Your Wanted Posts</CardTitle>
-          </div>
           <Button 
             onClick={handleCreateClick}
             className="flex items-center gap-2"

@@ -251,17 +251,17 @@ const DashboardComponent = () => {
       
       {/* Dashboard Header */}
       <div className="mb-8">
-        <div className="flex items-start gap-6">
-          <Avatar className="h-16 w-16">
+        <div className="flex items-start gap-8">
+          <Avatar className="h-20 w-20">
             <AvatarImage src={user.photoURL || undefined} alt={user.displayName || 'User avatar'} />
             <AvatarFallback>{user.email ? user.email.charAt(0).toUpperCase() : 'U'}</AvatarFallback>
           </Avatar>
-          <div className="flex-1">
+          <div className="flex-1 pt-2">
             <div className="group cursor-pointer" onClick={() => router.push(`/profile/${user.uid}`)}>
               <h1 className="text-3xl font-bold tracking-tight hover:text-primary transition-colors">
                 {user.displayName || profile?.username || 'User'}
               </h1>
-              <p className="text-muted-foreground hover:text-primary transition-colors truncate max-w-[300px] mt-1">
+              <p className="text-muted-foreground hover:text-primary transition-colors truncate max-w-[300px] mt-2">
                 {user.email}
               </p>
             </div>
