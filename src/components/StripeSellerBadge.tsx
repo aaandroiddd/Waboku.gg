@@ -48,10 +48,4 @@ export function StripeSellerBadge({ className, userId }: StripeSellerBadgeProps)
       Verified Seller
     </Badge>
   );
-}</function_results>
-
-Now, let's update the profile page to include this new badge:
-
-<function_calls>
-<invoke name="edit_file">
-<parameter name="file_path">src/pages/profile/[id].tsx
+}
