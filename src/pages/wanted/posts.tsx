@@ -97,10 +97,10 @@ export default function AllWantedPostsPage() {
             </div>
             <Button 
               onClick={handleCreateWanted}
-              className="flex items-center gap-2"
+              className="flex items-center gap-2 justify-center w-full md:w-auto"
             >
               <PlusCircle className="h-4 w-4" />
-              Create Wanted Post
+              <span className="whitespace-nowrap">Create Wanted Post</span>
             </Button>
           </div>
 
@@ -220,8 +220,8 @@ function WantedPostCard({ post }: { post: WantedPost }) {
       onClick={handleClick}
     >
       <CardContent className="p-6">
-        <div className="flex justify-between">
-          <div>
+        <div className="flex flex-col sm:flex-row justify-between gap-4">
+          <div className="flex-1">
             <h3 className="text-lg font-medium mb-1">{post.title}</h3>
             <p className="text-sm text-muted-foreground mb-3">{post.description}</p>
             
@@ -234,7 +234,7 @@ function WantedPostCard({ post }: { post: WantedPost }) {
               )}
             </div>
             
-            <div className="flex items-center text-sm text-muted-foreground">
+            <div className="flex items-center text-sm text-muted-foreground flex-wrap">
               <MapPin className="h-3 w-3 mr-1" />
               <span className="mr-3">{post.location}</span>
               <Calendar className="h-3 w-3 mr-1" />
@@ -242,7 +242,7 @@ function WantedPostCard({ post }: { post: WantedPost }) {
             </div>
           </div>
           
-          <div className="text-right">
+          <div className="sm:text-right flex flex-row sm:flex-col justify-between items-center sm:items-end">
             <div className="font-medium">
               {post.priceRange 
                 ? `$${post.priceRange.min} - $${post.priceRange.max}` 
@@ -251,7 +251,7 @@ function WantedPostCard({ post }: { post: WantedPost }) {
             </div>
             <Button 
               size="sm" 
-              className="mt-2"
+              className="sm:mt-2"
               onClick={handleContactClick}
             >
               Contact

@@ -46,21 +46,21 @@ export default function WantedBoardPage() {
                 Post cards or accessories you're looking for that aren't currently available in listings
               </p>
             </div>
-            <div className="flex gap-3">
+            <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
               <Button 
                 variant="outline"
                 onClick={() => router.push("/wanted/posts")}
-                className="flex items-center gap-2"
+                className="flex items-center gap-2 justify-center"
               >
                 <SearchIcon className="h-4 w-4" />
-                Browse All Wanted Posts
+                <span className="whitespace-nowrap">Browse All Wanted Posts</span>
               </Button>
               <Button 
                 onClick={handleCreateWanted}
-                className="flex items-center gap-2"
+                className="flex items-center gap-2 justify-center"
               >
                 <PlusCircle className="h-4 w-4" />
-                Create Wanted Post
+                <span className="whitespace-nowrap">Create Wanted Post</span>
               </Button>
             </div>
           </div>
@@ -89,14 +89,14 @@ export default function WantedBoardPage() {
                       <div className="mt-auto">
                         <Button 
                           variant="outline" 
-                          className="w-full flex items-center gap-2"
+                          className="w-full flex items-center gap-2 justify-center"
                           onClick={(e) => {
                             e.stopPropagation();
                             router.push(`/wanted/posts?game=${gameKey}`);
                           }}
                         >
                           <SearchIcon className="h-4 w-4" />
-                          Browse Wanted Posts
+                          <span className="whitespace-nowrap">Browse Wanted Posts</span>
                         </Button>
                       </div>
                     </div>
@@ -128,14 +128,14 @@ export default function WantedBoardPage() {
                       <div className="mt-auto">
                         <Button 
                           variant="outline" 
-                          className="w-full flex items-center gap-2"
+                          className="w-full flex items-center gap-2 justify-center"
                           onClick={(e) => {
                             e.stopPropagation();
                             router.push(`/wanted/posts?game=${gameKey}`);
                           }}
                         >
                           <SearchIcon className="h-4 w-4" />
-                          Browse Wanted Posts
+                          <span className="whitespace-nowrap">Browse Wanted Posts</span>
                         </Button>
                       </div>
                     </div>
