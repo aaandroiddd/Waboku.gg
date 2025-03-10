@@ -26,10 +26,17 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  // Verify that this is a cron job request from Vercel
+  // Verify that this is a cron job request from Vercel or an admin request
   const authHeader = req.headers.authorization;
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-    console.warn('[Cleanup Archived] Unauthorized access attempt');
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    console.warn('[Cleanup Archived] Unauthorized access attempt - missing or invalid authorization header');
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+  
+  const token = authHeader.split(' ')[1];
+  // Accept either CRON_SECRET (for automated jobs) or ADMIN_SECRET (for admin dashboard)
+  if (token !== process.env.CRON_SECRET && token !== process.env.ADMIN_SECRET) {
+    console.warn('[Cleanup Archived] Unauthorized access attempt - invalid token');
     return res.status(401).json({ error: 'Unauthorized' });
   }
 

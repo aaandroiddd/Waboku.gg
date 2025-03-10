@@ -72,12 +72,28 @@ export default function AdminDashboard() {
   const handleApiCall = async (endpoint: string, method: string = 'POST') => {
     setLoading(true);
     try {
+      // Different endpoints require different authorization header formats
+      let headers = {
+        'Content-Type': 'application/json'
+      };
+      
+      // For cleanup-archived endpoint, use Bearer token format with CRON_SECRET
+      if (endpoint === '/api/listings/cleanup-archived') {
+        headers = {
+          ...headers,
+          'Authorization': `Bearer ${adminSecret}`
+        };
+      } else {
+        // For other admin endpoints, use x-admin-secret
+        headers = {
+          ...headers,
+          'x-admin-secret': adminSecret
+        };
+      }
+      
       const response = await fetch(endpoint, {
         method,
-        headers: {
-          'x-admin-secret': adminSecret,
-          'Content-Type': 'application/json'
-        }
+        headers
       });
       
       const data = await response.json();
