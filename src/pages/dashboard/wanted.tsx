@@ -50,6 +50,7 @@ const WantedDashboardPage = () => {
       <div className="space-y-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold tracking-tight pl-5">Wanted Posts</h1>
+          <p className="text-muted-foreground pl-5 mt-1">Cards and accessories you're looking for</p>
         </div>
         
         <WantedPostsSection />

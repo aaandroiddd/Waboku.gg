@@ -234,11 +234,15 @@ function WantedPostCard({ post }: { post: WantedPost }) {
               )}
             </div>
             
-            <div className="flex items-center text-sm text-muted-foreground flex-wrap">
+            <div className="flex items-center text-sm text-muted-foreground flex-wrap mb-2">
               <MapPin className="h-3 w-3 mr-1" />
               <span className="mr-3">{post.location}</span>
               <Calendar className="h-3 w-3 mr-1" />
               <span>{new Date(post.createdAt).toLocaleDateString()}</span>
+            </div>
+            
+            <div className="text-sm text-muted-foreground">
+              Posted by: <span className="font-medium">{post.userName || 'Anonymous User'}</span>
             </div>
           </div>
           
