@@ -14,6 +14,7 @@ import { Footer } from '@/components/Footer';
 import { SellerBadge } from '@/components/SellerBadge';
 import { AdminBadge } from '@/components/AdminBadge';
 import { MessageDialog } from '@/components/MessageDialog';
+import { StripeSellerBadge } from '@/components/StripeSellerBadge';
 
 const LoadingProfile = () => (
   <div className="container mx-auto p-6">
