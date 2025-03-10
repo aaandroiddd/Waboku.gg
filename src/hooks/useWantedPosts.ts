@@ -64,7 +64,36 @@ export function useWantedPosts(options: WantedPostsOptions = {}) {
           throw new Error('Database not initialized');
         }
         
-        // Create reference to wanted/posts collection
+        // First, call the fix-paths API to ensure the database structure is correct
+        // and create a test post if needed
+        try {
+          console.log("Calling fix-paths API to ensure database structure...");
+          await logToServer('Calling fix-paths API', {}, 'info');
+          
+          const fixPathsResponse = await fetch('/api/wanted/fix-paths');
+          if (!fixPathsResponse.ok) {
+            throw new Error(`Fix paths API returned status ${fixPathsResponse.status}`);
+          }
+          
+          const fixPathsResult = await fixPathsResponse.json();
+          console.log("Fix paths API result:", fixPathsResult);
+          await logToServer('Fix paths API result', fixPathsResult, 'info');
+          
+          // If no posts were found and a test post was created, we'll need to wait a moment
+          // for the database to update
+          if (fixPathsResult.testPostCreated) {
+            console.log("Test post was created, waiting for database to update...");
+            await new Promise(resolve => setTimeout(resolve, 500));
+          }
+        } catch (fixPathsError) {
+          console.error("Error calling fix-paths API:", fixPathsError);
+          await logToServer('Error calling fix-paths API', {
+            error: fixPathsError instanceof Error ? fixPathsError.message : String(fixPathsError)
+          }, 'error');
+          // Continue with the fetch attempt even if fix-paths fails
+        }
+        
+        // Create reference to wanted/posts collection (primary path)
         let postsRef = ref(database, 'wanted/posts');
         await logToServer('Created posts reference', { path: 'wanted/posts' }, 'info');
         
@@ -75,7 +104,7 @@ export function useWantedPosts(options: WantedPostsOptions = {}) {
           path: 'wanted/posts'
         }, 'info');
         
-        // If path doesn't exist, try the old path as fallback
+        // If primary path doesn't exist, try the old path as fallback
         if (!pathCheckSnapshot.exists()) {
           console.log("Path 'wanted/posts' doesn't exist, trying fallback path...");
           await logToServer('Trying fallback path', { fallbackPath: 'wantedPosts' }, 'info');
@@ -93,6 +122,20 @@ export function useWantedPosts(options: WantedPostsOptions = {}) {
           if (!fallbackSnapshot.exists()) {
             console.log("Neither 'wanted/posts' nor 'wantedPosts' paths exist in the database");
             await logToServer('No wanted posts paths exist in database', {}, 'warn');
+            
+            // Try one more time with the direct 'wanted' path
+            postsRef = ref(database, 'wanted');
+            const directSnapshot = await get(postsRef);
+            
+            await logToServer('Direct path check result', { 
+              directPathExists: directSnapshot.exists(),
+              directPath: 'wanted'
+            }, 'info');
+            
+            if (!directSnapshot.exists()) {
+              console.log("No posts found in any path");
+              await logToServer('No posts found in any path', {}, 'warn');
+            }
           }
         }
         
@@ -151,19 +194,6 @@ export function useWantedPosts(options: WantedPostsOptions = {}) {
         } else {
           console.log("No posts found in database");
           await logToServer('No posts found in database', { path: postsRef.toString() }, 'info');
-          
-          // Make a direct API call to check and potentially create a test post
-          try {
-            const checkResponse = await fetch('/api/wanted/check-posts');
-            const checkResult = await checkResponse.json();
-            console.log("Check posts API result:", checkResult);
-            await logToServer('Check posts API result', checkResult, 'info');
-          } catch (apiError) {
-            console.error("Error calling check-posts API:", apiError);
-            await logToServer('Error calling check-posts API', {
-              error: apiError instanceof Error ? apiError.message : String(apiError)
-            }, 'error');
-          }
         }
 
         // Apply additional filters that can't be done at the database level

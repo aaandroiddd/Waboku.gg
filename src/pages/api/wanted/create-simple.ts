@@ -2,11 +2,24 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import admin from 'firebase-admin';
 import { getDatabase } from 'firebase-admin/database';
 
+// Helper function to log detailed information
+const logDetails = (message: string, data: any = {}) => {
+  console.log(`[create-simple] ${message}`, data);
+};
+
 // Initialize Firebase Admin if not already initialized
 let firebaseAdmin: admin.app.App;
 try {
   firebaseAdmin = admin.app();
+  logDetails('Using existing Firebase Admin app');
 } catch (error) {
+  logDetails('Initializing new Firebase Admin app', {
+    projectId: process.env.FIREBASE_PROJECT_ID ? 'set' : 'missing',
+    clientEmail: process.env.FIREBASE_CLIENT_EMAIL ? 'set' : 'missing',
+    privateKey: process.env.FIREBASE_PRIVATE_KEY ? 'set (length: ' + process.env.FIREBASE_PRIVATE_KEY?.length + ')' : 'missing',
+    databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL ? 'set' : 'missing'
+  });
+  
   const serviceAccount = {
     projectId: process.env.FIREBASE_PROJECT_ID,
     clientEmail: process.env.FIREBASE_CLIENT_EMAIL,

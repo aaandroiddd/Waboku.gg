@@ -18,6 +18,7 @@ import { ListingList } from "@/components/ListingList";
 import { DeleteListingDialog } from "@/components/DeleteListingDialog";
 import { ListingsSearchBar } from "@/components/ListingsSearchBar";
 import { WantedPostsSection } from "@/components/dashboard/WantedPostsSection";
+import { WantedPostsDebugger } from "@/components/dashboard/WantedPostsDebugger";
 import { useListings } from '@/hooks/useListings';
 import { useProfile } from '@/hooks/useProfile';
 import { Listing } from '@/types/database';
@@ -285,7 +286,12 @@ const DashboardComponent = () => {
       {/* Wanted Posts Section */}
       <div className="mb-8">
         {user ? (
-          <WantedPostsSection />
+          <>
+            <WantedPostsSection />
+            <div className="mt-6">
+              <WantedPostsDebugger />
+            </div>
+          </>
         ) : (
           <Card>
             <CardHeader>
