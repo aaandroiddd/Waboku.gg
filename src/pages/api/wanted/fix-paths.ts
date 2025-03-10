@@ -1,11 +1,36 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { ref, get, set, push } from 'firebase/database';
-import { firebaseDatabase } from '@/lib/firebase';
+import admin from 'firebase-admin';
+import { getDatabase } from 'firebase-admin/database';
 
 // Helper function to log detailed information
 const logDetails = (message: string, data: any = {}) => {
   console.log(`[fix-paths] ${message}`, data);
 };
+
+// Initialize Firebase Admin if not already initialized
+let firebaseAdmin: admin.app.App;
+try {
+  firebaseAdmin = admin.app();
+  logDetails('Using existing Firebase Admin app');
+} catch (error) {
+  logDetails('Initializing new Firebase Admin app', {
+    projectId: process.env.FIREBASE_PROJECT_ID ? 'set' : 'missing',
+    clientEmail: process.env.FIREBASE_CLIENT_EMAIL ? 'set' : 'missing',
+    privateKey: process.env.FIREBASE_PRIVATE_KEY ? 'set (length: ' + process.env.FIREBASE_PRIVATE_KEY?.length + ')' : 'missing',
+    databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL ? 'set' : 'missing'
+  });
+  
+  const serviceAccount = {
+    projectId: process.env.FIREBASE_PROJECT_ID,
+    clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+    privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n')
+  };
+
+  firebaseAdmin = admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount as admin.ServiceAccount),
+    databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL
+  });
+}
 
 export default async function handler(
   req: NextApiRequest,
@@ -14,24 +39,27 @@ export default async function handler(
   try {
     logDetails('Starting fix-paths API handler');
     
+    // Use admin SDK to access the database
+    const adminDb = getDatabase(firebaseAdmin);
+    
     // Check if database is initialized
-    if (!firebaseDatabase) {
-      logDetails('Database not initialized', {
-        databaseExists: !!firebaseDatabase,
+    if (!adminDb) {
+      logDetails('Admin database not initialized', {
+        databaseExists: !!adminDb,
         databaseURL: !!process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL,
         projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID
       });
       
       return res.status(500).json({ 
-        error: 'Database not initialized',
-        databaseExists: !!firebaseDatabase,
+        error: 'Admin database not initialized',
+        databaseExists: !!adminDb,
         databaseURL: !!process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL
       });
     }
     
     // Log Firebase configuration status
     logDetails('Firebase configuration status', {
-      databaseInitialized: !!firebaseDatabase,
+      databaseInitialized: !!adminDb,
       databaseURLExists: !!process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL,
       apiKeyExists: !!process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
       projectIdExists: !!process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID
@@ -51,10 +79,10 @@ export default async function handler(
     // Check each path for posts
     for (const path of paths) {
       logDetails(`Checking path: ${path}`);
-      const pathRef = ref(firebaseDatabase, path);
+      const pathRef = adminDb.ref(path);
       
       try {
-        const snapshot = await get(pathRef);
+        const snapshot = await pathRef.get();
         const exists = snapshot.exists();
         
         if (exists) {
@@ -120,8 +148,8 @@ export default async function handler(
       
       try {
         // Create a new post reference in the primary path
-        const postsRef = ref(firebaseDatabase, 'wanted/posts');
-        const newPostRef = push(postsRef);
+        const postsRef = adminDb.ref('wanted/posts');
+        const newPostRef = postsRef.push();
         
         if (!newPostRef || !newPostRef.key) {
           logDetails('Failed to create post reference', {
@@ -131,7 +159,7 @@ export default async function handler(
           
           return res.status(500).json({
             error: 'Failed to create post reference',
-            databaseInitialized: !!firebaseDatabase
+            databaseInitialized: !!adminDb
           });
         }
         
@@ -155,16 +183,24 @@ export default async function handler(
           userAvatar: "/images/default-avatar.svg"
         };
         
-        // Save the test post
-        await set(newPostRef, testPost);
+        // Save the test post to both paths for consistency
+        const updates: Record<string, any> = {};
+        updates[`wanted/posts/${newPostRef.key}`] = testPost;
+        updates[`wantedPosts/${newPostRef.key}`] = testPost;
+        
+        await adminDb.ref().update(updates);
+        
         logDetails('Test post created successfully', { 
           postId: newPostRef.key,
-          path: `wanted/posts/${newPostRef.key}`
+          paths: [
+            `wanted/posts/${newPostRef.key}`,
+            `wantedPosts/${newPostRef.key}`
+          ]
         });
         
         // Verify the post was actually saved
-        const verifyRef = ref(firebaseDatabase, `wanted/posts/${newPostRef.key}`);
-        const verifySnapshot = await get(verifyRef);
+        const verifyRef = adminDb.ref(`wanted/posts/${newPostRef.key}`);
+        const verifySnapshot = await verifyRef.get();
         
         if (verifySnapshot.exists()) {
           logDetails('Verified post was saved correctly', { 
