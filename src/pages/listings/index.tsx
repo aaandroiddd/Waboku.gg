@@ -6,6 +6,7 @@ import { ListingGrid } from '@/components/ListingGrid';
 import { SearchListingList } from '@/components/SearchListingList';
 import Head from 'next/head';
 import Header from '@/components/Header';
+import Link from 'next/link';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useRouter } from 'next/router';
 import { Input } from '@/components/ui/input';
@@ -517,6 +518,16 @@ export default function ListingsPage() {
               </div>
             </div>
 
+
+            {/* Wanted Board link above search results */}
+            <div className="mb-6 p-4 bg-muted rounded-lg text-center">
+              <p className="text-sm md:text-base">
+                Can't find what you're looking for? 
+                <Link href="/wanted" className="ml-2 text-primary hover:underline font-medium">
+                  Click here to view the Wanted Board
+                </Link>
+              </p>
+            </div>
 
             {error ? (
               <Alert variant="destructive" className="mb-8">
