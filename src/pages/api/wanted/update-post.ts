@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getAuth } from 'firebase-admin/auth';
-import { getDatabase, ref, get, update } from 'firebase-admin/database';
+import { getDatabase } from 'firebase-admin/database';
 import { initializeFirebaseAdmin } from '@/lib/firebase-admin';
 
 type ResponseData = {
@@ -21,7 +21,7 @@ export default async function handler(
 
   try {
     // Initialize Firebase Admin if not already initialized
-    initializeFirebaseAdmin();
+    const admin = initializeFirebaseAdmin();
     const db = getDatabase();
     
     // Extract data from request body
@@ -52,8 +52,8 @@ export default async function handler(
     // Check each path until we find the post
     for (const path of paths) {
       console.log(`API: Checking path: ${path}`);
-      postRef = ref(db, path);
-      const snapshot = await get(postRef);
+      postRef = admin.database().ref(path);
+      const snapshot = await postRef.once('value');
       
       if (snapshot.exists()) {
         postData = snapshot.val();
@@ -85,7 +85,7 @@ export default async function handler(
     
     // Update the post
     console.log(`API: Updating post at path: ${foundPath}`);
-    await update(postRef, updates);
+    await postRef.update(updates);
     console.log('API: Post updated successfully');
     
     // Return success response
