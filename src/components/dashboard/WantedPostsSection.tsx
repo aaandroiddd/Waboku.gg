@@ -137,9 +137,6 @@ export function WantedPostsSection() {
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
             <CardTitle>Your Wanted Posts</CardTitle>
-            <CardDescription>
-              Cards and accessories you're looking for
-            </CardDescription>
           </div>
           <Button 
             onClick={handleCreateClick}
@@ -184,14 +181,14 @@ export function WantedPostsSection() {
                       </div>
                     </div>
                     
-                    <div className="flex flex-row sm:flex-col items-center sm:items-end gap-2">
+                    <div className="flex flex-col gap-2">
                       <div className="text-sm font-medium">
                         {post.priceRange 
                           ? `$${post.priceRange.min} - $${post.priceRange.max}` 
                           : "Price Negotiable"
                         }
                       </div>
-                      <div className="flex gap-2">
+                      <div className="flex flex-wrap gap-2">
                         <Button 
                           variant="outline" 
                           size="sm"
@@ -199,7 +196,7 @@ export function WantedPostsSection() {
                           onClick={() => router.push(`/wanted/${post.id}`)}
                         >
                           <ExternalLink className="h-3 w-3" />
-                          View
+                          <span>View</span>
                         </Button>
                         <Button 
                           variant="outline" 
@@ -208,7 +205,7 @@ export function WantedPostsSection() {
                           onClick={() => handleEditClick(post.id)}
                         >
                           <Pencil className="h-3 w-3" />
-                          Edit
+                          <span>Edit</span>
                         </Button>
                         <Button 
                           variant="outline" 
@@ -217,7 +214,7 @@ export function WantedPostsSection() {
                           onClick={() => handleDeleteClick(post.id)}
                         >
                           <Trash2 className="h-3 w-3" />
-                          Delete
+                          <span>Delete</span>
                         </Button>
                       </div>
                     </div>
