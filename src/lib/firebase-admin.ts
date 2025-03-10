@@ -24,6 +24,14 @@ export function initAdmin(): typeof admin {
   return getFirebaseAdmin();
 }
 
+/**
+ * Initialize Firebase Admin SDK
+ * This is the function used by API routes
+ */
+export function initializeFirebaseAdmin(): typeof admin {
+  return getFirebaseAdmin();
+}
+
 export function getFirebaseAdmin(): typeof admin {
   if (firebaseAdmin) {
     return firebaseAdmin;
