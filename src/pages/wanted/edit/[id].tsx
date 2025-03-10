@@ -124,7 +124,9 @@ export default function EditWantedPostPage() {
     };
 
     loadWantedPost();
-  }, [router.isReady, id, user, getWantedPost, router, toast]);
+    // Only run this effect when the router is ready and the ID changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [router.isReady, id]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
