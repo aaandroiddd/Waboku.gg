@@ -5,7 +5,6 @@ import { useRouter } from 'next/router';
 import { useAuth } from '@/contexts/AuthContext';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { WantedPostsSection } from '@/components/dashboard/WantedPostsSection';
-import { WantedPostsDebugger } from '@/components/dashboard/WantedPostsDebugger';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
@@ -57,10 +56,6 @@ const WantedDashboardPage = () => {
         </div>
         
         <WantedPostsSection />
-        
-        <div className="mt-6">
-          <WantedPostsDebugger />
-        </div>
       </div>
     </DashboardLayout>
   );

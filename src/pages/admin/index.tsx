@@ -20,6 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Footer } from '@/components/Footer';
+import { WantedPostsDebugger } from '@/components/dashboard/WantedPostsDebugger';
 
 interface ApiResponse {
   success?: boolean;
@@ -241,6 +242,12 @@ export default function AdminDashboard() {
                 </Button>
               </Card>
             ))}
+          </div>
+          
+          {/* Wanted Posts Debugger Section */}
+          <div className="mt-8">
+            <h2 className="text-xl font-semibold mb-4">Wanted Posts Debugging Tools</h2>
+            <WantedPostsDebugger />
           </div>
 
           <Dialog open={responseDialog} onOpenChange={setResponseDialog}>
