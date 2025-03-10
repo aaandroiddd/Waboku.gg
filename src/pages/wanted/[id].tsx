@@ -55,33 +55,58 @@ export default function WantedPostDetailPage() {
         setIsLoading(true);
         try {
           console.log("Loading wanted post with ID:", id);
+          
+          // Log the database connection status
+          console.log("Database connection status:", {
+            databaseInitialized: !!database,
+            databaseURL: !!process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL
+          });
+          
+          // Fetch the post data with enhanced error handling
           const postData = await getWantedPost(id as string);
           
+          console.log("Post data response:", postData ? "Found" : "Not found");
+          
           if (postData) {
-            console.log("Post data loaded successfully:", postData);
+            // Log the structure of the post data to help debug
+            console.log("Post data structure:", {
+              hasId: !!postData.id,
+              hasTitle: !!postData.title,
+              hasDescription: !!postData.description,
+              hasGame: !!postData.game,
+              hasLocation: !!postData.location,
+              hasUserId: !!postData.userId,
+              hasUserName: !!postData.userName,
+              createdAt: postData.createdAt
+            });
+            
+            // Set the post data in state
             setWantedPost(postData);
             
             // Fetch additional user data if needed
             try {
+              console.log("Fetching user data for:", postData.userId);
               const userRef = ref(database, `users/${postData.userId}`);
               const userSnapshot = await get(userRef);
               
               if (userSnapshot.exists()) {
+                console.log("User data found in database");
                 const userData = userSnapshot.val();
                 setPosterData({
                   id: postData.userId,
-                  name: postData.userName,
-                  avatar: postData.userAvatar,
+                  name: postData.userName || "Anonymous User",
+                  avatar: postData.userAvatar || undefined,
                   joinedDate: userData.createdAt || Date.now() - 86400000 * 30, // fallback to 30 days ago
                   rating: userData.rating || 4.5,
                   totalRatings: userData.totalRatings || 0
                 });
               } else {
+                console.log("User data not found, using fallback data");
                 // Fallback user data if not found
                 setPosterData({
                   id: postData.userId,
-                  name: postData.userName,
-                  avatar: postData.userAvatar,
+                  name: postData.userName || "Anonymous User",
+                  avatar: postData.userAvatar || undefined,
                   joinedDate: Date.now() - 86400000 * 30, // 30 days ago
                   rating: 4.5,
                   totalRatings: 0
@@ -92,8 +117,8 @@ export default function WantedPostDetailPage() {
               // Fallback user data on error
               setPosterData({
                 id: postData.userId,
-                name: postData.userName,
-                avatar: postData.userAvatar,
+                name: postData.userName || "Anonymous User",
+                avatar: postData.userAvatar || undefined,
                 joinedDate: Date.now() - 86400000 * 30,
                 rating: 4.5,
                 totalRatings: 0
@@ -101,9 +126,23 @@ export default function WantedPostDetailPage() {
             }
           } else {
             console.error("Post data not found for ID:", id);
+            // Show toast for not found post
+            toast({
+              title: "Post Not Found",
+              description: "The wanted post you're looking for could not be found.",
+              variant: "destructive",
+            });
           }
         } catch (error) {
           console.error("Error loading wanted post:", error);
+          // Log detailed error information
+          if (error instanceof Error) {
+            console.error("Error details:", {
+              message: error.message,
+              stack: error.stack
+            });
+          }
+          
           toast({
             title: "Error",
             description: "Failed to load the wanted post. Please try again.",

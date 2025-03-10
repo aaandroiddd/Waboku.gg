@@ -373,19 +373,94 @@ export function useWantedPosts(options: WantedPostsOptions = {}) {
 
   const getWantedPost = async (postId: string): Promise<WantedPost | null> => {
     try {
+      console.log(`Fetching wanted post with ID: ${postId}`);
+      
+      // Validate database connection
+      if (!database) {
+        console.error('Database not initialized when fetching specific wanted post');
+        await logToServer('Database not initialized when fetching specific wanted post', {
+          postId,
+          databaseExists: !!database,
+          databaseURL: !!process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL
+        }, 'error');
+        throw new Error('Database not initialized');
+      }
+      
+      // Create reference to the specific post
       const postRef = ref(database, `wantedPosts/${postId}`);
+      console.log(`Created post reference for path: wantedPosts/${postId}`);
+      
+      // Fetch the post data
+      console.log('Executing get() for post data...');
       const snapshot = await get(postRef);
+      console.log(`Post data fetch complete, exists: ${snapshot.exists()}`);
       
       if (!snapshot.exists()) {
+        console.log(`No post found with ID: ${postId}`);
+        await logToServer('Wanted post not found', { postId }, 'warn');
         return null;
       }
       
-      return {
+      // Get the post data
+      const postData = snapshot.val();
+      console.log('Post data retrieved successfully');
+      
+      // Validate required fields
+      if (!postData || !postData.title || !postData.game) {
+        console.error('Invalid post data structure:', postData);
+        await logToServer('Invalid post data structure', { 
+          postId,
+          hasTitle: !!postData?.title,
+          hasGame: !!postData?.game,
+          hasLocation: !!postData?.location
+        }, 'error');
+        
+        // Try to return partial data if possible
+        if (postData) {
+          return {
+            id: postId,
+            title: postData.title || 'Untitled Post',
+            description: postData.description || 'No description provided',
+            game: postData.game || 'Unknown Game',
+            condition: postData.condition || 'any',
+            isPriceNegotiable: postData.isPriceNegotiable || true,
+            location: postData.location || 'Unknown Location',
+            createdAt: postData.createdAt || Date.now(),
+            userId: postData.userId || 'unknown',
+            userName: postData.userName || 'Anonymous User',
+            userAvatar: postData.userAvatar,
+            ...postData
+          };
+        }
+        
+        return null;
+      }
+      
+      // Return the complete post data
+      const completePost: WantedPost = {
         id: postId,
-        ...snapshot.val()
+        ...postData
       };
+      
+      console.log('Returning complete post data');
+      return completePost;
     } catch (err) {
       console.error('Error fetching wanted post:', err);
+      
+      // Log detailed error information
+      if (err instanceof Error) {
+        await logToServer('Error fetching wanted post', {
+          postId,
+          error: err.message,
+          stack: err.stack
+        }, 'error');
+      } else {
+        await logToServer('Unknown error fetching wanted post', {
+          postId,
+          error: String(err)
+        }, 'error');
+      }
+      
       return null;
     }
   };
