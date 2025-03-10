@@ -43,7 +43,21 @@ export default async function handler(
   console.log('[Cleanup Archived] Starting cleanup process', new Date().toISOString());
 
   try {
-    const { db } = getFirebaseAdmin();
+    // Get Firebase admin instance
+    const admin = getFirebaseAdmin();
+    
+    // Explicitly initialize Firestore
+    if (!admin.firestore) {
+      console.error('[Cleanup Archived] Firestore not available on admin instance');
+      return res.status(500).json({ 
+        error: 'Failed to initialize Firestore',
+        details: 'Firestore not available on admin instance'
+      });
+    }
+    
+    const db = admin.firestore();
+    console.log('[Cleanup Archived] Firestore initialized successfully');
+    
     let batch = db.batch();
     let batchOperations = 0;
     let totalDeleted = 0;
@@ -139,7 +153,14 @@ export default async function handler(
       message: `Successfully cleaned up ${totalDeleted} expired archived listings and removed ${totalFavoritesRemoved} favorite references`,
       summary
     });
-  } catch (error) {
+  } catch (error: any) {
+    console.error('[Cleanup Archived] Error:', {
+      message: error.message,
+      stack: error.stack,
+      code: error.code,
+      name: error.name
+    });
+    
     logError('Cleanup archived listings', error);
     return res.status(500).json({
       error: 'Failed to clean up archived listings',
