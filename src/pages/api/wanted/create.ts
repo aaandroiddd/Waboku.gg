@@ -72,7 +72,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
     
     // Create a reference to the wanted posts collection
-    const postsRef = adminDb.ref('wantedPosts');
+    const postsRef = adminDb.ref('wanted/posts');
     
     // Generate a new post ID
     const newPostRef = postsRef.push();

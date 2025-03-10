@@ -60,8 +60,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
     
     // Create a reference to the wanted posts collection
-    const postsRef = adminDb.ref('wantedPosts');
-    console.log('Created posts reference to path:', 'wantedPosts');
+    const postsRef = adminDb.ref('wanted/posts');
+    console.log('Created posts reference to path:', 'wanted/posts');
     
     // Generate a new post ID
     const newPostRef = postsRef.push();
@@ -100,7 +100,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     
     // Verify the post was saved by reading it back
     try {
-      const savedPostRef = adminDb.ref(`wantedPosts/${newPostId}`);
+      const savedPostRef = adminDb.ref(`wanted/posts/${newPostId}`);
       const snapshot = await savedPostRef.get();
       
       if (snapshot.exists()) {

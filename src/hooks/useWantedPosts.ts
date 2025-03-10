@@ -64,9 +64,9 @@ export function useWantedPosts(options: WantedPostsOptions = {}) {
           throw new Error('Database not initialized');
         }
         
-        // Create reference to wantedPosts collection
-        let postsRef = ref(database, 'wantedPosts');
-        await logToServer('Created posts reference', { path: 'wantedPosts' }, 'info');
+        // Create reference to wanted/posts collection
+        let postsRef = ref(database, 'wanted/posts');
+        await logToServer('Created posts reference', { path: 'wanted/posts' }, 'info');
         
         let postsQuery = postsRef;
 
@@ -224,8 +224,8 @@ export function useWantedPosts(options: WantedPostsOptions = {}) {
       }, 'info');
 
       // Create a reference to the wanted posts collection
-      const postsRef = ref(database, 'wantedPosts');
-      await logToServer('Created posts reference', { path: 'wantedPosts' }, 'info');
+      const postsRef = ref(database, 'wanted/posts');
+      await logToServer('Created posts reference', { path: 'wanted/posts' }, 'info');
       
       // Generate a new post ID
       const newPostRef = push(postsRef);
@@ -304,7 +304,7 @@ export function useWantedPosts(options: WantedPostsOptions = {}) {
 
     try {
       // Get the post to verify ownership
-      const postRef = ref(database, `wantedPosts/${postId}`);
+      const postRef = ref(database, `wanted/posts/${postId}`);
       const snapshot = await get(postRef);
       
       if (!snapshot.exists()) {
@@ -338,7 +338,7 @@ export function useWantedPosts(options: WantedPostsOptions = {}) {
 
     try {
       // Get the post to verify ownership
-      const postRef = ref(database, `wantedPosts/${postId}`);
+      const postRef = ref(database, `wanted/posts/${postId}`);
       const snapshot = await get(postRef);
       
       if (!snapshot.exists()) {
@@ -387,8 +387,8 @@ export function useWantedPosts(options: WantedPostsOptions = {}) {
       }
       
       // Create reference to the specific post
-      const postRef = ref(database, `wantedPosts/${postId}`);
-      console.log(`Created post reference for path: wantedPosts/${postId}`);
+      const postRef = ref(database, `wanted/posts/${postId}`);
+      console.log(`Created post reference for path: wanted/posts/${postId}`);
       
       // Fetch the post data
       console.log('Executing get() for post data...');
