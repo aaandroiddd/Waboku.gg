@@ -381,30 +381,101 @@ export function useWantedPosts(options: WantedPostsOptions = {}) {
     }
 
     try {
-      // Get the post to verify ownership
-      const postRef = ref(database, `wanted/posts/${postId}`);
-      const snapshot = await get(postRef);
+      console.log(`Attempting to delete wanted post with ID: ${postId}`);
+      await logToServer('Attempting to delete wanted post', { postId }, 'info');
       
-      if (!snapshot.exists()) {
-        throw new Error('Post not found');
+      // First try using the API endpoint for more robust deletion
+      try {
+        const response = await fetch('/api/wanted/delete-post', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ 
+            postId, 
+            userId: user.uid 
+          }),
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+          console.log('Post deleted successfully via API:', result);
+          await logToServer('Post deleted successfully via API', { 
+            postId, 
+            path: result.path 
+          }, 'info');
+          
+          // Update local state
+          setPosts(prevPosts => prevPosts.filter(post => post.id !== postId));
+          return true;
+        } else {
+          console.error('API returned error when deleting post:', result.error);
+          await logToServer('API error when deleting post', { 
+            postId, 
+            error: result.error 
+          }, 'error');
+          
+          // If API fails, fall back to direct database deletion
+          throw new Error(result.error || 'API error when deleting post');
+        }
+      } catch (apiError) {
+        console.error('Error using API to delete post, falling back to direct deletion:', apiError);
+        await logToServer('Falling back to direct deletion', { 
+          postId, 
+          error: apiError instanceof Error ? apiError.message : 'Unknown error' 
+        }, 'warn');
+        
+        // Fall back to direct database deletion
+        // First try the new path structure
+        let postRef = ref(database, `wanted/posts/${postId}`);
+        let snapshot = await get(postRef);
+        
+        // If not found in the new path, check the old path
+        if (!snapshot.exists()) {
+          console.log(`Post not found at new path, trying legacy path: wantedPosts/${postId}`);
+          postRef = ref(database, `wantedPosts/${postId}`);
+          snapshot = await get(postRef);
+          
+          // If still not found, try direct path
+          if (!snapshot.exists()) {
+            console.log(`Post not found at legacy path, trying direct path: wanted/${postId}`);
+            postRef = ref(database, `wanted/${postId}`);
+            snapshot = await get(postRef);
+          }
+        }
+        
+        if (!snapshot.exists()) {
+          throw new Error('Post not found in any path');
+        }
+        
+        const post = snapshot.val();
+        
+        // Verify the user owns this post
+        if (post.userId !== user.uid) {
+          throw new Error('You do not have permission to delete this post');
+        }
+        
+        // Delete the post
+        await remove(postRef);
+        console.log(`Post deleted directly from path: ${postRef.toString()}`);
+        await logToServer('Post deleted directly', { 
+          postId, 
+          path: postRef.toString() 
+        }, 'info');
+        
+        // Update local state
+        setPosts(prevPosts => prevPosts.filter(post => post.id !== postId));
+        return true;
       }
-      
-      const post = snapshot.val();
-      
-      // Verify the user owns this post
-      if (post.userId !== user.uid) {
-        throw new Error('You do not have permission to delete this post');
-      }
-      
-      // Delete the post
-      await remove(postRef);
-      
-      // Update local state
-      setPosts(prevPosts => prevPosts.filter(post => post.id !== postId));
-      
-      return true;
     } catch (err) {
       console.error('Error deleting wanted post:', err);
+      await logToServer('Error deleting wanted post', { 
+        postId, 
+        error: err instanceof Error ? err.message : 'Unknown error',
+        stack: err instanceof Error ? err.stack : null
+      }, 'error');
+      
       throw new Error('Failed to delete wanted post. Please try again.');
     }
   };

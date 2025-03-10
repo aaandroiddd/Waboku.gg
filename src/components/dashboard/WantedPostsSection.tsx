@@ -102,8 +102,22 @@ export function WantedPostsSection() {
     try {
       await deleteWantedPost(postToDelete);
       setDeleteDialogOpen(false);
+      
+      // Show success toast
+      toast({
+        title: "Post deleted",
+        description: "Your wanted post has been successfully deleted.",
+        variant: "default",
+      });
     } catch (error) {
       console.error("Error deleting post:", error);
+      
+      // Show error toast
+      toast({
+        title: "Error deleting post",
+        description: error instanceof Error ? error.message : "Failed to delete post. Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setIsDeleting(false);
       setPostToDelete(null);
