@@ -224,34 +224,34 @@ const OffersComponent = () => {
 
   return (
     <DashboardLayout>
-      <Card className="mb-6">
-        <CardHeader>
-          <div className="flex justify-between items-center">
-            <CardTitle>Offers Dashboard</CardTitle>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={handleRefresh}
-              disabled={isRefreshing}
-            >
-              {isRefreshing ? (
-                <>
-                  <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                  Refreshing...
-                </>
-              ) : (
-                <>
-                  <RefreshCw className="mr-2 h-4 w-4" />
-                  Refresh
-                </>
-              )}
-            </Button>
+      <div className="mb-8 space-y-3">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Offers Dashboard</h1>
+            <p className="text-muted-foreground mt-1">
+              Manage your received and sent offers for listings
+            </p>
           </div>
-          <CardDescription>
-            Manage your received and sent offers for listings
-          </CardDescription>
-        </CardHeader>
-      </Card>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+          >
+            {isRefreshing ? (
+              <>
+                <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                Refreshing...
+              </>
+            ) : (
+              <>
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Refresh
+              </>
+            )}
+          </Button>
+        </div>
+      </div>
 
       <Tabs defaultValue={router.query.tab === 'sent' ? 'sent' : 'received'} className="space-y-4">
         <TabsList>

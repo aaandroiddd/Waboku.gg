@@ -603,7 +603,7 @@ const SettingsPageContent = () => {
       <div className="container mx-auto p-6">
         <Card>
           <CardHeader>
-            <CardTitle>Profile Settings</CardTitle>
+            <CardTitle className="text-2xl font-bold tracking-tight">Profile Settings</CardTitle>
             <CardDescription>
               Manage your profile information and preferences
             </CardDescription>
