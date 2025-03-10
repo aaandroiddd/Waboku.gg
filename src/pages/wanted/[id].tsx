@@ -96,10 +96,23 @@ export default function WantedPostDetailPage() {
               
               if (snapshot.exists()) {
                 console.log(`Found post at path: ${path}`);
+                const rawData = snapshot.val();
+                
+                // Ensure the post data has all required fields
                 postData = {
                   id: id as string,
-                  ...snapshot.val()
+                  title: rawData.title || "Untitled Post",
+                  description: rawData.description || "No description provided",
+                  game: rawData.game || "Unknown Game",
+                  condition: rawData.condition || "any",
+                  isPriceNegotiable: rawData.isPriceNegotiable || true,
+                  location: rawData.location || "Unknown Location",
+                  createdAt: rawData.createdAt || Date.now(),
+                  userId: rawData.userId || "unknown",
+                  userName: rawData.userName || "Anonymous User",
+                  ...rawData
                 };
+                
                 foundPath = path;
                 break;
               } else {
@@ -176,32 +189,8 @@ export default function WantedPostDetailPage() {
             // Continue with the normal flow if direct fetch fails
           }
           
-          // If direct fetch failed, try the migration approach
-          console.log("Direct fetch failed, trying migration approach...");
-          
-          // Import the utility function to check and migrate wanted posts if needed
-          const { checkAndMigrateWantedPosts } = await import('@/lib/wanted-posts-utils');
-          
-          // Check if migration is needed and perform it if necessary
-          try {
-            console.log("Checking if wanted posts need migration...");
-            const migrationResult = await checkAndMigrateWantedPosts();
-            console.log("Migration check result:", migrationResult);
-            
-            if (migrationResult.migrated) {
-              console.log("Wanted posts were migrated successfully");
-            }
-            
-            // If a test post was created, redirect to it
-            if (migrationResult.testPostCreated && migrationResult.testPostId) {
-              console.log("Test post was created, redirecting...");
-              router.push(`/wanted/${migrationResult.testPostId}`);
-              return;
-            }
-          } catch (migrationError) {
-            console.error("Error checking/migrating wanted posts:", migrationError);
-            // Continue with post loading even if migration check fails
-          }
+          // If direct fetch failed, try the getWantedPost method
+          console.log("Direct fetch failed, trying getWantedPost method...");
           
           // Fetch the post data with enhanced error handling
           console.log("Trying to fetch post data using getWantedPost...");
@@ -268,23 +257,6 @@ export default function WantedPostDetailPage() {
             }
           } else {
             console.error("Post data not found for ID:", id);
-            
-            // Try to create a test post if none was found
-            try {
-              console.log("Attempting to create a test post via API...");
-              const checkResponse = await fetch('/api/wanted/check-posts');
-              const checkResult = await checkResponse.json();
-              console.log("Check posts API result:", checkResult);
-              
-              if (checkResult.postId) {
-                // Redirect to the newly created test post
-                console.log("Test post created, redirecting to:", checkResult.postId);
-                router.push(`/wanted/${checkResult.postId}`);
-                return;
-              }
-            } catch (apiError) {
-              console.error("Error calling check-posts API:", apiError);
-            }
             
             // Show toast for not found post
             toast({
