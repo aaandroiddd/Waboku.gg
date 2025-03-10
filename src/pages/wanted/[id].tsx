@@ -33,6 +33,7 @@ export default function WantedPostDetailPage() {
   const [message, setMessage] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [posterData, setPosterData] = useState<any>(null);
+  const [fetchAttempted, setFetchAttempted] = useState(false);
 
   // Check if we were redirected from post creation
   useEffect(() => {
@@ -50,34 +51,17 @@ export default function WantedPostDetailPage() {
 
   // Load the wanted post data
   useEffect(() => {
-    const loadWantedPost = async () => {
-      if (router.isReady && id) {
+    // Only run this effect if router is ready, id exists, and we haven't already attempted to fetch
+    if (router.isReady && id && !fetchAttempted) {
+      const loadWantedPost = async () => {
         setIsLoading(true);
+        setFetchAttempted(true); // Mark that we've attempted to fetch
+        
         try {
           console.log("Loading wanted post with ID:", id);
           
-          // Log the database connection status
-          console.log("Database connection status:", {
-            databaseInitialized: !!database,
-            databaseURL: !!process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL
-          });
-          
-          // Verify database is initialized
-          if (!database) {
-            console.error("Firebase database not initialized");
-            toast({
-              title: "Database Error",
-              description: "Could not connect to the database. Please try again later.",
-              variant: "destructive",
-            });
-            setIsLoading(false);
-            return;
-          }
-          
-          // First try to directly fetch the post to see if it exists
-          try {
-            console.log("Attempting direct fetch of post data...");
-            
+          // Try to directly fetch the post from the database
+          if (database) {
             // Try all possible paths where the post might be stored
             const paths = [
               `wanted/posts/${id}`,
@@ -86,91 +70,76 @@ export default function WantedPostDetailPage() {
             ];
             
             let postData = null;
-            let foundPath = null;
             
             // Try each path until we find the post
             for (const path of paths) {
               console.log(`Checking path: ${path}`);
-              const postRef = ref(database, path);
-              const snapshot = await get(postRef);
-              
-              if (snapshot.exists()) {
-                console.log(`Found post at path: ${path}`);
-                const rawData = snapshot.val();
+              try {
+                const postRef = ref(database, path);
+                const snapshot = await get(postRef);
                 
-                // Ensure the post data has all required fields
-                postData = {
-                  id: id as string,
-                  title: rawData.title || "Untitled Post",
-                  description: rawData.description || "No description provided",
-                  game: rawData.game || "Unknown Game",
-                  condition: rawData.condition || "any",
-                  isPriceNegotiable: rawData.isPriceNegotiable || true,
-                  location: rawData.location || "Unknown Location",
-                  createdAt: rawData.createdAt || Date.now(),
-                  userId: rawData.userId || "unknown",
-                  userName: rawData.userName || "Anonymous User",
-                  ...rawData
-                };
-                
-                foundPath = path;
-                break;
-              } else {
-                console.log(`Post not found at path: ${path}`);
+                if (snapshot.exists()) {
+                  console.log(`Found post at path: ${path}`);
+                  const rawData = snapshot.val();
+                  
+                  // Ensure the post data has all required fields
+                  postData = {
+                    id: id as string,
+                    title: rawData.title || "Untitled Post",
+                    description: rawData.description || "No description provided",
+                    game: rawData.game || "Unknown Game",
+                    condition: rawData.condition || "any",
+                    isPriceNegotiable: rawData.isPriceNegotiable || true,
+                    location: rawData.location || "Unknown Location",
+                    createdAt: rawData.createdAt || Date.now(),
+                    userId: rawData.userId || "unknown",
+                    userName: rawData.userName || "Anonymous User",
+                    ...rawData
+                  };
+                  
+                  break;
+                }
+              } catch (pathError) {
+                console.error(`Error checking path ${path}:`, pathError);
+                // Continue to the next path
               }
             }
             
-            // If we found the post, set it in state
-            if (postData && foundPath) {
-              console.log(`Successfully found post at path: ${foundPath}`);
-              
-              // Log the structure of the post data to help debug
-              console.log("Post data structure:", {
-                hasId: !!postData.id,
-                hasTitle: !!postData.title,
-                hasDescription: !!postData.description,
-                hasGame: !!postData.game,
-                hasLocation: !!postData.location,
-                hasUserId: !!postData.userId,
-                hasUserName: !!postData.userName,
-                createdAt: postData.createdAt
-              });
-              
-              // Set the post data in state
+            // If we found the post directly, set it in state
+            if (postData) {
               setWantedPost(postData);
               
               // Fetch additional user data if needed
               try {
-                console.log("Fetching user data for:", postData.userId);
-                const userRef = ref(database, `users/${postData.userId}`);
-                const userSnapshot = await get(userRef);
-                
-                if (userSnapshot.exists()) {
-                  console.log("User data found in database");
-                  const userData = userSnapshot.val();
-                  setPosterData({
-                    id: postData.userId,
-                    name: postData.userName || "Anonymous User",
-                    avatar: postData.userAvatar || undefined,
-                    joinedDate: userData.createdAt || Date.now() - 86400000 * 30, // fallback to 30 days ago
-                    rating: userData.rating || 4.5,
-                    totalRatings: userData.totalRatings || 0
-                  });
-                } else {
-                  console.log("User data not found, using fallback data");
-                  // Fallback user data if not found
-                  setPosterData({
-                    id: postData.userId,
-                    name: postData.userName || "Anonymous User",
-                    avatar: postData.userAvatar || undefined,
-                    joinedDate: Date.now() - 86400000 * 30, // 30 days ago
-                    rating: 4.5,
-                    totalRatings: 0
-                  });
+                if (postData.userId && postData.userId !== "unknown") {
+                  const userRef = ref(database, `users/${postData.userId}`);
+                  const userSnapshot = await get(userRef);
+                  
+                  if (userSnapshot.exists()) {
+                    const userData = userSnapshot.val();
+                    setPosterData({
+                      id: postData.userId,
+                      name: postData.userName || "Anonymous User",
+                      avatar: postData.userAvatar || undefined,
+                      joinedDate: userData.createdAt || Date.now() - 86400000 * 30,
+                      rating: userData.rating || 4.5,
+                      totalRatings: userData.totalRatings || 0
+                    });
+                  } else {
+                    // Fallback user data if not found
+                    setPosterData({
+                      id: postData.userId,
+                      name: postData.userName || "Anonymous User",
+                      avatar: postData.userAvatar || undefined,
+                      joinedDate: Date.now() - 86400000 * 30,
+                      rating: 4.5,
+                      totalRatings: 0
+                    });
+                  }
                 }
-              } catch (error) {
-                console.error("Error fetching user data:", error);
-                // Fallback user data on error
+              } catch (userError) {
+                console.error("Error fetching user data:", userError);
+                // Use fallback user data
                 setPosterData({
                   id: postData.userId,
                   name: postData.userName || "Anonymous User",
@@ -184,77 +153,24 @@ export default function WantedPostDetailPage() {
               setIsLoading(false);
               return;
             }
-          } catch (directFetchError) {
-            console.error("Error during direct fetch attempt:", directFetchError);
-            // Continue with the normal flow if direct fetch fails
           }
           
-          // If direct fetch failed, try the getWantedPost method
+          // If direct fetch failed or database isn't initialized, try the hook method
           console.log("Direct fetch failed, trying getWantedPost method...");
-          
-          // Fetch the post data with enhanced error handling
-          console.log("Trying to fetch post data using getWantedPost...");
           const postData = await getWantedPost(id as string);
           
-          console.log("Post data response:", postData ? "Found" : "Not found");
-          
           if (postData) {
-            // Log the structure of the post data to help debug
-            console.log("Post data structure:", {
-              hasId: !!postData.id,
-              hasTitle: !!postData.title,
-              hasDescription: !!postData.description,
-              hasGame: !!postData.game,
-              hasLocation: !!postData.location,
-              hasUserId: !!postData.userId,
-              hasUserName: !!postData.userName,
-              createdAt: postData.createdAt
-            });
-            
-            // Set the post data in state
             setWantedPost(postData);
             
-            // Fetch additional user data if needed
-            try {
-              console.log("Fetching user data for:", postData.userId);
-              const userRef = ref(database, `users/${postData.userId}`);
-              const userSnapshot = await get(userRef);
-              
-              if (userSnapshot.exists()) {
-                console.log("User data found in database");
-                const userData = userSnapshot.val();
-                setPosterData({
-                  id: postData.userId,
-                  name: postData.userName || "Anonymous User",
-                  avatar: postData.userAvatar || undefined,
-                  joinedDate: userData.createdAt || Date.now() - 86400000 * 30, // fallback to 30 days ago
-                  rating: userData.rating || 4.5,
-                  totalRatings: userData.totalRatings || 0
-                });
-              } else {
-                console.log("User data not found, using fallback data");
-                // Fallback user data if not found
-                setPosterData({
-                  id: postData.userId,
-                  name: postData.userName || "Anonymous User",
-                  avatar: postData.userAvatar || undefined,
-                  joinedDate: Date.now() - 86400000 * 30, // 30 days ago
-                  rating: 4.5,
-                  totalRatings: 0
-                });
-              }
-            } catch (error) {
-              console.error("Error fetching user data:", error);
-              // Fallback user data on error
-              setPosterData({
-                id: postData.userId,
-                name: postData.userName || "Anonymous User",
-                avatar: postData.userAvatar || undefined,
-                joinedDate: Date.now() - 86400000 * 30,
-                rating: 4.5,
-                totalRatings: 0
-              });
-            }
+            // Set basic poster data from the post
+            setPosterData({
+              id: postData.userId,
+              name: postData.userName || "Anonymous User",
+              avatar: postData.userAvatar || undefined,
+              joinedDate: Date.now() - 86400000 * 30,
+              rating: 4.5,
+              totalRatings: 0
+            });
           } else {
             console.error("Post data not found for ID:", id);
             
@@ -267,13 +183,6 @@ export default function WantedPostDetailPage() {
           }
         } catch (error) {
           console.error("Error loading wanted post:", error);
-          // Log detailed error information
-          if (error instanceof Error) {
-            console.error("Error details:", {
-              message: error.message,
-              stack: error.stack
-            });
-          }
           
           toast({
             title: "Error",
@@ -283,11 +192,11 @@ export default function WantedPostDetailPage() {
         } finally {
           setIsLoading(false);
         }
-      }
-    };
+      };
 
-    loadWantedPost();
-  }, [router.isReady, id, getWantedPost, toast, router]);
+      loadWantedPost();
+    }
+  }, [router.isReady, id, getWantedPost, toast, fetchAttempted]);
 
   const handleSendMessage = async () => {
     if (!message.trim()) return;
@@ -305,11 +214,18 @@ export default function WantedPostDetailPage() {
       setMessageDialogOpen(false);
       setMessage("");
       
-      // Show success notification (would use toast in real implementation)
-      alert("Message sent successfully!");
+      toast({
+        title: "Message Sent",
+        description: "Your message has been sent to the poster.",
+      });
     } catch (err) {
       console.error("Error sending message:", err);
-      alert("Failed to send message. Please try again.");
+      
+      toast({
+        title: "Error",
+        description: "Failed to send message. Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setIsSending(false);
     }
