@@ -10,6 +10,7 @@ import { Listing } from '@/types/database';
 import { formatPrice } from '@/lib/price';
 import { motion } from 'framer-motion';
 import { UserNameLink } from './UserNameLink';
+import { StripeSellerBadge } from './StripeSellerBadge';
 import { memo, useEffect, useState } from 'react';
 import { useLocation } from '@/hooks/useLocation';
 import { useAuth } from '@/contexts/AuthContext';
@@ -304,10 +305,13 @@ export const ListingCard = memo(({ listing, isFavorite, onFavoriteClick, getCond
               transition={{ delay: 0.2 }}
             >
               <h3 className="font-medium text-base line-clamp-1">{listing.title}</h3>
-              <p className="text-sm text-muted-foreground">
-                by{" "}
-                <UserNameLink userId={listing.userId} initialUsername={listing.username} />
-              </p>
+              <div className="flex items-center gap-2">
+                <p className="text-sm text-muted-foreground">
+                  by{" "}
+                  <UserNameLink userId={listing.userId} initialUsername={listing.username} />
+                </p>
+                <StripeSellerBadge userId={listing.userId} className="text-xs" />
+              </div>
               <div className="flex items-center gap-2 flex-wrap">
                 <motion.div whileHover={{ scale: 1.05 }}>
                   {listing.game && (

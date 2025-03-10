@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { loadStripe } from '@stripe/stripe-js';
 import { UserNameLink } from '@/components/UserNameLink';
+import { StripeSellerBadge } from '@/components/StripeSellerBadge';
 import { useRouter } from 'next/router';
 import { formatPrice } from '@/lib/price';
 import { doc, getDoc, deleteDoc, setDoc } from 'firebase/firestore';
@@ -586,13 +587,16 @@ export default function ListingPage() {
                 <Separator />
 
                 <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
-                  <Button
-                    variant="ghost"
-                    className="flex items-center justify-start space-x-2 h-8"
-                  >
-                    <User className="h-4 w-4" />
-                    <UserNameLink userId={listing.userId} initialUsername={listing.username} />
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="ghost"
+                      className="flex items-center justify-start space-x-2 h-8"
+                    >
+                      <User className="h-4 w-4" />
+                      <UserNameLink userId={listing.userId} initialUsername={listing.username} />
+                    </Button>
+                    <StripeSellerBadge userId={listing.userId} />
+                  </div>
                   <div className="flex items-center text-muted-foreground text-sm">
                     <MapPin className="h-4 w-4 mr-1" />
                     <span>{listing.city}, {listing.state}</span>
