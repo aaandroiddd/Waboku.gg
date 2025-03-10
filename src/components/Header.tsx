@@ -50,12 +50,7 @@ export default function Header() {
 
         {/* Desktop Navigation */}
         <nav className="hidden md:flex items-center space-x-4">
-          <div className="flex items-center space-x-4 mr-4">
-            {/* Removed 'Browse Listings' button for desktop as requested */}
-            <Link href="/wanted" className="text-sm font-medium hover:text-primary">
-              Wanted Board
-            </Link>
-          </div>
+          {/* Desktop navigation links removed as requested */}
           <div className="flex items-center">
             <ThemeToggle />
           </div>
