@@ -226,17 +226,56 @@ export default function EditWantedPostPage() {
         detailedDescription: formData.detailedDescription || undefined
       };
       
-      // Update the post
-      await updateWantedPost(id as string, postData);
+      console.log(`Attempting to update wanted post with ID: ${id}`);
       
-      // Show success message
-      toast({
-        title: "Post updated",
-        description: "Your wanted post has been successfully updated.",
-      });
-      
-      // Redirect to the post
-      router.push(`/wanted/${id}`);
+      // First try using the API endpoint for more robust updates
+      try {
+        const response = await fetch('/api/wanted/update-post', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            postId: id,
+            userId: user?.uid,
+            updates: postData
+          }),
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok && result.success) {
+          console.log('Post updated successfully via API:', result);
+          
+          // Show success message
+          toast({
+            title: "Post updated",
+            description: "Your wanted post has been successfully updated.",
+          });
+          
+          // Redirect to the post
+          router.push(`/wanted/${id}`);
+          return;
+        } else {
+          console.error('API returned error when updating post:', result.error);
+          // If API fails, fall back to direct update
+          throw new Error(result.error || 'API error when updating post');
+        }
+      } catch (apiError) {
+        console.error('Error using API to update post, falling back to direct update:', apiError);
+        
+        // Fall back to direct update using the hook
+        await updateWantedPost(id as string, postData);
+        
+        // Show success message
+        toast({
+          title: "Post updated",
+          description: "Your wanted post has been successfully updated.",
+        });
+        
+        // Redirect to the post
+        router.push(`/wanted/${id}`);
+      }
     } catch (err) {
       console.error("Error updating wanted post:", err);
       setError("Failed to update wanted post. Please try again.");

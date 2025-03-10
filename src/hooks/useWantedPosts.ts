@@ -486,11 +486,63 @@ export function useWantedPosts(options: WantedPostsOptions = {}) {
     }
 
     try {
-      // Get the post to verify ownership
-      const postRef = ref(database, `wanted/posts/${postId}`);
-      const snapshot = await get(postRef);
+      console.log(`Attempting to update wanted post with ID: ${postId}`);
+      await logToServer('Attempting to update wanted post', { postId }, 'info');
       
+      // Validate database connection
+      if (!database) {
+        console.error('Database not initialized when updating wanted post');
+        await logToServer('Database not initialized when updating wanted post', {
+          postId,
+          databaseExists: !!database,
+          databaseURL: !!process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL
+        }, 'error');
+        throw new Error('Database not initialized');
+      }
+      
+      // First try the new path structure
+      let postRef = ref(database, `wanted/posts/${postId}`);
+      console.log(`Trying to update post at path: wanted/posts/${postId}`);
+      
+      // Check if the post exists at this path
+      let snapshot = await get(postRef);
+      
+      // If not found, try the old path structure
       if (!snapshot.exists()) {
+        console.log(`Post not found at new path, trying legacy path: wantedPosts/${postId}`);
+        await logToServer('Post not found at new path for update, trying legacy path', { 
+          postId, 
+          newPath: `wanted/posts/${postId}`,
+          legacyPath: `wantedPosts/${postId}`
+        }, 'info');
+        
+        postRef = ref(database, `wantedPosts/${postId}`);
+        snapshot = await get(postRef);
+        
+        // If still not found, try direct path without subfolder
+        if (!snapshot.exists()) {
+          console.log(`Post not found at legacy path, trying direct path: wanted/${postId}`);
+          await logToServer('Post not found at legacy path for update, trying direct path', { 
+            postId, 
+            directPath: `wanted/${postId}`
+          }, 'info');
+          
+          postRef = ref(database, `wanted/${postId}`);
+          snapshot = await get(postRef);
+        }
+      }
+      
+      // If still not found after trying all paths
+      if (!snapshot.exists()) {
+        console.error(`No post found with ID: ${postId} after trying all path variations`);
+        await logToServer('Wanted post not found in any path location for update', { 
+          postId,
+          pathsChecked: [
+            `wanted/posts/${postId}`,
+            `wantedPosts/${postId}`,
+            `wanted/${postId}`
+          ]
+        }, 'error');
         throw new Error('Post not found');
       }
       
@@ -498,11 +550,29 @@ export function useWantedPosts(options: WantedPostsOptions = {}) {
       
       // Verify the user owns this post
       if (post.userId !== user.uid) {
+        console.error(`User ${user.uid} does not own post ${postId}`);
+        await logToServer('User does not own post for update', { 
+          postId,
+          userId: user.uid,
+          postOwnerId: post.userId
+        }, 'error');
         throw new Error('You do not have permission to update this post');
       }
       
       // Update the post
+      console.log(`Updating post at path: ${postRef.toString()}`);
+      await logToServer('Updating post', { 
+        postId,
+        path: postRef.toString(),
+        updateFields: Object.keys(updates)
+      }, 'info');
+      
       await update(postRef, updates);
+      console.log('Post updated successfully');
+      await logToServer('Post updated successfully', { 
+        postId,
+        path: postRef.toString()
+      }, 'info');
       
       // Update local state
       setPosts(prevPosts => 
@@ -516,6 +586,21 @@ export function useWantedPosts(options: WantedPostsOptions = {}) {
       return true;
     } catch (err) {
       console.error('Error updating wanted post:', err);
+      
+      // Log detailed error information
+      if (err instanceof Error) {
+        await logToServer('Error updating wanted post', {
+          postId,
+          error: err.message,
+          stack: err.stack
+        }, 'error');
+      } else {
+        await logToServer('Unknown error updating wanted post', {
+          postId,
+          error: String(err)
+        }, 'error');
+      }
+      
       throw new Error('Failed to update wanted post. Please try again.');
     }
   };
