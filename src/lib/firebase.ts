@@ -116,11 +116,20 @@ function initializeFirebase() {
       
       // Add a test connection to verify database is working
       if (typeof window !== 'undefined') {
-        const testRef = ref(database, '.info/connected');
-        onValue(testRef, (snapshot) => {
-          const connected = snapshot.val();
-          console.log('Realtime Database connection status:', connected ? 'connected' : 'disconnected');
-        });
+        try {
+          const testRef = ref(database, '.info/connected');
+          onValue(testRef, (snapshot) => {
+            const connected = snapshot.val();
+            console.log('Realtime Database connection status:', connected ? 'connected' : 'disconnected');
+          });
+        } catch (connError) {
+          console.error('Error testing database connection:', connError);
+        }
+      }
+      
+      // Verify database URL is correctly formatted
+      if (firebaseConfig.databaseURL && !firebaseConfig.databaseURL.startsWith('https://')) {
+        console.error('CRITICAL: Firebase database URL is incorrectly formatted. It should start with https://');
       }
     } catch (rtdbError) {
       console.error('Failed to initialize Realtime Database:', rtdbError);

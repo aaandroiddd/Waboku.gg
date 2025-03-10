@@ -62,6 +62,123 @@ export default function WantedPostDetailPage() {
             databaseURL: !!process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL
           });
           
+          // Verify database is initialized
+          if (!database) {
+            console.error("Firebase database not initialized");
+            toast({
+              title: "Database Error",
+              description: "Could not connect to the database. Please try again later.",
+              variant: "destructive",
+            });
+            setIsLoading(false);
+            return;
+          }
+          
+          // First try to directly fetch the post to see if it exists
+          try {
+            console.log("Attempting direct fetch of post data...");
+            
+            // Try all possible paths where the post might be stored
+            const paths = [
+              `wanted/posts/${id}`,
+              `wantedPosts/${id}`,
+              `wanted/${id}`
+            ];
+            
+            let postData = null;
+            let foundPath = null;
+            
+            // Try each path until we find the post
+            for (const path of paths) {
+              console.log(`Checking path: ${path}`);
+              const postRef = ref(database, path);
+              const snapshot = await get(postRef);
+              
+              if (snapshot.exists()) {
+                console.log(`Found post at path: ${path}`);
+                postData = {
+                  id: id as string,
+                  ...snapshot.val()
+                };
+                foundPath = path;
+                break;
+              } else {
+                console.log(`Post not found at path: ${path}`);
+              }
+            }
+            
+            // If we found the post, set it in state
+            if (postData && foundPath) {
+              console.log(`Successfully found post at path: ${foundPath}`);
+              
+              // Log the structure of the post data to help debug
+              console.log("Post data structure:", {
+                hasId: !!postData.id,
+                hasTitle: !!postData.title,
+                hasDescription: !!postData.description,
+                hasGame: !!postData.game,
+                hasLocation: !!postData.location,
+                hasUserId: !!postData.userId,
+                hasUserName: !!postData.userName,
+                createdAt: postData.createdAt
+              });
+              
+              // Set the post data in state
+              setWantedPost(postData);
+              
+              // Fetch additional user data if needed
+              try {
+                console.log("Fetching user data for:", postData.userId);
+                const userRef = ref(database, `users/${postData.userId}`);
+                const userSnapshot = await get(userRef);
+                
+                if (userSnapshot.exists()) {
+                  console.log("User data found in database");
+                  const userData = userSnapshot.val();
+                  setPosterData({
+                    id: postData.userId,
+                    name: postData.userName || "Anonymous User",
+                    avatar: postData.userAvatar || undefined,
+                    joinedDate: userData.createdAt || Date.now() - 86400000 * 30, // fallback to 30 days ago
+                    rating: userData.rating || 4.5,
+                    totalRatings: userData.totalRatings || 0
+                  });
+                } else {
+                  console.log("User data not found, using fallback data");
+                  // Fallback user data if not found
+                  setPosterData({
+                    id: postData.userId,
+                    name: postData.userName || "Anonymous User",
+                    avatar: postData.userAvatar || undefined,
+                    joinedDate: Date.now() - 86400000 * 30, // 30 days ago
+                    rating: 4.5,
+                    totalRatings: 0
+                  });
+                }
+              } catch (error) {
+                console.error("Error fetching user data:", error);
+                // Fallback user data on error
+                setPosterData({
+                  id: postData.userId,
+                  name: postData.userName || "Anonymous User",
+                  avatar: postData.userAvatar || undefined,
+                  joinedDate: Date.now() - 86400000 * 30,
+                  rating: 4.5,
+                  totalRatings: 0
+                });
+              }
+              
+              setIsLoading(false);
+              return;
+            }
+          } catch (directFetchError) {
+            console.error("Error during direct fetch attempt:", directFetchError);
+            // Continue with the normal flow if direct fetch fails
+          }
+          
+          // If direct fetch failed, try the migration approach
+          console.log("Direct fetch failed, trying migration approach...");
+          
           // Import the utility function to check and migrate wanted posts if needed
           const { checkAndMigrateWantedPosts } = await import('@/lib/wanted-posts-utils');
           
@@ -74,12 +191,20 @@ export default function WantedPostDetailPage() {
             if (migrationResult.migrated) {
               console.log("Wanted posts were migrated successfully");
             }
+            
+            // If a test post was created, redirect to it
+            if (migrationResult.testPostCreated && migrationResult.testPostId) {
+              console.log("Test post was created, redirecting...");
+              router.push(`/wanted/${migrationResult.testPostId}`);
+              return;
+            }
           } catch (migrationError) {
             console.error("Error checking/migrating wanted posts:", migrationError);
             // Continue with post loading even if migration check fails
           }
           
           // Fetch the post data with enhanced error handling
+          console.log("Trying to fetch post data using getWantedPost...");
           const postData = await getWantedPost(id as string);
           
           console.log("Post data response:", postData ? "Found" : "Not found");
@@ -153,6 +278,7 @@ export default function WantedPostDetailPage() {
               
               if (checkResult.postId) {
                 // Redirect to the newly created test post
+                console.log("Test post created, redirecting to:", checkResult.postId);
                 router.push(`/wanted/${checkResult.postId}`);
                 return;
               }
