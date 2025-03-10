@@ -24,7 +24,16 @@ export function StripeSellerBadge({ className, userId }: StripeSellerBadgeProps)
       const data = doc.data();
       if (data) {
         // Check if the user has a Stripe Connect account
-        setHasStripeAccount(!!data.stripeConnectAccount?.accountId && data.stripeConnectAccount?.status === 'active');
+        // First check the new structure
+        if (data.stripeConnectStatus === 'active' && data.stripeConnectAccountId) {
+          setHasStripeAccount(true);
+        } 
+        // Fallback to the old structure if needed
+        else if (data.stripeConnectAccount?.accountId && data.stripeConnectAccount?.status === 'active') {
+          setHasStripeAccount(true);
+        } else {
+          setHasStripeAccount(false);
+        }
       }
       setIsLoading(false);
     }, (error) => {
