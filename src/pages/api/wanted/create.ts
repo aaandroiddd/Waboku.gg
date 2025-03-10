@@ -71,7 +71,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: 'Missing required fields' });
     }
     
-    // Create a reference to the wanted posts collection
+    // Create a reference to the wanted posts collection (new path)
     const postsRef = adminDb.ref('wanted/posts');
     
     // Generate a new post ID
@@ -96,10 +96,29 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       userAvatar: user.photoURL || undefined,
     };
     
-    // Save to Firebase using admin SDK
+    // Save to Firebase using admin SDK (to both paths for backward compatibility)
     console.log('Saving post to Firebase with admin SDK...');
-    await newPostRef.set(newPost);
-    console.log('Post saved successfully');
+    
+    // Create a multi-path update to save to both locations
+    const updates: Record<string, any> = {};
+    updates[`wanted/posts/${newPostId}`] = newPost;
+    updates[`wantedPosts/${newPostId}`] = newPost;
+    
+    try {
+      await adminDb.ref().update(updates);
+      console.log('Post saved successfully to both paths');
+    } catch (saveError) {
+      console.error('Error during multi-path save:', saveError);
+      
+      // Try saving to just the new path as fallback
+      try {
+        await newPostRef.set(newPost);
+        console.log('Fallback: Post saved to new path only');
+      } catch (fallbackError) {
+        console.error('Error during fallback save:', fallbackError);
+        throw fallbackError;
+      }
+    }
     
     return res.status(200).json({ 
       success: true, 

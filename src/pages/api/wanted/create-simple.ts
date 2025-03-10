@@ -59,7 +59,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: 'Missing required fields' });
     }
     
-    // Create a reference to the wanted posts collection
+    // Create a reference to the wanted posts collection (new path)
     const postsRef = adminDb.ref('wanted/posts');
     console.log('Created posts reference to path:', 'wanted/posts');
     
@@ -88,14 +88,28 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Log the post object being saved
     console.log('Post object to save:', JSON.stringify(newPost, null, 2));
     
-    // Save to Firebase using admin SDK
+    // Save to Firebase using admin SDK (to both paths for backward compatibility)
     console.log('Saving post to Firebase with admin SDK...');
+    
+    // Create a multi-path update to save to both locations
+    const updates: Record<string, any> = {};
+    updates[`wanted/posts/${newPostId}`] = newPost;
+    updates[`wantedPosts/${newPostId}`] = newPost;
+    
     try {
-      await newPostRef.set(newPost);
-      console.log('Post saved successfully with ID:', newPostId);
+      await adminDb.ref().update(updates);
+      console.log('Post saved successfully to both paths with ID:', newPostId);
     } catch (saveError) {
-      console.error('Error during database save operation:', saveError);
-      throw saveError;
+      console.error('Error during multi-path save:', saveError);
+      
+      // Try saving to just the new path as fallback
+      try {
+        await newPostRef.set(newPost);
+        console.log('Fallback: Post saved to new path only with ID:', newPostId);
+      } catch (fallbackError) {
+        console.error('Error during fallback save:', fallbackError);
+        throw fallbackError;
+      }
     }
     
     // Verify the post was saved by reading it back
