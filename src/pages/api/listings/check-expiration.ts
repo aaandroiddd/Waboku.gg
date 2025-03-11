@@ -36,24 +36,42 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     
     console.log(`[API] Checking expiration for listing: ${listingId}`);
     
-    // Check and archive the listing if expired
-    const result = await checkAndArchiveExpiredListing(listingId);
-    
-    // Return the result with appropriate status code
-    if (result.success) {
-      return res.status(200).json(result);
-    } else {
-      // Log the error but return a 200 status to prevent client-side errors
-      // This is a background check that shouldn't disrupt the user experience
-      console.error(`[API] Expiration check failed for listing ${listingId}:`, result.error);
+    try {
+      // Check and archive the listing if expired
+      const result = await checkAndArchiveExpiredListing(listingId);
       
-      // Return a 200 status with error information
-      // This prevents the client from showing network errors while still providing error details
+      // Return the result with appropriate status code
+      if (result.success) {
+        return res.status(200).json(result);
+      } else {
+        // Log the error but return a 200 status to prevent client-side errors
+        // This is a background check that shouldn't disrupt the user experience
+        console.error(`[API] Expiration check failed for listing ${listingId}:`, result.error);
+        
+        // Return a 200 status with error information
+        // This prevents the client from showing network errors while still providing error details
+        return res.status(200).json({
+          success: false,
+          handled: true,
+          error: result.error || 'Unknown error occurred during expiration check',
+          code: 'expiration_check_failed'
+        });
+      }
+    } catch (checkError: any) {
+      // Handle any unexpected errors from the check function
+      console.error(`[API] Exception during expiration check for listing ${listingId}:`, {
+        message: checkError.message,
+        stack: checkError.stack?.split('\n').slice(0, 3).join('\n'),
+        code: checkError.code,
+        name: checkError.name
+      });
+      
       return res.status(200).json({
         success: false,
         handled: true,
-        error: result.error || 'Unknown error occurred during expiration check',
-        code: 'expiration_check_failed'
+        error: `Exception during expiration check: ${checkError.message || 'Unknown error'}`,
+        errorType: checkError.name || 'UnknownError',
+        code: 'expiration_check_exception'
       });
     }
   } catch (error: any) {

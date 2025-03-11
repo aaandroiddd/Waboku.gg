@@ -96,27 +96,47 @@ export function getFirebaseAdmin() {
         console.log('[Firebase Admin] Processed private key with escaped newlines');
       }
       
-      // Check if the private key has the correct format
-      if (!processedPrivateKey.startsWith('-----BEGIN PRIVATE KEY-----') || 
-          !processedPrivateKey.endsWith('-----END PRIVATE KEY-----\n')) {
-        console.warn('[Firebase Admin] Private key may not be in the correct format');
-        
-        // Try to fix common issues with the private key format
-        if (!processedPrivateKey.startsWith('-----BEGIN PRIVATE KEY-----')) {
-          processedPrivateKey = '-----BEGIN PRIVATE KEY-----\n' + processedPrivateKey;
-        }
-        
-        if (!processedPrivateKey.endsWith('-----END PRIVATE KEY-----\n')) {
-          if (processedPrivateKey.includes('-----END PRIVATE KEY-----')) {
-            // Ensure it ends with a newline
-            processedPrivateKey = processedPrivateKey.replace('-----END PRIVATE KEY-----', '-----END PRIVATE KEY-----\n');
-          } else {
-            processedPrivateKey = processedPrivateKey + '\n-----END PRIVATE KEY-----\n';
-          }
-        }
-        
-        console.log('[Firebase Admin] Attempted to fix private key format');
+      // Check if the private key has the correct format and fix if needed
+      const keyStartMarker = '-----BEGIN PRIVATE KEY-----';
+      const keyEndMarker = '-----END PRIVATE KEY-----';
+      
+      if (!processedPrivateKey.includes(keyStartMarker) || !processedPrivateKey.includes(keyEndMarker)) {
+        console.error('[Firebase Admin] Private key is missing required markers');
+        throw new Error('Invalid private key format: missing BEGIN/END markers');
       }
+      
+      // Ensure proper formatting with newlines
+      if (!processedPrivateKey.startsWith(keyStartMarker)) {
+        processedPrivateKey = processedPrivateKey.trim();
+        processedPrivateKey = keyStartMarker + '\n' + processedPrivateKey.substring(keyStartMarker.length);
+      }
+      
+      if (!processedPrivateKey.endsWith('\n')) {
+        processedPrivateKey = processedPrivateKey + '\n';
+      }
+      
+      // Ensure there's a newline after the start marker if not already present
+      const startMarkerIndex = processedPrivateKey.indexOf(keyStartMarker);
+      if (startMarkerIndex !== -1 && 
+          processedPrivateKey.charAt(startMarkerIndex + keyStartMarker.length) !== '\n') {
+        processedPrivateKey = 
+          processedPrivateKey.substring(0, startMarkerIndex + keyStartMarker.length) + 
+          '\n' + 
+          processedPrivateKey.substring(startMarkerIndex + keyStartMarker.length);
+      }
+      
+      // Ensure there's a newline before the end marker if not already present
+      const endMarkerIndex = processedPrivateKey.lastIndexOf(keyEndMarker);
+      if (endMarkerIndex !== -1 && 
+          endMarkerIndex > 0 && 
+          processedPrivateKey.charAt(endMarkerIndex - 1) !== '\n') {
+        processedPrivateKey = 
+          processedPrivateKey.substring(0, endMarkerIndex) + 
+          '\n' + 
+          processedPrivateKey.substring(endMarkerIndex);
+      }
+      
+      console.log('[Firebase Admin] Processed private key format');
 
       try {
         // Create the credential object

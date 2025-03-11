@@ -45,9 +45,35 @@ export async function checkAndArchiveExpiredListing(listingId: string) {
     
     // Get the listing document with error handling
     try {
-      // Get the listing document
+      // Get the listing document with better error handling
       const listingRef = db.collection('listings').doc(listingId);
-      const listingDoc = await listingRef.get();
+      
+      let listingDoc;
+      try {
+        listingDoc = await listingRef.get();
+      } catch (fetchError: any) {
+        console.error(`[ListingExpiration] Error fetching listing ${listingId}:`, {
+          message: fetchError.message,
+          code: fetchError.code,
+          name: fetchError.name,
+          stack: fetchError.stack?.split('\n').slice(0, 3).join('\n')
+        });
+        
+        // Check for specific error related to certificate/private key issues
+        if (fetchError.message?.includes('DECODER routines') || 
+            fetchError.message?.includes('unsupported') ||
+            fetchError.code === 'UNKNOWN') {
+          return { 
+            success: false, 
+            error: `Firebase credential error: ${fetchError.message}. Please check the private key format.`
+          };
+        }
+        
+        return { 
+          success: false, 
+          error: `Failed to retrieve listing: ${fetchError.code || 'unknown'} ${fetchError.message || 'Unknown error'}`
+        };
+      }
       
       if (!listingDoc.exists) {
         console.log(`[ListingExpiration] Listing ${listingId} not found`);
