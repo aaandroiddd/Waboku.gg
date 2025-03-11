@@ -129,11 +129,19 @@ const usStates = [
 ];
 
 const subtitles = [
-  "Join the growing card game community.",
-  "Buy, sell, and trade cards with collectors in your area.",
-  "Trust us, you don't have enough lands.",
-  "You need that next alt-art, don't listen to your wife.",
-  "Home of the secret rares."
+  "Your deck isn't 'meta' until your wallet cries.",
+  "One more booster won't hurt—unless it's another bulk rare.",
+  "Foils don't pay the rent, but they do bring happiness.",
+  "Your binder is worth more than your car, and you're proud of it.",
+  "Yes, you do need three more for a playset.",
+  "Why invest in stocks when you have cards?",
+  "It's not hoarding if they're neatly in sleeves.",
+  "The real TCG battle? Justifying this hobby to your bank account.",
+  "Budget deck? Never heard of her.",
+  "Draft night: where your self-control goes to die.",
+  "Your deck isn't bad, it's just too advanced for winning.",
+  "Your biggest L wasn't misplaying—it was opening that $100 box for $5 of bulk.",
+  "Alt-art cards appreciate in value. Your self-control doesn't."
 ];
 
 const containerVariants = {
