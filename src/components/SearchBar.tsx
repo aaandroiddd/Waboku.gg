@@ -54,9 +54,23 @@ export default function SearchBar({ showSearchButton = false, initialValue = "",
   const { recordSearch } = useTrendingSearches();
 
   const handleSearch = async (query: string) => {
-    // If query has content, record it
+    // If query has content, try to record it but don't wait for it to complete
     if (query.trim()) {
-      await recordSearch(query.trim());
+      try {
+        // Use Promise.race with a timeout to prevent blocking the search
+        await Promise.race([
+          recordSearch(query.trim()),
+          new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Search recording timeout')), 1000)
+          )
+        ]).catch(error => {
+          console.warn('Search recording timed out or failed:', error);
+          // Continue with search regardless of recording success
+        });
+      } catch (error) {
+        console.error('Error recording search:', error);
+        // Continue with search regardless of recording error
+      }
     }
     
     // Preserve existing query parameters and update only the search query

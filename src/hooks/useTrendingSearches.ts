@@ -61,7 +61,9 @@ export function useTrendingSearches() {
       const data = await response.json();
       
       if (!Array.isArray(data)) {
-        throw new Error('Invalid response format - expected an array');
+        console.warn('[TrendingSearches] Invalid response format - expected an array, got:', typeof data);
+        // Return fallback data instead of throwing
+        return FALLBACK_TRENDING;
       }
 
       setError(null);
@@ -81,7 +83,9 @@ export function useTrendingSearches() {
           await new Promise(resolve => setTimeout(resolve, delay));
           return fetchWithRetry(retries - 1, delay * 1.5);
         }
-        throw new Error('Request timed out');
+        // Return fallback data instead of throwing
+        console.log('[TrendingSearches] All retries failed, using fallback data');
+        return FALLBACK_TRENDING;
       }
       
       if (retries > 0) {
@@ -90,7 +94,9 @@ export function useTrendingSearches() {
         return fetchWithRetry(retries - 1, delay * 1.5);
       }
       
-      throw error;
+      // Return fallback data instead of throwing
+      console.log('[TrendingSearches] All retries failed, using fallback data');
+      return FALLBACK_TRENDING;
     }
   };
 

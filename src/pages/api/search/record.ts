@@ -1,68 +1,19 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { validateSearchTerm, normalizeSearchTerm } from '@/lib/search-validation';
 import { checkRateLimit } from '@/lib/rate-limit';
-import { initializeApp, getApps, cert } from 'firebase-admin/app';
+import { getFirebaseAdmin } from '@/lib/firebase-admin';
 import { getDatabase } from 'firebase-admin/database';
 
-const initializeFirebaseAdmin = () => {
-  try {
-    // Check for required environment variables
-    const requiredEnvVars = {
-      'FIREBASE_PRIVATE_KEY': process.env.FIREBASE_PRIVATE_KEY,
-      'FIREBASE_CLIENT_EMAIL': process.env.FIREBASE_CLIENT_EMAIL,
-      'NEXT_PUBLIC_FIREBASE_DATABASE_URL': process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL,
-      'NEXT_PUBLIC_FIREBASE_PROJECT_ID': process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID
-    };
-
-    // Check all required environment variables
-    const missingVars = Object.entries(requiredEnvVars)
-      .filter(([_, value]) => !value)
-      .map(([key]) => key);
-
-    if (missingVars.length > 0) {
-      console.error('Missing environment variables:', missingVars);
-      throw new Error(`Missing required environment variables: ${missingVars.join(', ')}`);
-    }
-
-    if (getApps().length === 0) {
-      console.log('Initializing new Firebase Admin instance...');
-      
-      const privateKey = process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n');
-      
-      const config = {
-        credential: cert({
-          projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-          clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-          privateKey: privateKey,
-        }),
-        databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL
-      };
-
-      initializeApp(config);
-      console.log('Firebase Admin initialized successfully');
-    }
-
-    const db = getDatabase();
-    if (!db) {
-      throw new Error('Failed to get database instance');
-    }
-    return db;
-  } catch (error: any) {
-    console.error('Firebase Admin initialization error:', {
-      message: error.message,
-      stack: error.stack,
-      timestamp: new Date().toISOString()
-    });
-    throw error;
-  }
-};
+// Timeout for database operations
+const DB_OPERATION_TIMEOUT = 3000; // 3 seconds
 
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
+  const requestId = Math.random().toString(36).substring(2, 15);
   const timestamp = new Date().toISOString();
-  console.log(`[${timestamp}] Search term recording request received`);
+  console.log(`Path: /api/search/record [${requestId}] Search term recording request received at ${timestamp}`);
   
   // Add CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -76,18 +27,18 @@ export default async function handler(
   }
 
   if (req.method !== 'POST') {
-    console.log('Method not allowed:', req.method);
+    console.log(`Path: /api/search/record [${requestId}] Method not allowed:`, req.method);
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
   const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
-  console.log(`Processing search request from IP: ${ip}`);
+  console.log(`Path: /api/search/record [${requestId}] Processing search request from IP: ${ip}`);
 
   try {
     // Apply rate limiting
     const isAllowed = await checkRateLimit(ip);
     if (!isAllowed) {
-      console.log(`Rate limit exceeded for IP: ${ip}`);
+      console.log(`Path: /api/search/record [${requestId}] Rate limit exceeded for IP: ${ip}`);
       return res.status(429).json({ error: 'Rate limit exceeded. Please try again later.' });
     }
 
@@ -95,85 +46,120 @@ export default async function handler(
     
     // Validate search term
     if (!searchTerm || typeof searchTerm !== 'string') {
-      console.log('Invalid search term format:', searchTerm);
+      console.log(`Path: /api/search/record [${requestId}] Invalid search term format:`, searchTerm);
       return res.status(400).json({ 
         error: 'Invalid search term format',
         message: 'Search term must be a non-empty string'
       });
     }
 
-    console.log(`Processing search term: "${searchTerm}"`);
+    console.log(`Path: /api/search/record [${requestId}] Processing search term: "${searchTerm}"`);
 
     // Normalize search term
     const normalizedTerm = normalizeSearchTerm(searchTerm);
-    console.log(`Normalized search term: "${normalizedTerm}"`);
-    
-    // Log the validation process
-    console.log('Starting search term validation...');
-    console.log('Term length:', normalizedTerm.length);
-    console.log('Character test:', /^[a-zA-Z0-9\s\-',.:"()&]+$/.test(normalizedTerm));
+    console.log(`Path: /api/search/record [${requestId}] Normalized search term: "${normalizedTerm}"`);
     
     // Apply search term validation
-    console.log('Starting validation for:', normalizedTerm);
     const isValid = validateSearchTerm(normalizedTerm);
-    console.log('Validation result:', isValid);
+    console.log(`Path: /api/search/record [${requestId}] Validation result:`, isValid);
     
     if (!isValid) {
-      console.log(`Search term validation failed: "${normalizedTerm}"`);
+      console.log(`Path: /api/search/record [${requestId}] Search term validation failed: "${normalizedTerm}"`);
       return res.status(400).json({ 
         error: 'Invalid search term',
-        message: 'Search term contains invalid characters or is inappropriate',
-        details: {
-          term: normalizedTerm,
-          length: normalizedTerm.length
-        }
+        message: 'Search term contains invalid characters or is inappropriate'
       });
     }
 
-    // Initialize Firebase Admin and get Database instance
-    console.log('Initializing Firebase Admin...');
-    const database = initializeFirebaseAdmin();
+    // Return success early to avoid timeout issues
+    // This makes the API non-blocking for the client
+    res.status(200).json({ 
+      success: true,
+      message: 'Search term received for processing',
+      term: normalizedTerm
+    });
 
-    // Record the search term in Firebase Realtime Database
+    // Continue processing in the background
+    // This prevents the client from waiting for the database operation
     try {
-      const searchRef = database.ref('searchTerms').child(normalizedTerm.toLowerCase());
+      console.log(`Path: /api/search/record [${requestId}] Initializing Firebase Admin...`);
       
-      const snapshot = await searchRef.once('value');
-      const currentCount = snapshot.exists() ? snapshot.val()?.count || 0 : 0;
-      
-      const updateData = {
-        term: normalizedTerm,
-        count: currentCount + 1,
-        lastUpdated: Date.now()
+      // Check if required environment variables are present
+      const requiredEnvVars = {
+        projectId: process.env.FIREBASE_PROJECT_ID || process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+        clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+        privateKey: process.env.FIREBASE_PRIVATE_KEY,
+        databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL
       };
-
-      await searchRef.set(updateData);
-      console.log(`Successfully recorded search term: "${normalizedTerm}" (count: ${currentCount + 1})`);
       
-      return res.status(200).json({ 
-        success: true,
-        message: 'Search term recorded successfully',
-        data: updateData
-      });
+      const missingVars = Object.entries(requiredEnvVars)
+        .filter(([_, value]) => !value)
+        .map(([key]) => key);
+        
+      if (missingVars.length > 0) {
+        console.error(`Path: /api/search/record [${requestId}] Missing required environment variables:`, missingVars);
+        return; // Exit silently as we've already sent a response
+      }
+      
+      // Use the centralized Firebase Admin initialization with timeout
+      const adminInitPromise = Promise.race([
+        getFirebaseAdmin(),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Firebase Admin initialization timeout')), 3000)
+        )
+      ]);
+      
+      const admin = await adminInitPromise;
+      const database = getDatabase();
+      
+      if (!database) {
+        throw new Error('Failed to get Firebase database instance');
+      }
+      
+      // Set a timeout for the database operation
+      const dbOperationPromise = Promise.race([
+        (async () => {
+          const searchRef = database.ref('searchTerms').child(normalizedTerm.toLowerCase());
+          const snapshot = await searchRef.once('value');
+          const currentCount = snapshot.exists() ? snapshot.val()?.count || 0 : 0;
+          
+          const updateData = {
+            term: normalizedTerm,
+            count: currentCount + 1,
+            lastUpdated: Date.now()
+          };
+          
+          await searchRef.set(updateData);
+          return updateData;
+        })(),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Database operation timeout')), DB_OPERATION_TIMEOUT)
+        )
+      ]);
+      
+      const result = await dbOperationPromise;
+      console.log(`Path: /api/search/record [${requestId}] Successfully recorded search term: "${normalizedTerm}"`);
     } catch (dbError: any) {
-      console.error('Database operation error:', {
+      console.error(`Path: /api/search/record [${requestId}] Database operation error:`, {
         message: dbError.message,
         stack: dbError.stack,
         searchTerm: normalizedTerm
       });
-      throw new Error(`Failed to record search term in database: ${dbError.message}`);
+      // We don't need to send an error response as we've already sent a success response
     }
   } catch (error: any) {
-    console.error('Error processing search request:', {
+    console.error(`Path: /api/search/record [${requestId}] Error processing search request:`, {
       message: error.message,
       stack: error.stack,
       timestamp: new Date().toISOString()
     });
     
-    return res.status(500).json({ 
-      error: 'Internal Server Error',
-      message: process.env.NODE_ENV === 'development' ? error.message : 'An error occurred while processing your request',
-      timestamp: new Date().toISOString()
-    });
+    // Only send an error response if we haven't sent a response yet
+    if (!res.writableEnded) {
+      return res.status(500).json({ 
+        error: 'Internal Server Error',
+        message: 'An error occurred while processing your request'
+      });
+    }
   }
 }
