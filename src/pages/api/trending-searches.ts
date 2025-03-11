@@ -3,7 +3,7 @@ import { getDatabase } from 'firebase-admin/database';
 import { validateSearchTerm } from '@/lib/search-validation';
 import { getFirebaseAdmin } from '@/lib/firebase-admin';
 
-const CACHE_DURATION = 120 * 1000; // 120 seconds cache (increased from 60)
+const CACHE_DURATION = 300 * 1000; // 300 seconds cache (5 minutes, increased from 120 seconds)
 let cachedTrending: any = null;
 let lastCacheTime = 0;
 
@@ -21,7 +21,7 @@ export default async function handler(
   res: NextApiResponse
 ) {
   const requestId = Math.random().toString(36).substring(2, 15);
-  console.info(`Path: /api/trending-searches [${requestId}] Trending searches API called at:`, new Date().toISOString());
+  console.info(`Path: /api/trending-searches START RequestId: ${requestId}`);
   
   // Add CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -45,8 +45,6 @@ export default async function handler(
     });
   }
   
-  console.info(`Path: /api/trending-searches [${requestId}] Processing GET request`);
-
   // Check if we have a valid cache
   const now = Date.now();
   if (cachedTrending && (now - lastCacheTime) < CACHE_DURATION) {
@@ -54,13 +52,18 @@ export default async function handler(
     return res.status(200).json(cachedTrending);
   }
 
+  // Set a timeout for the entire request
+  const requestTimeout = setTimeout(() => {
+    console.warn(`Path: /api/trending-searches [${requestId}] Request timeout reached, returning fallback data`);
+    if (!res.writableEnded) {
+      res.status(200).json(FALLBACK_TRENDING);
+    }
+  }, 4500); // 4.5 seconds timeout (just under Vercel's 5s limit)
+
   try {
-    // Return fallback data immediately to avoid timeouts
-    // This ensures the client gets a response while we try to fetch fresh data
+    // Set fallback data as default
     cachedTrending = FALLBACK_TRENDING;
     lastCacheTime = now;
-    
-    console.info(`Path: /api/trending-searches [${requestId}] Initializing Firebase Admin...`);
     
     // Check if required environment variables are present
     const requiredEnvVars = {
@@ -76,6 +79,7 @@ export default async function handler(
       
     if (missingVars.length > 0) {
       console.error(`Path: /api/trending-searches [${requestId}] Missing required environment variables:`, missingVars);
+      clearTimeout(requestTimeout);
       return res.status(200).json(FALLBACK_TRENDING);
     }
     
@@ -83,7 +87,7 @@ export default async function handler(
     const adminInitPromise = Promise.race([
       getFirebaseAdmin(),
       new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Firebase Admin initialization timeout')), 3000)
+        setTimeout(() => reject(new Error('Firebase Admin initialization timeout')), 2000)
       )
     ]);
     
@@ -93,8 +97,6 @@ export default async function handler(
     if (!database) {
       throw new Error('Failed to get Firebase database instance');
     }
-    
-    console.info(`Path: /api/trending-searches [${requestId}] Fetching trending searches from Firebase...`);
     
     // Calculate timestamp for 24 hours ago
     const twentyFourHoursAgo = Date.now() - (24 * 60 * 60 * 1000);
@@ -107,7 +109,7 @@ export default async function handler(
         .startAt(twentyFourHoursAgo)
         .once('value'),
       new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Database query timeout')), 4000)
+        setTimeout(() => reject(new Error('Database query timeout')), 3000)
       )
     ]);
     
@@ -115,6 +117,7 @@ export default async function handler(
     
     if (!snapshot.exists()) {
       console.info(`Path: /api/trending-searches [${requestId}] No trending searches found in the last 24 hours`);
+      clearTimeout(requestTimeout);
       return res.status(200).json(FALLBACK_TRENDING);
     }
 
@@ -151,11 +154,12 @@ export default async function handler(
     lastCacheTime = now;
 
     console.info(`Path: /api/trending-searches [${requestId}] Successfully fetched ${trending.length} trending searches`);
+    clearTimeout(requestTimeout);
     return res.status(200).json(trending);
   } catch (error: any) {
     console.error(`Path: /api/trending-searches [${requestId}] Error:`, {
       message: error.message,
-      stack: error.stack,
+      stack: error.stack?.substring(0, 200), // Limit stack trace length
       code: error.code,
       name: error.name,
       type: error.constructor.name,
@@ -170,6 +174,11 @@ export default async function handler(
     
     // Return fallback data instead of error
     console.info(`Path: /api/trending-searches [${requestId}] Returning fallback trending data due to error`);
+    clearTimeout(requestTimeout);
     return res.status(200).json(FALLBACK_TRENDING);
+  } finally {
+    // Ensure timeout is cleared in all cases
+    clearTimeout(requestTimeout);
+    console.info(`Path: /api/trending-searches [${requestId}] Request completed`);
   }
 }

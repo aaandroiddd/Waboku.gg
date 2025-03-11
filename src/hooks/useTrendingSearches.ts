@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { database } from '@/lib/firebase';
 import { ref, get, set } from 'firebase/database';
 
@@ -16,22 +16,44 @@ const FALLBACK_TRENDING = [
   { term: "Jace", count: 28 }
 ];
 
-const REFRESH_INTERVAL = 120 * 1000; // 120 seconds (increased from 60)
+const REFRESH_INTERVAL = 180 * 1000; // 180 seconds (increased from 120)
 const MAX_RETRIES = 1; // Reduced from 2 to avoid excessive retries
-const INITIAL_RETRY_DELAY = 2000; // 2 seconds (increased from 1)
-const REQUEST_TIMEOUT = 3000; // 3 seconds (reduced from 5)
+const INITIAL_RETRY_DELAY = 2000; // 2 seconds
+const REQUEST_TIMEOUT = 5000; // 5 seconds (increased from 3)
 
 export function useTrendingSearches() {
   const [trendingSearches, setTrendingSearches] = useState<TrendingSearch[]>(FALLBACK_TRENDING);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastSuccessfulFetch, setLastSuccessfulFetch] = useState<number | null>(null);
+  const activeController = useRef<AbortController | null>(null);
+
+  // Cleanup function to abort any pending requests
+  const cleanupPendingRequests = () => {
+    if (activeController.current) {
+      try {
+        activeController.current.abort();
+      } catch (e) {
+        console.warn('[TrendingSearches] Error aborting previous request:', e);
+      }
+      activeController.current = null;
+    }
+  };
 
   const fetchWithRetry = async (retries = MAX_RETRIES, delay = INITIAL_RETRY_DELAY): Promise<TrendingSearch[]> => {
+    // Clean up any existing requests
+    cleanupPendingRequests();
+    
     try {
+      // Create a new controller for this request
       const controller = new AbortController();
+      activeController.current = controller;
+      
+      // Set up timeout
       const timeoutId = setTimeout(() => {
-        controller.abort();
+        if (controller.signal.aborted) return;
+        console.warn('[TrendingSearches] Request timeout reached, aborting');
+        controller.abort('timeout');
       }, REQUEST_TIMEOUT);
 
       // Use absolute URL with origin to avoid path resolution issues
@@ -49,7 +71,9 @@ export function useTrendingSearches() {
           'Cache-Control': 'no-cache, no-store',
           'Pragma': 'no-cache'
         },
-        cache: 'no-store'
+        cache: 'no-store',
+        // Add a unique parameter to prevent caching
+        credentials: 'same-origin'
       });
 
       clearTimeout(timeoutId);
@@ -62,7 +86,6 @@ export function useTrendingSearches() {
       
       if (!Array.isArray(data)) {
         console.warn('[TrendingSearches] Invalid response format - expected an array, got:', typeof data);
-        // Return fallback data instead of throwing
         return FALLBACK_TRENDING;
       }
 
@@ -76,27 +99,34 @@ export function useTrendingSearches() {
         type: error.constructor.name
       });
       
+      // Handle abort errors (timeout or manual abort)
       if (error.name === 'AbortError') {
-        console.warn('[TrendingSearches] Request timed out after', REQUEST_TIMEOUT, 'ms');
+        console.warn('[TrendingSearches] Request was aborted');
+        
         if (retries > 0) {
           console.log(`[TrendingSearches] Retrying after ${delay}ms (${retries} retries left)`);
           await new Promise(resolve => setTimeout(resolve, delay));
           return fetchWithRetry(retries - 1, delay * 1.5);
         }
-        // Return fallback data instead of throwing
+        
         console.log('[TrendingSearches] All retries failed, using fallback data');
         return FALLBACK_TRENDING;
       }
       
+      // Handle other errors with retry logic
       if (retries > 0) {
         console.log(`[TrendingSearches] Retrying after ${delay}ms (${retries} retries left)`);
         await new Promise(resolve => setTimeout(resolve, delay));
         return fetchWithRetry(retries - 1, delay * 1.5);
       }
       
-      // Return fallback data instead of throwing
       console.log('[TrendingSearches] All retries failed, using fallback data');
       return FALLBACK_TRENDING;
+    } finally {
+      // Clear the active controller reference
+      if (activeController.current?.signal.aborted) {
+        activeController.current = null;
+      }
     }
   };
 
@@ -113,7 +143,7 @@ export function useTrendingSearches() {
       setError(null);
     } catch (error: any) {
       console.error('[TrendingSearches] Error fetching trending searches:', error);
-      setError(error.message);
+      setError(error.message || 'Unknown error fetching trending searches');
       
       // Only use fallback data if we don't have any data yet
       if (trendingSearches.length === 0) {
@@ -136,7 +166,7 @@ export function useTrendingSearches() {
     // Initial fetch with a small delay to allow other critical components to load first
     const initialFetchTimer = setTimeout(() => {
       initFetch();
-    }, 500);
+    }, 800); // Increased from 500ms to allow more time for other components
 
     // Set up periodic refresh
     intervalId = setInterval(fetchTrendingSearches, REFRESH_INTERVAL);
@@ -146,6 +176,7 @@ export function useTrendingSearches() {
       isSubscribed = false;
       clearTimeout(initialFetchTimer);
       clearInterval(intervalId);
+      cleanupPendingRequests();
     };
   }, []);
 
@@ -177,6 +208,8 @@ export function useTrendingSearches() {
 
   const refreshTrending = async () => {
     console.log('[TrendingSearches] Manual refresh requested');
+    // Clean up any existing requests before starting a new one
+    cleanupPendingRequests();
     await fetchTrendingSearches();
   };
 
