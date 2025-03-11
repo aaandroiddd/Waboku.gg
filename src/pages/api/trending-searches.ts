@@ -3,7 +3,7 @@ import { getDatabase } from 'firebase-admin/database';
 import { validateSearchTerm } from '@/lib/search-validation';
 import { getFirebaseAdmin } from '@/lib/firebase-admin';
 
-const CACHE_DURATION = 60 * 1000; // 60 seconds cache (increased from 30)
+const CACHE_DURATION = 120 * 1000; // 120 seconds cache (increased from 60)
 let cachedTrending: any = null;
 let lastCacheTime = 0;
 
@@ -28,6 +28,7 @@ export default async function handler(
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   res.setHeader('Content-Type', 'application/json');
+  res.setHeader('Cache-Control', 'no-store, max-age=0');
   
   // Handle preflight request
   if (req.method === 'OPTIONS') {
@@ -54,27 +55,66 @@ export default async function handler(
   }
 
   try {
+    // Return fallback data immediately to avoid timeouts
+    // This ensures the client gets a response while we try to fetch fresh data
+    cachedTrending = FALLBACK_TRENDING;
+    lastCacheTime = now;
+    
     console.info(`Path: /api/trending-searches [${requestId}] Initializing Firebase Admin...`);
-    // Use the centralized Firebase Admin initialization
-    getFirebaseAdmin();
+    
+    // Check if required environment variables are present
+    const requiredEnvVars = {
+      projectId: process.env.FIREBASE_PROJECT_ID || process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+      privateKey: process.env.FIREBASE_PRIVATE_KEY,
+      databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL
+    };
+    
+    const missingVars = Object.entries(requiredEnvVars)
+      .filter(([_, value]) => !value)
+      .map(([key]) => key);
+      
+    if (missingVars.length > 0) {
+      console.error(`Path: /api/trending-searches [${requestId}] Missing required environment variables:`, missingVars);
+      return res.status(200).json(FALLBACK_TRENDING);
+    }
+    
+    // Use the centralized Firebase Admin initialization with timeout
+    const adminInitPromise = Promise.race([
+      getFirebaseAdmin(),
+      new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Firebase Admin initialization timeout')), 3000)
+      )
+    ]);
+    
+    const admin = await adminInitPromise;
     const database = getDatabase();
+    
+    if (!database) {
+      throw new Error('Failed to get Firebase database instance');
+    }
     
     console.info(`Path: /api/trending-searches [${requestId}] Fetching trending searches from Firebase...`);
     
     // Calculate timestamp for 24 hours ago
     const twentyFourHoursAgo = Date.now() - (24 * 60 * 60 * 1000);
     
-    const snapshot = await database
-      .ref('searchTerms')
-      .orderByChild('lastUpdated')
-      .startAt(twentyFourHoursAgo)
-      .once('value');
+    // Set a timeout for the database query
+    const dbQueryPromise = Promise.race([
+      database
+        .ref('searchTerms')
+        .orderByChild('lastUpdated')
+        .startAt(twentyFourHoursAgo)
+        .once('value'),
+      new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Database query timeout')), 4000)
+      )
+    ]);
+    
+    const snapshot = await dbQueryPromise;
     
     if (!snapshot.exists()) {
       console.info(`Path: /api/trending-searches [${requestId}] No trending searches found in the last 24 hours`);
-      // Use fallback data instead of empty array
-      cachedTrending = FALLBACK_TRENDING;
-      lastCacheTime = now;
       return res.status(200).json(FALLBACK_TRENDING);
     }
 
@@ -117,6 +157,8 @@ export default async function handler(
       message: error.message,
       stack: error.stack,
       code: error.code,
+      name: error.name,
+      type: error.constructor.name,
       config: {
         hasPrivateKey: !!process.env.FIREBASE_PRIVATE_KEY,
         hasClientEmail: !!process.env.FIREBASE_CLIENT_EMAIL,

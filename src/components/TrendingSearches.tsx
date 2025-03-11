@@ -2,9 +2,10 @@ import { useState, useEffect } from 'react';
 import { useTrendingSearches } from '@/hooks/useTrendingSearches';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/router';
-import { Loader2, TrendingUp, RefreshCw } from 'lucide-react';
+import { Loader2, TrendingUp, RefreshCw, AlertCircle } from 'lucide-react';
 import { motion } from "framer-motion";
 import Link from 'next/link';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 const itemVariants = {
   initial: { opacity: 0, x: -20 },
@@ -31,6 +32,7 @@ export function TrendingSearches() {
   const { trendingSearches, loading, error, refreshTrending } = useTrendingSearches();
   const router = useRouter();
   const [refreshAttempt, setRefreshAttempt] = useState(0);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const handleSearchClick = (term: string) => {
     router.push({
@@ -41,10 +43,13 @@ export function TrendingSearches() {
 
   const handleRefresh = async () => {
     setRefreshAttempt(prev => prev + 1);
+    setIsRefreshing(true);
     try {
       await refreshTrending();
     } catch (err) {
       console.error('Error refreshing trending searches:', err);
+    } finally {
+      setIsRefreshing(false);
     }
   };
   
@@ -70,7 +75,7 @@ export function TrendingSearches() {
   // Common container with fixed height to prevent layout shifts
   return (
     <div className="min-h-[48px] flex items-center">
-      {loading ? (
+      {loading && !trendingSearches.length ? (
         <motion.div 
           className="flex items-center gap-2 text-muted-foreground"
           initial={{ opacity: 0 }}
@@ -80,7 +85,7 @@ export function TrendingSearches() {
           <Loader2 className="h-4 w-4 animate-spin" />
           <span className="text-sm">Loading trending searches...</span>
         </motion.div>
-      ) : error || !trendingSearches.length ? (
+      ) : error && !trendingSearches.length ? (
         <motion.div 
           className="flex items-center gap-2 text-muted-foreground"
           initial={{ opacity: 0 }}
@@ -100,15 +105,37 @@ export function TrendingSearches() {
           <div className="flex items-center gap-1 text-muted-foreground">
             <TrendingUp className="h-4 w-4" />
             <span className="text-sm">Trending:</span>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-6 w-6"
-              onClick={handleRefresh}
-              disabled={loading}
-            >
-              <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-            </Button>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6"
+                    onClick={handleRefresh}
+                    disabled={isRefreshing}
+                  >
+                    <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Refresh trending searches</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            
+            {error && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <AlertCircle className="h-4 w-4 text-amber-500" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Using cached data. Refresh to try again.</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
           </div>
           
           {trendingSearches.slice(0, 3).map((search, index) => (
