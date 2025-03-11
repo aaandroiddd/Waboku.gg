@@ -27,9 +27,38 @@ export async function syncSubscriptionData(userId: string, subscriptionData: any
       };
     }
     
+    // Determine the correct account tier based on subscription status and dates
+    let accountTier = 'free';
+    const currentDate = new Date();
+    const endDate = subscriptionData.endDate ? new Date(subscriptionData.endDate) : null;
+    
+    // If subscription is active, or canceled but still within the paid period
+    if (
+      subscriptionData.currentPlan === 'premium' || 
+      subscriptionData.tier === 'premium'
+    ) {
+      // Check if subscription is active or within the paid period
+      if (
+        subscriptionData.status === 'active' || 
+        (subscriptionData.status === 'canceled' && endDate && currentDate < endDate)
+      ) {
+        accountTier = 'premium';
+      }
+    }
+    
+    console.log(`[Subscription Sync] Determined account tier for user ${userId}:`, {
+      accountTier,
+      status: subscriptionData.status,
+      currentPlan: subscriptionData.currentPlan,
+      tier: subscriptionData.tier,
+      endDate: subscriptionData.endDate,
+      currentDate: currentDate.toISOString(),
+      isWithinPaidPeriod: endDate ? currentDate < endDate : false
+    });
+    
     // Format the subscription data for Firestore
     const firestoreData = {
-      accountTier: subscriptionData.tier || subscriptionData.currentPlan || 'free',
+      accountTier: accountTier,
       updatedAt: new Date().toISOString(),
       subscription: {
         status: subscriptionData.status || 'none',

@@ -293,52 +293,75 @@ export default async function handler(
         const status = subscription.status;
         const currentPeriodEnd = new Date(subscription.current_period_end * 1000).toISOString();
         const currentPeriodStart = new Date(subscription.current_period_start * 1000).toISOString();
+        const cancelAtPeriodEnd = subscription.cancel_at_period_end;
+        const canceledAt = subscription.canceled_at ? new Date(subscription.canceled_at * 1000).toISOString() : null;
 
         console.log('[Stripe Webhook] Processing subscription update:', {
           userId,
           subscriptionId: subscription.id,
           status,
           currentPeriodStart,
-          currentPeriodEnd
+          currentPeriodEnd,
+          cancelAtPeriodEnd,
+          canceledAt
         });
+
+        // Determine the correct account tier and status
+        // If subscription is active but set to cancel at period end, we should keep it as premium until the end date
+        let accountTier = 'free';
+        let subscriptionStatus = status;
+        
+        if (status === 'active') {
+          accountTier = 'premium';
+          
+          // If it's set to cancel at period end, mark it as 'canceled' in our system
+          // but keep the accountTier as premium until the end date
+          if (cancelAtPeriodEnd) {
+            subscriptionStatus = 'canceled';
+          }
+        }
 
         // Update Firestore
         await firestoreDb.collection('users').doc(userId).set({
-          accountTier: status === 'active' ? 'premium' : 'free', // Add accountTier at the top level
+          accountTier: accountTier,
           subscription: {
-            currentPlan: status === 'active' ? 'premium' : 'free',
+            currentPlan: 'premium', // Keep the plan as premium
             startDate: currentPeriodStart,
             endDate: currentPeriodEnd,
-            status: status,
-            stripeSubscriptionId: subscription.id // Add the subscription ID
+            status: subscriptionStatus,
+            stripeSubscriptionId: subscription.id,
+            cancelAtPeriodEnd: cancelAtPeriodEnd,
+            canceledAt: canceledAt
           }
         }, { merge: true });
 
         // Update Realtime Database with more complete data - update fields separately
-        const tier = status === 'active' ? 'premium' : 'free';
         
         // Update tier and status separately to comply with validation rules
-        await realtimeDb.ref(`users/${userId}/account/tier`).set(tier);
+        await realtimeDb.ref(`users/${userId}/account/tier`).set(accountTier);
         await realtimeDb.ref(`users/${userId}/account/status`).set('active');
         
         // Update subscription fields separately
         const subscriptionRef = realtimeDb.ref(`users/${userId}/account/subscription`);
         await subscriptionRef.update({
           stripeSubscriptionId: subscription.id,
-          status: status,
-          tier: tier,
+          status: subscriptionStatus,
+          tier: 'premium', // Keep the tier as premium
           startDate: currentPeriodStart,
           endDate: currentPeriodEnd,
           renewalDate: currentPeriodEnd,
           currentPeriodEnd: subscription.current_period_end,
+          cancelAtPeriodEnd: cancelAtPeriodEnd,
+          canceledAt: canceledAt,
           lastUpdated: Date.now()
         });
         
         console.log('[Stripe Webhook] Updated subscription status:', {
           userId,
           subscriptionId: subscription.id,
-          status: status,
-          tier: status === 'active' ? 'premium' : 'free'
+          status: subscriptionStatus,
+          accountTier: accountTier,
+          cancelAtPeriodEnd: cancelAtPeriodEnd
         });
         break;
       }
