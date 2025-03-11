@@ -12,10 +12,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
+    // Extract and validate the listing ID from the request body
     const { listingId } = req.body;
     
     if (!listingId) {
-      return res.status(400).json({ success: false, error: 'Listing ID is required' });
+      console.warn('[API] Missing listing ID in request body');
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Listing ID is required',
+        code: 'missing_listing_id'
+      });
+    }
+    
+    // Validate that listingId is a string
+    if (typeof listingId !== 'string') {
+      console.warn('[API] Invalid listing ID type:', typeof listingId);
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Listing ID must be a string',
+        code: 'invalid_listing_id_type'
+      });
     }
     
     console.log(`[API] Checking expiration for listing: ${listingId}`);
@@ -27,10 +43,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (result.success) {
       return res.status(200).json(result);
     } else {
+      // Log the error but return a 200 status to prevent client-side errors
+      // This is a background check that shouldn't disrupt the user experience
       console.error(`[API] Expiration check failed for listing ${listingId}:`, result.error);
-      return res.status(400).json({
+      
+      // Return a 200 status with error information
+      // This prevents the client from showing network errors while still providing error details
+      return res.status(200).json({
         success: false,
-        error: result.error || 'Unknown error occurred during expiration check'
+        handled: true,
+        error: result.error || 'Unknown error occurred during expiration check',
+        code: 'expiration_check_failed'
       });
     }
   } catch (error: any) {
@@ -42,11 +65,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       name: error.name
     });
     
-    return res.status(500).json({ 
+    // Return a 200 status with error information to prevent client-side errors
+    // Since this is a background check, we don't want to disrupt the user experience
+    return res.status(200).json({ 
       success: false,
+      handled: true,
       error: 'Failed to check listing expiration',
       details: error.message,
-      errorType: error.name || 'UnknownError'
+      errorType: error.name || 'UnknownError',
+      code: 'expiration_check_exception'
     });
   }
 }

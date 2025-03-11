@@ -123,31 +123,56 @@ export default function ListingPage() {
             try {
               console.log(`[Listing] Checking expiration for listing ${id}`);
               
-              const response = await fetch('/api/listings/check-expiration', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ listingId: id }),
-              });
+              // Add timeout to prevent long-running requests
+              const controller = new AbortController();
+              const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
               
-              // If the response is not ok, log it but don't throw an error
-              // This prevents the 400 error from affecting the user experience
-              if (!response.ok) {
-                // Try to get more detailed error information
+              try {
+                const response = await fetch('/api/listings/check-expiration', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ listingId: id }),
+                  signal: controller.signal
+                });
+                
+                // Clear the timeout since the request completed
+                clearTimeout(timeoutId);
+                
+                // Always try to parse the response, regardless of status code
+                let result;
                 try {
-                  const errorData = await response.json();
-                  console.log(`[Listing] Expiration check returned status ${response.status}:`, errorData);
+                  result = await response.json();
                 } catch (jsonError) {
-                  console.log(`[Listing] Expiration check returned status ${response.status} - could not parse error details`);
+                  console.log(`[Listing] Could not parse response as JSON:`, jsonError);
+                  return; // Exit silently if we can't parse the response
                 }
-                return; // Exit silently
-              }
-              
-              // Process successful response if needed
-              const result = await response.json();
-              console.log(`[Listing] Expiration check result:`, result);
-              
-              if (result.status === 'archived') {
-                console.log('[Listing] Listing was archived in background check');
+                
+                // Log the result for debugging
+                console.log(`[Listing] Expiration check response:`, {
+                  status: response.status,
+                  result
+                });
+                
+                // Check if the API returned an error (even with status 200)
+                if (!result.success) {
+                  console.log(`[Listing] Expiration check failed:`, result.error || 'Unknown error');
+                  return; // Exit silently
+                }
+                
+                // Process successful response
+                if (result.status === 'archived') {
+                  console.log('[Listing] Listing was archived in background check');
+                  // Could refresh the page or show a notification here if needed
+                }
+              } catch (fetchError) {
+                // Clear the timeout in case of error
+                clearTimeout(timeoutId);
+                
+                if (fetchError.name === 'AbortError') {
+                  console.log('[Listing] Expiration check request timed out');
+                } else {
+                  console.error('[Listing] Fetch error during expiration check:', fetchError);
+                }
               }
             } catch (err) {
               // Silently log any errors without affecting the user experience
