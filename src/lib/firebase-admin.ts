@@ -177,11 +177,27 @@ export function getFirebaseAdmin() {
 
       try {
         // Create the credential object
-        const credential = admin.credential.cert({
-          projectId,
-          clientEmail,
-          privateKey: processedPrivateKey,
-        });
+        // As a last resort, try to use the original private key if processing failed
+        let finalPrivateKey = processedPrivateKey;
+        
+        // Create the credential
+        let credential;
+        try {
+          credential = admin.credential.cert({
+            projectId,
+            clientEmail,
+            privateKey: finalPrivateKey,
+          });
+        } catch (certError) {
+          console.error('[Firebase Admin] Failed with processed key, trying original key');
+          // If the processed key fails, try the original key as a fallback
+          finalPrivateKey = privateKey;
+          credential = admin.credential.cert({
+            projectId,
+            clientEmail,
+            privateKey: finalPrivateKey,
+          });
+        }
 
         // Prepare the initialization options
         const options: admin.AppOptions = {
