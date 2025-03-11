@@ -117,7 +117,12 @@ export function getFirebaseAdmin() {
       
       if (!processedPrivateKey.includes(keyStartMarker) || !processedPrivateKey.includes(keyEndMarker)) {
         console.error('[Firebase Admin] Private key is missing required markers');
-        throw new Error('Invalid private key format: missing BEGIN/END markers');
+        
+        // Try to request a new environmental variable to be set
+        console.error('[Firebase Admin] Requesting new FIREBASE_PRIVATE_KEY to be set');
+        
+        // Provide a more helpful error message
+        throw new Error('Invalid private key format: missing BEGIN/END markers. Please check that your FIREBASE_PRIVATE_KEY environment variable contains a valid private key in PEM format.');
       }
       
       try {
