@@ -3,6 +3,16 @@ import { getFirebaseAdmin } from '@/lib/firebase-admin';
 import { Timestamp } from 'firebase-admin/firestore';
 import { ACCOUNT_TIERS } from '@/types/account';
 
+// Add more detailed logging for debugging
+const logError = (message: string, error: any) => {
+  console.error(`[ListingExpiration] ${message}:`, {
+    message: error.message,
+    stack: error.stack?.split('\n').slice(0, 3).join('\n'),
+    code: error.code,
+    name: error.name
+  });
+};
+
 /**
  * Middleware to handle listing expiration in the background
  * This will be called by the API route to check and archive expired listings
@@ -10,7 +20,19 @@ import { ACCOUNT_TIERS } from '@/types/account';
 export async function checkAndArchiveExpiredListing(listingId: string) {
   try {
     console.log(`[ListingExpiration] Checking listing ${listingId} for expiration`);
-    const { db } = getFirebaseAdmin();
+    
+    // Get Firebase admin with better error handling
+    const firebaseAdmin = getFirebaseAdmin();
+    
+    if (!firebaseAdmin || !firebaseAdmin.db) {
+      console.error('[ListingExpiration] Firebase admin or Firestore DB is not initialized properly');
+      return { 
+        success: false, 
+        error: 'Database connection error - admin not initialized properly' 
+      };
+    }
+    
+    const { db } = firebaseAdmin;
     
     // Get the listing document
     const listingRef = db.collection('listings').doc(listingId);

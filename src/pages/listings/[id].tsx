@@ -121,6 +121,8 @@ export default function ListingPage() {
           // Use async/await with proper error handling
           const checkExpiration = async () => {
             try {
+              console.log(`[Listing] Checking expiration for listing ${id}`);
+              
               const response = await fetch('/api/listings/check-expiration', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -130,18 +132,26 @@ export default function ListingPage() {
               // If the response is not ok, log it but don't throw an error
               // This prevents the 400 error from affecting the user experience
               if (!response.ok) {
-                console.log(`Expiration check returned status ${response.status} - this is expected for some listings`);
+                // Try to get more detailed error information
+                try {
+                  const errorData = await response.json();
+                  console.log(`[Listing] Expiration check returned status ${response.status}:`, errorData);
+                } catch (jsonError) {
+                  console.log(`[Listing] Expiration check returned status ${response.status} - could not parse error details`);
+                }
                 return; // Exit silently
               }
               
               // Process successful response if needed
               const result = await response.json();
+              console.log(`[Listing] Expiration check result:`, result);
+              
               if (result.status === 'archived') {
-                console.log('Listing was archived in background check');
+                console.log('[Listing] Listing was archived in background check');
               }
             } catch (err) {
               // Silently log any errors without affecting the user experience
-              console.error('Background expiration check failed:', err);
+              console.error('[Listing] Background expiration check failed:', err);
             }
           };
           

@@ -32,9 +32,15 @@ export function initializeFirebaseAdmin(): typeof admin {
   return getFirebaseAdmin();
 }
 
-export function getFirebaseAdmin(): typeof admin {
+export function getFirebaseAdmin() {
   if (firebaseAdmin) {
-    return firebaseAdmin;
+    return {
+      admin: firebaseAdmin,
+      db: firebaseAdmin.firestore(),
+      auth: firebaseAdmin.auth(),
+      storage: firebaseAdmin.storage(),
+      database: firebaseAdmin.database()
+    };
   }
 
   if (!admin.apps.length) {
@@ -168,5 +174,11 @@ export function getFirebaseAdmin(): typeof admin {
   }
 
   firebaseAdmin = admin;
-  return firebaseAdmin;
+  return {
+    admin: firebaseAdmin,
+    db: firebaseAdmin.firestore(),
+    auth: firebaseAdmin.auth(),
+    storage: firebaseAdmin.storage(),
+    database: firebaseAdmin.database()
+  };
 }
