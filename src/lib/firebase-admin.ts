@@ -90,6 +90,21 @@ export function getFirebaseAdmin() {
         throw new Error('[Firebase Admin] Invalid FIREBASE_PRIVATE_KEY - value is empty or undefined');
       }
       
+      // Log the private key format (safely)
+      console.log('[Firebase Admin] Private key format check:', {
+        length: processedPrivateKey.length,
+        hasEscapedNewlines: processedPrivateKey.includes('\\n'),
+        hasQuotes: processedPrivateKey.startsWith('"') && processedPrivateKey.endsWith('"'),
+        hasSingleQuotes: processedPrivateKey.startsWith("'") && processedPrivateKey.endsWith("'"),
+      });
+      
+      // Remove surrounding quotes if present (sometimes environment variables get quoted)
+      if ((processedPrivateKey.startsWith('"') && processedPrivateKey.endsWith('"')) ||
+          (processedPrivateKey.startsWith("'") && processedPrivateKey.endsWith("'"))) {
+        processedPrivateKey = processedPrivateKey.substring(1, processedPrivateKey.length - 1);
+        console.log('[Firebase Admin] Removed surrounding quotes from private key');
+      }
+      
       // Replace escaped newlines with actual newlines if needed
       if (processedPrivateKey.includes('\\n')) {
         processedPrivateKey = processedPrivateKey.replace(/\\n/g, '\n');
@@ -105,38 +120,27 @@ export function getFirebaseAdmin() {
         throw new Error('Invalid private key format: missing BEGIN/END markers');
       }
       
-      // Ensure proper formatting with newlines
-      if (!processedPrivateKey.startsWith(keyStartMarker)) {
-        processedPrivateKey = processedPrivateKey.trim();
-        processedPrivateKey = keyStartMarker + '\n' + processedPrivateKey.substring(keyStartMarker.length);
+      // Ensure the key has the proper PEM format with correct line breaks
+      // First, extract just the base64 content between the markers
+      const startIndex = processedPrivateKey.indexOf(keyStartMarker) + keyStartMarker.length;
+      const endIndex = processedPrivateKey.lastIndexOf(keyEndMarker);
+      let keyContent = processedPrivateKey.substring(startIndex, endIndex).trim();
+      
+      // Remove any existing line breaks in the content
+      keyContent = keyContent.replace(/\s/g, '');
+      
+      // Format the key properly with header, content (in 64-character lines), and footer
+      processedPrivateKey = keyStartMarker + '\n';
+      
+      // Add content in 64-character chunks
+      for (let i = 0; i < keyContent.length; i += 64) {
+        processedPrivateKey += keyContent.substring(i, Math.min(i + 64, keyContent.length)) + '\n';
       }
       
-      if (!processedPrivateKey.endsWith('\n')) {
-        processedPrivateKey = processedPrivateKey + '\n';
-      }
+      // Add the footer
+      processedPrivateKey += keyEndMarker + '\n';
       
-      // Ensure there's a newline after the start marker if not already present
-      const startMarkerIndex = processedPrivateKey.indexOf(keyStartMarker);
-      if (startMarkerIndex !== -1 && 
-          processedPrivateKey.charAt(startMarkerIndex + keyStartMarker.length) !== '\n') {
-        processedPrivateKey = 
-          processedPrivateKey.substring(0, startMarkerIndex + keyStartMarker.length) + 
-          '\n' + 
-          processedPrivateKey.substring(startMarkerIndex + keyStartMarker.length);
-      }
-      
-      // Ensure there's a newline before the end marker if not already present
-      const endMarkerIndex = processedPrivateKey.lastIndexOf(keyEndMarker);
-      if (endMarkerIndex !== -1 && 
-          endMarkerIndex > 0 && 
-          processedPrivateKey.charAt(endMarkerIndex - 1) !== '\n') {
-        processedPrivateKey = 
-          processedPrivateKey.substring(0, endMarkerIndex) + 
-          '\n' + 
-          processedPrivateKey.substring(endMarkerIndex);
-      }
-      
-      console.log('[Firebase Admin] Processed private key format');
+      console.log('[Firebase Admin] Reformatted private key to proper PEM format');
 
       try {
         // Create the credential object
