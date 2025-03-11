@@ -120,27 +120,60 @@ export function getFirebaseAdmin() {
         throw new Error('Invalid private key format: missing BEGIN/END markers');
       }
       
-      // Ensure the key has the proper PEM format with correct line breaks
-      // First, extract just the base64 content between the markers
-      const startIndex = processedPrivateKey.indexOf(keyStartMarker) + keyStartMarker.length;
-      const endIndex = processedPrivateKey.lastIndexOf(keyEndMarker);
-      let keyContent = processedPrivateKey.substring(startIndex, endIndex).trim();
-      
-      // Remove any existing line breaks in the content
-      keyContent = keyContent.replace(/\s/g, '');
-      
-      // Format the key properly with header, content (in 64-character lines), and footer
-      processedPrivateKey = keyStartMarker + '\n';
-      
-      // Add content in 64-character chunks
-      for (let i = 0; i < keyContent.length; i += 64) {
-        processedPrivateKey += keyContent.substring(i, Math.min(i + 64, keyContent.length)) + '\n';
+      try {
+        // Try a more robust approach to fix the private key format
+        // First, check if the key is already properly formatted
+        if (processedPrivateKey.startsWith(keyStartMarker) && 
+            processedPrivateKey.endsWith(keyEndMarker + '\n')) {
+          // Key might be properly formatted already, let's verify the structure
+          const lines = processedPrivateKey.split('\n');
+          const isProperlyFormatted = 
+            lines.length > 3 && // At least header, content, and footer
+            lines[0] === keyStartMarker && 
+            lines[lines.length - 2] === keyEndMarker;
+          
+          if (isProperlyFormatted) {
+            console.log('[Firebase Admin] Private key appears to be properly formatted already');
+          } else {
+            // Key needs reformatting
+            console.log('[Firebase Admin] Private key needs reformatting');
+            throw new Error('Key needs reformatting');
+          }
+        } else {
+          // Key definitely needs reformatting
+          console.log('[Firebase Admin] Private key definitely needs reformatting');
+          throw new Error('Key needs reformatting');
+        }
+      } catch (error) {
+        // Reformat the key to ensure proper PEM format
+        console.log('[Firebase Admin] Reformatting private key to proper PEM format');
+        
+        // Extract just the base64 content between the markers
+        const startIndex = processedPrivateKey.indexOf(keyStartMarker) + keyStartMarker.length;
+        const endIndex = processedPrivateKey.lastIndexOf(keyEndMarker);
+        
+        if (startIndex <= 0 || endIndex <= 0 || startIndex >= endIndex) {
+          throw new Error('Invalid private key format: cannot extract content between markers');
+        }
+        
+        let keyContent = processedPrivateKey.substring(startIndex, endIndex).trim();
+        
+        // Remove any existing line breaks and whitespace in the content
+        keyContent = keyContent.replace(/\s/g, '');
+        
+        // Format the key properly with header, content (in 64-character lines), and footer
+        processedPrivateKey = keyStartMarker + '\n';
+        
+        // Add content in 64-character chunks
+        for (let i = 0; i < keyContent.length; i += 64) {
+          processedPrivateKey += keyContent.substring(i, Math.min(i + 64, keyContent.length)) + '\n';
+        }
+        
+        // Add the footer
+        processedPrivateKey += keyEndMarker + '\n';
+        
+        console.log('[Firebase Admin] Successfully reformatted private key to proper PEM format');
       }
-      
-      // Add the footer
-      processedPrivateKey += keyEndMarker + '\n';
-      
-      console.log('[Firebase Admin] Reformatted private key to proper PEM format');
 
       try {
         // Create the credential object
