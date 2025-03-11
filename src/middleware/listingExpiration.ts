@@ -93,41 +93,95 @@ export async function checkAndArchiveExpiredListing(listingId: string) {
       
       const now = new Date();
       
-      // Check if listing has expired - handle potential timestamp conversion issues
-      let createdAt: Date;
-      try {
-        createdAt = data.createdAt?.toDate ? data.createdAt.toDate() : 
-                   data.createdAt instanceof Date ? data.createdAt : 
-                   new Date(data.createdAt || Date.now());
-      } catch (timestampError) {
-        console.error(`[ListingExpiration] Error converting timestamp for listing ${listingId}:`, timestampError);
-        createdAt = new Date(); // Fallback to current date
-      }
+      // Check if listing has explicit expiresAt field
+      let expirationTime: Date;
       
-      // Get user data to determine account tier with error handling
-      let accountTier = 'free'; // Default to free tier
-      let tierDuration = ACCOUNT_TIERS.free.listingDuration;
-      
-      try {
-        if (data.userId) {
-          const userRef = db.collection('users').doc(data.userId);
-          const userDoc = await userRef.get();
+      if (data.expiresAt) {
+        try {
+          // Try to convert the expiresAt field to a Date
+          expirationTime = data.expiresAt?.toDate ? data.expiresAt.toDate() : 
+                          data.expiresAt instanceof Date ? data.expiresAt : 
+                          new Date(data.expiresAt);
           
-          if (userDoc.exists) {
-            const userData = userDoc.data();
-            if (userData) {
-              accountTier = userData.accountTier || 'free';
-              tierDuration = ACCOUNT_TIERS[accountTier]?.listingDuration || ACCOUNT_TIERS.free.listingDuration;
+          console.log(`[ListingExpiration] Listing ${listingId} has explicit expiresAt: ${expirationTime.toISOString()}`);
+        } catch (expiresAtError) {
+          console.error(`[ListingExpiration] Error converting expiresAt timestamp for listing ${listingId}:`, expiresAtError);
+          
+          // Fall back to calculating from createdAt
+          let createdAt: Date;
+          try {
+            createdAt = data.createdAt?.toDate ? data.createdAt.toDate() : 
+                      data.createdAt instanceof Date ? data.createdAt : 
+                      new Date(data.createdAt || Date.now());
+          } catch (timestampError) {
+            console.error(`[ListingExpiration] Error converting createdAt timestamp for listing ${listingId}:`, timestampError);
+            createdAt = new Date(); // Fallback to current date
+          }
+          
+          // Get user data to determine account tier with error handling
+          let accountTier = 'free'; // Default to free tier
+          let tierDuration = ACCOUNT_TIERS.free.listingDuration;
+          
+          try {
+            if (data.userId) {
+              const userRef = db.collection('users').doc(data.userId);
+              const userDoc = await userRef.get();
+              
+              if (userDoc.exists) {
+                const userData = userDoc.data();
+                if (userData) {
+                  accountTier = userData.accountTier || 'free';
+                  tierDuration = ACCOUNT_TIERS[accountTier]?.listingDuration || ACCOUNT_TIERS.free.listingDuration;
+                }
+              }
+            }
+          } catch (userError) {
+            console.error(`[ListingExpiration] Error fetching user data for listing ${listingId}:`, userError);
+            // Continue with default free tier values
+          }
+          
+          // Calculate expiration time based on tier duration
+          expirationTime = new Date(createdAt.getTime() + (tierDuration * 60 * 60 * 1000));
+        }
+      } else {
+        // No expiresAt field, calculate from createdAt
+        let createdAt: Date;
+        try {
+          createdAt = data.createdAt?.toDate ? data.createdAt.toDate() : 
+                    data.createdAt instanceof Date ? data.createdAt : 
+                    new Date(data.createdAt || Date.now());
+        } catch (timestampError) {
+          console.error(`[ListingExpiration] Error converting createdAt timestamp for listing ${listingId}:`, timestampError);
+          createdAt = new Date(); // Fallback to current date
+        }
+        
+        // Get user data to determine account tier with error handling
+        let accountTier = 'free'; // Default to free tier
+        let tierDuration = ACCOUNT_TIERS.free.listingDuration;
+        
+        try {
+          if (data.userId) {
+            const userRef = db.collection('users').doc(data.userId);
+            const userDoc = await userRef.get();
+            
+            if (userDoc.exists) {
+              const userData = userDoc.data();
+              if (userData) {
+                accountTier = userData.accountTier || 'free';
+                tierDuration = ACCOUNT_TIERS[accountTier]?.listingDuration || ACCOUNT_TIERS.free.listingDuration;
+              }
             }
           }
+        } catch (userError) {
+          console.error(`[ListingExpiration] Error fetching user data for listing ${listingId}:`, userError);
+          // Continue with default free tier values
         }
-      } catch (userError) {
-        console.error(`[ListingExpiration] Error fetching user data for listing ${listingId}:`, userError);
-        // Continue with default free tier values
+        
+        // Calculate expiration time based on tier duration
+        expirationTime = new Date(createdAt.getTime() + (tierDuration * 60 * 60 * 1000));
       }
       
-      // Calculate expiration time based on tier duration
-      const expirationTime = new Date(createdAt.getTime() + (tierDuration * 60 * 60 * 1000));
+      console.log(`[ListingExpiration] Listing ${listingId} expiration time: ${expirationTime.toISOString()}, current time: ${now.toISOString()}`);
       
       // Check if listing has expired
       if (now > expirationTime) {

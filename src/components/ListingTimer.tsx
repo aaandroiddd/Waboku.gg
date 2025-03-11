@@ -88,6 +88,7 @@ export function ListingTimer({ createdAt, archivedAt, accountTier, status, listi
     const calculateTimeLeft = () => {
       const now = Date.now();
       let startTime: number;
+      let endTime: number;
       let duration: number;
 
       if (status === 'archived' && archivedAt) {
@@ -123,29 +124,79 @@ export function ListingTimer({ createdAt, archivedAt, accountTier, status, listi
           startTime = now; // Fallback to current time
         }
         duration = 7 * 24 * 60 * 60 * 1000; // 7 days for archived listings
+        endTime = startTime + duration;
       } else {
-        // For active listings, use createdAt and tier duration
-        try {
-          if (createdAt instanceof Date) {
-            startTime = createdAt.getTime();
-          } else if (typeof createdAt === 'object' && createdAt._seconds) {
-            // Handle Firestore Timestamp
-            startTime = createdAt._seconds * 1000;
-          } else if (typeof createdAt === 'string') {
-            startTime = Date.parse(createdAt);
-          } else {
-            startTime = Number(createdAt);
+        // For active listings, first try to use the expiresAt field directly if available
+        const expiresAt = (window as any).listingExpiresAt;
+        
+        if (expiresAt) {
+          try {
+            // Try to parse the expiresAt timestamp
+            if (expiresAt instanceof Date) {
+              endTime = expiresAt.getTime();
+            } else if (typeof expiresAt === 'object' && (expiresAt.seconds || expiresAt._seconds)) {
+              // Handle Firestore Timestamp
+              endTime = (expiresAt.seconds || expiresAt._seconds) * 1000;
+            } else if (typeof expiresAt === 'string') {
+              endTime = Date.parse(expiresAt);
+            } else if (typeof expiresAt === 'number') {
+              endTime = expiresAt;
+            } else {
+              console.error('Invalid expiresAt format:', expiresAt);
+              // Fall back to calculating from createdAt
+              endTime = 0; // This will trigger the fallback below
+            }
+            
+            if (isNaN(endTime)) {
+              console.error('Invalid expiresAt timestamp:', expiresAt);
+              endTime = 0; // This will trigger the fallback below
+            }
+          } catch (error) {
+            console.error('Error parsing expiresAt:', error);
+            endTime = 0; // This will trigger the fallback below
+          }
+        } else {
+          endTime = 0; // This will trigger the fallback below
+        }
+        
+        // If we couldn't get a valid endTime from expiresAt, calculate it from createdAt
+        if (endTime <= 0) {
+          try {
+            if (createdAt instanceof Date) {
+              startTime = createdAt.getTime();
+            } else if (typeof createdAt === 'object' && (createdAt.seconds || createdAt._seconds)) {
+              // Handle Firestore Timestamp
+              startTime = (createdAt.seconds || createdAt._seconds) * 1000;
+            } else if (typeof createdAt === 'string') {
+              startTime = Date.parse(createdAt);
+            } else if (typeof createdAt === 'number') {
+              startTime = createdAt;
+            } else {
+              console.error('Invalid createdAt format:', createdAt);
+              startTime = now - 1000; // Fallback to current time minus 1 second
+            }
+            
+            if (isNaN(startTime)) {
+              console.error('Invalid createdAt timestamp:', createdAt);
+              startTime = now - 1000; // Fallback to current time minus 1 second
+            }
+          } catch (error) {
+            console.error('Error parsing createdAt:', error);
+            startTime = now - 1000; // Fallback to current time minus 1 second
           }
           
-          if (isNaN(startTime)) {
-            console.error('Invalid createdAt timestamp:', createdAt);
-            startTime = now; // Fallback to current time
-          }
-        } catch (error) {
-          console.error('Error parsing createdAt:', error);
-          startTime = now; // Fallback to current time
+          duration = ACCOUNT_TIERS[accountTier].listingDuration * 60 * 60 * 1000;
+          endTime = startTime + duration;
         }
-        duration = ACCOUNT_TIERS[accountTier].listingDuration * 60 * 60 * 1000;
+        
+        // Calculate duration based on start and end time
+        startTime = createdAt instanceof Date ? createdAt.getTime() : 
+                   typeof createdAt === 'object' && (createdAt.seconds || createdAt._seconds) ? 
+                   (createdAt.seconds || createdAt._seconds) * 1000 : 
+                   typeof createdAt === 'string' ? Date.parse(createdAt) : 
+                   typeof createdAt === 'number' ? createdAt : now - 1000;
+                   
+        duration = endTime - startTime;
       }
       
       const elapsed = now - startTime;

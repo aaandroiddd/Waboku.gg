@@ -255,6 +255,8 @@ export default function ListingPage() {
         }
         
         // Create listing object with careful type handling
+        const expiresAt = data.expiresAt ? convertTimestamp(data.expiresAt) : new Date(createdAt.getTime() + (data.isPremium ? 30 : 2) * 24 * 60 * 60 * 1000);
+        
         const listingData: Listing = {
           id: listingDoc.id,
           title: data.title || 'Untitled Listing',
@@ -269,7 +271,7 @@ export default function ListingPage() {
           username: data.username || 'Unknown User',
           createdAt: createdAt,
           // Handle expiresAt field which is required by the Listing type
-          expiresAt: data.expiresAt ? convertTimestamp(data.expiresAt) : new Date(createdAt.getTime() + (data.isPremium ? 30 : 2) * 24 * 60 * 60 * 1000),
+          expiresAt: expiresAt,
           status: data.status || 'active',
           isGraded: Boolean(data.isGraded),
           gradeLevel: data.gradeLevel ? Number(data.gradeLevel) : undefined,
@@ -281,6 +283,11 @@ export default function ListingPage() {
           cardName: data.cardName || undefined,
           location: locationData
         };
+        
+        // Make expiresAt available to the client-side code
+        if (typeof window !== 'undefined') {
+          (window as any).listingExpiresAt = expiresAt;
+        }
 
         if (isMounted) {
           setListing(listingData);
