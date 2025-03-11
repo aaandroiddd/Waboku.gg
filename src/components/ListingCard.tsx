@@ -147,46 +147,33 @@ export const ListingCard = memo(({ listing, isFavorite, onFavoriteClick, getCond
   const [calculatedDistance, setCalculatedDistance] = useState<number | null>(null);
   const [isCheckingExpiration, setIsCheckingExpiration] = useState(false);
 
-  // Check if listing is expired and fix it if needed
+  // Silently check if listing is expired in the background
   useEffect(() => {
-    const checkAndFixExpiredListing = async () => {
-      // Only check active listings
-      if (listing.status !== 'active' || isCheckingExpiration) return;
-      
-      // Check if the listing might be expired based on creation date
-      const createdAt = listing.createdAt instanceof Date 
-        ? listing.createdAt 
-        : new Date(listing.createdAt);
-      
-      const now = new Date();
-      const accountTier = listing.accountTier || 'free';
-      const tierDuration = accountTier === 'premium' ? 30 * 24 : 48; // 30 days for premium, 48 hours for free
-      const expirationTime = new Date(createdAt.getTime() + (tierDuration * 60 * 60 * 1000));
-      
-      // If the listing appears to be expired, try to fix it
-      if (now > expirationTime) {
-        setIsCheckingExpiration(true);
-        try {
-          await fetch('/api/listings/fix-expired', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              listingId: listing.id
-            }),
-          });
-          // We don't need to handle the response here as we don't want to
-          // disrupt the user experience - the server will handle the archiving
-        } catch (error) {
-          console.error('Error checking listing expiration:', error);
-        } finally {
-          setIsCheckingExpiration(false);
-        }
+    // Only check active listings
+    if (listing.status !== 'active' || isCheckingExpiration) return;
+    
+    // Trigger a background check without waiting for the response
+    const triggerBackgroundCheck = async () => {
+      setIsCheckingExpiration(true);
+      try {
+        // Fire and forget - we don't need to wait for the response
+        fetch('/api/listings/check-expiration', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ listingId: listing.id }),
+        }).catch(err => {
+          // Silently log any errors without affecting the user experience
+          console.error('Background expiration check failed:', err);
+        });
+      } catch (error) {
+        // Ignore any errors in the background check
+        console.error('Error triggering background expiration check:', error);
+      } finally {
+        setIsCheckingExpiration(false);
       }
     };
     
-    checkAndFixExpiredListing();
+    triggerBackgroundCheck();
   }, [listing]);
 
   useEffect(() => {

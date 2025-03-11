@@ -115,6 +115,22 @@ export default function ListingPage() {
           throw new Error('Database not initialized');
         }
 
+        // First, trigger a background check for listing expiration
+        // This happens silently and won't block the UI
+        try {
+          fetch('/api/listings/check-expiration', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ listingId: id }),
+          }).catch(err => {
+            // Silently log any errors without affecting the user experience
+            console.error('Background expiration check failed:', err);
+          });
+        } catch (error) {
+          // Ignore any errors in the background check
+          console.error('Error triggering background expiration check:', error);
+        }
+
         const listingRef = doc(db, 'listings', id);
         const listingDoc = await getDoc(listingRef);
 
@@ -128,7 +144,7 @@ export default function ListingPage() {
           throw new Error('Listing data is empty');
         }
         
-        // Check if the listing is archived or expired
+        // Check if the listing is archived
         if (data.status === 'archived' || data.archivedAt) {
           throw new Error('This listing has been archived and is no longer available');
         }
@@ -168,19 +184,6 @@ export default function ListingPage() {
         
         // Get created timestamp with robust error handling
         const createdAt = convertTimestamp(data.createdAt);
-        
-        // Check if the listing has expired based on expiresAt field
-        const now = Date.now();
-        
-        // Only check expiration if we have a valid expiresAt date and the listing is not active
-        if (data.status !== 'active') {
-          if (data.expiresAt && typeof data.expiresAt.toDate === 'function') {
-            const expiresAt = data.expiresAt.toDate();
-            if (now > expiresAt.getTime()) {
-              throw new Error('This listing has expired and is no longer available');
-            }
-          }
-        }
         
         // Process location data safely
         let locationData = undefined;
