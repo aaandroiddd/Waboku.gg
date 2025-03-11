@@ -22,12 +22,13 @@ export function ListingTimer({ createdAt, archivedAt, accountTier, status, listi
   const { toast } = useToast();
   const router = useRouter();
 
-  // This function is now only used as a fallback if the server-side process fails
+  // Enhanced function to proactively handle expired listings
   const triggerManualCleanup = useCallback(async () => {
     if (isProcessing || !listingId) return;
     
     setIsProcessing(true);
     try {
+      console.log(`Attempting to fix expired listing: ${listingId}`);
       const response = await fetch('/api/listings/fix-expired', {
         method: 'POST',
         headers: {
@@ -44,6 +45,7 @@ export function ListingTimer({ createdAt, archivedAt, accountTier, status, listi
       }
 
       const data = await response.json();
+      console.log('Fix expired response:', data);
       
       if (data.status === 'archived' && status === 'active') {
         toast({
@@ -57,7 +59,7 @@ export function ListingTimer({ createdAt, archivedAt, accountTier, status, listi
           router.push('/listings');
         } else {
           // If we're on any other page, refresh to update the UI
-          router.refresh();
+          window.location.reload();
         }
       } else if (data.status === 'deleted' && status === 'archived') {
         toast({
@@ -67,7 +69,7 @@ export function ListingTimer({ createdAt, archivedAt, accountTier, status, listi
         });
         
         // Refresh the page to update the UI
-        router.refresh();
+        window.location.reload();
       }
     } catch (error) {
       console.error('Error triggering manual cleanup:', error);

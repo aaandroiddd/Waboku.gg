@@ -145,6 +145,49 @@ const BuyNowButton = ({ listing, className }: BuyNowButtonProps) => {
 export const ListingCard = memo(({ listing, isFavorite, onFavoriteClick, getConditionColor }: ListingCardProps) => {
   const { location } = useLocation();
   const [calculatedDistance, setCalculatedDistance] = useState<number | null>(null);
+  const [isCheckingExpiration, setIsCheckingExpiration] = useState(false);
+
+  // Check if listing is expired and fix it if needed
+  useEffect(() => {
+    const checkAndFixExpiredListing = async () => {
+      // Only check active listings
+      if (listing.status !== 'active' || isCheckingExpiration) return;
+      
+      // Check if the listing might be expired based on creation date
+      const createdAt = listing.createdAt instanceof Date 
+        ? listing.createdAt 
+        : new Date(listing.createdAt);
+      
+      const now = new Date();
+      const accountTier = listing.accountTier || 'free';
+      const tierDuration = accountTier === 'premium' ? 30 * 24 : 48; // 30 days for premium, 48 hours for free
+      const expirationTime = new Date(createdAt.getTime() + (tierDuration * 60 * 60 * 1000));
+      
+      // If the listing appears to be expired, try to fix it
+      if (now > expirationTime) {
+        setIsCheckingExpiration(true);
+        try {
+          await fetch('/api/listings/fix-expired', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              listingId: listing.id
+            }),
+          });
+          // We don't need to handle the response here as we don't want to
+          // disrupt the user experience - the server will handle the archiving
+        } catch (error) {
+          console.error('Error checking listing expiration:', error);
+        } finally {
+          setIsCheckingExpiration(false);
+        }
+      }
+    };
+    
+    checkAndFixExpiredListing();
+  }, [listing]);
 
   useEffect(() => {
     if (location?.latitude && location?.longitude && listing?.location?.latitude && listing?.location?.longitude) {

@@ -24,15 +24,21 @@ const createNewBatchIfNeeded = (db: FirebaseFirestore.Firestore, currentBatch: F
 };
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  // Verify that this is a cron job request from Vercel
+  // Verify that this is a cron job request from Vercel or an admin request
   const authHeader = req.headers.authorization;
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  const isValidCronRequest = authHeader === `Bearer ${process.env.CRON_SECRET}`;
+  const isValidAdminRequest = authHeader === `Bearer ${process.env.NEXT_PUBLIC_ADMIN_SECRET}`;
+  
+  if (!isValidCronRequest && !isValidAdminRequest) {
     console.warn('[Archive Expired] Unauthorized access attempt', {
-      providedAuth: authHeader,
+      providedAuth: authHeader ? authHeader.substring(0, 15) + '...' : 'none',
       ip: req.headers['x-forwarded-for'] || req.socket.remoteAddress
     });
     return res.status(401).json({ error: 'Unauthorized' });
   }
+  
+  // Log the source of the request
+  console.log(`[Archive Expired] Request authorized as ${isValidCronRequest ? 'cron job' : 'admin request'}`)
 
   // Force console log to ensure visibility in Vercel logs
   console.log('[Archive Expired] Starting automated archival process', {

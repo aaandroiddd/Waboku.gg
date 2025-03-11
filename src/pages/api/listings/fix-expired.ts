@@ -186,6 +186,54 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         expiresAt: sevenDaysFromNow.toISOString()
       });
     } else {
+      // Special case: Check if the listing is actually expired but still marked as active
+      // This is a fallback for listings that weren't caught by the cron job
+      if (data.status === 'active') {
+        const createdAt = data.createdAt?.toDate() || new Date();
+        
+        // Get user data to determine account tier
+        let accountTier = 'free'; // Default to free tier
+        try {
+          const userRef = db.collection('users').doc(data.userId);
+          const userDoc = await userRef.get();
+          const userData = userDoc.data();
+          if (userData) {
+            accountTier = userData.accountTier || 'free';
+          }
+        } catch (error) {
+          console.error(`[Fix Expired] Error getting user data for listing ${listingId}:`, error);
+          // Continue with free tier as fallback
+        }
+        
+        const tierDuration = ACCOUNT_TIERS[accountTier]?.listingDuration || ACCOUNT_TIERS.free.listingDuration;
+        const expirationTime = new Date(createdAt.getTime() + (tierDuration * 60 * 60 * 1000));
+        
+        // Force check if listing has expired
+        if (now > expirationTime) {
+          console.log(`[Fix Expired] Listing ${listingId} is expired but still active. Archiving now.`);
+          
+          // Archive the listing
+          const sevenDaysFromNow = new Date(now);
+          sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
+          
+          await listingRef.update({
+            status: 'archived',
+            archivedAt: Timestamp.now(),
+            originalCreatedAt: data.createdAt,
+            expirationReason: 'manual_fix_forced',
+            expiresAt: Timestamp.fromDate(sevenDaysFromNow),
+            updatedAt: Timestamp.now(),
+            previousStatus: data.status
+          });
+          
+          return res.status(200).json({
+            message: 'Listing was expired and has been archived successfully',
+            status: 'archived',
+            expiresAt: sevenDaysFromNow.toISOString()
+          });
+        }
+      }
+      
       console.log(`[Fix Expired] Listing ${listingId} has status ${data.status}, no action needed`);
       return res.status(200).json({
         message: `Listing has status '${data.status}', no action needed`,

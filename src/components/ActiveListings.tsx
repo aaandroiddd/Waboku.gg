@@ -91,22 +91,21 @@ export const ActiveListings = ({
         duration: 3000,
       });
       
-      // First try to use the cleanup-inactive-listings endpoint with no specific listing ID
+      // Try to use the archive-expired endpoint first
       try {
-        console.log('Calling cleanup-inactive-listings endpoint');
-        const cleanupResponse = await fetch('/api/cleanup-inactive-listings', {
-          method: 'POST',
+        console.log('Calling archive-expired endpoint');
+        const archiveResponse = await fetch('/api/listings/archive-expired', {
+          method: 'GET',
           headers: {
             'Content-Type': 'application/json',
-          },
-          // No specific listing ID, let the endpoint handle all expired listings
-          body: JSON.stringify({}),
+            'Authorization': `Bearer ${process.env.NEXT_PUBLIC_ADMIN_SECRET}`
+          }
         });
         
-        if (cleanupResponse.ok) {
-          const result = await cleanupResponse.json();
-          console.log('Cleanup response:', result);
-          processed = result.details?.archived || 0;
+        if (archiveResponse.ok) {
+          const result = await archiveResponse.json();
+          console.log('Archive response:', result);
+          processed = result.summary?.totalArchived || 0;
           
           // If successful, no need to process individual listings
           if (processed > 0) {
@@ -121,12 +120,12 @@ export const ActiveListings = ({
             return;
           }
         } else {
-          console.error('Cleanup endpoint failed, falling back to individual processing');
-          const errorText = await cleanupResponse.text();
-          console.error('Cleanup error:', errorText);
+          console.error('Archive endpoint failed, falling back to individual processing');
+          const errorText = await archiveResponse.text();
+          console.error('Archive error:', errorText);
         }
-      } catch (cleanupError) {
-        console.error('Error calling cleanup endpoint:', cleanupError);
+      } catch (archiveError) {
+        console.error('Error calling archive endpoint:', archiveError);
       }
       
       // Fallback: Process each expired listing individually
@@ -148,8 +147,15 @@ export const ActiveListings = ({
           });
           
           if (response.ok) {
-            processed++;
-            console.log(`Successfully processed listing: ${listingId}`);
+            const result = await response.json();
+            console.log(`Processed listing ${listingId}:`, result);
+            
+            if (result.status === 'archived') {
+              processed++;
+              console.log(`Successfully archived listing: ${listingId}`);
+            } else {
+              console.log(`Listing ${listingId} status: ${result.status}`);
+            }
           } else {
             errors++;
             const errorText = await response.text();
@@ -159,6 +165,9 @@ export const ActiveListings = ({
           errors++;
           console.error(`Error processing listing ${listingId}:`, error);
         }
+        
+        // Add a small delay between requests to avoid overwhelming the server
+        await new Promise(resolve => setTimeout(resolve, 200));
       }
       
       if (processed > 0) {
@@ -170,6 +179,12 @@ export const ActiveListings = ({
         
         // Refresh the page to update the UI
         window.location.reload();
+      } else if (processed === 0 && errors === 0) {
+        toast({
+          title: "No Action Needed",
+          description: "No listings needed to be archived.",
+          duration: 5000,
+        });
       }
       
       if (errors > 0) {
