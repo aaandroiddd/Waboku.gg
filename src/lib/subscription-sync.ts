@@ -93,7 +93,13 @@ export async function syncSubscriptionData(userId: string, subscriptionData: any
         manuallyUpdated: subscriptionData.manuallyUpdated || false,
         lastManualUpdate: subscriptionData.manuallyUpdated ? new Date().toISOString() : null,
         canceledAt: subscriptionData.canceledAt || null,
-        cancelAtPeriodEnd: subscriptionData.cancelAtPeriodEnd || false
+        cancelAtPeriodEnd: subscriptionData.cancelAtPeriodEnd || false,
+        // For canceled subscriptions, ensure endDate is properly set
+        ...(subscriptionData.status === 'canceled' && subscriptionData.endDate ? {
+          endDate: subscriptionData.endDate,
+          // For canceled subscriptions, set renewalDate to match endDate for consistency
+          renewalDate: subscriptionData.endDate
+        } : {})
       }
     };
     

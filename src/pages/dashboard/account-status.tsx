@@ -428,10 +428,10 @@ export default function AccountStatus() {
                 </span>
               </div>
             )}
-            {subscription.status === 'canceled' && subscription.endDate && (
+            {subscription.status === 'canceled' && (
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Access Until:</span>
-                <span>{formatDate(subscription.endDate)}</span>
+                <span>{subscription.endDate ? formatDate(subscription.endDate) : 'End of billing period'}</span>
               </div>
             )}
             {subscription.status === 'active' && !subscription.stripeSubscriptionId?.includes('admin_') && (

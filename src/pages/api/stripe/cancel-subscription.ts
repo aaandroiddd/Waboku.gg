@@ -219,7 +219,10 @@ export default async function handler(
         renewalDate: endDate,
         stripeSubscriptionId: subscriptionId,
         canceledAt: new Date().toISOString(),
-        cancelAtPeriodEnd: true
+        cancelAtPeriodEnd: true,
+        // Preserve the current plan and tier to ensure proper display
+        currentPlan: subscriptionData.currentPlan || 'premium',
+        tier: subscriptionData.tier || 'premium'
       };
       
       // Sync the updated data to both databases
