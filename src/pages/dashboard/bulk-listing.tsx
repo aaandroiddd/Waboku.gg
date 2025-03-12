@@ -512,7 +512,7 @@ const BulkListingPage = () => {
                       </TableHeader>
                       <TableBody>
                         {bulkListings.map((listing) => (
-                          <TableRow key={listing.id} className={listing.status === 'error' ? 'bg-red-50 dark:bg-red-900/20' : ''}>
+                          <TableRow key={listing.id} className={listing.status === 'error' ? 'bg-red-50 dark:bg-red-900/30 midnight:bg-red-900/50' : ''}>
                             <TableCell className="font-medium">{listing.title}</TableCell>
                             <TableCell>${listing.price}</TableCell>
                             <TableCell>{GAME_CATEGORIES[listing.game as keyof typeof GAME_CATEGORIES] || listing.game}</TableCell>
