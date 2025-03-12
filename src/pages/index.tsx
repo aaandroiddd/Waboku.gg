@@ -435,7 +435,7 @@ export default function Home() {
           <GameCategories />
 
           {/* Hero Section */}
-          <div className="relative overflow-hidden">
+          <div className="relative overflow-hidden min-h-screen">
             {/* Original Background Animation */}
             <motion.div 
               className="hero-background"

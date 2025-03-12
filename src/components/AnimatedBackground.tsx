@@ -20,8 +20,19 @@ const AnimatedBackground: React.FC<AnimatedBackgroundProps> = ({ className }) =>
       canvas.height = window.innerHeight;
     };
     
+    // Handle scroll events to ensure canvas covers the viewport
+    const handleScroll = () => {
+      if (canvas) {
+        // Ensure the canvas height is at least the viewport height
+        if (canvas.height < window.innerHeight) {
+          canvas.height = window.innerHeight;
+        }
+      }
+    };
+    
     resizeCanvas();
     window.addEventListener('resize', resizeCanvas);
+    window.addEventListener('scroll', handleScroll);
     
     // Card shapes
     const cards: Card[] = [];
@@ -129,6 +140,7 @@ const AnimatedBackground: React.FC<AnimatedBackgroundProps> = ({ className }) =>
     // Cleanup
     return () => {
       window.removeEventListener('resize', resizeCanvas);
+      window.removeEventListener('scroll', handleScroll);
       window.cancelAnimationFrame(animationFrameId);
     };
   }, []);
@@ -136,7 +148,7 @@ const AnimatedBackground: React.FC<AnimatedBackgroundProps> = ({ className }) =>
   return (
     <canvas 
       ref={canvasRef} 
-      className={`absolute inset-0 w-full h-full pointer-events-none z-0 ${className || ''}`}
+      className={`fixed inset-0 w-full h-full pointer-events-none z-0 ${className || ''}`}
     />
   );
 };
