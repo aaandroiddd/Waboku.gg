@@ -238,6 +238,16 @@ export default function WantedPostDetailPage() {
       return;
     }
     
+    // Check if the user is trying to message themselves
+    if (user.uid === wantedPost.userId) {
+      toast({
+        title: "Cannot message yourself",
+        description: "You cannot send a message to your own wanted post.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     setMessageDialogOpen(true);
   };
 
