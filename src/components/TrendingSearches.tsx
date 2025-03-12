@@ -94,16 +94,16 @@ export function TrendingSearches() {
             <Loader2 className="h-4 w-4 animate-spin" />
             <span className="text-sm">Loading trending searches...</span>
           </motion.div>
-        ) : error && !trendingSearches.length ? (
+        ) : (!trendingSearches.length) ? (
           <motion.div 
-            key="error-empty"
+            key="empty-state"
             className="flex items-center gap-2 text-muted-foreground"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
           >
             <TrendingUp className="h-4 w-4" />
-            <span className="text-sm">Start searching to see trends</span>
+            <span className="text-sm">Start searching to see trending results</span>
           </motion.div>
         ) : (
           <motion.div 

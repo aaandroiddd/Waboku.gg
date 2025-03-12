@@ -161,7 +161,7 @@ export default function TrendingPage() {
             <div className="space-y-4">
               {trendingSearches.length === 0 ? (
                 <div className="text-center py-8">
-                  <p className="text-muted-foreground">No trending searches available. {isPremium ? "Be the first to search!" : "Sign in as a premium user to see more."}</p>
+                  <p className="text-muted-foreground">No trending searches available yet. Start searching to see trending results!</p>
                 </div>
               ) : (
                 // Show only 3 items for non-premium users

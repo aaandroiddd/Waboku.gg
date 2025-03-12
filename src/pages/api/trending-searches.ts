@@ -7,14 +7,8 @@ const CACHE_DURATION = 300 * 1000; // 300 seconds cache (5 minutes, increased fr
 let cachedTrending: any = null;
 let lastCacheTime = 0;
 
-// Fallback data in case of errors
-const FALLBACK_TRENDING = [
-  { term: "Charizard", count: 42 },
-  { term: "Pikachu", count: 38 },
-  { term: "Black Lotus", count: 35 },
-  { term: "Mox Pearl", count: 30 },
-  { term: "Jace", count: 28 }
-];
+// No fallback data - we'll return an empty array instead
+const FALLBACK_TRENDING: Array<{ term: string, count: number }> = [];
 
 export default async function handler(
   req: NextApiRequest,

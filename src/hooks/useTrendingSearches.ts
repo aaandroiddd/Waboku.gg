@@ -7,14 +7,8 @@ interface TrendingSearch {
   count: number;
 }
 
-// Fallback data in case of errors
-const FALLBACK_TRENDING = [
-  { term: "Charizard", count: 42 },
-  { term: "Pikachu", count: 38 },
-  { term: "Black Lotus", count: 35 },
-  { term: "Mox Pearl", count: 30 },
-  { term: "Jace", count: 28 }
-];
+// No fallback data - we'll show a message instead
+const FALLBACK_TRENDING: TrendingSearch[] = [];
 
 const REFRESH_INTERVAL = 180 * 1000; // 180 seconds (increased from 120)
 const MAX_RETRIES = 1; // Reduced from 2 to avoid excessive retries
