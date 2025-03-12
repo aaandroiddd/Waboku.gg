@@ -424,7 +424,8 @@ export default function AccountStatus() {
                 <span className="text-muted-foreground">Next Renewal:</span>
                 <span>
                   {subscription.renewalDate ? formatDate(subscription.renewalDate) : 
-                   (subscription.stripeSubscriptionId?.includes('admin_') ? 'N/A (Admin Upgraded)' : 'N/A')}
+                   (subscription.stripeSubscriptionId?.includes('admin_') && subscription.endDate ? formatDate(subscription.endDate) : 
+                   subscription.stripeSubscriptionId?.includes('admin_') ? 'N/A (Admin Upgraded)' : 'N/A')}
                 </span>
               </div>
             )}
