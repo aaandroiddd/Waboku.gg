@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { getFirebaseServices } from '@/lib/firebase';
-import { collection, query, where, orderBy, getDocs } from 'firebase/firestore';
+import { collection, query, where, orderBy, getDocs, doc, getDoc } from 'firebase/firestore';
 import { Order } from '@/types/order';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -25,41 +25,92 @@ export default function OrdersPage() {
       try {
         const { db } = getFirebaseServices();
         
-        // Fetch purchases
-        const purchasesQuery = query(
-          collection(db, 'orders'),
-          where('buyerId', '==', user.uid),
+        // Method 1: Try to fetch from user-specific subcollections first
+        const userOrdersQuery = query(
+          collection(db, 'users', user.uid, 'orders'),
           orderBy('createdAt', 'desc')
         );
         
-        // Fetch sales
-        const salesQuery = query(
-          collection(db, 'orders'),
-          where('sellerId', '==', user.uid),
-          orderBy('createdAt', 'desc')
-        );
+        const userOrdersSnapshot = await getDocs(userOrdersQuery);
+        
+        // If we have user-specific orders, fetch the full order details
+        if (!userOrdersSnapshot.empty) {
+          console.log(`Found ${userOrdersSnapshot.docs.length} user-specific orders`);
+          
+          const userPurchases: Order[] = [];
+          const userSales: Order[] = [];
+          
+          // For each order reference, get the full order details
+          const orderPromises = userOrdersSnapshot.docs.map(async (orderDoc) => {
+            const orderData = orderDoc.data();
+            const orderId = orderData.orderId;
+            const role = orderData.role; // 'buyer' or 'seller'
+            
+            // Get the full order details from the main orders collection
+            const fullOrderDoc = await getDoc(doc(db, 'orders', orderId));
+            
+            if (fullOrderDoc.exists()) {
+              const fullOrderData = fullOrderDoc.data() as Order;
+              const order = {
+                id: fullOrderDoc.id,
+                ...fullOrderData,
+                createdAt: fullOrderData.createdAt.toDate(),
+                updatedAt: fullOrderData.updatedAt.toDate(),
+              };
+              
+              // Add to the appropriate array based on role
+              if (role === 'buyer') {
+                userPurchases.push(order);
+              } else if (role === 'seller') {
+                userSales.push(order);
+              }
+            }
+          });
+          
+          await Promise.all(orderPromises);
+          
+          setPurchases(userPurchases);
+          setSales(userSales);
+        } else {
+          // Method 2: Fallback to querying the main orders collection directly
+          console.log('No user-specific orders found, falling back to main collection query');
+          
+          // Fetch purchases
+          const purchasesQuery = query(
+            collection(db, 'orders'),
+            where('buyerId', '==', user.uid),
+            orderBy('createdAt', 'desc')
+          );
+          
+          // Fetch sales
+          const salesQuery = query(
+            collection(db, 'orders'),
+            where('sellerId', '==', user.uid),
+            orderBy('createdAt', 'desc')
+          );
 
-        const [purchasesSnapshot, salesSnapshot] = await Promise.all([
-          getDocs(purchasesQuery),
-          getDocs(salesQuery)
-        ]);
+          const [purchasesSnapshot, salesSnapshot] = await Promise.all([
+            getDocs(purchasesQuery),
+            getDocs(salesQuery)
+          ]);
 
-        const purchasesData = purchasesSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data(),
-          createdAt: doc.data().createdAt.toDate(),
-          updatedAt: doc.data().updatedAt.toDate(),
-        })) as Order[];
+          const purchasesData = purchasesSnapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data(),
+            createdAt: doc.data().createdAt.toDate(),
+            updatedAt: doc.data().updatedAt.toDate(),
+          })) as Order[];
 
-        const salesData = salesSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data(),
-          createdAt: doc.data().createdAt.toDate(),
-          updatedAt: doc.data().updatedAt.toDate(),
-        })) as Order[];
+          const salesData = salesSnapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data(),
+            createdAt: doc.data().createdAt.toDate(),
+            updatedAt: doc.data().updatedAt.toDate(),
+          })) as Order[];
 
-        setPurchases(purchasesData);
-        setSales(salesData);
+          setPurchases(purchasesData);
+          setSales(salesData);
+        }
       } catch (error) {
         console.error('Error fetching orders:', error);
       } finally {
