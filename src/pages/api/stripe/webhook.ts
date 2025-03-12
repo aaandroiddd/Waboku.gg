@@ -23,7 +23,9 @@ export default async function handler(
 ) {
   console.log('[Stripe Webhook] Request received:', {
     method: req.method,
-    hasSignature: !!req.headers['stripe-signature']
+    hasSignature: !!req.headers['stripe-signature'],
+    url: req.url,
+    headers: Object.keys(req.headers)
   });
 
   if (req.method !== 'POST') {
@@ -56,17 +58,23 @@ export default async function handler(
   let event: Stripe.Event;
 
   try {
+    console.log('[Stripe Webhook] Attempting to construct event with signature:', sig.substring(0, 10) + '...');
     event = stripe.webhooks.constructEvent(
       buf,
       sig,
       process.env.STRIPE_WEBHOOK_SECRET
     );
-    console.log('[Stripe Webhook] Event constructed:', event.type);
+    console.log('[Stripe Webhook] Event constructed successfully:', {
+      type: event.type,
+      id: event.id,
+      apiVersion: event.api_version
+    });
   } catch (err) {
     console.error('[Stripe Webhook] Error verifying webhook signature:', err);
     return res.status(400).json({
       error: 'Webhook verification failed',
-      message: 'Could not verify webhook signature'
+      message: 'Could not verify webhook signature',
+      details: err instanceof Error ? err.message : String(err)
     });
   }
 
@@ -202,18 +210,65 @@ export default async function handler(
               buyerId,
               sellerId,
               amount: orderData.amount,
-              status: orderData.status
+              status: orderData.status,
+              paymentSessionId: orderData.paymentSessionId,
+              paymentIntentId: orderData.paymentIntentId,
+              shippingAddress: orderData.shippingAddress ? 'Present' : 'Missing'
             });
+            
+            // Verify Firestore connection
+            try {
+              const testRef = firestoreDb.collection('_test_connection').doc('test');
+              await testRef.set({ timestamp: new Date() });
+              console.log('[Stripe Webhook] Firestore connection verified');
+              await testRef.delete();
+            } catch (connectionError) {
+              console.error('[Stripe Webhook] Firestore connection test failed:', connectionError);
+              // Continue anyway, as the actual order creation might still work
+            }
             
             let orderRef;
             try {
-              orderRef = await firestoreDb.collection('orders').add(orderData);
-              console.log('[Stripe Webhook] Order created successfully in main collection:', {
-                orderId: orderRef.id,
-                path: `orders/${orderRef.id}`
-              });
+              // First check if an order with this payment session already exists
+              const existingOrdersQuery = await firestoreDb.collection('orders')
+                .where('paymentSessionId', '==', session.id)
+                .limit(1)
+                .get();
+              
+              if (!existingOrdersQuery.empty) {
+                const existingOrder = existingOrdersQuery.docs[0];
+                console.log('[Stripe Webhook] Order already exists for this session:', {
+                  orderId: existingOrder.id,
+                  paymentSessionId: session.id
+                });
+                orderRef = existingOrder.ref;
+                
+                // Update the existing order with any new information
+                await orderRef.update({
+                  updatedAt: new Date(),
+                  paymentIntentId: paymentIntentId, // Ensure payment intent is updated
+                  status: 'completed' // Ensure status is completed
+                });
+              } else {
+                // Create a new order
+                orderRef = await firestoreDb.collection('orders').add(orderData);
+                console.log('[Stripe Webhook] Order created successfully in main collection:', {
+                  orderId: orderRef.id,
+                  path: `orders/${orderRef.id}`
+                });
+              }
             } catch (orderCreateError) {
               console.error('[Stripe Webhook] Failed to create order in main collection:', orderCreateError);
+              
+              // Log more details about the error
+              if (orderCreateError instanceof Error) {
+                console.error('[Stripe Webhook] Error details:', {
+                  message: orderCreateError.message,
+                  stack: orderCreateError.stack,
+                  name: orderCreateError.name
+                });
+              }
+              
               throw orderCreateError; // Re-throw to be caught by the outer try/catch
             }
             
