@@ -24,6 +24,7 @@ export default function OrdersPage() {
 
       try {
         const { db } = getFirebaseServices();
+        console.log('Fetching orders for user:', user.uid);
         
         // Method 1: Try to fetch from user-specific subcollections first
         const userOrdersQuery = query(
@@ -31,6 +32,7 @@ export default function OrdersPage() {
           orderBy('createdAt', 'desc')
         );
         
+        console.log('Querying user-specific orders subcollection');
         const userOrdersSnapshot = await getDocs(userOrdersQuery);
         
         // If we have user-specific orders, fetch the full order details
@@ -42,74 +44,121 @@ export default function OrdersPage() {
           
           // For each order reference, get the full order details
           const orderPromises = userOrdersSnapshot.docs.map(async (orderDoc) => {
-            const orderData = orderDoc.data();
-            const orderId = orderData.orderId;
-            const role = orderData.role; // 'buyer' or 'seller'
-            
-            // Get the full order details from the main orders collection
-            const fullOrderDoc = await getDoc(doc(db, 'orders', orderId));
-            
-            if (fullOrderDoc.exists()) {
-              const fullOrderData = fullOrderDoc.data() as Order;
-              const order = {
-                id: fullOrderDoc.id,
-                ...fullOrderData,
-                createdAt: fullOrderData.createdAt.toDate(),
-                updatedAt: fullOrderData.updatedAt.toDate(),
-              };
+            try {
+              const orderData = orderDoc.data();
+              const orderId = orderData.orderId;
+              const role = orderData.role; // 'buyer' or 'seller'
               
-              // Add to the appropriate array based on role
-              if (role === 'buyer') {
-                userPurchases.push(order);
-              } else if (role === 'seller') {
-                userSales.push(order);
+              console.log(`Fetching full order details for order: ${orderId}, role: ${role}`);
+              
+              // Get the full order details from the main orders collection
+              const fullOrderDoc = await getDoc(doc(db, 'orders', orderId));
+              
+              if (fullOrderDoc.exists()) {
+                const fullOrderData = fullOrderDoc.data() as Order;
+                
+                // Safely convert timestamps to dates
+                const createdAt = fullOrderData.createdAt?.toDate?.() || new Date();
+                const updatedAt = fullOrderData.updatedAt?.toDate?.() || new Date();
+                
+                const order = {
+                  id: fullOrderDoc.id,
+                  ...fullOrderData,
+                  createdAt,
+                  updatedAt,
+                };
+                
+                console.log(`Successfully fetched order: ${orderId}`);
+                
+                // Add to the appropriate array based on role
+                if (role === 'buyer') {
+                  userPurchases.push(order);
+                } else if (role === 'seller') {
+                  userSales.push(order);
+                }
+              } else {
+                console.warn(`Order ${orderId} referenced in user subcollection not found in main orders collection`);
               }
+            } catch (err) {
+              console.error(`Error processing order reference:`, err);
             }
           });
           
           await Promise.all(orderPromises);
           
+          console.log(`Processed ${userPurchases.length} purchases and ${userSales.length} sales`);
           setPurchases(userPurchases);
           setSales(userSales);
         } else {
           // Method 2: Fallback to querying the main orders collection directly
           console.log('No user-specific orders found, falling back to main collection query');
           
-          // Fetch purchases
-          const purchasesQuery = query(
-            collection(db, 'orders'),
-            where('buyerId', '==', user.uid),
-            orderBy('createdAt', 'desc')
-          );
-          
-          // Fetch sales
-          const salesQuery = query(
-            collection(db, 'orders'),
-            where('sellerId', '==', user.uid),
-            orderBy('createdAt', 'desc')
-          );
+          try {
+            // Fetch purchases
+            const purchasesQuery = query(
+              collection(db, 'orders'),
+              where('buyerId', '==', user.uid),
+              orderBy('createdAt', 'desc')
+            );
+            
+            // Fetch sales
+            const salesQuery = query(
+              collection(db, 'orders'),
+              where('sellerId', '==', user.uid),
+              orderBy('createdAt', 'desc')
+            );
 
-          const [purchasesSnapshot, salesSnapshot] = await Promise.all([
-            getDocs(purchasesQuery),
-            getDocs(salesQuery)
-          ]);
+            console.log('Querying main orders collection');
+            const [purchasesSnapshot, salesSnapshot] = await Promise.all([
+              getDocs(purchasesQuery),
+              getDocs(salesQuery)
+            ]);
 
-          const purchasesData = purchasesSnapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data(),
-            createdAt: doc.data().createdAt.toDate(),
-            updatedAt: doc.data().updatedAt.toDate(),
-          })) as Order[];
+            console.log(`Found ${purchasesSnapshot.size} purchases and ${salesSnapshot.size} sales in main collection`);
 
-          const salesData = salesSnapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data(),
-            createdAt: doc.data().createdAt.toDate(),
-            updatedAt: doc.data().updatedAt.toDate(),
-          })) as Order[];
+            const purchasesData = purchasesSnapshot.docs.map(doc => {
+              try {
+                const data = doc.data();
+                // Safely convert timestamps to dates
+                const createdAt = data.createdAt?.toDate?.() || new Date();
+                const updatedAt = data.updatedAt?.toDate?.() || new Date();
+                
+                return {
+                  id: doc.id,
+                  ...data,
+                  createdAt,
+                  updatedAt,
+                };
+              } catch (err) {
+                console.error(`Error processing purchase document ${doc.id}:`, err);
+                return null;
+              }
+            }).filter(Boolean) as Order[];
 
-          setPurchases(purchasesData);
-          setSales(salesData);
+            const salesData = salesSnapshot.docs.map(doc => {
+              try {
+                const data = doc.data();
+                // Safely convert timestamps to dates
+                const createdAt = data.createdAt?.toDate?.() || new Date();
+                const updatedAt = data.updatedAt?.toDate?.() || new Date();
+                
+                return {
+                  id: doc.id,
+                  ...data,
+                  createdAt,
+                  updatedAt,
+                };
+              } catch (err) {
+                console.error(`Error processing sale document ${doc.id}:`, err);
+                return null;
+              }
+            }).filter(Boolean) as Order[];
+
+            setPurchases(purchasesData);
+            setSales(salesData);
+          } catch (err) {
+            console.error('Error querying main orders collection:', err);
+          }
         }
       } catch (error) {
         console.error('Error fetching orders:', error);

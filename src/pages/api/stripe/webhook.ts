@@ -139,79 +139,101 @@ export default async function handler(
             sessionId: session.id
           });
 
-          // Get the payment intent to access transfer data
-          let paymentIntentId = session.payment_intent as string;
-          
-          // Update the listing status to sold
-          await firestoreDb.collection('listings').doc(listingId).update({
-            status: 'sold',
-            soldAt: new Date(),
-            soldTo: buyerId,
-            paymentSessionId: session.id,
-            paymentIntentId: paymentIntentId,
-            updatedAt: new Date()
-          });
+          try {
+            // Get the payment intent to access transfer data
+            let paymentIntentId = session.payment_intent as string;
+            
+            // Update the listing status to sold
+            await firestoreDb.collection('listings').doc(listingId).update({
+              status: 'sold',
+              soldAt: new Date(),
+              soldTo: buyerId,
+              paymentSessionId: session.id,
+              paymentIntentId: paymentIntentId,
+              updatedAt: new Date()
+            });
+            
+            console.log('[Stripe Webhook] Listing marked as sold:', {
+              listingId,
+              status: 'sold',
+              soldTo: buyerId
+            });
 
-          // Get the listing data to include in the order
-          const listingDoc = await firestoreDb.collection('listings').doc(listingId).get();
-          const listingData = listingDoc.data();
-          
-          if (!listingData) {
-            throw new Error(`Listing ${listingId} not found`);
-          }
-          
-          // Create an order record
-          const orderData = {
-            listingId,
-            buyerId,
-            sellerId,
-            status: 'completed',
-            amount: session.amount_total ? session.amount_total / 100 : 0, // Convert from cents
-            platformFee: session.metadata.platformFee ? parseInt(session.metadata.platformFee) / 100 : 0, // Convert from cents
-            paymentSessionId: session.id,
-            paymentIntentId: paymentIntentId,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-            shippingAddress: session.shipping?.address ? {
-              name: session.shipping.name,
-              line1: session.shipping.address.line1,
-              line2: session.shipping.address.line2,
-              city: session.shipping.address.city,
-              state: session.shipping.address.state,
-              postal_code: session.shipping.address.postal_code,
-              country: session.shipping.address.country,
-            } : null,
-            // Add the listing snapshot for display in the orders page
-            listingSnapshot: {
-              title: listingData.title || 'Untitled Listing',
-              price: listingData.price || 0,
-              imageUrl: listingData.imageUrls && listingData.imageUrls.length > 0 ? listingData.imageUrls[0] : null
+            // Get the listing data to include in the order
+            const listingDoc = await firestoreDb.collection('listings').doc(listingId).get();
+            const listingData = listingDoc.data();
+            
+            if (!listingData) {
+              throw new Error(`Listing ${listingId} not found`);
             }
-          };
+            
+            // Create an order record
+            const orderData = {
+              listingId,
+              buyerId,
+              sellerId,
+              status: 'completed',
+              amount: session.amount_total ? session.amount_total / 100 : 0, // Convert from cents
+              platformFee: session.metadata.platformFee ? parseInt(session.metadata.platformFee) / 100 : 0, // Convert from cents
+              paymentSessionId: session.id,
+              paymentIntentId: paymentIntentId,
+              createdAt: new Date(),
+              updatedAt: new Date(),
+              shippingAddress: session.shipping?.address ? {
+                name: session.shipping.name,
+                line1: session.shipping.address.line1,
+                line2: session.shipping.address.line2,
+                city: session.shipping.address.city,
+                state: session.shipping.address.state,
+                postal_code: session.shipping.address.postal_code,
+                country: session.shipping.address.country,
+              } : null,
+              // Add the listing snapshot for display in the orders page
+              listingSnapshot: {
+                title: listingData.title || 'Untitled Listing',
+                price: listingData.price || 0,
+                imageUrl: listingData.imageUrls && listingData.imageUrls.length > 0 ? listingData.imageUrls[0] : null
+              }
+            };
 
-          // Create the order in Firestore
-          const orderRef = await firestoreDb.collection('orders').add(orderData);
-          
-          // Add the order to the buyer's orders
-          await firestoreDb.collection('users').doc(buyerId).collection('orders').doc(orderRef.id).set({
-            orderId: orderRef.id,
-            role: 'buyer',
-            createdAt: new Date()
-          });
-          
-          // Add the order to the seller's orders
-          await firestoreDb.collection('users').doc(sellerId).collection('orders').doc(orderRef.id).set({
-            orderId: orderRef.id,
-            role: 'seller',
-            createdAt: new Date()
-          });
+            // Create the order in Firestore
+            const orderRef = await firestoreDb.collection('orders').add(orderData);
+            console.log('[Stripe Webhook] Order created in main collection:', {
+              orderId: orderRef.id
+            });
+            
+            // Add the order to the buyer's orders
+            await firestoreDb.collection('users').doc(buyerId).collection('orders').doc(orderRef.id).set({
+              orderId: orderRef.id,
+              role: 'buyer',
+              createdAt: new Date()
+            });
+            console.log('[Stripe Webhook] Order added to buyer collection:', {
+              buyerId,
+              orderId: orderRef.id
+            });
+            
+            // Add the order to the seller's orders
+            await firestoreDb.collection('users').doc(sellerId).collection('orders').doc(orderRef.id).set({
+              orderId: orderRef.id,
+              role: 'seller',
+              createdAt: new Date()
+            });
+            console.log('[Stripe Webhook] Order added to seller collection:', {
+              sellerId,
+              orderId: orderRef.id
+            });
 
-          console.log('[Stripe Webhook] Order created:', {
-            orderId: orderRef.id,
-            listingId,
-            buyerId,
-            sellerId
-          });
+            console.log('[Stripe Webhook] Order creation completed successfully:', {
+              orderId: orderRef.id,
+              listingId,
+              buyerId,
+              sellerId
+            });
+          } catch (error) {
+            console.error('[Stripe Webhook] Error processing marketplace purchase:', error);
+            throw error; // Re-throw to be caught by the outer try/catch
+          }
         }
         break;
       }

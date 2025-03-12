@@ -128,6 +128,14 @@ service cloud.firestore {
       allow delete: if isAuthenticated() && 
         (resource.data.buyerId == request.auth.uid || resource.data.sellerId == request.auth.uid);
     }
+    
+    // User-specific orders subcollection rules
+    match /users/{userId}/orders/{orderRef} {
+      allow read: if isAuthenticated() && request.auth.uid == userId;
+      allow create: if isAuthenticated() && request.auth.uid == userId;
+      allow update: if isAuthenticated() && request.auth.uid == userId;
+      allow delete: if isAuthenticated() && request.auth.uid == userId;
+    }
 
     // Offers collection rules
     match /offers/{offerId} {
