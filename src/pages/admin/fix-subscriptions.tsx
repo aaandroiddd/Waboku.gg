@@ -31,7 +31,7 @@ export default function FixSubscriptionsPage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-admin-secret': secret
+          'Authorization': `Bearer ${secret}`
         }
       });
 
@@ -67,7 +67,7 @@ export default function FixSubscriptionsPage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-admin-secret': adminSecret
+          'Authorization': `Bearer ${adminSecret}`
         },
         body: JSON.stringify({ userId })
       });
@@ -96,7 +96,7 @@ export default function FixSubscriptionsPage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-admin-secret': adminSecret
+          'Authorization': `Bearer ${adminSecret}`
         },
         body: JSON.stringify({})
       });

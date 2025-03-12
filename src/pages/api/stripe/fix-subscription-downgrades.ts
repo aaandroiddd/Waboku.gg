@@ -9,7 +9,15 @@ export default async function handler(
   res: NextApiResponse
 ) {
   // Ensure this endpoint is only accessible with the admin secret
-  const adminSecret = req.headers['x-admin-secret'] || req.query.adminSecret;
+  // Check for Bearer token in Authorization header
+  const authHeader = req.headers.authorization;
+  let adminSecret = req.headers['x-admin-secret'] || req.query.adminSecret;
+  
+  // Extract token from Authorization header if present
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    adminSecret = authHeader.split(' ')[1];
+  }
+  
   if (adminSecret !== process.env.ADMIN_SECRET) {
     console.error('Unauthorized access attempt to fix-subscription-downgrades');
     return res.status(401).json({ error: 'Unauthorized' });
