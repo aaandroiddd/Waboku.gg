@@ -16,6 +16,7 @@ import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { LocationInput } from "@/components/LocationInput";
 import * as XLSX from 'xlsx';
 
 // Define the structure of a listing from the spreadsheet
@@ -32,6 +33,8 @@ interface BulkListingItem {
   gradeLevel?: number;
   gradingCompany?: string;
   image?: File;
+  city?: string;
+  state?: string;
   status: 'pending' | 'ready' | 'error' | 'uploaded';
   error?: string;
 }
@@ -385,8 +388,8 @@ const BulkListingPage = () => {
           gradingCompany: listing.gradingCompany,
           images: listing.image ? [listing.image] : [],
           coverImageIndex: 0,
-          city: "", // These will be filled from user profile
-          state: "",
+          city: listing.city || "", // Use the city from the listing (set by LocationInput)
+          state: listing.state || "", // Use the state from the listing (set by LocationInput)
           termsAccepted: true,
           onUploadProgress: (progress: number) => {
             setUploadProgress(progress);
@@ -546,6 +549,27 @@ const BulkListingPage = () => {
                       </div>
                     </div>
                   )}
+                  
+                  {/* Location input for all listings */}
+                  <div className="p-4 bg-muted rounded-lg">
+                    <h3 className="text-lg font-medium mb-3">Set Location for All Listings</h3>
+                    <div className="mb-2 text-sm text-muted-foreground">
+                      This location will be applied to all listings in this batch.
+                    </div>
+                    <LocationInput 
+                      onLocationSelect={(city, state) => {
+                        // Update all listings with the selected location
+                        setBulkListings(prevListings => 
+                          prevListings.map(listing => ({
+                            ...listing,
+                            city,
+                            state
+                          }))
+                        );
+                      }}
+                      placeholder="Search for a location to apply to all listings"
+                    />
+                  </div>
                   
                   <div className="overflow-x-auto">
                     <Table>
