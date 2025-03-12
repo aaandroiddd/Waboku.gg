@@ -135,7 +135,7 @@ export function WantedPostsSection() {
   return (
     <Card>
       <CardHeader>
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div className="flex justify-center w-full">
           <div className="flex flex-col sm:flex-row gap-3">
             <Button 
               onClick={handleCreateClick}
@@ -202,7 +202,7 @@ export function WantedPostsSection() {
                           : "Price Negotiable"
                         }
                       </div>
-                      <div className="flex flex-wrap gap-2">
+                      <div className="flex flex-wrap gap-2 justify-center">
                         <Button 
                           variant="outline" 
                           size="sm"
@@ -243,9 +243,11 @@ export function WantedPostsSection() {
             <p className="text-muted-foreground mb-6">
               Create a wanted post to let others know what you're looking for
             </p>
-            <Button onClick={handleCreateClick}>
-              Create Wanted Post
-            </Button>
+            <div className="flex justify-center">
+              <Button onClick={handleCreateClick}>
+                Create Wanted Post
+              </Button>
+            </div>
           </div>
         )}
         </ContentLoader>
