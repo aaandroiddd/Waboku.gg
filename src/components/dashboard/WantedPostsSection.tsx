@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
+import { ContentLoader } from "@/components/ContentLoader";
 import { GameCategoryBadge } from "@/components/GameCategoryBadge";
 import { Calendar, MapPin, PlusCircle, Pencil, Trash2, ExternalLink } from "lucide-react";
 import { useWantedPosts, WantedPost } from "@/hooks/useWantedPosts";
@@ -145,13 +146,19 @@ export function WantedPostsSection() {
         </div>
       </CardHeader>
       <CardContent>
-        {isLoading ? (
-          <div className="space-y-4">
-            {[...Array(2)].map((_, i) => (
-              <Skeleton key={i} className="h-32 w-full" />
-            ))}
-          </div>
-        ) : posts.length > 0 ? (
+        <ContentLoader 
+          isLoading={isLoading} 
+          loadingMessage="Loading your wanted posts..."
+          minHeight="300px"
+          fallback={
+            <div className="space-y-4">
+              {[...Array(2)].map((_, i) => (
+                <Skeleton key={i} className="h-32 w-full" />
+              ))}
+            </div>
+          }
+        >
+          {posts.length > 0 ? (
           <div className="space-y-4">
             {posts.map((post) => (
               <Card key={post.id} className="overflow-hidden">
@@ -231,6 +238,7 @@ export function WantedPostsSection() {
             </Button>
           </div>
         )}
+        </ContentLoader>
       </CardContent>
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>

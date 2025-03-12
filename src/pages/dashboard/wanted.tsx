@@ -5,6 +5,7 @@ import { useRouter } from 'next/router';
 import { useAuth } from '@/contexts/AuthContext';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { WantedPostsSection } from '@/components/dashboard/WantedPostsSection';
+import { GlobalLoading } from '@/components/GlobalLoading';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
@@ -21,8 +22,8 @@ const WantedDashboardPage = () => {
   if (authLoading) {
     return (
       <DashboardLayout>
-        <div className="min-h-screen flex items-center justify-center">
-          <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+        <div className="min-h-screen">
+          <GlobalLoading fullScreen={false} message="Loading your dashboard..." />
         </div>
       </DashboardLayout>
     );

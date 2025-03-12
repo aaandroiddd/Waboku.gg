@@ -6,6 +6,7 @@ import { Footer } from '../Footer';
 import { VerificationStatus } from '../VerificationStatus';
 import { SellerBadge } from '../SellerBadge';
 import { AdminBadge } from '../AdminBadge';
+import { GlobalLoading } from '@/components/GlobalLoading';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/router';
 import { Card, CardContent } from '@/components/ui/card';
@@ -54,11 +55,8 @@ export const DashboardLayout = ({ children }: { children: ReactNode }) => {
   // Show loading state
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-          <p className="text-muted-foreground">Loading dashboard...</p>
-        </div>
+      <div className="min-h-screen">
+        <GlobalLoading fullScreen={true} message="Loading dashboard..." />
       </div>
     );
   }
