@@ -12,6 +12,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useAccount } from '@/contexts/AccountContext';
 import { AnimatePresence } from 'framer-motion';
 import Head from 'next/head';
+import { LoadingProvider, useLoading } from '@/contexts/LoadingContext';
 
 const LoadingScreen = dynamic(() => import('@/components/LoadingScreen').then(mod => ({ default: mod.LoadingScreen })), {
   ssr: false
@@ -30,14 +31,14 @@ const protectedPaths = [
 ];
 
 // Memoize the main content to prevent unnecessary re-renders
-const MainContent = memo(({ Component, pageProps, pathname, isLoading }: {
+const MainContent = memo(({ Component, pageProps, pathname }: {
   Component: any;
   pageProps: any;
   pathname: string;
-  isLoading: boolean;
 }) => {
   const auth = useAuth();
   const account = useAccount();
+  const { isLoading } = useLoading();
   const { useThemeSync } = require('@/hooks/useThemeSync');
 
   // Show loading screen while auth or account is initializing
@@ -65,25 +66,9 @@ MainContent.displayName = 'MainContent';
 
 export default function App({ Component, pageProps }: AppProps) {
   const router = useRouter();
-  const [isLoading, setIsLoading] = useState(false);
   const requireAuth = protectedPaths.some(path => 
     router.pathname.startsWith(path)
   );
-
-  useEffect(() => {
-    const handleStart = () => setIsLoading(true);
-    const handleComplete = () => setIsLoading(false);
-
-    router.events.on('routeChangeStart', handleStart);
-    router.events.on('routeChangeComplete', handleComplete);
-    router.events.on('routeChangeError', handleComplete);
-
-    return () => {
-      router.events.off('routeChangeStart', handleStart);
-      router.events.off('routeChangeComplete', handleComplete);
-      router.events.off('routeChangeError', handleComplete);
-    };
-  }, [router]);
 
   return (
     <>
@@ -106,18 +91,19 @@ export default function App({ Component, pageProps }: AppProps) {
         enableSystem
         disableTransitionOnChange
       >
-        <AuthProvider>
-          <AccountProvider>
-            <RouteGuard requireAuth={requireAuth}>
-              <MainContent 
-                Component={Component}
-                pageProps={pageProps}
-                pathname={router.pathname}
-                isLoading={isLoading}
-              />
-            </RouteGuard>
-          </AccountProvider>
-        </AuthProvider>
+        <LoadingProvider>
+          <AuthProvider>
+            <AccountProvider>
+              <RouteGuard requireAuth={requireAuth}>
+                <MainContent 
+                  Component={Component}
+                  pageProps={pageProps}
+                  pathname={router.pathname}
+                />
+              </RouteGuard>
+            </AccountProvider>
+          </AuthProvider>
+        </LoadingProvider>
       </ThemeProvider>
     </>);
 }

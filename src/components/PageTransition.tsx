@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
-import { ReactNode } from "react";
+import { ReactNode, useEffect } from "react";
+import { useLoading } from "@/contexts/LoadingContext";
 
 interface PageTransitionProps {
   children: ReactNode;
@@ -29,12 +30,24 @@ const pageVariants = {
 };
 
 export function PageTransition({ children }: PageTransitionProps) {
+  const { stopLoading } = useLoading();
+
+  // When the animation completes, ensure loading is stopped
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      stopLoading();
+    }, 400); // Match the duration of the animation
+    
+    return () => clearTimeout(timer);
+  }, [stopLoading]);
+
   return (
     <motion.div
       initial="initial"
       animate="animate"
       exit="exit"
       variants={pageVariants}
+      onAnimationComplete={() => stopLoading()}
     >
       {children}
     </motion.div>

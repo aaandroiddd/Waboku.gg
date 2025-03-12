@@ -96,6 +96,8 @@ export default function ListingPage() {
     checkSellerStripeStatus();
   }, [listing]);
 
+  const { startLoading, stopLoading } = useLoading();
+
   useEffect(() => {
     let isMounted = true;
 
@@ -108,6 +110,7 @@ export default function ListingPage() {
         if (isMounted) {
           setLoading(true);
           setError(null);
+          startLoading(); // Start global loading indicator
         }
 
         const { db } = getFirebaseServices();
