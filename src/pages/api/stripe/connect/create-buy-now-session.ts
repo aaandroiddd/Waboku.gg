@@ -102,7 +102,7 @@ export default async function handler(
         },
       },
       mode: 'payment',
-      success_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/orders?success=true&session_id={CHECKOUT_SESSION_ID}`,
+      success_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/orders?success=true&session_id={CHECKOUT_SESSION_ID}&ensure_order=true`,
       cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/listings/${listingId}?canceled=true`,
       metadata: {
         listingId,

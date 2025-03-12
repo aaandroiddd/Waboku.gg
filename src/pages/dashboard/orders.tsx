@@ -11,12 +11,72 @@ import Image from 'next/image';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { Loader2 } from 'lucide-react';
+import { useRouter } from 'next/router';
+import { toast } from 'sonner';
 
 export default function OrdersPage() {
   const { user } = useAuth();
+  const router = useRouter();
   const [purchases, setPurchases] = useState<Order[]>([]);
   const [sales, setSales] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
+  const [processingOrder, setProcessingOrder] = useState(false);
+
+  // Check for successful checkout and ensure order is created
+  useEffect(() => {
+    const checkAndEnsureOrder = async () => {
+      const { success, session_id, ensure_order } = router.query;
+      
+      if (success === 'true' && session_id && ensure_order === 'true' && !processingOrder) {
+        setProcessingOrder(true);
+        
+        try {
+          console.log('[Orders Page] Ensuring order is created for session:', session_id);
+          
+          // Show a loading toast
+          const toastId = toast.loading('Processing your order...');
+          
+          // Call our API to ensure the order is created
+          const response = await fetch('/api/stripe/ensure-order-created', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              sessionId: session_id,
+            }),
+          });
+          
+          const data = await response.json();
+          
+          if (response.ok) {
+            // Order was created or already existed
+            toast.success('Order processed successfully!', { id: toastId });
+            console.log('[Orders Page] Order ensured successfully:', data);
+            
+            // Remove the query parameters to prevent duplicate processing
+            router.replace('/dashboard/orders', undefined, { shallow: true });
+            
+            // Refresh the orders list by triggering a re-render
+            setLoading(true);
+          } else {
+            // There was an error
+            toast.error('Failed to process order. Please contact support.', { id: toastId });
+            console.error('[Orders Page] Error ensuring order:', data);
+          }
+        } catch (error) {
+          console.error('[Orders Page] Error in ensure order process:', error);
+          toast.error('An unexpected error occurred. Please contact support.');
+        } finally {
+          setProcessingOrder(false);
+        }
+      }
+    };
+    
+    if (user) {
+      checkAndEnsureOrder();
+    }
+  }, [router.query, user, processingOrder]);
 
   useEffect(() => {
     async function fetchOrders() {
