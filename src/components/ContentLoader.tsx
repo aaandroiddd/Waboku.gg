@@ -30,7 +30,7 @@ export function ContentLoader({
         )}
         style={{ minHeight }}
       >
-        <LoadingAnimation color="var(--theme-primary, #000)" />
+        <LoadingAnimation color="var(--theme-primary, #000)" size="40" />
         {loadingMessage && (
           <p className="mt-4 text-sm text-muted-foreground animate-pulse">{loadingMessage}</p>
         )}

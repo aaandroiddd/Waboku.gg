@@ -136,13 +136,23 @@ export function WantedPostsSection() {
     <Card>
       <CardHeader>
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <Button 
-            onClick={handleCreateClick}
-            className="flex items-center gap-2"
-          >
-            <PlusCircle className="h-4 w-4" />
-            Create Wanted Post
-          </Button>
+          <div className="flex flex-col sm:flex-row gap-3">
+            <Button 
+              onClick={handleCreateClick}
+              className="flex items-center gap-2"
+            >
+              <PlusCircle className="h-4 w-4" />
+              Create Wanted Post
+            </Button>
+            <Button 
+              variant="outline"
+              onClick={() => router.push("/wanted/posts")}
+              className="flex items-center gap-2"
+            >
+              <ExternalLink className="h-4 w-4" />
+              View All Wanted Posts
+            </Button>
+          </div>
         </div>
       </CardHeader>
       <CardContent>

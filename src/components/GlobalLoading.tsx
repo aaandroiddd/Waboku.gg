@@ -12,6 +12,7 @@ export function GlobalLoading({ fullScreen = true, message }: GlobalLoadingProps
     }`}>
       <LoadingAnimation 
         color="var(--theme-primary, #000)" 
+        size="40"
         className="my-4"
       />
       {message && (
