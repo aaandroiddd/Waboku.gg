@@ -45,6 +45,7 @@ const CreateListingPage = () => {
   const { toast } = useToast();
   const { createListing } = useListings();
   const { profile } = useProfile(user?.uid);
+  const { accountTier } = useAccount();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [stripeConnectStatus, setStripeConnectStatus] = useState<'none' | 'pending' | 'active' | 'error'>('none');
@@ -363,7 +364,7 @@ const CreateListingPage = () => {
                 <div className="space-y-2">
                   <Label htmlFor="description">Description</Label>
                   {/* Use the account context to check if user is premium */}
-                  {useAccount().accountTier === 'premium' ? (
+                  {accountTier === 'premium' ? (
                     <MarkdownEditor
                       value={formData.description}
                       onChange={(value) => setFormData({ ...formData, description: value })}
