@@ -257,8 +257,28 @@ const CreateListingPage = () => {
   return (
     <DashboardLayout>
       <div className="max-w-3xl mx-auto space-y-6">
-        <div className="flex justify-center items-center">
+        <div className="flex justify-between items-center">
           <h1 className="text-3xl font-bold">Create New Listing</h1>
+          {accountTier === 'premium' && (
+            <Button 
+              variant="outline" 
+              onClick={() => router.push('/dashboard/bulk-listing')}
+              className="flex items-center gap-2"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M8 3H7a2 2 0 0 0-2 2v5a2 2 0 0 0 2 2h1" />
+                <path d="M17 3h1a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-1" />
+                <path d="M8 21h8" />
+                <path d="M12 3v18" />
+                <path d="M3 9h2" />
+                <path d="M19 9h2" />
+                <path d="M3 6h2" />
+                <path d="M19 6h2" />
+                <path d="M3 12h18" />
+              </svg>
+              Bulk Listing
+            </Button>
+          )}
         </div>
         
         {/* Only show Stripe Connect notice if status is confirmed as not active */}

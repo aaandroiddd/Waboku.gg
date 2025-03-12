@@ -150,6 +150,24 @@ export function DashboardSidebar({ onNavigate }: DashboardSidebarProps) {
         </svg>
       ),
       premium: true,
+    },
+    {
+      name: 'Bulk Listing',
+      href: '/dashboard/bulk-listing',
+      icon: (
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M8 3H7a2 2 0 0 0-2 2v5a2 2 0 0 0 2 2h1" />
+          <path d="M17 3h1a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-1" />
+          <path d="M8 21h8" />
+          <path d="M12 3v18" />
+          <path d="M3 9h2" />
+          <path d="M19 9h2" />
+          <path d="M3 6h2" />
+          <path d="M19 6h2" />
+          <path d="M3 12h18" />
+        </svg>
+      ),
+      premium: true,
     }
   ];
 
