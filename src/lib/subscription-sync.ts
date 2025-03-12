@@ -31,7 +31,9 @@ export async function syncSubscriptionData(userId: string, subscriptionData: any
     let accountTier = 'free';
     const currentDate = new Date();
     const endDate = subscriptionData.endDate ? new Date(subscriptionData.endDate) : null;
+    const renewalDate = subscriptionData.renewalDate ? new Date(subscriptionData.renewalDate) : endDate;
     
+    // FIXED: More comprehensive check for premium status
     // If subscription is active, or canceled but still within the paid period
     if (
       subscriptionData.currentPlan === 'premium' || 
@@ -40,10 +42,25 @@ export async function syncSubscriptionData(userId: string, subscriptionData: any
       // Check if subscription is active or within the paid period
       if (
         subscriptionData.status === 'active' || 
-        (subscriptionData.status === 'canceled' && endDate && currentDate < endDate)
+        subscriptionData.status === 'trialing' ||
+        // Important: Check both endDate and renewalDate to ensure we don't downgrade prematurely
+        (subscriptionData.status === 'canceled' && 
+         ((endDate && currentDate < endDate) || (renewalDate && currentDate < renewalDate)))
       ) {
         accountTier = 'premium';
       }
+    }
+    
+    // FIXED: If manually updated to premium, respect that setting
+    if (subscriptionData.manuallyUpdated && 
+        (subscriptionData.currentPlan === 'premium' || subscriptionData.tier === 'premium')) {
+      accountTier = 'premium';
+    }
+    
+    // FIXED: If subscription ID exists and includes 'admin_', always set as premium
+    if (subscriptionData.stripeSubscriptionId && 
+        subscriptionData.stripeSubscriptionId.includes('admin_')) {
+      accountTier = 'premium';
     }
     
     console.log(`[Subscription Sync] Determined account tier for user ${userId}:`, {
@@ -51,9 +68,14 @@ export async function syncSubscriptionData(userId: string, subscriptionData: any
       status: subscriptionData.status,
       currentPlan: subscriptionData.currentPlan,
       tier: subscriptionData.tier,
-      endDate: subscriptionData.endDate,
+      endDate: subscriptionData.endDate ? subscriptionData.endDate : null,
+      renewalDate: subscriptionData.renewalDate ? subscriptionData.renewalDate : null,
       currentDate: currentDate.toISOString(),
-      isWithinPaidPeriod: endDate ? currentDate < endDate : false
+      isWithinPaidPeriod: endDate ? currentDate < endDate : false,
+      isWithinRenewalPeriod: renewalDate ? currentDate < renewalDate : false,
+      manuallyUpdated: subscriptionData.manuallyUpdated || false,
+      stripeSubscriptionId: subscriptionData.stripeSubscriptionId ? 
+        (subscriptionData.stripeSubscriptionId.includes('admin_') ? 'admin_subscription' : 'stripe_subscription') : 'none'
     });
     
     // Format the subscription data for Firestore

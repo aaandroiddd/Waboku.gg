@@ -374,33 +374,84 @@ export default async function handler(
           throw new Error('No userId found in subscription metadata');
         }
 
-        const endDate = new Date(subscription.current_period_end * 1000).toISOString();
-
-        // Update Firestore
-        await firestoreDb.collection('users').doc(userId).set({
-          subscription: {
-            currentPlan: 'free',
-            status: 'inactive',
-            endDate: endDate
-          }
-        }, { merge: true });
-
-        // Update Realtime Database - update fields separately
-        await realtimeDb.ref(`users/${userId}/account/tier`).set('free');
+        // FIXED: Check if the subscription is still within the paid period
+        const currentDate = new Date();
+        const endDate = new Date(subscription.current_period_end * 1000);
+        const endDateIso = endDate.toISOString();
         
-        // Update subscription fields separately
-        const subscriptionRef = realtimeDb.ref(`users/${userId}/account/subscription`);
-        await subscriptionRef.update({
-          status: 'inactive',
-          tier: 'free',
-          endDate: endDate,
-          lastUpdated: Date.now()
-        });
+        // If the subscription is deleted but still within the paid period,
+        // we should keep the user as premium until the end date
+        const isWithinPaidPeriod = currentDate < endDate;
         
-        console.log('[Stripe Webhook] Subscription deleted:', {
+        console.log('[Stripe Webhook] Processing subscription deletion:', {
           userId,
-          endDate: endDate
+          endDate: endDateIso,
+          currentDate: currentDate.toISOString(),
+          isWithinPaidPeriod
         });
+
+        if (isWithinPaidPeriod) {
+          // Update Firestore - keep as premium but mark as canceled
+          await firestoreDb.collection('users').doc(userId).set({
+            accountTier: 'premium', // Keep as premium until end date
+            subscription: {
+              currentPlan: 'premium',
+              status: 'canceled', // Mark as canceled
+              endDate: endDateIso,
+              renewalDate: endDateIso,
+              canceledAt: new Date().toISOString(),
+              cancelAtPeriodEnd: true
+            }
+          }, { merge: true });
+
+          // Update Realtime Database - update fields separately
+          await realtimeDb.ref(`users/${userId}/account/tier`).set('premium'); // Keep as premium
+          
+          // Update subscription fields separately
+          const subscriptionRef = realtimeDb.ref(`users/${userId}/account/subscription`);
+          await subscriptionRef.update({
+            status: 'canceled',
+            tier: 'premium',
+            endDate: endDateIso,
+            renewalDate: endDateIso,
+            canceledAt: new Date().toISOString(),
+            cancelAtPeriodEnd: true,
+            lastUpdated: Date.now()
+          });
+          
+          console.log('[Stripe Webhook] Subscription marked as canceled but still active until end date:', {
+            userId,
+            endDate: endDateIso
+          });
+        } else {
+          // If already past the end date, downgrade immediately
+          // Update Firestore
+          await firestoreDb.collection('users').doc(userId).set({
+            accountTier: 'free',
+            subscription: {
+              currentPlan: 'free',
+              status: 'inactive',
+              endDate: endDateIso
+            }
+          }, { merge: true });
+
+          // Update Realtime Database - update fields separately
+          await realtimeDb.ref(`users/${userId}/account/tier`).set('free');
+          
+          // Update subscription fields separately
+          const subscriptionRef = realtimeDb.ref(`users/${userId}/account/subscription`);
+          await subscriptionRef.update({
+            status: 'inactive',
+            tier: 'free',
+            endDate: endDateIso,
+            lastUpdated: Date.now()
+          });
+          
+          console.log('[Stripe Webhook] Subscription deleted and downgraded immediately:', {
+            userId,
+            endDate: endDateIso
+          });
+        }
         break;
       }
 
