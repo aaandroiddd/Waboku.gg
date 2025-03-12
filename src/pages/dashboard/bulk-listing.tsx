@@ -562,7 +562,7 @@ const BulkListingPage = () => {
                       </TableHeader>
                       <TableBody>
                         {bulkListings.map((listing) => (
-                          <TableRow key={listing.id} className={listing.status === 'error' ? 'bg-red-100 dark:bg-red-950/60 midnight:bg-red-950/80 border-l-4 border-red-500' : ''}>
+                          <TableRow key={listing.id} className={listing.status === 'error' ? 'bg-red-50/70 dark:bg-red-900/20 midnight:bg-red-900/30 border-l-2 border-red-400 dark:border-red-700' : ''}>
                             <TableCell className="font-medium">{listing.title}</TableCell>
                             <TableCell>${listing.price}</TableCell>
                             <TableCell>{GAME_CATEGORIES[listing.game as keyof typeof GAME_CATEGORIES] || listing.game}</TableCell>
@@ -636,7 +636,7 @@ const BulkListingPage = () => {
                                 </Button>
                               </div>
                               {listing.error && (
-                                <div className="text-xs text-red-500 mt-1 p-1 rounded bg-red-100/50 dark:bg-red-950/50 midnight:bg-red-950/70 border-l-2 border-red-500">
+                                <div className="text-xs mt-1 p-2 rounded bg-red-50 text-red-800 dark:bg-red-900/30 dark:text-red-300 midnight:bg-red-900/40 midnight:text-red-200 border border-red-200 dark:border-red-800 shadow-sm">
                                   <span className="font-medium">Error:</span> {listing.error}
                                 </div>
                               )}
