@@ -1,5 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import Stripe from 'stripe';
+import { getFirebaseAdmin } from '@/lib/firebase-admin';
+import { getFirestore } from 'firebase-admin/firestore';
 
 // Initialize Stripe
 if (!process.env.STRIPE_SECRET_KEY) {
@@ -27,7 +29,7 @@ export default async function handler(
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { sessionId, signature } = req.body;
+  const { sessionId } = req.body;
 
   if (!sessionId) {
     return res.status(400).json({ error: 'Session ID is required' });
@@ -36,7 +38,9 @@ export default async function handler(
   try {
     // Retrieve the session from Stripe to get the necessary metadata
     console.log(`[Admin Webhook Fix Trigger] Retrieving session: ${sessionId}`);
-    const session = await stripe.checkout.sessions.retrieve(sessionId);
+    const session = await stripe.checkout.sessions.retrieve(sessionId, {
+      expand: ['payment_intent']
+    });
 
     if (!session) {
       return res.status(404).json({ error: 'Session not found' });
@@ -51,63 +55,159 @@ export default async function handler(
       });
     }
 
-    // Prepare the request to the webhook-fix endpoint
-    const webhookUrl = new URL('/api/stripe/webhook-fix', process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000');
-    
-    // Create a mock event payload
-    const mockEvent = {
-      id: `evt_admin_${Date.now()}`,
-      object: 'event',
-      api_version: '2023-10-16',
-      type: 'checkout.session.completed',
-      data: {
-        object: session
-      }
-    };
+    // Initialize Firebase Admin
+    getFirebaseAdmin();
+    const firestoreDb = getFirestore();
 
-    // Convert the event to a buffer (similar to what Stripe would send)
-    const eventBuffer = Buffer.from(JSON.stringify(mockEvent));
+    // Process the session directly (similar to webhook-fix logic)
+    const { listingId, buyerId, sellerId } = session.metadata;
     
-    // If a signature was provided, use it, otherwise generate one
-    let stripeSignature = signature;
-    if (!stripeSignature && process.env.STRIPE_WEBHOOK_SECRET) {
-      // Generate a valid signature using the webhook secret
-      // This is a simplified version and may not work with actual webhook verification
-      // In a real scenario, Stripe generates this signature with specific algorithms
-      const timestamp = Math.floor(Date.now() / 1000);
-      const payload = `${timestamp}.${eventBuffer.toString()}`;
-      stripeSignature = `t=${timestamp},v1=mock_signature_for_admin_use_only`;
+    console.log('[Admin Webhook Fix Trigger] Processing marketplace purchase:', {
+      listingId,
+      buyerId,
+      sellerId,
+      sessionId: session.id
+    });
+
+    try {
+      // First check if an order with this payment session already exists
+      const existingOrdersQuery = await firestoreDb.collection('orders')
+        .where('paymentSessionId', '==', session.id)
+        .limit(1)
+        .get();
+      
+      if (!existingOrdersQuery.empty) {
+        const existingOrder = existingOrdersQuery.docs[0];
+        console.log('[Admin Webhook Fix Trigger] Order already exists for this session:', {
+          orderId: existingOrder.id,
+          paymentSessionId: session.id
+        });
+        
+        return res.status(200).json({ 
+          success: true,
+          message: 'Order already exists',
+          orderId: existingOrder.id,
+          orderData: existingOrder.data()
+        });
+      }
+
+      // Get the payment intent ID
+      let paymentIntentId = typeof session.payment_intent === 'string' 
+        ? session.payment_intent 
+        : session.payment_intent?.id;
+      
+      if (!paymentIntentId) {
+        return res.status(400).json({
+          error: 'Invalid session',
+          message: 'No payment intent found for this session'
+        });
+      }
+
+      // Update the listing status to sold
+      await firestoreDb.collection('listings').doc(listingId).update({
+        status: 'sold',
+        soldAt: new Date(),
+        soldTo: buyerId,
+        paymentSessionId: session.id,
+        paymentIntentId: paymentIntentId,
+        updatedAt: new Date()
+      });
+      
+      console.log('[Admin Webhook Fix Trigger] Listing marked as sold:', {
+        listingId,
+        status: 'sold',
+        soldTo: buyerId
+      });
+
+      // Get the listing data to include in the order
+      const listingDoc = await firestoreDb.collection('listings').doc(listingId).get();
+      const listingData = listingDoc.data();
+      
+      if (!listingData) {
+        throw new Error(`Listing ${listingId} not found`);
+      }
+      
+      // Create an order record
+      const orderData = {
+        listingId,
+        buyerId,
+        sellerId,
+        status: 'completed',
+        amount: session.amount_total ? session.amount_total / 100 : 0, // Convert from cents
+        platformFee: session.metadata.platformFee ? parseInt(session.metadata.platformFee) / 100 : 0, // Convert from cents
+        paymentSessionId: session.id,
+        paymentIntentId: paymentIntentId,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        shippingAddress: session.shipping?.address ? {
+          name: session.shipping.name,
+          line1: session.shipping.address.line1,
+          line2: session.shipping.address.line2,
+          city: session.shipping.address.city,
+          state: session.shipping.address.state,
+          postal_code: session.shipping.address.postal_code,
+          country: session.shipping.address.country,
+        } : null,
+        // Add the listing snapshot for display in the orders page
+        listingSnapshot: {
+          title: listingData.title || 'Untitled Listing',
+          price: listingData.price || 0,
+          imageUrl: listingData.imageUrls && listingData.imageUrls.length > 0 ? listingData.imageUrls[0] : null
+        }
+      };
+      
+      // Create the order in Firestore
+      console.log('[Admin Webhook Fix Trigger] Creating order with data:', {
+        listingId,
+        buyerId,
+        sellerId,
+        amount: orderData.amount,
+        paymentSessionId: session.id
+      });
+      
+      const orderRef = await firestoreDb.collection('orders').add(orderData);
+      
+      console.log('[Admin Webhook Fix Trigger] Order created successfully:', {
+        orderId: orderRef.id,
+        path: `orders/${orderRef.id}`
+      });
+      
+      // Add the order to the buyer's orders
+      await firestoreDb.collection('users').doc(buyerId).collection('orders').doc(orderRef.id).set({
+        orderId: orderRef.id,
+        role: 'buyer',
+        createdAt: new Date()
+      });
+      
+      // Add the order to the seller's orders
+      await firestoreDb.collection('users').doc(sellerId).collection('orders').doc(orderRef.id).set({
+        orderId: orderRef.id,
+        role: 'seller',
+        createdAt: new Date()
+      });
+      
+      console.log('[Admin Webhook Fix Trigger] Order creation completed successfully:', {
+        orderId: orderRef.id,
+        listingId,
+        buyerId,
+        sellerId
+      });
+      
+      return res.status(200).json({ 
+        success: true,
+        message: 'Order created successfully',
+        orderId: orderRef.id,
+        sessionDetails: {
+          id: session.id,
+          metadata: session.metadata,
+          amount_total: session.amount_total,
+          payment_intent: paymentIntentId
+        }
+      });
+    } catch (error) {
+      console.error('[Admin Webhook Fix Trigger] Error processing marketplace purchase:', error);
+      throw error;
     }
-
-    // Make the request to the webhook-fix endpoint
-    console.log('[Admin Webhook Fix Trigger] Calling webhook-fix endpoint');
-    const webhookResponse = await fetch(webhookUrl.toString(), {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Stripe-Signature': stripeSignature || 'mock_signature_for_admin_use_only'
-      },
-      body: eventBuffer
-    });
-
-    const webhookResult = await webhookResponse.json();
-
-    return res.status(200).json({
-      success: true,
-      message: 'Webhook fix triggered successfully',
-      sessionId,
-      webhookResponse: {
-        status: webhookResponse.status,
-        result: webhookResult
-      },
-      session: {
-        id: session.id,
-        metadata: session.metadata,
-        amount_total: session.amount_total,
-        payment_intent: session.payment_intent,
-        customer: session.customer
-      }
-    });
   } catch (error) {
     console.error('[Admin Webhook Fix Trigger] Error:', error);
     return res.status(500).json({

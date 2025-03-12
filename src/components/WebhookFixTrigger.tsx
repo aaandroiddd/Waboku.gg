@@ -11,7 +11,6 @@ interface WebhookFixTriggerProps {
 
 export function WebhookFixTrigger({ adminSecret }: WebhookFixTriggerProps) {
   const [sessionId, setSessionId] = useState('');
-  const [signature, setSignature] = useState('');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
@@ -27,28 +26,6 @@ export function WebhookFixTrigger({ adminSecret }: WebhookFixTriggerProps) {
     setResult(null);
 
     try {
-      // Create a mock Stripe event payload for checkout.session.completed
-      const mockEvent = {
-        id: `evt_${Math.random().toString(36).substring(2, 15)}`,
-        object: 'event',
-        api_version: '2023-10-16',
-        type: 'checkout.session.completed',
-        data: {
-          object: {
-            id: sessionId,
-            object: 'checkout.session',
-            // Add other required fields that the webhook expects
-            metadata: {
-              // These would normally come from the actual session
-              // The admin would need to provide these values
-              listingId: '',
-              buyerId: '',
-              sellerId: ''
-            }
-          }
-        }
-      };
-
       // Call the admin endpoint that will trigger the webhook fix
       const response = await fetch('/api/admin/trigger-webhook-fix', {
         method: 'POST',
@@ -56,20 +33,18 @@ export function WebhookFixTrigger({ adminSecret }: WebhookFixTriggerProps) {
           'Content-Type': 'application/json',
           'x-admin-secret': adminSecret
         },
-        body: JSON.stringify({
-          sessionId,
-          signature: signature || undefined
-        })
+        body: JSON.stringify({ sessionId })
       });
 
       const data = await response.json();
       
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to trigger webhook fix');
+        throw new Error(data.error || data.message || 'Failed to trigger webhook fix');
       }
       
       setResult(data);
     } catch (err) {
+      console.error('Error triggering webhook fix:', err);
       setError(err instanceof Error ? err.message : 'An unknown error occurred');
     } finally {
       setLoading(false);
@@ -81,8 +56,8 @@ export function WebhookFixTrigger({ adminSecret }: WebhookFixTriggerProps) {
       <h2 className="text-xl font-semibold mb-4">Stripe Webhook Fix</h2>
       <Alert className="mb-4">
         <AlertDescription>
-          This tool allows you to manually trigger the webhook-fix endpoint for a specific Stripe Checkout Session.
-          Use this only when you need to fix issues with order creation.
+          This tool allows you to manually fix order creation issues for a specific Stripe Checkout Session.
+          Enter the Session ID from Stripe Dashboard to create the missing order.
         </AlertDescription>
       </Alert>
       
@@ -95,20 +70,8 @@ export function WebhookFixTrigger({ adminSecret }: WebhookFixTriggerProps) {
             value={sessionId}
             onChange={(e) => setSessionId(e.target.value)}
           />
-        </div>
-        
-        <div className="space-y-2">
-          <Label htmlFor="signature">
-            Stripe Signature (Optional)
-          </Label>
-          <Input
-            id="signature"
-            placeholder="t=...,v1=..."
-            value={signature}
-            onChange={(e) => setSignature(e.target.value)}
-          />
-          <p className="text-xs text-muted-foreground">
-            If left empty, the admin endpoint will attempt to retrieve session details directly from Stripe.
+          <p className="text-xs text-muted-foreground mt-1">
+            The session must be a completed checkout with listingId, buyerId, and sellerId in its metadata.
           </p>
         </div>
         
@@ -117,11 +80,11 @@ export function WebhookFixTrigger({ adminSecret }: WebhookFixTriggerProps) {
           disabled={loading || !sessionId}
           className="w-full"
         >
-          {loading ? 'Processing...' : 'Trigger Webhook Fix'}
+          {loading ? 'Processing...' : 'Fix Order Creation'}
         </Button>
         
         {error && (
-          <Alert variant="destructive">
+          <Alert variant="destructive" className="mt-4">
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
