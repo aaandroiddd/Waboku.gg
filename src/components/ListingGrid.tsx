@@ -10,6 +10,7 @@ import { RemoveFavoriteDialog } from './RemoveFavoriteDialog';
 import { Button } from '@/components/ui/button';
 import { ListingCard } from './ListingCard';
 import { useListings } from '@/hooks/useListings';
+import { ContentLoader } from './ContentLoader';
 
 interface ListingGridProps {
   listings?: Listing[];
@@ -193,58 +194,63 @@ export function ListingGrid({
 
   const memoizedGetConditionColor = useCallback(getConditionColor, []);
 
-  if (loading) {
-    return <LoadingSkeleton />;
-  }
-
   // Check if we have any listings after filtering
   const hasListings = displayedListings.length > 0;
   
-  if (!hasListings) {
-    return <EmptyState />;
-  }
-
   return (
-    <div className="space-y-4 sm:space-y-8">
-      <RemoveFavoriteDialog
-        isOpen={isDialogOpen}
-        onClose={() => {
-          setIsDialogOpen(false);
-          setSelectedListing(null);
-        }}
-        onConfirm={handleRemoveFavorite}
-        title={selectedListing?.title || ''}
-      />
-      <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 auto-rows-fr">
-        <AnimatePresence>
-          {displayedListings.map((listing) => (
-            <ListingCard
-              key={listing.id}
-              listing={listing}
-              isFavorite={user ? isFavorite(listing.id) : false}
-              onFavoriteClick={handleFavoriteClick}
-              getConditionColor={memoizedGetConditionColor}
-              distance={(listing as any).distance}
-            />
-          ))}
-        </AnimatePresence>
+    <ContentLoader 
+      isLoading={loading} 
+      loadingMessage="Loading listings..."
+      minHeight="400px"
+      fallback={<LoadingSkeleton />}
+    >
+      <div className="space-y-4 sm:space-y-8">
+        <RemoveFavoriteDialog
+          isOpen={isDialogOpen}
+          onClose={() => {
+            setIsDialogOpen(false);
+            setSelectedListing(null);
+          }}
+          onConfirm={handleRemoveFavorite}
+          title={selectedListing?.title || ''}
+        />
+        {!hasListings ? (
+          <EmptyState />
+        ) : (
+          <>
+            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 auto-rows-fr">
+              <AnimatePresence>
+                {displayedListings.map((listing) => (
+                  <ListingCard
+                    key={listing.id}
+                    listing={listing}
+                    isFavorite={user ? isFavorite(listing.id) : false}
+                    onFavoriteClick={handleFavoriteClick}
+                    getConditionColor={memoizedGetConditionColor}
+                    distance={(listing as any).distance}
+                  />
+                ))}
+              </AnimatePresence>
+            </div>
+            {hasMore && (
+              <motion.div 
+                className="flex justify-center"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.5 }}
+              >
+                <Button 
+                  onClick={onLoadMore} 
+                  variant="outline"
+                  className="min-w-[200px]"
+                >
+                  Load More
+                </Button>
+              </motion.div>
+            )}
+          </>
+        )}
       </div>
-      {hasMore && (
-        <motion.div 
-          className="flex justify-center"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5 }}
-        >
-          <Button 
-            onClick={onLoadMore} 
-            variant="outline"
-            className="min-w-[200px]"
-          >
-            Load More
-          </Button>
-        </motion.div>
-      )}
-    </div>
+    </ContentLoader>
   );
 }
