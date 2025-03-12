@@ -31,6 +31,7 @@ interface ApiResponse {
 }
 
 export default function AdminDashboard() {
+  const router = useRouter();
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [adminSecret, setAdminSecret] = useState('');
   const [loading, setLoading] = useState(false);
