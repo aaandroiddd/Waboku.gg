@@ -5,7 +5,13 @@ export interface Order {
   sellerId: string;
   amount: number;
   status: 'pending' | 'completed' | 'cancelled';
-  shippingAddress: {
+  paymentSessionId?: string;
+  paymentIntentId?: string;
+  transferId?: string;
+  transferAmount?: number;
+  platformFee?: number;
+  paymentStatus?: string;
+  shippingAddress?: {
     name: string;
     line1: string;
     line2?: string;
@@ -16,9 +22,9 @@ export interface Order {
   };
   createdAt: Date;
   updatedAt: Date;
-  listingSnapshot: {
+  listingSnapshot?: {
     title: string;
     price: number;
-    imageUrl: string;
+    imageUrl: string | null;
   };
 }

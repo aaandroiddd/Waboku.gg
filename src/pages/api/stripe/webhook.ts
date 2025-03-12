@@ -152,6 +152,14 @@ export default async function handler(
             updatedAt: new Date()
           });
 
+          // Get the listing data to include in the order
+          const listingDoc = await firestoreDb.collection('listings').doc(listingId).get();
+          const listingData = listingDoc.data();
+          
+          if (!listingData) {
+            throw new Error(`Listing ${listingId} not found`);
+          }
+          
           // Create an order record
           const orderData = {
             listingId,
@@ -165,14 +173,20 @@ export default async function handler(
             createdAt: new Date(),
             updatedAt: new Date(),
             shippingAddress: session.shipping?.address ? {
+              name: session.shipping.name,
               line1: session.shipping.address.line1,
               line2: session.shipping.address.line2,
               city: session.shipping.address.city,
               state: session.shipping.address.state,
-              postalCode: session.shipping.address.postal_code,
+              postal_code: session.shipping.address.postal_code,
               country: session.shipping.address.country,
             } : null,
-            shippingName: session.shipping?.name || null,
+            // Add the listing snapshot for display in the orders page
+            listingSnapshot: {
+              title: listingData.title || 'Untitled Listing',
+              price: listingData.price || 0,
+              imageUrl: listingData.imageUrls && listingData.imageUrls.length > 0 ? listingData.imageUrls[0] : null
+            }
           };
 
           // Create the order in Firestore

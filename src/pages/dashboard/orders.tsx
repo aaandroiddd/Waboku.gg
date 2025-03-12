@@ -75,10 +75,10 @@ export default function OrdersPage() {
       <CardContent className="pt-6">
         <div className="flex flex-col md:flex-row gap-4">
           <div className="relative w-24 h-24 md:w-32 md:h-32">
-            {order.listingSnapshot.imageUrl ? (
+            {order.listingSnapshot?.imageUrl ? (
               <Image
                 src={order.listingSnapshot.imageUrl}
-                alt={order.listingSnapshot.title}
+                alt={order.listingSnapshot.title || 'Order item'}
                 fill
                 className="object-cover rounded-lg"
               />
@@ -89,7 +89,9 @@ export default function OrdersPage() {
             )}
           </div>
           <div className="flex-1">
-            <h3 className="font-semibold text-lg mb-2">{order.listingSnapshot.title}</h3>
+            <h3 className="font-semibold text-lg mb-2">
+              {order.listingSnapshot?.title || `Order #${order.id.slice(0, 6)}`}
+            </h3>
             <div className="space-y-2">
               <p className="text-muted-foreground">
                 Order ID: <span className="font-mono">{order.id.slice(0, 8)}...</span>
@@ -105,19 +107,21 @@ export default function OrdersPage() {
               </Badge>
             </div>
           </div>
-          <div className="md:w-1/3">
-            <h4 className="font-semibold mb-2">Shipping Address</h4>
-            <div className="text-sm text-muted-foreground">
-              <p>{order.shippingAddress.name}</p>
-              <p>{order.shippingAddress.line1}</p>
-              {order.shippingAddress.line2 && <p>{order.shippingAddress.line2}</p>}
-              <p>
-                {order.shippingAddress.city}, {order.shippingAddress.state}{' '}
-                {order.shippingAddress.postal_code}
-              </p>
-              <p>{order.shippingAddress.country}</p>
+          {order.shippingAddress && (
+            <div className="md:w-1/3">
+              <h4 className="font-semibold mb-2">Shipping Address</h4>
+              <div className="text-sm text-muted-foreground">
+                <p>{order.shippingAddress.name}</p>
+                <p>{order.shippingAddress.line1}</p>
+                {order.shippingAddress.line2 && <p>{order.shippingAddress.line2}</p>}
+                <p>
+                  {order.shippingAddress.city}, {order.shippingAddress.state}{' '}
+                  {order.shippingAddress.postal_code}
+                </p>
+                <p>{order.shippingAddress.country}</p>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </CardContent>
     </Card>
