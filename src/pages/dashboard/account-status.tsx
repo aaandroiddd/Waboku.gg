@@ -425,7 +425,7 @@ export default function AccountStatus() {
                 <span>
                   {subscription.renewalDate ? formatDate(subscription.renewalDate) : 
                    (subscription.stripeSubscriptionId?.includes('admin_') && subscription.endDate ? formatDate(subscription.endDate) : 
-                   subscription.stripeSubscriptionId?.includes('admin_') ? 'N/A (Admin Upgraded)' : 'N/A')}
+                   subscription.stripeSubscriptionId?.includes('admin_') ? formatDate(new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)) : 'N/A')}
                 </span>
               </div>
             )}
