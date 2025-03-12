@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/router';
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
@@ -244,7 +245,7 @@ export default function AdminDashboard() {
             </div>
           </Card>
           
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-8">
             {apiEndpoints.map((api) => (
               <Card key={api.endpoint} className="p-4">
                 <h3 className="font-semibold mb-2">{api.name}</h3>
@@ -259,6 +260,22 @@ export default function AdminDashboard() {
               </Card>
             ))}
           </div>
+          
+          {/* Subscription Management Section */}
+          <Card className="p-6 mb-8">
+            <h2 className="text-xl font-semibold mb-4">Subscription Management</h2>
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Fix subscription downgrades and synchronize subscription data between Stripe, Firestore, and Realtime Database.
+              </p>
+              <Button 
+                onClick={() => router.push(`/admin/fix-subscriptions?adminSecret=${adminSecret}`)}
+                className="w-full"
+              >
+                Fix Subscriptions
+              </Button>
+            </div>
+          </Card>
           
           {/* Wanted Posts Debugger Section */}
           <div className="mt-8">
