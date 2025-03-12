@@ -24,7 +24,13 @@ export default function OrdersPage() {
 
       try {
         const { db } = getFirebaseServices();
-        console.log('Fetching orders for user:', user.uid);
+        console.log('[Orders Page] Fetching orders for user:', user.uid);
+        
+        // Log the query paths we're going to check
+        console.log('[Orders Page] Will check the following paths:');
+        console.log(`- users/${user.uid}/orders (user-specific subcollection)`);
+        console.log(`- orders (main collection, filtered by buyerId/sellerId)`);
+        
         
         // Method 1: Try to fetch from user-specific subcollections first
         const userOrdersQuery = query(

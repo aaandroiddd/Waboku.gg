@@ -197,10 +197,25 @@ export default async function handler(
             };
 
             // Create the order in Firestore
-            const orderRef = await firestoreDb.collection('orders').add(orderData);
-            console.log('[Stripe Webhook] Order created in main collection:', {
-              orderId: orderRef.id
+            console.log('[Stripe Webhook] Attempting to create order in main collection with data:', {
+              listingId,
+              buyerId,
+              sellerId,
+              amount: orderData.amount,
+              status: orderData.status
             });
+            
+            let orderRef;
+            try {
+              orderRef = await firestoreDb.collection('orders').add(orderData);
+              console.log('[Stripe Webhook] Order created successfully in main collection:', {
+                orderId: orderRef.id,
+                path: `orders/${orderRef.id}`
+              });
+            } catch (orderCreateError) {
+              console.error('[Stripe Webhook] Failed to create order in main collection:', orderCreateError);
+              throw orderCreateError; // Re-throw to be caught by the outer try/catch
+            }
             
             // Add the order to the buyer's orders
             await firestoreDb.collection('users').doc(buyerId).collection('orders').doc(orderRef.id).set({
