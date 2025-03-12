@@ -52,7 +52,7 @@ export default async function handler(
     if (!res.writableEnded) {
       res.status(200).json(FALLBACK_TRENDING);
     }
-  }, 4500); // 4.5 seconds timeout (just under Vercel's 5s limit)
+  }, 3000); // 3 seconds timeout (reduced from 4.5s to avoid client-side timeouts)
 
   try {
     // Set fallback data as default

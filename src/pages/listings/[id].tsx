@@ -25,6 +25,7 @@ import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
 import { Footer } from '@/components/Footer';
 import dynamic from 'next/dynamic';
 import { DistanceIndicator } from '@/components/DistanceIndicator';
+import { useLoading } from '@/contexts/LoadingContext';
 
 const getConditionColor = (condition: string) => {
   const colors: Record<string, string> = {
