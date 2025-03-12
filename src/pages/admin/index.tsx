@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/select";
 import { Footer } from '@/components/Footer';
 import { WantedPostsDebugger } from '@/components/dashboard/WantedPostsDebugger';
+import { WebhookFixTrigger } from '@/components/WebhookFixTrigger';
 
 interface ApiResponse {
   success?: boolean;
@@ -277,6 +278,9 @@ export default function AdminDashboard() {
               </Button>
             </div>
           </Card>
+          
+          {/* Stripe Webhook Fix Section */}
+          <WebhookFixTrigger adminSecret={adminSecret} />
           
           {/* Wanted Posts Debugger Section */}
           <div className="mt-8">
