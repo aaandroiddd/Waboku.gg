@@ -50,6 +50,22 @@ const TEMPLATE_HEADERS = [
   'Grading Company'
 ];
 
+// Instructions row for the template
+const TEMPLATE_INSTRUCTIONS = [
+  [
+    '--- INSTRUCTIONS ---',
+    'Please follow these guidelines when filling out the template',
+    '',
+    '--- VALID GAME CATEGORIES ---',
+    `Valid options: ${Object.keys(GAME_CATEGORIES).join(', ')}`,
+    '--- VALID CONDITIONS ---',
+    `Valid options: ${Object.keys(CONDITION_MAPPING).join(', ')}`,
+    '',
+    '',
+    ''
+  ]
+];
+
 // Sample data for the template
 const TEMPLATE_SAMPLE_DATA = [
   [
@@ -71,6 +87,30 @@ const TEMPLATE_SAMPLE_DATA = [
     'mtg', 
     'excellent', 
     'Liliana of the Veil', 
+    '1', 
+    'false', 
+    '', 
+    ''
+  ],
+  [
+    'Disney Lorcana TCG Ursula Foil', 
+    'Mint condition Disney Lorcana card', 
+    '69.99', 
+    'lorcana', 
+    'mint', 
+    'Ursula', 
+    '1', 
+    'false', 
+    '', 
+    ''
+  ],
+  [
+    'Flesh and Blood TCG Alpha Booster Box', 
+    'Sealed Alpha booster box', 
+    '3627.00', 
+    'flesh-and-blood', 
+    'mint', 
+    '', 
     '1', 
     'false', 
     '', 
@@ -139,12 +179,16 @@ const BulkListingPage = () => {
 
   // Generate template for download
   const generateTemplate = () => {
-    const worksheet = XLSX.utils.aoa_to_sheet([TEMPLATE_HEADERS, ...TEMPLATE_SAMPLE_DATA]);
+    const worksheet = XLSX.utils.aoa_to_sheet([
+      TEMPLATE_HEADERS, 
+      ...TEMPLATE_INSTRUCTIONS,
+      ...TEMPLATE_SAMPLE_DATA
+    ]);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Bulk Listing Template");
     
     // Add column widths
-    const wscols = TEMPLATE_HEADERS.map(() => ({ wch: 20 }));
+    const wscols = TEMPLATE_HEADERS.map(() => ({ wch: 25 }));
     worksheet['!cols'] = wscols;
     
     // Generate file
@@ -468,6 +512,12 @@ const BulkListingPage = () => {
                     <AlertCircle className="w-4 h-4 inline-block mr-2" />
                     Make sure your spreadsheet follows the template format. Each row will become a separate listing.
                   </div>
+                  
+                  <div className="text-sm bg-amber-100 dark:bg-amber-950/50 midnight:bg-amber-950/70 text-amber-800 dark:text-amber-400 p-3 rounded-lg border-l-2 border-amber-500">
+                    <AlertCircle className="w-4 h-4 inline-block mr-2" />
+                    <strong>Important:</strong> Each game category has specific valid options (e.g., 'pokemon', 'mtg', 'lorcana', 'flesh-and-blood'). 
+                    The template includes examples and instructions for all valid options.
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -512,7 +562,7 @@ const BulkListingPage = () => {
                       </TableHeader>
                       <TableBody>
                         {bulkListings.map((listing) => (
-                          <TableRow key={listing.id} className={listing.status === 'error' ? 'bg-red-50 dark:bg-red-900/30 midnight:bg-red-900/50' : ''}>
+                          <TableRow key={listing.id} className={listing.status === 'error' ? 'bg-red-100 dark:bg-red-950/60 midnight:bg-red-950/80 border-l-4 border-red-500' : ''}>
                             <TableCell className="font-medium">{listing.title}</TableCell>
                             <TableCell>${listing.price}</TableCell>
                             <TableCell>{GAME_CATEGORIES[listing.game as keyof typeof GAME_CATEGORIES] || listing.game}</TableCell>
@@ -586,7 +636,9 @@ const BulkListingPage = () => {
                                 </Button>
                               </div>
                               {listing.error && (
-                                <p className="text-xs text-red-500 mt-1">{listing.error}</p>
+                                <div className="text-xs text-red-500 mt-1 p-1 rounded bg-red-100/50 dark:bg-red-950/50 midnight:bg-red-950/70 border-l-2 border-red-500">
+                                  <span className="font-medium">Error:</span> {listing.error}
+                                </div>
                               )}
                             </TableCell>
                           </TableRow>
