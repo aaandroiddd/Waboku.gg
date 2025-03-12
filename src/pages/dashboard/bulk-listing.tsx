@@ -50,22 +50,6 @@ const TEMPLATE_HEADERS = [
   'Grading Company'
 ];
 
-// Instructions row for the template
-const TEMPLATE_INSTRUCTIONS = [
-  [
-    '--- INSTRUCTIONS ---',
-    'Please follow these guidelines when filling out the template',
-    '',
-    '--- VALID GAME CATEGORIES ---',
-    `Valid options: ${Object.keys(GAME_CATEGORIES).join(', ')}`,
-    '--- VALID CONDITIONS ---',
-    `Valid options: ${Object.keys(CONDITION_MAPPING).join(', ')}`,
-    '',
-    '',
-    ''
-  ]
-];
-
 // Sample data for the template
 const TEMPLATE_SAMPLE_DATA = [
   [
@@ -147,6 +131,22 @@ const CONDITION_MAPPING = {
   'played': 'Played',
   'poor': 'Poor'
 };
+
+// Instructions row for the template
+const TEMPLATE_INSTRUCTIONS = [
+  [
+    '--- INSTRUCTIONS ---',
+    'Please follow these guidelines when filling out the template',
+    '',
+    '--- VALID GAME CATEGORIES ---',
+    `Valid options: ${Object.keys(GAME_CATEGORIES).join(', ')}`,
+    '--- VALID CONDITIONS ---',
+    `Valid options: ${Object.keys(CONDITION_MAPPING).join(', ')}`,
+    '',
+    '',
+    ''
+  ]
+];
 
 const BulkListingPage = () => {
   const { user, loading } = useAuth();
