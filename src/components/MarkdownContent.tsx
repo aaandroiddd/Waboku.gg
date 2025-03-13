@@ -18,14 +18,14 @@ export function MarkdownContent({ content, className = '' }: MarkdownContentProp
 
   if (!hasMarkdown) {
     return (
-      <div className={`whitespace-pre-wrap ${className}`}>
+      <div className={`whitespace-pre-wrap break-words overflow-wrap-anywhere overflow-hidden ${className}`}>
         {content}
       </div>
     );
   }
 
   return (
-    <div className={`prose dark:prose-invert max-w-none ${className}`}>
+    <div className={`prose dark:prose-invert max-w-none break-words overflow-wrap-anywhere overflow-hidden ${className}`}>
       <ReactMarkdown>{content}</ReactMarkdown>
     </div>
   );

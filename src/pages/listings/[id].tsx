@@ -694,10 +694,12 @@ export default function ListingPage() {
                     {(() => {
                       const MarkdownContent = dynamic(() => import('@/components/MarkdownContent').then(mod => mod.MarkdownContent), {
                         ssr: false,
-                        loading: () => <p className="text-muted-foreground whitespace-pre-wrap text-sm md:text-base">{listing.description}</p>
+                        loading: () => <p className="text-muted-foreground whitespace-pre-wrap text-sm md:text-base overflow-hidden break-words">{listing.description}</p>
                       });
                       
-                      return <MarkdownContent content={listing.description} className="text-muted-foreground text-sm md:text-base" />;
+                      return <div className="max-w-full overflow-hidden">
+                        <MarkdownContent content={listing.description} className="text-muted-foreground text-sm md:text-base" />
+                      </div>;
                     })()}
                   </div>
 
