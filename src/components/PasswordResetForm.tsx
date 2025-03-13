@@ -99,8 +99,8 @@ export default function PasswordResetForm() {
           )}
 
           {success && (
-            <Alert variant="default" className="bg-green-50 border-green-200">
-              <CheckCircle2 className="h-4 w-4 text-green-600" />
+            <Alert variant="default" className="bg-muted/80 border-muted dark:bg-muted/30 dark:border-muted/50">
+              <CheckCircle2 className="h-4 w-4 text-primary" />
               <AlertTitle>Email Sent</AlertTitle>
               <AlertDescription>
                 If an account exists with this email address, you will receive a password reset link shortly.
