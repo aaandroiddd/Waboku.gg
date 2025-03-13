@@ -509,7 +509,7 @@ const BulkListingPage = () => {
                     Make sure your spreadsheet follows the template format. Each row will become a separate listing.
                   </div>
                   
-                  <div className="text-sm bg-amber-100 dark:bg-amber-950/50 midnight:bg-amber-950/70 text-amber-800 dark:text-amber-400 p-3 rounded-lg border-l-2 border-amber-500">
+                  <div className="text-sm bg-amber-100 dark:bg-amber-800/40 midnight:bg-amber-800/30 text-amber-800 dark:text-amber-100 midnight:text-amber-50 p-3 rounded-lg border-l-2 border-amber-500 dark:border-amber-600 midnight:border-amber-700">
                     <AlertCircle className="w-4 h-4 inline-block mr-2" />
                     <strong>Important:</strong> Each game category has specific valid options (e.g., 'pokemon', 'mtg', 'lorcana', 'flesh-and-blood'). 
                     The template includes examples and instructions for all valid options.
@@ -544,13 +544,13 @@ const BulkListingPage = () => {
                   )}
                   
                   {/* Location input for all listings */}
-                  <div className="p-6 bg-white dark:bg-gray-900 midnight:bg-gray-950 rounded-lg border border-primary/20 shadow-sm">
-                    <h3 className="text-lg font-semibold mb-3 text-primary">Set Location for All Listings</h3>
-                    <div className="mb-3 text-sm text-gray-700 dark:text-gray-300 midnight:text-gray-200">
+                  <div className="p-6 bg-white dark:bg-gray-800 midnight:bg-gray-900 rounded-lg border border-primary/20 shadow-sm">
+                    <h3 className="text-lg font-semibold mb-3 text-primary dark:text-primary/90 midnight:text-primary/90">Set Location for All Listings</h3>
+                    <div className="mb-3 text-sm text-gray-700 dark:text-gray-200 midnight:text-gray-100">
                       This location will be applied to all listings in this batch.
                     </div>
-                    <div className="bg-amber-100 dark:bg-amber-900/50 midnight:bg-amber-900/60 p-4 rounded-md border border-amber-300 dark:border-amber-700 mb-4">
-                      <div className="text-sm text-amber-900 dark:text-amber-200 midnight:text-amber-100">
+                    <div className="bg-amber-100 dark:bg-amber-800/50 midnight:bg-amber-800/40 p-4 rounded-md border border-amber-300 dark:border-amber-600 midnight:border-amber-700/70 mb-4">
+                      <div className="text-sm text-amber-900 dark:text-amber-100 midnight:text-amber-50">
                         <strong>Important:</strong> Setting a location helps buyers find your cards in their area.
                       </div>
                     </div>
@@ -635,7 +635,7 @@ const BulkListingPage = () => {
                                 <Badge variant="outline">Pending Image</Badge>
                               )}
                               {listing.status === 'ready' && (
-                                <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800">
+                                <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800 midnight:bg-green-900/30 midnight:text-green-300 midnight:border-green-800/70">
                                   Ready
                                 </Badge>
                               )}
@@ -668,7 +668,7 @@ const BulkListingPage = () => {
                                 </Button>
                               </div>
                               {listing.error && (
-                                <div className="text-xs mt-1 p-2 rounded bg-red-50 text-red-800 dark:bg-red-900/30 dark:text-red-300 midnight:bg-red-900/40 midnight:text-red-200 border border-red-200 dark:border-red-800 shadow-sm">
+                                <div className="text-xs mt-1 p-2 rounded bg-red-50 text-red-800 dark:bg-red-900/30 dark:text-red-300 midnight:bg-red-900/40 midnight:text-red-200 border border-red-200 dark:border-red-800 midnight:border-red-700 shadow-sm">
                                   <span className="font-medium">Error:</span> {listing.error}
                                 </div>
                               )}

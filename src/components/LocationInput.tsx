@@ -307,7 +307,7 @@ export function LocationInput({
               }
             }}
             placeholder={placeholder}
-            className={`h-12 bg-white dark:bg-gray-800 midnight:bg-gray-950 border-2 ${error ? "border-red-500" : "border-primary/30 focus-visible:border-primary"} shadow-sm`}
+            className={`h-12 bg-white dark:bg-gray-800 midnight:bg-gray-900 border-2 ${error ? "border-red-500" : "border-primary/30 focus-visible:border-primary"} shadow-sm`}
           />
           <div className="absolute right-3 top-3 text-primary/70">
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
