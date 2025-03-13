@@ -544,12 +544,12 @@ const BulkListingPage = () => {
                   )}
                   
                   {/* Location input for all listings */}
-                  <div className="p-6 bg-white dark:bg-gray-700 midnight:bg-gray-800 rounded-lg border border-primary/20 shadow-sm">
-                    <h3 className="text-lg font-semibold mb-3 text-primary dark:text-primary/90 midnight:text-primary/90">Set Location for All Listings</h3>
-                    <div className="mb-3 text-sm text-gray-700 dark:text-gray-200 midnight:text-gray-100">
+                  <div className="p-6 bg-card rounded-lg border border-border shadow-sm">
+                    <h3 className="text-lg font-semibold mb-3 text-primary">Set Location for All Listings</h3>
+                    <div className="mb-3 text-sm text-foreground">
                       This location will be applied to all listings in this batch.
                     </div>
-                    <div className="bg-amber-100 dark:bg-amber-800/50 midnight:bg-amber-800/40 p-4 rounded-md border border-amber-300 dark:border-amber-600 midnight:border-amber-700/70 mb-4">
+                    <div className="bg-amber-100 dark:bg-amber-800/30 midnight:bg-amber-900/20 p-4 rounded-md border border-amber-300 dark:border-amber-700/50 midnight:border-amber-800/40 mb-4">
                       <div className="text-sm text-amber-900 dark:text-amber-100 midnight:text-amber-50">
                         <strong>Important:</strong> Setting a location helps buyers find your cards in their area.
                       </div>
