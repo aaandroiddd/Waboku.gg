@@ -181,30 +181,32 @@ export function Chat({
     };
   }, []);
 
-  // Auto-scroll to bottom for new messages and initial load
+  // Auto-scroll to bottom for new messages
   useEffect(() => {
-    if (isAtBottom || messages.length > 0) {
+    if (isAtBottom && messages.length > 0) {
       scrollToBottom('auto');
     }
   }, [messages, isAtBottom]);
   
-  // Scroll to bottom on initial load
+  // Always scroll to bottom on initial load and when chat changes
   useEffect(() => {
-    if (messages.length > 0 && !messagesLoading) {
-      // Use a small timeout to ensure the DOM has updated
+    if (messages.length > 0) {
+      // Use a timeout to ensure the DOM has updated
       const timer = setTimeout(() => {
         scrollToBottom('auto');
+        setIsAtBottom(true);
       }, 100);
       return () => clearTimeout(timer);
     }
-  }, [messagesLoading]);
+  }, [messagesLoading, chatId]);
   
-  // Immediately scroll to bottom when chat is selected/loaded
+  // Force scroll to bottom when chat is selected/loaded
   useEffect(() => {
     if (chatId && messages.length > 0) {
       // Use a slightly longer timeout to ensure all messages are rendered
       const timer = setTimeout(() => {
         scrollToBottom('auto');
+        setIsAtBottom(true);
       }, 200);
       return () => clearTimeout(timer);
     }
@@ -669,11 +671,24 @@ export function Chat({
               size="sm"
               className="absolute bottom-4 right-4 rounded-full opacity-90 hover:opacity-100 shadow-md z-10"
               onClick={() => {
-                setIsAtBottom(true);
                 scrollToBottom();
+                setIsAtBottom(true);
               }}
             >
-              ↓
+              <svg 
+                xmlns="http://www.w3.org/2000/svg" 
+                width="16" 
+                height="16" 
+                viewBox="0 0 24 24" 
+                fill="none" 
+                stroke="currentColor" 
+                strokeWidth="2" 
+                strokeLinecap="round" 
+                strokeLinejoin="round"
+              >
+                <path d="M12 5v14"/>
+                <path d="m19 12-7 7-7-7"/>
+              </svg>
             </Button>
           )}
         </div>
