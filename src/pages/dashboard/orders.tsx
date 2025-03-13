@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useUnread } from '@/contexts/UnreadContext';
 import { getFirebaseServices } from '@/lib/firebase';
 import { collection, query, where, orderBy, getDocs, doc, getDoc } from 'firebase/firestore';
 import { Order } from '@/types/order';
@@ -17,10 +18,21 @@ import { toast } from 'sonner';
 export default function OrdersPage() {
   const { user } = useAuth();
   const router = useRouter();
+  const { clearUnreadCount, resetUnreadCount } = useUnread();
   const [purchases, setPurchases] = useState<Order[]>([]);
   const [sales, setSales] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [processingOrder, setProcessingOrder] = useState(false);
+  
+  // Clear unread count when component mounts
+  useEffect(() => {
+    clearUnreadCount('orders');
+    
+    // Reset when component unmounts
+    return () => {
+      resetUnreadCount('orders');
+    };
+  }, [clearUnreadCount, resetUnreadCount]);
 
   // Check for successful checkout and ensure order is created
   useEffect(() => {

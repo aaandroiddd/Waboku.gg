@@ -8,6 +8,7 @@ import { Logo } from '@/components/Logo';
 import { useState } from 'react';
 import { SignOutDialog } from '@/components/SignOutDialog';
 import { Badge } from '@/components/ui/badge';
+import { useUnread } from '@/contexts/UnreadContext';
 
 interface DashboardSidebarProps {
   onNavigate?: () => void;
@@ -17,11 +18,23 @@ export function DashboardSidebar({ onNavigate }: DashboardSidebarProps) {
   const router = useRouter();
   const { user, signOut, isEmailVerified } = useAuth();
   const { accountTier, features } = useAccount();
+  const { unreadCounts } = useUnread();
   const [showSignOutDialog, setShowSignOutDialog] = useState(false);
 
   const handleSignOut = async () => {
     await signOut();
     router.push('/');
+  };
+
+  // Function to render unread badge
+  const renderUnreadBadge = (count: number) => {
+    if (count <= 0) return null;
+    
+    return (
+      <Badge variant="destructive" className="ml-auto">
+        {count > 10 ? '10+' : count}
+      </Badge>
+    );
   };
 
   // Base navigation items
@@ -70,6 +83,7 @@ export function DashboardSidebar({ onNavigate }: DashboardSidebarProps) {
           <path d="M16 10a4 4 0 0 1-8 0"/>
         </svg>
       ),
+      badge: unreadCounts.orders,
     },
     {
       name: 'Offers',
@@ -81,6 +95,7 @@ export function DashboardSidebar({ onNavigate }: DashboardSidebarProps) {
           <line x1="12" y1="17" x2="12.01" y2="17"/>
         </svg>
       ),
+      badge: unreadCounts.offers,
     },
     {
       name: 'Favorites',
@@ -102,6 +117,7 @@ export function DashboardSidebar({ onNavigate }: DashboardSidebarProps) {
           <path d="M16 10h.01"/>
         </svg>
       ),
+      badge: unreadCounts.messages,
     },
     {
       name: 'Seller Account',
@@ -232,6 +248,7 @@ export function DashboardSidebar({ onNavigate }: DashboardSidebarProps) {
             >
               {item.icon}
               {item.name}
+              {item.badge !== undefined && renderUnreadBadge(item.badge)}
             </button>
           ))}
         </nav>

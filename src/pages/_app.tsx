@@ -3,6 +3,7 @@ import type { AppProps } from 'next/app';
 import { ThemeProvider } from '@/components/ThemeProvider';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { AccountProvider } from '@/contexts/AccountContext';
+import { UnreadProvider } from '@/contexts/UnreadContext';
 import { Toaster } from '@/components/ui/toaster';
 import { RouteGuard } from '@/components/RouteGuard';
 import dynamic from 'next/dynamic';
@@ -101,13 +102,15 @@ export default function App({ Component, pageProps }: AppProps) {
         <LoadingProvider>
           <AuthProvider>
             <AccountProvider>
-              <RouteGuard requireAuth={requireAuth}>
-                <MainContent 
-                  Component={Component}
-                  pageProps={pageProps}
-                  pathname={router.pathname}
-                />
-              </RouteGuard>
+              <UnreadProvider>
+                <RouteGuard requireAuth={requireAuth}>
+                  <MainContent 
+                    Component={Component}
+                    pageProps={pageProps}
+                    pathname={router.pathname}
+                  />
+                </RouteGuard>
+              </UnreadProvider>
             </AccountProvider>
           </AuthProvider>
         </LoadingProvider>

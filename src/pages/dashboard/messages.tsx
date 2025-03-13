@@ -4,6 +4,7 @@ import { getDatabase, ref, onValue, get } from 'firebase/database';
 import { doc, getDoc } from 'firebase/firestore';
 import { db, getFirebaseServices } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
+import { useUnread } from '@/contexts/UnreadContext';
 import { Skeleton } from "@/components/ui/skeleton";
 import { Chat } from '@/components/Chat';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -34,6 +35,7 @@ interface ParticipantProfile {
 export default function MessagesPage() {
   const router = useRouter();
   const { user } = useAuth();
+  const { clearUnreadCount, resetUnreadCount } = useUnread();
   const [chats, setChats] = useState<ChatPreview[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -114,6 +116,16 @@ export default function MessagesPage() {
       setProfilesLoading(prev => ({ ...prev, [userId]: false }));
     }
   };
+
+  // Clear unread count when component mounts
+  useEffect(() => {
+    clearUnreadCount('messages');
+    
+    // Reset when component unmounts
+    return () => {
+      resetUnreadCount('messages');
+    };
+  }, [clearUnreadCount, resetUnreadCount]);
 
   useEffect(() => {
     if (!user) {

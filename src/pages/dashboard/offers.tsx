@@ -3,6 +3,7 @@ import type { NextPage } from 'next';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { useAuth } from '@/contexts/AuthContext';
+import { useUnread } from '@/contexts/UnreadContext';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -20,6 +21,7 @@ const OffersComponent = () => {
   const { toast } = useToast();
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
+  const { clearUnreadCount, resetUnreadCount } = useUnread();
   const [error, setError] = useState<string | null>(null);
   const { receivedOffers: initialReceivedOffers, sentOffers: initialSentOffers, loading: offersLoading, error: offersError, fetchOffers, updateOfferStatus, makeCounterOffer } = useOffers();
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -27,6 +29,16 @@ const OffersComponent = () => {
   // Create local state to manage offers that can be updated immediately on UI
   const [receivedOffers, setReceivedOffers] = useState(initialReceivedOffers);
   const [sentOffers, setSentOffers] = useState(initialSentOffers);
+  
+  // Clear unread count when component mounts
+  useEffect(() => {
+    clearUnreadCount('offers');
+    
+    // Reset when component unmounts
+    return () => {
+      resetUnreadCount('offers');
+    };
+  }, [clearUnreadCount, resetUnreadCount]);
   
   // Update local state when the hook data changes
   useEffect(() => {
