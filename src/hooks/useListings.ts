@@ -202,13 +202,34 @@ export function useListings({ userId, searchQuery, showOnlyActive = false }: Use
         updateData.originalCreatedAt = listingData.createdAt;
       } else if (status === 'active') {
         // When activating/restoring, set new dates and remove archive-related fields
-        const standardExpiration = new Date(now);
-        standardExpiration.setDate(standardExpiration.getDate() + 30);
+        
+        // Get user data to determine account tier
+        let accountTier = 'free'; // Default to free tier
+        try {
+          const userRef = doc(db, 'users', user.uid);
+          const userDoc = await getDoc(userRef);
+          if (userDoc.exists()) {
+            const userData = userDoc.data();
+            accountTier = userData.accountTier || 'free';
+          }
+        } catch (error) {
+          console.error('Error getting user account tier:', error);
+          // Continue with free tier as fallback
+        }
+        
+        // Get the appropriate listing duration based on account tier
+        // Free tier: 48 hours, Premium tier: 720 hours (30 days)
+        const tierDuration = accountTier === 'premium' ? 720 : 48;
+        
+        // Calculate expiration time in hours
+        const expirationTime = new Date(now);
+        expirationTime.setHours(expirationTime.getHours() + tierDuration);
         
         updateData.createdAt = now;
-        updateData.expiresAt = standardExpiration;
+        updateData.expiresAt = expirationTime;
         updateData.archivedAt = null;
         updateData.originalCreatedAt = null;
+        updateData.accountTier = accountTier; // Store the account tier with the listing
       } else {
         // For inactive status, keep current expiration but remove archive-related fields
         updateData.archivedAt = null;
