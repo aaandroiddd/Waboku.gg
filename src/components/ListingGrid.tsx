@@ -5,12 +5,13 @@ import { useFavorites } from '@/hooks/useFavorites';
 import { useAuth } from '@/contexts/AuthContext';
 import { Listing } from '@/types/database';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useState, useCallback, useMemo, memo } from 'react';
+import { useState, useCallback, useMemo, memo, useEffect } from 'react';
 import { RemoveFavoriteDialog } from './RemoveFavoriteDialog';
 import { Button } from '@/components/ui/button';
 import { ListingCard } from './ListingCard';
 import { useListings } from '@/hooks/useListings';
 import { ContentLoader } from './ContentLoader';
+import { useLoading } from '@/contexts/LoadingContext';
 
 interface ListingGridProps {
   listings?: Listing[];
