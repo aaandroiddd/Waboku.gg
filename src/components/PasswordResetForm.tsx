@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AlertCircle, CheckCircle2 } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Info } from 'lucide-react';
 import { sendPasswordResetEmail } from 'firebase/auth';
 import { firebaseAuth } from '@/lib/firebase';
 
@@ -12,6 +12,29 @@ export default function PasswordResetForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isGoogleAccount, setIsGoogleAccount] = useState(false);
+
+  const checkGoogleAuth = async (email: string) => {
+    try {
+      const response = await fetch('/api/auth/check-google-auth', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to check authentication methods');
+      }
+
+      const data = await response.json();
+      return data.hasGoogleAuth;
+    } catch (err) {
+      console.error('Error checking Google auth:', err);
+      return false;
+    }
+  };
 
   const handleResetPassword = async () => {
     if (!email) {
@@ -28,8 +51,18 @@ export default function PasswordResetForm() {
     setIsLoading(true);
     setError(null);
     setSuccess(false);
+    setIsGoogleAccount(false);
 
     try {
+      // First check if this email is associated with Google authentication
+      const hasGoogleAuth = await checkGoogleAuth(email);
+      
+      if (hasGoogleAuth) {
+        setIsGoogleAccount(true);
+        setIsLoading(false);
+        return;
+      }
+
       // Set up the action code settings with the app URL
       const actionCodeSettings = {
         url: `${process.env.NEXT_PUBLIC_APP_URL}/auth/sign-in`,
@@ -83,16 +116,16 @@ export default function PasswordResetForm() {
               placeholder="Enter email address"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              disabled={isLoading || success}
+              disabled={isLoading || success || isGoogleAccount}
               className="w-full"
             />
             <div className="flex justify-center">
               <Button 
                 onClick={handleResetPassword} 
-                disabled={isLoading || success}
+                disabled={isLoading || success || isGoogleAccount}
                 className="w-1/2"
               >
-                {isLoading ? 'Sending...' : 'Send Link'}
+                {isLoading ? 'Checking...' : 'Send Link'}
               </Button>
             </div>
           </div>
@@ -102,6 +135,16 @@ export default function PasswordResetForm() {
               <AlertCircle className="h-4 w-4" />
               <AlertTitle>Error</AlertTitle>
               <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+
+          {isGoogleAccount && (
+            <Alert variant="default" className="bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800">
+              <Info className="h-4 w-4 text-blue-500 dark:text-blue-400" />
+              <AlertTitle>Google Account Detected</AlertTitle>
+              <AlertDescription>
+                This email is associated with a Google account. Please sign in with Google instead of using password reset.
+              </AlertDescription>
             </Alert>
           )}
 

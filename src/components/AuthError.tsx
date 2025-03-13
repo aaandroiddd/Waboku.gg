@@ -24,6 +24,18 @@ const AuthError: React.FC<AuthErrorProps> = ({ error, errorCode, onClose }) => {
       };
     }
     
+    // Check for Google account error
+    if (error.name === 'auth/google-account') {
+      return {
+        title: "Google Account Detected",
+        description: (
+          <>
+            This email is associated with a Google account. Please use the "Sign in with Google" button below instead.
+          </>
+        ),
+      };
+    }
+    
     switch (code) {
       case "auth/wrong-password":
         return {

@@ -61,6 +61,28 @@ function SignInComponent() {
     }
   }, [user, router]);
 
+  const checkGoogleAuth = async (email: string) => {
+    try {
+      const response = await fetch('/api/auth/check-google-auth', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to check authentication methods');
+      }
+
+      const data = await response.json();
+      return data.hasGoogleAuth;
+    } catch (err) {
+      console.error('Error checking Google auth:', err);
+      return false;
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setAuthError(null);
@@ -91,6 +113,15 @@ function SignInComponent() {
       if (!emailRegex.test(email)) {
         throw Object.assign(new Error("Invalid email format"), {
           name: "auth/invalid-email"
+        });
+      }
+
+      // Check if this email is associated with Google authentication
+      const hasGoogleAuth = await checkGoogleAuth(email);
+      
+      if (hasGoogleAuth) {
+        throw Object.assign(new Error("This email is associated with a Google account. Please sign in with Google instead."), {
+          name: "auth/google-account"
         });
       }
 
