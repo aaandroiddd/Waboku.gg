@@ -181,12 +181,23 @@ export function Chat({
     };
   }, []);
 
-  // Auto-scroll to bottom for new messages
+  // Auto-scroll to bottom for new messages and initial load
   useEffect(() => {
-    if (isAtBottom) {
-      scrollToBottom();
+    if (isAtBottom || messages.length > 0) {
+      scrollToBottom('auto');
     }
   }, [messages, isAtBottom]);
+  
+  // Scroll to bottom on initial load
+  useEffect(() => {
+    if (messages.length > 0 && !messagesLoading) {
+      // Use a small timeout to ensure the DOM has updated
+      const timer = setTimeout(() => {
+        scrollToBottom('auto');
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [messagesLoading]);
 
   // Mark messages as read when they become visible
   useEffect(() => {
@@ -197,6 +208,15 @@ export function Chat({
       
       if (unreadMessages.length > 0) {
         markAsRead(unreadMessages.map(msg => msg.id));
+        
+        // Update the chat's lastMessage.read status in the database
+        if (unreadMessages.some(msg => msg.id === messages[messages.length - 1].id)) {
+          const database = getDatabase();
+          const lastMessageReadRef = ref(database, `chats/${chatId}/lastMessage/read`);
+          set(lastMessageReadRef, true).catch(err => {
+            console.error('Error updating lastMessage read status:', err);
+          });
+        }
       }
     }
   }, [messages, chatId, user?.uid, markAsRead]);

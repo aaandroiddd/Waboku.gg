@@ -68,6 +68,16 @@ export const useMessages = (chatId?: string) => {
           });
           const sortedMessages = messageList.sort((a, b) => a.timestamp - b.timestamp);
           setMessages(sortedMessages);
+          
+          // Mark unread messages as read
+          const unreadMessages = sortedMessages.filter(
+            msg => msg.senderId !== user?.uid && !msg.read
+          );
+          
+          if (unreadMessages.length > 0) {
+            markAsRead(unreadMessages.map(msg => msg.id));
+          }
+          
           console.log(`Loaded ${sortedMessages.length} messages`);
         } else {
           console.log('No messages found for this chat');

@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useAuth } from './AuthContext';
-import { getDatabase, ref, onValue } from 'firebase/database';
+import { getDatabase, ref, onValue, get, update } from 'firebase/database';
 import { getFirebaseServices } from '@/lib/firebase';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 
@@ -151,6 +151,45 @@ export const UnreadProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const clearUnreadCount = (section: keyof UnreadCounts) => {
     setActiveSection(section);
     setUnreadCounts(prev => ({ ...prev, [section]: 0 }));
+    
+    // For messages, we need to update the database to mark messages as read
+    if (section === 'messages' && user) {
+      const database = getDatabase();
+      const chatsRef = ref(database, 'chats');
+      
+      // Get all chats
+      get(chatsRef).then((snapshot) => {
+        const chatsData = snapshot.val();
+        if (!chatsData) return;
+        
+        const updates: Record<string, any> = {};
+        
+        // Process each chat
+        for (const [chatId, chat] of Object.entries<any>(chatsData)) {
+          // Skip if user is not a participant or chat is deleted by user
+          if (!chat.participants?.[user.uid] || chat.deletedBy?.[user.uid]) {
+            continue;
+          }
+          
+          // Check if there's a last message and it's unread
+          if (chat.lastMessage && 
+              chat.lastMessage.receiverId === user.uid && 
+              chat.lastMessage.read === false) {
+            // Mark the last message as read
+            updates[`chats/${chatId}/lastMessage/read`] = true;
+          }
+        }
+        
+        // Apply all updates at once
+        if (Object.keys(updates).length > 0) {
+          update(ref(database), updates).catch(err => {
+            console.error('Error updating message read status:', err);
+          });
+        }
+      }).catch(err => {
+        console.error('Error getting chats for read status update:', err);
+      });
+    }
   };
 
   // Reset tracking when user leaves a section

@@ -319,15 +319,22 @@ export default function MessagesPage() {
                 <div className="space-y-3 p-4">
                   {chats.map((chat) => {
                     const otherParticipant = getOtherParticipant(chat);
+                    const isUnread = chat.lastMessage && 
+                                    chat.lastMessage.receiverId === user?.uid && 
+                                    chat.lastMessage.read === false;
+                    
                     return (
                       <Button
                         key={chat.id}
                         variant={selectedChat === chat.id ? "secondary" : "ghost"}
-                        className="w-full justify-start h-auto py-3"
+                        className={`w-full justify-start h-auto py-3 relative ${isUnread ? 'bg-muted/50' : ''}`}
                         onClick={() => setSelectedChat(chat.id)}
                       >
+                        {isUnread && (
+                          <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary rounded-full"></div>
+                        )}
                         <div className="text-left w-full space-y-1.5">
-                          <div className="font-medium">
+                          <div className="font-medium flex items-center gap-2">
                             {otherParticipant.id ? (
                               <UserNameLink 
                                 userId={otherParticipant.id} 
@@ -335,6 +342,9 @@ export default function MessagesPage() {
                               />
                             ) : (
                               <span>Unknown User</span>
+                            )}
+                            {isUnread && (
+                              <div className="h-2 w-2 rounded-full bg-primary"></div>
                             )}
                           </div>
                           {chat.subject && (
@@ -348,7 +358,7 @@ export default function MessagesPage() {
                             </div>
                           )}
                           {chat.lastMessage && (
-                            <div className="text-sm text-muted-foreground truncate mt-1">
+                            <div className={`text-sm truncate mt-1 ${isUnread ? 'font-medium text-foreground' : 'text-muted-foreground'}`}>
                               {chat.lastMessage.content}
                             </div>
                           )}
