@@ -154,37 +154,86 @@ export function Chat({
 
   const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
     if (scrollRef.current) {
-      scrollRef.current.scrollTo({
-        top: scrollRef.current.scrollHeight,
-        behavior
-      });
+      // Try to find the viewport element
+      const viewport = scrollRef.current.querySelector('[data-radix-scroll-area-viewport]');
+      if (viewport) {
+        // Scroll the viewport element
+        viewport.scrollTo({
+          top: viewport.scrollHeight,
+          behavior
+        });
+      } else {
+        // Fallback to scrolling the ScrollArea component itself
+        scrollRef.current.scrollTo({
+          top: scrollRef.current.scrollHeight,
+          behavior
+        });
+      }
+      
+      // Set a flag to indicate we're at the bottom
+      setIsAtBottom(true);
     }
   };
 
-  // Handle scroll position detection
+  // Handle scroll position detection with improved sensitivity
   useEffect(() => {
-    if (!bottomRef.current) return;
+    if (!bottomRef.current || !scrollRef.current) return;
 
+    // More sensitive intersection observer
     observerRef.current = new IntersectionObserver(
       ([entry]) => {
         setIsAtBottom(entry.isIntersecting);
       },
-      { threshold: 0.1, rootMargin: "100px" }
+      { threshold: 0.01, rootMargin: "150px" } // Increased sensitivity and margin
     );
 
     observerRef.current.observe(bottomRef.current);
+
+    // Additional scroll event listener for more reliable detection
+    const handleScroll = () => {
+      if (scrollRef.current) {
+        const viewport = scrollRef.current.querySelector('[data-radix-scroll-area-viewport]');
+        if (viewport) {
+          const isBottom = Math.abs(viewport.scrollHeight - viewport.clientHeight - viewport.scrollTop) < 20; // More forgiving threshold
+          setIsAtBottom(isBottom);
+        }
+      }
+    };
+
+    const scrollElement = scrollRef.current.querySelector('[data-radix-scroll-area-viewport]');
+    if (scrollElement) {
+      scrollElement.addEventListener('scroll', handleScroll);
+    }
 
     return () => {
       if (observerRef.current) {
         observerRef.current.disconnect();
       }
+      if (scrollElement) {
+        scrollElement.removeEventListener('scroll', handleScroll);
+      }
     };
   }, []);
 
-  // Auto-scroll to bottom for new messages
+  // Auto-scroll to bottom for new messages with improved reliability
   useEffect(() => {
-    if (isAtBottom && messages.length > 0) {
-      scrollToBottom('auto');
+    if (messages.length > 0) {
+      // Always scroll to bottom when a new message is added
+      const lastMessage = messages[messages.length - 1];
+      const isNewMessage = lastMessage && Date.now() - lastMessage.timestamp < 5000; // Message is less than 5 seconds old
+      
+      if (isNewMessage || isAtBottom) {
+        // Use multiple timeouts to ensure scrolling works across different devices/browsers
+        const timer1 = setTimeout(() => scrollToBottom('auto'), 50);
+        const timer2 = setTimeout(() => scrollToBottom('auto'), 150);
+        const timer3 = setTimeout(() => scrollToBottom('auto'), 300);
+        
+        return () => {
+          clearTimeout(timer1);
+          clearTimeout(timer2);
+          clearTimeout(timer3);
+        };
+      }
     }
   }, [messages, isAtBottom]);
   
@@ -608,7 +657,8 @@ export function Chat({
               const target = e.currentTarget;
               const viewport = target.querySelector('[data-radix-scroll-area-viewport]');
               if (viewport) {
-                const isBottom = Math.abs(viewport.scrollHeight - viewport.clientHeight - viewport.scrollTop) < 1;
+                // More forgiving threshold for detecting bottom (20px)
+                const isBottom = Math.abs(viewport.scrollHeight - viewport.clientHeight - viewport.scrollTop) < 20;
                 setIsAtBottom(isBottom);
               }
             }}
@@ -679,17 +729,18 @@ export function Chat({
             </div>
           </ScrollArea>
 
-          {/* Scroll to bottom button - Fixed positioning */}
+          {/* Scroll to bottom button - Fixed positioning with improved visibility */}
           {!isAtBottom && messages.length > 0 && (
             <Button
               variant="secondary"
               size="sm"
-              className="absolute bottom-16 right-4 rounded-full opacity-90 hover:opacity-100 shadow-md z-10"
+              className="absolute bottom-16 right-4 rounded-full opacity-90 hover:opacity-100 shadow-md z-10 flex items-center gap-1 px-3 py-2 bg-primary text-primary-foreground animate-pulse"
               onClick={() => {
                 scrollToBottom();
                 setIsAtBottom(true);
               }}
             >
+              <span className="text-xs font-medium">New messages</span>
               <svg 
                 xmlns="http://www.w3.org/2000/svg" 
                 width="16" 
