@@ -22,6 +22,8 @@ import { WantedPostsDebugger } from "@/components/dashboard/WantedPostsDebugger"
 import { useListings } from '@/hooks/useListings';
 import { useProfile } from '@/hooks/useProfile';
 import { Listing } from '@/types/database';
+import { ContentLoader } from '@/components/ContentLoader';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const DashboardComponent = () => {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -247,12 +249,24 @@ const DashboardComponent = () => {
     router.push('/dashboard/messages?listing=' + listingId);
   };
 
+  // Use ContentLoader instead of a simple loading spinner
   if (loading) {
     return (
       <DashboardLayout>
-        <div className="min-h-screen flex items-center justify-center">
-          <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-        </div>
+        <ContentLoader 
+          isLoading={true} 
+          loadingMessage="Loading dashboard..."
+          minHeight="600px"
+          fallback={
+            <div className="space-y-4">
+              {[...Array(3)].map((_, i) => (
+                <Skeleton key={i} className="h-32 w-full" />
+              ))}
+            </div>
+          }
+        >
+          <div></div>
+        </ContentLoader>
       </DashboardLayout>
     );
   }

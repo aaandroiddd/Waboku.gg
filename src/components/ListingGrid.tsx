@@ -140,6 +140,12 @@ export function ListingGrid({
   const { user } = useAuth();
   const [selectedListing, setSelectedListing] = useState<Listing | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const { setLoading } = useLoading();
+  
+  // Update global loading state when our loading state changes
+  useEffect(() => {
+    setLoading(loading);
+  }, [loading, setLoading]);
 
   const handleFavoriteClick = useCallback((e: React.MouseEvent, listing: Listing) => {
     e.preventDefault();

@@ -4,6 +4,7 @@ import { getStorage, ref, uploadBytesResumable, getDownloadURL } from 'firebase/
 import { getFirebaseServices } from '@/lib/firebase';
 import { Listing } from '@/types/database';
 import { useAuth } from '@/contexts/AuthContext';
+import { useClientCache } from './useClientCache';
 
 // Game name mappings for consistent filtering
 const GAME_NAME_MAPPING: { [key: string]: string[] } = {
@@ -516,22 +517,45 @@ export function useListings({ userId, searchQuery, showOnlyActive = false }: Use
 
   useEffect(() => {
     // Calculate distance between two points using Haversine formula
-const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
-  const R = 6371; // Earth's radius in kilometers
-  const dLat = (lat2 - lat1) * Math.PI / 180;
-  const dLon = (lon2 - lon1) * Math.PI / 180;
-  const a = 
-    Math.sin(dLat/2) * Math.sin(dLat/2) +
-    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
-    Math.sin(dLon/2) * Math.sin(dLon/2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-  return R * c;
-};
+    const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+      const R = 6371; // Earth's radius in kilometers
+      const dLat = (lat2 - lat1) * Math.PI / 180;
+      const dLon = (lon2 - lon1) * Math.PI / 180;
+      const a = 
+        Math.sin(dLat/2) * Math.sin(dLat/2) +
+        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+        Math.sin(dLon/2) * Math.sin(dLon/2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+      return R * c;
+    };
 
-const fetchListings = async () => {
+    // Create a cache key based on the current options
+    const cacheKey = `listings_${userId || 'all'}_${showOnlyActive ? 'active' : 'all'}_${searchQuery || 'none'}`;
+    
+    // Initialize client cache
+    const { getFromCache, saveToCache } = useClientCache<Listing[]>({
+      key: cacheKey,
+      expirationMinutes: 5 // Cache expires after 5 minutes
+    });
+
+    const fetchListings = async () => {
       try {
         setIsLoading(true);
         setError(null);
+        
+        // Check if we have cached data
+        const { data: cachedListings, expired } = getFromCache();
+        
+        if (cachedListings && !expired) {
+          console.log(`Using cached listings data (${cachedListings.length} items)`);
+          // Set listings from cache immediately to improve perceived performance
+          setListings(cachedListings);
+          setIsLoading(false);
+          
+          // If we're using cached data, we can return early
+          // This provides a faster initial render
+          return;
+        }
         
         // Get user's location
         let userLocation: { latitude: number | null; longitude: number | null } = { latitude: null, longitude: null };
@@ -640,6 +664,10 @@ const fetchListings = async () => {
           });
         }
         
+        // Cache the results for faster loading next time
+        saveToCache(fetchedListings);
+        console.log(`Cached ${fetchedListings.length} listings for future use`);
+        
         setListings(fetchedListings);
       } catch (err: any) {
         console.error('Error fetching listings:', err);
@@ -653,7 +681,7 @@ const fetchListings = async () => {
     if (!searchQuery) {
       fetchListings();
     }
-  }, [userId]);
+  }, [userId, showOnlyActive, searchQuery]);
 
   return { 
     listings, 

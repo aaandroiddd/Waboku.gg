@@ -1,4 +1,4 @@
-import { Button } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Listing } from "@/types/database";
 import { Edit2, ExternalLink, MessageCircle, Share2, Trash2 } from "lucide-react";

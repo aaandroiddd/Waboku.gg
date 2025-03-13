@@ -14,6 +14,7 @@ import Header from "@/components/Header";
 import { GameCategories } from "@/components/GameCategories";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Slider } from "@/components/ui/slider";
 import { TrendingSearches } from "@/components/TrendingSearches";
 import { checkAndClearStaleAuthData } from "@/lib/auth-token-manager";
@@ -533,13 +534,26 @@ export default function Home() {
               </Link>
             </div>
             <div className="max-w-[1400px] mx-auto">
-              <ListingGrid 
-                listings={filteredListings} 
-                loading={loading} 
-                displayCount={displayCount}
-                hasMore={filteredListings.length > displayCount}
-                onLoadMore={() => setDisplayCount(prev => prev + 8)}
-              />
+              <ContentLoader 
+                isLoading={loading} 
+                loadingMessage="Loading listings..."
+                minHeight="400px"
+                fallback={
+                  <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                    {[...Array(8)].map((_, i) => (
+                      <Skeleton key={i} className="h-64 w-full" />
+                    ))}
+                  </div>
+                }
+              >
+                <ListingGrid 
+                  listings={filteredListings} 
+                  loading={false} // We're handling loading state with ContentLoader
+                  displayCount={displayCount}
+                  hasMore={filteredListings.length > displayCount}
+                  onLoadMore={() => setDisplayCount(prev => prev + 8)}
+                />
+              </ContentLoader>
             </div>
           </section>
         </main>
