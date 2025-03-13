@@ -14,6 +14,9 @@ import { GAME_NAME_MAPPING } from "@/lib/game-mappings";
 import { StateSelect } from "@/components/StateSelect";
 import { useWantedPosts, WantedPost } from "@/hooks/useWantedPosts";
 import { useState, useEffect } from "react";
+import { ContentLoader } from "@/components/ContentLoader";
+import { LoadingScreen } from "@/components/LoadingScreen";
+import { useLoading } from "@/contexts/LoadingContext";
 
 // Helper function to get the display name for a game category
 const getGameDisplayName = (gameKey: string): string => {
@@ -29,6 +32,7 @@ export default function AllWantedPostsPage() {
   const router = useRouter();
   const { user } = useAuth();
   const [selectedState, setSelectedState] = useState<string | null>(null);
+  const { setLoading } = useLoading();
   
   const { game } = router.query;
   
@@ -38,8 +42,11 @@ export default function AllWantedPostsPage() {
     state: selectedState || undefined
   });
   
-  // Log for debugging
+  // Set global loading state when data is being fetched
   useEffect(() => {
+    setLoading(isLoading);
+    
+    // Log for debugging
     console.log("Wanted Posts Page - Posts loaded:", wantedPosts.length);
     console.log("Wanted Posts Page - Loading state:", isLoading);
     console.log("Wanted Posts Page - Error state:", error);
@@ -72,7 +79,7 @@ export default function AllWantedPostsPage() {
     };
     
     logData();
-  }, [wantedPosts, isLoading, error, game, selectedState]);
+  }, [wantedPosts, isLoading, error, game, selectedState, setLoading]);
 
   const handleCreateWanted = () => {
     if (!user) {
@@ -141,39 +148,51 @@ export default function AllWantedPostsPage() {
                 </div>
 
                 <TabsContent value="recent" className="mt-0">
-                  {isLoading ? (
-                    <div className="space-y-4">
-                      {[...Array(3)].map((_, i) => (
-                        <Skeleton key={i} className="h-32 w-full" />
-                      ))}
-                    </div>
-                  ) : wantedPosts.length > 0 ? (
-                    <div className="space-y-4">
-                      {wantedPosts.map((post) => (
-                        <WantedPostCard key={post.id} post={post} />
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-center py-12 bg-muted/30 rounded-lg">
-                      <h3 className="text-xl font-medium mb-2">No wanted posts found</h3>
-                      <p className="text-muted-foreground mb-6">
-                        Be the first to create a wanted post
-                      </p>
-                      <Button onClick={handleCreateWanted}>
-                        Create Wanted Post
-                      </Button>
-                    </div>
-                  )}
+                  <ContentLoader 
+                    isLoading={isLoading} 
+                    loadingMessage="Loading wanted posts..."
+                    minHeight="400px"
+                    fallback={
+                      <div className="space-y-4">
+                        {[...Array(3)].map((_, i) => (
+                          <Skeleton key={i} className="h-32 w-full" />
+                        ))}
+                      </div>
+                    }
+                  >
+                    {wantedPosts.length > 0 ? (
+                      <div className="space-y-4">
+                        {wantedPosts.map((post) => (
+                          <WantedPostCard key={post.id} post={post} />
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-12 bg-muted/30 rounded-lg">
+                        <h3 className="text-xl font-medium mb-2">No wanted posts found</h3>
+                        <p className="text-muted-foreground mb-6">
+                          Be the first to create a wanted post
+                        </p>
+                        <Button onClick={handleCreateWanted}>
+                          Create Wanted Post
+                        </Button>
+                      </div>
+                    )}
+                  </ContentLoader>
                 </TabsContent>
 
                 <TabsContent value="nearby" className="mt-0">
-                  {isLoading ? (
-                    <div className="space-y-4">
-                      {[...Array(3)].map((_, i) => (
-                        <Skeleton key={i} className="h-32 w-full" />
-                      ))}
-                    </div>
-                  ) : (
+                  <ContentLoader 
+                    isLoading={isLoading}
+                    loadingMessage="Loading nearby posts..."
+                    minHeight="400px"
+                    fallback={
+                      <div className="space-y-4">
+                        {[...Array(3)].map((_, i) => (
+                          <Skeleton key={i} className="h-32 w-full" />
+                        ))}
+                      </div>
+                    }
+                  >
                     <div className="text-center py-12 bg-muted/30 rounded-lg">
                       <h3 className="text-xl font-medium mb-2">Location-based results</h3>
                       <p className="text-muted-foreground mb-6">
@@ -183,7 +202,7 @@ export default function AllWantedPostsPage() {
                         Enable Location
                       </Button>
                     </div>
-                  )}
+                  </ContentLoader>
                 </TabsContent>
               </Tabs>
             </div>
@@ -191,6 +210,8 @@ export default function AllWantedPostsPage() {
         </div>
       </main>
       <Footer />
+      {/* Add LoadingScreen for initial page load */}
+      <LoadingScreen isLoading={isLoading && wantedPosts.length === 0} message="Loading Wanted Posts..." />
     </PageTransition>
   );
 }

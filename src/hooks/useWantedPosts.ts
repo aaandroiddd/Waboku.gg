@@ -45,8 +45,31 @@ export function useWantedPosts(options: WantedPostsOptions = {}) {
   const { user } = useAuth();
 
   useEffect(() => {
+    // Create a cache key based on the current options
+    const cacheKey = `wantedPosts_${options.game || 'all'}_${options.state || 'all'}_${options.userId || 'all'}_${options.limit || 'none'}`;
+    
+    // Check if we have cached data in sessionStorage
+    const cachedData = sessionStorage.getItem(cacheKey);
+    let cachedPosts: WantedPost[] | null = null;
+    
+    if (cachedData) {
+      try {
+        cachedPosts = JSON.parse(cachedData);
+        console.log("Using cached wanted posts data:", cachedPosts.length);
+        // Set posts from cache immediately to improve perceived performance
+        setPosts(cachedPosts);
+      } catch (e) {
+        console.error("Error parsing cached posts:", e);
+        // Clear invalid cache
+        sessionStorage.removeItem(cacheKey);
+      }
+    }
+    
     const fetchWantedPosts = async () => {
-      setIsLoading(true);
+      // If we're using cached data, don't show loading state
+      if (!cachedPosts) {
+        setIsLoading(true);
+      }
       setError(null);
 
       try {
@@ -64,78 +87,47 @@ export function useWantedPosts(options: WantedPostsOptions = {}) {
           throw new Error('Database not initialized');
         }
         
-        // First, call the fix-paths API to ensure the database structure is correct
-        // and create a test post if needed
-        try {
-          console.log("Calling fix-paths API to ensure database structure...");
-          await logToServer('Calling fix-paths API', {}, 'info');
-          
-          const fixPathsResponse = await fetch('/api/wanted/fix-paths');
-          if (!fixPathsResponse.ok) {
-            throw new Error(`Fix paths API returned status ${fixPathsResponse.status}`);
+        // Skip fix-paths API call if we have cached data to speed up loading
+        if (!cachedPosts) {
+          // First, call the fix-paths API to ensure the database structure is correct
+          try {
+            console.log("Calling fix-paths API to ensure database structure...");
+            const fixPathsResponse = await fetch('/api/wanted/fix-paths');
+            if (!fixPathsResponse.ok) {
+              throw new Error(`Fix paths API returned status ${fixPathsResponse.status}`);
+            }
+            
+            const fixPathsResult = await fixPathsResponse.json();
+            console.log("Fix paths API result:", fixPathsResult);
+            
+            // If a test post was created, wait for database to update
+            if (fixPathsResult.testPostCreated) {
+              await new Promise(resolve => setTimeout(resolve, 300));
+            }
+          } catch (fixPathsError) {
+            console.error("Error calling fix-paths API:", fixPathsError);
+            // Continue with fetch attempt even if fix-paths fails
           }
-          
-          const fixPathsResult = await fixPathsResponse.json();
-          console.log("Fix paths API result:", fixPathsResult);
-          await logToServer('Fix paths API result', fixPathsResult, 'info');
-          
-          // If no posts were found and a test post was created, we'll need to wait a moment
-          // for the database to update
-          if (fixPathsResult.testPostCreated) {
-            console.log("Test post was created, waiting for database to update...");
-            await new Promise(resolve => setTimeout(resolve, 500));
-          }
-        } catch (fixPathsError) {
-          console.error("Error calling fix-paths API:", fixPathsError);
-          await logToServer('Error calling fix-paths API', {
-            error: fixPathsError instanceof Error ? fixPathsError.message : String(fixPathsError)
-          }, 'error');
-          // Continue with the fetch attempt even if fix-paths fails
         }
         
         // Create reference to wanted/posts collection (primary path)
         let postsRef = ref(database, 'wanted/posts');
-        await logToServer('Created posts reference', { path: 'wanted/posts' }, 'info');
         
         // Check if the path exists by doing a direct get first
         const pathCheckSnapshot = await get(postsRef);
-        await logToServer('Path check result', { 
-          pathExists: pathCheckSnapshot.exists(),
-          path: 'wanted/posts'
-        }, 'info');
         
         // If primary path doesn't exist, try the old path as fallback
         if (!pathCheckSnapshot.exists()) {
           console.log("Path 'wanted/posts' doesn't exist, trying fallback path...");
-          await logToServer('Trying fallback path', { fallbackPath: 'wantedPosts' }, 'info');
           
           // Try the old path as fallback
           postsRef = ref(database, 'wantedPosts');
           const fallbackSnapshot = await get(postsRef);
           
-          await logToServer('Fallback path check result', { 
-            fallbackPathExists: fallbackSnapshot.exists(),
-            fallbackPath: 'wantedPosts'
-          }, 'info');
-          
-          // If neither path exists, we'll continue with the new path but there will be no results
+          // If neither path exists, try direct 'wanted' path
           if (!fallbackSnapshot.exists()) {
             console.log("Neither 'wanted/posts' nor 'wantedPosts' paths exist in the database");
-            await logToServer('No wanted posts paths exist in database', {}, 'warn');
-            
-            // Try one more time with the direct 'wanted' path
             postsRef = ref(database, 'wanted');
-            const directSnapshot = await get(postsRef);
-            
-            await logToServer('Direct path check result', { 
-              directPathExists: directSnapshot.exists(),
-              directPath: 'wanted'
-            }, 'info');
-            
-            if (!directSnapshot.exists()) {
-              console.log("No posts found in any path");
-              await logToServer('No posts found in any path', {}, 'warn');
-            }
           }
         }
         
@@ -144,26 +136,14 @@ export function useWantedPosts(options: WantedPostsOptions = {}) {
         // Apply filters based on options
         if (options.userId) {
           postsQuery = query(postsRef, orderByChild('userId'), equalTo(options.userId));
-          await logToServer('Applied userId filter', { userId: options.userId }, 'info');
         } else if (options.game) {
           postsQuery = query(postsRef, orderByChild('game'), equalTo(options.game));
-          await logToServer('Applied game filter', { game: options.game }, 'info');
         }
 
         console.log("Executing database query...");
-        await logToServer('Executing database query', { 
-          hasUserId: !!options.userId,
-          hasGame: !!options.game,
-          hasState: !!options.state,
-          path: postsRef.toString()
-        }, 'info');
         
         const snapshot = await get(postsQuery);
         console.log("Query completed, snapshot exists:", snapshot.exists());
-        await logToServer('Query completed', { 
-          snapshotExists: snapshot.exists(),
-          path: postsRef.toString()
-        }, 'info');
         
         const fetchedPosts: WantedPost[] = [];
 
@@ -187,13 +167,8 @@ export function useWantedPosts(options: WantedPostsOptions = {}) {
             }
           });
           console.log(`Found ${fetchedPosts.length} posts in database`);
-          await logToServer('Posts found in database', { 
-            count: fetchedPosts.length,
-            path: postsRef.toString()
-          }, 'info');
         } else {
           console.log("No posts found in database");
-          await logToServer('No posts found in database', { path: postsRef.toString() }, 'info');
         }
 
         // Apply additional filters that can't be done at the database level
@@ -204,10 +179,6 @@ export function useWantedPosts(options: WantedPostsOptions = {}) {
             post.location.toLowerCase().includes(options.state!.toLowerCase())
           );
           console.log(`After state filter: ${filteredPosts.length} posts`);
-          await logToServer('Applied state filter', { 
-            state: options.state,
-            countAfterFilter: filteredPosts.length 
-          }, 'info');
         }
         
         // Sort by createdAt (newest first)
@@ -217,17 +188,17 @@ export function useWantedPosts(options: WantedPostsOptions = {}) {
         if (options.limit && filteredPosts.length > options.limit) {
           filteredPosts = filteredPosts.slice(0, options.limit);
           console.log(`After limit: ${filteredPosts.length} posts`);
-          await logToServer('Applied limit', { 
-            limit: options.limit,
-            finalCount: filteredPosts.length 
-          }, 'info');
         }
         
         console.log("Final posts to display:", filteredPosts.length);
-        await logToServer('Final posts to display', { 
-          count: filteredPosts.length,
-          firstPostId: filteredPosts.length > 0 ? filteredPosts[0].id : null
-        }, 'info');
+        
+        // Cache the results in sessionStorage for faster loading next time
+        try {
+          sessionStorage.setItem(cacheKey, JSON.stringify(filteredPosts));
+          console.log("Cached wanted posts data for future use");
+        } catch (cacheError) {
+          console.error("Error caching posts:", cacheError);
+        }
         
         setPosts(filteredPosts);
       } catch (err) {
@@ -237,11 +208,17 @@ export function useWantedPosts(options: WantedPostsOptions = {}) {
           stack: err instanceof Error ? err.stack : null
         }, 'error');
         setError('Failed to load wanted posts. Please try again.');
+        
+        // If we have cached data and encounter an error, keep using the cached data
+        if (cachedPosts) {
+          console.log("Using cached data due to fetch error");
+        }
       } finally {
         setIsLoading(false);
       }
     };
 
+    // Always fetch fresh data, but we might show cached data first
     fetchWantedPosts();
   }, [options.game, options.state, options.userId, options.limit]);
 
