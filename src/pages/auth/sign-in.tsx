@@ -8,7 +8,7 @@ import { Logo } from "@/components/Logo";
 import { useAuth } from "@/contexts/AuthContext";
 import { Skeleton } from "@/components/ui/skeleton";
 import AuthError from "@/components/AuthError";
-import AuthMethodsHelper from "@/components/AuthMethodsHelper";
+import PasswordResetForm from "@/components/PasswordResetForm";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
 function LoadingState() {
@@ -276,10 +276,10 @@ function SignInComponent() {
             <Accordion type="single" collapsible className="w-full">
               <AccordionItem value="auth-help">
                 <AccordionTrigger className="text-sm text-muted-foreground">
-                  Having trouble signing in?
+                  Forgot your password?
                 </AccordionTrigger>
                 <AccordionContent>
-                  <AuthMethodsHelper />
+                  <PasswordResetForm />
                 </AccordionContent>
               </AccordionItem>
             </Accordion>
