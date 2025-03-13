@@ -668,7 +668,7 @@ const BulkListingPage = () => {
                                 </Button>
                               </div>
                               {listing.error && (
-                                <div className="text-xs mt-1 p-2 rounded bg-red-50 text-red-800 dark:bg-red-900/30 dark:text-red-300 midnight:bg-red-900/40 midnight:text-red-200 border border-red-200 dark:border-red-800 midnight:border-red-700 shadow-sm">
+                                <div className="text-xs mt-1 p-2 rounded bg-red-50 text-red-800 dark:bg-red-950/80 dark:text-red-300 midnight:bg-red-950/90 midnight:text-red-200 border border-red-200 dark:border-red-800 midnight:border-red-700 shadow-sm">
                                   <span className="font-medium">Error:</span> {listing.error}
                                 </div>
                               )}
