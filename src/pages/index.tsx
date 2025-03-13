@@ -19,6 +19,7 @@ import { Slider } from "@/components/ui/slider";
 import { TrendingSearches } from "@/components/TrendingSearches";
 import { checkAndClearStaleAuthData } from "@/lib/auth-token-manager";
 import AnimatedBackground from "@/components/AnimatedBackground";
+import { ContentLoader } from "@/components/ContentLoader";
 import {
   Command,
   CommandEmpty,
