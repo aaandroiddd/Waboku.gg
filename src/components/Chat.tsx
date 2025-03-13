@@ -549,12 +549,12 @@ export function Chat({
           </div>
         </div>
 
-        {/* Main Content Area - Modified for proper scrolling */}
-        <div className="flex-1 flex flex-col min-h-0 relative">
-          {/* Messages Area with Modified ScrollArea */}
+        {/* Main Content Area - Fixed height and proper scrolling */}
+        <div className="flex-1 flex flex-col min-h-0 relative overflow-hidden">
+          {/* Messages Area with Fixed Height ScrollArea */}
           <ScrollArea 
             ref={scrollRef}
-            className="flex-1"
+            className="flex-1 h-full"
             type="always"
             onScroll={(e) => {
               const target = e.currentTarget;
@@ -631,7 +631,7 @@ export function Chat({
             </div>
           </ScrollArea>
 
-          {/* Scroll to bottom button - Adjusted positioning */}
+          {/* Scroll to bottom button - Fixed positioning */}
           {!isAtBottom && messages.length > 0 && (
             <Button
               variant="secondary"

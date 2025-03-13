@@ -351,9 +351,9 @@ export default function MessagesPage() {
         )}
 
         {showChat && (
-          <div className="flex-1 flex flex-col bg-muted/30">
+          <div className="flex-1 flex flex-col bg-muted/30 overflow-hidden">
             {selectedChat ? (
-              <div className="flex flex-col h-full">
+              <div className="flex flex-col h-full overflow-hidden">
                 {isMobileView && (
                   <div className="flex-none p-2 border-b bg-background">
                     <Button
@@ -367,7 +367,7 @@ export default function MessagesPage() {
                     </Button>
                   </div>
                 )}
-                <div className="flex-1">
+                <div className="flex-1 overflow-hidden">
                   <Chat
                     chatId={selectedChat}
                     receiverId={getOtherParticipant(chats.find(c => c.id === selectedChat)!).id}
