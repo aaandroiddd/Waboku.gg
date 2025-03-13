@@ -2,12 +2,12 @@ import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
-import { X, Upload, ImageIcon } from "lucide-react";
+import { X, Upload, ImageIcon, CheckCircle2 } from "lucide-react";
 
 interface MultiImageUploadProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onImagesConfirm: (images: File[]) => void;
+  onImagesConfirm: (images: File[], coverImageIndex?: number) => void;
   existingImages?: File[];
   maxImages?: number;
 }
@@ -21,6 +21,7 @@ export function MultiImageUpload({
 }: MultiImageUploadProps) {
   const { toast } = useToast();
   const [images, setImages] = useState<File[]>(existingImages);
+  const [coverImageIndex, setCoverImageIndex] = useState<number>(0);
   
   // Handle file selection
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -69,17 +70,38 @@ export function MultiImageUpload({
   
   // Remove an image
   const removeImage = (index: number) => {
+    // If removing the cover image, reset cover to the first image
+    if (index === coverImageIndex) {
+      if (images.length > 1) {
+        // Set to first image or next image if first is being removed
+        setCoverImageIndex(index === 0 && images.length > 1 ? 1 : 0);
+      }
+    } else if (index < coverImageIndex) {
+      // If removing an image before the cover, adjust the cover index
+      setCoverImageIndex(coverImageIndex - 1);
+    }
+    
     setImages(prev => prev.filter((_, i) => i !== index));
+  };
+  
+  // Set an image as the cover
+  const setCoverImage = (index: number) => {
+    setCoverImageIndex(index);
+    toast({
+      title: "Cover Image Set",
+      description: "This image will be displayed as the main image for your listing.",
+    });
   };
   
   // Clear all images
   const clearImages = () => {
     setImages([]);
+    setCoverImageIndex(0);
   };
   
   // Confirm selection
   const confirmImages = () => {
-    onImagesConfirm(images);
+    onImagesConfirm(images, coverImageIndex);
     onOpenChange(false);
   };
 
@@ -98,11 +120,20 @@ export function MultiImageUpload({
                 <img 
                   src={URL.createObjectURL(image)} 
                   alt={`Upload ${index + 1}`} 
-                  className="w-full h-24 object-cover rounded-md"
+                  className={`w-full h-24 object-cover rounded-md cursor-pointer ${index === coverImageIndex ? 'ring-2 ring-primary ring-offset-2' : ''}`}
+                  onClick={() => setCoverImage(index)}
                 />
+                {index === coverImageIndex && (
+                  <div className="absolute top-1 left-1 bg-primary text-white rounded-full p-1">
+                    <CheckCircle2 className="h-3 w-3" />
+                  </div>
+                )}
                 <button
                   type="button"
-                  onClick={() => removeImage(index)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    removeImage(index);
+                  }}
                   className="absolute top-1 right-1 bg-black/70 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
                 >
                   <X className="h-3 w-3" />
@@ -139,7 +170,8 @@ export function MultiImageUpload({
           
           {/* Instructions */}
           <div className="text-sm bg-muted p-3 rounded-md">
-            <p>Click on an image to remove it or use the Clear All button to start over.</p>
+            <p><strong>Cover Image:</strong> Click on an image to set it as the cover image (highlighted with a ring).</p>
+            <p className="mt-1">To remove an image, hover over it and click the X button.</p>
             <p className="mt-1">Images must be JPG, PNG, or WebP format and under 5MB each.</p>
           </div>
         </div>

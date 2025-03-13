@@ -299,15 +299,16 @@ const BulkListingPage = () => {
   };
 
   // Handle images confirmation from the multi-image upload dialog
-  const handleImagesConfirm = (images: File[]) => {
+  const handleImagesConfirm = (images: File[], coverImageIndex: number = 0) => {
     if (!currentEditingListingId) return;
     
-    // Update the listing with the images
+    // Update the listing with the images and cover image index
     setBulkListings(prev => prev.map(listing => {
       if (listing.id === currentEditingListingId) {
         return {
           ...listing,
           images: images,
+          coverImageIndex: coverImageIndex,
           status: images.length > 0 ? 'ready' : 'pending'
         };
       }
@@ -543,7 +544,7 @@ const BulkListingPage = () => {
                   )}
                   
                   {/* Location input for all listings */}
-                  <div className="p-6 bg-white dark:bg-gray-900 midnight:bg-gray-950 rounded-lg border border-primary/20 shadow-sm">
+                  <div className="p-6 bg-slate-100 dark:bg-slate-800 midnight:bg-slate-900 rounded-lg border border-primary/20 shadow-sm">
                     <h3 className="text-lg font-semibold mb-3 text-primary">Set Location for All Listings</h3>
                     <div className="mb-3 text-sm">
                       This location will be applied to all listings in this batch.
