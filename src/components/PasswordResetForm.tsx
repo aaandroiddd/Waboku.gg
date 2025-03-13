@@ -77,17 +77,24 @@ export default function PasswordResetForm() {
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          <div className="flex space-x-2">
+          <div className="flex flex-col space-y-3">
             <Input
               type="email"
               placeholder="Enter email address"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               disabled={isLoading || success}
+              className="w-full"
             />
-            <Button onClick={handleResetPassword} disabled={isLoading || success}>
-              {isLoading ? 'Sending...' : 'Send Link'}
-            </Button>
+            <div className="flex justify-center">
+              <Button 
+                onClick={handleResetPassword} 
+                disabled={isLoading || success}
+                className="w-1/2"
+              >
+                {isLoading ? 'Sending...' : 'Send Link'}
+              </Button>
+            </div>
           </div>
 
           {error && (
