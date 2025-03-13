@@ -544,7 +544,7 @@ const BulkListingPage = () => {
                   )}
                   
                   {/* Location input for all listings */}
-                  <div className="p-6 bg-white dark:bg-gray-800 midnight:bg-gray-900 rounded-lg border border-primary/20 shadow-sm">
+                  <div className="p-6 bg-white dark:bg-gray-700 midnight:bg-gray-800 rounded-lg border border-primary/20 shadow-sm">
                     <h3 className="text-lg font-semibold mb-3 text-primary dark:text-primary/90 midnight:text-primary/90">Set Location for All Listings</h3>
                     <div className="mb-3 text-sm text-gray-700 dark:text-gray-200 midnight:text-gray-100">
                       This location will be applied to all listings in this batch.
