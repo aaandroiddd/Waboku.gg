@@ -60,12 +60,12 @@ export function SellerBadge({ className, userId, showOnlyOnProfile = false }: Se
     (!userData.subscription?.endDate || new Date(userData.subscription.endDate) > new Date());
   
   return (
-    <div className="flex gap-2">
+    <div className="flex flex-wrap gap-2">
       {userData.isEmailVerified && (
         <BadgeTooltip content="This user has verified their email address, confirming their identity">
           <Badge 
             variant="secondary"
-            className="bg-green-500/10 hover:bg-green-500/20 text-green-500 border-green-500/20"
+            className="bg-green-500/10 hover:bg-green-500/20 text-green-500 border-green-500/20 inline-flex items-center"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -77,12 +77,12 @@ export function SellerBadge({ className, userId, showOnlyOnProfile = false }: Se
               strokeWidth="2"
               strokeLinecap="round"
               strokeLinejoin="round"
-              className="mr-1"
+              className="mr-1 flex-shrink-0"
             >
               <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z" />
               <path d="m9 12 2 2 4-4" />
             </svg>
-            Verified
+            <span>Verified</span>
           </Badge>
         </BadgeTooltip>
       )}
@@ -90,18 +90,19 @@ export function SellerBadge({ className, userId, showOnlyOnProfile = false }: Se
         <BadgeTooltip content="Premium members enjoy enhanced features, priority listings, and reduced fees">
           <Badge 
             variant="secondary"
-            className="bg-gradient-to-r from-yellow-500 to-yellow-600 text-white border-none"
+            className="bg-gradient-to-r from-yellow-500 to-yellow-600 text-white border-none inline-flex items-center"
           >
-            ⭐ Premium
+            <span className="mr-1">⭐</span>
+            <span>Premium</span>
           </Badge>
         </BadgeTooltip>
       ) : (
         <BadgeTooltip content="Standard account with basic marketplace features">
           <Badge 
             variant="secondary"
-            className="bg-gray-500/10 hover:bg-gray-500/20 text-gray-500 border-gray-500/20"
+            className="bg-gray-500/10 hover:bg-gray-500/20 text-gray-500 border-gray-500/20 inline-flex items-center"
           >
-            Free User
+            <span>Free User</span>
           </Badge>
         </BadgeTooltip>
       )}

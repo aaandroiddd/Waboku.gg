@@ -53,10 +53,10 @@ export function StripeSellerBadge({ className, userId }: StripeSellerBadgeProps)
     <BadgeTooltip content="This seller has connected their Stripe account and can accept secure payments">
       <Badge 
         variant="secondary"
-        className={`bg-purple-500/10 hover:bg-purple-500/20 text-purple-500 border-purple-500/20 ${className}`}
+        className={`bg-purple-500/10 hover:bg-purple-500/20 text-purple-500 border-purple-500/20 inline-flex items-center ${className}`}
       >
-        <CreditCard className="h-3 w-3 mr-1" />
-        Verified Seller
+        <CreditCard className="h-3 w-3 mr-1 flex-shrink-0" />
+        <span>Verified Seller</span>
       </Badge>
     </BadgeTooltip>
   );
