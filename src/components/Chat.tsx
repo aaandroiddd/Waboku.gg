@@ -198,6 +198,17 @@ export function Chat({
       return () => clearTimeout(timer);
     }
   }, [messagesLoading]);
+  
+  // Immediately scroll to bottom when chat is selected/loaded
+  useEffect(() => {
+    if (chatId && messages.length > 0) {
+      // Use a slightly longer timeout to ensure all messages are rendered
+      const timer = setTimeout(() => {
+        scrollToBottom('auto');
+      }, 200);
+      return () => clearTimeout(timer);
+    }
+  }, [chatId]);
 
   // Mark messages as read when they become visible
   useEffect(() => {
