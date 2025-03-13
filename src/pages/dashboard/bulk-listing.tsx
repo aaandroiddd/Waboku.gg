@@ -17,6 +17,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { LocationInput } from "@/components/LocationInput";
+import { MultiImageUpload } from "@/components/MultiImageUpload";
 import * as XLSX from 'xlsx';
 
 // Define the structure of a listing from the spreadsheet
@@ -32,7 +33,7 @@ interface BulkListingItem {
   isGraded?: boolean;
   gradeLevel?: number;
   gradingCompany?: string;
-  image?: File;
+  images?: File[];
   city?: string;
   state?: string;
   status: 'pending' | 'ready' | 'error' | 'uploaded';
@@ -163,6 +164,8 @@ const BulkListingPage = () => {
   const [bulkListings, setBulkListings] = useState<BulkListingItem[]>([]);
   const [currentUploadIndex, setCurrentUploadIndex] = useState(-1);
   const [overallProgress, setOverallProgress] = useState(0);
+  const [showImageUploadDialog, setShowImageUploadDialog] = useState(false);
+  const [currentEditingListingId, setCurrentEditingListingId] = useState<string | null>(null);
 
   // Redirect non-premium users
   useEffect(() => {
@@ -295,50 +298,39 @@ const BulkListingPage = () => {
     reader.readAsArrayBuffer(file);
   };
 
-  // Handle image upload for a specific listing
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, listingId: string) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  // Handle images confirmation from the multi-image upload dialog
+  const handleImagesConfirm = (images: File[]) => {
+    if (!currentEditingListingId) return;
     
-    // Validate file type and size
-    const ALLOWED_FILE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
-    const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
-    
-    if (!ALLOWED_FILE_TYPES.includes(file.type)) {
-      toast({
-        title: "Invalid File Type",
-        description: "Please upload a JPG, PNG, or WebP image.",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    if (file.size > MAX_FILE_SIZE) {
-      toast({
-        title: "File Too Large",
-        description: "Image must be under 5MB.",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    // Update the listing with the image
+    // Update the listing with the images
     setBulkListings(prev => prev.map(listing => {
-      if (listing.id === listingId) {
+      if (listing.id === currentEditingListingId) {
         return {
           ...listing,
-          image: file,
-          status: 'ready'
+          images: images,
+          status: images.length > 0 ? 'ready' : 'pending'
         };
       }
       return listing;
     }));
+    
+    // Close the dialog
+    setShowImageUploadDialog(false);
+    setCurrentEditingListingId(null);
+    
+    // Show toast
+    if (images.length > 0) {
+      toast({
+        title: "Images Added",
+        description: `${images.length} image${images.length > 1 ? 's' : ''} added to listing.`,
+      });
+    }
   };
 
   // Submit all listings
   const submitAllListings = async () => {
     // Check if all listings have images
-    const missingImages = bulkListings.filter(listing => !listing.image);
+    const missingImages = bulkListings.filter(listing => !listing.images || listing.images.length === 0);
     if (missingImages.length > 0) {
       toast({
         title: "Missing Images",
@@ -386,7 +378,7 @@ const BulkListingPage = () => {
           isGraded: listing.isGraded,
           gradeLevel: listing.gradeLevel,
           gradingCompany: listing.gradingCompany,
-          images: listing.image ? [listing.image] : [],
+          images: listing.images || [],
           coverImageIndex: 0,
           city: listing.city || "", // Use the city from the listing (set by LocationInput)
           state: listing.state || "", // Use the state from the listing (set by LocationInput)
@@ -597,32 +589,42 @@ const BulkListingPage = () => {
                             <TableCell>{GAME_CATEGORIES[listing.game as keyof typeof GAME_CATEGORIES] || listing.game}</TableCell>
                             <TableCell>{CONDITION_MAPPING[listing.condition as keyof typeof CONDITION_MAPPING] || listing.condition}</TableCell>
                             <TableCell>
-                              {listing.image ? (
-                                <div className="relative w-12 h-12">
-                                  <img 
-                                    src={URL.createObjectURL(listing.image)} 
-                                    alt={listing.title} 
-                                    className="w-12 h-12 object-cover rounded-md"
-                                  />
-                                </div>
-                              ) : (
-                                <div className="flex items-center">
-                                  <Input
-                                    id={`image-${listing.id}`}
-                                    type="file"
-                                    accept="image/jpeg,image/png,image/webp"
-                                    onChange={(e) => handleImageUpload(e, listing.id)}
-                                    className="hidden"
-                                    disabled={isSubmitting}
-                                  />
-                                  <label 
-                                    htmlFor={`image-${listing.id}`}
+                              <div className="flex items-center">
+                                {listing.images && listing.images.length > 0 ? (
+                                  <div 
+                                    className="relative w-12 h-12 cursor-pointer" 
+                                    onClick={() => {
+                                      // Find the listing index
+                                      const index = bulkListings.findIndex(item => item.id === listing.id);
+                                      if (index !== -1) {
+                                        setCurrentEditingListingId(listing.id);
+                                        setShowImageUploadDialog(true);
+                                      }
+                                    }}
+                                  >
+                                    <img 
+                                      src={URL.createObjectURL(listing.images[0])} 
+                                      alt={listing.title} 
+                                      className="w-12 h-12 object-cover rounded-md"
+                                    />
+                                    {listing.images.length > 1 && (
+                                      <Badge className="absolute -top-2 -right-2 bg-primary text-xs">
+                                        {listing.images.length}
+                                      </Badge>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <div 
                                     className="cursor-pointer flex items-center justify-center w-12 h-12 bg-muted rounded-md hover:bg-muted/80 transition-colors"
+                                    onClick={() => {
+                                      setCurrentEditingListingId(listing.id);
+                                      setShowImageUploadDialog(true);
+                                    }}
                                   >
                                     <ImageIcon className="w-6 h-6 text-muted-foreground" />
-                                  </label>
-                                </div>
-                              )}
+                                  </div>
+                                )}
+                              </div>
                             </TableCell>
                             <TableCell>
                               {listing.status === 'error' && (
@@ -700,6 +702,17 @@ const BulkListingPage = () => {
           </TabsContent>
         </Tabs>
       </div>
+      
+      {/* Multi-image upload dialog */}
+      {currentEditingListingId && (
+        <MultiImageUpload
+          open={showImageUploadDialog}
+          onOpenChange={setShowImageUploadDialog}
+          onImagesConfirm={handleImagesConfirm}
+          existingImages={bulkListings.find(l => l.id === currentEditingListingId)?.images || []}
+          maxImages={5}
+        />
+      )}
     </DashboardLayout>
   );
 };
