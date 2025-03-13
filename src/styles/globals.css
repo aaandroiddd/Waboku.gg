@@ -291,7 +291,7 @@
       "Oxygen", "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue",
       sans-serif;
     
-    --background: 210 40% 98%;
+    --background: 0 0% 100%;
     --foreground: 222 47% 11%;
     
     --card: 0 0% 100%;
@@ -300,7 +300,7 @@
     --popover: 0 0% 100%;
     --popover-foreground: 222 47% 11%;
     
-    --primary: 199 89% 48%;
+    --primary: 221 83% 53%;
     --primary-foreground: 210 40% 98%;
     
     --secondary: 210 40% 96%;
@@ -315,9 +315,9 @@
     --destructive: 0 84% 60%;
     --destructive-foreground: 210 40% 98%;
     
-    --border: 214 32% 91%;
-    --input: 214 32% 91%;
-    --ring: 199 89% 48%;
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 221 83% 53%;
     
     --radius: 0.5rem;
   }
