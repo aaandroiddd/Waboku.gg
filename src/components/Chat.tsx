@@ -169,7 +169,7 @@ export function Chat({
       ([entry]) => {
         setIsAtBottom(entry.isIntersecting);
       },
-      { threshold: 0.5 }
+      { threshold: 0.1, rootMargin: "100px" }
     );
 
     observerRef.current.observe(bottomRef.current);
@@ -198,19 +198,34 @@ export function Chat({
       }, 100);
       return () => clearTimeout(timer);
     }
-  }, [messagesLoading, chatId]);
+  }, [messagesLoading]);
   
   // Force scroll to bottom when chat is selected/loaded
   useEffect(() => {
     if (chatId && messages.length > 0) {
-      // Use a slightly longer timeout to ensure all messages are rendered
-      const timer = setTimeout(() => {
+      // Use multiple timeouts with increasing delays to ensure scrolling works
+      const timer1 = setTimeout(() => {
         scrollToBottom('auto');
         setIsAtBottom(true);
-      }, 200);
-      return () => clearTimeout(timer);
+      }, 100);
+      
+      const timer2 = setTimeout(() => {
+        scrollToBottom('auto');
+        setIsAtBottom(true);
+      }, 300);
+      
+      const timer3 = setTimeout(() => {
+        scrollToBottom('auto');
+        setIsAtBottom(true);
+      }, 500);
+      
+      return () => {
+        clearTimeout(timer1);
+        clearTimeout(timer2);
+        clearTimeout(timer3);
+      };
     }
-  }, [chatId]);
+  }, [chatId, messages.length]);
 
   // Mark messages as read when they become visible
   useEffect(() => {
@@ -669,7 +684,7 @@ export function Chat({
             <Button
               variant="secondary"
               size="sm"
-              className="absolute bottom-4 right-4 rounded-full opacity-90 hover:opacity-100 shadow-md z-10"
+              className="absolute bottom-16 right-4 rounded-full opacity-90 hover:opacity-100 shadow-md z-10"
               onClick={() => {
                 scrollToBottom();
                 setIsAtBottom(true);
