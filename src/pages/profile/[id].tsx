@@ -154,16 +154,18 @@ const ProfileContent = ({ userId }: { userId: string | null }) => {
               </div>
               <div className="flex-1">
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center">
-                  <div>
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-2">
-                      <h1 className="text-2xl md:text-3xl font-bold">{profile.username || 'Anonymous User'}</h1>
-                      <div className="flex flex-wrap gap-2">
+                  <div className="w-full">
+                    {/* Username centered on its own line */}
+                    <h1 className="text-2xl md:text-3xl font-bold text-center mb-3">{profile.username || 'Anonymous User'}</h1>
+                    
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-center gap-2 mb-2">
+                      <div className="flex flex-wrap gap-2 justify-center sm:justify-start">
                         <SellerBadge userId={userId} />
                         <StripeSellerBadge userId={userId} />
                         {profile.isAdmin && <AdminBadge />}
                       </div>
                     </div>
-                    <p className="text-muted-foreground">Member since {joinDate}</p>
+                    <p className="text-muted-foreground text-center sm:text-left">Member since {joinDate}</p>
                   </div>
                   {/* Message button for desktop */}
                   {user && user.uid !== userId && (
