@@ -38,13 +38,23 @@ interface ListingCardProps {
   getConditionColor: (condition: string) => { base: string; hover: string };
 }
 
+// Detect if we're on a mobile device to simplify animations
+const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+
 const cardVariants = {
-  hidden: { 
+  hidden: isMobile ? { 
+    opacity: 0
+  } : { 
     opacity: 0,
     y: 20,
     scale: 0.95
   },
-  visible: { 
+  visible: isMobile ? { 
+    opacity: 1,
+    transition: {
+      duration: 0.3
+    }
+  } : { 
     opacity: 1,
     y: 0,
     scale: 1,
@@ -53,7 +63,7 @@ const cardVariants = {
       ease: [0.23, 1, 0.32, 1]
     }
   },
-  hover: {
+  hover: isMobile ? {} : {
     y: -8,
     scale: 1.02,
     transition: {
@@ -63,7 +73,7 @@ const cardVariants = {
   }
 };
 
-const imageVariants = {
+const imageVariants = isMobile ? {} : {
   hover: {
     scale: 1.05,
     transition: {
@@ -73,7 +83,11 @@ const imageVariants = {
   }
 };
 
-const buttonVariants = {
+const buttonVariants = isMobile ? {
+  tap: {
+    scale: 0.95
+  }
+} : {
   hover: {
     scale: 1.1,
     transition: {

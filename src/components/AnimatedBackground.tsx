@@ -14,6 +14,9 @@ const AnimatedBackground: React.FC<AnimatedBackgroundProps> = ({ className }) =>
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
     
+    // Check if we're on a mobile device
+    const isMobile = window.innerWidth < 768;
+    
     // Set canvas dimensions to match window size
     const resizeCanvas = () => {
       canvas.width = window.innerWidth;
@@ -36,7 +39,10 @@ const AnimatedBackground: React.FC<AnimatedBackgroundProps> = ({ className }) =>
     
     // Card shapes
     const cards: Card[] = [];
-    const cardCount = Math.min(15, Math.floor(window.innerWidth / 150)); // Limit card count based on screen width
+    // Reduce card count on mobile for better performance
+    const cardCount = isMobile 
+      ? Math.min(6, Math.floor(window.innerWidth / 200)) 
+      : Math.min(15, Math.floor(window.innerWidth / 150));
     
     interface Card {
       x: number;

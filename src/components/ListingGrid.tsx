@@ -69,6 +69,9 @@ const getConditionColor = (condition: string): { base: string; hover: string } =
   return conditionColors[condition?.toLowerCase()] || defaultColor;
 };
 
+// Detect if we're on a mobile device to simplify animations
+const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+
 // Memoize the loading skeleton
 const LoadingSkeleton = memo(function LoadingSkeleton() {
   return (
@@ -78,7 +81,7 @@ const LoadingSkeleton = memo(function LoadingSkeleton() {
           key={i}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ duration: 0.5, delay: i * 0.1 }}
+          transition={{ duration: isMobile ? 0.3 : 0.5, delay: isMobile ? 0 : i * 0.1 }}
         >
           <Card className="animate-pulse">
             <CardContent className="p-4">
@@ -97,9 +100,9 @@ const LoadingSkeleton = memo(function LoadingSkeleton() {
 const EmptyState = memo(function EmptyState() {
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: isMobile ? 0 : 20 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5 }}
+      transition={{ duration: isMobile ? 0.3 : 0.5 }}
       className="text-center"
     >
       <Card>

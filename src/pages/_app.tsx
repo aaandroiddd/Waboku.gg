@@ -52,11 +52,18 @@ const MainContent = memo(({ Component, pageProps, pathname }: {
   return (
     <>
       <LoadingScreen isLoading={isLoading} />
-      <AnimatePresence mode="wait">
+      {/* On mobile, we'll use a simpler transition without AnimatePresence to avoid double animations */}
+      {typeof window !== 'undefined' && window.innerWidth < 768 ? (
         <PageTransition key={pathname}>
           <Component {...pageProps} />
         </PageTransition>
-      </AnimatePresence>
+      ) : (
+        <AnimatePresence mode="wait">
+          <PageTransition key={pathname}>
+            <Component {...pageProps} />
+          </PageTransition>
+        </AnimatePresence>
+      )}
       <Toaster />
     </>
   );
