@@ -354,7 +354,6 @@ export const ListingCard = memo(({ listing, isFavorite, onFavoriteClick, getCond
                   by{" "}
                   <UserNameLink userId={listing.userId} initialUsername={listing.username} />
                 </p>
-                <StripeSellerBadge userId={listing.userId} className="text-xs" />
               </div>
               <div className="flex items-center gap-2 flex-wrap mt-1">
                 <motion.div whileHover={{ scale: 1.05 }}>
@@ -371,6 +370,9 @@ export const ListingCard = memo(({ listing, isFavorite, onFavoriteClick, getCond
                   <Badge className={`${getConditionColor(listing.condition).base} ${getConditionColor(listing.condition).hover} shadow-sm font-medium`}>
                     {listing.condition}
                   </Badge>
+                </motion.div>
+                <motion.div whileHover={{ scale: 1.05 }}>
+                  <StripeSellerBadge userId={listing.userId} className="text-xs" />
                 </motion.div>
                 {listing.isGraded && (
                   <motion.span 
