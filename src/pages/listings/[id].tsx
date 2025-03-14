@@ -36,6 +36,7 @@ const getConditionColor = (condition: string) => {
     'excellent': 'bg-[#f7e379]/10 text-[#f7e379] hover:bg-[#f7e379]/20',
     'near-mint': 'bg-[#7bce2a]/10 text-[#7bce2a] hover:bg-[#7bce2a]/20',
     'near mint': 'bg-[#7bce2a]/10 text-[#7bce2a] hover:bg-[#7bce2a]/20',
+    'near_mint': 'bg-[#7bce2a]/10 text-[#7bce2a] hover:bg-[#7bce2a]/20',
     'mint': 'bg-[#44ce1b]/10 text-[#44ce1b] hover:bg-[#44ce1b]/20',
     'unknown': 'bg-gray-500/10 text-gray-500 hover:bg-gray-500/20'
   };
