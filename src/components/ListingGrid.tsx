@@ -26,44 +26,44 @@ interface ListingGridProps {
 // Memoize the condition color mapping
 const conditionColors: Record<string, { base: string; hover: string }> = {
   'poor': {
-    base: 'bg-[#e51f1f]/10 text-[#e51f1f]',
-    hover: 'hover:bg-[#e51f1f]/20'
+    base: 'bg-[#e51f1f]/20 text-[#e51f1f] border border-[#e51f1f]/30',
+    hover: 'hover:bg-[#e51f1f]/30'
   },
   'played': {
-    base: 'bg-[#e85f2a]/10 text-[#e85f2a]',
-    hover: 'hover:bg-[#e85f2a]/20'
+    base: 'bg-[#e85f2a]/20 text-[#e85f2a] border border-[#e85f2a]/30',
+    hover: 'hover:bg-[#e85f2a]/30'
   },
   'light played': {
-    base: 'bg-[#f2a134]/10 text-[#f2a134]',
-    hover: 'hover:bg-[#f2a134]/20'
+    base: 'bg-[#f2a134]/20 text-[#f2a134] border border-[#f2a134]/30',
+    hover: 'hover:bg-[#f2a134]/30'
   },
   'light-played': {
-    base: 'bg-[#f2a134]/10 text-[#f2a134]',
-    hover: 'hover:bg-[#f2a134]/20'
+    base: 'bg-[#f2a134]/20 text-[#f2a134] border border-[#f2a134]/30',
+    hover: 'hover:bg-[#f2a134]/30'
   },
   'good': {
-    base: 'bg-[#f2a134]/10 text-[#f2a134]',
-    hover: 'hover:bg-[#f2a134]/20'
+    base: 'bg-[#f2a134]/20 text-[#f2a134] border border-[#f2a134]/30',
+    hover: 'hover:bg-[#f2a134]/30'
   },
   'excellent': {
-    base: 'bg-[#f7e379]/10 text-[#f7e379]',
-    hover: 'hover:bg-[#f7e379]/20'
+    base: 'bg-[#f7e379]/20 text-[#f7e379] border border-[#f7e379]/30',
+    hover: 'hover:bg-[#f7e379]/30'
   },
   'near mint': {
-    base: 'bg-[#bbdb44]/10 text-[#bbdb44]',
-    hover: 'hover:bg-[#bbdb44]/20'
+    base: 'bg-[#bbdb44]/20 text-[#bbdb44] border border-[#bbdb44]/30',
+    hover: 'hover:bg-[#bbdb44]/30'
   },
   'near-mint': {
-    base: 'bg-[#bbdb44]/10 text-[#bbdb44]',
-    hover: 'hover:bg-[#bbdb44]/20'
+    base: 'bg-[#bbdb44]/20 text-[#bbdb44] border border-[#bbdb44]/30',
+    hover: 'hover:bg-[#bbdb44]/30'
   },
   'mint': {
-    base: 'bg-[#44ce1b]/10 text-[#44ce1b]',
-    hover: 'hover:bg-[#44ce1b]/20'
+    base: 'bg-[#44ce1b]/20 text-[#44ce1b] border border-[#44ce1b]/30',
+    hover: 'hover:bg-[#44ce1b]/30'
   }
 };
 
-const defaultColor = { base: 'bg-gray-500/10 text-gray-500', hover: 'hover:bg-gray-500/20' };
+const defaultColor = { base: 'bg-gray-500/20 text-gray-500 border border-gray-500/30', hover: 'hover:bg-gray-500/30' };
 
 // Memoize the condition color function
 const getConditionColor = (condition: string): { base: string; hover: string } => {

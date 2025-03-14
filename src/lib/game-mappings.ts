@@ -46,19 +46,19 @@ export const GAME_NAME_MAPPING = {
 
 // Game category icons
 export const GAME_ICONS: Record<string, string> = {
-  "pokemon": "🔴",
-  "mtg": "🧙",
-  "yugioh": "👑",
-  "onepiece": "⚓",
-  "lorcana": "✨",
+  "pokemon": "⚡",
+  "mtg": "🔮",
+  "yugioh": "👁️",
+  "onepiece": "☠️",
+  "lorcana": "🏰",
   "digimon": "🦖",
-  "dbs": "🔥",
-  "flesh-and-blood": "❤️",
-  "star-wars": "⭐",
+  "dbs": "🐉",
+  "flesh-and-blood": "⚔️",
+  "star-wars": "🚀",
   "union-arena": "🎮",
   "universus": "🌌",
   "vanguard": "🛡️",
-  "weiss": "🃏",
+  "weiss": "🎭",
   "accessories": "🎒",
   "other": "🃏",
 };

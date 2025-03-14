@@ -356,25 +356,25 @@ export const ListingCard = memo(({ listing, isFavorite, onFavoriteClick, getCond
                 </p>
                 <StripeSellerBadge userId={listing.userId} className="text-xs" />
               </div>
-              <div className="flex items-center gap-2 flex-wrap">
+              <div className="flex items-center gap-2 flex-wrap mt-1">
                 <motion.div whileHover={{ scale: 1.05 }}>
                   {listing.game && (
                     <GameCategoryBadge 
                       game={listing.game} 
-                      variant="secondary" 
-                      className="text-xs"
+                      variant="outline" 
+                      className="text-xs font-medium shadow-sm"
                       onClick={(e) => e.stopPropagation()} // Prevent link navigation when clicking the badge
                     />
                   )}
                 </motion.div>
                 <motion.div whileHover={{ scale: 1.05 }}>
-                  <Badge className={`${getConditionColor(listing.condition).base} ${getConditionColor(listing.condition).hover}`}>
+                  <Badge className={`${getConditionColor(listing.condition).base} ${getConditionColor(listing.condition).hover} shadow-sm font-medium`}>
                     {listing.condition}
                   </Badge>
                 </motion.div>
                 {listing.isGraded && (
                   <motion.span 
-                    className="text-xs px-2 py-0.5 bg-primary/10 text-primary rounded-full"
+                    className="text-xs px-2 py-0.5 bg-primary/20 text-primary rounded-full shadow-sm font-medium"
                     whileHover={{ scale: 1.05 }}
                   >
                     {listing.gradingCompany} {listing.gradeLevel}

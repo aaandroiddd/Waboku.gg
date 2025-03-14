@@ -49,11 +49,11 @@ export function GameCategoryBadge({ game, className, variant = 'secondary', ...p
     <BadgeTooltip content={tooltipContent}>
       <Badge 
         variant={variant} 
-        className={`cursor-pointer hover:opacity-80 ${className || ''}`} 
+        className={`cursor-pointer hover:opacity-80 transition-all duration-200 ${className || ''}`} 
         onClick={handleClick}
         {...props}
       >
-        {game}
+        {gameIcon && <span className="mr-1">{gameIcon}</span>}{game}
       </Badge>
     </BadgeTooltip>
   );
