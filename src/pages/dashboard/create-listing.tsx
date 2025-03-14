@@ -461,10 +461,10 @@ const CreateListingPage = () => {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="mint">Mint</SelectItem>
-                      <SelectItem value="near_mint">Near Mint</SelectItem>
+                      <SelectItem value="near mint">Near Mint</SelectItem>
                       <SelectItem value="excellent">Excellent</SelectItem>
                       <SelectItem value="good">Good</SelectItem>
-                      <SelectItem value="light_played">Light Played</SelectItem>
+                      <SelectItem value="light played">Light Played</SelectItem>
                       <SelectItem value="played">Played</SelectItem>
                       <SelectItem value="poor">Poor</SelectItem>
                     </SelectContent>

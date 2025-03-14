@@ -50,12 +50,12 @@ const conditionColors: Record<string, { base: string; hover: string }> = {
     hover: 'hover:bg-[#f7e379]/30'
   },
   'near mint': {
-    base: 'bg-[#bbdb44]/20 text-[#bbdb44] border border-[#bbdb44]/30',
-    hover: 'hover:bg-[#bbdb44]/30'
+    base: 'bg-[#7bce2a]/20 text-[#7bce2a] border border-[#7bce2a]/30',
+    hover: 'hover:bg-[#7bce2a]/30'
   },
   'near-mint': {
-    base: 'bg-[#bbdb44]/20 text-[#bbdb44] border border-[#bbdb44]/30',
-    hover: 'hover:bg-[#bbdb44]/30'
+    base: 'bg-[#7bce2a]/20 text-[#7bce2a] border border-[#7bce2a]/30',
+    hover: 'hover:bg-[#7bce2a]/30'
   },
   'mint': {
     base: 'bg-[#44ce1b]/20 text-[#44ce1b] border border-[#44ce1b]/30',
