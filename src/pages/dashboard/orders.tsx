@@ -251,9 +251,8 @@ export default function OrdersPage() {
   const OrderCard = ({ order }: { order: Order }) => {
     const router = useRouter();
     
-    const handleOrderClick = (e: React.MouseEvent) => {
-      e.preventDefault();
-      e.stopPropagation();
+    const handleOrderClick = () => {
+      // Remove preventDefault and stopPropagation
       if (order && order.id) {
         router.push(`/dashboard/orders/${order.id}`);
       }
