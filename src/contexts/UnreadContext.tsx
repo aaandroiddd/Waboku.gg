@@ -97,35 +97,48 @@ export const UnreadProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       }
     };
 
-    // Listen for unread orders
+    // Listen for unread orders - with debounce to prevent excessive queries
+    let ordersDebounceTimer: NodeJS.Timeout | null = null;
+    
     const fetchUnreadOrders = async () => {
       try {
+        // Don't fetch if user is currently viewing orders section
         if (activeSection === 'orders') return;
         
-        const { db } = getFirebaseServices();
+        // Clear any existing timer
+        if (ordersDebounceTimer) {
+          clearTimeout(ordersDebounceTimer);
+        }
         
-        // Query for new orders (as seller)
-        const newOrdersQuery = query(
-          collection(db, 'orders'),
-          where('sellerId', '==', user.uid),
-          where('sellerRead', '==', false)
-        );
-        
-        // Query for updated orders (as buyer)
-        const updatedOrdersQuery = query(
-          collection(db, 'orders'),
-          where('buyerId', '==', user.uid),
-          where('buyerRead', '==', false)
-        );
-        
-        const [newOrdersSnapshot, updatedOrdersSnapshot] = await Promise.all([
-          getDocs(newOrdersQuery),
-          getDocs(updatedOrdersQuery)
-        ]);
-        
-        const unreadOrderCount = newOrdersSnapshot.size + updatedOrdersSnapshot.size;
-        
-        setUnreadCounts(prev => ({ ...prev, orders: unreadOrderCount }));
+        // Set a new timer to delay the actual fetch
+        ordersDebounceTimer = setTimeout(async () => {
+          console.log('[UnreadContext] Fetching unread orders count');
+          const { db } = getFirebaseServices();
+          
+          // Query for new orders (as seller)
+          const newOrdersQuery = query(
+            collection(db, 'orders'),
+            where('sellerId', '==', user.uid),
+            where('sellerRead', '==', false)
+          );
+          
+          // Query for updated orders (as buyer)
+          const updatedOrdersQuery = query(
+            collection(db, 'orders'),
+            where('buyerId', '==', user.uid),
+            where('buyerRead', '==', false)
+          );
+          
+          const [newOrdersSnapshot, updatedOrdersSnapshot] = await Promise.all([
+            getDocs(newOrdersQuery),
+            getDocs(updatedOrdersQuery)
+          ]);
+          
+          const unreadOrderCount = newOrdersSnapshot.size + updatedOrdersSnapshot.size;
+          console.log(`[UnreadContext] Found ${unreadOrderCount} unread orders`);
+          
+          setUnreadCounts(prev => ({ ...prev, orders: unreadOrderCount }));
+        }, 2000); // 2 second debounce
       } catch (error) {
         console.error('Error counting unread orders:', error);
       }

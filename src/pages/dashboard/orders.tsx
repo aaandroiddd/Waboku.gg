@@ -253,15 +253,21 @@ export default function OrdersPage() {
     const [buyerName, setBuyerName] = useState<string | null>(null);
     const [isLoadingBuyer, setIsLoadingBuyer] = useState<boolean>(false);
     
-    // Fetch buyer username for sales
+    // Fetch buyer username for sales - only once when component mounts
     useEffect(() => {
+      let isMounted = true;
+      
       const fetchBuyerName = async () => {
-        if (isSale && order.buyerId) {
+        // Only fetch if this is a sale and we have a buyer ID and we haven't already loaded or started loading
+        if (isSale && order.buyerId && !buyerName && !isLoadingBuyer) {
           setIsLoadingBuyer(true);
           try {
             console.log(`[OrderCard] Fetching buyer info for order ${order.id}, buyerId: ${order.buyerId}`);
             const { db } = getFirebaseServices();
             const userDoc = await getDoc(doc(db, 'users', order.buyerId));
+            
+            // Only update state if component is still mounted
+            if (!isMounted) return;
             
             if (userDoc.exists()) {
               const userData = userDoc.data();
@@ -274,9 +280,13 @@ export default function OrdersPage() {
             }
           } catch (error) {
             console.error(`[OrderCard] Error fetching buyer name for order ${order.id}:`, error);
-            setBuyerName('Unknown User');
+            if (isMounted) {
+              setBuyerName('Unknown User');
+            }
           } finally {
-            setIsLoadingBuyer(false);
+            if (isMounted) {
+              setIsLoadingBuyer(false);
+            }
           }
         }
       };
@@ -284,7 +294,12 @@ export default function OrdersPage() {
       if (isSale) {
         fetchBuyerName();
       }
-    }, [order.buyerId, isSale, order.id]);
+      
+      // Cleanup function to prevent state updates after unmount
+      return () => {
+        isMounted = false;
+      };
+    }, []);
     
     const handleOrderClick = () => {
       // Remove preventDefault and stopPropagation
