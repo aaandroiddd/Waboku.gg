@@ -248,8 +248,35 @@ export default function OrdersPage() {
     fetchOrders();
   }, [user]);
 
-  const OrderCard = ({ order }: { order: Order }) => {
+  const OrderCard = ({ order, isSale = false }: { order: Order; isSale?: boolean }) => {
     const router = useRouter();
+    const [buyerName, setBuyerName] = useState<string | null>(null);
+    
+    // Fetch buyer username for sales
+    useEffect(() => {
+      const fetchBuyerName = async () => {
+        if (isSale && order.buyerId) {
+          try {
+            const { db } = getFirebaseServices();
+            const userDoc = await getDoc(doc(db, 'users', order.buyerId));
+            
+            if (userDoc.exists()) {
+              const userData = userDoc.data();
+              setBuyerName(userData.displayName || userData.username || 'Unknown User');
+            } else {
+              setBuyerName('Unknown User');
+            }
+          } catch (error) {
+            console.error('Error fetching buyer name:', error);
+            setBuyerName('Unknown User');
+          }
+        }
+      };
+      
+      if (isSale) {
+        fetchBuyerName();
+      }
+    }, [order.buyerId, isSale]);
     
     const handleOrderClick = () => {
       // Remove preventDefault and stopPropagation
@@ -300,8 +327,13 @@ export default function OrdersPage() {
               </h3>
               <div className="space-y-2">
                 <p className="text-muted-foreground order-card-id">
-                  Order ID: <span className="font-mono">{typeof order.id === 'string' ? `${order.id.slice(0, 8)}...` : order.id}</span>
+                  Order ID: <span className="font-mono">{order.id}</span>
                 </p>
+                {isSale && (
+                  <p className="text-muted-foreground order-card-buyer">
+                    Buyer: {buyerName || <span className="italic">Loading...</span>}
+                  </p>
+                )}
                 <p className="text-muted-foreground order-card-date">
                   Date: {format(order.createdAt instanceof Date ? order.createdAt : new Date(), 'PPP')}
                 </p>
@@ -403,7 +435,7 @@ export default function OrdersPage() {
                 </p>
               ) : (
                 sales.map((order) => (
-                  <OrderCard key={order.id} order={order} />
+                  <OrderCard key={order.id} order={order} isSale={true} />
                 ))
               )}
             </TabsContent>
