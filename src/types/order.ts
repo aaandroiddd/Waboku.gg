@@ -20,6 +20,14 @@ export interface Order {
     postal_code: string;
     country: string;
   };
+  trackingInfo?: {
+    carrier: string;
+    trackingNumber: string;
+    notes?: string;
+    addedAt: Date;
+    addedBy: string;
+  };
+  noTrackingConfirmed?: boolean;
   createdAt: Date;
   updatedAt: Date;
   listingSnapshot?: {

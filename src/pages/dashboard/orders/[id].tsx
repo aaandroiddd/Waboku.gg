@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { useAuth } from '@/contexts/AuthContext';
 import { getFirebaseServices } from '@/lib/firebase';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { Order } from '@/types/order';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
@@ -12,8 +12,13 @@ import { Separator } from '@/components/ui/separator';
 import { formatPrice } from '@/lib/price';
 import Image from 'next/image';
 import { format } from 'date-fns';
-import { Loader2, ArrowLeft, Package, CreditCard, User, MapPin, Calendar, Clock } from 'lucide-react';
+import { Loader2, ArrowLeft, Package, CreditCard, User, MapPin, Calendar, Clock, Truck, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 
 export default function OrderDetailsPage() {
   const router = useRouter();
@@ -25,6 +30,12 @@ export default function OrderDetailsPage() {
   const [buyerName, setBuyerName] = useState<string | null>(null);
   const [sellerName, setSellerName] = useState<string | null>(null);
   const [loadingUserInfo, setLoadingUserInfo] = useState(false);
+  const [trackingNumber, setTrackingNumber] = useState('');
+  const [carrier, setCarrier] = useState('');
+  const [trackingNotes, setTrackingNotes] = useState('');
+  const [isUpdatingShipping, setIsUpdatingShipping] = useState(false);
+  const [showTrackingDialog, setShowTrackingDialog] = useState(false);
+  const [showNoTrackingDialog, setShowNoTrackingDialog] = useState(false);
 
   useEffect(() => {
     async function fetchOrderDetails() {
@@ -121,6 +132,84 @@ export default function OrderDetailsPage() {
 
   const handleBack = () => {
     router.push('/dashboard/orders');
+  };
+  
+  // Function to add tracking information
+  const handleAddTracking = async () => {
+    if (!order || !id) return;
+    
+    try {
+      setIsUpdatingShipping(true);
+      const { db } = getFirebaseServices();
+      
+      // Update the order with tracking information
+      await updateDoc(doc(db, 'orders', id as string), {
+        status: 'shipped',
+        trackingInfo: {
+          carrier,
+          trackingNumber,
+          notes: trackingNotes,
+          addedAt: new Date(),
+          addedBy: user?.uid
+        },
+        updatedAt: new Date()
+      });
+      
+      // Update local state
+      setOrder({
+        ...order,
+        status: 'shipped',
+        trackingInfo: {
+          carrier,
+          trackingNumber,
+          notes: trackingNotes,
+          addedAt: new Date(),
+          addedBy: user?.uid
+        },
+        updatedAt: new Date()
+      });
+      
+      toast.success('Tracking information added successfully');
+      setShowTrackingDialog(false);
+    } catch (error) {
+      console.error('Error adding tracking information:', error);
+      toast.error('Failed to add tracking information');
+    } finally {
+      setIsUpdatingShipping(false);
+    }
+  };
+  
+  // Function to mark as shipped without tracking
+  const handleMarkAsShipped = async () => {
+    if (!order || !id) return;
+    
+    try {
+      setIsUpdatingShipping(true);
+      const { db } = getFirebaseServices();
+      
+      // Update the order status to shipped without tracking info
+      await updateDoc(doc(db, 'orders', id as string), {
+        status: 'shipped',
+        noTrackingConfirmed: true,
+        updatedAt: new Date()
+      });
+      
+      // Update local state
+      setOrder({
+        ...order,
+        status: 'shipped',
+        noTrackingConfirmed: true,
+        updatedAt: new Date()
+      });
+      
+      toast.success('Order marked as shipped');
+      setShowNoTrackingDialog(false);
+    } catch (error) {
+      console.error('Error marking order as shipped:', error);
+      toast.error('Failed to update order status');
+    } finally {
+      setIsUpdatingShipping(false);
+    }
   };
 
   if (loading) {
@@ -341,13 +430,83 @@ export default function OrderDetailsPage() {
                 </CardContent>
               </Card>
             </div>
+            
+            {/* Tracking Information */}
+            {order.trackingInfo && (
+              <div>
+                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                  <Truck className="h-5 w-5" />
+                  Tracking Information
+                </h3>
+                <Card>
+                  <CardContent className="pt-6">
+                    <div className="space-y-2">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Carrier:</span>
+                        <span>{order.trackingInfo.carrier}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Tracking Number:</span>
+                        <span className="font-mono">{order.trackingInfo.trackingNumber}</span>
+                      </div>
+                      {order.trackingInfo.notes && (
+                        <div className="mt-2">
+                          <span className="text-muted-foreground">Notes:</span>
+                          <p className="mt-1 text-sm">{order.trackingInfo.notes}</p>
+                        </div>
+                      )}
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Added On:</span>
+                        <span>{order.trackingInfo.addedAt && format(new Date(order.trackingInfo.addedAt.seconds * 1000), 'PPP')}</span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+            
+            {/* No Tracking Confirmation */}
+            {order.noTrackingConfirmed && !order.trackingInfo && (
+              <div>
+                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                  <AlertTriangle className="h-5 w-5 text-yellow-500" />
+                  Shipping Status
+                </h3>
+                <Card>
+                  <CardContent className="pt-6">
+                    <div className="flex items-center gap-2 text-yellow-600">
+                      <AlertTriangle className="h-4 w-4" />
+                      <p>This order was marked as shipped without tracking information.</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
           </CardContent>
           <CardFooter className="flex justify-between">
             <Button onClick={handleBack} variant="outline">
               <ArrowLeft className="mr-2 h-4 w-4" /> Back to Orders
             </Button>
             
-            {/* Additional actions could be added here based on order status */}
+            {/* Seller shipping actions */}
+            {!isUserBuyer && (order.status === 'paid' || order.status === 'awaiting_shipping') && (
+              <div className="flex gap-2">
+                <Button 
+                  variant="outline" 
+                  onClick={() => setShowTrackingDialog(true)}
+                >
+                  <Truck className="mr-2 h-4 w-4" /> Add Tracking
+                </Button>
+                <Button 
+                  variant="secondary" 
+                  onClick={() => setShowNoTrackingDialog(true)}
+                >
+                  <Package className="mr-2 h-4 w-4" /> Mark as Shipped
+                </Button>
+              </div>
+            )}
+            
+            {/* Buyer actions */}
             {isUserBuyer && order.status === 'completed' && (
               <Button variant="outline" onClick={() => toast.info('Contact support for any issues with this order')}>
                 <Package className="mr-2 h-4 w-4" /> Report Issue
@@ -356,6 +515,84 @@ export default function OrderDetailsPage() {
           </CardFooter>
         </Card>
       </div>
+
+      {/* Add Tracking Information Dialog */}
+      <Dialog open={showTrackingDialog} onOpenChange={setShowTrackingDialog}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Add Tracking Information</DialogTitle>
+            <DialogDescription>
+              Enter the shipping carrier and tracking number for this order.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="carrier">Shipping Carrier</Label>
+              <Input
+                id="carrier"
+                placeholder="USPS, FedEx, UPS, etc."
+                value={carrier}
+                onChange={(e) => setCarrier(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="trackingNumber">Tracking Number</Label>
+              <Input
+                id="trackingNumber"
+                placeholder="Enter tracking number"
+                value={trackingNumber}
+                onChange={(e) => setTrackingNumber(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="trackingNotes">Additional Notes (Optional)</Label>
+              <Textarea
+                id="trackingNotes"
+                placeholder="Any additional information about the shipment"
+                value={trackingNotes}
+                onChange={(e) => setTrackingNotes(e.target.value)}
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowTrackingDialog(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleAddTracking} 
+              disabled={!carrier || !trackingNumber || isUpdatingShipping}
+            >
+              {isUpdatingShipping && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Save Tracking Information
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Mark as Shipped Without Tracking Dialog */}
+      <AlertDialog open={showNoTrackingDialog} onOpenChange={setShowNoTrackingDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Ship Without Tracking?</AlertDialogTitle>
+            <AlertDialogDescription>
+              You are about to mark this order as shipped without providing tracking information. 
+              This means you will have no proof of delivery in case of disputes.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleMarkAsShipped}
+              disabled={isUpdatingShipping}
+              className="bg-yellow-600 hover:bg-yellow-700"
+            >
+              {isUpdatingShipping && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              I Understand the Risk
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </DashboardLayout>
   );
 }
