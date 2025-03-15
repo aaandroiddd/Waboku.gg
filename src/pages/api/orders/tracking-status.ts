@@ -1,23 +1,12 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { getAuth } from 'firebase-admin/auth';
 import { getFirebaseServices } from '@/lib/firebase';
+import { getTrackingInfo, TrackingStatus } from '@/lib/shipping-carriers';
+import NodeCache from 'node-cache';
 
-// Define the tracking status response type
-interface TrackingStatus {
-  carrier: string;
-  trackingNumber: string;
-  status: string;
-  statusDescription: string;
-  estimatedDelivery?: string;
-  lastUpdate?: string;
-  location?: string;
-  events?: Array<{
-    timestamp: string;
-    description: string;
-    location?: string;
-  }>;
-  error?: string;
-}
+// Create a cache for tracking results to avoid excessive API calls
+// Cache results for 1 hour (3600 seconds)
+const trackingCache = new NodeCache({ stdTTL: 3600 });
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
@@ -50,16 +39,36 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: 'Missing required query parameters' });
     }
 
-    // This is a placeholder for actual tracking API integration
-    // In a real implementation, you would call the appropriate carrier API here
+    const carrierStr = carrier as string;
+    const trackingNumberStr = trackingNumber as string;
     
-    // For now, return a mock response based on the carrier
-    const mockTrackingStatus: TrackingStatus = await getMockTrackingStatus(
-      carrier as string, 
-      trackingNumber as string
-    );
+    // Check if we should bypass cache (for debugging or forced refresh)
+    const bypassCache = req.query.refresh === 'true';
+    
+    // Create a cache key
+    const cacheKey = `${carrierStr.toLowerCase()}_${trackingNumberStr}`;
+    
+    // Check if we have a cached result
+    if (!bypassCache && trackingCache.has(cacheKey)) {
+      console.log(`Using cached tracking info for ${carrierStr} ${trackingNumberStr}`);
+      return res.status(200).json(trackingCache.get(cacheKey));
+    }
+    
+    // Get real-time tracking information from carrier APIs
+    console.log(`Fetching live tracking info for ${carrierStr} ${trackingNumberStr}`);
+    const trackingStatus = await getTrackingInfo(carrierStr, trackingNumberStr);
+    
+    // Cache the result if it's not an error
+    if (trackingStatus.status !== 'error') {
+      trackingCache.set(cacheKey, trackingStatus);
+    }
+    
+    // For delivered packages, we can cache longer (1 week)
+    if (trackingStatus.status === 'delivered') {
+      trackingCache.ttl(cacheKey, 604800); // 7 days in seconds
+    }
 
-    return res.status(200).json(mockTrackingStatus);
+    return res.status(200).json(trackingStatus);
   } catch (error) {
     console.error('Error fetching tracking status:', error);
     return res.status(500).json({ 
@@ -67,81 +76,4 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       details: error instanceof Error ? error.message : 'Unknown error'
     });
   }
-}
-
-// Mock function to simulate tracking status
-// In a real implementation, this would be replaced with actual API calls to carriers
-async function getMockTrackingStatus(carrier: string, trackingNumber: string): Promise<TrackingStatus> {
-  // Log the request for debugging
-  console.log(`Fetching tracking status for carrier: ${carrier}, tracking number: ${trackingNumber}`);
-  
-  const normalizedCarrier = carrier.toLowerCase();
-  
-  // Generate a random status for demonstration
-  const statuses = ['in_transit', 'delivered', 'out_for_delivery', 'pending'];
-  const randomStatus = statuses[Math.floor(Math.random() * statuses.length)];
-  
-  const currentDate = new Date();
-  const yesterday = new Date(currentDate);
-  yesterday.setDate(yesterday.getDate() - 1);
-  
-  const tomorrow = new Date(currentDate);
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  
-  // Create mock events
-  const events = [
-    {
-      timestamp: yesterday.toISOString(),
-      description: 'Package processed at carrier facility',
-      location: 'Sorting Center'
-    }
-  ];
-  
-  if (randomStatus === 'in_transit') {
-    events.unshift({
-      timestamp: currentDate.toISOString(),
-      description: 'Package in transit to destination',
-      location: 'In Transit'
-    });
-  } else if (randomStatus === 'out_for_delivery') {
-    events.unshift({
-      timestamp: currentDate.toISOString(),
-      description: 'Out for delivery',
-      location: 'Local Delivery Facility'
-    });
-  } else if (randomStatus === 'delivered') {
-    events.unshift({
-      timestamp: currentDate.toISOString(),
-      description: 'Delivered',
-      location: 'Destination'
-    });
-  }
-  
-  // Create status description based on status
-  let statusDescription = '';
-  switch (randomStatus) {
-    case 'in_transit':
-      statusDescription = 'Package is in transit to the destination';
-      break;
-    case 'delivered':
-      statusDescription = 'Package has been delivered';
-      break;
-    case 'out_for_delivery':
-      statusDescription = 'Package is out for delivery';
-      break;
-    case 'pending':
-      statusDescription = 'Shipping label created, waiting for package';
-      break;
-  }
-  
-  return {
-    carrier: carrier,
-    trackingNumber: trackingNumber,
-    status: randomStatus,
-    statusDescription: statusDescription,
-    estimatedDelivery: tomorrow.toISOString(),
-    lastUpdate: events[0].timestamp,
-    location: events[0].location,
-    events: events
-  };
 }

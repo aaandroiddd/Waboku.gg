@@ -16,6 +16,10 @@
     {
       "path": "/api/search/cleanup",
       "schedule": "0 */1 * * *"
+    },
+    {
+      "path": "/api/orders/update-all-tracking",
+      "schedule": "0 */2 * * *"
     }
   ]
 }

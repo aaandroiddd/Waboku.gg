@@ -3,6 +3,7 @@ import { getFirebaseServices } from '@/lib/firebase';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { getAuth } from 'firebase-admin/auth';
 import { Order } from '@/types/order';
+import { getTrackingInfo } from '@/lib/shipping-carriers';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -51,23 +52,56 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(403).json({ error: 'Only the seller can update tracking information' });
     }
 
+    // Try to get initial tracking information
+    let initialTrackingStatus = null;
+    try {
+      console.log(`Fetching initial tracking status for ${carrier} ${trackingNumber}`);
+      initialTrackingStatus = await getTrackingInfo(carrier, trackingNumber);
+    } catch (trackingError) {
+      console.warn(`Could not fetch initial tracking status: ${trackingError}`);
+      // Continue even if we can't get initial tracking status
+    }
+
+    // Prepare tracking info object
+    const trackingInfo = {
+      carrier,
+      trackingNumber,
+      notes: notes || '',
+      addedAt: new Date(),
+      addedBy: userId,
+      lastChecked: new Date(),
+      // Include initial status information if available
+      ...(initialTrackingStatus && {
+        currentStatus: initialTrackingStatus.status,
+        statusDescription: initialTrackingStatus.statusDescription,
+        estimatedDelivery: initialTrackingStatus.estimatedDelivery,
+        lastUpdate: initialTrackingStatus.lastUpdate,
+        location: initialTrackingStatus.location
+      })
+    };
+
     // Update the order with tracking information
     await updateDoc(doc(db, 'orders', orderId), {
       status: 'shipped',
-      trackingInfo: {
-        carrier,
-        trackingNumber,
-        notes: notes || '',
-        addedAt: new Date(),
-        addedBy: userId
-      },
+      trackingInfo,
       trackingRequired: true,
       updatedAt: new Date()
     });
 
-    return res.status(200).json({ success: true, message: 'Tracking information updated successfully' });
+    // Log the successful update
+    console.log(`Updated tracking for order ${orderId}: ${carrier} ${trackingNumber}`);
+
+    return res.status(200).json({ 
+      success: true, 
+      message: 'Tracking information updated successfully',
+      trackingInfo,
+      initialStatus: initialTrackingStatus
+    });
   } catch (error) {
     console.error('Error updating tracking information:', error);
-    return res.status(500).json({ error: 'Failed to update tracking information' });
+    return res.status(500).json({ 
+      error: 'Failed to update tracking information',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
   }
 }

@@ -26,8 +26,18 @@ export interface Order {
     notes?: string;
     addedAt: Date;
     addedBy: string;
+    lastChecked?: Date;
     lastUpdated?: Date;
-    status?: string;
+    currentStatus?: string;
+    statusDescription?: string;
+    estimatedDelivery?: string;
+    lastUpdate?: string;
+    location?: string;
+    events?: Array<{
+      timestamp: string;
+      description: string;
+      location?: string;
+    }>;
   };
   noTrackingConfirmed?: boolean;
   trackingRequired?: boolean; // Flag to indicate if tracking is required
