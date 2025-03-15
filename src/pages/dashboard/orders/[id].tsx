@@ -179,11 +179,19 @@ export default function OrderDetailsPage() {
             <ArrowLeft className="mr-2 h-4 w-4" /> Back to Orders
           </Button>
           <Badge
-            variant={order.status === 'completed' ? 'default' : 
-                   order.status === 'cancelled' ? 'destructive' : 'secondary'}
+            variant={
+              order.status === 'completed' ? 'default' : 
+              order.status === 'paid' ? 'success' :
+              order.status === 'awaiting_shipping' ? 'warning' :
+              order.status === 'shipped' ? 'info' :
+              order.status === 'cancelled' ? 'destructive' : 
+              'secondary'
+            }
             className="text-sm"
           >
-            {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+            {order.status === 'awaiting_shipping' 
+              ? 'Awaiting Shipping' 
+              : order.status.charAt(0).toUpperCase() + order.status.slice(1).replace('_', ' ')}
           </Badge>
         </div>
 

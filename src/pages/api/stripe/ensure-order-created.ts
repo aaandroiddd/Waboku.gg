@@ -157,7 +157,7 @@ export default async function handler(
       listingId,
       buyerId,
       sellerId,
-      status: 'completed',
+      status: 'awaiting_shipping', // Changed from 'completed' to 'awaiting_shipping'
       amount: session.amount_total ? session.amount_total / 100 : 0, // Convert from cents
       platformFee: session.metadata.platformFee ? parseInt(session.metadata.platformFee) / 100 : 0, // Convert from cents
       paymentSessionId: sessionId,

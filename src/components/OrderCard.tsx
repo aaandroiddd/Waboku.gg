@@ -140,11 +140,16 @@ export function OrderCard({ order, isSale = false }: OrderCardProps) {
               <Badge
                 variant={
                   safeOrder.status === 'completed' ? 'default' : 
+                  safeOrder.status === 'paid' ? 'success' :
+                  safeOrder.status === 'awaiting_shipping' ? 'warning' :
+                  safeOrder.status === 'shipped' ? 'info' :
                   safeOrder.status === 'cancelled' ? 'destructive' : 
                   'secondary'
                 }
               >
-                {safeOrder.status.charAt(0).toUpperCase() + safeOrder.status.slice(1)}
+                {safeOrder.status === 'awaiting_shipping' 
+                  ? 'Awaiting Shipping' 
+                  : safeOrder.status.charAt(0).toUpperCase() + safeOrder.status.slice(1).replace('_', ' ')}
               </Badge>
             </div>
           </div>

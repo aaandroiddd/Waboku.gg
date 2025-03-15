@@ -4,7 +4,7 @@ export interface Order {
   buyerId: string;
   sellerId: string;
   amount: number;
-  status: 'pending' | 'completed' | 'cancelled';
+  status: 'pending' | 'completed' | 'cancelled' | 'paid' | 'awaiting_shipping' | 'shipped';
   paymentSessionId?: string;
   paymentIntentId?: string;
   transferId?: string;
