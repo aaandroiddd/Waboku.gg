@@ -22,7 +22,7 @@ export default async function handler(
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   res.setHeader('Content-Type', 'application/json');
-  res.setHeader('Cache-Control', 'no-store, max-age=0');
+  res.setHeader('Cache-Control', 'public, max-age=300'); // Allow caching for 5 minutes
   
   // Handle preflight request
   if (req.method === 'OPTIONS') {

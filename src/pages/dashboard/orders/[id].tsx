@@ -259,7 +259,7 @@ export default function OrderDetailsPage() {
                         <span className="font-mono">{order.paymentSessionId.slice(0, 12)}...</span>
                       </div>
                     )}
-                    {order.paymentIntentId && (
+                    {order.paymentIntentId && typeof order.paymentIntentId === 'string' && (
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Payment Intent:</span>
                         <span className="font-mono">{order.paymentIntentId.slice(0, 12)}...</span>

@@ -251,9 +251,18 @@ export default function OrdersPage() {
   const OrderCard = ({ order }: { order: Order }) => {
     const router = useRouter();
     
-    const handleOrderClick = () => {
-      router.push(`/dashboard/orders/${order.id}`);
+    const handleOrderClick = (e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (order && order.id) {
+        router.push(`/dashboard/orders/${order.id}`);
+      }
     };
+    
+    // Safety check for order
+    if (!order || !order.id) {
+      return null;
+    }
     
     return (
       <Card 
@@ -278,21 +287,21 @@ export default function OrdersPage() {
             </div>
             <div className="flex-1">
               <h3 className="font-semibold text-lg mb-2">
-                {order.listingSnapshot?.title || `Order #${order.id.slice(0, 6)}`}
+                {order.listingSnapshot?.title || `Order #${typeof order.id === 'string' ? order.id.slice(0, 6) : order.id}`}
               </h3>
               <div className="space-y-2">
                 <p className="text-muted-foreground">
-                  Order ID: <span className="font-mono">{order.id.slice(0, 8)}...</span>
+                  Order ID: <span className="font-mono">{typeof order.id === 'string' ? `${order.id.slice(0, 8)}...` : order.id}</span>
                 </p>
                 <p className="text-muted-foreground">
-                  Date: {format(order.createdAt, 'PPP')}
+                  Date: {format(order.createdAt instanceof Date ? order.createdAt : new Date(), 'PPP')}
                 </p>
-                <p className="font-semibold">{formatPrice(order.amount)}</p>
+                <p className="font-semibold">{formatPrice(order.amount || 0)}</p>
                 <Badge
                   variant={order.status === 'completed' ? 'default' : 
                          order.status === 'cancelled' ? 'destructive' : 'secondary'}
                 >
-                  {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                  {order.status ? order.status.charAt(0).toUpperCase() + order.status.slice(1) : 'Unknown'}
                 </Badge>
               </div>
             </div>
