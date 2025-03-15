@@ -1,3 +1,4 @@
+import dynamic from 'next/dynamic';
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUnread } from '@/contexts/UnreadContext';
@@ -5,17 +6,14 @@ import { getFirebaseServices } from '@/lib/firebase';
 import { collection, query, where, orderBy, getDocs, doc, getDoc } from 'firebase/firestore';
 import { Order } from '@/types/order';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { formatPrice } from '@/lib/price';
-import Image from 'next/image';
-import { Badge } from '@/components/ui/badge';
-import { format } from 'date-fns';
-import { Loader2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Loader2, RefreshCw } from 'lucide-react';
 import { useRouter } from 'next/router';
 import { toast } from 'sonner';
+import { OrderCard } from '@/components/OrderCard';
 
-export default function OrdersPage() {
+const OrdersComponent = () => {
   const { user } = useAuth();
   const router = useRouter();
   const { clearUnreadCount, resetUnreadCount } = useUnread();
@@ -23,6 +21,7 @@ export default function OrdersPage() {
   const [sales, setSales] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [processingOrder, setProcessingOrder] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   
   // Clear unread count when component mounts
   useEffect(() => {
@@ -70,7 +69,7 @@ export default function OrdersPage() {
             router.replace('/dashboard/orders', undefined, { shallow: true });
             
             // Refresh the orders list by triggering a re-render
-            setLoading(true);
+            fetchOrders();
           } else {
             // There was an error
             toast.error('Failed to process order. Please contact support.', { id: toastId });
@@ -90,310 +89,181 @@ export default function OrdersPage() {
     }
   }, [router.query, user, processingOrder]);
 
-  useEffect(() => {
-    async function fetchOrders() {
-      if (!user) return;
-
-      try {
-        const { db } = getFirebaseServices();
-        console.log('[Orders Page] Fetching orders for user:', user.uid);
+  const fetchOrders = async () => {
+    if (!user) return;
+    
+    try {
+      setLoading(true);
+      const { db } = getFirebaseServices();
+      console.log('[Orders Page] Fetching orders for user:', user.uid);
+      
+      // Log the query paths we're going to check
+      console.log('[Orders Page] Will check the following paths:');
+      console.log(`- users/${user.uid}/orders (user-specific subcollection)`);
+      console.log(`- orders (main collection, filtered by buyerId/sellerId)`);
+      
+      // Method 1: Try to fetch from user-specific subcollections first
+      const userOrdersQuery = query(
+        collection(db, 'users', user.uid, 'orders'),
+        orderBy('createdAt', 'desc')
+      );
+      
+      console.log('Querying user-specific orders subcollection');
+      const userOrdersSnapshot = await getDocs(userOrdersQuery);
+      
+      // If we have user-specific orders, fetch the full order details
+      if (!userOrdersSnapshot.empty) {
+        console.log(`Found ${userOrdersSnapshot.docs.length} user-specific orders`);
         
-        // Log the query paths we're going to check
-        console.log('[Orders Page] Will check the following paths:');
-        console.log(`- users/${user.uid}/orders (user-specific subcollection)`);
-        console.log(`- orders (main collection, filtered by buyerId/sellerId)`);
+        const userPurchases: Order[] = [];
+        const userSales: Order[] = [];
         
-        
-        // Method 1: Try to fetch from user-specific subcollections first
-        const userOrdersQuery = query(
-          collection(db, 'users', user.uid, 'orders'),
-          orderBy('createdAt', 'desc')
-        );
-        
-        console.log('Querying user-specific orders subcollection');
-        const userOrdersSnapshot = await getDocs(userOrdersQuery);
-        
-        // If we have user-specific orders, fetch the full order details
-        if (!userOrdersSnapshot.empty) {
-          console.log(`Found ${userOrdersSnapshot.docs.length} user-specific orders`);
-          
-          const userPurchases: Order[] = [];
-          const userSales: Order[] = [];
-          
-          // For each order reference, get the full order details
-          const orderPromises = userOrdersSnapshot.docs.map(async (orderDoc) => {
-            try {
-              const orderData = orderDoc.data();
-              const orderId = orderData.orderId;
-              const role = orderData.role; // 'buyer' or 'seller'
-              
-              console.log(`Fetching full order details for order: ${orderId}, role: ${role}`);
-              
-              // Get the full order details from the main orders collection
-              const fullOrderDoc = await getDoc(doc(db, 'orders', orderId));
-              
-              if (fullOrderDoc.exists()) {
-                const fullOrderData = fullOrderDoc.data() as Order;
-                
-                // Safely convert timestamps to dates
-                const createdAt = fullOrderData.createdAt?.toDate?.() || new Date();
-                const updatedAt = fullOrderData.updatedAt?.toDate?.() || new Date();
-                
-                const order = {
-                  id: fullOrderDoc.id,
-                  ...fullOrderData,
-                  createdAt,
-                  updatedAt,
-                };
-                
-                console.log(`Successfully fetched order: ${orderId}`);
-                
-                // Add to the appropriate array based on role
-                if (role === 'buyer') {
-                  userPurchases.push(order);
-                } else if (role === 'seller') {
-                  userSales.push(order);
-                }
-              } else {
-                console.warn(`Order ${orderId} referenced in user subcollection not found in main orders collection`);
-              }
-            } catch (err) {
-              console.error(`Error processing order reference:`, err);
-            }
-          });
-          
-          await Promise.all(orderPromises);
-          
-          console.log(`Processed ${userPurchases.length} purchases and ${userSales.length} sales`);
-          setPurchases(userPurchases);
-          setSales(userSales);
-        } else {
-          // Method 2: Fallback to querying the main orders collection directly
-          console.log('No user-specific orders found, falling back to main collection query');
-          
+        // For each order reference, get the full order details
+        const orderPromises = userOrdersSnapshot.docs.map(async (orderDoc) => {
           try {
-            // Fetch purchases
-            const purchasesQuery = query(
-              collection(db, 'orders'),
-              where('buyerId', '==', user.uid),
-              orderBy('createdAt', 'desc')
-            );
+            const orderData = orderDoc.data();
+            const orderId = orderData.orderId;
+            const role = orderData.role; // 'buyer' or 'seller'
             
-            // Fetch sales
-            const salesQuery = query(
-              collection(db, 'orders'),
-              where('sellerId', '==', user.uid),
-              orderBy('createdAt', 'desc')
-            );
-
-            console.log('Querying main orders collection');
-            const [purchasesSnapshot, salesSnapshot] = await Promise.all([
-              getDocs(purchasesQuery),
-              getDocs(salesQuery)
-            ]);
-
-            console.log(`Found ${purchasesSnapshot.size} purchases and ${salesSnapshot.size} sales in main collection`);
-
-            const purchasesData = purchasesSnapshot.docs.map(doc => {
-              try {
-                const data = doc.data();
-                // Safely convert timestamps to dates
-                const createdAt = data.createdAt?.toDate?.() || new Date();
-                const updatedAt = data.updatedAt?.toDate?.() || new Date();
-                
-                return {
-                  id: doc.id,
-                  ...data,
-                  createdAt,
-                  updatedAt,
-                };
-              } catch (err) {
-                console.error(`Error processing purchase document ${doc.id}:`, err);
-                return null;
+            console.log(`Fetching full order details for order: ${orderId}, role: ${role}`);
+            
+            // Get the full order details from the main orders collection
+            const fullOrderDoc = await getDoc(doc(db, 'orders', orderId));
+            
+            if (fullOrderDoc.exists()) {
+              const fullOrderData = fullOrderDoc.data() as Order;
+              
+              // Safely convert timestamps to dates
+              const createdAt = fullOrderData.createdAt?.toDate?.() || new Date();
+              const updatedAt = fullOrderData.updatedAt?.toDate?.() || new Date();
+              
+              const order = {
+                id: fullOrderDoc.id,
+                ...fullOrderData,
+                createdAt,
+                updatedAt,
+              };
+              
+              console.log(`Successfully fetched order: ${orderId}`);
+              
+              // Add to the appropriate array based on role
+              if (role === 'buyer') {
+                userPurchases.push(order);
+              } else if (role === 'seller') {
+                userSales.push(order);
               }
-            }).filter(Boolean) as Order[];
-
-            const salesData = salesSnapshot.docs.map(doc => {
-              try {
-                const data = doc.data();
-                // Safely convert timestamps to dates
-                const createdAt = data.createdAt?.toDate?.() || new Date();
-                const updatedAt = data.updatedAt?.toDate?.() || new Date();
-                
-                return {
-                  id: doc.id,
-                  ...data,
-                  createdAt,
-                  updatedAt,
-                };
-              } catch (err) {
-                console.error(`Error processing sale document ${doc.id}:`, err);
-                return null;
-              }
-            }).filter(Boolean) as Order[];
-
-            setPurchases(purchasesData);
-            setSales(salesData);
+            } else {
+              console.warn(`Order ${orderId} referenced in user subcollection not found in main orders collection`);
+            }
           } catch (err) {
-            console.error('Error querying main orders collection:', err);
+            console.error(`Error processing order reference:`, err);
           }
-        }
-      } catch (error) {
-        console.error('Error fetching orders:', error);
-      } finally {
-        setLoading(false);
-      }
-    }
+        });
+        
+        await Promise.all(orderPromises);
+        
+        console.log(`Processed ${userPurchases.length} purchases and ${userSales.length} sales`);
+        setPurchases(userPurchases);
+        setSales(userSales);
+      } else {
+        // Method 2: Fallback to querying the main orders collection directly
+        console.log('No user-specific orders found, falling back to main collection query');
+        
+        try {
+          // Fetch purchases
+          const purchasesQuery = query(
+            collection(db, 'orders'),
+            where('buyerId', '==', user.uid),
+            orderBy('createdAt', 'desc')
+          );
+          
+          // Fetch sales
+          const salesQuery = query(
+            collection(db, 'orders'),
+            where('sellerId', '==', user.uid),
+            orderBy('createdAt', 'desc')
+          );
 
+          console.log('Querying main orders collection');
+          const [purchasesSnapshot, salesSnapshot] = await Promise.all([
+            getDocs(purchasesQuery),
+            getDocs(salesQuery)
+          ]);
+
+          console.log(`Found ${purchasesSnapshot.size} purchases and ${salesSnapshot.size} sales in main collection`);
+
+          const purchasesData = purchasesSnapshot.docs.map(doc => {
+            try {
+              const data = doc.data();
+              // Safely convert timestamps to dates
+              const createdAt = data.createdAt?.toDate?.() || new Date();
+              const updatedAt = data.updatedAt?.toDate?.() || new Date();
+              
+              return {
+                id: doc.id,
+                ...data,
+                createdAt,
+                updatedAt,
+              };
+            } catch (err) {
+              console.error(`Error processing purchase document ${doc.id}:`, err);
+              return null;
+            }
+          }).filter(Boolean) as Order[];
+
+          const salesData = salesSnapshot.docs.map(doc => {
+            try {
+              const data = doc.data();
+              // Safely convert timestamps to dates
+              const createdAt = data.createdAt?.toDate?.() || new Date();
+              const updatedAt = data.updatedAt?.toDate?.() || new Date();
+              
+              return {
+                id: doc.id,
+                ...data,
+                createdAt,
+                updatedAt,
+              };
+            } catch (err) {
+              console.error(`Error processing sale document ${doc.id}:`, err);
+              return null;
+            }
+          }).filter(Boolean) as Order[];
+
+          setPurchases(purchasesData);
+          setSales(salesData);
+        } catch (err) {
+          console.error('Error querying main orders collection:', err);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching orders:', error);
+      toast.error('Failed to load orders. Please try again.');
+    } finally {
+      setLoading(false);
+      setIsRefreshing(false);
+    }
+  };
+
+  // Fetch orders when component mounts
+  useEffect(() => {
     fetchOrders();
   }, [user]);
 
-  // Extract OrderCard to a separate component to ensure proper rendering and event handling
-  const OrderCard = ({ order, isSale = false }: { order: Order; isSale?: boolean }) => {
-    const router = useRouter();
-    const [buyerName, setBuyerName] = useState<string | null>(null);
-    const [isLoadingBuyer, setIsLoadingBuyer] = useState<boolean>(false);
+  const handleRefresh = async () => {
+    if (isRefreshing) return;
     
-    // Fetch buyer username for sales - only once when component mounts
-    useEffect(() => {
-      let isMounted = true;
-      
-      const fetchBuyerName = async () => {
-        // Only fetch if this is a sale and we have a buyer ID and we haven't already loaded or started loading
-        if (isSale && order.buyerId && !buyerName && !isLoadingBuyer) {
-          setIsLoadingBuyer(true);
-          try {
-            console.log(`[OrderCard] Fetching buyer info for order ${order.id}, buyerId: ${order.buyerId}`);
-            const { db } = getFirebaseServices();
-            const userDoc = await getDoc(doc(db, 'users', order.buyerId));
-            
-            // Only update state if component is still mounted
-            if (!isMounted) return;
-            
-            if (userDoc.exists()) {
-              const userData = userDoc.data();
-              const name = userData.displayName || userData.username || 'Unknown User';
-              console.log(`[OrderCard] Found buyer name: ${name} for order ${order.id}`);
-              setBuyerName(name);
-            } else {
-              console.warn(`[OrderCard] Buyer document not found for buyerId: ${order.buyerId}`);
-              setBuyerName('Unknown User');
-            }
-          } catch (error) {
-            console.error(`[OrderCard] Error fetching buyer name for order ${order.id}:`, error);
-            if (isMounted) {
-              setBuyerName('Unknown User');
-            }
-          } finally {
-            if (isMounted) {
-              setIsLoadingBuyer(false);
-            }
-          }
-        }
-      };
-      
-      if (isSale) {
-        fetchBuyerName();
-      }
-      
-      // Cleanup function to prevent state updates after unmount
-      return () => {
-        isMounted = false;
-      };
-    }, [isSale, order.buyerId, order.id, buyerName, isLoadingBuyer]);
-    
-    const handleOrderClick = () => {
-      if (order && order.id) {
-        router.push(`/dashboard/orders/${order.id}`);
-      }
-    };
-    
-    // Safety check for order - log the issue instead of silently returning null
-    if (!order || !order.id) {
-      console.warn('OrderCard received invalid order data:', order);
-      return (
-        <Card className="mb-4 order-card-error">
-          <CardContent className="pt-6">
-            <div className="text-destructive">
-              Invalid order data. This card cannot be displayed properly.
-            </div>
-          </CardContent>
-        </Card>
-      );
+    try {
+      setIsRefreshing(true);
+      await fetchOrders();
+      toast.success('Orders refreshed successfully');
+    } catch (error) {
+      console.error('Error refreshing orders:', error);
+      toast.error('Failed to refresh orders. Please try again.');
     }
-    
-    return (
-      <div className="mb-4">
-        <Card 
-          className="cursor-pointer hover:shadow-md transition-shadow duration-200 order-card"
-          onClick={handleOrderClick}
-          data-order-id={order.id}
-        >
-          <CardContent className="pt-6">
-            <div className="flex flex-col md:flex-row gap-4">
-              <div className="relative w-24 h-24 md:w-32 md:h-32 order-card-image">
-                {order.listingSnapshot?.imageUrl ? (
-                  <Image
-                    src={order.listingSnapshot.imageUrl}
-                    alt={order.listingSnapshot.title || 'Order item'}
-                    fill
-                    className="object-cover rounded-lg"
-                  />
-                ) : (
-                  <div className="w-full h-full bg-muted rounded-lg flex items-center justify-center">
-                    <span className="text-muted-foreground text-sm">No image</span>
-                  </div>
-                )}
-              </div>
-              <div className="flex-1 order-card-details">
-                <h3 className="font-semibold text-lg mb-2 order-card-title">
-                  {order.listingSnapshot?.title || `Order #${typeof order.id === 'string' ? order.id.slice(0, 6) : order.id}`}
-                </h3>
-                <div className="space-y-2">
-                  <p className="text-muted-foreground order-card-id">
-                    Order ID: <span className="font-mono">{order.id}</span>
-                  </p>
-                  {isSale && (
-                    <p className="text-muted-foreground order-card-buyer">
-                      Buyer: {buyerName || <span className="italic">Loading...</span>}
-                    </p>
-                  )}
-                  <p className="text-muted-foreground order-card-date">
-                    Date: {format(order.createdAt instanceof Date ? order.createdAt : new Date(), 'PPP')}
-                  </p>
-                  <p className="font-semibold order-card-price">{formatPrice(order.amount || 0)}</p>
-                  <Badge
-                    variant={order.status === 'completed' ? 'default' : 
-                           order.status === 'cancelled' ? 'destructive' : 'secondary'}
-                    className="order-card-status"
-                  >
-                    {order.status ? order.status.charAt(0).toUpperCase() + order.status.slice(1) : 'Unknown'}
-                  </Badge>
-                </div>
-              </div>
-              {order.shippingAddress && (
-                <div className="md:w-1/3 order-card-shipping">
-                  <h4 className="font-semibold mb-2">Shipping Address</h4>
-                  <div className="text-sm text-muted-foreground">
-                    <p>{order.shippingAddress.name}</p>
-                    <p>{order.shippingAddress.line1}</p>
-                    {order.shippingAddress.line2 && <p>{order.shippingAddress.line2}</p>}
-                    <p>
-                      {order.shippingAddress.city}, {order.shippingAddress.state}{' '}
-                      {order.shippingAddress.postal_code}
-                    </p>
-                    <p>{order.shippingAddress.country}</p>
-                  </div>
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
   };
 
-  if (loading) {
+  if (loading && !isRefreshing) {
     return (
       <DashboardLayout>
         <div className="flex items-center justify-center min-h-[400px]">
@@ -401,72 +271,84 @@ export default function OrdersPage() {
         </div>
       </DashboardLayout>
     );
-  };
-
-  // Create a sample order for debugging purposes
-  const sampleOrder: Order = {
-    id: 'sample-order-id',
-    listingId: 'sample-listing-id',
-    buyerId: user?.uid || 'sample-buyer-id',
-    sellerId: 'sample-seller-id',
-    amount: 2999,
-    status: 'completed',
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    listingSnapshot: {
-      title: 'Sample Order Card (Debug Only)',
-      price: 2999,
-      imageUrl: null
-    }
-  };
+  }
 
   return (
     <DashboardLayout>
-      <Card>
-        <CardHeader>
-          <CardTitle>Orders Management</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Tabs defaultValue="purchases">
-            <TabsList>
-              <TabsTrigger value="purchases">
-                Purchases ({purchases.length})
-              </TabsTrigger>
-              <TabsTrigger value="sales">
-                Sales ({sales.length})
-              </TabsTrigger>
-            </TabsList>
-            <TabsContent value="purchases" className="mt-4">
-              {/* Debug sample order card - always visible */}
-              <div className="mb-6 p-3 bg-muted rounded-lg">
-                <h3 className="text-sm font-medium mb-2">Debug Sample Order Card (Always Visible)</h3>
-                <OrderCard order={sampleOrder} />
-              </div>
-              
-              {purchases.length === 0 ? (
-                <p className="text-center text-muted-foreground py-8">
-                  You haven't made any purchases yet.
-                </p>
-              ) : (
-                purchases.map((order) => (
-                  <OrderCard key={order.id} order={order} />
-                ))
-              )}
-            </TabsContent>
-            <TabsContent value="sales" className="mt-4">
-              {sales.length === 0 ? (
-                <p className="text-center text-muted-foreground py-8">
-                  You haven't made any sales yet.
-                </p>
-              ) : (
-                sales.map((order) => (
-                  <OrderCard key={order.id} order={order} isSale={true} />
-                ))
-              )}
-            </TabsContent>
-          </Tabs>
-        </CardContent>
-      </Card>
+      <div className="mb-8 space-y-3">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight pl-5">Orders Dashboard</h1>
+            <p className="text-muted-foreground mt-1 pl-5">
+              Manage your purchases and sales
+            </p>
+          </div>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+          >
+            {isRefreshing ? (
+              <>
+                <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                Refreshing...
+              </>
+            ) : (
+              <>
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Refresh
+              </>
+            )}
+          </Button>
+        </div>
+      </div>
+
+      <Tabs defaultValue={router.query.tab === 'sales' ? 'sales' : 'purchases'} className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="purchases">Purchases ({purchases.length})</TabsTrigger>
+          <TabsTrigger value="sales">Sales ({sales.length})</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="purchases" className="space-y-4">
+          {purchases.length === 0 ? (
+            <div className="text-center py-12 border rounded-lg bg-background">
+              <h3 className="text-lg font-medium mb-2">No purchases yet</h3>
+              <p className="text-muted-foreground">
+                When you buy items, they will appear here.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {purchases.map((order) => (
+                <OrderCard key={order.id} order={order} />
+              ))}
+            </div>
+          )}
+        </TabsContent>
+        
+        <TabsContent value="sales" className="space-y-4">
+          {sales.length === 0 ? (
+            <div className="text-center py-12 border rounded-lg bg-background">
+              <h3 className="text-lg font-medium mb-2">No sales yet</h3>
+              <p className="text-muted-foreground">
+                When you sell items, they will appear here.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {sales.map((order) => (
+                <OrderCard key={order.id} order={order} isSale={true} />
+              ))}
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
     </DashboardLayout>
   );
-}
+};
+
+// Use dynamic import with ssr disabled
+export default dynamic(() => Promise.resolve(OrdersComponent), {
+  ssr: false
+});
