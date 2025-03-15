@@ -110,7 +110,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       // Verify the token and get user data
       let decodedToken;
       try {
-        decodedToken = await admin.auth().verifyIdToken(idToken, true);
+        decodedToken = await admin.auth.verifyIdToken(idToken, true);
       } catch (error: any) {
         console.error(`[Subscription Check ${requestId}] Token verification failed:`, {
           error: error.message,
@@ -122,7 +122,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         // Try one more time without forcing token refresh
         try {
           console.log(`[Subscription Check ${requestId}] Retrying token verification without refresh check`);
-          decodedToken = await admin.auth().verifyIdToken(idToken, false);
+          decodedToken = await admin.auth.verifyIdToken(idToken, false);
           console.log(`[Subscription Check ${requestId}] Retry succeeded`);
         } catch (retryError: any) {
           console.error(`[Subscription Check ${requestId}] Retry token verification also failed:`, {

@@ -101,9 +101,13 @@ export default async function handler(
         .ref('searchTerms')
         .orderByChild('lastUpdated')
         .startAt(twentyFourHoursAgo)
-        .once('value'),
+        .once('value')
+        .catch(err => {
+          console.error(`Path: /api/trending-searches [${requestId}] Database query error:`, err);
+          return { exists: () => false, val: () => null };
+        }),
       new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Database query timeout')), 3000)
+        setTimeout(() => reject(new Error('Database query timeout')), 2500)
       )
     ]);
     

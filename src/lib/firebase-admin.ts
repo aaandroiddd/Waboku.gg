@@ -34,13 +34,7 @@ export function initializeFirebaseAdmin(): typeof admin {
 
 export function getFirebaseAdmin() {
   if (firebaseAdmin) {
-    return {
-      admin: firebaseAdmin,
-      db: firebaseAdmin.firestore(),
-      auth: firebaseAdmin.auth(),
-      storage: firebaseAdmin.storage(),
-      database: firebaseAdmin.database()
-    };
+    return firebaseAdmin;
   }
 
   if (!admin.apps.length) {
