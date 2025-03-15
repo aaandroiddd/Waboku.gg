@@ -259,19 +259,29 @@ export default function OrdersPage() {
       }
     };
     
-    // Safety check for order
+    // Safety check for order - log the issue instead of silently returning null
     if (!order || !order.id) {
-      return null;
+      console.warn('OrderCard received invalid order data:', order);
+      return (
+        <Card className="mb-4 order-card-error">
+          <CardContent className="pt-6">
+            <div className="text-destructive">
+              Invalid order data. This card cannot be displayed properly.
+            </div>
+          </CardContent>
+        </Card>
+      );
     }
     
     return (
       <Card 
-        className="mb-4 cursor-pointer hover:shadow-md transition-shadow duration-200"
+        className="mb-4 cursor-pointer hover:shadow-md transition-shadow duration-200 order-card"
         onClick={handleOrderClick}
+        data-order-id={order.id}
       >
         <CardContent className="pt-6">
           <div className="flex flex-col md:flex-row gap-4">
-            <div className="relative w-24 h-24 md:w-32 md:h-32">
+            <div className="relative w-24 h-24 md:w-32 md:h-32 order-card-image">
               {order.listingSnapshot?.imageUrl ? (
                 <Image
                   src={order.listingSnapshot.imageUrl}
@@ -285,28 +295,29 @@ export default function OrdersPage() {
                 </div>
               )}
             </div>
-            <div className="flex-1">
-              <h3 className="font-semibold text-lg mb-2">
+            <div className="flex-1 order-card-details">
+              <h3 className="font-semibold text-lg mb-2 order-card-title">
                 {order.listingSnapshot?.title || `Order #${typeof order.id === 'string' ? order.id.slice(0, 6) : order.id}`}
               </h3>
               <div className="space-y-2">
-                <p className="text-muted-foreground">
+                <p className="text-muted-foreground order-card-id">
                   Order ID: <span className="font-mono">{typeof order.id === 'string' ? `${order.id.slice(0, 8)}...` : order.id}</span>
                 </p>
-                <p className="text-muted-foreground">
+                <p className="text-muted-foreground order-card-date">
                   Date: {format(order.createdAt instanceof Date ? order.createdAt : new Date(), 'PPP')}
                 </p>
-                <p className="font-semibold">{formatPrice(order.amount || 0)}</p>
+                <p className="font-semibold order-card-price">{formatPrice(order.amount || 0)}</p>
                 <Badge
                   variant={order.status === 'completed' ? 'default' : 
                          order.status === 'cancelled' ? 'destructive' : 'secondary'}
+                  className="order-card-status"
                 >
                   {order.status ? order.status.charAt(0).toUpperCase() + order.status.slice(1) : 'Unknown'}
                 </Badge>
               </div>
             </div>
             {order.shippingAddress && (
-              <div className="md:w-1/3">
+              <div className="md:w-1/3 order-card-shipping">
                 <h4 className="font-semibold mb-2">Shipping Address</h4>
                 <div className="text-sm text-muted-foreground">
                   <p>{order.shippingAddress.name}</p>
@@ -336,6 +347,23 @@ export default function OrdersPage() {
     );
   };
 
+  // Create a sample order for debugging purposes
+  const sampleOrder: Order = {
+    id: 'sample-order-id',
+    listingId: 'sample-listing-id',
+    buyerId: user?.uid || 'sample-buyer-id',
+    sellerId: 'sample-seller-id',
+    amount: 2999,
+    status: 'completed',
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    listingSnapshot: {
+      title: 'Sample Order Card (Debug Only)',
+      price: 2999,
+      imageUrl: null
+    }
+  };
+
   return (
     <DashboardLayout>
       <Card>
@@ -353,6 +381,12 @@ export default function OrdersPage() {
               </TabsTrigger>
             </TabsList>
             <TabsContent value="purchases" className="mt-4">
+              {/* Debug sample order card - always visible */}
+              <div className="mb-6 p-3 bg-muted rounded-lg">
+                <h3 className="text-sm font-medium mb-2">Debug Sample Order Card (Always Visible)</h3>
+                <OrderCard order={sampleOrder} />
+              </div>
+              
               {purchases.length === 0 ? (
                 <p className="text-center text-muted-foreground py-8">
                   You haven't made any purchases yet.
