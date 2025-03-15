@@ -22,6 +22,9 @@ export default function OrderDetailsPage() {
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [buyerName, setBuyerName] = useState<string | null>(null);
+  const [sellerName, setSellerName] = useState<string | null>(null);
+  const [loadingUserInfo, setLoadingUserInfo] = useState(false);
 
   useEffect(() => {
     async function fetchOrderDetails() {
@@ -53,12 +56,17 @@ export default function OrderDetailsPage() {
         const createdAt = orderData.createdAt?.toDate?.() || new Date();
         const updatedAt = orderData.updatedAt?.toDate?.() || new Date();
         
-        setOrder({
+        const orderWithDates = {
           id: orderDoc.id,
           ...orderData,
           createdAt,
           updatedAt,
-        });
+        };
+        
+        setOrder(orderWithDates);
+        
+        // Fetch user information after setting the order
+        fetchUserInfo(orderWithDates.buyerId, orderWithDates.sellerId);
       } catch (error) {
         console.error('Error fetching order details:', error);
         setError('Failed to load order details');
@@ -69,6 +77,47 @@ export default function OrderDetailsPage() {
 
     fetchOrderDetails();
   }, [id, user]);
+  
+  // Function to fetch buyer and seller information
+  const fetchUserInfo = async (buyerId: string, sellerId: string) => {
+    if (!buyerId || !sellerId) return;
+    
+    setLoadingUserInfo(true);
+    try {
+      const { db } = getFirebaseServices();
+      console.log(`[OrderDetails] Fetching user info for buyerId: ${buyerId}, sellerId: ${sellerId}`);
+      
+      // Fetch buyer info
+      const buyerDoc = await getDoc(doc(db, 'users', buyerId));
+      if (buyerDoc.exists()) {
+        const buyerData = buyerDoc.data();
+        const name = buyerData.displayName || buyerData.username || 'Unknown User';
+        console.log(`[OrderDetails] Found buyer name: ${name}`);
+        setBuyerName(name);
+      } else {
+        console.warn(`[OrderDetails] Buyer document not found for buyerId: ${buyerId}`);
+        setBuyerName('Unknown User');
+      }
+      
+      // Fetch seller info
+      const sellerDoc = await getDoc(doc(db, 'users', sellerId));
+      if (sellerDoc.exists()) {
+        const sellerData = sellerDoc.data();
+        const name = sellerData.displayName || sellerData.username || 'Unknown User';
+        console.log(`[OrderDetails] Found seller name: ${name}`);
+        setSellerName(name);
+      } else {
+        console.warn(`[OrderDetails] Seller document not found for sellerId: ${sellerId}`);
+        setSellerName('Unknown User');
+      }
+    } catch (error) {
+      console.error('[OrderDetails] Error fetching user information:', error);
+      setBuyerName('Unknown User');
+      setSellerName('Unknown User');
+    } finally {
+      setLoadingUserInfo(false);
+    }
+  };
 
   const handleBack = () => {
     router.push('/dashboard/orders');
@@ -185,7 +234,10 @@ export default function OrderDetailsPage() {
                   <div className="flex items-center gap-2">
                     <User className="h-4 w-4 text-muted-foreground" />
                     <span className="text-sm">
-                      {isUserBuyer ? 'You purchased from a seller' : 'Sold to a buyer'}
+                      {isUserBuyer 
+                        ? `You purchased from: ${sellerName || 'Loading...'}`
+                        : `Sold to: ${buyerName || 'Loading...'}`
+                      }
                     </span>
                   </div>
                   

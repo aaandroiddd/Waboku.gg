@@ -251,24 +251,32 @@ export default function OrdersPage() {
   const OrderCard = ({ order, isSale = false }: { order: Order; isSale?: boolean }) => {
     const router = useRouter();
     const [buyerName, setBuyerName] = useState<string | null>(null);
+    const [isLoadingBuyer, setIsLoadingBuyer] = useState<boolean>(false);
     
     // Fetch buyer username for sales
     useEffect(() => {
       const fetchBuyerName = async () => {
         if (isSale && order.buyerId) {
+          setIsLoadingBuyer(true);
           try {
+            console.log(`[OrderCard] Fetching buyer info for order ${order.id}, buyerId: ${order.buyerId}`);
             const { db } = getFirebaseServices();
             const userDoc = await getDoc(doc(db, 'users', order.buyerId));
             
             if (userDoc.exists()) {
               const userData = userDoc.data();
-              setBuyerName(userData.displayName || userData.username || 'Unknown User');
+              const name = userData.displayName || userData.username || 'Unknown User';
+              console.log(`[OrderCard] Found buyer name: ${name} for order ${order.id}`);
+              setBuyerName(name);
             } else {
+              console.warn(`[OrderCard] Buyer document not found for buyerId: ${order.buyerId}`);
               setBuyerName('Unknown User');
             }
           } catch (error) {
-            console.error('Error fetching buyer name:', error);
+            console.error(`[OrderCard] Error fetching buyer name for order ${order.id}:`, error);
             setBuyerName('Unknown User');
+          } finally {
+            setIsLoadingBuyer(false);
           }
         }
       };
@@ -276,7 +284,7 @@ export default function OrdersPage() {
       if (isSale) {
         fetchBuyerName();
       }
-    }, [order.buyerId, isSale]);
+    }, [order.buyerId, isSale, order.id]);
     
     const handleOrderClick = () => {
       // Remove preventDefault and stopPropagation
