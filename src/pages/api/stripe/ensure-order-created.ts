@@ -162,6 +162,7 @@ export default async function handler(
       platformFee: session.metadata.platformFee ? parseInt(session.metadata.platformFee) / 100 : 0, // Convert from cents
       paymentSessionId: sessionId,
       paymentIntentId: paymentIntentId,
+      trackingRequired: true, // Set tracking as required by default
       createdAt: new Date(),
       updatedAt: new Date(),
       shippingAddress: session.shipping?.address ? {

@@ -28,6 +28,8 @@ export interface Order {
     addedBy: string;
   };
   noTrackingConfirmed?: boolean;
+  trackingRequired?: boolean; // Flag to indicate if tracking is required
+  deliveryConfirmed?: boolean; // Flag to indicate if delivery has been confirmed by buyer
   createdAt: Date;
   updatedAt: Date;
   listingSnapshot?: {

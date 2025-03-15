@@ -137,20 +137,43 @@ export function OrderCard({ order, isSale = false }: OrderCardProps) {
                 Date: {format(safeOrder.createdAt, 'PPP')}
               </p>
               <p className="font-semibold">{formatPrice(safeOrder.amount || 0)}</p>
-              <Badge
-                variant={
-                  safeOrder.status === 'completed' ? 'default' : 
-                  safeOrder.status === 'paid' ? 'success' :
-                  safeOrder.status === 'awaiting_shipping' ? 'warning' :
-                  safeOrder.status === 'shipped' ? 'info' :
-                  safeOrder.status === 'cancelled' ? 'destructive' : 
-                  'secondary'
-                }
-              >
-                {safeOrder.status === 'awaiting_shipping' 
-                  ? 'Awaiting Shipping' 
-                  : safeOrder.status.charAt(0).toUpperCase() + safeOrder.status.slice(1).replace('_', ' ')}
-              </Badge>
+              <div className="flex flex-wrap gap-2">
+                <Badge
+                  variant={
+                    safeOrder.status === 'completed' ? 'default' : 
+                    safeOrder.status === 'paid' ? 'success' :
+                    safeOrder.status === 'awaiting_shipping' ? 'warning' :
+                    safeOrder.status === 'shipped' ? 'info' :
+                    safeOrder.status === 'cancelled' ? 'destructive' : 
+                    'secondary'
+                  }
+                >
+                  {safeOrder.status === 'awaiting_shipping' 
+                    ? 'Awaiting Shipping' 
+                    : safeOrder.status.charAt(0).toUpperCase() + safeOrder.status.slice(1).replace('_', ' ')}
+                </Badge>
+                
+                {/* Show tracking requirement badge */}
+                {safeOrder.status === 'shipped' && safeOrder.trackingRequired && !safeOrder.trackingInfo && (
+                  <Badge variant="outline" className="bg-yellow-50 text-yellow-800 border-yellow-300">
+                    Tracking Required
+                  </Badge>
+                )}
+                
+                {/* Show tracking provided badge */}
+                {safeOrder.trackingInfo && (
+                  <Badge variant="outline" className="bg-green-50 text-green-800 border-green-300">
+                    Tracking Provided
+                  </Badge>
+                )}
+                
+                {/* Show no tracking badge */}
+                {safeOrder.noTrackingConfirmed && (
+                  <Badge variant="outline" className="bg-orange-50 text-orange-800 border-orange-300">
+                    No Tracking
+                  </Badge>
+                )}
+              </div>
             </div>
           </div>
           

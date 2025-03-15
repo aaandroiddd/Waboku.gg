@@ -34,8 +34,10 @@ export default function OrderDetailsPage() {
   const [carrier, setCarrier] = useState('');
   const [trackingNotes, setTrackingNotes] = useState('');
   const [isUpdatingShipping, setIsUpdatingShipping] = useState(false);
+  const [isConfirmingDelivery, setIsConfirmingDelivery] = useState(false);
   const [showTrackingDialog, setShowTrackingDialog] = useState(false);
   const [showNoTrackingDialog, setShowNoTrackingDialog] = useState(false);
+  const [showConfirmDeliveryDialog, setShowConfirmDeliveryDialog] = useState(false);
 
   useEffect(() => {
     async function fetchOrderDetails() {
@@ -152,6 +154,7 @@ export default function OrderDetailsPage() {
           addedAt: new Date(),
           addedBy: user?.uid
         },
+        trackingRequired: true, // Ensure tracking is marked as required
         updatedAt: new Date()
       });
       
@@ -166,6 +169,7 @@ export default function OrderDetailsPage() {
           addedAt: new Date(),
           addedBy: user?.uid
         },
+        trackingRequired: true,
         updatedAt: new Date()
       });
       
@@ -191,6 +195,7 @@ export default function OrderDetailsPage() {
       await updateDoc(doc(db, 'orders', id as string), {
         status: 'shipped',
         noTrackingConfirmed: true,
+        trackingRequired: false, // Explicitly mark that tracking is not required for this order
         updatedAt: new Date()
       });
       
@@ -199,6 +204,7 @@ export default function OrderDetailsPage() {
         ...order,
         status: 'shipped',
         noTrackingConfirmed: true,
+        trackingRequired: false,
         updatedAt: new Date()
       });
       
@@ -209,6 +215,39 @@ export default function OrderDetailsPage() {
       toast.error('Failed to update order status');
     } finally {
       setIsUpdatingShipping(false);
+    }
+  };
+  
+  // Function for buyer to confirm delivery
+  const handleConfirmDelivery = async () => {
+    if (!order || !id) return;
+    
+    try {
+      setIsConfirmingDelivery(true);
+      const { db } = getFirebaseServices();
+      
+      // Update the order status to completed
+      await updateDoc(doc(db, 'orders', id as string), {
+        status: 'completed',
+        deliveryConfirmed: true,
+        updatedAt: new Date()
+      });
+      
+      // Update local state
+      setOrder({
+        ...order,
+        status: 'completed',
+        deliveryConfirmed: true,
+        updatedAt: new Date()
+      });
+      
+      toast.success('Order marked as delivered');
+      setShowConfirmDeliveryDialog(false);
+    } catch (error) {
+      console.error('Error confirming delivery:', error);
+      toast.error('Failed to update order status');
+    } finally {
+      setIsConfirmingDelivery(false);
     }
   };
 
@@ -575,6 +614,11 @@ export default function OrderDetailsPage() {
             )}
             
             {/* Buyer actions */}
+            {isUserBuyer && order.status === 'shipped' && (
+              <Button variant="primary" onClick={() => setShowConfirmDeliveryDialog(true)}>
+                <Package className="mr-2 h-4 w-4" /> Confirm Delivery
+              </Button>
+            )}
             {isUserBuyer && order.status === 'completed' && (
               <Button variant="outline" onClick={() => toast.info('Contact support for any issues with this order')}>
                 <Package className="mr-2 h-4 w-4" /> Report Issue
@@ -657,6 +701,30 @@ export default function OrderDetailsPage() {
             >
               {isUpdatingShipping && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               I Understand the Risk
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      
+      {/* Confirm Delivery Dialog */}
+      <AlertDialog open={showConfirmDeliveryDialog} onOpenChange={setShowConfirmDeliveryDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm Delivery</AlertDialogTitle>
+            <AlertDialogDescription>
+              By confirming delivery, you acknowledge that you have received the item in the condition described.
+              This will mark the order as completed.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleConfirmDelivery}
+              disabled={isConfirmingDelivery}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              {isConfirmingDelivery && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Confirm Delivery
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
