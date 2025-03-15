@@ -12,13 +12,14 @@ import { Separator } from '@/components/ui/separator';
 import { formatPrice } from '@/lib/price';
 import Image from 'next/image';
 import { format } from 'date-fns';
-import { Loader2, ArrowLeft, Package, CreditCard, User, MapPin, Calendar, Clock, Truck, AlertTriangle, Copy, ExternalLink, Info } from 'lucide-react';
+import { Loader2, ArrowLeft, Package, CreditCard, User, MapPin, Calendar, Clock, Truck, AlertTriangle, Copy, ExternalLink, Info, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { TrackingStatusComponent } from '@/components/TrackingStatus';
 
 export default function OrderDetailsPage() {
   const router = useRouter();
@@ -493,80 +494,112 @@ export default function OrderDetailsPage() {
                       
                       {/* Tracking Information */}
                       {order.trackingInfo ? (
-                        <div className="border rounded-lg p-4 bg-slate-50 dark:bg-slate-900 mt-4">
-                          <div className="space-y-3">
-                            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
-                              <div className="flex items-center gap-2">
-                                <span className="text-muted-foreground font-medium">Carrier:</span>
-                                <span className="font-semibold">{order.trackingInfo.carrier}</span>
+                        <div className="space-y-4 mt-4">
+                          <div className="border rounded-lg p-4 bg-slate-50 dark:bg-slate-900">
+                            <div className="space-y-3">
+                              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-muted-foreground font-medium">Carrier:</span>
+                                  <span className="font-semibold">{order.trackingInfo.carrier}</span>
+                                </div>
+                                
+                                <div className="flex items-center gap-2">
+                                  {/* Update Tracking Button - Only visible to seller */}
+                                  {!isUserBuyer && order.status !== 'completed' && (
+                                    <Button 
+                                      variant="outline" 
+                                      size="sm"
+                                      onClick={() => {
+                                        setCarrier(order.trackingInfo?.carrier || '');
+                                        setTrackingNumber(order.trackingInfo?.trackingNumber || '');
+                                        setTrackingNotes(order.trackingInfo?.notes || '');
+                                        setShowTrackingDialog(true);
+                                      }}
+                                    >
+                                      <RefreshCw className="mr-2 h-4 w-4" />
+                                      Update Tracking
+                                    </Button>
+                                  )}
+                                  
+                                  {/* Track Package Button - Links to carrier tracking page */}
+                                  <Button 
+                                    variant="outline" 
+                                    size="sm"
+                                    onClick={() => {
+                                      let trackingUrl = '';
+                                      const carrier = order.trackingInfo?.carrier.toLowerCase();
+                                      const trackingNumber = order.trackingInfo?.trackingNumber;
+                                      
+                                      if (carrier?.includes('usps')) {
+                                        trackingUrl = `https://tools.usps.com/go/TrackConfirmAction?tLabels=${trackingNumber}`;
+                                      } else if (carrier?.includes('ups')) {
+                                        trackingUrl = `https://www.ups.com/track?tracknum=${trackingNumber}`;
+                                      } else if (carrier?.includes('fedex')) {
+                                        trackingUrl = `https://www.fedex.com/fedextrack/?trknbr=${trackingNumber}`;
+                                      } else if (carrier?.includes('dhl')) {
+                                        trackingUrl = `https://www.dhl.com/us-en/home/tracking.html?tracking-id=${trackingNumber}`;
+                                      } else {
+                                        // Generic tracking search
+                                        trackingUrl = `https://www.google.com/search?q=${encodeURIComponent(`${order.trackingInfo?.carrier} tracking ${trackingNumber}`)}`;
+                                      }
+                                      
+                                      window.open(trackingUrl, '_blank');
+                                    }}
+                                  >
+                                    <ExternalLink className="mr-2 h-4 w-4" />
+                                    Track Package
+                                  </Button>
+                                </div>
                               </div>
                               
-                              {/* Track Package Button - Links to carrier tracking page */}
-                              <Button 
-                                variant="outline" 
-                                size="sm"
-                                onClick={() => {
-                                  let trackingUrl = '';
-                                  const carrier = order.trackingInfo?.carrier.toLowerCase();
-                                  const trackingNumber = order.trackingInfo?.trackingNumber;
-                                  
-                                  if (carrier?.includes('usps')) {
-                                    trackingUrl = `https://tools.usps.com/go/TrackConfirmAction?tLabels=${trackingNumber}`;
-                                  } else if (carrier?.includes('ups')) {
-                                    trackingUrl = `https://www.ups.com/track?tracknum=${trackingNumber}`;
-                                  } else if (carrier?.includes('fedex')) {
-                                    trackingUrl = `https://www.fedex.com/fedextrack/?trknbr=${trackingNumber}`;
-                                  } else if (carrier?.includes('dhl')) {
-                                    trackingUrl = `https://www.dhl.com/us-en/home/tracking.html?tracking-id=${trackingNumber}`;
-                                  } else {
-                                    // Generic tracking search
-                                    trackingUrl = `https://www.google.com/search?q=${encodeURIComponent(`${order.trackingInfo?.carrier} tracking ${trackingNumber}`)}`;
-                                  }
-                                  
-                                  window.open(trackingUrl, '_blank');
-                                }}
-                              >
-                                <ExternalLink className="mr-2 h-4 w-4" />
-                                Track Package
-                              </Button>
-                            </div>
-                            
-                            <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-                              <div className="flex items-center gap-2">
-                                <span className="text-muted-foreground font-medium">Tracking Number:</span>
-                                <code className="bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded font-mono">
-                                  {order.trackingInfo.trackingNumber}
-                                </code>
+                              <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-muted-foreground font-medium">Tracking Number:</span>
+                                  <code className="bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded font-mono">
+                                    {order.trackingInfo.trackingNumber}
+                                  </code>
+                                </div>
+                                
+                                {/* Copy Tracking Button */}
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm"
+                                  onClick={() => {
+                                    navigator.clipboard.writeText(order.trackingInfo?.trackingNumber || '');
+                                    toast.success('Tracking number copied to clipboard');
+                                  }}
+                                >
+                                  <Copy className="mr-2 h-4 w-4" />
+                                  Copy
+                                </Button>
                               </div>
                               
-                              {/* Copy Tracking Button */}
-                              <Button 
-                                variant="ghost" 
-                                size="sm"
-                                onClick={() => {
-                                  navigator.clipboard.writeText(order.trackingInfo?.trackingNumber || '');
-                                  toast.success('Tracking number copied to clipboard');
-                                }}
-                              >
-                                <Copy className="mr-2 h-4 w-4" />
-                                Copy
-                              </Button>
-                            </div>
-                            
-                            {order.trackingInfo.notes && (
-                              <div className="mt-2">
-                                <span className="text-muted-foreground font-medium">Notes:</span>
-                                <p className="mt-1 text-sm p-2 bg-slate-100 dark:bg-slate-800 rounded">
-                                  {order.trackingInfo.notes}
-                                </p>
+                              {order.trackingInfo.notes && (
+                                <div className="mt-2">
+                                  <span className="text-muted-foreground font-medium">Notes:</span>
+                                  <p className="mt-1 text-sm p-2 bg-slate-100 dark:bg-slate-800 rounded">
+                                    {order.trackingInfo.notes}
+                                  </p>
+                                </div>
+                              )}
+                              
+                              <div className="text-sm text-muted-foreground mt-2">
+                                Tracking added on {order.trackingInfo.addedAt && 
+                                  format(new Date(order.trackingInfo.addedAt.seconds * 1000), 'PPP')}
                               </div>
-                            )}
-                            
-                            <div className="text-sm text-muted-foreground mt-2">
-                              Tracking added on {order.trackingInfo.addedAt && 
-                                format(new Date(order.trackingInfo.addedAt.seconds * 1000), 'PPP')}
                             </div>
                           </div>
+                          
+                          {/* Live Tracking Status */}
+                          {order.trackingInfo.carrier && order.trackingInfo.trackingNumber && (
+                            <div className="mt-4">
+                              <h4 className="text-sm font-medium mb-2">Live Tracking Status</h4>
+                              <TrackingStatusComponent 
+                                carrier={order.trackingInfo.carrier} 
+                                trackingNumber={order.trackingInfo.trackingNumber} 
+                              />
+                            </div>
+                          )}
                         </div>
                       ) : order.noTrackingConfirmed ? (
                         <div className="flex items-center gap-2 text-yellow-600 mt-2">

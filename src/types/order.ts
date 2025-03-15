@@ -26,6 +26,8 @@ export interface Order {
     notes?: string;
     addedAt: Date;
     addedBy: string;
+    lastUpdated?: Date;
+    status?: string;
   };
   noTrackingConfirmed?: boolean;
   trackingRequired?: boolean; // Flag to indicate if tracking is required
