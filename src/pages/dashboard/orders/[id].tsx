@@ -518,7 +518,7 @@ export default function OrderDetailsPage() {
                                   </Badge>
                                 </div>
                                 
-                                <div className="flex items-center gap-2">
+                                <div className="flex flex-wrap items-center gap-2 mt-2 sm:mt-0">
                                   {/* Update Tracking Button - Only visible to seller */}
                                   {!isUserBuyer && order.status !== 'completed' && (
                                     <Button 
@@ -567,10 +567,10 @@ export default function OrderDetailsPage() {
                                 </div>
                               </div>
                               
-                              <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-                                <div className="flex items-center gap-2">
+                              <div className="flex flex-col sm:flex-row sm:items-center gap-2 mt-3">
+                                <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
                                   <span className="text-muted-foreground font-medium">Tracking Number:</span>
-                                  <code className="bg-muted px-2 py-1 rounded font-mono text-foreground">
+                                  <code className="bg-muted px-2 py-1 rounded font-mono text-foreground text-sm break-all">
                                     {order.trackingInfo.trackingNumber}
                                   </code>
                                 </div>
@@ -579,6 +579,7 @@ export default function OrderDetailsPage() {
                                 <Button 
                                   variant="ghost" 
                                   size="sm"
+                                  className="mt-1 sm:mt-0 self-start sm:self-auto"
                                   onClick={() => {
                                     navigator.clipboard.writeText(order.trackingInfo?.trackingNumber || '');
                                     toast.success('Tracking number copied to clipboard');

@@ -118,19 +118,19 @@ export function TrackingStatusComponent({ carrier, trackingNumber }: TrackingSta
   };
 
   return (
-    <Card className="border border-slate-200 dark:border-slate-800">
+    <Card className="border border-slate-200 dark:border-slate-800 overflow-hidden">
       <CardContent className="pt-6">
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               {getStatusBadge(status.status)}
-              <span className="font-medium">{status.statusDescription}</span>
+              <span className="font-medium text-sm sm:text-base">{status.statusDescription}</span>
             </div>
             <Button 
               variant="ghost" 
               size="sm" 
               onClick={() => refetch()}
-              className="h-8 px-2"
+              className="h-8 px-2 self-end sm:self-auto"
             >
               <RefreshCw className="h-4 w-4" />
             </Button>
@@ -147,17 +147,17 @@ export function TrackingStatusComponent({ carrier, trackingNumber }: TrackingSta
           )}
 
           {status.estimatedDelivery && (
-            <div className="text-sm">
+            <div className="text-sm break-words">
               <span className="text-muted-foreground">Estimated Delivery:</span>{' '}
               <span className="font-medium">{formatDate(status.estimatedDelivery)}</span>
             </div>
           )}
 
           {status.lastUpdate && (
-            <div className="text-sm">
+            <div className="text-sm break-words">
               <span className="text-muted-foreground">Last Update:</span>{' '}
               <span>{formatDate(status.lastUpdate)}</span>
-              {status.location && <span> • {status.location}</span>}
+              {status.location && <span className="block sm:inline sm:before:content-['_•_']">{status.location}</span>}
             </div>
           )}
 
