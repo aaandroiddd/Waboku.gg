@@ -17,6 +17,7 @@ export interface TrackingStatus {
   location?: string;
   events?: TrackingEvent[];
   error?: string;
+  isMockData?: boolean; // Flag to indicate if this is mock/demo data
 }
 
 export function useTrackingStatus(carrier: string, trackingNumber: string) {

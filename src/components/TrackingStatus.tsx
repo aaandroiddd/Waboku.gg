@@ -18,6 +18,9 @@ export function TrackingStatusComponent({ carrier, trackingNumber }: TrackingSta
   
   // If the carrier was auto-detected, show the detected carrier
   const displayCarrier = status?.carrier || carrier;
+  
+  // Check if we're using mock data
+  const isMockData = status?.isMockData === true;
 
   if (loading) {
     return (
@@ -120,20 +123,61 @@ export function TrackingStatusComponent({ carrier, trackingNumber }: TrackingSta
   return (
     <Card className="border border-slate-200 dark:border-slate-800 overflow-hidden">
       <CardContent className="pt-6">
+        {isMockData && (
+          <div className="mb-4 p-2 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-md text-amber-700 dark:text-amber-300 text-sm">
+            <div className="flex items-center gap-2">
+              <AlertCircle className="h-4 w-4" />
+              <span>Demo Mode: Using simulated tracking data</span>
+            </div>
+          </div>
+        )}
         <div className="space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
             <div className="flex items-center gap-2 flex-wrap">
               {getStatusBadge(status.status)}
               <span className="font-medium text-sm sm:text-base">{status.statusDescription}</span>
             </div>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={() => refetch()}
-              className="h-8 px-2 self-end sm:self-auto"
-            >
-              <RefreshCw className="h-4 w-4" />
-            </Button>
+            <div className="flex gap-2">
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => refetch()}
+                className="h-8 px-2 self-end sm:self-auto"
+                title="Refresh tracking information"
+              >
+                <RefreshCw className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 px-2 self-end sm:self-auto"
+                onClick={() => {
+                  // Open carrier tracking page in new tab
+                  let trackingUrl = '';
+                  switch (displayCarrier.toLowerCase()) {
+                    case 'usps':
+                      trackingUrl = `https://tools.usps.com/go/TrackConfirmAction?qtc_tLabels1=${trackingNumber}`;
+                      break;
+                    case 'fedex':
+                      trackingUrl = `https://www.fedex.com/fedextrack/?trknbr=${trackingNumber}`;
+                      break;
+                    case 'ups':
+                      trackingUrl = `https://www.ups.com/track?tracknum=${trackingNumber}`;
+                      break;
+                    case 'dhl':
+                      trackingUrl = `https://www.dhl.com/us-en/home/tracking/tracking-express.html?submit=1&tracking-id=${trackingNumber}`;
+                      break;
+                    default:
+                      // Generic tracking URL that might work for some carriers
+                      trackingUrl = `https://www.packagetrackr.com/track/${trackingNumber}`;
+                  }
+                  window.open(trackingUrl, '_blank');
+                }}
+                title="Open carrier's tracking page"
+              >
+                Track Package
+              </Button>
+            </div>
           </div>
           
           {/* Show detected carrier if it was auto-detected */}
