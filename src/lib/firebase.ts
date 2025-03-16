@@ -12,8 +12,8 @@ import {
   where, 
   Firestore,
   enableIndexedDbPersistence,
-  disableNetwork,
-  enableNetwork,
+  disableNetwork as disableFirestoreNetwork,
+  enableNetwork as enableFirestoreNetwork,
   connectFirestoreEmulator
 } from 'firebase/firestore';
 import { getStorage, FirebaseStorage } from 'firebase/storage';
@@ -374,3 +374,7 @@ class FirebaseConnectionManager {
 
 // Create and export the connection manager
 export const connectionManager = typeof window !== 'undefined' ? new FirebaseConnectionManager() : null;
+
+// Export network control functions
+export const disableNetwork = (firestore: Firestore) => disableFirestoreNetwork(firestore);
+export const enableNetwork = (firestore: Firestore) => enableFirestoreNetwork(firestore);
