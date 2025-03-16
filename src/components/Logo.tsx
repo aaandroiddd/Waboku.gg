@@ -23,6 +23,7 @@ export const Logo = memo(({ className, href = '/', alwaysShowFull = false }: Log
             <>
               <span className="lowercase text-sky-400">w</span>
               <span className="lowercase">.gg</span>
+              <span className="text-xs align-top ml-1 text-muted-foreground">(beta)</span>
             </>
           )}
         </div>
@@ -32,6 +33,7 @@ export const Logo = memo(({ className, href = '/', alwaysShowFull = false }: Log
       <div className={`${alwaysShowFull ? 'block' : 'hidden md:block'} text-2xl`}>
         <span className="lowercase">waboku</span>
         <span className="text-sky-400">.gg</span>
+        <span className="text-xs align-top ml-1 text-muted-foreground">(beta)</span>
       </div>
     </div>
   );
