@@ -20,6 +20,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { TrackingStatusComponent } from '@/components/TrackingStatus';
+import { UserNameLink } from '@/components/UserNameLink';
 
 export default function OrderDetailsPage() {
   const router = useRouter();
@@ -340,22 +341,28 @@ export default function OrderDetailsPage() {
           <CardContent className="space-y-6">
             {/* Order Summary */}
             <div className="flex flex-col md:flex-row gap-6">
-              <div className="relative w-full md:w-1/3 h-48 md:h-64">
+              <div 
+                className="relative w-full md:w-1/3 h-48 md:h-64 cursor-pointer"
+                onClick={() => order.listingId && router.push(`/listings/${order.listingId}`)}
+              >
                 {order.listingSnapshot?.imageUrl ? (
                   <Image
                     src={order.listingSnapshot.imageUrl}
                     alt={order.listingSnapshot.title || 'Order item'}
                     fill
-                    className="object-cover rounded-lg"
+                    className="object-cover rounded-lg hover:opacity-90 transition-opacity"
                   />
                 ) : (
-                  <div className="w-full h-full bg-muted rounded-lg flex items-center justify-center">
+                  <div className="w-full h-full bg-muted rounded-lg flex items-center justify-center hover:bg-muted/80 transition-colors">
                     <span className="text-muted-foreground">No image available</span>
                   </div>
                 )}
               </div>
               <div className="flex-1">
-                <h2 className="text-xl font-semibold mb-4">
+                <h2 
+                  className="text-xl font-semibold mb-4 hover:text-primary cursor-pointer"
+                  onClick={() => order.listingId && router.push(`/listings/${order.listingId}`)}
+                >
                   {order.listingSnapshot?.title || `Order #${order.id.slice(0, 8)}`}
                 </h2>
                 
@@ -378,8 +385,26 @@ export default function OrderDetailsPage() {
                     <User className="h-4 w-4 text-muted-foreground" />
                     <span className="text-sm">
                       {isUserBuyer 
-                        ? `You purchased from: ${sellerName || 'Loading...'}`
-                        : `Sold to: ${buyerName || 'Loading...'}`
+                        ? (
+                          <>
+                            You purchased from:{' '}
+                            <UserNameLink 
+                              userId={order.sellerId} 
+                              initialUsername={sellerName || undefined} 
+                              className="hover:text-primary"
+                            />
+                          </>
+                        )
+                        : (
+                          <>
+                            Sold to:{' '}
+                            <UserNameLink 
+                              userId={order.buyerId} 
+                              initialUsername={buyerName || undefined} 
+                              className="hover:text-primary"
+                            />
+                          </>
+                        )
                       }
                     </span>
                   </div>
