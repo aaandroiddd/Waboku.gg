@@ -139,21 +139,26 @@ export default function OrderDetailsPage() {
   
   // Function to add tracking information
   const handleAddTracking = async () => {
-    if (!order || !id) return;
+    if (!order || !id || !trackingNumber) return;
     
     try {
       setIsUpdatingShipping(true);
       const { db } = getFirebaseServices();
       
+      // If carrier is empty, we'll let the API detect it
+      // The carrier will be updated later when the tracking status is fetched
+      const carrierValue = carrier.trim() || 'auto-detect';
+      
       // Update the order with tracking information
       await updateDoc(doc(db, 'orders', id as string), {
         status: 'shipped',
         trackingInfo: {
-          carrier,
+          carrier: carrierValue,
           trackingNumber,
           notes: trackingNotes,
           addedAt: new Date(),
-          addedBy: user?.uid
+          addedBy: user?.uid,
+          autoDetect: !carrier.trim() // Flag to indicate carrier should be auto-detected
         },
         trackingRequired: true, // Ensure tracking is marked as required
         updatedAt: new Date()
@@ -164,11 +169,12 @@ export default function OrderDetailsPage() {
         ...order,
         status: 'shipped',
         trackingInfo: {
-          carrier,
+          carrier: carrierValue,
           trackingNumber,
           notes: trackingNotes,
           addedAt: new Date(),
-          addedBy: user?.uid
+          addedBy: user?.uid,
+          autoDetect: !carrier.trim()
         },
         trackingRequired: true,
         updatedAt: new Date()
@@ -672,7 +678,10 @@ export default function OrderDetailsPage() {
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="carrier">Shipping Carrier</Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="carrier">Shipping Carrier (Optional)</Label>
+                <span className="text-xs text-muted-foreground">Will be auto-detected if left empty</span>
+              </div>
               <Input
                 id="carrier"
                 placeholder="USPS, FedEx, UPS, etc."
@@ -706,7 +715,7 @@ export default function OrderDetailsPage() {
             </Button>
             <Button 
               onClick={handleAddTracking} 
-              disabled={!carrier || !trackingNumber || isUpdatingShipping}
+              disabled={!trackingNumber || isUpdatingShipping}
             >
               {isUpdatingShipping && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Save Tracking Information

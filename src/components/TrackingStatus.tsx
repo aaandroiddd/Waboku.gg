@@ -15,6 +15,9 @@ interface TrackingStatusComponentProps {
 export function TrackingStatusComponent({ carrier, trackingNumber }: TrackingStatusComponentProps) {
   const { status, loading, error, refetch } = useTrackingStatus(carrier, trackingNumber);
   const [expanded, setExpanded] = useState(false);
+  
+  // If the carrier was auto-detected, show the detected carrier
+  const displayCarrier = status?.carrier || carrier;
 
   if (loading) {
     return (
@@ -123,6 +126,16 @@ export function TrackingStatusComponent({ carrier, trackingNumber }: TrackingSta
               <RefreshCw className="h-4 w-4" />
             </Button>
           </div>
+          
+          {/* Show detected carrier if it was auto-detected */}
+          {carrier === 'auto-detect' && status.carrier && status.carrier !== 'auto-detect' && (
+            <div className="text-sm">
+              <span className="text-muted-foreground">Detected Carrier:</span>{' '}
+              <Badge variant="outline" className="ml-1">
+                {status.carrier.toUpperCase()}
+              </Badge>
+            </div>
+          )}
 
           {status.estimatedDelivery && (
             <div className="text-sm">

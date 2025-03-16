@@ -39,7 +39,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const order = doc.data() as Order;
       
       // Skip if no tracking info
-      if (!order.trackingInfo?.carrier || !order.trackingInfo?.trackingNumber) {
+      if (!order.trackingInfo?.trackingNumber) {
         continue;
       }
       
@@ -48,7 +48,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         continue;
       }
       
-      const { carrier, trackingNumber } = order.trackingInfo;
+      const { carrier = 'auto-detect', trackingNumber } = order.trackingInfo;
       
       try {
         console.log(`Updating tracking for order ${order.id}: ${carrier} ${trackingNumber}`);

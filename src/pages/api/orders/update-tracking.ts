@@ -33,9 +33,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const userId = decodedToken.uid;
     const { orderId, carrier, trackingNumber, notes } = req.body;
 
-    if (!orderId || !carrier || !trackingNumber) {
+    if (!orderId || !trackingNumber) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
+    
+    // If carrier is not provided or is 'auto-detect', we'll try to detect it
+    const carrierToUse = carrier || 'auto-detect';
 
     // Get the order
     const { db } = getFirebaseServices();

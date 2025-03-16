@@ -35,12 +35,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const { carrier, trackingNumber } = req.query;
 
-    if (!carrier || !trackingNumber) {
-      return res.status(400).json({ error: 'Missing required query parameters' });
+    if (!trackingNumber) {
+      return res.status(400).json({ error: 'Missing tracking number parameter' });
     }
 
-    const carrierStr = carrier as string;
     const trackingNumberStr = trackingNumber as string;
+    let carrierStr = (carrier as string) || 'auto-detect';
+    
+    // If carrier is set to auto-detect, we'll let Shippo API handle it
+    const isAutoDetect = !carrier || carrierStr.toLowerCase() === 'auto-detect';
     
     // Check if we should bypass cache (for debugging or forced refresh)
     const bypassCache = req.query.refresh === 'true';

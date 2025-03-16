@@ -374,16 +374,62 @@ export function getShippoAPI(): ShippoCarrierAPI | null {
   return null;
 }
 
+// Function to detect carrier from tracking number pattern
+export function detectCarrier(trackingNumber: string): string {
+  // Remove any spaces or special characters
+  const cleanTrackingNumber = trackingNumber.replace(/[^a-zA-Z0-9]/g, '');
+  
+  // USPS tracking number patterns
+  if (/^94\d{20}$/.test(cleanTrackingNumber) || 
+      /^92\d{20}$/.test(cleanTrackingNumber) ||
+      /^9[34]\d{2}\s?\d{4}\s?\d{4}\s?\d{4}\s?\d{4}\s?\d{2}$/.test(cleanTrackingNumber) ||
+      /^E\D{1}\d{9}\D{2}$|^9\d{15,21}$/.test(cleanTrackingNumber) ||
+      /^(91|92|93|94|95|96)\d{20}$/.test(cleanTrackingNumber) ||
+      /^(C|P|V|R)\d{9}(US|CN)$/.test(cleanTrackingNumber)) {
+    return 'usps';
+  }
+  
+  // FedEx tracking number patterns
+  if (/^(\d{12}|\d{15})$/.test(cleanTrackingNumber) || 
+      /^6\d{11,12}$/.test(cleanTrackingNumber) ||
+      /^7\d{11,12}$/.test(cleanTrackingNumber)) {
+    return 'fedex';
+  }
+  
+  // UPS tracking number patterns
+  if (/^1Z[A-Z0-9]{16}$/.test(cleanTrackingNumber) ||
+      /^(T\d{10}|9\d{17,18})$/.test(cleanTrackingNumber)) {
+    return 'ups';
+  }
+  
+  // DHL tracking number patterns
+  if (/^\d{10,11}$/.test(cleanTrackingNumber) ||
+      /^[A-Z]{3}\d{7}$/.test(cleanTrackingNumber) ||
+      /^JD\d{18}$/.test(cleanTrackingNumber)) {
+    return 'dhl';
+  }
+  
+  // Default to 'unknown' if no pattern matches
+  return 'unknown';
+}
+
 // Function to get tracking info from any supported carrier
 export async function getTrackingInfo(carrier: string, trackingNumber: string): Promise<TrackingStatus> {
   console.log(`Fetching tracking info for ${carrier} tracking number: ${trackingNumber}`);
   
   try {
+    // Check if we need to auto-detect the carrier
+    let carrierToUse = carrier;
+    if (carrier === 'auto-detect' || carrier === 'unknown') {
+      carrierToUse = detectCarrier(trackingNumber);
+      console.log(`Auto-detected carrier: ${carrierToUse} for tracking number: ${trackingNumber}`);
+    }
+    
     // First try using Shippo (multi-carrier API) if available
     const shippoAPI = getShippoAPI();
     if (shippoAPI) {
       try {
-        return await shippoAPI.getTrackingInfo(trackingNumber, carrier);
+        return await shippoAPI.getTrackingInfo(trackingNumber, carrierToUse);
       } catch (shippoError) {
         console.warn(`Shippo API failed, falling back to direct carrier API: ${shippoError}`);
         // Fall through to carrier-specific API
@@ -391,14 +437,14 @@ export async function getTrackingInfo(carrier: string, trackingNumber: string): 
     }
     
     // Try carrier-specific API
-    const carrierAPI = getCarrierAPI(carrier);
+    const carrierAPI = getCarrierAPI(carrierToUse);
     if (carrierAPI) {
       return await carrierAPI.getTrackingInfo(trackingNumber);
     }
     
     // If no API is available, return a mock response
-    console.warn(`No API available for carrier: ${carrier}, using mock data`);
-    return getMockTrackingStatus(carrier, trackingNumber);
+    console.warn(`No API available for carrier: ${carrierToUse}, using mock data`);
+    return getMockTrackingStatus(carrierToUse, trackingNumber);
   } catch (error) {
     console.error(`Error getting tracking info for ${carrier}:`, error);
     
