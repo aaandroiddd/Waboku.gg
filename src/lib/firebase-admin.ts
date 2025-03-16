@@ -249,7 +249,7 @@ export function getFirebaseAdmin() {
   return {
     admin: firebaseAdmin,
     db: firebaseAdmin.firestore(),
-    auth: firebaseAdmin.auth(),
+    auth: firebaseAdmin.auth(), // This should be a function
     storage: firebaseAdmin.storage(),
     database: firebaseAdmin.database()
   };
