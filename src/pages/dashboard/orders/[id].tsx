@@ -606,8 +606,20 @@ export default function OrderDetailsPage() {
                                   size="sm"
                                   className="mt-1 sm:mt-0 self-start sm:self-auto"
                                   onClick={() => {
-                                    navigator.clipboard.writeText(order.trackingInfo?.trackingNumber || '');
-                                    toast.success('Tracking number copied to clipboard');
+                                    try {
+                                      const trackingNumber = order.trackingInfo?.trackingNumber || '';
+                                      navigator.clipboard.writeText(trackingNumber)
+                                        .then(() => {
+                                          toast.success('Tracking number copied to clipboard');
+                                        })
+                                        .catch((err) => {
+                                          console.error('Failed to copy tracking number:', err);
+                                          toast.error('Failed to copy tracking number');
+                                        });
+                                    } catch (error) {
+                                      console.error('Error copying tracking number:', error);
+                                      toast.error('Failed to copy tracking number');
+                                    }
                                   }}
                                 >
                                   <Copy className="mr-2 h-4 w-4" />
