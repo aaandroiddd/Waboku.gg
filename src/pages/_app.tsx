@@ -14,6 +14,7 @@ import { useAccount } from '@/contexts/AccountContext';
 import { AnimatePresence } from 'framer-motion';
 import Head from 'next/head';
 import { LoadingProvider, useLoading } from '@/contexts/LoadingContext';
+import { FirebaseConnectionHandler } from '@/components/FirebaseConnectionHandler';
 
 const LoadingScreen = dynamic(() => import('@/components/LoadingScreen').then(mod => ({ default: mod.LoadingScreen })), {
   ssr: false
@@ -66,6 +67,7 @@ const MainContent = memo(({ Component, pageProps, pathname }: {
         </AnimatePresence>
       )}
       <Toaster />
+      {typeof window !== 'undefined' && <FirebaseConnectionHandler />}
     </>
   );
 });

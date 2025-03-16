@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-import { database } from '@/lib/firebase';
-import { ref, get, set } from 'firebase/database';
+import { database, connectionManager } from '@/lib/firebase';
+import { ref, get, set, onDisconnect } from 'firebase/database';
 
 interface TrendingSearch {
   term: string;

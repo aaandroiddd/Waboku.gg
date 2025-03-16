@@ -10,10 +10,14 @@ import {
   getDocs, 
   query, 
   where, 
-  Firestore
+  Firestore,
+  enableIndexedDbPersistence,
+  disableNetwork,
+  enableNetwork,
+  connectFirestoreEmulator
 } from 'firebase/firestore';
 import { getStorage, FirebaseStorage } from 'firebase/storage';
-import { getDatabase, Database, ref, onValue } from 'firebase/database';
+import { getDatabase, Database, ref, onValue, connectDatabaseEmulator } from 'firebase/database';
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -196,12 +200,165 @@ function initializeFirebase() {
 const services = initializeFirebase();
 
 // Export initialized services
-export const { app: firebaseApp, auth: firebaseAuth, db: firebaseDb, storage: firebaseStorage, database: firebaseDatabase } = services;
+export const { app, auth, db, storage, database } = services;
+
+// Aliases for backward compatibility
+export const firebaseApp = app;
+export const firebaseAuth = auth;
+export const firebaseDb = db;
+export const firebaseStorage = storage;
+export const firebaseDatabase = database;
 
 // Helper function to get Firebase services
 export function getFirebaseServices() {
-  if (!firebaseApp || !firebaseAuth || !firebaseDb) {
+  if (!app || !auth || !db) {
     throw new Error('Firebase services not initialized');
   }
   return services;
 }
+
+// Connection manager for Firestore and Realtime Database
+class FirebaseConnectionManager {
+  private isOnline: boolean = true;
+  private reconnectAttempts: number = 0;
+  private maxReconnectAttempts: number = 5;
+  private reconnectInterval: number = 5000; // 5 seconds
+  private reconnectTimeoutId: NodeJS.Timeout | null = null;
+  private listeners: Set<() => void> = new Set();
+
+  constructor() {
+    if (typeof window !== 'undefined') {
+      // Listen for online/offline events
+      window.addEventListener('online', this.handleOnline);
+      window.addEventListener('offline', this.handleOffline);
+      
+      // Initial connection check
+      this.isOnline = navigator.onLine;
+      
+      // Setup connection monitoring for Realtime Database
+      if (database) {
+        try {
+          const connectedRef = ref(database, '.info/connected');
+          onValue(connectedRef, (snapshot) => {
+            const connected = snapshot.val();
+            console.log(`[Firebase] Realtime Database connection: ${connected ? 'connected' : 'disconnected'}`);
+            
+            if (!connected && this.isOnline) {
+              // We're online but database is disconnected
+              this.handleConnectionError();
+            }
+          });
+        } catch (error) {
+          console.error('[Firebase] Error setting up connection monitoring:', error);
+        }
+      }
+    }
+  }
+
+  private handleOnline = () => {
+    console.log('[Firebase] Browser went online');
+    this.isOnline = true;
+    this.reconnectFirebase();
+  }
+
+  private handleOffline = () => {
+    console.log('[Firebase] Browser went offline');
+    this.isOnline = false;
+    
+    // Disable Firestore network to prevent unnecessary retries
+    if (db) {
+      try {
+        disableNetwork(db).then(() => {
+          console.log('[Firebase] Firestore network disabled due to offline status');
+        }).catch(error => {
+          console.error('[Firebase] Error disabling Firestore network:', error);
+        });
+      } catch (error) {
+        console.error('[Firebase] Error disabling Firestore network:', error);
+      }
+    }
+  }
+
+  private handleConnectionError = () => {
+    if (this.reconnectAttempts >= this.maxReconnectAttempts) {
+      console.warn(`[Firebase] Maximum reconnect attempts (${this.maxReconnectAttempts}) reached`);
+      return;
+    }
+
+    this.reconnectAttempts++;
+    
+    // Clear any existing timeout
+    if (this.reconnectTimeoutId) {
+      clearTimeout(this.reconnectTimeoutId);
+    }
+    
+    // Exponential backoff for reconnect attempts
+    const delay = Math.min(this.reconnectInterval * Math.pow(1.5, this.reconnectAttempts - 1), 60000);
+    console.log(`[Firebase] Scheduling reconnect attempt ${this.reconnectAttempts} in ${delay}ms`);
+    
+    this.reconnectTimeoutId = setTimeout(() => {
+      this.reconnectFirebase();
+    }, delay);
+  }
+
+  private reconnectFirebase = () => {
+    if (!this.isOnline) {
+      console.log('[Firebase] Cannot reconnect while offline');
+      return;
+    }
+
+    console.log('[Firebase] Attempting to reconnect Firebase services...');
+    
+    // Re-enable Firestore network
+    if (db) {
+      try {
+        enableNetwork(db).then(() => {
+          console.log('[Firebase] Firestore network re-enabled');
+          this.reconnectAttempts = 0; // Reset counter on successful reconnect
+          this.notifyListeners();
+        }).catch(error => {
+          console.error('[Firebase] Error re-enabling Firestore network:', error);
+          this.handleConnectionError(); // Try again
+        });
+      } catch (error) {
+        console.error('[Firebase] Error re-enabling Firestore network:', error);
+        this.handleConnectionError(); // Try again
+      }
+    }
+  }
+
+  public addConnectionListener(listener: () => void): () => void {
+    this.listeners.add(listener);
+    
+    // Return a function to remove the listener
+    return () => {
+      this.listeners.delete(listener);
+    };
+  }
+
+  private notifyListeners() {
+    this.listeners.forEach(listener => {
+      try {
+        listener();
+      } catch (error) {
+        console.error('[Firebase] Error in connection listener:', error);
+      }
+    });
+  }
+
+  public cleanup() {
+    if (typeof window !== 'undefined') {
+      window.removeEventListener('online', this.handleOnline);
+      window.removeEventListener('offline', this.handleOffline);
+    }
+    
+    if (this.reconnectTimeoutId) {
+      clearTimeout(this.reconnectTimeoutId);
+    }
+    
+    this.listeners.clear();
+  }
+}
+
+// Create and export the connection manager
+export const connectionManager = typeof window !== 'undefined' ? new FirebaseConnectionManager() : null;
