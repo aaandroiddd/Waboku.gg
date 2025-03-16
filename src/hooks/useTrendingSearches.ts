@@ -21,12 +21,16 @@ export function useTrendingSearches() {
   const [error, setError] = useState<string | null>(null);
   const [lastSuccessfulFetch, setLastSuccessfulFetch] = useState<number | null>(null);
   const activeController = useRef<AbortController | null>(null);
+  const isMounted = useRef(true);
 
   // Cleanup function to abort any pending requests
   const cleanupPendingRequests = () => {
     if (activeController.current) {
       try {
-        activeController.current.abort();
+        // Only abort if the controller is still active
+        if (!activeController.current.signal.aborted) {
+          activeController.current.abort('cleanup');
+        }
       } catch (e) {
         console.warn('[TrendingSearches] Error aborting previous request:', e);
       }
@@ -38,13 +42,20 @@ export function useTrendingSearches() {
     // Clean up any existing requests
     cleanupPendingRequests();
     
+    // If component is unmounted, don't proceed
+    if (!isMounted.current) {
+      return FALLBACK_TRENDING;
+    }
+    
+    let timeoutId: NodeJS.Timeout | null = null;
+    
     try {
       // Create a new controller for this request
       const controller = new AbortController();
       activeController.current = controller;
       
       // Set up timeout
-      const timeoutId = setTimeout(() => {
+      timeoutId = setTimeout(() => {
         if (controller.signal.aborted) return;
         console.warn('[TrendingSearches] Request timeout reached, aborting');
         controller.abort('timeout');
@@ -66,11 +77,13 @@ export function useTrendingSearches() {
           'Pragma': 'no-cache'
         },
         cache: 'no-store',
-        // Add a unique parameter to prevent caching
         credentials: 'same-origin'
       });
 
-      clearTimeout(timeoutId);
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+        timeoutId = null;
+      }
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -83,8 +96,10 @@ export function useTrendingSearches() {
         return FALLBACK_TRENDING;
       }
 
-      setError(null);
-      setLastSuccessfulFetch(Date.now());
+      if (isMounted.current) {
+        setError(null);
+        setLastSuccessfulFetch(Date.now());
+      }
       return data;
     } catch (error: any) {
       console.error('[TrendingSearches] Fetch error:', {
@@ -93,11 +108,17 @@ export function useTrendingSearches() {
         type: error.constructor.name
       });
       
+      // Clear timeout if it exists
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+        timeoutId = null;
+      }
+      
       // Handle abort errors (timeout or manual abort)
       if (error.name === 'AbortError') {
-        console.warn('[TrendingSearches] Request was aborted');
+        console.warn('[TrendingSearches] Request was aborted:', error.message || 'No reason provided');
         
-        if (retries > 0) {
+        if (retries > 0 && isMounted.current) {
           console.log(`[TrendingSearches] Retrying after ${delay}ms (${retries} retries left)`);
           await new Promise(resolve => setTimeout(resolve, delay));
           return fetchWithRetry(retries - 1, delay * 1.5);
@@ -108,7 +129,7 @@ export function useTrendingSearches() {
       }
       
       // Handle other errors with retry logic
-      if (retries > 0) {
+      if (retries > 0 && isMounted.current) {
         console.log(`[TrendingSearches] Retrying after ${delay}ms (${retries} retries left)`);
         await new Promise(resolve => setTimeout(resolve, delay));
         return fetchWithRetry(retries - 1, delay * 1.5);
@@ -117,7 +138,7 @@ export function useTrendingSearches() {
       console.log('[TrendingSearches] All retries failed, using fallback data');
       return FALLBACK_TRENDING;
     } finally {
-      // Clear the active controller reference
+      // Clear the active controller reference if it's the current one
       if (activeController.current?.signal.aborted) {
         activeController.current = null;
       }
@@ -149,11 +170,11 @@ export function useTrendingSearches() {
   };
 
   useEffect(() => {
-    let isSubscribed = true;
+    isMounted.current = true;
     let intervalId: NodeJS.Timeout;
 
     const initFetch = async () => {
-      if (!isSubscribed) return;
+      if (!isMounted.current) return;
       await fetchTrendingSearches();
     };
 
@@ -167,7 +188,7 @@ export function useTrendingSearches() {
 
     // Cleanup
     return () => {
-      isSubscribed = false;
+      isMounted.current = false;
       clearTimeout(initialFetchTimer);
       clearInterval(intervalId);
       cleanupPendingRequests();

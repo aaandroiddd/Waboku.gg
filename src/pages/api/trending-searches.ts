@@ -55,6 +55,13 @@ export default async function handler(
   }, 3000); // 3 seconds timeout (reduced from 4.5s to avoid client-side timeouts)
 
   try {
+    // Check if the request has already been aborted by the client
+    if (req.socket?.destroyed) {
+      console.warn(`Path: /api/trending-searches [${requestId}] Request aborted by client (socket destroyed)`);
+      clearTimeout(requestTimeout);
+      return res.status(499).end(); // 499 is "Client Closed Request"
+    }
+    
     // Set fallback data as default
     cachedTrending = FALLBACK_TRENDING;
     lastCacheTime = now;
@@ -85,11 +92,25 @@ export default async function handler(
       )
     ]);
     
+    // Check again if the request has been aborted
+    if (req.socket?.destroyed) {
+      console.warn(`Path: /api/trending-searches [${requestId}] Request aborted during Firebase admin init`);
+      clearTimeout(requestTimeout);
+      return res.status(499).end();
+    }
+    
     const admin = await adminInitPromise;
     const database = getDatabase();
     
     if (!database) {
       throw new Error('Failed to get Firebase database instance');
+    }
+    
+    // Check again if the request has been aborted
+    if (req.socket?.destroyed) {
+      console.warn(`Path: /api/trending-searches [${requestId}] Request aborted after database init`);
+      clearTimeout(requestTimeout);
+      return res.status(499).end();
     }
     
     // Calculate timestamp for 24 hours ago
