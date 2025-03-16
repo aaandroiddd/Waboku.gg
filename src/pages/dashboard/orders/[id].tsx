@@ -591,7 +591,10 @@ export default function OrderDetailsPage() {
                               
                               <div className="text-sm text-muted-foreground mt-2">
                                 Tracking added on {order.trackingInfo.addedAt && 
-                                  format(new Date(order.trackingInfo.addedAt.seconds * 1000), 'PPP')}
+                                  (typeof order.trackingInfo.addedAt === 'object' && 'seconds' in order.trackingInfo.addedAt
+                                    ? format(new Date(order.trackingInfo.addedAt.seconds * 1000), 'PPP')
+                                    : format(new Date(order.trackingInfo.addedAt), 'PPP')
+                                  )}
                               </div>
                             </div>
                           </div>
@@ -688,6 +691,11 @@ export default function OrderDetailsPage() {
                 value={carrier}
                 onChange={(e) => setCarrier(e.target.value)}
               />
+              {trackingNumber && !carrier && (
+                <p className="text-xs text-blue-600 mt-1">
+                  Carrier will be auto-detected from tracking number
+                </p>
+              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="trackingNumber">Tracking Number</Label>

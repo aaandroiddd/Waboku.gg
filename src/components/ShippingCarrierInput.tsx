@@ -14,6 +14,7 @@ interface ShippingCarrierInputProps {
 }
 
 const CARRIERS = [
+  { id: 'auto-detect', name: 'Auto-detect from tracking number' },
   { id: 'usps', name: 'USPS' },
   { id: 'fedex', name: 'FedEx' },
   { id: 'ups', name: 'UPS' },

@@ -102,9 +102,18 @@ export function TrackingStatusComponent({ carrier, trackingNumber }: TrackingSta
 
   const formatDate = (dateString: string) => {
     try {
-      return format(parseISO(dateString), 'MMM d, yyyy h:mm a');
+      // First check if it's a valid ISO string
+      if (dateString && typeof dateString === 'string') {
+        // Validate the date string before parsing
+        const date = new Date(dateString);
+        if (!isNaN(date.getTime())) {
+          return format(date, 'MMM d, yyyy h:mm a');
+        }
+      }
+      return 'Unknown date';
     } catch (e) {
-      return dateString;
+      console.error('Error formatting date:', e, dateString);
+      return 'Unknown date';
     }
   };
 

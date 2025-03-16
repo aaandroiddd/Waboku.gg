@@ -57,9 +57,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // Try to get initial tracking information
     let initialTrackingStatus = null;
+    let detectedCarrier = carrierToUse;
+    
     try {
-      console.log(`Fetching initial tracking status for ${carrier} ${trackingNumber}`);
-      initialTrackingStatus = await getTrackingInfo(carrier, trackingNumber);
+      console.log(`Fetching initial tracking status for ${carrierToUse} ${trackingNumber}`);
+      initialTrackingStatus = await getTrackingInfo(carrierToUse, trackingNumber);
+      
+      // If carrier was auto-detected, use the detected carrier
+      if (carrierToUse === 'auto-detect' && initialTrackingStatus && initialTrackingStatus.carrier) {
+        detectedCarrier = initialTrackingStatus.carrier;
+        console.log(`Auto-detected carrier: ${detectedCarrier}`);
+      }
     } catch (trackingError) {
       console.warn(`Could not fetch initial tracking status: ${trackingError}`);
       // Continue even if we can't get initial tracking status
@@ -67,7 +75,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // Prepare tracking info object
     const trackingInfo = {
-      carrier,
+      // Use detected carrier if available, otherwise use the provided carrier
+      carrier: detectedCarrier !== 'auto-detect' ? detectedCarrier : carrier,
       trackingNumber,
       notes: notes || '',
       addedAt: new Date(),
