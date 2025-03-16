@@ -488,7 +488,14 @@ export default function OrderDetailsPage() {
                   {order.status === 'shipped' || order.status === 'completed' ? (
                     <div className="space-y-4">
                       <div className="flex items-center gap-2">
-                        <Badge variant="success" className="px-2 py-1">
+                        <Badge 
+                          variant={order.status === 'completed' ? 'success' : 'info'} 
+                          className={`px-2 py-1 ${
+                            order.status === 'completed' 
+                              ? 'bg-green-100 hover:bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 dark:hover:bg-green-900/40 border-green-200 dark:border-green-800' 
+                              : 'bg-blue-100 hover:bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 dark:hover:bg-blue-900/40 border-blue-200 dark:border-blue-800'
+                          }`}
+                        >
                           {order.status === 'completed' ? 'Delivered' : 'Shipped'}
                         </Badge>
                         <span>
@@ -501,12 +508,14 @@ export default function OrderDetailsPage() {
                       {/* Tracking Information */}
                       {order.trackingInfo ? (
                         <div className="space-y-4 mt-4">
-                          <div className="border rounded-lg p-4 bg-slate-50 dark:bg-slate-900">
+                          <div className="border rounded-lg p-4 bg-card">
                             <div className="space-y-3">
                               <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
                                 <div className="flex items-center gap-2">
                                   <span className="text-muted-foreground font-medium">Carrier:</span>
-                                  <span className="font-semibold">{order.trackingInfo.carrier}</span>
+                                  <Badge variant="outline" className="font-semibold">
+                                    {order.trackingInfo.carrier}
+                                  </Badge>
                                 </div>
                                 
                                 <div className="flex items-center gap-2">
@@ -561,7 +570,7 @@ export default function OrderDetailsPage() {
                               <div className="flex flex-col sm:flex-row sm:items-center gap-2">
                                 <div className="flex items-center gap-2">
                                   <span className="text-muted-foreground font-medium">Tracking Number:</span>
-                                  <code className="bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded font-mono">
+                                  <code className="bg-muted px-2 py-1 rounded font-mono text-foreground">
                                     {order.trackingInfo.trackingNumber}
                                   </code>
                                 </div>
@@ -583,7 +592,7 @@ export default function OrderDetailsPage() {
                               {order.trackingInfo.notes && (
                                 <div className="mt-2">
                                   <span className="text-muted-foreground font-medium">Notes:</span>
-                                  <p className="mt-1 text-sm p-2 bg-slate-100 dark:bg-slate-800 rounded">
+                                  <p className="mt-1 text-sm p-2 bg-muted rounded text-foreground">
                                     {order.trackingInfo.notes}
                                   </p>
                                 </div>
@@ -611,7 +620,7 @@ export default function OrderDetailsPage() {
                           )}
                         </div>
                       ) : order.noTrackingConfirmed ? (
-                        <div className="flex items-center gap-2 text-yellow-600 mt-2">
+                        <div className="flex items-center gap-2 p-3 rounded-md bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 mt-2">
                           <AlertTriangle className="h-4 w-4" />
                           <p>This order was marked as shipped without tracking information.</p>
                         </div>

@@ -51,10 +51,10 @@ export function TrackingStatusComponent({ carrier, trackingNumber }: TrackingSta
 
   if (!status) {
     return (
-      <div className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-4">
+      <div className="bg-card border border-border rounded-lg p-4">
         <div className="flex items-center">
-          <Package className="h-5 w-5 text-slate-600 dark:text-slate-400 mr-2" />
-          <span className="text-slate-600 dark:text-slate-400">No tracking information available yet</span>
+          <Package className="h-5 w-5 text-muted-foreground mr-2" />
+          <span className="text-muted-foreground">No tracking information available yet</span>
         </div>
       </div>
     );
@@ -64,35 +64,35 @@ export function TrackingStatusComponent({ carrier, trackingNumber }: TrackingSta
     switch (status) {
       case 'delivered':
         return (
-          <Badge variant="success" className="px-2 py-1 flex items-center gap-1">
+          <Badge variant="success" className="px-2 py-1 flex items-center gap-1 bg-green-100 hover:bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 dark:hover:bg-green-900/40 border-green-200 dark:border-green-800">
             <CheckCircle className="h-3 w-3" />
             Delivered
           </Badge>
         );
       case 'out_for_delivery':
         return (
-          <Badge variant="warning" className="px-2 py-1 flex items-center gap-1">
+          <Badge variant="warning" className="px-2 py-1 flex items-center gap-1 bg-yellow-100 hover:bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300 dark:hover:bg-yellow-900/40 border-yellow-200 dark:border-yellow-800">
             <TruckIcon className="h-3 w-3" />
             Out for Delivery
           </Badge>
         );
       case 'in_transit':
         return (
-          <Badge variant="info" className="px-2 py-1 flex items-center gap-1">
+          <Badge variant="info" className="px-2 py-1 flex items-center gap-1 bg-blue-100 hover:bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 dark:hover:bg-blue-900/40 border-blue-200 dark:border-blue-800">
             <TruckIcon className="h-3 w-3" />
             In Transit
           </Badge>
         );
       case 'pending':
         return (
-          <Badge variant="secondary" className="px-2 py-1 flex items-center gap-1">
+          <Badge variant="secondary" className="px-2 py-1 flex items-center gap-1 bg-slate-100 hover:bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-800/80 border-slate-200 dark:border-slate-700">
             <Clock className="h-3 w-3" />
             Pending
           </Badge>
         );
       default:
         return (
-          <Badge variant="outline" className="px-2 py-1 flex items-center gap-1">
+          <Badge variant="outline" className="px-2 py-1 flex items-center gap-1 bg-slate-50 hover:bg-slate-50 text-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-900/90">
             <Package className="h-3 w-3" />
             {status.charAt(0).toUpperCase() + status.slice(1).replace('_', ' ')}
           </Badge>
