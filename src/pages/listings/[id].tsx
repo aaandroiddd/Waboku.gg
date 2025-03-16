@@ -288,7 +288,10 @@ export default function ListingPage() {
           favoriteCount: typeof data.favoriteCount === 'number' ? data.favoriteCount : 0,
           quantity: data.quantity ? Number(data.quantity) : undefined,
           cardName: data.cardName || undefined,
-          location: locationData
+          location: locationData,
+          // Add sold status fields
+          soldTo: data.soldTo || null,
+          archivedAt: data.archivedAt ? convertTimestamp(data.archivedAt) : null
         };
         
         // Make expiresAt available to the client-side code
@@ -628,6 +631,22 @@ export default function ListingPage() {
               </div>
 
               <div className="space-y-4 md:space-y-6 order-2 md:order-1">
+                {/* Sold/Unavailable Banner */}
+                {(listing.soldTo || listing.archivedAt) && (
+                  <div className="bg-red-500/90 text-white p-3 rounded-md mb-4 shadow-md">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                        </svg>
+                        <span className="font-semibold">
+                          {listing.soldTo ? "This item has been sold" : "This listing is no longer available"}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
                 {/* Desktop title - hidden on mobile */}
                 <div className="hidden md:block">
                   <h1 className="text-3xl font-bold mb-3">{listing.title}</h1>
@@ -736,6 +755,7 @@ export default function ListingPage() {
                       }}
                       className={`flex-1 ${isFavorited ? "text-red-500" : ""}`}
                       type="button"
+                      disabled={listing.soldTo || listing.archivedAt}
                     >
                       <Heart className={`h-4 w-4 mr-2 ${isFavorited ? "fill-current" : ""}`} />
                       {isFavorited ? "Saved" : "Save"}
@@ -745,6 +765,7 @@ export default function ListingPage() {
                       size="sm"
                       onClick={handleMessage}
                       className="flex-1"
+                      disabled={listing.soldTo || listing.archivedAt}
                     >
                       <MessageCircle className="h-4 w-4 mr-2" />
                       Message
@@ -753,7 +774,16 @@ export default function ListingPage() {
                   
                   {/* Buy Now and Make Offer buttons */}
                   <div className="flex flex-col sm:flex-row gap-2">
-                    {sellerHasActiveStripeAccount ? (
+                    {listing.soldTo || listing.archivedAt ? (
+                      <Button
+                        variant="outline"
+                        size="lg"
+                        className="flex-1 bg-gray-200 text-gray-500 hover:bg-gray-200 cursor-not-allowed"
+                        disabled={true}
+                      >
+                        No Longer Available
+                      </Button>
+                    ) : sellerHasActiveStripeAccount ? (
                       <Button
                         variant="default"
                         size="lg"
@@ -779,7 +809,7 @@ export default function ListingPage() {
                       size="lg"
                       onClick={handleMakeOffer}
                       className="flex-1 border-blue-500 text-blue-500 hover:bg-blue-500/10"
-                      disabled={user?.uid === listing.userId}
+                      disabled={user?.uid === listing.userId || listing.soldTo || listing.archivedAt}
                     >
                       Make Offer
                     </Button>

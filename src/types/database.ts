@@ -11,7 +11,8 @@ export interface Listing {
   createdAt: Date;
   expiresAt: Date;
   status: 'active' | 'sold' | 'pending' | 'inactive' | 'archived';
-  archivedAt?: Date;
+  archivedAt?: Date | null;
+  soldTo?: string | null;
   isGraded: boolean;
   gradeLevel?: number;
   gradingCompany?: string;
@@ -23,6 +24,10 @@ export interface Listing {
   latitude?: number;
   longitude?: number;
   distance?: number;
+  location?: {
+    latitude?: number;
+    longitude?: number;
+  };
 }
 
 export interface CreateListingData {
