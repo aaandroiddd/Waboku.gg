@@ -487,7 +487,7 @@ export default function OrderDetailsPage() {
                 <CardContent className="pt-6">
                   {order.status === 'shipped' || order.status === 'completed' ? (
                     <div className="space-y-4">
-                      <div className="flex items-center gap-2 text-green-600">
+                      <div className="flex items-center gap-2">
                         <Badge variant="success" className="px-2 py-1">
                           {order.status === 'completed' ? 'Delivered' : 'Shipped'}
                         </Badge>

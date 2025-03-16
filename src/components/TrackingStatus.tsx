@@ -30,12 +30,12 @@ export function TrackingStatusComponent({ carrier, trackingNumber }: TrackingSta
 
   if (error) {
     return (
-      <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+      <div className="bg-background border border-border rounded-lg p-4">
         <div className="flex items-center">
-          <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400 mr-2" />
-          <span className="text-red-600 dark:text-red-400">Error loading tracking information</span>
+          <AlertCircle className="h-5 w-5 text-destructive mr-2" />
+          <span className="text-destructive">Error loading tracking information</span>
         </div>
-        <p className="text-sm mt-2 text-red-600/80 dark:text-red-400/80">{error}</p>
+        <p className="text-sm mt-2 text-muted-foreground">{error}</p>
         <Button 
           variant="outline" 
           size="sm" 

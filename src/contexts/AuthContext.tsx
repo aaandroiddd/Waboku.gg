@@ -38,6 +38,7 @@ interface AuthContextType {
   sendVerificationEmail: () => Promise<void>;
   isEmailVerified: () => boolean;
   checkVerificationStatus: () => Promise<void>;
+  getIdToken: () => Promise<string>;
 }
 
 const defaultAuthContext: AuthContextType = {
@@ -977,6 +978,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const getIdToken = async (): Promise<string> => {
+    if (!user) {
+      throw new Error('No user logged in');
+    }
+    try {
+      return await user.getIdToken(true);
+    } catch (err) {
+      console.error('Error getting ID token:', err);
+      throw new Error('Failed to get authentication token');
+    }
+  };
+
   const value = {
     user,
     profile,
@@ -990,7 +1003,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     deleteAccount,
     sendVerificationEmail,
     isEmailVerified,
-    checkVerificationStatus
+    checkVerificationStatus,
+    getIdToken
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
