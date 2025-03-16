@@ -44,12 +44,6 @@ if (!process.env.NEXT_PUBLIC_FIREBASE_API_KEY) {
 }
 
 // Initialize Firebase services
-let app: FirebaseApp;
-let auth: Auth;
-let db: Firestore;
-let storage: FirebaseStorage;
-let database: Database;
-
 function initializeFirebase() {
   try {
     // Validate Firebase config with detailed logging
@@ -73,20 +67,28 @@ function initializeFirebase() {
     
     console.log('Firebase configuration validated successfully');
 
+    // Initialize Firebase app
+    let firebaseApp: FirebaseApp;
+    
     // Check if Firebase is already initialized
     if (!getApps().length) {
       console.log('Initializing new Firebase app...');
-      app = initializeApp(firebaseConfig);
+      firebaseApp = initializeApp(firebaseConfig);
       console.log('Firebase app initialized successfully');
     } else {
       console.log('Firebase app already initialized, reusing existing app');
-      app = getApps()[0];
+      firebaseApp = getApps()[0];
     }
 
     // Initialize services with better error handling
+    let firebaseAuth: Auth;
+    let firebaseDb: Firestore;
+    let firebaseDatabase: Database;
+    let firebaseStorage: FirebaseStorage | null = null;
+    
     try {
       console.log('Initializing Firebase Auth...');
-      auth = getAuth(app);
+      firebaseAuth = getAuth(firebaseApp);
       console.log('Firebase Auth initialized successfully');
     } catch (authError) {
       console.error('Failed to initialize Firebase Auth:', authError);
@@ -95,7 +97,7 @@ function initializeFirebase() {
 
     try {
       console.log('Initializing Firestore...');
-      db = getFirestore(app);
+      firebaseDb = getFirestore(firebaseApp);
       console.log('Firestore initialized successfully');
     } catch (dbError) {
       console.error('Failed to initialize Firestore:', dbError);
@@ -113,7 +115,7 @@ function initializeFirebase() {
       }
       
       // Explicitly pass the databaseURL to ensure it's properly configured
-      database = getDatabase(app);
+      firebaseDatabase = getDatabase(firebaseApp);
       
       // Verify database connection
       console.log('Realtime Database initialized successfully');
@@ -121,7 +123,7 @@ function initializeFirebase() {
       // Add a test connection to verify database is working
       if (typeof window !== 'undefined') {
         try {
-          const testRef = ref(database, '.info/connected');
+          const testRef = ref(firebaseDatabase, '.info/connected');
           onValue(testRef, (snapshot) => {
             const connected = snapshot.val();
             console.log('Realtime Database connection status:', connected ? 'connected' : 'disconnected');
@@ -148,7 +150,7 @@ function initializeFirebase() {
     // Only initialize storage in browser environment
     if (typeof window !== 'undefined') {
       try {
-        storage = getStorage(app);
+        firebaseStorage = getStorage(firebaseApp);
         console.log('Firebase Storage initialized successfully');
       } catch (storageError) {
         console.error('Failed to initialize Firebase Storage:', storageError);
@@ -158,7 +160,7 @@ function initializeFirebase() {
 
     // Set persistence only in browser environment
     if (typeof window !== 'undefined') {
-      setPersistence(auth, browserLocalPersistence)
+      setPersistence(firebaseAuth, browserLocalPersistence)
         .then(() => {
           console.log('Firebase Auth persistence set to LOCAL');
         })
@@ -168,7 +170,13 @@ function initializeFirebase() {
         });
     }
 
-    return { app, auth, db, storage, database };
+    return { 
+      app: firebaseApp, 
+      auth: firebaseAuth, 
+      db: firebaseDb, 
+      storage: firebaseStorage, 
+      database: firebaseDatabase 
+    };
   } catch (error) {
     console.error('Error initializing Firebase:', error);
     
@@ -186,11 +194,11 @@ function initializeFirebase() {
     // Return a partially initialized object to prevent complete app failure
     // This allows the app to at least render something instead of crashing completely
     return { 
-      app: app || null, 
-      auth: auth || null, 
-      db: db || null, 
-      storage: storage || null, 
-      database: database || null,
+      app: null, 
+      auth: null, 
+      db: null, 
+      storage: null, 
+      database: null,
       initializationError: error
     };
   }
@@ -200,7 +208,11 @@ function initializeFirebase() {
 const services = initializeFirebase();
 
 // Export initialized services
-export const { app, auth, db, storage, database } = services;
+export const app = services.app;
+export const auth = services.auth;
+export const db = services.db;
+export const storage = services.storage;
+export const database = services.database;
 
 // Aliases for backward compatibility
 export const firebaseApp = app;
