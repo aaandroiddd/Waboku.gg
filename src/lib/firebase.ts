@@ -233,10 +233,16 @@ export function getFirebaseServices() {
 class FirebaseConnectionManager {
   private isOnline: boolean = true;
   private reconnectAttempts: number = 0;
-  private maxReconnectAttempts: number = 5;
+  private maxReconnectAttempts: number = 10;
   private reconnectInterval: number = 5000; // 5 seconds
   private reconnectTimeoutId: NodeJS.Timeout | null = null;
+  private connectionCheckIntervalId: NodeJS.Timeout | null = null;
   private listeners: Set<() => void> = new Set();
+  private lastReconnectTime: number = 0;
+  private isReconnecting: boolean = false;
+  private connectionErrors: Set<string> = new Set();
+  private consecutiveErrors: number = 0;
+  private reconnectInProgress: boolean = false;
 
   constructor() {
     if (typeof window !== 'undefined') {
@@ -255,14 +261,52 @@ class FirebaseConnectionManager {
             const connected = snapshot.val();
             console.log(`[Firebase] Realtime Database connection: ${connected ? 'connected' : 'disconnected'}`);
             
-            if (!connected && this.isOnline) {
+            if (connected) {
+              // Reset error counters on successful connection
+              this.resetErrorState();
+              this.notifyListeners();
+            } else if (this.isOnline) {
               // We're online but database is disconnected
-              this.handleConnectionError();
+              this.handleConnectionError('Database disconnected while browser is online');
             }
           });
         } catch (error) {
           console.error('[Firebase] Error setting up connection monitoring:', error);
         }
+      }
+      
+      // Set up periodic connection check
+      this.connectionCheckIntervalId = setInterval(() => {
+        this.checkConnection();
+      }, 30000); // Check every 30 seconds
+    }
+  }
+
+  private resetErrorState() {
+    this.reconnectAttempts = 0;
+    this.consecutiveErrors = 0;
+    this.connectionErrors.clear();
+  }
+
+  private checkConnection = () => {
+    // Skip check if we're offline or already reconnecting
+    if (!this.isOnline || this.isReconnecting) return;
+    
+    // If we have database, check connection status
+    if (database) {
+      try {
+        const connectedRef = ref(database, '.info/connected');
+        onValue(connectedRef, (snapshot) => {
+          const connected = snapshot.val();
+          
+          // Only log if disconnected to reduce noise
+          if (!connected) {
+            console.log('[Firebase] Periodic check: Database disconnected while browser is online');
+            this.handleConnectionError('Periodic check failed');
+          }
+        }, { onlyOnce: true });
+      } catch (error) {
+        console.error('[Firebase] Error during periodic connection check:', error);
       }
     }
   }
@@ -270,7 +314,14 @@ class FirebaseConnectionManager {
   private handleOnline = () => {
     console.log('[Firebase] Browser went online');
     this.isOnline = true;
-    this.reconnectFirebase();
+    
+    // Reset consecutive errors when coming back online
+    this.consecutiveErrors = 0;
+    
+    // Attempt reconnection with a small delay to allow network to stabilize
+    setTimeout(() => {
+      this.reconnectFirebase();
+    }, 1000);
   }
 
   private handleOffline = () => {
@@ -291,9 +342,37 @@ class FirebaseConnectionManager {
     }
   }
 
-  private handleConnectionError = () => {
+  private handleConnectionError = (reason: string) => {
+    // Track unique error reasons
+    this.connectionErrors.add(reason);
+    this.consecutiveErrors++;
+    
+    console.log(`[Firebase] Connection error (${this.consecutiveErrors}): ${reason}`);
+    
+    // Limit reconnection attempts
     if (this.reconnectAttempts >= this.maxReconnectAttempts) {
       console.warn(`[Firebase] Maximum reconnect attempts (${this.maxReconnectAttempts}) reached`);
+      
+      // Reset after a longer period to allow future attempts
+      if (this.reconnectTimeoutId) {
+        clearTimeout(this.reconnectTimeoutId);
+      }
+      
+      this.reconnectTimeoutId = setTimeout(() => {
+        console.log('[Firebase] Resetting reconnect attempts counter after cooling period');
+        this.reconnectAttempts = 0;
+        this.reconnectFirebase();
+      }, 120000); // 2 minutes cooling period
+      
+      return;
+    }
+
+    // Don't attempt reconnection too frequently
+    const now = Date.now();
+    const timeSinceLastReconnect = now - this.lastReconnectTime;
+    
+    if (timeSinceLastReconnect < 5000) {
+      console.log('[Firebase] Skipping reconnect attempt - too soon since last attempt');
       return;
     }
 
@@ -304,38 +383,67 @@ class FirebaseConnectionManager {
       clearTimeout(this.reconnectTimeoutId);
     }
     
-    // Exponential backoff for reconnect attempts
-    const delay = Math.min(this.reconnectInterval * Math.pow(1.5, this.reconnectAttempts - 1), 60000);
-    console.log(`[Firebase] Scheduling reconnect attempt ${this.reconnectAttempts} in ${delay}ms`);
+    // Exponential backoff for reconnect attempts with jitter
+    const baseDelay = this.reconnectInterval * Math.pow(1.5, this.reconnectAttempts - 1);
+    const jitter = Math.random() * 1000; // Add up to 1 second of jitter
+    const delay = Math.min(baseDelay + jitter, 60000);
+    
+    console.log(`[Firebase] Scheduling reconnect attempt ${this.reconnectAttempts} in ${Math.round(delay)}ms`);
     
     this.reconnectTimeoutId = setTimeout(() => {
       this.reconnectFirebase();
     }, delay);
   }
 
-  private reconnectFirebase = () => {
+  private reconnectFirebase = async () => {
     if (!this.isOnline) {
       console.log('[Firebase] Cannot reconnect while offline');
       return;
     }
 
+    if (this.reconnectInProgress) {
+      console.log('[Firebase] Reconnection already in progress, skipping');
+      return;
+    }
+
+    this.reconnectInProgress = true;
+    this.isReconnecting = true;
+    this.lastReconnectTime = Date.now();
+    
     console.log('[Firebase] Attempting to reconnect Firebase services...');
     
-    // Re-enable Firestore network
-    if (db) {
-      try {
-        enableNetwork(db).then(() => {
+    try {
+      // First disable the network to reset any hanging connections
+      if (db) {
+        try {
+          await disableNetwork(db);
+          console.log('[Firebase] Firestore network disabled for reconnection');
+          
+          // Short delay to ensure disconnection is complete
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          
+          // Then re-enable the network
+          await enableNetwork(db);
           console.log('[Firebase] Firestore network re-enabled');
-          this.reconnectAttempts = 0; // Reset counter on successful reconnect
+          
+          // Reset error counters on successful reconnect
+          this.resetErrorState();
           this.notifyListeners();
-        }).catch(error => {
-          console.error('[Firebase] Error re-enabling Firestore network:', error);
-          this.handleConnectionError(); // Try again
-        });
-      } catch (error) {
-        console.error('[Firebase] Error re-enabling Firestore network:', error);
-        this.handleConnectionError(); // Try again
+        } catch (error) {
+          console.error('[Firebase] Error during Firestore reconnection:', error);
+          // Don't throw here, just log the error
+        }
       }
+    } catch (error) {
+      console.error('[Firebase] Error during reconnection process:', error);
+      // Schedule another attempt if this one failed
+      this.handleConnectionError('Reconnection attempt failed');
+    } finally {
+      // Allow new reconnection attempts after a delay
+      setTimeout(() => {
+        this.isReconnecting = false;
+        this.reconnectInProgress = false;
+      }, 5000);
     }
   }
 
@@ -366,6 +474,10 @@ class FirebaseConnectionManager {
     
     if (this.reconnectTimeoutId) {
       clearTimeout(this.reconnectTimeoutId);
+    }
+    
+    if (this.connectionCheckIntervalId) {
+      clearInterval(this.connectionCheckIntervalId);
     }
     
     this.listeners.clear();
