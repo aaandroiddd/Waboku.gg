@@ -1,4 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
+
+// Add global type definition for the transform instances
+declare global {
+  interface Window {
+    __transformInstances?: Record<string, any>;
+  }
+}
 import { loadStripe } from '@stripe/stripe-js';
 import { UserNameLink } from '@/components/UserNameLink';
 import { StripeSellerBadge } from '@/components/StripeSellerBadge';
@@ -58,6 +65,64 @@ export default function ListingPage() {
       setCurrentImageIndex(listing.coverImageIndex);
     }
   }, [listing?.coverImageIndex]);
+  
+  // Initialize the transform instances tracking
+  useEffect(() => {
+    // Create a global registry for transform instances
+    if (typeof window !== 'undefined') {
+      window.__transformInstances = window.__transformInstances || {};
+      
+      // Set up a MutationObserver to detect when TransformWrapper components are added to the DOM
+      const observer = new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+          if (mutation.addedNodes.length) {
+            mutation.addedNodes.forEach((node) => {
+              if (node.nodeType === 1) { // Element node
+                // Find all transform components that were just added
+                const transformComponents = (node as Element).querySelectorAll('.react-transform-component');
+                transformComponents.forEach((component) => {
+                  if (!component.hasAttribute('data-instance-id')) {
+                    // Generate a unique ID for this instance
+                    const instanceId = `transform-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+                    component.setAttribute('data-instance-id', instanceId);
+                    
+                    // Find the parent TransformWrapper to access its methods
+                    const wrapper = component.closest('.react-transform-wrapper');
+                    if (wrapper) {
+                      // Find the React fiber node
+                      const fiberKey = Object.keys(wrapper).find(key => key.startsWith('__reactFiber$'));
+                      if (fiberKey) {
+                        const fiber = (wrapper as any)[fiberKey];
+                        if (fiber && fiber.return && fiber.return.memoizedProps) {
+                          // Store the methods in our registry
+                          const { zoomIn, zoomOut, resetTransform } = fiber.return.memoizedProps;
+                          if (typeof zoomIn === 'function' && typeof zoomOut === 'function' && typeof resetTransform === 'function') {
+                            window.__transformInstances[instanceId] = {
+                              zoomIn,
+                              zoomOut,
+                              resetTransform
+                            };
+                          }
+                        }
+                      }
+                    }
+                  }
+                });
+              }
+            });
+          }
+        });
+      });
+      
+      // Start observing the document with the configured parameters
+      observer.observe(document.body, { childList: true, subtree: true });
+      
+      // Clean up the observer when the component unmounts
+      return () => {
+        observer.disconnect();
+      };
+    }
+  }, []);
 
   const handleCarouselChange = (api: any) => {
     if (!api) return;
@@ -859,6 +924,7 @@ export default function ListingPage() {
                         initialPositionX={0}
                         initialPositionY={0}
                         panning={{ disabled: false }}
+                        data-index={index}
                       >
                         {({ zoomIn, zoomOut, resetTransform }) => (
                           <>
@@ -892,33 +958,22 @@ export default function ListingPage() {
                       size="icon"
                       onClick={(e) => {
                         e.stopPropagation();
-                        // Access the current TransformWrapper instance using window
-                        if (typeof window !== 'undefined') {
-                          const transformWrappers = document.querySelectorAll('.react-transform-wrapper');
-                          // Find the visible transform wrapper (the one that's currently in view)
-                          transformWrappers.forEach((wrapper) => {
-                            const rect = wrapper.getBoundingClientRect();
-                            const isVisible = rect.width > 0 && rect.height > 0 && 
-                                            rect.top >= 0 && rect.left >= 0 && 
-                                            rect.bottom <= window.innerHeight && rect.right <= window.innerWidth;
-                            
-                            if (isVisible || (rect.width > 0 && rect.height > 0)) {
-                              // Access the instance methods through the __reactProps$ property
-                              const reactInstance = Object.keys(wrapper).find(key => key.startsWith('__reactFiber$'));
-                              if (reactInstance) {
-                                const fiberNode = (wrapper as any)[reactInstance];
-                                if (fiberNode && fiberNode.return && fiberNode.return.memoizedProps) {
-                                  const { zoomOut } = fiberNode.return.memoizedProps;
-                                  if (typeof zoomOut === 'function') {
-                                    zoomOut(0.5);
-                                  }
-                                }
-                              }
+                        // Get the current visible carousel item
+                        const currentItem = document.querySelector(`.carousel__item[data-index="${currentImageIndex}"]`);
+                        if (currentItem) {
+                          // Find the TransformWrapper within this carousel item
+                          const transformWrapper = currentItem.querySelector('.react-transform-component');
+                          if (transformWrapper) {
+                            // Get the instance from the data attribute we'll set
+                            const instanceId = transformWrapper.getAttribute('data-instance-id');
+                            if (instanceId && window.__transformInstances && window.__transformInstances[instanceId]) {
+                              window.__transformInstances[instanceId].zoomOut(0.5);
                             }
-                          });
+                          }
                         }
                       }}
                       className="h-8 w-8"
+                      aria-label="Zoom out"
                     >
                       <Minus className="h-4 w-4" />
                     </Button>
@@ -927,33 +982,22 @@ export default function ListingPage() {
                       size="icon"
                       onClick={(e) => {
                         e.stopPropagation();
-                        // Access the current TransformWrapper instance using window
-                        if (typeof window !== 'undefined') {
-                          const transformWrappers = document.querySelectorAll('.react-transform-wrapper');
-                          // Find the visible transform wrapper (the one that's currently in view)
-                          transformWrappers.forEach((wrapper) => {
-                            const rect = wrapper.getBoundingClientRect();
-                            const isVisible = rect.width > 0 && rect.height > 0 && 
-                                            rect.top >= 0 && rect.left >= 0 && 
-                                            rect.bottom <= window.innerHeight && rect.right <= window.innerWidth;
-                            
-                            if (isVisible || (rect.width > 0 && rect.height > 0)) {
-                              // Access the instance methods through the __reactProps$ property
-                              const reactInstance = Object.keys(wrapper).find(key => key.startsWith('__reactFiber$'));
-                              if (reactInstance) {
-                                const fiberNode = (wrapper as any)[reactInstance];
-                                if (fiberNode && fiberNode.return && fiberNode.return.memoizedProps) {
-                                  const { zoomIn } = fiberNode.return.memoizedProps;
-                                  if (typeof zoomIn === 'function') {
-                                    zoomIn(0.5);
-                                  }
-                                }
-                              }
+                        // Get the current visible carousel item
+                        const currentItem = document.querySelector(`.carousel__item[data-index="${currentImageIndex}"]`);
+                        if (currentItem) {
+                          // Find the TransformWrapper within this carousel item
+                          const transformWrapper = currentItem.querySelector('.react-transform-component');
+                          if (transformWrapper) {
+                            // Get the instance from the data attribute we'll set
+                            const instanceId = transformWrapper.getAttribute('data-instance-id');
+                            if (instanceId && window.__transformInstances && window.__transformInstances[instanceId]) {
+                              window.__transformInstances[instanceId].zoomIn(0.5);
                             }
-                          });
+                          }
                         }
                       }}
                       className="h-8 w-8"
+                      aria-label="Zoom in"
                     >
                       <Plus className="h-4 w-4" />
                     </Button>
@@ -962,33 +1006,22 @@ export default function ListingPage() {
                       size="icon"
                       onClick={(e) => {
                         e.stopPropagation();
-                        // Access the current TransformWrapper instance using window
-                        if (typeof window !== 'undefined') {
-                          const transformWrappers = document.querySelectorAll('.react-transform-wrapper');
-                          // Find the visible transform wrapper (the one that's currently in view)
-                          transformWrappers.forEach((wrapper) => {
-                            const rect = wrapper.getBoundingClientRect();
-                            const isVisible = rect.width > 0 && rect.height > 0 && 
-                                            rect.top >= 0 && rect.left >= 0 && 
-                                            rect.bottom <= window.innerHeight && rect.right <= window.innerWidth;
-                            
-                            if (isVisible || (rect.width > 0 && rect.height > 0)) {
-                              // Access the instance methods through the __reactProps$ property
-                              const reactInstance = Object.keys(wrapper).find(key => key.startsWith('__reactFiber$'));
-                              if (reactInstance) {
-                                const fiberNode = (wrapper as any)[reactInstance];
-                                if (fiberNode && fiberNode.return && fiberNode.return.memoizedProps) {
-                                  const { resetTransform } = fiberNode.return.memoizedProps;
-                                  if (typeof resetTransform === 'function') {
-                                    resetTransform();
-                                  }
-                                }
-                              }
+                        // Get the current visible carousel item
+                        const currentItem = document.querySelector(`.carousel__item[data-index="${currentImageIndex}"]`);
+                        if (currentItem) {
+                          // Find the TransformWrapper within this carousel item
+                          const transformWrapper = currentItem.querySelector('.react-transform-component');
+                          if (transformWrapper) {
+                            // Get the instance from the data attribute we'll set
+                            const instanceId = transformWrapper.getAttribute('data-instance-id');
+                            if (instanceId && window.__transformInstances && window.__transformInstances[instanceId]) {
+                              window.__transformInstances[instanceId].resetTransform();
                             }
-                          });
+                          }
                         }
                       }}
                       className="h-8 w-8"
+                      aria-label="Reset zoom"
                     >
                       <RotateCw className="h-4 w-4" />
                     </Button>
