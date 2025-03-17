@@ -892,13 +892,30 @@ export default function ListingPage() {
                       size="icon"
                       onClick={(e) => {
                         e.stopPropagation();
-                        // Find the current TransformWrapper component and call its zoomOut method
-                        const transformWrapper = document.querySelector(`[data-key="transform-wrapper-${currentImageIndex}"]`);
-                        if (transformWrapper) {
-                          const instance = (transformWrapper as any).__reactInternalInstance$;
-                          if (instance && instance.child && instance.child.memoizedProps && instance.child.memoizedProps.zoomOut) {
-                            instance.child.memoizedProps.zoomOut();
-                          }
+                        // Access the current TransformWrapper instance using window
+                        if (typeof window !== 'undefined') {
+                          const transformWrappers = document.querySelectorAll('.react-transform-wrapper');
+                          // Find the visible transform wrapper (the one that's currently in view)
+                          transformWrappers.forEach((wrapper) => {
+                            const rect = wrapper.getBoundingClientRect();
+                            const isVisible = rect.width > 0 && rect.height > 0 && 
+                                            rect.top >= 0 && rect.left >= 0 && 
+                                            rect.bottom <= window.innerHeight && rect.right <= window.innerWidth;
+                            
+                            if (isVisible || (rect.width > 0 && rect.height > 0)) {
+                              // Access the instance methods through the __reactProps$ property
+                              const reactInstance = Object.keys(wrapper).find(key => key.startsWith('__reactFiber$'));
+                              if (reactInstance) {
+                                const fiberNode = (wrapper as any)[reactInstance];
+                                if (fiberNode && fiberNode.return && fiberNode.return.memoizedProps) {
+                                  const { zoomOut } = fiberNode.return.memoizedProps;
+                                  if (typeof zoomOut === 'function') {
+                                    zoomOut(0.5);
+                                  }
+                                }
+                              }
+                            }
+                          });
                         }
                       }}
                       className="h-8 w-8"
@@ -910,13 +927,30 @@ export default function ListingPage() {
                       size="icon"
                       onClick={(e) => {
                         e.stopPropagation();
-                        // Find the current TransformWrapper component and call its zoomIn method
-                        const transformWrapper = document.querySelector(`[data-key="transform-wrapper-${currentImageIndex}"]`);
-                        if (transformWrapper) {
-                          const instance = (transformWrapper as any).__reactInternalInstance$;
-                          if (instance && instance.child && instance.child.memoizedProps && instance.child.memoizedProps.zoomIn) {
-                            instance.child.memoizedProps.zoomIn();
-                          }
+                        // Access the current TransformWrapper instance using window
+                        if (typeof window !== 'undefined') {
+                          const transformWrappers = document.querySelectorAll('.react-transform-wrapper');
+                          // Find the visible transform wrapper (the one that's currently in view)
+                          transformWrappers.forEach((wrapper) => {
+                            const rect = wrapper.getBoundingClientRect();
+                            const isVisible = rect.width > 0 && rect.height > 0 && 
+                                            rect.top >= 0 && rect.left >= 0 && 
+                                            rect.bottom <= window.innerHeight && rect.right <= window.innerWidth;
+                            
+                            if (isVisible || (rect.width > 0 && rect.height > 0)) {
+                              // Access the instance methods through the __reactProps$ property
+                              const reactInstance = Object.keys(wrapper).find(key => key.startsWith('__reactFiber$'));
+                              if (reactInstance) {
+                                const fiberNode = (wrapper as any)[reactInstance];
+                                if (fiberNode && fiberNode.return && fiberNode.return.memoizedProps) {
+                                  const { zoomIn } = fiberNode.return.memoizedProps;
+                                  if (typeof zoomIn === 'function') {
+                                    zoomIn(0.5);
+                                  }
+                                }
+                              }
+                            }
+                          });
                         }
                       }}
                       className="h-8 w-8"
@@ -928,13 +962,30 @@ export default function ListingPage() {
                       size="icon"
                       onClick={(e) => {
                         e.stopPropagation();
-                        // Find the current TransformWrapper component and call its resetTransform method
-                        const transformWrapper = document.querySelector(`[data-key="transform-wrapper-${currentImageIndex}"]`);
-                        if (transformWrapper) {
-                          const instance = (transformWrapper as any).__reactInternalInstance$;
-                          if (instance && instance.child && instance.child.memoizedProps && instance.child.memoizedProps.resetTransform) {
-                            instance.child.memoizedProps.resetTransform();
-                          }
+                        // Access the current TransformWrapper instance using window
+                        if (typeof window !== 'undefined') {
+                          const transformWrappers = document.querySelectorAll('.react-transform-wrapper');
+                          // Find the visible transform wrapper (the one that's currently in view)
+                          transformWrappers.forEach((wrapper) => {
+                            const rect = wrapper.getBoundingClientRect();
+                            const isVisible = rect.width > 0 && rect.height > 0 && 
+                                            rect.top >= 0 && rect.left >= 0 && 
+                                            rect.bottom <= window.innerHeight && rect.right <= window.innerWidth;
+                            
+                            if (isVisible || (rect.width > 0 && rect.height > 0)) {
+                              // Access the instance methods through the __reactProps$ property
+                              const reactInstance = Object.keys(wrapper).find(key => key.startsWith('__reactFiber$'));
+                              if (reactInstance) {
+                                const fiberNode = (wrapper as any)[reactInstance];
+                                if (fiberNode && fiberNode.return && fiberNode.return.memoizedProps) {
+                                  const { resetTransform } = fiberNode.return.memoizedProps;
+                                  if (typeof resetTransform === 'function') {
+                                    resetTransform();
+                                  }
+                                }
+                              }
+                            }
+                          });
                         }
                       }}
                       className="h-8 w-8"

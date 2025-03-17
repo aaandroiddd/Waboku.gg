@@ -31,7 +31,7 @@ const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
 >(({ className, children, ...props }, ref) => {
-  // Check if DialogTitle is present in children
+  // Check if DialogTitle or DialogDescription is present in children
   const hasDialogTitle = React.Children.toArray(children).some(child => {
     if (React.isValidElement(child)) {
       // Check direct child
@@ -46,10 +46,33 @@ const DialogContent = React.forwardRef<
     return false;
   });
 
+  const hasDialogDescription = React.Children.toArray(children).some(child => {
+    if (React.isValidElement(child)) {
+      // Check direct child
+      if (child.type === DialogDescription) return true;
+      // Check children in DialogHeader
+      if (child.type === DialogHeader) {
+        return React.Children.toArray(child.props.children).some(
+          headerChild => React.isValidElement(headerChild) && headerChild.type === DialogDescription
+        );
+      }
+    }
+    return false;
+  });
+
+  // Generate a unique ID for aria-describedby if needed
+  const descriptionId = React.useId();
+
   if (!hasDialogTitle) {
     console.warn(
       'DialogContent requires a DialogTitle component for accessibility. ' +
-      'If you want to hide the title visually, wrap it with a visually-hidden class.'
+      'If you want to hide the title visually, use className="sr-only".'
+    );
+  }
+
+  if (!hasDialogDescription && !props['aria-describedby']) {
+    console.warn(
+      'DialogContent should have a DialogDescription component or aria-describedby attribute for accessibility.'
     );
   }
 
@@ -62,9 +85,15 @@ const DialogContent = React.forwardRef<
           "fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] sm:rounded-lg",
           className
         )}
+        aria-describedby={!hasDialogDescription && !props['aria-describedby'] ? descriptionId : props['aria-describedby']}
         {...props}
       >
         {children}
+        {!hasDialogDescription && !props['aria-describedby'] && (
+          <div id={descriptionId} className="sr-only">
+            Dialog content
+          </div>
+        )}
         <DialogPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
           <Cross2Icon className="h-4 w-4" />
           <span className="sr-only">Close</span>
