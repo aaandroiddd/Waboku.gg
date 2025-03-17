@@ -21,6 +21,7 @@ import { WantedPostsSection } from "@/components/dashboard/WantedPostsSection";
 import { WantedPostsDebugger } from "@/components/dashboard/WantedPostsDebugger";
 import { useListings } from '@/hooks/useListings';
 import { useProfile } from '@/hooks/useProfile';
+import { useListingVisibility } from '@/hooks/useListingVisibility';
 import { Listing } from '@/types/database';
 import { ContentLoader } from '@/components/ContentLoader';
 import { Skeleton } from '@/components/ui/skeleton';
