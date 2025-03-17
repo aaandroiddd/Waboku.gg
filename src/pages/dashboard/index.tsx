@@ -70,6 +70,11 @@ const DashboardComponent = () => {
   });
   const { profile, loading: profileLoading } = useProfile(user?.uid || null);
   
+  // Use the listing visibility hook to properly filter active listings
+  const { visibleListings: properlyFilteredActiveListings } = useListingVisibility(
+    allListings.filter(listing => listing.status === 'active')
+  );
+  
   const loading = authLoading || listingsLoading || profileLoading;
 
   const handleShare = (listingId: string) => {
@@ -178,7 +183,8 @@ const DashboardComponent = () => {
     return matchesGameFilter && matchesSearch;
   });
 
-  const activeListings = filteredAndSortedListings.filter(listing => listing.status === 'active');
+  // Use the properly filtered active listings instead of just filtering by status
+  const activeListings = properlyFilteredActiveListings;
   const previousListings = filteredAndSortedListings.filter(listing => listing.status !== 'active');
 
   useEffect(() => {

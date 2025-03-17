@@ -134,18 +134,36 @@ export function useListings({ userId, searchQuery, showOnlyActive = false }: Use
       sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
 
       // Update the listing to archived status instead of deleting
+      // Use server timestamp for better consistency
       const updateData = {
         status: 'archived',
         archivedAt: now,
         originalCreatedAt: listingData.createdAt,
         expirationReason: 'user_deleted',
         expiresAt: sevenDaysFromNow,
+        updatedAt: now, // Add updatedAt timestamp
         // Preserve the original listing data
         previousStatus: listingData.status,
         previousExpiresAt: listingData.expiresAt
       };
       
+      console.log(`Archiving listing ${listingId} with data:`, updateData);
+      
+      // Update in Firebase
       await updateDoc(listingRef, updateData);
+      
+      // Double-check that the update was successful
+      const updatedSnap = await getDoc(listingRef);
+      if (updatedSnap.exists()) {
+        const updatedData = updatedSnap.data();
+        console.log(`Listing ${listingId} updated status:`, updatedData.status);
+        
+        if (updatedData.status !== 'archived') {
+          console.error(`Failed to update listing status to archived. Current status: ${updatedData.status}`);
+          // Try one more time with a different approach
+          await updateDoc(listingRef, { status: 'archived' });
+        }
+      }
       
       // Update local state to reflect the archived status
       setListings(prevListings => prevListings.map(listing => 
@@ -156,7 +174,8 @@ export function useListings({ userId, searchQuery, showOnlyActive = false }: Use
               archivedAt: now,
               originalCreatedAt: listing.createdAt,
               expirationReason: 'user_deleted',
-              expiresAt: sevenDaysFromNow
+              expiresAt: sevenDaysFromNow,
+              updatedAt: now
             }
           : listing
       ));

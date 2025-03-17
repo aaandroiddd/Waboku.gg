@@ -48,6 +48,9 @@ export const ActiveListings = ({
   const [expiredListings, setExpiredListings] = useState<string[]>([]);
   const [isProcessingExpired, setIsProcessingExpired] = useState(false);
   const { toast } = useToast();
+  
+  // Use the listing visibility hook to properly filter active listings
+  const { visibleListings } = useListingVisibility(listings);
 
   // Check for expired listings
   useEffect(() => {
@@ -305,7 +308,7 @@ export const ActiveListings = ({
       </div>
 
       <ListingList
-        listings={listings}
+        listings={visibleListings}
         onEdit={onEdit}
         onDelete={onDelete}
         onMessage={onMessage}
