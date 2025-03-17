@@ -67,6 +67,14 @@ export default function ListingPage() {
   }, [listing?.coverImageIndex]);
   
   // Initialize the transform instances tracking
+  // Create refs to store zoom control functions for each image
+  const zoomControlsRef = useRef<{[key: number]: {
+    zoomIn: (step?: number) => void;
+    zoomOut: (step?: number) => void;
+    resetTransform: () => void;
+  }}>({});
+
+  // Initialize the transform instances tracking
   useEffect(() => {
     // Create a global registry for transform instances
     if (typeof window !== 'undefined') {
@@ -79,33 +87,54 @@ export default function ListingPage() {
             mutation.addedNodes.forEach((node) => {
               if (node.nodeType === 1) { // Element node
                 // Find all transform components that were just added
-                const transformComponents = (node as Element).querySelectorAll('.react-transform-component');
-                transformComponents.forEach((component) => {
-                  if (!component.hasAttribute('data-instance-id')) {
-                    // Generate a unique ID for this instance
-                    const instanceId = `transform-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-                    component.setAttribute('data-instance-id', instanceId);
+                const transformComponents = (node as Element).querySelectorAll('.react-transform-wrapper');
+                transformComponents.forEach((wrapper) => {
+                  try {
+                    // Find the carousel item index this wrapper belongs to
+                    const carouselItem = wrapper.closest('.carousel__item');
+                    if (!carouselItem) return;
                     
-                    // Find the parent TransformWrapper to access its methods
-                    const wrapper = component.closest('.react-transform-wrapper');
-                    if (wrapper) {
-                      // Find the React fiber node
-                      const fiberKey = Object.keys(wrapper).find(key => key.startsWith('__reactFiber$'));
-                      if (fiberKey) {
-                        const fiber = (wrapper as any)[fiberKey];
-                        if (fiber && fiber.return && fiber.return.memoizedProps) {
-                          // Store the methods in our registry
-                          const { zoomIn, zoomOut, resetTransform } = fiber.return.memoizedProps;
-                          if (typeof zoomIn === 'function' && typeof zoomOut === 'function' && typeof resetTransform === 'function') {
-                            window.__transformInstances[instanceId] = {
-                              zoomIn,
-                              zoomOut,
-                              resetTransform
-                            };
-                          }
-                        }
-                      }
+                    const indexAttr = carouselItem.getAttribute('data-index');
+                    if (!indexAttr) return;
+                    
+                    const index = parseInt(indexAttr, 10);
+                    if (isNaN(index)) return;
+                    
+                    // Find the React fiber node to access the component's methods
+                    const fiberKey = Object.keys(wrapper).find(key => 
+                      key.startsWith('__reactFiber$') || key.startsWith('__reactInternalInstance$')
+                    );
+                    
+                    if (!fiberKey) return;
+                    
+                    const fiber = (wrapper as any)[fiberKey];
+                    if (!fiber || !fiber.return || !fiber.return.memoizedProps) return;
+                    
+                    // Extract the zoom methods
+                    const { zoomIn, zoomOut, resetTransform } = fiber.return.memoizedProps;
+                    
+                    if (typeof zoomIn === 'function' && 
+                        typeof zoomOut === 'function' && 
+                        typeof resetTransform === 'function') {
+                      
+                      // Store the methods in our registry with the index as the key
+                      zoomControlsRef.current[index] = {
+                        zoomIn,
+                        zoomOut,
+                        resetTransform
+                      };
+                      
+                      // Also store in window for debugging
+                      window.__transformInstances[`image-${index}`] = {
+                        zoomIn,
+                        zoomOut,
+                        resetTransform
+                      };
+                      
+                      console.log(`Registered zoom controls for image ${index}`);
                     }
+                  } catch (error) {
+                    console.error('Error registering zoom controls:', error);
                   }
                 });
               }
@@ -120,6 +149,15 @@ export default function ListingPage() {
       // Clean up the observer when the component unmounts
       return () => {
         observer.disconnect();
+        zoomControlsRef.current = {};
+        // Clean up window registry
+        if (window.__transformInstances) {
+          Object.keys(window.__transformInstances).forEach(key => {
+            if (key.startsWith('image-')) {
+              delete window.__transformInstances[key];
+            }
+          });
+        }
       };
     }
   }, []);
@@ -958,17 +996,14 @@ export default function ListingPage() {
                       size="icon"
                       onClick={(e) => {
                         e.stopPropagation();
-                        // Get the current visible carousel item
-                        const currentItem = document.querySelector(`.carousel__item[data-index="${currentImageIndex}"]`);
-                        if (currentItem) {
-                          // Find the TransformWrapper within this carousel item
-                          const transformWrapper = currentItem.querySelector('.react-transform-component');
-                          if (transformWrapper) {
-                            // Get the instance from the data attribute we'll set
-                            const instanceId = transformWrapper.getAttribute('data-instance-id');
-                            if (instanceId && window.__transformInstances && window.__transformInstances[instanceId]) {
-                              window.__transformInstances[instanceId].zoomOut(0.5);
-                            }
+                        // Use our ref-based approach to access zoom controls
+                        if (zoomControlsRef.current[currentImageIndex]) {
+                          zoomControlsRef.current[currentImageIndex].zoomOut(0.5);
+                        } else {
+                          console.log(`No zoom controls found for image ${currentImageIndex}`);
+                          // Fallback to window-based approach
+                          if (window.__transformInstances && window.__transformInstances[`image-${currentImageIndex}`]) {
+                            window.__transformInstances[`image-${currentImageIndex}`].zoomOut(0.5);
                           }
                         }
                       }}
@@ -982,17 +1017,14 @@ export default function ListingPage() {
                       size="icon"
                       onClick={(e) => {
                         e.stopPropagation();
-                        // Get the current visible carousel item
-                        const currentItem = document.querySelector(`.carousel__item[data-index="${currentImageIndex}"]`);
-                        if (currentItem) {
-                          // Find the TransformWrapper within this carousel item
-                          const transformWrapper = currentItem.querySelector('.react-transform-component');
-                          if (transformWrapper) {
-                            // Get the instance from the data attribute we'll set
-                            const instanceId = transformWrapper.getAttribute('data-instance-id');
-                            if (instanceId && window.__transformInstances && window.__transformInstances[instanceId]) {
-                              window.__transformInstances[instanceId].zoomIn(0.5);
-                            }
+                        // Use our ref-based approach to access zoom controls
+                        if (zoomControlsRef.current[currentImageIndex]) {
+                          zoomControlsRef.current[currentImageIndex].zoomIn(0.5);
+                        } else {
+                          console.log(`No zoom controls found for image ${currentImageIndex}`);
+                          // Fallback to window-based approach
+                          if (window.__transformInstances && window.__transformInstances[`image-${currentImageIndex}`]) {
+                            window.__transformInstances[`image-${currentImageIndex}`].zoomIn(0.5);
                           }
                         }
                       }}
@@ -1006,17 +1038,14 @@ export default function ListingPage() {
                       size="icon"
                       onClick={(e) => {
                         e.stopPropagation();
-                        // Get the current visible carousel item
-                        const currentItem = document.querySelector(`.carousel__item[data-index="${currentImageIndex}"]`);
-                        if (currentItem) {
-                          // Find the TransformWrapper within this carousel item
-                          const transformWrapper = currentItem.querySelector('.react-transform-component');
-                          if (transformWrapper) {
-                            // Get the instance from the data attribute we'll set
-                            const instanceId = transformWrapper.getAttribute('data-instance-id');
-                            if (instanceId && window.__transformInstances && window.__transformInstances[instanceId]) {
-                              window.__transformInstances[instanceId].resetTransform();
-                            }
+                        // Use our ref-based approach to access zoom controls
+                        if (zoomControlsRef.current[currentImageIndex]) {
+                          zoomControlsRef.current[currentImageIndex].resetTransform();
+                        } else {
+                          console.log(`No zoom controls found for image ${currentImageIndex}`);
+                          // Fallback to window-based approach
+                          if (window.__transformInstances && window.__transformInstances[`image-${currentImageIndex}`]) {
+                            window.__transformInstances[`image-${currentImageIndex}`].resetTransform();
                           }
                         }
                       }}
