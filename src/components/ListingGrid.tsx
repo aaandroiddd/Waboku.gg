@@ -153,10 +153,12 @@ export function ListingGrid({
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { setLoading } = useLoading();
   
-  // Log listings for debugging
+  // Log listings for debugging only in development
   useEffect(() => {
-    console.log('ListingGrid received listings:', rawListings.length);
-    console.log('ListingGrid visible listings:', listings.length);
+    if (process.env.NODE_ENV === 'development') {
+      console.log('ListingGrid received listings:', rawListings.length);
+      console.log('ListingGrid visible listings:', listings.length);
+    }
   }, [rawListings.length, listings.length]);
   
   // Update global loading state when our loading state changes

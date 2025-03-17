@@ -34,7 +34,10 @@ export function useListingVisibility(listings: Listing[]) {
       return true;
     });
     
-    console.log(`[useListingVisibility] Filtered ${listings.length} listings to ${filtered.length} visible listings`);
+    // Only log in development environment to reduce noise
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`[useListingVisibility] Filtered ${listings.length} listings to ${filtered.length} visible listings`);
+    }
     setVisibleListings(filtered);
   }, [listings]);
   

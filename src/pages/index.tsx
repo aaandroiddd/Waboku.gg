@@ -284,42 +284,45 @@ export default function Home() {
             };
           }) as Listing[];
 
+        // Process all listings at once to avoid multiple re-renders
         if (latitude && longitude) {
-          // Calculate distances and add proximity categories
-          fetchedListings = fetchedListings
-            .map(listing => {
-              const listingLat = listing.coordinates?.latitude;
-              const listingLng = listing.coordinates?.longitude;
-              const distance = listingLat && listingLng
-                ? calculateDistance(latitude, longitude, listingLat, listingLng)
-                : Infinity;
-              
-              // Add proximity category
-              let proximity = 'far';
-              if (distance <= 5) proximity = 'very-close';
-              else if (distance <= 15) proximity = 'close';
-              else if (distance <= 30) proximity = 'medium';
-              
-              return { ...listing, distance, proximity };
-            })
-            .sort((a, b) => {
-              // Prioritize listings within 50km
-              const aWithin50 = (a.distance || Infinity) <= 50;
-              const bWithin50 = (b.distance || Infinity) <= 50;
-              
-              if (aWithin50 && !bWithin50) return -1;
-              if (!aWithin50 && bWithin50) return 1;
-              
-              // For listings within 50km, sort by distance
-              if (aWithin50 && bWithin50) {
-                return (a.distance || Infinity) - (b.distance || Infinity);
-              }
-              
-              // For listings beyond 50km, sort by recency
-              return (b.createdAt?.getTime() || 0) - (a.createdAt?.getTime() || 0);
-            });
+          // First, add distance information to all listings
+          fetchedListings = fetchedListings.map(listing => {
+            const listingLat = listing.coordinates?.latitude;
+            const listingLng = listing.coordinates?.longitude;
+            const distance = listingLat && listingLng
+              ? calculateDistance(latitude, longitude, listingLat, listingLng)
+              : Infinity;
+            
+            // Add proximity category
+            let proximity = 'far';
+            if (distance <= 5) proximity = 'very-close';
+            else if (distance <= 15) proximity = 'close';
+            else if (distance <= 30) proximity = 'medium';
+            
+            return { ...listing, distance, proximity };
+          });
+          
+          // Then sort them in a single operation
+          fetchedListings.sort((a, b) => {
+            // Prioritize listings within 50km
+            const aWithin50 = (a.distance || Infinity) <= 50;
+            const bWithin50 = (b.distance || Infinity) <= 50;
+            
+            if (aWithin50 && !bWithin50) return -1;
+            if (!aWithin50 && bWithin50) return 1;
+            
+            // For listings within 50km, sort by distance
+            if (aWithin50 && bWithin50) {
+              return (a.distance || Infinity) - (b.distance || Infinity);
+            }
+            
+            // For listings beyond 50km, sort by recency
+            return (b.createdAt?.getTime() || 0) - (a.createdAt?.getTime() || 0);
+          });
         }
 
+        // Set both state variables at once to avoid multiple renders
         setListings(fetchedListings);
         setFilteredListings(fetchedListings);
       } catch (error) {
@@ -331,6 +334,7 @@ export default function Home() {
       }
     }
 
+    // Only fetch listings when latitude/longitude are available or have changed
     fetchListings();
   }, [latitude, longitude]);
 
