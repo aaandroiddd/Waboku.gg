@@ -543,6 +543,8 @@ export function useListings({ userId, searchQuery, showOnlyActive = false }: Use
         setIsLoading(true);
         setError(null);
         
+        console.log('useListings: Fetching listings...');
+        
         // Check if we have cached data
         const { data: cachedListings, expired } = getFromCache();
         

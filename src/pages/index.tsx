@@ -244,7 +244,15 @@ export default function Home() {
       
       try {
         setLoading(true);
+        console.log('Home page: Fetching listings...');
         const db = getFirestore(app);
+        
+        if (!db) {
+          console.error('Firestore database instance is null');
+          setLoading(false);
+          return;
+        }
+        
         const q = query(
           collection(db, 'listings'),
           where('status', '==', 'active'),
@@ -252,7 +260,10 @@ export default function Home() {
           limit(50) // Increased limit to get more listings for better location-based filtering
         );
 
+        console.log('Home page: Executing Firestore query...');
         const querySnapshot = await getDocs(q);
+        console.log(`Home page: Query returned ${querySnapshot.docs.length} listings`);
+        
         let fetchedListings = querySnapshot.docs
           .map(doc => {
             const data = doc.data();

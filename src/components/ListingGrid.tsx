@@ -147,6 +147,11 @@ export function ListingGrid({
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { setLoading } = useLoading();
   
+  // Log listings for debugging
+  useEffect(() => {
+    console.log('ListingGrid received listings:', listings.length);
+  }, [listings.length]);
+  
   // Update global loading state when our loading state changes
   useEffect(() => {
     setLoading(loading);

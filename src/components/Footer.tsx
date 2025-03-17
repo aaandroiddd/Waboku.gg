@@ -44,6 +44,11 @@ export function Footer() {
           </div>
         </div>
       </div>
+      <div className="w-full bg-amber-100 dark:bg-amber-900/60 py-2 text-center text-sm">
+        <p className="text-amber-800 dark:text-amber-200">
+          <span className="font-semibold">Beta Version:</span> This application is currently under development. Some features may be incomplete or change without notice.
+        </p>
+      </div>
     </footer>
   );
 }
