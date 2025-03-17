@@ -10,6 +10,7 @@ import { RemoveFavoriteDialog } from './RemoveFavoriteDialog';
 import { Button } from '@/components/ui/button';
 import { ListingCard } from './ListingCard';
 import { useListings } from '@/hooks/useListings';
+import { useListingVisibility } from '@/hooks/useListingVisibility';
 import { ContentLoader } from './ContentLoader';
 import { useLoading } from '@/contexts/LoadingContext';
 
@@ -138,7 +139,12 @@ export function ListingGrid({
     showOnlyActive: true 
   });
   
-  const listings = userId ? (propListings.length > 0 ? propListings : fetchedListings) : propListings;
+  const rawListings = userId ? (propListings.length > 0 ? propListings : fetchedListings) : propListings;
+  
+  // Use our new hook to filter listings for visibility
+  const { visibleListings } = useListingVisibility(rawListings);
+  const listings = visibleListings;
+  
   const loading = propLoading || (userId ? isLoading : false);
   
   const { toggleFavorite, isFavorite } = useFavorites();
@@ -149,8 +155,9 @@ export function ListingGrid({
   
   // Log listings for debugging
   useEffect(() => {
-    console.log('ListingGrid received listings:', listings.length);
-  }, [listings.length]);
+    console.log('ListingGrid received listings:', rawListings.length);
+    console.log('ListingGrid visible listings:', listings.length);
+  }, [rawListings.length, listings.length]);
   
   // Update global loading state when our loading state changes
   useEffect(() => {

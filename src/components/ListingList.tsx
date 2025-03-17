@@ -7,6 +7,8 @@ import Link from "next/link";
 import { formatPrice } from "@/lib/price";
 import { ContentLoader } from "./ContentLoader";
 import { Skeleton } from "./ui/skeleton";
+import { useListingVisibility } from "@/hooks/useListingVisibility";
+import { useEffect, useState } from "react";
 
 interface ListingListProps {
   listings: Listing[];
@@ -44,7 +46,7 @@ const ListingsSkeleton = () => (
 );
 
 export const ListingList = ({
-  listings,
+  listings: rawListings,
   onEdit,
   onDelete,
   onMessage,
@@ -52,6 +54,15 @@ export const ListingList = ({
   onShare,
   isLoading = false
 }: ListingListProps) => {
+  // Use our new hook to filter listings for visibility
+  const { visibleListings } = useListingVisibility(rawListings);
+  const listings = visibleListings;
+  
+  // Log for debugging
+  useEffect(() => {
+    console.log('ListingList received listings:', rawListings.length);
+    console.log('ListingList visible listings:', listings.length);
+  }, [rawListings.length, listings.length]);
   return (
     <ContentLoader 
       isLoading={isLoading} 
