@@ -260,6 +260,12 @@ export default function Home() {
     const cacheAge = cachedTimestamp ? now - parseInt(cachedTimestamp) : Infinity;
     const cacheValid = cachedListings && cacheAge < 5 * 60 * 1000; // 5 minutes
     
+    // Track problematic listing IDs to avoid infinite retries
+    const problematicListingIds = new Set<string>([
+      'CqxNR6z76xXKon3V3BM1', // Known problematic listing
+      'ufKDqtR3DUt2Id2RdLfi'  // Known problematic listing
+    ]);
+    
     async function fetchListings() {
       if (typeof window === 'undefined') return;
       
@@ -269,14 +275,19 @@ export default function Home() {
           const parsedListings = JSON.parse(cachedListings as string) as Listing[];
           console.log('Home page: Using cached listings', parsedListings.length);
           
+          // Filter out known problematic listings
+          const filteredParsedListings = parsedListings.filter(listing => 
+            !problematicListingIds.has(listing.id)
+          );
+          
           // Process cached listings with location data if available
           if (latitude && longitude) {
-            const processedListings = processListingsWithLocation(parsedListings, latitude, longitude);
+            const processedListings = processListingsWithLocation(filteredParsedListings, latitude, longitude);
             setListings(processedListings);
             setFilteredListings(processedListings);
           } else {
-            setListings(parsedListings);
-            setFilteredListings(parsedListings);
+            setListings(filteredParsedListings);
+            setFilteredListings(filteredParsedListings);
           }
           
           setLoading(false);
@@ -368,23 +379,37 @@ export default function Home() {
         
         let fetchedListings = querySnapshot.docs
           .map(doc => {
-            const data = doc.data();
-            return {
-              id: doc.id,
-              ...data,
-              createdAt: data.createdAt?.toDate() || new Date(),
-              title: data.title || 'Untitled Listing',
-              price: data.price || 0,
-              condition: data.condition || 'Not Specified',
-              game: data.game || 'Other',
-              imageUrls: data.imageUrls || [],
-              status: 'active',
-              username: data.username || 'Anonymous',
-              userId: data.userId || '',
-              city: data.city || '',
-              state: data.state || '',
-            };
-          }) as Listing[];
+            // Skip known problematic listings
+            if (problematicListingIds.has(doc.id)) {
+              console.log(`Skipping known problematic listing: ${doc.id}`);
+              return null;
+            }
+            
+            try {
+              const data = doc.data();
+              return {
+                id: doc.id,
+                ...data,
+                createdAt: data.createdAt?.toDate() || new Date(),
+                title: data.title || 'Untitled Listing',
+                price: data.price || 0,
+                condition: data.condition || 'Not Specified',
+                game: data.game || 'Other',
+                imageUrls: data.imageUrls || [],
+                status: 'active',
+                username: data.username || 'Anonymous',
+                userId: data.userId || '',
+                city: data.city || '',
+                state: data.state || '',
+              };
+            } catch (error) {
+              console.error(`Error processing listing ${doc.id}:`, error);
+              // Add to problematic listings set to avoid future processing
+              problematicListingIds.add(doc.id);
+              return null;
+            }
+          })
+          .filter(Boolean) as Listing[]; // Remove null entries
 
         // Cache the raw listings in sessionStorage
         try {

@@ -5,6 +5,12 @@ import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { motion, AnimatePresence } from 'framer-motion';
 
+// Known problematic listing IDs that should be ignored
+const PROBLEMATIC_LISTING_IDS = new Set([
+  'CqxNR6z76xXKon3V3BM1',
+  'ufKDqtR3DUt2Id2RdLfi'
+]);
+
 export function FirebaseConnectionHandler() {
   const [connectionError, setConnectionError] = useState(false);
   const [isReconnecting, setIsReconnecting] = useState(false);
@@ -91,6 +97,14 @@ export function FirebaseConnectionHandler() {
   const handleFirebaseError = useCallback((errorMessage: string) => {
     // Skip if we're already reconnecting
     if (isReconnectingRef.current) return;
+    
+    // Check if this error is related to known problematic listings
+    for (const listingId of PROBLEMATIC_LISTING_IDS) {
+      if (errorMessage.includes(listingId)) {
+        console.log(`[ConnectionHandler] Ignoring error related to known problematic listing: ${listingId}`);
+        return; // Skip processing this error
+      }
+    }
     
     const now = Date.now();
     const tracker = errorTracker.current;
