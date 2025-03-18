@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import { useToast } from "@/components/ui/use-toast";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
+import { useListingVisibility } from "@/hooks/useListingVisibility";
 
 interface ActiveListingsProps {
   listings: Listing[];

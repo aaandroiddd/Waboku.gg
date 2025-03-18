@@ -186,6 +186,24 @@ const DashboardComponent = () => {
 
   // Use the properly filtered active listings instead of just filtering by status
   const activeListings = properlyFilteredActiveListings;
+  
+  // Debug logging for active listings
+  useEffect(() => {
+    console.log('Dashboard - All listings count:', allListings.length);
+    console.log('Dashboard - Active listings count:', allListings.filter(l => l.status === 'active').length);
+    console.log('Dashboard - Properly filtered active listings count:', properlyFilteredActiveListings.length);
+    
+    // Log the first few listings for debugging
+    if (allListings.length > 0) {
+      console.log('Dashboard - Sample listing:', {
+        id: allListings[0].id,
+        title: allListings[0].title,
+        status: allListings[0].status,
+        createdAt: allListings[0].createdAt,
+        expiresAt: allListings[0].expiresAt
+      });
+    }
+  }, [allListings, properlyFilteredActiveListings]);
   const previousListings = filteredAndSortedListings.filter(listing => listing.status !== 'active');
 
   useEffect(() => {

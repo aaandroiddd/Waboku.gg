@@ -24,9 +24,32 @@ export function useListingVisibility(listings: Listing[]) {
       
       // Check if the listing has expired
       const now = new Date();
-      const expiresAt = listing.expiresAt instanceof Date 
-        ? listing.expiresAt 
-        : new Date(listing.expiresAt);
+      
+      // Properly handle different types of expiresAt
+      let expiresAt: Date;
+      
+      if (listing.expiresAt instanceof Date) {
+        expiresAt = listing.expiresAt;
+      } else if (listing.expiresAt && typeof listing.expiresAt.toDate === 'function') {
+        // Handle Firestore timestamp
+        expiresAt = listing.expiresAt.toDate();
+      } else if (listing.expiresAt && typeof listing.expiresAt === 'object' && 'seconds' in listing.expiresAt) {
+        // Handle Firestore timestamp in serialized form
+        expiresAt = new Date((listing.expiresAt as any).seconds * 1000);
+      } else {
+        // Fallback for other formats
+        try {
+          expiresAt = new Date(listing.expiresAt as any);
+        } catch (error) {
+          console.error('Failed to parse expiresAt date:', listing.expiresAt);
+          // Default to a future date to avoid filtering out listings with invalid dates
+          expiresAt = new Date();
+          expiresAt.setDate(expiresAt.getDate() + 30); // 30 days in the future
+        }
+      }
+      
+      // Log for debugging
+      console.log(`Listing ${listing.id} - Status: ${listing.status}, Expires: ${expiresAt.toISOString()}, Now: ${now.toISOString()}, Expired: ${now > expiresAt}`);
       
       if (now > expiresAt) return false;
       
@@ -37,7 +60,14 @@ export function useListingVisibility(listings: Listing[]) {
     // Only log in development environment to reduce noise
     if (process.env.NODE_ENV === 'development') {
       console.log(`[useListingVisibility] Filtered ${listings.length} listings to ${filtered.length} visible listings`);
+      
+      // Log the IDs of filtered listings for debugging
+      if (listings.length > 0 && filtered.length === 0) {
+        console.log('All listings were filtered out. Listing IDs:', listings.map(l => l.id));
+        console.log('Listing statuses:', listings.map(l => l.status));
+      }
     }
+    
     setVisibleListings(filtered);
   }, [listings]);
   
