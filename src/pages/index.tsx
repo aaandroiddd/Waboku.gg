@@ -248,17 +248,110 @@ export default function Home() {
       sessionStorage.setItem('hasVisitedBefore', 'true');
     }
 
+    // Use sessionStorage to cache listings for a short period
+    // This prevents unnecessary Firestore queries on page refreshes or navigation
+    const cachedListingsKey = 'homePageListings';
+    const cachedListingsTimestampKey = 'homePageListingsTimestamp';
+    const cachedListings = sessionStorage.getItem(cachedListingsKey);
+    const cachedTimestamp = sessionStorage.getItem(cachedListingsTimestampKey);
+    
+    // Check if we have valid cached listings (less than 5 minutes old)
+    const now = Date.now();
+    const cacheAge = cachedTimestamp ? now - parseInt(cachedTimestamp) : Infinity;
+    const cacheValid = cachedListings && cacheAge < 5 * 60 * 1000; // 5 minutes
+    
     async function fetchListings() {
       if (typeof window === 'undefined') return;
       
+      // If we have valid cached listings, use them first for immediate display
+      if (cacheValid) {
+        try {
+          const parsedListings = JSON.parse(cachedListings as string) as Listing[];
+          console.log('Home page: Using cached listings', parsedListings.length);
+          
+          // Process cached listings with location data if available
+          if (latitude && longitude) {
+            const processedListings = processListingsWithLocation(parsedListings, latitude, longitude);
+            setListings(processedListings);
+            setFilteredListings(processedListings);
+          } else {
+            setListings(parsedListings);
+            setFilteredListings(parsedListings);
+          }
+          
+          setLoading(false);
+          
+          // If cache is older than 2 minutes, refresh in background
+          if (cacheAge > 2 * 60 * 1000) {
+            console.log('Home page: Cache is older than 2 minutes, refreshing in background');
+            // Don't set loading state to true for background refresh
+            fetchFromFirestore(false);
+          }
+          
+          return;
+        } catch (cacheError) {
+          console.error('Error parsing cached listings:', cacheError);
+          // Continue with normal fetch if cache parsing fails
+        }
+      }
+      
+      // No valid cache, fetch from Firestore
+      fetchFromFirestore(true);
+    }
+    
+    // Helper function to process listings with location data
+    function processListingsWithLocation(fetchedListings: Listing[], lat: number, lng: number) {
+      // First, add distance information to all listings
+      const processedListings = fetchedListings.map(listing => {
+        const listingLat = listing.coordinates?.latitude;
+        const listingLng = listing.coordinates?.longitude;
+        const distance = listingLat && listingLng
+          ? calculateDistance(lat, lng, listingLat, listingLng)
+          : Infinity;
+        
+        // Add proximity category
+        let proximity = 'far';
+        if (distance <= 5) proximity = 'very-close';
+        else if (distance <= 15) proximity = 'close';
+        else if (distance <= 30) proximity = 'medium';
+        
+        return { ...listing, distance, proximity };
+      });
+      
+      // Then sort them in a single operation
+      processedListings.sort((a, b) => {
+        // Prioritize listings within 50km
+        const aWithin50 = (a.distance || Infinity) <= 50;
+        const bWithin50 = (b.distance || Infinity) <= 50;
+        
+        if (aWithin50 && !bWithin50) return -1;
+        if (!aWithin50 && bWithin50) return 1;
+        
+        // For listings within 50km, sort by distance
+        if (aWithin50 && bWithin50) {
+          return (a.distance || Infinity) - (b.distance || Infinity);
+        }
+        
+        // For listings beyond 50km, sort by recency
+        return (b.createdAt?.getTime() || 0) - (a.createdAt?.getTime() || 0);
+      });
+      
+      return processedListings;
+    }
+    
+    // Function to fetch listings from Firestore
+    async function fetchFromFirestore(showLoading: boolean) {
       try {
-        setLoading(true);
-        console.log('Home page: Fetching listings...');
+        if (showLoading) {
+          setLoading(true);
+        }
+        
+        console.log('Home page: Fetching listings from Firestore...');
         const db = getFirestore(app);
         
         if (!db) {
           console.error('Firestore database instance is null');
-          setLoading(false);
+          if (showLoading) setLoading(false);
           return;
         }
         
@@ -293,42 +386,19 @@ export default function Home() {
             };
           }) as Listing[];
 
+        // Cache the raw listings in sessionStorage
+        try {
+          sessionStorage.setItem(cachedListingsKey, JSON.stringify(fetchedListings));
+          sessionStorage.setItem(cachedListingsTimestampKey, now.toString());
+          console.log('Home page: Cached listings in sessionStorage');
+        } catch (cacheError) {
+          console.error('Error caching listings:', cacheError);
+          // Continue even if caching fails
+        }
+
         // Process all listings at once to avoid multiple re-renders
         if (latitude && longitude) {
-          // First, add distance information to all listings
-          fetchedListings = fetchedListings.map(listing => {
-            const listingLat = listing.coordinates?.latitude;
-            const listingLng = listing.coordinates?.longitude;
-            const distance = listingLat && listingLng
-              ? calculateDistance(latitude, longitude, listingLat, listingLng)
-              : Infinity;
-            
-            // Add proximity category
-            let proximity = 'far';
-            if (distance <= 5) proximity = 'very-close';
-            else if (distance <= 15) proximity = 'close';
-            else if (distance <= 30) proximity = 'medium';
-            
-            return { ...listing, distance, proximity };
-          });
-          
-          // Then sort them in a single operation
-          fetchedListings.sort((a, b) => {
-            // Prioritize listings within 50km
-            const aWithin50 = (a.distance || Infinity) <= 50;
-            const bWithin50 = (b.distance || Infinity) <= 50;
-            
-            if (aWithin50 && !bWithin50) return -1;
-            if (!aWithin50 && bWithin50) return 1;
-            
-            // For listings within 50km, sort by distance
-            if (aWithin50 && bWithin50) {
-              return (a.distance || Infinity) - (b.distance || Infinity);
-            }
-            
-            // For listings beyond 50km, sort by recency
-            return (b.createdAt?.getTime() || 0) - (a.createdAt?.getTime() || 0);
-          });
+          fetchedListings = processListingsWithLocation(fetchedListings, latitude, longitude);
         }
 
         // Set both state variables at once to avoid multiple renders
@@ -339,7 +409,9 @@ export default function Home() {
         setListings([]);
         setFilteredListings([]);
       } finally {
-        setLoading(false);
+        if (showLoading) {
+          setLoading(false);
+        }
         
         // If this is the first visit and we didn't get any listings, try fetching again
         // This helps with the issue where first-time visitors don't see listings
@@ -347,7 +419,7 @@ export default function Home() {
           console.log('First visit with no listings, scheduling a refetch');
           setTimeout(() => {
             console.log('Executing scheduled refetch');
-            fetchListings();
+            fetchFromFirestore(true);
           }, 1000); // Retry after 1 second
         }
       }

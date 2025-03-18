@@ -166,6 +166,17 @@ export const ListingCard = memo(({ listing, isFavorite, onFavoriteClick, getCond
     // Only check active listings
     if (listing.status !== 'active' || isCheckingExpiration) return;
     
+    // Use sessionStorage to track which listings have been checked
+    // This prevents repeated API calls for the same listing during a session
+    const checkedListingsKey = 'checkedListingExpirations';
+    const checkedListings = sessionStorage.getItem(checkedListingsKey) || '';
+    const checkedListingsArray = checkedListings.split(',');
+    
+    // Skip if this listing has already been checked in this session
+    if (checkedListingsArray.includes(listing.id)) {
+      return;
+    }
+    
     // Trigger a background check without waiting for the response
     const triggerBackgroundCheck = async () => {
       setIsCheckingExpiration(true);
@@ -175,7 +186,13 @@ export const ListingCard = memo(({ listing, isFavorite, onFavoriteClick, getCond
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ listingId: listing.id }),
-        }).catch(err => {
+        })
+        .then(() => {
+          // Add this listing to the checked list in sessionStorage
+          checkedListingsArray.push(listing.id);
+          sessionStorage.setItem(checkedListingsKey, checkedListingsArray.join(','));
+        })
+        .catch(err => {
           // Silently log any errors without affecting the user experience
           console.error('Background expiration check failed:', err);
         });
@@ -187,8 +204,9 @@ export const ListingCard = memo(({ listing, isFavorite, onFavoriteClick, getCond
       }
     };
     
+    // Only run the check once per component mount
     triggerBackgroundCheck();
-  }, [listing]);
+  }, [listing.id]); // Only depend on listing.id, not the entire listing object
 
   useEffect(() => {
     if (location?.latitude && location?.longitude && listing?.location?.latitude && listing?.location?.longitude) {
