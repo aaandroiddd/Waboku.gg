@@ -204,8 +204,62 @@ function initializeFirebase() {
   }
 }
 
-// Initialize Firebase on module load
-const services = initializeFirebase();
+// Initialize Firebase on module load, but with a check for the home page
+// to prevent unnecessary connections
+let services: ReturnType<typeof initializeFirebase>;
+
+// Check if we're on the client side
+if (typeof window !== 'undefined') {
+  // Check if we're on the home page
+  const isHomePage = window.location.pathname === '/' || 
+                     window.location.pathname === '';
+  
+  if (isHomePage) {
+    console.log('On home page - initializing Firebase with minimal connections');
+    // Delay full initialization to reduce initial load on home page
+    services = {
+      app: null,
+      auth: null,
+      db: null,
+      storage: null,
+      database: null,
+      // This flag indicates we're intentionally not fully initializing
+      // to distinguish from an actual initialization error
+      minimalInitForHomePage: true
+    };
+    
+    // Schedule full initialization after a delay or when user interacts
+    const initializeAfterDelay = () => {
+      if (!services.minimalInitForHomePage) return; // Already initialized
+      console.log('Initializing Firebase services after delay');
+      services = initializeFirebase();
+    };
+    
+    // Initialize after user interaction or 5 seconds, whichever comes first
+    const userEvents = ['click', 'touchstart', 'scroll'];
+    const initOnUserInteraction = () => {
+      initializeAfterDelay();
+      // Remove event listeners after initialization
+      userEvents.forEach(event => {
+        window.removeEventListener(event, initOnUserInteraction);
+      });
+    };
+    
+    // Add event listeners for user interaction
+    userEvents.forEach(event => {
+      window.addEventListener(event, initOnUserInteraction, { once: true });
+    });
+    
+    // Fallback initialization after 5 seconds
+    setTimeout(initializeAfterDelay, 5000);
+  } else {
+    // Not on home page, initialize normally
+    services = initializeFirebase();
+  }
+} else {
+  // Server-side, initialize normally
+  services = initializeFirebase();
+}
 
 // Export initialized services
 export const app = services.app;

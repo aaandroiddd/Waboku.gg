@@ -170,10 +170,23 @@ export const ListingCard = memo(({ listing, isFavorite, onFavoriteClick, getCond
     // This prevents repeated API calls for the same listing during a session
     const checkedListingsKey = 'checkedListingExpirations';
     const checkedListings = sessionStorage.getItem(checkedListingsKey) || '';
-    const checkedListingsArray = checkedListings.split(',');
+    const checkedListingsArray = checkedListings.split(',').filter(Boolean);
     
     // Skip if this listing has already been checked in this session
     if (checkedListingsArray.includes(listing.id)) {
+      return;
+    }
+    
+    // Skip expiration check on the front page to reduce API calls
+    // Only check expiration when viewing individual listings
+    const isListingDetailPage = typeof window !== 'undefined' && 
+      window.location.pathname.includes('/listings/') && 
+      window.location.pathname.split('/').length > 2;
+    
+    if (!isListingDetailPage) {
+      // Still mark as checked to prevent future checks if user navigates to this listing
+      checkedListingsArray.push(listing.id);
+      sessionStorage.setItem(checkedListingsKey, checkedListingsArray.join(','));
       return;
     }
     

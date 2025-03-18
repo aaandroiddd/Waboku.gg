@@ -4,6 +4,7 @@ import { AlertCircle, WifiOff, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useRouter } from 'next/router';
 
 // Known problematic listing IDs that should be ignored
 const PROBLEMATIC_LISTING_IDS = new Set([
@@ -12,6 +13,7 @@ const PROBLEMATIC_LISTING_IDS = new Set([
 ]);
 
 export function FirebaseConnectionHandler() {
+  const router = useRouter();
   const [connectionError, setConnectionError] = useState(false);
   const [isReconnecting, setIsReconnecting] = useState(false);
   const [showAlert, setShowAlert] = useState(false);
@@ -20,6 +22,9 @@ export function FirebaseConnectionHandler() {
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const errorTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isReconnectingRef = useRef<boolean>(false);
+  
+  // Check if we're on the front page
+  const isHomePage = router.pathname === '/';
   
   // Track errors with debouncing to prevent excessive reconnection attempts
   const errorTracker = useRef<{
@@ -151,6 +156,36 @@ export function FirebaseConnectionHandler() {
   }, [attemptReconnection]);
 
   useEffect(() => {
+    // On the home page, we want to minimize Firebase connections
+    // Only set up minimal error handling without active listeners
+    if (isHomePage) {
+      console.log('[ConnectionHandler] On home page - minimizing Firebase connections');
+      
+      // Only handle critical errors on the home page
+      const handleCriticalError = (event: ErrorEvent) => {
+        // Only handle critical Firebase errors that would affect user experience
+        if (event.message.includes('Firebase: Error') && 
+            event.message.includes('critical')) {
+          handleFirebaseError(event.message);
+        }
+      };
+      
+      window.addEventListener('error', handleCriticalError);
+      
+      return () => {
+        window.removeEventListener('error', handleCriticalError);
+        
+        // Clear any pending timeouts
+        if (reconnectTimeoutRef.current) {
+          clearTimeout(reconnectTimeoutRef.current);
+        }
+        if (errorTimeoutRef.current) {
+          clearTimeout(errorTimeoutRef.current);
+        }
+      };
+    }
+    
+    // For non-home pages, use the full connection handling
     if (!connectionManager) return;
 
     // Setup error event listener with improved filtering
@@ -231,7 +266,7 @@ export function FirebaseConnectionHandler() {
         clearTimeout(errorTimeoutRef.current);
       }
     };
-  }, [connectionError, handleFirebaseError, attemptReconnection]);
+  }, [connectionError, handleFirebaseError, attemptReconnection, isHomePage]);
 
   const handleReconnect = () => {
     attemptReconnection();
