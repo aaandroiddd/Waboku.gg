@@ -5,7 +5,7 @@ import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectLabel, SelectSeparator } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectLabel, SelectSeparator, SelectGroup } from "@/components/ui/select";
 import { PlusCircle, Filter, MapPin, Calendar, User } from "lucide-react";
 import { GameCategoryBadge } from "@/components/GameCategoryBadge";
 import { UserNameLink } from "@/components/UserNameLink";
@@ -188,32 +188,36 @@ export default function AllWantedPostsPage() {
                           </SelectItem>
                           
                           <SelectSeparator />
-                          <SelectLabel>Main Categories</SelectLabel>
-                          
-                          {/* Main game categories */}
-                          {MAIN_GAME_CATEGORIES.map((category) => {
-                            const gameKey = GAME_MAPPING[category as keyof typeof GAME_MAPPING];
-                            return (
-                              <SelectItem key={gameKey} value={gameKey}>
-                                <span className="mr-2">{GAME_ICONS[gameKey] || "🎮"}</span>
-                                {category}
-                              </SelectItem>
-                            );
-                          })}
+                          <SelectGroup>
+                            <SelectLabel>Main Categories</SelectLabel>
+                            
+                            {/* Main game categories */}
+                            {MAIN_GAME_CATEGORIES.map((category) => {
+                              const gameKey = GAME_MAPPING[category as keyof typeof GAME_MAPPING];
+                              return (
+                                <SelectItem key={gameKey} value={gameKey}>
+                                  <span className="mr-2">{GAME_ICONS[gameKey] || "🎮"}</span>
+                                  {category}
+                                </SelectItem>
+                              );
+                            })}
+                          </SelectGroup>
                           
                           <SelectSeparator />
-                          <SelectLabel>Other Categories</SelectLabel>
-                          
-                          {/* Other game categories */}
-                          {OTHER_GAME_CATEGORIES.map((category) => {
-                            const gameKey = OTHER_GAME_MAPPING[category as keyof typeof OTHER_GAME_MAPPING];
-                            return (
-                              <SelectItem key={gameKey} value={gameKey}>
-                                <span className="mr-2">{GAME_ICONS[gameKey] || "🎮"}</span>
-                                {category}
-                              </SelectItem>
-                            );
-                          })}
+                          <SelectGroup>
+                            <SelectLabel>Other Categories</SelectLabel>
+                            
+                            {/* Other game categories */}
+                            {OTHER_GAME_CATEGORIES.map((category) => {
+                              const gameKey = OTHER_GAME_MAPPING[category as keyof typeof OTHER_GAME_MAPPING];
+                              return (
+                                <SelectItem key={gameKey} value={gameKey}>
+                                  <span className="mr-2">{GAME_ICONS[gameKey] || "🎮"}</span>
+                                  {category}
+                                </SelectItem>
+                              );
+                            })}
+                          </SelectGroup>
                         </SelectContent>
                       </Select>
                     </div>
