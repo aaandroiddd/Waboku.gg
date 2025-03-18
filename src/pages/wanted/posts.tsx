@@ -5,6 +5,7 @@ import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectLabel, SelectSeparator } from "@/components/ui/select";
 import { PlusCircle, Filter, MapPin, Calendar, User } from "lucide-react";
 import { GameCategoryBadge } from "@/components/GameCategoryBadge";
 import { UserNameLink } from "@/components/UserNameLink";
@@ -167,50 +168,54 @@ export default function AllWantedPostsPage() {
                   <div className="space-y-4">
                     <div>
                       <label className="text-sm font-medium mb-2 block">Game Category</label>
-                      <div className="grid grid-cols-1 gap-2">
-                        <Button 
-                          variant={!game ? "default" : "outline"} 
-                          size="sm"
-                          className="justify-start"
-                          onClick={() => router.push("/wanted/posts")}
-                        >
-                          All Games
-                        </Button>
-                        
-                        {/* Main game categories */}
-                        {MAIN_GAME_CATEGORIES.map((category) => {
-                          const gameKey = GAME_MAPPING[category as keyof typeof GAME_MAPPING];
-                          return (
-                            <Button 
-                              key={gameKey}
-                              variant={game === gameKey ? "default" : "outline"} 
-                              size="sm"
-                              className="justify-start"
-                              onClick={() => router.push(`/wanted/posts?game=${gameKey}`)}
-                            >
-                              <span className="mr-2">{GAME_ICONS[gameKey] || "🎮"}</span>
-                              {category}
-                            </Button>
-                          );
-                        })}
-                        
-                        {/* Other game categories */}
-                        {OTHER_GAME_CATEGORIES.map((category) => {
-                          const gameKey = OTHER_GAME_MAPPING[category as keyof typeof OTHER_GAME_MAPPING];
-                          return (
-                            <Button 
-                              key={gameKey}
-                              variant={game === gameKey ? "default" : "outline"} 
-                              size="sm"
-                              className="justify-start"
-                              onClick={() => router.push(`/wanted/posts?game=${gameKey}`)}
-                            >
-                              <span className="mr-2">{GAME_ICONS[gameKey] || "🎮"}</span>
-                              {category}
-                            </Button>
-                          );
-                        })}
-                      </div>
+                      <Select
+                        value={game as string || "all"}
+                        onValueChange={(value) => {
+                          if (value === "all") {
+                            router.push("/wanted/posts");
+                          } else {
+                            router.push(`/wanted/posts?game=${value}`);
+                          }
+                        }}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Select a game category" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">
+                            <span className="mr-2">🎲</span>
+                            All Games
+                          </SelectItem>
+                          
+                          <SelectSeparator />
+                          <SelectLabel>Main Categories</SelectLabel>
+                          
+                          {/* Main game categories */}
+                          {MAIN_GAME_CATEGORIES.map((category) => {
+                            const gameKey = GAME_MAPPING[category as keyof typeof GAME_MAPPING];
+                            return (
+                              <SelectItem key={gameKey} value={gameKey}>
+                                <span className="mr-2">{GAME_ICONS[gameKey] || "🎮"}</span>
+                                {category}
+                              </SelectItem>
+                            );
+                          })}
+                          
+                          <SelectSeparator />
+                          <SelectLabel>Other Categories</SelectLabel>
+                          
+                          {/* Other game categories */}
+                          {OTHER_GAME_CATEGORIES.map((category) => {
+                            const gameKey = OTHER_GAME_MAPPING[category as keyof typeof OTHER_GAME_MAPPING];
+                            return (
+                              <SelectItem key={gameKey} value={gameKey}>
+                                <span className="mr-2">{GAME_ICONS[gameKey] || "🎮"}</span>
+                                {category}
+                              </SelectItem>
+                            );
+                          })}
+                        </SelectContent>
+                      </Select>
                     </div>
                     
                     <div>
