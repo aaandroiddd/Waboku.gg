@@ -58,12 +58,26 @@ export function useWantedPosts(options: WantedPostsOptions = {}) {
         console.log("Using cached wanted posts data:", cachedPosts.length);
         // Set posts from cache immediately to improve perceived performance
         setPosts(cachedPosts);
+        // If we have recent cached data (less than 30 seconds old), don't refetch
+        const cacheTimestamp = sessionStorage.getItem(`${cacheKey}_timestamp`);
+        if (cacheTimestamp) {
+          const cacheAge = Date.now() - parseInt(cacheTimestamp);
+          if (cacheAge < 30000) { // 30 seconds
+            console.log("Using recent cache, skipping fetch");
+            setIsLoading(false);
+            return; // Skip fetching if cache is recent
+          }
+        }
       } catch (e) {
         console.error("Error parsing cached posts:", e);
         // Clear invalid cache
         sessionStorage.removeItem(cacheKey);
+        sessionStorage.removeItem(`${cacheKey}_timestamp`);
       }
     }
+    
+    // Track if this effect is still the most recent one
+    const fetchId = Date.now();
     
     const fetchWantedPosts = async () => {
       // If we're using cached data, don't show loading state
@@ -73,7 +87,7 @@ export function useWantedPosts(options: WantedPostsOptions = {}) {
       setError(null);
 
       try {
-        console.log("Fetching wanted posts with options:", options);
+        console.log(`Fetching wanted posts with options (fetchId: ${fetchId}):`, options);
         
         // Log Firebase database status and connection details
         console.log("Database initialized:", !!database);
@@ -90,23 +104,32 @@ export function useWantedPosts(options: WantedPostsOptions = {}) {
         // Skip fix-paths API call if we have cached data to speed up loading
         if (!cachedPosts) {
           // First, call the fix-paths API to ensure the database structure is correct
-          try {
-            console.log("Calling fix-paths API to ensure database structure...");
-            const fixPathsResponse = await fetch('/api/wanted/fix-paths');
-            if (!fixPathsResponse.ok) {
-              throw new Error(`Fix paths API returned status ${fixPathsResponse.status}`);
+          // We'll only do this once per session to avoid multiple calls
+          const fixPathsCalled = sessionStorage.getItem('fix_paths_called');
+          if (!fixPathsCalled) {
+            try {
+              console.log("Calling fix-paths API to ensure database structure...");
+              const fixPathsResponse = await fetch('/api/wanted/fix-paths');
+              if (!fixPathsResponse.ok) {
+                throw new Error(`Fix paths API returned status ${fixPathsResponse.status}`);
+              }
+              
+              const fixPathsResult = await fixPathsResponse.json();
+              console.log("Fix paths API result:", fixPathsResult);
+              
+              // Mark that we've called fix-paths this session
+              sessionStorage.setItem('fix_paths_called', 'true');
+              
+              // If a test post was created, wait for database to update
+              if (fixPathsResult.testPostCreated) {
+                await new Promise(resolve => setTimeout(resolve, 300));
+              }
+            } catch (fixPathsError) {
+              console.error("Error calling fix-paths API:", fixPathsError);
+              // Continue with fetch attempt even if fix-paths fails
             }
-            
-            const fixPathsResult = await fixPathsResponse.json();
-            console.log("Fix paths API result:", fixPathsResult);
-            
-            // If a test post was created, wait for database to update
-            if (fixPathsResult.testPostCreated) {
-              await new Promise(resolve => setTimeout(resolve, 300));
-            }
-          } catch (fixPathsError) {
-            console.error("Error calling fix-paths API:", fixPathsError);
-            // Continue with fetch attempt even if fix-paths fails
+          } else {
+            console.log("Skipping fix-paths API call (already called this session)");
           }
         }
         

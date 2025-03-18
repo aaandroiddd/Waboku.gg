@@ -51,6 +51,17 @@ export default function AllWantedPostsPage() {
     console.log("Wanted Posts Page - Loading state:", isLoading);
     console.log("Wanted Posts Page - Error state:", error);
     
+    // Store timestamp in cache to prevent double loading
+    if (!isLoading && wantedPosts.length > 0) {
+      const cacheKey = `wantedPosts_${game || 'all'}_${selectedState || 'all'}_all_none`;
+      try {
+        sessionStorage.setItem(`${cacheKey}_timestamp`, Date.now().toString());
+        console.log("Updated cache timestamp to prevent double loading");
+      } catch (e) {
+        console.error("Error updating cache timestamp:", e);
+      }
+    }
+    
     // Log to server for debugging
     const logData = async () => {
       try {
@@ -148,6 +159,54 @@ export default function AllWantedPostsPage() {
                   
                   <div className="space-y-4">
                     <div>
+                      <label className="text-sm font-medium mb-2 block">Game Category</label>
+                      <div className="grid grid-cols-1 gap-2">
+                        <Button 
+                          variant={!game ? "default" : "outline"} 
+                          size="sm"
+                          className="justify-start"
+                          onClick={() => router.push("/wanted/posts")}
+                        >
+                          All Games
+                        </Button>
+                        
+                        {/* Main game categories */}
+                        {MAIN_GAME_CATEGORIES.map((category) => {
+                          const gameKey = GAME_MAPPING[category as keyof typeof GAME_MAPPING];
+                          return (
+                            <Button 
+                              key={gameKey}
+                              variant={game === gameKey ? "default" : "outline"} 
+                              size="sm"
+                              className="justify-start"
+                              onClick={() => router.push(`/wanted/posts?game=${gameKey}`)}
+                            >
+                              <span className="mr-2">{GAME_ICONS[gameKey] || "🎮"}</span>
+                              {category}
+                            </Button>
+                          );
+                        })}
+                        
+                        {/* Other game categories */}
+                        {OTHER_GAME_CATEGORIES.map((category) => {
+                          const gameKey = OTHER_GAME_MAPPING[category as keyof typeof OTHER_GAME_MAPPING];
+                          return (
+                            <Button 
+                              key={gameKey}
+                              variant={game === gameKey ? "default" : "outline"} 
+                              size="sm"
+                              className="justify-start"
+                              onClick={() => router.push(`/wanted/posts?game=${gameKey}`)}
+                            >
+                              <span className="mr-2">{GAME_ICONS[gameKey] || "🎮"}</span>
+                              {category}
+                            </Button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                    
+                    <div>
                       <label className="text-sm font-medium mb-2 block">Location</label>
                       <StateSelect 
                         value={selectedState || ""}
@@ -156,8 +215,6 @@ export default function AllWantedPostsPage() {
                         className="w-full"
                       />
                     </div>
-                    
-                    {/* Additional filters can be added here */}
                   </div>
                 </CardContent>
               </Card>
