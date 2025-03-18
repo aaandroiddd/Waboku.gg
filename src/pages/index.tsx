@@ -343,7 +343,7 @@ export default function Home() {
         
         // If this is the first visit and we didn't get any listings, try fetching again
         // This helps with the issue where first-time visitors don't see listings
-        if (isFirstVisit && fetchedListings.length === 0) {
+        if (isFirstVisit && listings.length === 0) {
           console.log('First visit with no listings, scheduling a refetch');
           setTimeout(() => {
             console.log('Executing scheduled refetch');
