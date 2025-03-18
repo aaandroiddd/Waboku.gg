@@ -950,7 +950,6 @@ export default function ListingPage() {
                   {listing.imageUrls.map((url, index) => (
                     <CarouselItem key={`carousel-item-${index}`} className="h-full flex items-center justify-center">
                       <TransformWrapper
-                        key={`transform-wrapper-${index}`}
                         initialScale={1}
                         minScale={0.5}
                         maxScale={4}
@@ -962,7 +961,6 @@ export default function ListingPage() {
                         initialPositionX={0}
                         initialPositionY={0}
                         panning={{ disabled: false }}
-                        data-index={index}
                       >
                         {({ zoomIn, zoomOut, resetTransform }) => (
                           <>
@@ -975,87 +973,46 @@ export default function ListingPage() {
                                   src={url}
                                   alt={`${listing.title} - Image ${index + 1}`}
                                   className="max-w-full max-h-[80vh] w-auto h-auto object-contain"
-                                  loading={index === currentImageIndex ? "eager" : "lazy"}
+                                  loading="eager"
                                 />
                               </div>
                             </TransformComponent>
+                            <div 
+                              className="absolute bottom-4 left-1/2 transform -translate-x-1/2 z-10 bg-background/90 rounded-lg p-2 backdrop-blur-sm shadow-lg"
+                            >
+                              <div className="flex items-center gap-2">
+                                <Button
+                                  variant="outline"
+                                  size="icon"
+                                  onClick={() => zoomOut()}
+                                  className="h-8 w-8"
+                                >
+                                  <Minus className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="icon"
+                                  onClick={() => zoomIn()}
+                                  className="h-8 w-8"
+                                >
+                                  <Plus className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="icon"
+                                  onClick={() => resetTransform()}
+                                  className="h-8 w-8"
+                                >
+                                  <RotateCw className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </div>
                           </>
                         )}
                       </TransformWrapper>
                     </CarouselItem>
                   ))}
                 </CarouselContent>
-                
-                {/* Static zoom controls that work for all images */}
-                <div 
-                  className="absolute bottom-4 left-1/2 transform -translate-x-1/2 z-10 bg-background/90 rounded-lg p-2 backdrop-blur-sm shadow-lg"
-                >
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        // Use our ref-based approach to access zoom controls
-                        if (zoomControlsRef.current[currentImageIndex]) {
-                          zoomControlsRef.current[currentImageIndex].zoomOut(0.5);
-                        } else {
-                          console.log(`No zoom controls found for image ${currentImageIndex}`);
-                          // Fallback to window-based approach
-                          if (window.__transformInstances && window.__transformInstances[`image-${currentImageIndex}`]) {
-                            window.__transformInstances[`image-${currentImageIndex}`].zoomOut(0.5);
-                          }
-                        }
-                      }}
-                      className="h-8 w-8"
-                      aria-label="Zoom out"
-                    >
-                      <Minus className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        // Use our ref-based approach to access zoom controls
-                        if (zoomControlsRef.current[currentImageIndex]) {
-                          zoomControlsRef.current[currentImageIndex].zoomIn(0.5);
-                        } else {
-                          console.log(`No zoom controls found for image ${currentImageIndex}`);
-                          // Fallback to window-based approach
-                          if (window.__transformInstances && window.__transformInstances[`image-${currentImageIndex}`]) {
-                            window.__transformInstances[`image-${currentImageIndex}`].zoomIn(0.5);
-                          }
-                        }
-                      }}
-                      className="h-8 w-8"
-                      aria-label="Zoom in"
-                    >
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        // Use our ref-based approach to access zoom controls
-                        if (zoomControlsRef.current[currentImageIndex]) {
-                          zoomControlsRef.current[currentImageIndex].resetTransform();
-                        } else {
-                          console.log(`No zoom controls found for image ${currentImageIndex}`);
-                          // Fallback to window-based approach
-                          if (window.__transformInstances && window.__transformInstances[`image-${currentImageIndex}`]) {
-                            window.__transformInstances[`image-${currentImageIndex}`].resetTransform();
-                          }
-                        }
-                      }}
-                      className="h-8 w-8"
-                      aria-label="Reset zoom"
-                    >
-                      <RotateCw className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
                 <CarouselPrevious className="left-4" />
                 <CarouselNext className="right-4" />
               </Carousel>
