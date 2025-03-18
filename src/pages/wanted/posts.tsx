@@ -102,6 +102,31 @@ export default function AllWantedPostsPage() {
               <p className="text-muted-foreground">
                 Browse cards and accessories that other collectors are looking for
               </p>
+              
+              {/* Back navigation options when viewing filtered results */}
+              {game && (
+                <div className="flex gap-2 mt-3">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => router.push("/wanted")}
+                    className="flex items-center gap-1"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
+                      <path d="m15 18-6-6 6-6"/>
+                    </svg>
+                    Back to Categories
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => router.push("/wanted/posts")}
+                    className="flex items-center gap-1"
+                  >
+                    All Wanted Posts
+                  </Button>
+                </div>
+              )}
             </div>
             <Button 
               onClick={handleCreateWanted}
