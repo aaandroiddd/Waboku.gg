@@ -161,6 +161,19 @@ export function ListingGrid({
     }
   }, [rawListings.length, listings.length]);
   
+  // Force a re-render if we have listings but none are visible
+  // This helps with the first-time visitor issue
+  useEffect(() => {
+    if (rawListings.length > 0 && listings.length === 0) {
+      console.log('ListingGrid has listings but none are visible, forcing visibility check');
+      // Force a re-render by updating a state variable
+      setLoading(prev => {
+        setTimeout(() => setLoading(false), 100);
+        return true;
+      });
+    }
+  }, [rawListings.length, listings.length]);
+  
   // Update global loading state when our loading state changes
   useEffect(() => {
     setLoading(loading);

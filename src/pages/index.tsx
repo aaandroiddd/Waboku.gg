@@ -238,6 +238,15 @@ export default function Home() {
         console.log('Stale authentication data was found and cleared');
       }
     }
+  }, []);
+
+  // Separate useEffect for fetching listings to avoid race conditions
+  useEffect(() => {
+    // Set a flag in sessionStorage to track if this is the first visit
+    const isFirstVisit = sessionStorage.getItem('hasVisitedBefore') !== 'true';
+    if (isFirstVisit) {
+      sessionStorage.setItem('hasVisitedBefore', 'true');
+    }
 
     async function fetchListings() {
       if (typeof window === 'undefined') return;
@@ -331,10 +340,20 @@ export default function Home() {
         setFilteredListings([]);
       } finally {
         setLoading(false);
+        
+        // If this is the first visit and we didn't get any listings, try fetching again
+        // This helps with the issue where first-time visitors don't see listings
+        if (isFirstVisit && fetchedListings.length === 0) {
+          console.log('First visit with no listings, scheduling a refetch');
+          setTimeout(() => {
+            console.log('Executing scheduled refetch');
+            fetchListings();
+          }, 1000); // Retry after 1 second
+        }
       }
     }
 
-    // Only fetch listings when latitude/longitude are available or have changed
+    // Fetch listings immediately
     fetchListings();
   }, [latitude, longitude]);
 
