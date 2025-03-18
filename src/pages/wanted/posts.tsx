@@ -54,51 +54,37 @@ export default function AllWantedPostsPage() {
   useEffect(() => {
     setLoading(isLoading);
     
-    // Log for debugging
-    console.log("Wanted Posts Page - Posts loaded:", wantedPosts.length);
-    console.log("Wanted Posts Page - Loading state:", isLoading);
-    console.log("Wanted Posts Page - Error state:", error);
-    
-    // Store timestamp in cache to prevent double loading
-    if (!isLoading && wantedPosts.length > 0) {
-      const cacheKey = `wantedPosts_${game || 'all'}_${selectedState || 'all'}_all_none`;
-      try {
-        sessionStorage.setItem(`${cacheKey}_timestamp`, Date.now().toString());
-        console.log("Updated cache timestamp to prevent double loading");
-      } catch (e) {
-        console.error("Error updating cache timestamp:", e);
-      }
+    // Only log to server when there's an error or when the loading state changes
+    if (error || wantedPosts.length === 0) {
+      const logData = async () => {
+        try {
+          await fetch('/api/debug/log', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ 
+              message: "Wanted Posts Page - Data state", 
+              data: { 
+                postsCount: wantedPosts.length,
+                isLoading,
+                hasError: !!error,
+                errorMessage: error || null,
+                game: game || 'all',
+                state: selectedState || 'all'
+              }, 
+              level: error ? 'error' : 'info' 
+            }),
+          });
+        } catch (e) {
+          // Silent fail for logging errors
+        }
+      };
+      
+      // Only log on significant state changes
+      logData();
     }
-    
-    // Log to server for debugging
-    const logData = async () => {
-      try {
-        await fetch('/api/debug/log', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ 
-            message: "Wanted Posts Page - Data state", 
-            data: { 
-              postsCount: wantedPosts.length,
-              isLoading,
-              hasError: !!error,
-              errorMessage: error || null,
-              game: game || 'all',
-              state: selectedState || 'all',
-              databaseURL: !!process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL
-            }, 
-            level: 'info' 
-          }),
-        });
-      } catch (e) {
-        console.error('Failed to send log to server:', e);
-      }
-    };
-    
-    logData();
-  }, [wantedPosts, isLoading, error, game, selectedState, setLoading]);
+  }, [isLoading, error, game, selectedState, setLoading, wantedPosts.length]);
 
   const handleCreateWanted = () => {
     if (!user) {

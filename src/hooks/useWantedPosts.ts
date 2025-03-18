@@ -48,6 +48,13 @@ export function useWantedPosts(options: WantedPostsOptions = {}) {
     // Create a cache key based on the current options
     const cacheKey = `wantedPosts_${options.game || 'all'}_${options.state || 'all'}_${options.userId || 'all'}_${options.limit || 'none'}`;
     
+    // Track if this effect is still the most recent one
+    const effectId = Date.now();
+    
+    // Store the current effect ID to prevent race conditions
+    const currentEffectIdKey = 'current_wanted_posts_effect_id';
+    sessionStorage.setItem(currentEffectIdKey, effectId.toString());
+    
     // Check if we have cached data in sessionStorage
     const cachedData = sessionStorage.getItem(cacheKey);
     let cachedPosts: WantedPost[] | null = null;
@@ -55,15 +62,13 @@ export function useWantedPosts(options: WantedPostsOptions = {}) {
     if (cachedData) {
       try {
         cachedPosts = JSON.parse(cachedData);
-        console.log("Using cached wanted posts data:", cachedPosts.length);
         // Set posts from cache immediately to improve perceived performance
         setPosts(cachedPosts);
-        // If we have recent cached data (less than 30 seconds old), don't refetch
+        // If we have recent cached data (less than 60 seconds old), don't refetch
         const cacheTimestamp = sessionStorage.getItem(`${cacheKey}_timestamp`);
         if (cacheTimestamp) {
           const cacheAge = Date.now() - parseInt(cacheTimestamp);
-          if (cacheAge < 30000) { // 30 seconds
-            console.log("Using recent cache, skipping fetch");
+          if (cacheAge < 60000) { // 60 seconds
             setIsLoading(false);
             return; // Skip fetching if cache is recent
           }

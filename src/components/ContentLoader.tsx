@@ -1,4 +1,4 @@
-import { ReactNode } from 'react';
+import { ReactNode, useState, useEffect } from 'react';
 import { LoadingAnimation } from './LoadingAnimation';
 import { cn } from '@/lib/utils';
 
@@ -9,6 +9,7 @@ interface ContentLoaderProps {
   loadingMessage?: string;
   fallback?: ReactNode;
   minHeight?: string;
+  delay?: number;
 }
 
 export function ContentLoader({
@@ -17,9 +18,34 @@ export function ContentLoader({
   className,
   loadingMessage,
   fallback,
-  minHeight = '200px'
+  minHeight = '200px',
+  delay = 200
 }: ContentLoaderProps) {
+  const [showLoader, setShowLoader] = useState(false);
+  
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    
+    if (isLoading) {
+      // Only show loader after a delay to prevent flashing for quick loads
+      timer = setTimeout(() => {
+        setShowLoader(true);
+      }, delay);
+    } else {
+      setShowLoader(false);
+    }
+    
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [isLoading, delay]);
+  
   if (isLoading) {
+    // If we're loading but haven't hit the delay threshold yet, show nothing
+    if (!showLoader) {
+      return <div style={{ minHeight }}></div>;
+    }
+    
     return fallback ? (
       <>{fallback}</>
     ) : (
