@@ -23,6 +23,11 @@ export function Footer() {
                 Home
               </Button>
             </Link>
+            <Link href="/wanted" passHref>
+              <Button variant="link" className="text-muted-foreground hover:text-primary">
+                Wanted Board
+              </Button>
+            </Link>
             <Link href="/about" passHref>
               <Button variant="link" className="text-muted-foreground hover:text-primary">
                 About Us
