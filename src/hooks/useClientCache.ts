@@ -6,9 +6,12 @@ interface CacheOptions {
 }
 
 export function useClientCache<T>(options: CacheOptions) {
-  // Use refs to ensure the functions don't change on re-renders
+  // Store options in a ref to ensure stability across renders
   const optionsRef = useRef(options);
-  const { key, expirationMinutes = 15 } = optionsRef.current;
+  
+  // Extract values from the ref, not directly from options
+  const key = optionsRef.current.key;
+  const expirationMinutes = optionsRef.current.expirationMinutes || 15;
   
   // Function to get data from cache
   const getFromCache = useCallback((): { data: T | null, expired: boolean } => {

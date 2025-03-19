@@ -207,8 +207,33 @@ function initializeFirebase() {
 // Initialize Firebase on module load
 let services: ReturnType<typeof initializeFirebase>;
 
-// Always initialize Firebase services immediately to prevent "Firebase services not initialized" errors
-services = initializeFirebase();
+// Initialize Firebase services only once
+if (typeof window !== 'undefined') {
+  try {
+    // Always initialize Firebase services immediately to prevent "Firebase services not initialized" errors
+    services = initializeFirebase();
+    console.log('Firebase services initialized successfully');
+  } catch (error) {
+    console.error('Failed to initialize Firebase services:', error);
+    services = { 
+      app: null, 
+      auth: null, 
+      db: null, 
+      storage: null, 
+      database: null,
+      initializationError: error
+    };
+  }
+} else {
+  // Server-side initialization with empty services
+  services = { 
+    app: null, 
+    auth: null, 
+    db: null, 
+    storage: null, 
+    database: null
+  };
+}
 
 // Export initialized services
 export const app = services.app;

@@ -18,6 +18,7 @@ export function FirebaseConnectionHandler() {
   const [isReconnecting, setIsReconnecting] = useState(false);
   const [showAlert, setShowAlert] = useState(false);
   const [errorCount, setErrorCount] = useState(0);
+  const [initializationError, setInitializationError] = useState(false);
   const lastReconnectAttemptRef = useRef<number>(0);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const errorTimeoutRef = useRef<NodeJS.Timeout | null>(null);

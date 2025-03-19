@@ -534,6 +534,15 @@ export function useListings({ userId, searchQuery, showOnlyActive = false }: Use
     }
   };
 
+  // Create a cache key based on the current options
+  const cacheKey = `listings_${userId || 'all'}_${showOnlyActive ? 'active' : 'all'}_${searchQuery || 'none'}`;
+  
+  // Initialize client cache outside of useEffect
+  const { getFromCache, saveToCache } = useClientCache<Listing[]>({
+    key: cacheKey,
+    expirationMinutes: 5 // Cache expires after 5 minutes
+  });
+  
   useEffect(() => {
     // Calculate distance between two points using Haversine formula
     const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
@@ -547,15 +556,6 @@ export function useListings({ userId, searchQuery, showOnlyActive = false }: Use
       const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
       return R * c;
     };
-
-    // Create a cache key based on the current options
-    const cacheKey = `listings_${userId || 'all'}_${showOnlyActive ? 'active' : 'all'}_${searchQuery || 'none'}`;
-    
-    // Initialize client cache
-    const { getFromCache, saveToCache } = useClientCache<Listing[]>({
-      key: cacheKey,
-      expirationMinutes: 5 // Cache expires after 5 minutes
-    });
 
     const fetchListings = async () => {
       try {
