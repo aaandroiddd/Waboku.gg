@@ -70,7 +70,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
-  const { auth, db } = getFirebaseServices();
+  // Get Firebase services with error handling
+  let auth, db;
+  try {
+    const services = getFirebaseServices();
+    auth = services.auth;
+    db = services.db;
+  } catch (error) {
+    console.error('Error getting Firebase services:', error);
+    setError('Failed to initialize authentication services. Please refresh the page.');
+    setIsLoading(false);
+  }
 
   useEffect(() => {
     // Check for stored auth redirect state

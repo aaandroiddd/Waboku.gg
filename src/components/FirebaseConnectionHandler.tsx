@@ -156,34 +156,38 @@ export function FirebaseConnectionHandler() {
   }, [attemptReconnection]);
 
   useEffect(() => {
-    // On the home page, we want to minimize Firebase connections
-    // Only set up minimal error handling without active listeners
-    if (isHomePage) {
-      console.log('[ConnectionHandler] On home page - minimizing Firebase connections');
-      
-      // Only handle critical errors on the home page
-      const handleCriticalError = (event: ErrorEvent) => {
-        // Only handle critical Firebase errors that would affect user experience
+    // Set up error handling for all pages, but with different sensitivity levels
+    const handleCriticalError = (event: ErrorEvent) => {
+      // For home page, only handle critical Firebase errors
+      if (isHomePage) {
         if (event.message.includes('Firebase: Error') && 
-            event.message.includes('critical')) {
+            (event.message.includes('critical') || event.message.includes('not initialized'))) {
           handleFirebaseError(event.message);
         }
-      };
-      
-      window.addEventListener('error', handleCriticalError);
-      
-      return () => {
-        window.removeEventListener('error', handleCriticalError);
-        
-        // Clear any pending timeouts
-        if (reconnectTimeoutRef.current) {
-          clearTimeout(reconnectTimeoutRef.current);
+      } else {
+        // For other pages, handle all Firebase-related errors
+        if (event.message.includes('Firebase') || 
+            event.message.includes('firestore') || 
+            event.message.includes('not initialized')) {
+          handleFirebaseError(event.message);
         }
-        if (errorTimeoutRef.current) {
-          clearTimeout(errorTimeoutRef.current);
-        }
-      };
-    }
+      }
+    };
+    
+    window.addEventListener('error', handleCriticalError);
+    
+    return () => {
+      window.removeEventListener('error', handleCriticalError);
+      
+      // Clear any pending timeouts
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+      }
+      if (errorTimeoutRef.current) {
+        clearTimeout(errorTimeoutRef.current);
+      }
+    };
+  
     
     // For non-home pages, use the full connection handling
     if (!connectionManager) return;
