@@ -1,4 +1,4 @@
-import { database } from "@/lib/firebase-admin";
+import { getFirebaseAdmin } from "@/lib/firebase-admin";
 import { NextApiRequest, NextApiResponse } from "next";
 
 export default async function handler(
@@ -6,6 +6,7 @@ export default async function handler(
   res: NextApiResponse
 ) {
   try {
+    const { database } = getFirebaseAdmin();
     const ref = database.ref("searchTerms");
     const now = Date.now();
     const twentyFourHoursAgo = now - (24 * 60 * 60 * 1000);

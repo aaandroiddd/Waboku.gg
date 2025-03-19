@@ -6,8 +6,8 @@ import { rateLimit } from '@/lib/rate-limit';
 
 // Rate limiting to prevent abuse
 const limiter = rateLimit({
-  interval: 60 * 1000, // 60 seconds
-  uniqueTokenPerInterval: 500, // Max 500 users per interval
+  limit: 5,
+  window: 60 * 1000 // 60 seconds
 });
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -18,8 +18,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   
   try {
     // Apply rate limiting - 5 requests per minute per IP
-    const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
-    await limiter.check(res, 5, clientIp as string);
+    await limiter(req, res);
   } catch (error) {
     return res.status(429).json({ message: 'Rate limit exceeded. Please try again later.' });
   }

@@ -70,16 +70,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
-  // Get Firebase services with error handling
-  let auth, db;
-  try {
-    const services = getFirebaseServices();
-    auth = services.auth;
-    db = services.db;
-  } catch (error) {
-    console.error('Error getting Firebase services:', error);
-    setError('Failed to initialize authentication services. Please refresh the page.');
-    setIsLoading(false);
+  // Check if we're running on the server
+  const isServer = typeof window === 'undefined';
+  
+  // Get Firebase services with error handling - only in browser environment
+  let auth: any = null;
+  let db: any = null;
+  
+  if (!isServer) {
+    try {
+      const services = getFirebaseServices();
+      auth = services.auth;
+      db = services.db;
+    } catch (error) {
+      console.error('Error getting Firebase services:', error);
+      setError('Failed to initialize authentication services. Please refresh the page.');
+      setIsLoading(false);
+    }
   }
 
   useEffect(() => {

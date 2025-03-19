@@ -11,7 +11,7 @@ export function initializeAdminApp() {
     return { admin: firebaseAdmin as typeof admin, app: adminApp };
   }
   
-  const admin = getFirebaseAdmin();
+  const { admin } = getFirebaseAdmin();
   adminApp = admin.app();
   
   return { admin, app: adminApp };
@@ -28,13 +28,22 @@ export function initAdmin(): typeof admin {
  * Initialize Firebase Admin SDK
  * This is the function used by API routes
  */
-export function initializeFirebaseAdmin(): typeof admin {
+export function initializeFirebaseAdmin() {
   return getFirebaseAdmin();
 }
 
+// Export database directly for convenience
+export const database = getFirebaseAdmin().database;
+
 export function getFirebaseAdmin() {
   if (firebaseAdmin) {
-    return firebaseAdmin;
+    return {
+      admin: firebaseAdmin,
+      db: firebaseAdmin.firestore(),
+      auth: firebaseAdmin.auth(),
+      storage: firebaseAdmin.storage(),
+      database: firebaseAdmin.database()
+    };
   }
 
   if (!admin.apps.length) {

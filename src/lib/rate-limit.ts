@@ -1,5 +1,6 @@
 import { getDatabase } from 'firebase-admin/database';
 import { getFirebaseAdmin } from './firebase-admin';
+import { NextApiRequest, NextApiResponse } from 'next';
 
 const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute
 const MAX_REQUESTS_PER_WINDOW = 10; // 10 searches per minute
@@ -54,4 +55,52 @@ export async function checkRateLimit(ip: string): Promise<boolean> {
     // In case of error, allow the request but log it
     return true;
   }
+}
+
+// Middleware function for API routes
+export function rateLimit(options: {
+  limit?: number;
+  window?: number;
+} = {}) {
+  const limit = options.limit || MAX_REQUESTS_PER_WINDOW;
+  const window = options.window || RATE_LIMIT_WINDOW;
+
+  return async function rateLimitMiddleware(
+    req: NextApiRequest,
+    res: NextApiResponse,
+    next?: () => void
+  ) {
+    try {
+      // Get client IP
+      const ip = req.headers['x-forwarded-for'] || 
+                req.socket.remoteAddress || 
+                'unknown';
+      
+      const ipStr = Array.isArray(ip) ? ip[0] : ip as string;
+      
+      // Check rate limit
+      const allowed = await checkRateLimit(ipStr);
+      
+      if (!allowed) {
+        res.status(429).json({ 
+          error: 'Too many requests, please try again later' 
+        });
+        return;
+      }
+      
+      // Continue to the next middleware or handler
+      if (next) {
+        next();
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('Rate limit middleware error:', error);
+      // In case of error, allow the request but log it
+      if (next) {
+        next();
+      }
+      return true;
+    }
+  };
 }
