@@ -6,12 +6,12 @@ declare global {
     __transformInstances?: Record<string, any>;
   }
 }
+import { doc, getDoc, deleteDoc, setDoc, onSnapshot } from 'firebase/firestore';
 import { loadStripe } from '@stripe/stripe-js';
 import { UserNameLink } from '@/components/UserNameLink';
 import { StripeSellerBadge } from '@/components/StripeSellerBadge';
 import { useRouter } from 'next/router';
 import { formatPrice } from '@/lib/price';
-import { doc, getDoc, deleteDoc, setDoc } from 'firebase/firestore';
 import { getFirebaseServices } from '@/lib/firebase';
 import { Listing } from '@/types/database';
 import { Card, CardContent } from '@/components/ui/card';
@@ -207,8 +207,11 @@ export default function ListingPage() {
   useEffect(() => {
     let isMounted = true;
     let retryCount = 0;
+    let expirationCheckDone = false;
     const maxRetries = 3;
     const retryDelay = 1000; // 1 second delay between retries
+    // Track any active listeners to clean them up
+    const activeListeners: (() => void)[] = [];
 
     async function fetchListing() {
       try {
@@ -230,74 +233,81 @@ export default function ListingPage() {
 
         // First, trigger a background check for listing expiration
         // This happens silently and won't block the UI
-        try {
-          // Use async/await with proper error handling
-          const checkExpiration = async () => {
-            try {
-              console.log(`[Listing] Checking expiration for listing ${id}`);
-              
-              // Add timeout to prevent long-running requests
-              const controller = new AbortController();
-              const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
-              
+        // Only do this once per component mount to prevent infinite loops
+        if (!expirationCheckDone) {
+          try {
+            // Use async/await with proper error handling
+            const checkExpiration = async () => {
               try {
-                const response = await fetch('/api/listings/check-expiration', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ listingId: id }),
-                  signal: controller.signal
-                });
+                console.log(`[Listing] Checking expiration for listing ${id}`);
                 
-                // Clear the timeout since the request completed
-                clearTimeout(timeoutId);
+                // Add timeout to prevent long-running requests
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
                 
-                // Always try to parse the response, regardless of status code
-                let result;
                 try {
-                  result = await response.json();
-                } catch (jsonError) {
-                  console.log(`[Listing] Could not parse response as JSON:`, jsonError);
-                  return; // Exit silently if we can't parse the response
+                  const response = await fetch('/api/listings/check-expiration', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ listingId: id }),
+                    signal: controller.signal
+                  });
+                  
+                  // Clear the timeout since the request completed
+                  clearTimeout(timeoutId);
+                  
+                  // Always try to parse the response, regardless of status code
+                  let result;
+                  try {
+                    result = await response.json();
+                  } catch (jsonError) {
+                    console.log(`[Listing] Could not parse response as JSON:`, jsonError);
+                    return; // Exit silently if we can't parse the response
+                  }
+                  
+                  // Log the result for debugging
+                  console.log(`[Listing] Expiration check response:`, {
+                    status: response.status,
+                    result
+                  });
+                  
+                  // Check if the API returned an error (even with status 200)
+                  if (!result.success) {
+                    console.log(`[Listing] Expiration check failed:`, result.error || 'Unknown error');
+                    return; // Exit silently
+                  }
+                  
+                  // Process successful response
+                  if (result.status === 'archived') {
+                    console.log('[Listing] Listing was archived in background check');
+                    // Could refresh the page or show a notification here if needed
+                  }
+                } catch (fetchError) {
+                  // Clear the timeout in case of error
+                  clearTimeout(timeoutId);
+                  
+                  if (fetchError.name === 'AbortError') {
+                    console.log('[Listing] Expiration check request timed out');
+                  } else {
+                    console.error('[Listing] Fetch error during expiration check:', fetchError);
+                  }
                 }
-                
-                // Log the result for debugging
-                console.log(`[Listing] Expiration check response:`, {
-                  status: response.status,
-                  result
-                });
-                
-                // Check if the API returned an error (even with status 200)
-                if (!result.success) {
-                  console.log(`[Listing] Expiration check failed:`, result.error || 'Unknown error');
-                  return; // Exit silently
-                }
-                
-                // Process successful response
-                if (result.status === 'archived') {
-                  console.log('[Listing] Listing was archived in background check');
-                  // Could refresh the page or show a notification here if needed
-                }
-              } catch (fetchError) {
-                // Clear the timeout in case of error
-                clearTimeout(timeoutId);
-                
-                if (fetchError.name === 'AbortError') {
-                  console.log('[Listing] Expiration check request timed out');
-                } else {
-                  console.error('[Listing] Fetch error during expiration check:', fetchError);
-                }
+              } catch (err) {
+                // Silently log any errors without affecting the user experience
+                console.error('[Listing] Background expiration check failed:', err);
               }
-            } catch (err) {
-              // Silently log any errors without affecting the user experience
-              console.error('[Listing] Background expiration check failed:', err);
-            }
-          };
-          
-          // Execute but don't await - let it run in background
-          checkExpiration();
-        } catch (error) {
-          // Ignore any errors in the background check
-          console.error('Error triggering background expiration check:', error);
+            };
+            
+            // Execute but don't await - let it run in background
+            checkExpiration();
+            // Mark as done to prevent repeated calls
+            expirationCheckDone = true;
+          } catch (error) {
+            // Ignore any errors in the background check
+            console.error('Error triggering background expiration check:', error);
+            // Still mark as done to prevent repeated calls
+            expirationCheckDone = true;
+          }
         }
 
         // Fetch the listing with retry logic
@@ -306,6 +316,12 @@ export default function ListingPage() {
         
         for (let attempt = 0; attempt <= maxRetries; attempt++) {
           try {
+            // Check if component is still mounted before proceeding
+            if (!isMounted) {
+              console.log('[Listing] Component unmounted, aborting fetch');
+              return;
+            }
+            
             console.log(`[Listing] Fetching listing ${id} (attempt ${attempt + 1}/${maxRetries + 1})`);
             const listingRef = doc(db, 'listings', id);
             listingDoc = await getDoc(listingRef);
@@ -342,6 +358,116 @@ export default function ListingPage() {
         }
 
         const data = listingDoc.data();
+        
+        // Set up a real-time listener for this listing to get updates
+        // This is important for status changes, but we need to clean it up properly
+        try {
+          const listingRef = doc(db, 'listings', id);
+          const unsubscribe = onSnapshot(listingRef, (doc) => {
+            if (!isMounted) return; // Don't update state if component is unmounted
+            
+            if (doc.exists()) {
+              const updatedData = doc.data();
+              // Process the data and update the listing state
+              console.log('[Listing] Received real-time update for listing');
+              
+              // Only update if there are actual changes to avoid infinite loops
+              if (JSON.stringify(updatedData) !== JSON.stringify(data)) {
+                console.log('[Listing] Updating listing with new data');
+                
+                // Process timestamps safely
+                const convertTimestamp = (timestamp: any): Date => {
+                  try {
+                    if (!timestamp) return new Date();
+                    
+                    // Handle Firestore timestamp objects
+                    if (timestamp && typeof timestamp.toDate === 'function') {
+                      return timestamp.toDate();
+                    }
+                    
+                    // Handle JavaScript Date objects
+                    if (timestamp instanceof Date) {
+                      return timestamp;
+                    }
+                    
+                    // Handle numeric timestamps (milliseconds since epoch)
+                    if (typeof timestamp === 'number') {
+                      return new Date(timestamp);
+                    }
+                    
+                    // Handle string timestamps
+                    if (typeof timestamp === 'string') {
+                      return new Date(timestamp);
+                    }
+                    
+                    // Default fallback
+                    return new Date();
+                  } catch (error) {
+                    console.error('Error converting timestamp:', error, timestamp);
+                    return new Date();
+                  }
+                };
+                
+                // Create listing object with careful type handling
+                const createdAt = convertTimestamp(updatedData.createdAt);
+                const expiresAt = updatedData.expiresAt ? convertTimestamp(updatedData.expiresAt) : 
+                  new Date(createdAt.getTime() + (updatedData.isPremium ? 30 : 2) * 24 * 60 * 60 * 1000);
+                
+                // Process location data safely
+                let locationData = undefined;
+                if (updatedData.location) {
+                  try {
+                    locationData = {
+                      latitude: typeof updatedData.location.latitude === 'number' ? updatedData.location.latitude : undefined,
+                      longitude: typeof updatedData.location.longitude === 'number' ? updatedData.location.longitude : undefined
+                    };
+                  } catch (error) {
+                    console.error('Error processing location data:', error);
+                  }
+                }
+                
+                const updatedListing: Listing = {
+                  id: doc.id,
+                  title: updatedData.title || 'Untitled Listing',
+                  description: updatedData.description || '',
+                  price: typeof updatedData.price === 'number' ? updatedData.price : 
+                         typeof updatedData.price === 'string' ? parseFloat(updatedData.price) : 0,
+                  condition: updatedData.condition || 'unknown',
+                  game: updatedData.game || 'other',
+                  imageUrls: Array.isArray(updatedData.imageUrls) ? updatedData.imageUrls : [],
+                  coverImageIndex: typeof updatedData.coverImageIndex === 'number' ? updatedData.coverImageIndex : 0,
+                  userId: updatedData.userId || '',
+                  username: updatedData.username || 'Unknown User',
+                  createdAt: createdAt,
+                  expiresAt: expiresAt,
+                  status: updatedData.status || 'active',
+                  isGraded: Boolean(updatedData.isGraded),
+                  gradeLevel: updatedData.gradeLevel ? Number(updatedData.gradeLevel) : undefined,
+                  gradingCompany: updatedData.gradingCompany,
+                  city: updatedData.city || 'Unknown',
+                  state: updatedData.state || 'Unknown',
+                  favoriteCount: typeof updatedData.favoriteCount === 'number' ? updatedData.favoriteCount : 0,
+                  quantity: updatedData.quantity ? Number(updatedData.quantity) : undefined,
+                  cardName: updatedData.cardName || undefined,
+                  location: locationData,
+                  soldTo: updatedData.soldTo || null,
+                  archivedAt: updatedData.archivedAt ? convertTimestamp(updatedData.archivedAt) : null
+                };
+                
+                // Update the listing state
+                setListing(updatedListing);
+              }
+            }
+          }, (error) => {
+            console.error('[Listing] Error in real-time listener:', error);
+          });
+          
+          // Add the unsubscribe function to our cleanup array
+          activeListeners.push(unsubscribe);
+        } catch (listenerError) {
+          console.error('[Listing] Failed to set up real-time listener:', listenerError);
+          // Continue without real-time updates
+        }
         
         if (!data) {
           throw new Error('Listing data is empty');
@@ -458,6 +584,8 @@ export default function ListingPage() {
 
     return () => {
       isMounted = false;
+      // Clean up any active Firestore listeners to prevent memory leaks and infinite loops
+      activeListeners.forEach(unsubscribe => unsubscribe());
     };
   }, [id, user, startLoading, stopLoading]);
   
