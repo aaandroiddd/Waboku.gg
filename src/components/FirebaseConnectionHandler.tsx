@@ -12,6 +12,17 @@ const PROBLEMATIC_LISTING_IDS = new Set([
   'ufKDqtR3DUt2Id2RdLfi'
 ]);
 
+// Known error patterns that should trigger immediate reconnection
+const CRITICAL_ERROR_PATTERNS = [
+  'Failed to fetch',
+  'firestore.googleapis.com/google.firestore.v1.Firestore/Listen',
+  'The operation couldn\'t be completed',
+  'network error',
+  'Network Error',
+  'NetworkError',
+  'AbortError'
+];
+
 export function FirebaseConnectionHandler() {
   const router = useRouter();
   const [connectionError, setConnectionError] = useState(false);
@@ -23,6 +34,8 @@ export function FirebaseConnectionHandler() {
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const errorTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isReconnectingRef = useRef<boolean>(false);
+  const reconnectAttemptCountRef = useRef<number>(0);
+  const lastSuccessfulConnectionRef = useRef<number>(Date.now());
   
   // Check if we're on the front page
   const isHomePage = router.pathname === '/';
@@ -32,22 +45,49 @@ export function FirebaseConnectionHandler() {
     count: number;
     lastErrorTime: number;
     errors: Set<string>;
+    criticalErrors: number;
   }>({
     count: 0,
     lastErrorTime: 0,
-    errors: new Set()
+    errors: new Set(),
+    criticalErrors: 0
   });
 
-  // More aggressive reconnection strategy with debouncing
-  const attemptReconnection = useCallback(async () => {
-    if (!db || isReconnectingRef.current) return;
+  // More aggressive reconnection strategy with debouncing and circuit breaker pattern
+  const attemptReconnection = useCallback(async (forcedReconnect = false) => {
+    if (!db || (isReconnectingRef.current && !forcedReconnect)) return;
+    
+    // Circuit breaker pattern - if we've tried too many times in a short period, back off
+    const now = Date.now();
+    const timeSinceLastSuccess = now - lastSuccessfulConnectionRef.current;
+    
+    // If we've been trying for more than 5 minutes with no success and have attempted at least 5 reconnects,
+    // implement a longer cooling period
+    if (!forcedReconnect && reconnectAttemptCountRef.current >= 5 && timeSinceLastSuccess > 5 * 60 * 1000) {
+      console.log('[ConnectionHandler] Circuit breaker activated - too many failed reconnection attempts');
+      
+      // Clear any existing timeout
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+      }
+      
+      // Schedule a retry after a longer cooling period
+      reconnectTimeoutRef.current = setTimeout(() => {
+        console.log('[ConnectionHandler] Circuit breaker reset - attempting reconnection after cooling period');
+        reconnectAttemptCountRef.current = 0; // Reset the counter after cooling period
+        attemptReconnection(true); // Force reconnect after cooling
+      }, 2 * 60 * 1000); // 2 minute cooling period
+      
+      return;
+    }
     
     // Prevent multiple simultaneous reconnection attempts
     isReconnectingRef.current = true;
     setIsReconnecting(true);
-    lastReconnectAttemptRef.current = Date.now();
+    lastReconnectAttemptRef.current = now;
+    reconnectAttemptCountRef.current++;
     
-    console.log('[ConnectionHandler] Attempting manual reconnection to Firestore');
+    console.log(`[ConnectionHandler] Attempting manual reconnection to Firestore (attempt #${reconnectAttemptCountRef.current})`);
     
     try {
       // First disable the network to reset any hanging connections
@@ -65,19 +105,31 @@ export function FirebaseConnectionHandler() {
       errorTracker.current = {
         count: 0,
         lastErrorTime: 0,
-        errors: new Set()
+        errors: new Set(),
+        criticalErrors: 0
       };
       
       setConnectionError(false);
       setErrorCount(0);
       setShowAlert(false);
       
+      // Mark this as a successful connection
+      lastSuccessfulConnectionRef.current = Date.now();
+      reconnectAttemptCountRef.current = 0; // Reset attempt counter on success
+      
       console.log('[ConnectionHandler] Manual reconnection completed successfully');
+      
+      // Force a page refresh if we've had multiple critical errors
+      // This helps clear any stale state that might be causing persistent issues
+      if (errorTracker.current.criticalErrors >= 3 && typeof window !== 'undefined') {
+        console.log('[ConnectionHandler] Multiple critical errors detected, refreshing page to clear state');
+        window.location.reload();
+      }
     } catch (error) {
       console.error('[ConnectionHandler] Error during manual reconnection:', error);
       
       // Schedule another reconnection attempt with exponential backoff
-      const backoffDelay = Math.min(5000 * Math.pow(1.5, errorTracker.current.count), 60000);
+      const backoffDelay = Math.min(5000 * Math.pow(1.5, reconnectAttemptCountRef.current), 60000);
       console.log(`[ConnectionHandler] Scheduling next reconnection attempt in ${backoffDelay}ms`);
       
       if (reconnectTimeoutRef.current) {
@@ -100,7 +152,7 @@ export function FirebaseConnectionHandler() {
   }, [db]);
 
   // Handle errors with improved debouncing and deduplication
-  const handleFirebaseError = useCallback((errorMessage: string) => {
+  const handleFirebaseError = useCallback((errorMessage: string, stack?: string) => {
     // Skip if we're already reconnecting
     if (isReconnectingRef.current) return;
     
@@ -118,7 +170,21 @@ export function FirebaseConnectionHandler() {
     // Check if this is a new unique error in this session
     if (!tracker.errors.has(errorMessage)) {
       console.log('[ConnectionHandler] New Firebase-related error:', errorMessage);
+      if (stack) {
+        console.log('[ConnectionHandler] Error stack:', stack);
+      }
       tracker.errors.add(errorMessage);
+    }
+    
+    // Check if this is a critical error that should trigger immediate reconnection
+    let isCriticalError = false;
+    for (const pattern of CRITICAL_ERROR_PATTERNS) {
+      if (errorMessage.includes(pattern) || (stack && stack.includes(pattern))) {
+        isCriticalError = true;
+        tracker.criticalErrors++;
+        console.log(`[ConnectionHandler] Critical error detected: ${pattern}`);
+        break;
+      }
     }
     
     // Update error count with rate limiting
@@ -126,7 +192,7 @@ export function FirebaseConnectionHandler() {
     
     // Only count as a new error if it's been at least 2 seconds since the last one
     // This prevents counting the same error multiple times in rapid succession
-    if (timeSinceLastError > 2000) {
+    if (timeSinceLastError > 2000 || isCriticalError) {
       tracker.count++;
       tracker.lastErrorTime = now;
       setErrorCount(tracker.count);
@@ -140,17 +206,24 @@ export function FirebaseConnectionHandler() {
       }
       
       // Show alert after multiple errors to avoid false positives
-      if (tracker.count >= 2) {
+      // Critical errors show alert immediately
+      if (tracker.count >= 2 || isCriticalError) {
         setShowAlert(true);
         
         // Auto-attempt reconnection if we're seeing multiple errors
         // and it's been at least 15 seconds since our last attempt
+        // Critical errors trigger immediate reconnection
         const timeSinceLastAttempt = now - lastReconnectAttemptRef.current;
-        if (tracker.count >= 3 && timeSinceLastAttempt > 15000 && !isReconnectingRef.current) {
+        if ((tracker.count >= 3 && timeSinceLastAttempt > 15000) || 
+            (isCriticalError && timeSinceLastAttempt > 5000)) {
+          
           // Schedule reconnection with a short delay to allow batching of errors
+          // Critical errors get a shorter delay
+          const reconnectDelay = isCriticalError ? 500 : 1000;
+          
           errorTimeoutRef.current = setTimeout(() => {
-            attemptReconnection();
-          }, 1000);
+            attemptReconnection(isCriticalError);
+          }, reconnectDelay);
         }
       }
     }
@@ -163,14 +236,14 @@ export function FirebaseConnectionHandler() {
       if (isHomePage) {
         if (event.message.includes('Firebase: Error') && 
             (event.message.includes('critical') || event.message.includes('not initialized'))) {
-          handleFirebaseError(event.message);
+          handleFirebaseError(event.message, event.error?.stack);
         }
       } else {
         // For other pages, handle all Firebase-related errors
         if (event.message.includes('Firebase') || 
             event.message.includes('firestore') || 
             event.message.includes('not initialized')) {
-          handleFirebaseError(event.message);
+          handleFirebaseError(event.message, event.error?.stack);
         }
       }
     };
@@ -188,8 +261,9 @@ export function FirebaseConnectionHandler() {
         clearTimeout(errorTimeoutRef.current);
       }
     };
-  
-    
+  }, [handleFirebaseError, isHomePage]);
+
+  useEffect(() => {
     // For non-home pages, use the full connection handling
     if (!connectionManager) return;
 
@@ -210,21 +284,25 @@ export function FirebaseConnectionHandler() {
         event.message.includes('firebase') ||
         event.message.includes('Failed to fetch')
       ) {
-        handleFirebaseError(event.message);
+        handleFirebaseError(event.message, event.error?.stack);
       }
     };
 
     // Handle unhandled promise rejections with improved filtering
     const handleRejection = (event: PromiseRejectionEvent) => {
       const errorMessage = event.reason?.message || 'Unknown error';
+      const errorStack = event.reason?.stack || '';
       
       // Only handle Firebase-related errors
       if (
         errorMessage.includes('firestore') ||
         errorMessage.includes('firebase') ||
-        errorMessage.includes('Failed to fetch')
+        errorMessage.includes('Failed to fetch') ||
+        errorStack.includes('firestore') ||
+        errorStack.includes('firebase') ||
+        errorStack.includes('Failed to fetch')
       ) {
-        handleFirebaseError(errorMessage);
+        handleFirebaseError(errorMessage, errorStack);
       }
     };
 
@@ -241,8 +319,13 @@ export function FirebaseConnectionHandler() {
       errorTracker.current = {
         count: 0,
         lastErrorTime: 0,
-        errors: new Set()
+        errors: new Set(),
+        criticalErrors: 0
       };
+      
+      // Mark successful connection
+      lastSuccessfulConnectionRef.current = Date.now();
+      reconnectAttemptCountRef.current = 0;
     });
 
     // Also listen for online/offline events
@@ -255,6 +338,21 @@ export function FirebaseConnectionHandler() {
     };
 
     window.addEventListener('online', handleOnline);
+    
+    // Set up a periodic connection check
+    const connectionCheckInterval = setInterval(() => {
+      // Only check if we're not already reconnecting and we have errors
+      if (!isReconnectingRef.current && errorTracker.current.count > 0) {
+        const now = Date.now();
+        const timeSinceLastAttempt = now - lastReconnectAttemptRef.current;
+        
+        // If it's been more than 30 seconds since our last attempt, try again
+        if (timeSinceLastAttempt > 30000) {
+          console.log('[ConnectionHandler] Periodic connection check - attempting reconnection');
+          attemptReconnection();
+        }
+      }
+    }, 30000); // Check every 30 seconds
 
     // Cleanup function
     return () => {
@@ -263,18 +361,19 @@ export function FirebaseConnectionHandler() {
       window.removeEventListener('online', handleOnline);
       removeListener();
       
-      // Clear any pending timeouts
+      // Clear any pending timeouts and intervals
       if (reconnectTimeoutRef.current) {
         clearTimeout(reconnectTimeoutRef.current);
       }
       if (errorTimeoutRef.current) {
         clearTimeout(errorTimeoutRef.current);
       }
+      clearInterval(connectionCheckInterval);
     };
-  }, [connectionError, handleFirebaseError, attemptReconnection, isHomePage]);
+  }, [connectionError, handleFirebaseError, attemptReconnection]);
 
   const handleReconnect = () => {
-    attemptReconnection();
+    attemptReconnection(true); // Force reconnection when user clicks the button
   };
 
   const handleDismiss = () => {
