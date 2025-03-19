@@ -206,6 +206,9 @@ export default function ListingPage() {
 
   useEffect(() => {
     let isMounted = true;
+    let retryCount = 0;
+    const maxRetries = 3;
+    const retryDelay = 1000; // 1 second delay between retries
 
     async function fetchListing() {
       try {
@@ -297,11 +300,45 @@ export default function ListingPage() {
           console.error('Error triggering background expiration check:', error);
         }
 
-        const listingRef = doc(db, 'listings', id);
-        const listingDoc = await getDoc(listingRef);
-
-        if (!listingDoc.exists()) {
-          throw new Error('Listing not found');
+        // Fetch the listing with retry logic
+        let listingDoc = null;
+        let fetchError = null;
+        
+        for (let attempt = 0; attempt <= maxRetries; attempt++) {
+          try {
+            console.log(`[Listing] Fetching listing ${id} (attempt ${attempt + 1}/${maxRetries + 1})`);
+            const listingRef = doc(db, 'listings', id);
+            listingDoc = await getDoc(listingRef);
+            
+            if (listingDoc.exists()) {
+              // Successfully fetched the listing
+              fetchError = null;
+              break;
+            } else {
+              // Listing not found, but this might be temporary
+              fetchError = new Error('Listing not found');
+              
+              // If this is not the last attempt, wait before retrying
+              if (attempt < maxRetries) {
+                console.log(`[Listing] Listing not found, retrying in ${retryDelay}ms...`);
+                await new Promise(resolve => setTimeout(resolve, retryDelay));
+              }
+            }
+          } catch (err: any) {
+            // Store the error and retry if not the last attempt
+            fetchError = err;
+            console.error(`[Listing] Error fetching listing (attempt ${attempt + 1}):`, err);
+            
+            if (attempt < maxRetries) {
+              console.log(`[Listing] Retrying in ${retryDelay}ms...`);
+              await new Promise(resolve => setTimeout(resolve, retryDelay));
+            }
+          }
+        }
+        
+        // If we still have an error after all retries, throw it
+        if (fetchError || !listingDoc || !listingDoc.exists()) {
+          throw fetchError || new Error('Listing not found after multiple attempts');
         }
 
         const data = listingDoc.data();
@@ -405,12 +442,14 @@ export default function ListingPage() {
         if (isMounted) {
           setListing(listingData);
           setLoading(false);
+          stopLoading(); // Stop global loading indicator
         }
       } catch (err: any) {
         console.error('Error fetching listing:', err);
         if (isMounted) {
           setError(err.message || 'Failed to load listing. Please try again later.');
           setLoading(false);
+          stopLoading(); // Stop global loading indicator
         }
       }
     }
@@ -420,7 +459,7 @@ export default function ListingPage() {
     return () => {
       isMounted = false;
     };
-  }, [id, user]);
+  }, [id, user, startLoading, stopLoading]);
   
   // Add a separate effect to update the favorite status when the listing or favorites change
   useEffect(() => {
