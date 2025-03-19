@@ -161,18 +161,23 @@ export function ListingGrid({
     }
   }, [rawListings.length, listings.length]);
   
-  // Force a re-render if we have listings but none are visible
+  // Handle case where we have listings but none are visible
   // This helps with the first-time visitor issue
+  const [visibilityCheckDone, setVisibilityCheckDone] = useState(false);
+  
   useEffect(() => {
-    if (rawListings.length > 0 && listings.length === 0) {
-      console.log('ListingGrid has listings but none are visible, forcing visibility check');
-      // Force a re-render by updating a state variable
-      setLoading(prev => {
-        setTimeout(() => setLoading(false), 100);
-        return true;
-      });
+    if (rawListings.length > 0 && listings.length === 0 && !visibilityCheckDone) {
+      console.log('ListingGrid has listings but none are visible, performing one-time visibility check');
+      // Only do this check once per component mount to avoid infinite loops
+      setVisibilityCheckDone(true);
+      
+      // Perform a one-time loading state update with a short timeout
+      setLoading(true);
+      const timer = setTimeout(() => setLoading(false), 300);
+      
+      return () => clearTimeout(timer);
     }
-  }, [rawListings.length, listings.length]);
+  }, [rawListings.length, listings.length, visibilityCheckDone]);
   
   // Update global loading state when our loading state changes
   useEffect(() => {

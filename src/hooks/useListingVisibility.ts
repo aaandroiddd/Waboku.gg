@@ -9,8 +9,20 @@ export function useListingVisibility(listings: Listing[]) {
   const [visibleListings, setVisibleListings] = useState<Listing[]>([]);
   // Keep track of problematic listing IDs to avoid repeated processing
   const problematicListingIds = useRef<Set<string>>(new Set());
+  // Keep track of the previous listings array to avoid unnecessary processing
+  const previousListingsRef = useRef<Listing[]>([]);
   
   useEffect(() => {
+    // Skip processing if listings array is the same reference as before
+    // This prevents unnecessary re-renders when the parent component re-renders
+    // but the listings array hasn't actually changed
+    if (listings === previousListingsRef.current) {
+      return;
+    }
+    
+    // Update the previous listings reference
+    previousListingsRef.current = listings;
+    
     if (!listings || !Array.isArray(listings)) {
       setVisibleListings([]);
       return;
@@ -62,7 +74,7 @@ export function useListingVisibility(listings: Listing[]) {
         }
         
         // Only log in development environment to reduce noise
-        if (process.env.NODE_ENV === 'development') {
+        if (process.env.NODE_ENV === 'development' && process.env.NEXT_PUBLIC_CO_DEV_ENV === 'true') {
           console.log(`Listing ${listing.id} - Status: ${listing.status}, Expires: ${expiresAt.toISOString()}, Now: ${now.toISOString()}, Expired: ${now > expiresAt}`);
         }
         
@@ -79,7 +91,7 @@ export function useListingVisibility(listings: Listing[]) {
     });
     
     // Only log in development environment to reduce noise
-    if (process.env.NODE_ENV === 'development') {
+    if (process.env.NODE_ENV === 'development' && process.env.NEXT_PUBLIC_CO_DEV_ENV === 'true') {
       console.log(`[useListingVisibility] Filtered ${listings.length} listings to ${filtered.length} visible listings`);
       
       // Log the IDs of filtered listings for debugging
@@ -94,7 +106,27 @@ export function useListingVisibility(listings: Listing[]) {
       }
     }
     
-    setVisibleListings(filtered);
+    // Only update state if the filtered listings have actually changed
+    // This prevents unnecessary re-renders
+    const currentListingIds = new Set(visibleListings.map(l => l.id));
+    const newListingIds = new Set(filtered.map(l => l.id));
+    
+    // Check if the sets are different
+    let hasChanged = currentListingIds.size !== newListingIds.size;
+    
+    if (!hasChanged) {
+      // Check if all IDs in the current set are also in the new set
+      for (const id of currentListingIds) {
+        if (!newListingIds.has(id)) {
+          hasChanged = true;
+          break;
+        }
+      }
+    }
+    
+    if (hasChanged) {
+      setVisibleListings(filtered);
+    }
   }, [listings]);
   
   return { visibleListings };

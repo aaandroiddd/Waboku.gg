@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useRef, useCallback } from 'react';
 
 interface CacheOptions {
   key: string;
@@ -6,10 +6,12 @@ interface CacheOptions {
 }
 
 export function useClientCache<T>(options: CacheOptions) {
-  const { key, expirationMinutes = 15 } = options;
+  // Use refs to ensure the functions don't change on re-renders
+  const optionsRef = useRef(options);
+  const { key, expirationMinutes = 15 } = optionsRef.current;
   
   // Function to get data from cache
-  const getFromCache = (): { data: T | null, expired: boolean } => {
+  const getFromCache = useCallback((): { data: T | null, expired: boolean } => {
     if (typeof window === 'undefined') return { data: null, expired: true };
     
     try {
@@ -32,10 +34,10 @@ export function useClientCache<T>(options: CacheOptions) {
       sessionStorage.removeItem(key);
       return { data: null, expired: true };
     }
-  };
+  }, [key, expirationMinutes]);
   
   // Function to save data to cache
-  const saveToCache = (data: T): void => {
+  const saveToCache = useCallback((data: T): void => {
     if (typeof window === 'undefined') return;
     
     try {
@@ -45,18 +47,24 @@ export function useClientCache<T>(options: CacheOptions) {
       };
       
       sessionStorage.setItem(key, JSON.stringify(cacheItem));
-      console.log(`Data cached for key: ${key}`);
+      
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`Data cached for key: ${key}`);
+      }
     } catch (error) {
       console.error(`Error caching data for key ${key}:`, error);
     }
-  };
+  }, [key]);
   
   // Function to clear specific cache
-  const clearCache = (): void => {
+  const clearCache = useCallback((): void => {
     if (typeof window === 'undefined') return;
     sessionStorage.removeItem(key);
-    console.log(`Cache cleared for key: ${key}`);
-  };
+    
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`Cache cleared for key: ${key}`);
+    }
+  }, [key]);
   
   return {
     getFromCache,

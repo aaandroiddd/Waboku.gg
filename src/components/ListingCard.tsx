@@ -190,20 +190,25 @@ export const ListingCard = memo(({ listing, isFavorite, onFavoriteClick, getCond
       return;
     }
     
+    // Prevent multiple checks for the same listing
+    let isMounted = true;
+    
     // Trigger a background check without waiting for the response
     const triggerBackgroundCheck = async () => {
+      if (!isMounted) return;
+      
       setIsCheckingExpiration(true);
       try {
+        // Add this listing to the checked list in sessionStorage before making the request
+        // This prevents duplicate requests if the component re-renders
+        checkedListingsArray.push(listing.id);
+        sessionStorage.setItem(checkedListingsKey, checkedListingsArray.join(','));
+        
         // Fire and forget - we don't need to wait for the response
         fetch('/api/listings/check-expiration', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ listingId: listing.id }),
-        })
-        .then(() => {
-          // Add this listing to the checked list in sessionStorage
-          checkedListingsArray.push(listing.id);
-          sessionStorage.setItem(checkedListingsKey, checkedListingsArray.join(','));
         })
         .catch(err => {
           // Silently log any errors without affecting the user experience
@@ -213,12 +218,18 @@ export const ListingCard = memo(({ listing, isFavorite, onFavoriteClick, getCond
         // Ignore any errors in the background check
         console.error('Error triggering background expiration check:', error);
       } finally {
-        setIsCheckingExpiration(false);
+        if (isMounted) {
+          setIsCheckingExpiration(false);
+        }
       }
     };
     
     // Only run the check once per component mount
     triggerBackgroundCheck();
+    
+    return () => {
+      isMounted = false;
+    };
   }, [listing.id]); // Only depend on listing.id, not the entire listing object
 
   useEffect(() => {

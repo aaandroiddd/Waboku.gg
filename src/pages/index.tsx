@@ -266,8 +266,15 @@ export default function Home() {
       'ufKDqtR3DUt2Id2RdLfi'  // Known problematic listing
     ]);
     
+    // Flag to prevent multiple fetches
+    let isFetching = false;
+    // Flag to track if component is still mounted
+    let isMounted = true;
+    
     async function fetchListings() {
-      if (typeof window === 'undefined') return;
+      if (typeof window === 'undefined' || isFetching) return;
+      
+      isFetching = true;
       
       // If we have valid cached listings, use them first for immediate display
       if (cacheValid) {
@@ -283,14 +290,18 @@ export default function Home() {
           // Process cached listings with location data if available
           if (latitude && longitude) {
             const processedListings = processListingsWithLocation(filteredParsedListings, latitude, longitude);
-            setListings(processedListings);
-            setFilteredListings(processedListings);
+            if (isMounted) {
+              setListings(processedListings);
+              setFilteredListings(processedListings);
+              setLoading(false);
+            }
           } else {
-            setListings(filteredParsedListings);
-            setFilteredListings(filteredParsedListings);
+            if (isMounted) {
+              setListings(filteredParsedListings);
+              setFilteredListings(filteredParsedListings);
+              setLoading(false);
+            }
           }
-          
-          setLoading(false);
           
           // If cache is older than 2 minutes, refresh in background
           if (cacheAge > 2 * 60 * 1000) {
@@ -299,6 +310,7 @@ export default function Home() {
             fetchFromFirestore(false);
           }
           
+          isFetching = false;
           return;
         } catch (cacheError) {
           console.error('Error parsing cached listings:', cacheError);
@@ -307,7 +319,8 @@ export default function Home() {
       }
       
       // No valid cache, fetch from Firestore
-      fetchFromFirestore(true);
+      await fetchFromFirestore(true);
+      isFetching = false;
     }
     
     // Helper function to process listings with location data
@@ -353,7 +366,7 @@ export default function Home() {
     // Function to fetch listings from Firestore
     async function fetchFromFirestore(showLoading: boolean) {
       try {
-        if (showLoading) {
+        if (showLoading && isMounted) {
           setLoading(true);
         }
         
@@ -362,7 +375,7 @@ export default function Home() {
         
         if (!db) {
           console.error('Firestore database instance is null');
-          if (showLoading) setLoading(false);
+          if (showLoading && isMounted) setLoading(false);
           return;
         }
         
@@ -427,31 +440,30 @@ export default function Home() {
         }
 
         // Set both state variables at once to avoid multiple renders
-        setListings(fetchedListings);
-        setFilteredListings(fetchedListings);
+        if (isMounted) {
+          setListings(fetchedListings);
+          setFilteredListings(fetchedListings);
+        }
       } catch (error) {
         console.error('Error fetching listings:', error);
-        setListings([]);
-        setFilteredListings([]);
-      } finally {
-        if (showLoading) {
-          setLoading(false);
+        if (isMounted) {
+          setListings([]);
+          setFilteredListings([]);
         }
-        
-        // If this is the first visit and we didn't get any listings, try fetching again
-        // This helps with the issue where first-time visitors don't see listings
-        if (isFirstVisit && listings.length === 0) {
-          console.log('First visit with no listings, scheduling a refetch');
-          setTimeout(() => {
-            console.log('Executing scheduled refetch');
-            fetchFromFirestore(true);
-          }, 1000); // Retry after 1 second
+      } finally {
+        if (showLoading && isMounted) {
+          setLoading(false);
         }
       }
     }
 
     // Fetch listings immediately
     fetchListings();
+    
+    // Cleanup function to prevent state updates after unmount
+    return () => {
+      isMounted = false;
+    };
   }, [latitude, longitude]);
 
   const [activeSearchParams, setActiveSearchParams] = useState({
