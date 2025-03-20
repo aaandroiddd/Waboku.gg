@@ -778,6 +778,7 @@ export function useListings({ userId, searchQuery, showOnlyActive = false }: Use
 
   return { 
     listings, 
+    setListings, // Expose setListings to allow direct state updates
     isLoading, 
     error, 
     createListing, 
@@ -786,6 +787,7 @@ export function useListings({ userId, searchQuery, showOnlyActive = false }: Use
     updateListingStatus,
     permanentlyDeleteListing,
     deleteListing,
-    restoreListing
+    restoreListing,
+    refreshListings
   };
 }

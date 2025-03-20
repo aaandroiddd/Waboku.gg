@@ -45,6 +45,50 @@ const DashboardComponent = () => {
   const handleRestoreListing = async (listingId: string) => {
     try {
       await updateListingStatus(listingId, 'active');
+      
+      // Update local state to immediately reflect the change
+      // This ensures the listing moves from archived to active tab without requiring a refresh
+      setListings(prevListings => 
+        prevListings.map(listing => 
+          listing.id === listingId 
+            ? { 
+                ...listing, 
+                status: 'active',
+                archivedAt: null,
+                // Set new creation date and expiration based on account tier
+                createdAt: new Date(),
+                expiresAt: (() => {
+                  const now = new Date();
+                  const tierDuration = (profile?.tier === 'premium' ? 720 : 48);
+                  const expirationTime = new Date(now);
+                  expirationTime.setHours(expirationTime.getHours() + tierDuration);
+                  return expirationTime;
+                })()
+              } 
+            : listing
+        )
+      );
+      
+      // Clear any cached listings data to ensure fresh data
+      if (user) {
+        try {
+          // Create cache keys for the user's listings
+          const userListingsCacheKey = `listings_${user.uid}_all_none`;
+          const activeListingsCacheKey = `listings_${user.uid}_active_none`;
+          
+          // Clear from localStorage to ensure fresh data
+          localStorage.removeItem(userListingsCacheKey);
+          localStorage.removeItem(activeListingsCacheKey);
+          
+          console.log('Cleared listings cache after restoring');
+        } catch (cacheError) {
+          console.error('Error clearing listings cache:', cacheError);
+        }
+      }
+      
+      // Refresh listings to ensure server data is up to date
+      refreshListings();
+      
       toast({
         title: "Listing restored",
         description: "The listing has been moved back to your active listings.",
@@ -65,7 +109,7 @@ const DashboardComponent = () => {
   const { tab = 'active', new: newListingId } = router.query;
   const { user, loading: authLoading } = useAuth();
   const [error, setError] = useState<string | null>(null);
-  const { listings: allListings, loading: listingsLoading, error: listingsError, refreshListings, updateListingStatus, permanentlyDeleteListing } = useListings({ 
+  const { listings: allListings, setListings, loading: listingsLoading, error: listingsError, refreshListings, updateListingStatus, permanentlyDeleteListing } = useListings({ 
     userId: user?.uid,
     showOnlyActive: false
   });
@@ -272,12 +316,45 @@ const DashboardComponent = () => {
         });
       } else {
         await updateListingStatus(listingId, 'archived');
+        
+        // Update local state to immediately reflect the change
+        // This ensures the listing moves from active to archived tab without requiring a refresh
+        setListings(prevListings => 
+          prevListings.map(listing => 
+            listing.id === listingId 
+              ? { 
+                  ...listing, 
+                  status: 'archived',
+                  archivedAt: new Date(),
+                } 
+              : listing
+          )
+        );
+        
         toast({
           title: "Listing archived",
           description: "The listing has been moved to your archived listings.",
           duration: 3000,
         });
       }
+      
+      // Clear any cached listings data to ensure fresh data
+      if (user) {
+        try {
+          // Create cache keys for the user's listings
+          const userListingsCacheKey = `listings_${user.uid}_all_none`;
+          const activeListingsCacheKey = `listings_${user.uid}_active_none`;
+          
+          // Clear from localStorage to ensure fresh data
+          localStorage.removeItem(userListingsCacheKey);
+          localStorage.removeItem(activeListingsCacheKey);
+          
+          console.log('Cleared listings cache after archiving/deleting');
+        } catch (cacheError) {
+          console.error('Error clearing listings cache:', cacheError);
+        }
+      }
+      
       // Refresh listings after successful deletion
       if (refreshListings) {
         refreshListings();
