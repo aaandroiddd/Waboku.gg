@@ -778,6 +778,237 @@ export default function ListingPage() {
       </div>
     );
   }
+  
+  // Check if the listing is archived and display the "no longer available" message
+  if (listing.status === 'archived' || listing.archivedAt) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <div className="container mx-auto p-4 flex-1">
+          <Button 
+            variant="ghost" 
+            className="mb-4" 
+            onClick={() => router.back()}
+          >
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back
+          </Button>
+          
+          <Card className="max-w-6xl mx-auto bg-black/[0.2] dark:bg-black/40 backdrop-blur-md border-muted">
+            <CardContent className="p-4 md:p-6">
+              <div className="bg-red-500/90 text-white p-4 rounded-md mb-4 shadow-md">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                    </svg>
+                    <span className="font-semibold text-lg">
+                      This listing is no longer available
+                    </span>
+                  </div>
+                </div>
+                <p className="mt-2 text-white/90 pl-8">
+                  The seller has archived this listing. It may have been sold elsewhere or is no longer for sale.
+                </p>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8">
+                {/* Mobile title - only visible on small screens */}
+                <div className="md:hidden space-y-4 mb-4">
+                  <div>
+                    <h1 className="text-2xl font-bold mb-3">{listing.title}</h1>
+                    <div className="flex flex-wrap gap-2">
+                      {listing.game && (
+                        <GameCategoryBadge game={listing.game} variant="secondary" className="text-sm" />
+                      )}
+                      <Badge className={`text-sm ${getConditionColor(listing.condition)}`}>
+                        {listing.condition}
+                      </Badge>
+                      {listing.isGraded && (
+                        <Badge variant="outline" className="bg-blue-500 text-white text-sm flex items-center gap-1">
+                          <svg 
+                            viewBox="0 0 24 24" 
+                            className="w-4 h-4" 
+                            fill="none" 
+                            stroke="currentColor" 
+                            strokeWidth="2"
+                          >
+                            <path d="M12 2L2 7L12 12L22 7L12 2Z" />
+                            <path d="M2 17L12 22L22 17" />
+                            <path d="M2 12L12 17L22 12" />
+                          </svg>
+                          {listing.gradingCompany} {listing.gradeLevel}
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-4 md:space-y-6 order-1 md:order-2">
+                  <div className="relative">
+                    <Carousel 
+                      className="w-full h-[300px] md:h-[400px] touch-pan-y"
+                      onSelect={handleCarouselChange}
+                      defaultIndex={listing.coverImageIndex || 0}
+                      index={currentImageIndex}
+                    >
+                      <div className="absolute top-4 right-4 z-10">
+                        <Badge variant="secondary" className="bg-background/80 backdrop-blur-sm">
+                          {currentImageIndex + 1} of {listing.imageUrls.length}
+                        </Badge>
+                      </div>
+                      <CarouselContent>
+                        {listing.imageUrls.map((url, index) => (
+                          <CarouselItem key={index} className="flex items-center justify-center h-full">
+                            <div className="relative w-full h-full flex items-center justify-center p-4">
+                              <div className="relative w-full h-full flex items-center justify-center">
+                                <div className="relative w-full h-full">
+                                  <div className="absolute inset-0 rounded-lg animate-pulse bg-gradient-to-r from-gray-200/20 via-gray-100/20 to-gray-200/20 dark:from-gray-800/20 dark:via-gray-700/20 dark:to-gray-800/20 bg-[length:200%_100%]" />
+                                  <Image
+                                    src={url}
+                                    alt={`${listing.title} - Image ${index + 1}`}
+                                    fill
+                                    className="object-contain rounded-lg"
+                                    sizes="(max-width: 640px) 90vw, (max-width: 768px) 70vw, (max-width: 1024px) 50vw, 600px"
+                                    priority={index === 0}
+                                    loading={index === 0 ? "eager" : "lazy"}
+                                    quality={85}
+                                    onError={(e) => {
+                                      const target = e.target as HTMLImageElement;
+                                      target.src = '/images/rect.png';
+                                    }}
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                          </CarouselItem>
+                        ))}
+                      </CarouselContent>
+                      <CarouselPrevious className="hidden md:flex -left-4" />
+                      <CarouselNext className="hidden md:flex -right-4" />
+                    </Carousel>
+                  </div>
+
+                  <div className="text-center">
+                    <div className="text-3xl md:text-4xl font-bold">
+                      {formatPrice(listing.price)}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-4 md:space-y-6 order-2 md:order-1">
+                  {/* Desktop title - hidden on mobile */}
+                  <div className="hidden md:block">
+                    <h1 className="text-3xl font-bold mb-3">{listing.title}</h1>
+                    <div className="flex flex-wrap gap-2">
+                      {listing.game && (
+                        <GameCategoryBadge game={listing.game} variant="secondary" className="text-sm" />
+                      )}
+                      <Badge className={`text-sm ${getConditionColor(listing.condition)}`}>
+                        {listing.condition}
+                      </Badge>
+                      {listing.isGraded && (
+                        <Badge variant="outline" className="bg-blue-500 text-white text-sm flex items-center gap-1">
+                          <svg 
+                            viewBox="0 0 24 24" 
+                            className="w-4 h-4" 
+                            fill="none" 
+                            stroke="currentColor" 
+                            strokeWidth="2"
+                          >
+                            <path d="M12 2L2 7L12 12L22 7L12 2Z" />
+                            <path d="M2 17L12 22L22 17" />
+                            <path d="M2 12L12 17L22 12" />
+                          </svg>
+                          {listing.gradingCompany} {listing.gradeLevel}
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+
+                  <Separator />
+
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="ghost"
+                        className="flex items-center justify-start space-x-2 h-8"
+                      >
+                        <User className="h-4 w-4" />
+                        <UserNameLink userId={listing.userId} initialUsername={listing.username} />
+                      </Button>
+                      <StripeSellerBadge userId={listing.userId} />
+                    </div>
+                    <div className="flex items-center text-muted-foreground text-sm">
+                      <MapPin className="h-4 w-4 mr-1" />
+                      <span>{listing.city}, {listing.state}</span>
+                      {listing.location?.latitude && listing.location?.longitude && (
+                        <DistanceIndicator 
+                          targetLat={listing.location.latitude} 
+                          targetLon={listing.location.longitude} 
+                        />
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    {listing.cardName && (
+                      <div>
+                        <h2 className="text-lg font-semibold mb-2">Card Name</h2>
+                        <p className="text-muted-foreground text-sm md:text-base">{listing.cardName}</p>
+                      </div>
+                    )}
+                    
+                    <div>
+                      <h2 className="text-lg font-semibold mb-2">Description</h2>
+                      {(() => {
+                        const MarkdownContent = dynamic(() => import('@/components/MarkdownContent').then(mod => mod.MarkdownContent), {
+                          ssr: false,
+                          loading: () => <p className="text-muted-foreground whitespace-pre-wrap text-sm md:text-base overflow-hidden break-words">{listing.description}</p>
+                        });
+                        
+                        return <div className="max-w-full overflow-hidden">
+                          <MarkdownContent content={listing.description} className="text-muted-foreground text-sm md:text-base" />
+                        </div>;
+                      })()}
+                    </div>
+
+                    {listing.quantity && parseInt(listing.quantity) > 0 && (
+                      <div>
+                        <h2 className="text-lg font-semibold mb-2">Quantity Available</h2>
+                        <p className="text-muted-foreground text-sm md:text-base">{listing.quantity}</p>
+                      </div>
+                    )}
+                  </div>
+
+                  <Separator />
+
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                    <div className="flex items-center text-sm text-muted-foreground">
+                      <Calendar className="h-4 w-4 mr-2" />
+                      Listed on {listing.createdAt.toLocaleDateString()}
+                    </div>
+                  </div>
+                  
+                  {/* Action buttons section - disabled for archived listings */}
+                  <div className="flex flex-col gap-3">
+                    <Button
+                      variant="outline"
+                      size="lg"
+                      className="flex-1 bg-gray-200 text-gray-500 hover:bg-gray-200 cursor-not-allowed"
+                      disabled={true}
+                    >
+                      No Longer Available
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
 
   const handleMakeOffer = () => {
     if (!user) {

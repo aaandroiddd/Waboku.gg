@@ -246,10 +246,12 @@ export function useListings({ userId, searchQuery, showOnlyActive = false }: Use
         const expirationTime = new Date(now);
         expirationTime.setHours(expirationTime.getHours() + tierDuration);
         
+        // When restoring from archived, ensure we properly reset all archive-related fields
+        updateData.status = 'active';
         updateData.createdAt = now;
         updateData.expiresAt = expirationTime;
-        updateData.archivedAt = null;
-        updateData.originalCreatedAt = null;
+        updateData.archivedAt = null; // Remove archived timestamp
+        updateData.originalCreatedAt = null; // Remove original creation date
         updateData.accountTier = accountTier; // Store the account tier with the listing
       } else {
         // For inactive status, keep current expiration but remove archive-related fields
@@ -257,8 +259,23 @@ export function useListings({ userId, searchQuery, showOnlyActive = false }: Use
         updateData.originalCreatedAt = null;
       }
 
+      console.log(`Updating listing ${listingId} status to ${status} with data:`, updateData);
+      
       // Update the listing status
       await updateDoc(listingRef, updateData);
+      
+      // Verify the update was successful
+      const updatedSnap = await getDoc(listingRef);
+      if (updatedSnap.exists()) {
+        const updatedData = updatedSnap.data();
+        console.log(`Listing ${listingId} updated status:`, updatedData.status);
+        
+        if (updatedData.status !== status) {
+          console.error(`Failed to update listing status to ${status}. Current status: ${updatedData.status}`);
+          // Try one more time with a direct status update
+          await updateDoc(listingRef, { status: status });
+        }
+      }
       
       // Update local state
       setListings(prevListings => 
