@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getFirebaseAdmin } from '@/lib/firebase-admin';
 import { Timestamp } from 'firebase-admin/firestore';
 import { ACCOUNT_TIERS } from '@/types/account';
+import { parseDate, createFutureDate } from '@/lib/date-utils';
 
 // Add more detailed logging for debugging
 const logError = (message: string, error: any) => {
@@ -98,10 +99,8 @@ export async function checkAndArchiveExpiredListing(listingId: string) {
       
       if (data.expiresAt) {
         try {
-          // Try to convert the expiresAt field to a Date
-          expirationTime = data.expiresAt?.toDate ? data.expiresAt.toDate() : 
-                          data.expiresAt instanceof Date ? data.expiresAt : 
-                          new Date(data.expiresAt);
+          // Use our utility function to safely parse the date
+          expirationTime = parseDate(data.expiresAt);
           
           console.log(`[ListingExpiration] Listing ${listingId} has explicit expiresAt: ${expirationTime.toISOString()}`);
         } catch (expiresAtError) {
@@ -110,9 +109,8 @@ export async function checkAndArchiveExpiredListing(listingId: string) {
           // Fall back to calculating from createdAt
           let createdAt: Date;
           try {
-            createdAt = data.createdAt?.toDate ? data.createdAt.toDate() : 
-                      data.createdAt instanceof Date ? data.createdAt : 
-                      new Date(data.createdAt || Date.now());
+            // Use our utility function to safely parse the date
+            createdAt = parseDate(data.createdAt, new Date());
           } catch (timestampError) {
             console.error(`[ListingExpiration] Error converting createdAt timestamp for listing ${listingId}:`, timestampError);
             createdAt = new Date(); // Fallback to current date

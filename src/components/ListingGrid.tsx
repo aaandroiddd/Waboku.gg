@@ -158,6 +158,21 @@ export function ListingGrid({
     if (process.env.NODE_ENV === 'development') {
       console.log('ListingGrid received listings:', rawListings.length);
       console.log('ListingGrid visible listings:', listings.length);
+      
+      // Log detailed information about the first few listings for debugging
+      if (rawListings.length > 0 && listings.length === 0) {
+        console.log('Listings that were filtered out:', 
+          rawListings.slice(0, 3).map(listing => ({
+            id: listing.id,
+            title: listing.title,
+            status: listing.status,
+            expiresAt: listing.expiresAt instanceof Date 
+              ? listing.expiresAt.toISOString() 
+              : String(listing.expiresAt),
+            game: listing.game
+          }))
+        );
+      }
     }
   }, [rawListings.length, listings.length]);
   

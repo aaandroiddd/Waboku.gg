@@ -18,6 +18,7 @@ import { useRouter } from 'next/router';
 import { cn } from '@/lib/utils';
 import { loadStripe } from '@stripe/stripe-js';
 import { toast } from 'sonner';
+import { parseDate, isExpired } from '@/lib/date-utils';
 
 const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
   const R = 3959; // Earth's radius in miles
@@ -160,6 +161,38 @@ export const ListingCard = memo(({ listing, isFavorite, onFavoriteClick, getCond
   const { location } = useLocation();
   const [calculatedDistance, setCalculatedDistance] = useState<number | null>(null);
   const [isCheckingExpiration, setIsCheckingExpiration] = useState(false);
+
+  // Log listing details in development mode
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'development') {
+      // Safely parse expiresAt date
+      let expiresAtDate: Date | null = null;
+      try {
+        if (listing.expiresAt instanceof Date) {
+          expiresAtDate = listing.expiresAt;
+        } else if (listing.expiresAt && typeof listing.expiresAt === 'string') {
+          expiresAtDate = new Date(listing.expiresAt);
+        } else if (listing.expiresAt && typeof listing.expiresAt.toDate === 'function') {
+          expiresAtDate = listing.expiresAt.toDate();
+        } else if (listing.expiresAt && typeof listing.expiresAt === 'object' && 'seconds' in listing.expiresAt) {
+          expiresAtDate = new Date((listing.expiresAt as any).seconds * 1000);
+        } else {
+          expiresAtDate = new Date(listing.expiresAt as any);
+        }
+      } catch (error) {
+        console.error(`Failed to parse expiresAt date for listing ${listing.id}:`, error);
+      }
+
+      console.log(`ListingCard rendering for listing ${listing.id}:`, {
+        title: listing.title,
+        status: listing.status,
+        expiresAt: expiresAtDate ? expiresAtDate.toISOString() : 'Invalid Date',
+        isExpired: expiresAtDate ? new Date() > expiresAtDate : false,
+        archivedAt: listing.archivedAt,
+        game: listing.game
+      });
+    }
+  }, [listing]);
 
   // Silently check if listing is expired in the background
   useEffect(() => {

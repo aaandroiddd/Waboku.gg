@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Listing } from '@/types/database';
+import { parseDate, isExpired } from '@/lib/date-utils';
 
 /**
  * Hook to handle listing visibility filtering
@@ -40,37 +41,24 @@ export function useListingVisibility(listings: Listing[]) {
       
       try {
         // Check if the listing has a status field and it's active
-        if (listing.status !== 'active') return false;
+        if (listing.status !== 'active') {
+          if (process.env.NODE_ENV === 'development') {
+            console.log(`Listing ${listing.id} filtered out due to status: ${listing.status}`);
+          }
+          return false;
+        }
         
         // Check if the listing has expired
         const now = new Date();
         
-        // Properly handle different types of expiresAt
-        let expiresAt: Date;
+        // Use our utility function to parse the date safely
+        const expiresAt = parseDate(listing.expiresAt, null);
         
-        if (listing.expiresAt instanceof Date) {
-          expiresAt = listing.expiresAt;
-        } else if (listing.expiresAt && typeof listing.expiresAt.toDate === 'function') {
-          // Handle Firestore timestamp
-          expiresAt = listing.expiresAt.toDate();
-        } else if (listing.expiresAt && typeof listing.expiresAt === 'object' && 'seconds' in listing.expiresAt) {
-          // Handle Firestore timestamp in serialized form
-          expiresAt = new Date((listing.expiresAt as any).seconds * 1000);
-        } else {
-          // Fallback for other formats
-          try {
-            expiresAt = new Date(listing.expiresAt as any);
-            
-            // Validate the date is valid
-            if (isNaN(expiresAt.getTime())) {
-              throw new Error('Invalid date');
-            }
-          } catch (error) {
-            console.error(`Failed to parse expiresAt date for listing ${listing.id}:`, listing.expiresAt);
-            // Mark this listing as problematic to avoid repeated processing
-            problematicListingIds.current.add(listing.id);
-            return false;
-          }
+        // If we couldn't parse the date, skip this listing
+        if (!expiresAt) {
+          console.error(`Failed to parse expiresAt date for listing ${listing.id}:`, listing.expiresAt);
+          problematicListingIds.current.add(listing.id);
+          return false;
         }
         
         // Only log in development environment to reduce noise
