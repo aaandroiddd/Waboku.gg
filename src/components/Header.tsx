@@ -199,6 +199,6 @@ export default function Header({ animate = false }: HeaderProps) {
         onConfirm={handleSignOut}
         onCancel={() => setShowSignOutDialog(false)}
       />
-    </header>
+    </motion.header>
   );
 }
