@@ -22,7 +22,7 @@ const nextConfig = {
               object-src 'none';
               base-uri 'self';
               form-action 'self';
-              frame-ancestors 'self' https://*.co.dev;
+              frame-ancestors 'self' https://*.co.dev https://*.vercel.app;
               frame-src 'self' https://*.stripe.com https://*.firebaseapp.com https://accounts.google.com https://*.firebaseio.com;
               connect-src 'self' 
                 https://*.stripe.com 
@@ -34,7 +34,8 @@ const nextConfig = {
                 https://*.firebaseapp.com
                 wss://*.firebaseio.com
                 https://identitytoolkit.googleapis.com
-                https://*.preview.co.dev;
+                https://*.preview.co.dev
+                https://*.vercel.app;
               media-src 'self' https: data:;
             `.replace(/\s+/g, ' ').trim()
           }
