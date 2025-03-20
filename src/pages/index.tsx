@@ -574,7 +574,7 @@ export default function Home() {
       </Head>
 
       <div className="bg-background min-h-screen flex flex-col">
-        <Header />
+        <Header animate={true} />
         <main className="flex-1">
           {/* Game Categories */}
           <GameCategories />

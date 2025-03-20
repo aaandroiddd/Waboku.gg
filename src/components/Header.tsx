@@ -15,13 +15,18 @@ import { Menu, LayoutDashboard, Heart, MessageSquare, Settings, Store, LogOut } 
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { SignOutDialog } from "./SignOutDialog";
+import { motion } from "framer-motion";
 
 // Dynamically import the auth-dependent navigation component
 const AuthNav = dynamic(() => import("./AuthNav"), {
   ssr: false,
 });
 
-export default function Header() {
+interface HeaderProps {
+  animate?: boolean;
+}
+
+export default function Header({ animate = false }: HeaderProps) {
   const router = useRouter();
   const { user, profile, signOut } = useAuth();
   const isAuthPage = router.pathname.startsWith("/auth/");
@@ -39,8 +44,28 @@ export default function Header() {
     setIsMobileMenuOpen(false);
   };
 
+  // Animation variants for the slide-down effect
+  const headerVariants = {
+    hidden: { y: -100, opacity: 0 },
+    visible: { 
+      y: 0, 
+      opacity: 1,
+      transition: {
+        type: "spring",
+        damping: 20,
+        stiffness: 100,
+        duration: 0.5
+      }
+    }
+  };
+
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <motion.header 
+      className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60"
+      initial={animate ? "hidden" : "visible"}
+      animate="visible"
+      variants={headerVariants}
+    >
       <div className="container mx-auto px-4 h-12 flex items-center justify-between gap-4">
         <div>
           <Link href="/" className="flex items-center">
