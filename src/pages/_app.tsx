@@ -42,6 +42,12 @@ const MainContent = memo(({ Component, pageProps, pathname }: {
   const account = useAccount();
   const { isLoading } = useLoading();
   const { useThemeSync } = require('@/hooks/useThemeSync');
+  const [isMounted, setIsMounted] = useState(false);
+
+  // Set mounted state on client-side
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   // Show loading screen while auth or account is initializing
   if (auth.isLoading || account.isLoading) {
@@ -51,11 +57,16 @@ const MainContent = memo(({ Component, pageProps, pathname }: {
   // Initialize theme sync
   useThemeSync();
 
+  // Determine if we're on mobile for simpler transitions
+  const isMobile = isMounted && window.innerWidth < 768;
+
   return (
     <>
+      {/* Always show loading screen when isLoading is true */}
       <LoadingScreen isLoading={isLoading} />
-      {/* On mobile, we'll use a simpler transition without AnimatePresence to avoid double animations */}
-      {typeof window !== 'undefined' && window.innerWidth < 768 ? (
+      
+      {/* Use different transition approaches for mobile vs desktop */}
+      {isMobile ? (
         <PageTransition key={pathname}>
           <Component {...pageProps} />
         </PageTransition>
@@ -66,8 +77,9 @@ const MainContent = memo(({ Component, pageProps, pathname }: {
           </PageTransition>
         </AnimatePresence>
       )}
+      
       <Toaster />
-      {typeof window !== 'undefined' && <FirebaseConnectionHandler />}
+      {isMounted && <FirebaseConnectionHandler />}
     </>
   );
 });

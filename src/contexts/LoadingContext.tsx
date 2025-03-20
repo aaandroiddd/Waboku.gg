@@ -32,12 +32,14 @@ export function LoadingProvider({ children }: LoadingProviderProps) {
       if (url.includes('#') && router.asPath.split('#')[0] === url.split('#')[0]) {
         return;
       }
+      // Immediately set loading to true when navigation starts
       setIsLoading(true);
     };
 
     const handleComplete = () => {
-      // Add a small delay to ensure content has time to render
-      setTimeout(() => setIsLoading(false), 300);
+      // Keep loading true for a moment to allow content to render
+      // This prevents flashing of previous page content
+      setTimeout(() => setIsLoading(false), 400);
     };
 
     router.events.on('routeChangeStart', handleStart);

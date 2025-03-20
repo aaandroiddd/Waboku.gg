@@ -32,11 +32,12 @@ const pageVariants = {
 export function PageTransition({ children }: PageTransitionProps) {
   const { stopLoading } = useLoading();
 
-  // When the animation completes, ensure loading is stopped
+  // When the component mounts, ensure we're ready to animate in
   useEffect(() => {
+    // Give a small delay to ensure content is ready before animation starts
     const timer = setTimeout(() => {
       stopLoading();
-    }, 400); // Match the duration of the animation
+    }, 200);
     
     return () => clearTimeout(timer);
   }, [stopLoading]);

@@ -7,7 +7,7 @@ export function LoadingScreen({ isLoading, message = "Loading Waboku.gg..." }: {
   const [loadingTimerId, setLoadingTimerId] = useState<NodeJS.Timeout | null>(null)
 
   useEffect(() => {
-    // Only show loading screen if loading persists for more than 300ms
+    // Only show loading screen if loading persists for more than 200ms
     // This prevents flashing for quick loads
     if (isLoading) {
       // Clear any existing timer
@@ -18,9 +18,13 @@ export function LoadingScreen({ isLoading, message = "Loading Waboku.gg..." }: {
       // Set a new timer to show loading screen after delay
       const timerId = setTimeout(() => {
         setVisible(true)
-      }, 300)
+      }, 200) // Reduced from 300ms to 200ms for faster feedback
       
       setLoadingTimerId(timerId)
+      
+      return () => {
+        if (timerId) clearTimeout(timerId)
+      }
     } else {
       // Clear the timer if loading completes before delay
       if (loadingTimerId) {
@@ -31,18 +35,17 @@ export function LoadingScreen({ isLoading, message = "Loading Waboku.gg..." }: {
       // Add a small delay before hiding to allow for fade-out animation
       const timer = setTimeout(() => {
         setVisible(false)
-      }, 500)
+      }, 300) // Reduced from 500ms to 300ms for faster transitions
+      
       return () => clearTimeout(timer)
     }
   }, [isLoading, loadingTimerId])
 
-  if (!visible) return null
-
   return (
     <div
       className={cn(
-        "fixed inset-0 z-50 flex flex-col items-center justify-center bg-background/90 backdrop-blur-sm transition-opacity duration-500",
-        isLoading ? "opacity-100" : "opacity-0"
+        "fixed inset-0 z-50 flex flex-col items-center justify-center bg-background/90 backdrop-blur-sm transition-opacity duration-300",
+        visible && isLoading ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
       )}
     >
       <div className="flex flex-col items-center justify-center space-y-4">
