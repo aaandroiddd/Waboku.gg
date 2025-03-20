@@ -7,8 +7,8 @@ export function LoadingScreen({ isLoading, message = "Loading Waboku.gg..." }: {
   const [loadingTimerId, setLoadingTimerId] = useState<NodeJS.Timeout | null>(null)
 
   useEffect(() => {
-    // Only show loading screen if loading persists for more than 200ms
-    // This prevents flashing for quick loads
+    // Only show loading screen if loading persists for more than 100ms
+    // This prevents flashing for quick loads but shows feedback faster
     if (isLoading) {
       // Clear any existing timer
       if (loadingTimerId) {
@@ -18,7 +18,7 @@ export function LoadingScreen({ isLoading, message = "Loading Waboku.gg..." }: {
       // Set a new timer to show loading screen after delay
       const timerId = setTimeout(() => {
         setVisible(true)
-      }, 200) // Reduced from 300ms to 200ms for faster feedback
+      }, 100) // Reduced from 200ms to 100ms for faster feedback
       
       setLoadingTimerId(timerId)
       
@@ -32,21 +32,23 @@ export function LoadingScreen({ isLoading, message = "Loading Waboku.gg..." }: {
         setLoadingTimerId(null)
       }
       
-      // Add a small delay before hiding to allow for fade-out animation
-      const timer = setTimeout(() => {
-        setVisible(false)
-      }, 300) // Reduced from 500ms to 300ms for faster transitions
+      // Immediately start fade-out animation
+      setVisible(false)
       
-      return () => clearTimeout(timer)
+      return () => {}
     }
   }, [isLoading, loadingTimerId])
 
   return (
     <div
       className={cn(
-        "fixed inset-0 z-50 flex flex-col items-center justify-center bg-background/90 backdrop-blur-sm transition-opacity duration-300",
+        "fixed inset-0 z-50 flex flex-col items-center justify-center bg-background/90 backdrop-blur-sm transition-opacity duration-200",
         visible && isLoading ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
       )}
+      // Add aria-hidden to improve accessibility
+      aria-hidden={!visible || !isLoading}
+      // Add role="status" for screen readers
+      role="status"
     >
       <div className="flex flex-col items-center justify-center space-y-4">
         <LoadingAnimation color="var(--theme-primary, #000)" />

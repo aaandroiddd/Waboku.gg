@@ -37,9 +37,9 @@ export function LoadingProvider({ children }: LoadingProviderProps) {
     };
 
     const handleComplete = () => {
-      // Keep loading true for a moment to allow content to render
-      // This prevents flashing of previous page content
-      setTimeout(() => setIsLoading(false), 400);
+      // Reduce the delay before hiding the loading screen
+      // This helps prevent layout shifts by allowing content to render faster
+      setTimeout(() => setIsLoading(false), 100);
     };
 
     router.events.on('routeChangeStart', handleStart);

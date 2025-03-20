@@ -46,7 +46,7 @@ export default function Header({ animate = true }: HeaderProps) {
 
   // Animation variants for the slide-down effect
   const headerVariants = {
-    hidden: { y: -100, opacity: 0 },
+    hidden: { y: 0, opacity: 0 }, // Changed from y: -100 to y: 0 to prevent layout shift
     visible: { 
       y: 0, 
       opacity: 1,
@@ -54,7 +54,7 @@ export default function Header({ animate = true }: HeaderProps) {
         type: "spring",
         damping: 20,
         stiffness: 100,
-        duration: 0.5
+        duration: 0.3 // Reduced from 0.5 to 0.3 for faster appearance
       }
     }
   };
@@ -65,6 +65,8 @@ export default function Header({ animate = true }: HeaderProps) {
       initial={animate ? "hidden" : "visible"}
       animate="visible"
       variants={headerVariants}
+      // Add layout="preserved" to maintain layout during animation
+      layout="preserved"
     >
       <div className="container mx-auto px-4 h-12 flex items-center justify-between gap-4">
         <div>

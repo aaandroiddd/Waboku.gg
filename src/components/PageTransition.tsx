@@ -9,19 +9,20 @@ interface PageTransitionProps {
 const pageVariants = {
   initial: {
     opacity: 0,
-    y: 20,
+    // Remove the y-axis movement to prevent layout shift
+    y: 0,
   },
   animate: {
     opacity: 1,
     y: 0,
     transition: {
-      duration: 0.4,
+      duration: 0.3, // Reduced from 0.4 to 0.3 for faster transitions
       ease: [0.23, 1, 0.32, 1],
     },
   },
   exit: {
     opacity: 0,
-    y: 20,
+    y: 0, // Keep at 0 to prevent layout shift during exit
     transition: {
       duration: 0.2,
       ease: [0.23, 1, 0.32, 1],
@@ -32,14 +33,12 @@ const pageVariants = {
 export function PageTransition({ children }: PageTransitionProps) {
   const { stopLoading } = useLoading();
 
-  // When the component mounts, ensure we're ready to animate in
+  // When the component mounts, stop loading immediately
   useEffect(() => {
-    // Give a small delay to ensure content is ready before animation starts
-    const timer = setTimeout(() => {
-      stopLoading();
-    }, 200);
+    // Immediately stop loading to prevent layout shifts
+    stopLoading();
     
-    return () => clearTimeout(timer);
+    return () => {};
   }, [stopLoading]);
 
   // Check if we're running on a mobile device to reduce animation complexity
@@ -53,6 +52,8 @@ export function PageTransition({ children }: PageTransitionProps) {
       variants={!isMobile ? pageVariants : undefined}
       transition={isMobile ? { duration: 0.3 } : undefined}
       onAnimationComplete={() => stopLoading()}
+      // Add layout="position" to help maintain layout during animations
+      layout="position"
     >
       {children}
     </motion.div>

@@ -19,21 +19,28 @@ const AnimatedBackground: React.FC<AnimatedBackgroundProps> = ({ className }) =>
     
     // Set canvas dimensions to match window size
     const resizeCanvas = () => {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
+      // Set dimensions with a small delay to prevent layout shifts during page load
+      requestAnimationFrame(() => {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+      });
     };
     
     // Handle scroll events to ensure canvas covers the viewport
     const handleScroll = () => {
       if (canvas) {
-        // Ensure the canvas height is at least the viewport height
-        if (canvas.height < window.innerHeight) {
-          canvas.height = window.innerHeight;
-        }
+        // Use requestAnimationFrame to avoid layout thrashing
+        requestAnimationFrame(() => {
+          // Ensure the canvas height is at least the viewport height
+          if (canvas.height < window.innerHeight) {
+            canvas.height = window.innerHeight;
+          }
+        });
       }
     };
     
-    resizeCanvas();
+    // Set initial size with a small delay to ensure the DOM is ready
+    setTimeout(resizeCanvas, 10);
     window.addEventListener('resize', resizeCanvas);
     window.addEventListener('scroll', handleScroll);
     
