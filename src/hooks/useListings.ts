@@ -265,14 +265,22 @@ export function useListings({ userId, searchQuery, showOnlyActive = false }: Use
         // When restoring from archived, ensure we properly reset all archive-related fields
         updateData.status = 'active';
         updateData.createdAt = now;
+        updateData.updatedAt = now;
         updateData.expiresAt = expirationTime;
         updateData.archivedAt = null; // Remove archived timestamp
         updateData.originalCreatedAt = null; // Remove original creation date
         updateData.accountTier = accountTier; // Store the account tier with the listing
+        updateData.expirationReason = null; // Remove expiration reason if it exists
+        
+        // Make sure to remove any fields that might affect visibility
+        updateData.soldTo = null; // Ensure the listing isn't marked as sold
+        updateData.previousStatus = null; // Clear previous status
+        updateData.previousExpiresAt = null; // Clear previous expiration date
       } else {
         // For inactive status, keep current expiration but remove archive-related fields
         updateData.archivedAt = null;
         updateData.originalCreatedAt = null;
+        updateData.updatedAt = now;
       }
 
       console.log(`Updating listing ${listingId} status to ${status} with data:`, updateData);
@@ -301,7 +309,11 @@ export function useListings({ userId, searchQuery, showOnlyActive = false }: Use
                 ...listing, 
                 ...updateData,
                 createdAt: updateData.createdAt || listing.createdAt,
-                expiresAt: updateData.expiresAt || listing.expiresAt
+                expiresAt: updateData.expiresAt || listing.expiresAt,
+                updatedAt: updateData.updatedAt || new Date(),
+                archivedAt: updateData.archivedAt,
+                soldTo: updateData.soldTo,
+                status: updateData.status
               } 
             : listing
         )
@@ -313,10 +325,21 @@ export function useListings({ userId, searchQuery, showOnlyActive = false }: Use
         // Create a cache key for the user's listings
         const userListingsCacheKey = `listings_${user.uid}_all_none`;
         const activeListingsCacheKey = `listings_${user.uid}_active_none`;
+        const allListingsCacheKey = `listings_all_active_none`;
         
         // Clear from localStorage to ensure fresh data on next page load
         localStorage.removeItem(userListingsCacheKey);
         localStorage.removeItem(activeListingsCacheKey);
+        localStorage.removeItem(allListingsCacheKey);
+        
+        // Clear any search-related caches that might contain this listing
+        const cacheKeys = Object.keys(localStorage).filter(key => 
+          key.startsWith('listings_') && key.includes('_active_')
+        );
+        
+        for (const key of cacheKeys) {
+          localStorage.removeItem(key);
+        }
         
         console.log('Cleared listings cache after status update');
       } catch (cacheError) {
