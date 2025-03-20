@@ -776,6 +776,139 @@ export function useListings({ userId, searchQuery, showOnlyActive = false }: Use
     }
   }, [userId, showOnlyActive, searchQuery]);
 
+  // Function to manually refresh listings data
+  const refreshListings = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      console.log('Manually refreshing listings data...');
+      
+      // Clear the cache for this specific query
+      localStorage.removeItem(cacheKey);
+      
+      // Get user's location
+      let userLocation: { latitude: number | null; longitude: number | null } = { latitude: null, longitude: null };
+      
+      try {
+        const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(resolve, reject);
+        });
+        userLocation = {
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude
+        };
+      } catch (locationError) {
+        console.log('Location access not granted or unavailable');
+      }
+
+      const { db } = await getFirebaseServices();
+      const listingsRef = collection(db, 'listings');
+      
+      // Create base query for listings
+      let queryConstraints: QueryConstraint[] = [];
+
+      // Add user filter if userId is provided
+      if (userId) {
+        queryConstraints.push(where('userId', '==', userId));
+      }
+
+      // Add status filters
+      if (showOnlyActive) {
+        queryConstraints.push(where('status', '==', 'active'));
+      } else if (userId) {
+        queryConstraints.push(where('status', 'in', ['active', 'archived', 'inactive']));
+      } else {
+        queryConstraints.push(where('status', '==', 'active'));
+      }
+
+      // Always add sorting by creation date
+      queryConstraints.push(orderBy('createdAt', 'desc'));
+
+      const q = query(listingsRef, ...queryConstraints);
+      const querySnapshot = await getDocs(q);
+      
+      let fetchedListings = querySnapshot.docs.map(doc => {
+        const data = doc.data();
+        const listing = {
+          id: doc.id,
+          ...data,
+          createdAt: data.createdAt?.toDate() || new Date(),
+          expiresAt: data.expiresAt?.toDate() || (() => {
+            // Create a default expiration date if none exists
+            const defaultExpiry = new Date();
+            defaultExpiry.setDate(defaultExpiry.getDate() + 30); // 30 days from now
+            return defaultExpiry;
+          })(),
+          price: Number(data.price) || 0,
+          imageUrls: Array.isArray(data.imageUrls) ? data.imageUrls : [],
+          isGraded: Boolean(data.isGraded),
+          gradeLevel: data.gradeLevel ? Number(data.gradeLevel) : undefined,
+          status: data.status || 'active',
+          condition: data.condition || 'Not specified',
+          game: data.game || 'Not specified',
+          city: data.city || 'Unknown',
+          state: data.state || 'Unknown',
+          gradingCompany: data.gradingCompany || undefined,
+          distance: 0 // Default distance
+        } as Listing & { distance: number };
+
+        // Calculate distance if we have both user location and listing location
+        if (userLocation.latitude && userLocation.longitude && data.latitude && data.longitude) {
+          listing.distance = calculateDistance(
+            userLocation.latitude,
+            userLocation.longitude,
+            data.latitude,
+            data.longitude
+          );
+        }
+
+        return listing;
+      });
+
+      // If there's a search query, filter results in memory
+      if (searchQuery?.trim()) {
+        const searchLower = searchQuery.toLowerCase();
+        fetchedListings = fetchedListings.filter(listing => 
+          listing.title?.toLowerCase().includes(searchLower)
+        );
+      }
+
+      // Sort listings by distance if location is available, otherwise keep creation date sort
+      if (userLocation.latitude && userLocation.longitude) {
+        fetchedListings.sort((a, b) => {
+          // First prioritize recent listings within 50km
+          const aIsNearby = a.distance <= 50;
+          const bIsNearby = b.distance <= 50;
+          
+          if (aIsNearby && !bIsNearby) return -1;
+          if (!aIsNearby && bIsNearby) return 1;
+          
+          // For listings in the same distance category, sort by date
+          if (aIsNearby === bIsNearby) {
+            return b.createdAt.getTime() - a.createdAt.getTime();
+          }
+          
+          // If neither is nearby, sort by distance
+          return a.distance - b.distance;
+        });
+      }
+      
+      // Cache the results for faster loading next time
+      saveToCache(fetchedListings);
+      console.log(`Cached ${fetchedListings.length} listings after manual refresh`);
+      
+      setListings(fetchedListings);
+      return fetchedListings;
+    } catch (err: any) {
+      console.error('Error refreshing listings:', err);
+      setError(err.message || 'Error refreshing listings');
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return { 
     listings, 
     setListings, // Expose setListings to allow direct state updates
