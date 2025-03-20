@@ -185,7 +185,11 @@ export function ListingTimer({ createdAt, archivedAt, accountTier, status, listi
             startTime = now - 1000; // Fallback to current time minus 1 second
           }
           
+          // Get the appropriate listing duration based on account tier
+          // This ensures we're using the correct duration for the account tier
+          // Free tier: 48 hours, Premium tier: 720 hours (30 days)
           duration = ACCOUNT_TIERS[accountTier].listingDuration * 60 * 60 * 1000;
+          console.log(`ListingTimer: Using account tier ${accountTier} with duration ${ACCOUNT_TIERS[accountTier].listingDuration} hours`);
           endTime = startTime + duration;
         }
         

@@ -5,6 +5,7 @@ import { getFirebaseServices } from '@/lib/firebase';
 import { Listing } from '@/types/database';
 import { useAuth } from '@/contexts/AuthContext';
 import { useClientCache } from './useClientCache';
+import { ACCOUNT_TIERS } from '@/types/account';
 
 // Game name mappings for consistent filtering
 const GAME_NAME_MAPPING: { [key: string]: string[] } = {
@@ -450,6 +451,26 @@ export function useListings({ userId, searchQuery, showOnlyActive = false }: Use
       const { images, onUploadProgress, ...cleanListingData } = listingData;
 
       const { db } = await getFirebaseServices();
+      
+      // Get user data to determine account tier
+      let accountTier = 'free'; // Default to free tier
+      try {
+        const userRef = doc(db, 'users', user.uid);
+        const userDoc = await getDoc(userRef);
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+          accountTier = userData.accountTier || 'free';
+        }
+      } catch (error) {
+        console.error('Error getting user account tier:', error);
+        // Continue with free tier as fallback
+      }
+      
+      // Get the appropriate listing duration based on account tier from ACCOUNT_TIERS
+      // Free tier: 48 hours, Premium tier: 720 hours (30 days)
+      const tierDuration = ACCOUNT_TIERS[accountTier as 'free' | 'premium'].listingDuration;
+      console.log(`Setting listing expiration based on account tier: ${accountTier}, duration: ${tierDuration} hours`);
+      
       // Create the listing document with image URLs
       const listingRef = collection(db, 'listings');
       // Prepare base listing data without grading fields
@@ -458,9 +479,9 @@ export function useListings({ userId, searchQuery, showOnlyActive = false }: Use
       // Remove cardReference if it's null
       const { cardReference, ...dataWithoutCard } = baseData;
       
-      // Set expiration date to 30 days from creation by default
+      // Set expiration date based on account tier
       const expiresAt = new Date();
-      expiresAt.setDate(expiresAt.getDate() + 30);
+      expiresAt.setHours(expiresAt.getHours() + tierDuration);
 
       // Get user's location for the listing
       let latitude = null;
@@ -483,9 +504,10 @@ export function useListings({ userId, searchQuery, showOnlyActive = false }: Use
         userId: user.uid,
         username: user.displayName || 'Anonymous',
         createdAt: new Date(),
-        expiresAt, // Add expiration date
+        expiresAt, // Add expiration date based on account tier
         status: 'active',
         isGraded: Boolean(cleanListingData.isGraded),
+        accountTier, // Store the account tier with the listing
         ...(cardReference ? { cardReference } : {}),
         // Add location data if available
         ...(latitude !== null && longitude !== null ? { latitude, longitude } : {}),
