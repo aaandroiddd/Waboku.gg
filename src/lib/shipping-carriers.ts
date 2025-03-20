@@ -305,10 +305,19 @@ export class ShippoCarrierAPI extends CarrierAPI {
   
   constructor(apiKey: string) {
     super(apiKey);
+    if (!apiKey || apiKey.trim() === '') {
+      console.warn('ShippoCarrierAPI initialized with empty API key');
+    }
   }
   
   async getTrackingInfo(trackingNumber: string, carrier: string): Promise<TrackingStatus> {
+    // Validate API key
+    if (!this.apiKey || this.apiKey.trim() === '') {
+      throw new Error('Shippo API key is not configured');
+    }
+    
     try {
+      console.log(`Making Shippo API request for ${carrier} ${trackingNumber}`);
       const response = await axios.get(`${this.baseUrl}${carrier}/${trackingNumber}`, {
         headers: {
           'Authorization': `ShippoToken ${this.apiKey}`,
@@ -316,22 +325,34 @@ export class ShippoCarrierAPI extends CarrierAPI {
         }
       });
       
+      if (!response.data) {
+        throw new Error('Empty response from Shippo API');
+      }
+      
       const data = response.data;
+      
+      // Validate required fields
+      if (!data.tracking_status || !data.tracking_status.status) {
+        throw new Error('Invalid response format from Shippo API');
+      }
       
       // Map Shippo response to our TrackingStatus interface
       const status = normalizeStatus(data.tracking_status.status, carrier);
       
-      const events = data.tracking_history.map((event: any) => ({
-        timestamp: new Date(event.status_date).toISOString(),
-        description: event.status.description,
-        location: event.location.city ? `${event.location.city}, ${event.location.state}` : undefined
-      }));
+      // Handle tracking history safely
+      const events = Array.isArray(data.tracking_history) 
+        ? data.tracking_history.map((event: any) => ({
+            timestamp: event.status_date ? new Date(event.status_date).toISOString() : new Date().toISOString(),
+            description: event.status?.description || 'Status update',
+            location: event.location?.city ? `${event.location.city}${event.location.state ? `, ${event.location.state}` : ''}` : undefined
+          }))
+        : [];
       
       return {
         carrier,
         trackingNumber,
         status,
-        statusDescription: data.tracking_status.status_description,
+        statusDescription: data.tracking_status.status_description || status,
         estimatedDelivery: data.eta ? new Date(data.eta).toISOString() : undefined,
         lastUpdate: events.length > 0 ? events[0].timestamp : undefined,
         location: events.length > 0 ? events[0].location : undefined,
@@ -339,6 +360,26 @@ export class ShippoCarrierAPI extends CarrierAPI {
       };
     } catch (error) {
       console.error(`Error fetching ${carrier} tracking via Shippo:`, error);
+      
+      // Provide more detailed error messages
+      if (axios.isAxiosError(error)) {
+        if (error.response) {
+          // The request was made and the server responded with a status code
+          // that falls out of the range of 2xx
+          console.error(`Shippo API error ${error.response.status}: ${JSON.stringify(error.response.data)}`);
+          throw new Error(`Shippo API error (${error.response.status}): ${
+            error.response.data?.message || error.message || 'Unknown error'
+          }`);
+        } else if (error.request) {
+          // The request was made but no response was received
+          console.error('No response received from Shippo API');
+          throw new Error('No response received from Shippo API');
+        } else {
+          // Something happened in setting up the request
+          throw new Error(`Shippo API request failed: ${error.message}`);
+        }
+      }
+      
       throw new Error(`Failed to fetch ${carrier} tracking: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
@@ -423,23 +464,42 @@ export async function getTrackingInfo(carrier: string, trackingNumber: string): 
     if (carrier === 'auto-detect' || carrier === 'unknown') {
       carrierToUse = detectCarrier(trackingNumber);
       console.log(`Auto-detected carrier: ${carrierToUse} for tracking number: ${trackingNumber}`);
+      
+      // If we couldn't detect the carrier, use a fallback
+      if (carrierToUse === 'unknown') {
+        console.warn(`Could not auto-detect carrier for tracking number: ${trackingNumber}, using mock data`);
+        return getMockTrackingStatus('unknown', trackingNumber);
+      }
     }
     
-    // First try using Shippo (multi-carrier API) if available
+    // Check if SHIPPO_API_KEY is available
+    if (!process.env.SHIPPO_API_KEY) {
+      console.warn('SHIPPO_API_KEY is not configured. Using mock tracking data.');
+      return getMockTrackingStatus(carrierToUse, trackingNumber);
+    }
+    
+    // Try using Shippo (multi-carrier API)
     const shippoAPI = getShippoAPI();
     if (shippoAPI) {
       try {
         return await shippoAPI.getTrackingInfo(trackingNumber, carrierToUse);
       } catch (shippoError) {
-        console.warn(`Shippo API failed, falling back to direct carrier API: ${shippoError}`);
-        // Fall through to carrier-specific API
+        console.warn(`Shippo API failed: ${shippoError instanceof Error ? shippoError.message : 'Unknown error'}`);
+        console.warn('Falling back to mock tracking data');
+        return getMockTrackingStatus(carrierToUse, trackingNumber);
       }
     }
     
-    // Try carrier-specific API
+    // If Shippo API is not available, try carrier-specific API
     const carrierAPI = getCarrierAPI(carrierToUse);
     if (carrierAPI) {
-      return await carrierAPI.getTrackingInfo(trackingNumber);
+      try {
+        return await carrierAPI.getTrackingInfo(trackingNumber);
+      } catch (carrierError) {
+        console.warn(`Carrier API failed: ${carrierError instanceof Error ? carrierError.message : 'Unknown error'}`);
+        console.warn('Falling back to mock tracking data');
+        return getMockTrackingStatus(carrierToUse, trackingNumber);
+      }
     }
     
     // If no API is available, return a mock response
@@ -448,13 +508,14 @@ export async function getTrackingInfo(carrier: string, trackingNumber: string): 
   } catch (error) {
     console.error(`Error getting tracking info for ${carrier}:`, error);
     
-    // Return an error status
+    // Return an error status with more detailed information
     return {
       carrier,
       trackingNumber,
       status: 'error',
       statusDescription: 'Unable to retrieve tracking information',
-      error: error instanceof Error ? error.message : 'Unknown error occurred'
+      error: error instanceof Error ? error.message : 'Unknown error occurred',
+      isMockData: true // Indicate this is an error response
     };
   }
 }

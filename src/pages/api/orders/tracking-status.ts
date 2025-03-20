@@ -36,14 +36,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const { carrier, trackingNumber } = req.query;
 
     if (!trackingNumber) {
+      console.error('Missing tracking number parameter');
       return res.status(400).json({ error: 'Missing tracking number parameter' });
     }
 
     const trackingNumberStr = trackingNumber as string;
     let carrierStr = (carrier as string) || 'auto-detect';
     
-    // If carrier is set to auto-detect, we'll let Shippo API handle it
-    const isAutoDetect = !carrier || carrierStr.toLowerCase() === 'auto-detect';
+    console.log(`Processing tracking request for carrier: ${carrierStr}, tracking number: ${trackingNumberStr}`);
     
     // Check if we should bypass cache (for debugging or forced refresh)
     const bypassCache = req.query.refresh === 'true';
@@ -57,26 +57,68 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(200).json(trackingCache.get(cacheKey));
     }
     
+    // Check if SHIPPO_API_KEY is configured
+    if (!process.env.SHIPPO_API_KEY) {
+      console.warn('SHIPPO_API_KEY is not configured. Using mock tracking data.');
+    }
+    
     // Get real-time tracking information from carrier APIs
     console.log(`Fetching live tracking info for ${carrierStr} ${trackingNumberStr}`);
-    const trackingStatus = await getTrackingInfo(carrierStr, trackingNumberStr);
-    
-    // Cache the result if it's not an error
-    if (trackingStatus.status !== 'error') {
-      trackingCache.set(cacheKey, trackingStatus);
-    }
-    
-    // For delivered packages, we can cache longer (1 week)
-    if (trackingStatus.status === 'delivered') {
-      trackingCache.ttl(cacheKey, 604800); // 7 days in seconds
-    }
+    try {
+      const trackingStatus = await getTrackingInfo(carrierStr, trackingNumberStr);
+      
+      // Log the result
+      console.log(`Tracking status for ${carrierStr} ${trackingNumberStr}: ${trackingStatus.status}`);
+      
+      // Cache the result if it's not an error
+      if (trackingStatus.status !== 'error') {
+        trackingCache.set(cacheKey, trackingStatus);
+        
+        // For delivered packages, we can cache longer (1 week)
+        if (trackingStatus.status === 'delivered') {
+          trackingCache.ttl(cacheKey, 604800); // 7 days in seconds
+        }
+      }
 
-    return res.status(200).json(trackingStatus);
+      return res.status(200).json(trackingStatus);
+    } catch (fetchError) {
+      console.error('Error in getTrackingInfo:', fetchError);
+      
+      // Return a more user-friendly error with fallback to mock data
+      const errorMessage = fetchError instanceof Error ? fetchError.message : 'Unknown error occurred';
+      console.error(`Tracking API error: ${errorMessage}`);
+      
+      // Return a mock tracking status with error information
+      const mockStatus: TrackingStatus = {
+        carrier: carrierStr,
+        trackingNumber: trackingNumberStr,
+        status: 'in_transit',
+        statusDescription: '[DEMO DATA] Package is in transit to the destination',
+        events: [
+          {
+            timestamp: new Date().toISOString(),
+            description: 'Package in transit',
+            location: 'Sorting Facility'
+          }
+        ],
+        isMockData: true,
+        error: `Could not fetch live tracking data: ${errorMessage}`
+      };
+      
+      return res.status(200).json(mockStatus);
+    }
   } catch (error) {
-    console.error('Error fetching tracking status:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Error in tracking-status API:', errorMessage);
+    
+    if (error instanceof Error && error.stack) {
+      console.error('Stack trace:', error.stack);
+    }
+    
     return res.status(500).json({ 
       error: 'Failed to fetch tracking status',
-      details: error instanceof Error ? error.message : 'Unknown error'
+      details: errorMessage,
+      isMockData: true
     });
   }
 }

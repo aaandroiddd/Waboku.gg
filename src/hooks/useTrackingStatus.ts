@@ -22,12 +22,20 @@ export interface TrackingStatus {
 
 export function useTrackingStatus(carrier: string, trackingNumber: string) {
   const [status, setStatus] = useState<TrackingStatus | null>(null);
-  const [loading, setLoading] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(true); // Start with loading true
   const [error, setError] = useState<string | null>(null);
   const { user, getIdToken } = useAuth();
 
   const fetchTrackingStatus = async () => {
-    if (!carrier || !trackingNumber || !user) {
+    if (!carrier || !trackingNumber) {
+      setError('Missing carrier or tracking number');
+      setLoading(false);
+      return;
+    }
+
+    if (!user) {
+      setError('User authentication required');
+      setLoading(false);
       return;
     }
 
@@ -35,7 +43,22 @@ export function useTrackingStatus(carrier: string, trackingNumber: string) {
     setError(null);
 
     try {
-      const token = await getIdToken();
+      // Get the authentication token
+      let token;
+      try {
+        token = await getIdToken();
+        if (!token) {
+          throw new Error('Failed to get authentication token');
+        }
+      } catch (tokenError) {
+        console.error('Error getting auth token:', tokenError);
+        setError('Authentication error. Please try signing in again.');
+        setLoading(false);
+        return;
+      }
+
+      // Make the API request
+      console.log(`Fetching tracking status for ${carrier} ${trackingNumber}`);
       const response = await fetch(
         `/api/orders/tracking-status?carrier=${encodeURIComponent(carrier)}&trackingNumber=${encodeURIComponent(trackingNumber)}`,
         {
@@ -45,13 +68,39 @@ export function useTrackingStatus(carrier: string, trackingNumber: string) {
         }
       );
 
+      // Handle non-200 responses
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to fetch tracking status');
+        let errorMessage = `Server error (${response.status})`;
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorData.details || errorMessage;
+        } catch (parseError) {
+          console.error('Error parsing error response:', parseError);
+        }
+        throw new Error(errorMessage);
       }
 
-      const data = await response.json();
-      setStatus(data);
+      // Parse the response
+      let data;
+      try {
+        data = await response.json();
+      } catch (parseError) {
+        console.error('Error parsing response:', parseError);
+        throw new Error('Invalid response from server');
+      }
+
+      // Check if the response contains an error
+      if (data.error) {
+        console.warn('API returned error in response body:', data.error);
+        setError(data.error);
+        // Still set the status if we have mock data
+        if (data.isMockData) {
+          setStatus(data);
+        }
+      } else {
+        setStatus(data);
+        setError(null);
+      }
     } catch (err) {
       console.error('Error fetching tracking status:', err);
       setError(err instanceof Error ? err.message : 'An unknown error occurred');

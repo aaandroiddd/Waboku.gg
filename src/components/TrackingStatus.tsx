@@ -31,7 +31,7 @@ export function TrackingStatusComponent({ carrier, trackingNumber }: TrackingSta
     );
   }
 
-  if (error) {
+  if (error && (!status || !status.isMockData)) {
     return (
       <div className="bg-background border border-border rounded-lg p-4">
         <div className="flex items-center">
@@ -129,6 +129,11 @@ export function TrackingStatusComponent({ carrier, trackingNumber }: TrackingSta
               <AlertCircle className="h-4 w-4" />
               <span>Demo Mode: Using simulated tracking data</span>
             </div>
+            {error && (
+              <div className="mt-1 text-xs">
+                <span className="font-medium">Note:</span> {error}
+              </div>
+            )}
           </div>
         )}
         <div className="space-y-4">
