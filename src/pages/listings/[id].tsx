@@ -20,7 +20,7 @@ import { GameCategoryBadge } from '@/components/GameCategoryBadge';
 import { Button } from '@/components/ui/button';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
 import { Separator } from '@/components/ui/separator';
-import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Chat } from '@/components/Chat';
 import { MakeOfferDialog } from '@/components/MakeOfferDialog';
 import Image from 'next/image';
@@ -1326,6 +1326,9 @@ export default function ListingPage() {
         <Dialog open={isZoomDialogOpen} onOpenChange={setIsZoomDialogOpen}>
           <DialogContent className="max-w-[95vw] max-h-[95vh] w-full h-full p-0 overflow-hidden">
             <DialogTitle className="sr-only">Image Viewer</DialogTitle>
+            <DialogDescription className="sr-only">
+              Detailed view of {listing.title} image {currentImageIndex + 1} of {listing.imageUrls.length}. Use zoom controls to examine details.
+            </DialogDescription>
             <Button
               variant="ghost"
               size="icon"
@@ -1465,6 +1468,9 @@ export default function ListingPage() {
       <Dialog open={isChatOpen} onOpenChange={setIsChatOpen}>
         <DialogContent className="max-w-md p-0">
           <DialogTitle className="sr-only">Chat with {listing?.username}</DialogTitle>
+          <DialogDescription className="sr-only">
+            Conversation with {listing?.username} about {listing?.title}
+          </DialogDescription>
           {listing && (
             <Chat
               receiverId={listing.userId}

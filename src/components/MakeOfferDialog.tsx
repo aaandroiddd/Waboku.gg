@@ -191,6 +191,9 @@ export function MakeOfferDialog({
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Make an Offer</DialogTitle>
+          <DialogDescription>
+            Enter your offer amount for this listing. The seller will be notified and can accept or decline.
+          </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit}>
           <div className="grid gap-4 py-4">
