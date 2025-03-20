@@ -181,6 +181,22 @@ export function useListings({ userId, searchQuery, showOnlyActive = false }: Use
           : listing
       ));
 
+      // Clear any cached listings data to ensure fresh data on next load
+      try {
+        // Create a cache key for the user's listings
+        const userListingsCacheKey = `listings_${user.uid}_all_none`;
+        const activeListingsCacheKey = `listings_${user.uid}_active_none`;
+        
+        // Clear from localStorage to ensure fresh data on next page load
+        localStorage.removeItem(userListingsCacheKey);
+        localStorage.removeItem(activeListingsCacheKey);
+        
+        console.log('Cleared listings cache after archiving');
+      } catch (cacheError) {
+        console.error('Error clearing listings cache:', cacheError);
+        // Continue even if cache clearing fails
+      }
+
       return true;
     } catch (error: any) {
       console.error('Error archiving listing:', error);
@@ -290,6 +306,23 @@ export function useListings({ userId, searchQuery, showOnlyActive = false }: Use
             : listing
         )
       );
+
+      // Clear any cached listings data to ensure fresh data on next load
+      // This is crucial for ensuring the UI reflects the updated status after navigation
+      try {
+        // Create a cache key for the user's listings
+        const userListingsCacheKey = `listings_${user.uid}_all_none`;
+        const activeListingsCacheKey = `listings_${user.uid}_active_none`;
+        
+        // Clear from localStorage to ensure fresh data on next page load
+        localStorage.removeItem(userListingsCacheKey);
+        localStorage.removeItem(activeListingsCacheKey);
+        
+        console.log('Cleared listings cache after status update');
+      } catch (cacheError) {
+        console.error('Error clearing listings cache:', cacheError);
+        // Continue even if cache clearing fails
+      }
 
       return true;
     } catch (error: any) {
