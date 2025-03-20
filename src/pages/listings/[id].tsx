@@ -1419,36 +1419,7 @@ export default function ListingPage() {
                                   />
                                 </div>
                               </TransformComponent>
-                              <div 
-                                className="absolute bottom-4 left-1/2 transform -translate-x-1/2 z-10 bg-background/90 rounded-lg p-2 backdrop-blur-sm shadow-lg"
-                              >
-                                <div className="flex items-center gap-2">
-                                  <Button
-                                    variant="outline"
-                                    size="icon"
-                                    onClick={() => zoomOut()}
-                                    className="h-8 w-8"
-                                  >
-                                    <Minus className="h-4 w-4" />
-                                  </Button>
-                                  <Button
-                                    variant="outline"
-                                    size="icon"
-                                    onClick={() => zoomIn()}
-                                    className="h-8 w-8"
-                                  >
-                                    <Plus className="h-4 w-4" />
-                                  </Button>
-                                  <Button
-                                    variant="outline"
-                                    size="icon"
-                                    onClick={() => resetTransform()}
-                                    className="h-8 w-8"
-                                  >
-                                    <RotateCw className="h-4 w-4" />
-                                  </Button>
-                                </div>
-                              </div>
+                              {/* Zoom controls removed while maintaining zoom functionality */}
                             </>
                           );
                         }}
