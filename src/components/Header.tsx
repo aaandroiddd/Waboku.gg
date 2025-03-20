@@ -26,7 +26,7 @@ interface HeaderProps {
   animate?: boolean;
 }
 
-export default function Header({ animate = false }: HeaderProps) {
+export default function Header({ animate = true }: HeaderProps) {
   const router = useRouter();
   const { user, profile, signOut } = useAuth();
   const isAuthPage = router.pathname.startsWith("/auth/");
