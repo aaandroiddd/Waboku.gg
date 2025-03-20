@@ -307,6 +307,8 @@ export class ShippoCarrierAPI extends CarrierAPI {
     super(apiKey);
     if (!apiKey || apiKey.trim() === '') {
       console.warn('ShippoCarrierAPI initialized with empty API key');
+    } else {
+      console.log(`ShippoCarrierAPI initialized with key: ${apiKey.substring(0, 5)}...${apiKey.substring(apiKey.length - 4)}`);
     }
   }
   
@@ -318,6 +320,8 @@ export class ShippoCarrierAPI extends CarrierAPI {
     
     try {
       console.log(`Making Shippo API request for ${carrier} ${trackingNumber}`);
+      console.log(`Using Shippo API key: ${this.apiKey.substring(0, 5)}...${this.apiKey.substring(this.apiKey.length - 4)}`);
+      
       const response = await axios.get(`${this.baseUrl}${carrier}/${trackingNumber}`, {
         headers: {
           'Authorization': `ShippoToken ${this.apiKey}`,

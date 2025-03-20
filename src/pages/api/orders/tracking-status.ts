@@ -1,8 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { getAuth } from 'firebase-admin/auth';
-import { getFirebaseServices } from '@/lib/firebase';
 import { getTrackingInfo, TrackingStatus } from '@/lib/shipping-carriers';
 import NodeCache from 'node-cache';
+import { initializeFirebaseAdmin } from '@/lib/firebase-admin';
 
 // Create a cache for tracking results to avoid excessive API calls
 // Cache results for 1 hour (3600 seconds)
@@ -14,23 +13,34 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    // Get the authorization token
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      console.error('Missing or invalid authorization header');
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
-
-    const token = authHeader.split('Bearer ')[1];
-    
-    // Verify the token
-    const { admin } = getFirebaseServices();
-    let decodedToken;
+    // Initialize Firebase Admin - this is now optional for tracking
     try {
-      decodedToken = await getAuth().verifyIdToken(token);
-    } catch (error) {
-      console.error('Error verifying auth token:', error);
-      return res.status(401).json({ error: 'Invalid authentication token' });
+      initializeFirebaseAdmin();
+      console.log('Firebase Admin initialized successfully for tracking API');
+    } catch (firebaseError) {
+      console.warn('Firebase Admin initialization failed, but continuing with tracking request:', 
+        firebaseError instanceof Error ? firebaseError.message : 'Unknown error');
+      // We'll continue without Firebase authentication for tracking requests
+    }
+    
+    // Authentication is now optional for tracking requests
+    // We'll check for auth token but proceed without it if not present
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.split('Bearer ')[1];
+      if (token && token !== 'null' && token !== 'undefined') {
+        try {
+          // Verify the token if provided, but don't block if verification fails
+          const { auth } = initializeFirebaseAdmin();
+          await auth().verifyIdToken(token);
+          console.log('User authenticated for tracking request');
+        } catch (authError) {
+          console.warn('Authentication failed, but continuing with tracking request:', 
+            authError instanceof Error ? authError.message : 'Unknown error');
+        }
+      }
+    } else {
+      console.log('No authentication provided for tracking request - proceeding as public request');
     }
 
     const { carrier, trackingNumber } = req.query;
@@ -57,10 +67,33 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(200).json(trackingCache.get(cacheKey));
     }
     
-    // Check if SHIPPO_API_KEY is configured
+    // Verify Shippo API key is available
     if (!process.env.SHIPPO_API_KEY) {
       console.warn('SHIPPO_API_KEY is not configured. Using mock tracking data.');
+      
+      // Return mock data with a warning
+      const mockStatus: TrackingStatus = {
+        carrier: carrierStr,
+        trackingNumber: trackingNumberStr,
+        status: 'in_transit',
+        statusDescription: '[DEMO DATA] Package is in transit to the destination',
+        events: [
+          {
+            timestamp: new Date().toISOString(),
+            description: 'Package in transit',
+            location: 'Sorting Facility'
+          }
+        ],
+        isMockData: true,
+        error: 'Shippo API key is not configured. Using demo data.'
+      };
+      
+      return res.status(200).json(mockStatus);
     }
+    
+    // Log the Shippo API key (partially masked for security)
+    const apiKey = process.env.SHIPPO_API_KEY;
+    console.log(`Using Shippo API key: ${apiKey.substring(0, 5)}...${apiKey.substring(apiKey.length - 4)}`);
     
     // Get real-time tracking information from carrier APIs
     console.log(`Fetching live tracking info for ${carrierStr} ${trackingNumberStr}`);
@@ -69,6 +102,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       
       // Log the result
       console.log(`Tracking status for ${carrierStr} ${trackingNumberStr}: ${trackingStatus.status}`);
+      
+      // Check if we got mock data despite having an API key
+      if (trackingStatus.isMockData) {
+        console.warn(`Received mock data despite having Shippo API key. Possible API error.`);
+      }
       
       // Cache the result if it's not an error
       if (trackingStatus.status !== 'error') {

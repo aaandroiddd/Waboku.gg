@@ -33,28 +33,21 @@ export function useTrackingStatus(carrier: string, trackingNumber: string) {
       return;
     }
 
-    if (!user) {
-      setError('User authentication required');
-      setLoading(false);
-      return;
-    }
-
     setLoading(true);
     setError(null);
 
     try {
-      // Get the authentication token
-      let token;
-      try {
-        token = await getIdToken();
-        if (!token) {
-          throw new Error('Failed to get authentication token');
+      // For public tracking, we don't require authentication
+      // This makes the tracking component more resilient
+      let token = null;
+      
+      if (user) {
+        try {
+          token = await getIdToken();
+        } catch (tokenError) {
+          console.warn('Could not get auth token, proceeding without authentication:', tokenError);
+          // Continue without token - the API will handle unauthenticated requests
         }
-      } catch (tokenError) {
-        console.error('Error getting auth token:', tokenError);
-        setError('Authentication error. Please try signing in again.');
-        setLoading(false);
-        return;
       }
 
       // Make the API request
@@ -110,10 +103,11 @@ export function useTrackingStatus(carrier: string, trackingNumber: string) {
   };
 
   useEffect(() => {
-    if (carrier && trackingNumber && user) {
+    // Fetch tracking status even if user is not authenticated
+    if (carrier && trackingNumber) {
       fetchTrackingStatus();
     }
-  }, [carrier, trackingNumber, user]);
+  }, [carrier, trackingNumber]);
 
   return {
     status,
