@@ -91,14 +91,16 @@ export default function ListingPage() {
                 transformComponents.forEach((wrapper) => {
                   try {
                     // Find the carousel item index this wrapper belongs to
-                    const carouselItem = wrapper.closest('.carousel__item');
+                    const carouselItem = wrapper.closest('[role="group"][aria-roledescription="slide"]');
                     if (!carouselItem) return;
                     
-                    const indexAttr = carouselItem.getAttribute('data-index');
-                    if (!indexAttr) return;
+                    // Get the index from the carousel item's position in the carousel
+                    const carouselItems = Array.from(document.querySelectorAll('[role="group"][aria-roledescription="slide"]'));
+                    const index = carouselItems.indexOf(carouselItem as Element);
+                    if (index === -1) return;
                     
-                    const index = parseInt(indexAttr, 10);
-                    if (isNaN(index)) return;
+                    // Add a data attribute to the carousel item for easier identification
+                    carouselItem.setAttribute('data-slide-index', index.toString());
                     
                     // Find the React fiber node to access the component's methods
                     const fiberKey = Object.keys(wrapper).find(key => 
@@ -1346,7 +1348,11 @@ export default function ListingPage() {
                 </div>
                 <CarouselContent className="h-full">
                   {listing.imageUrls.map((url, index) => (
-                    <CarouselItem key={`carousel-item-${index}`} className="h-full flex items-center justify-center">
+                    <CarouselItem 
+                      key={`carousel-item-${index}`} 
+                      className="h-full flex items-center justify-center"
+                      data-slide-index={index}
+                    >
                       <TransformWrapper
                         initialScale={1}
                         minScale={0.5}
@@ -1360,53 +1366,89 @@ export default function ListingPage() {
                         initialPositionY={0}
                         panning={{ disabled: false }}
                       >
-                        {({ zoomIn, zoomOut, resetTransform }) => (
-                          <>
-                            <TransformComponent 
-                              wrapperClass="!w-full !h-full !flex !items-center !justify-center" 
-                              contentClass="!w-full !h-full !flex !items-center !justify-center"
-                            >
-                              <div className="relative w-full h-full flex items-center justify-center p-4">
-                                <img
-                                  src={url}
-                                  alt={`${listing.title} - Image ${index + 1}`}
-                                  className="max-w-full max-h-[80vh] w-auto h-auto object-contain"
-                                  loading="eager"
-                                />
+                        {({ zoomIn, zoomOut, resetTransform }) => {
+                          // Store zoom controls in ref when component mounts
+                          React.useEffect(() => {
+                            if (zoomControlsRef.current) {
+                              zoomControlsRef.current[index] = {
+                                zoomIn,
+                                zoomOut,
+                                resetTransform
+                              };
+                              
+                              // Also store in window for debugging
+                              if (typeof window !== 'undefined') {
+                                window.__transformInstances = window.__transformInstances || {};
+                                window.__transformInstances[`image-${index}`] = {
+                                  zoomIn,
+                                  zoomOut,
+                                  resetTransform
+                                };
+                              }
+                            }
+                            
+                            return () => {
+                              // Clean up when unmounting
+                              if (zoomControlsRef.current && zoomControlsRef.current[index]) {
+                                delete zoomControlsRef.current[index];
+                              }
+                              
+                              if (typeof window !== 'undefined' && 
+                                  window.__transformInstances && 
+                                  window.__transformInstances[`image-${index}`]) {
+                                delete window.__transformInstances[`image-${index}`];
+                              }
+                            };
+                          }, []);
+                          
+                          return (
+                            <>
+                              <TransformComponent 
+                                wrapperClass="!w-full !h-full !flex !items-center !justify-center" 
+                                contentClass="!w-full !h-full !flex !items-center !justify-center"
+                              >
+                                <div className="relative w-full h-full flex items-center justify-center p-4">
+                                  <img
+                                    src={url}
+                                    alt={`${listing.title} - Image ${index + 1}`}
+                                    className="max-w-full max-h-[80vh] w-auto h-auto object-contain"
+                                    loading="eager"
+                                  />
+                                </div>
+                              </TransformComponent>
+                              <div 
+                                className="absolute bottom-4 left-1/2 transform -translate-x-1/2 z-10 bg-background/90 rounded-lg p-2 backdrop-blur-sm shadow-lg"
+                              >
+                                <div className="flex items-center gap-2">
+                                  <Button
+                                    variant="outline"
+                                    size="icon"
+                                    onClick={() => zoomOut()}
+                                    className="h-8 w-8"
+                                  >
+                                    <Minus className="h-4 w-4" />
+                                  </Button>
+                                  <Button
+                                    variant="outline"
+                                    size="icon"
+                                    onClick={() => zoomIn()}
+                                    className="h-8 w-8"
+                                  >
+                                    <Plus className="h-4 w-4" />
+                                  </Button>
+                                  <Button
+                                    variant="outline"
+                                    size="icon"
+                                    onClick={() => resetTransform()}
+                                    className="h-8 w-8"
+                                  >
+                                    <RotateCw className="h-4 w-4" />
+                                  </Button>
+                                </div>
                               </div>
-                            </TransformComponent>
-                            <div 
-                              className="absolute bottom-4 left-1/2 transform -translate-x-1/2 z-10 bg-background/90 rounded-lg p-2 backdrop-blur-sm shadow-lg"
-                            >
-                              <div className="flex items-center gap-2">
-                                <Button
-                                  variant="outline"
-                                  size="icon"
-                                  onClick={() => zoomOut()}
-                                  className="h-8 w-8"
-                                >
-                                  <Minus className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  variant="outline"
-                                  size="icon"
-                                  onClick={() => zoomIn()}
-                                  className="h-8 w-8"
-                                >
-                                  <Plus className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  variant="outline"
-                                  size="icon"
-                                  onClick={() => resetTransform()}
-                                  className="h-8 w-8"
-                                >
-                                  <RotateCw className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            </div>
-                          </>
-                        )}
+                            </>
+                          );
+                        }}
                       </TransformWrapper>
                     </CarouselItem>
                   ))}
