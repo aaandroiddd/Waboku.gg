@@ -20,6 +20,8 @@ import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { doc, getDoc, deleteDoc, collection, query, where, getDocs, setDoc } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase';
 import { ClearBrowserDataButton } from '@/components/ClearBrowserDataButton';
+import { AccountLinkingButton } from '@/components/AccountLinkingButton';
+import { Toaster } from '@/components/ui/toaster';
 
 const DashboardLayout = dynamic(
   () => import('@/components/dashboard/DashboardLayout').then(mod => mod.DashboardLayout),
@@ -599,6 +601,7 @@ const SettingsPageContent = () => {
 
   return (
     <DashboardLayout>
+      <Toaster />
 
       <div className="container mx-auto p-6">
         <Card>
@@ -822,13 +825,25 @@ const SettingsPageContent = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
+            <div className="space-y-6">
               <div>
                 <h3 className="text-lg font-medium mb-2">Fix Browser Data</h3>
                 <p className="text-sm text-muted-foreground mb-4">
                   If you're experiencing login issues or other unexpected behavior, clearing your browser's authentication data may help. This will sign you out and clear any cached authentication information.
                 </p>
                 <ClearBrowserDataButton variant="outline" size="default" className="w-full sm:w-auto" />
+              </div>
+              
+              <Separator />
+              
+              <div>
+                <h3 className="text-lg font-medium mb-2">Link Accounts</h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  If you've signed up with both email and Google using the same email address, you can link these accounts to ensure your profile data is consistent.
+                </p>
+                <div className="flex items-center gap-2">
+                  <AccountLinkingButton />
+                </div>
               </div>
             </div>
           </CardContent>

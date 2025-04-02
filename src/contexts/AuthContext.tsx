@@ -39,6 +39,7 @@ interface AuthContextType {
   isEmailVerified: () => boolean;
   checkVerificationStatus: () => Promise<void>;
   getIdToken: () => Promise<string>;
+  checkAndLinkAccounts: () => Promise<void>;
 }
 
 const defaultAuthContext: AuthContextType = {
@@ -1007,6 +1008,61 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const checkAndLinkAccounts = async () => {
+    if (!user || !user.email) {
+      throw new Error('No authenticated user with email');
+    }
+
+    try {
+      // Get a fresh token
+      const token = await user.getIdToken(true);
+      
+      // Call the API to check for accounts with the same email
+      const response = await fetch('/api/auth/link-accounts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          email: user.email,
+          currentUserId: user.uid
+        })
+      });
+      
+      const result = await response.json();
+      
+      if (!response.ok) {
+        console.error('Failed to link accounts:', result);
+        throw new Error(result.message || 'Failed to link accounts. Please try again.');
+      }
+      
+      // If accounts were linked, refresh the profile
+      if (result.success && result.totalAccountsLinked > 1) {
+        // Reload the user profile
+        const profileDoc = await getDoc(doc(db, 'users', user.uid));
+        if (profileDoc.exists()) {
+          const updatedProfile = profileDoc.data() as UserProfile;
+          setProfile(updatedProfile);
+          
+          // Show success message
+          console.log('Accounts linked successfully:', result);
+          return {
+            success: true,
+            message: 'Your accounts have been linked successfully.',
+            linkedAccounts: result.totalAccountsLinked
+          };
+        }
+      }
+      
+      return result;
+    } catch (err: any) {
+      console.error('Error linking accounts:', err);
+      setError(err.message || 'Failed to link accounts. Please try again.');
+      throw err;
+    }
+  };
+
   const value = {
     user,
     profile,
@@ -1021,7 +1077,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     sendVerificationEmail,
     isEmailVerified,
     checkVerificationStatus,
-    getIdToken
+    getIdToken,
+    checkAndLinkAccounts
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
