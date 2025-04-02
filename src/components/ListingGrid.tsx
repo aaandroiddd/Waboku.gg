@@ -141,9 +141,16 @@ export function ListingGrid({
   
   const rawListings = userId ? (propListings.length > 0 ? propListings : fetchedListings) : propListings;
   
-  // Use our new hook to filter listings for visibility
-  const { visibleListings } = useListingVisibility(rawListings);
+  // Use our enhanced hook to filter listings for visibility
+  const { visibleListings, filteredOutReasons } = useListingVisibility(rawListings);
   const listings = visibleListings;
+  
+  // Log detailed filtering reasons in development
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'development' && Object.keys(filteredOutReasons).length > 0) {
+      console.log('Listings filtered out with reasons:', filteredOutReasons);
+    }
+  }, [filteredOutReasons]);
   
   const loading = propLoading || (userId ? isLoading : false);
   

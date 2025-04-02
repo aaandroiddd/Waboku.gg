@@ -50,8 +50,15 @@ export const ActiveListings = ({
   const [isProcessingExpired, setIsProcessingExpired] = useState(false);
   const { toast } = useToast();
   
-  // Use the listing visibility hook to properly filter active listings
-  const { visibleListings } = useListingVisibility(listings);
+  // Use the enhanced listing visibility hook to properly filter active listings
+  const { visibleListings, filteredOutReasons } = useListingVisibility(listings);
+  
+  // Log detailed filtering reasons in development
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'development' && Object.keys(filteredOutReasons).length > 0) {
+      console.log('Dashboard listings filtered out with reasons:', filteredOutReasons);
+    }
+  }, [filteredOutReasons]);
 
   // Check for expired listings
   useEffect(() => {

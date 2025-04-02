@@ -9,8 +9,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  // Specific listing ID to fix
-  const listingId = 'r3R4M3uMDEUeOThMwCA8';
+  // Get listing ID from request body
+  const { listingId, action = 'reactivate' } = req.body;
+  
+  if (!listingId) {
+    return res.status(400).json({ error: 'Listing ID is required' });
+  }
+  
+  console.log(`[Fix Specific] Processing listing ${listingId} with action: ${action}`);
   
   try {
     const { db } = getFirebaseAdmin();
@@ -33,27 +39,77 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     console.log(`[Fix Specific] Current listing status: ${data.status}`);
     
     const now = new Date();
-    const sevenDaysFromNow = new Date(now);
-    sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
     
-    // Archive the listing
-    await listingRef.update({
-      status: 'archived',
-      archivedAt: Timestamp.now(),
-      originalCreatedAt: data.createdAt,
-      expirationReason: 'manual_fix_specific',
-      expiresAt: Timestamp.fromDate(sevenDaysFromNow),
-      updatedAt: Timestamp.now(),
-      previousStatus: data.status
-    });
+    if (action === 'archive') {
+      // Archive the listing
+      const sevenDaysFromNow = new Date(now);
+      sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
+      
+      await listingRef.update({
+        status: 'archived',
+        archivedAt: Timestamp.now(),
+        originalCreatedAt: data.createdAt,
+        expirationReason: 'manual_fix_specific',
+        expiresAt: Timestamp.fromDate(sevenDaysFromNow),
+        updatedAt: Timestamp.now(),
+        previousStatus: data.status
+      });
+      
+      console.log(`[Fix Specific] Successfully archived listing ${listingId}`);
+      
+      return res.status(200).json({
+        message: 'Listing archived successfully',
+        status: 'archived',
+        expiresAt: sevenDaysFromNow.toISOString()
+      });
+    } else if (action === 'reactivate') {
+      // Reactivate the listing with a new expiration date
+      const thirtyDaysFromNow = new Date(now);
+      thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
+      
+      await listingRef.update({
+        status: 'active',
+        expiresAt: Timestamp.fromDate(thirtyDaysFromNow),
+        updatedAt: Timestamp.now(),
+        // Clear any archive-related fields
+        archivedAt: null,
+        expirationReason: null,
+        accountTier: 'premium' // Ensure premium tier for 30-day expiration
+      });
+      
+      console.log(`[Fix Specific] Successfully reactivated listing ${listingId}`);
+      
+      return res.status(200).json({
+        message: 'Listing reactivated successfully',
+        status: 'active',
+        expiresAt: thirtyDaysFromNow.toISOString()
+      });
+    } else if (action === 'debug') {
+      // Return the current listing data for debugging
+      const expiresAt = data.expiresAt instanceof Timestamp 
+        ? data.expiresAt.toDate() 
+        : new Date(data.expiresAt);
+        
+      const createdAt = data.createdAt instanceof Timestamp 
+        ? data.createdAt.toDate() 
+        : new Date(data.createdAt);
+      
+      return res.status(200).json({
+        message: 'Listing data retrieved for debugging',
+        id: listingId,
+        status: data.status,
+        title: data.title,
+        game: data.game,
+        expiresAt: expiresAt.toISOString(),
+        createdAt: createdAt.toISOString(),
+        hasImages: Array.isArray(data.imageUrls) && data.imageUrls.length > 0,
+        imageCount: Array.isArray(data.imageUrls) ? data.imageUrls.length : 0,
+        price: data.price,
+        termsAccepted: data.termsAccepted
+      });
+    }
     
-    console.log(`[Fix Specific] Successfully archived listing ${listingId}`);
-    
-    return res.status(200).json({
-      message: 'Listing archived successfully',
-      status: 'archived',
-      expiresAt: sevenDaysFromNow.toISOString()
-    });
+    return res.status(400).json({ error: 'Invalid action. Use "archive", "reactivate", or "debug"' });
   } catch (error: any) {
     console.error('[Fix Specific] Error:', error);
     return res.status(500).json({ 
