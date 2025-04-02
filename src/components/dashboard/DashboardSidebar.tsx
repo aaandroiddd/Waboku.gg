@@ -42,6 +42,18 @@ export function DashboardSidebar({ onNavigate }: DashboardSidebarProps) {
       setSidebarReady(true);
     }
   }, [accountTier, isAccountLoading, getCachedAccountTier, cacheAccountTier]);
+  
+  // Update display tier whenever account tier changes
+  useEffect(() => {
+    if (!isAccountLoading && accountTier) {
+      // If the loaded account tier is different from what we're displaying, update it
+      if (displayTier !== accountTier) {
+        console.log('Account tier changed, updating display tier:', accountTier);
+        setDisplayTier(accountTier);
+        cacheAccountTier(accountTier);
+      }
+    }
+  }, [accountTier, isAccountLoading, displayTier, cacheAccountTier]);
 
   const handleSignOut = async () => {
     await signOut();
@@ -212,8 +224,9 @@ export function DashboardSidebar({ onNavigate }: DashboardSidebarProps) {
   // Combine navigation items based on account tier
   let navigation = [...baseNavigation];
   
-  // Use cached/loaded tier if available, otherwise show loading state
-  if (displayTier === 'premium') {
+  // Use cached/loaded tier if available, otherwise use the actual account tier
+  // This ensures premium items are shown even if the cache isn't set yet
+  if (displayTier === 'premium' || (!isAccountLoading && accountTier === 'premium')) {
     // Insert Analytics after Create Listing (index 2)
     navigation.splice(2, 0, ...premiumNavItems);
   }

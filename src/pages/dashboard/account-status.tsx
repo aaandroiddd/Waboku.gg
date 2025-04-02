@@ -11,6 +11,7 @@ import { getFirestore, doc, setDoc } from 'firebase/firestore';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/components/ui/use-toast';
 import { Card } from '@/components/ui/card';
+import { AccountTierDebugger } from '@/components/dashboard/AccountTierDebugger';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -715,6 +716,9 @@ export default function AccountStatus() {
           <h2 className="text-xl font-semibold text-foreground mb-4">Subscription Plans</h2>
           <PricingPlans />
         </div>
+        
+        {/* Account Tier Debugger */}
+        <AccountTierDebugger />
       </div>
       <Footer />
     </div>

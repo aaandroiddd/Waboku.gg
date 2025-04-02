@@ -18,7 +18,7 @@ export function useAccountCache() {
   const cacheKey = userId ? `${ACCOUNT_TIER_CACHE_KEY}_${userId}` : ACCOUNT_TIER_CACHE_KEY;
   
   // Initialize client cache with a 5-minute expiration
-  const { getFromCache, saveToCache } = useClientCache<{
+  const { getFromCache, saveToCache, clearCache } = useClientCache<{
     tier: AccountTier;
     timestamp: number;
   }>({
@@ -30,9 +30,16 @@ export function useAccountCache() {
   const getCachedAccountTier = (): AccountTier | null => {
     if (!userId) return null;
     
-    const { data, expired } = getFromCache();
-    if (data && !expired) {
-      return data.tier;
+    try {
+      const { data, expired } = getFromCache();
+      if (data && !expired) {
+        console.log('Using cached account tier:', data.tier);
+        return data.tier;
+      }
+    } catch (error) {
+      console.error('Error retrieving cached account tier:', error);
+      // Clear potentially corrupted cache
+      clearCache();
     }
     
     return null;
@@ -42,14 +49,39 @@ export function useAccountCache() {
   const cacheAccountTier = (tier: AccountTier): void => {
     if (!userId) return;
     
-    saveToCache({
-      tier,
-      timestamp: Date.now()
-    });
+    try {
+      console.log('Caching account tier:', tier);
+      saveToCache({
+        tier,
+        timestamp: Date.now()
+      });
+    } catch (error) {
+      console.error('Error caching account tier:', error);
+    }
+  };
+  
+  // Force refresh the cache with current tier
+  const refreshCache = (tier: AccountTier): void => {
+    if (!userId) return;
+    
+    try {
+      // Clear existing cache first
+      clearCache();
+      
+      // Then set the new value
+      console.log('Force refreshing account tier cache:', tier);
+      saveToCache({
+        tier,
+        timestamp: Date.now()
+      });
+    } catch (error) {
+      console.error('Error refreshing account tier cache:', error);
+    }
   };
   
   return {
     getCachedAccountTier,
-    cacheAccountTier
+    cacheAccountTier,
+    refreshCache
   };
 }
