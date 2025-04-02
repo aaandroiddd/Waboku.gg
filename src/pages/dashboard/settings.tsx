@@ -22,6 +22,7 @@ import { db, auth } from '@/lib/firebase';
 import { ClearBrowserDataButton } from '@/components/ClearBrowserDataButton';
 import { AccountLinkingButton } from '@/components/AccountLinkingButton';
 import { Toaster } from '@/components/ui/toaster';
+import { ProfileAvatar } from '@/components/ProfileAvatar';
 
 const DashboardLayout = dynamic(
   () => import('@/components/dashboard/DashboardLayout').then(mod => mod.DashboardLayout),
@@ -628,10 +629,14 @@ const SettingsPageContent = () => {
               <div className="space-y-4">
                 <Label>Profile Picture</Label>
                 <div className="flex items-center gap-4">
-                  <Avatar className="w-24 h-24">
-                    <AvatarImage src={avatarPreview} />
-                    <AvatarFallback>{formData.username.slice(0, 2).toUpperCase()}</AvatarFallback>
-                  </Avatar>
+                  {avatarPreview ? (
+                    <Avatar className="w-24 h-24">
+                      <AvatarImage src={avatarPreview} />
+                      <AvatarFallback>{formData.username.slice(0, 2).toUpperCase()}</AvatarFallback>
+                    </Avatar>
+                  ) : (
+                    <ProfileAvatar user={user} size="xl" className="w-24 h-24" />
+                  )}
                   <div className="space-y-2">
                     <Input
                       type="file"
