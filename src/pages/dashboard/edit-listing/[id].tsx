@@ -47,6 +47,7 @@ const EditListingPage = () => {
     quantity: 1,
     imageUrls: [] as string[],
     coverImageIndex: 0,
+    cardName: '',
   });
 
   const [errors, setErrors] = useState<{
@@ -241,6 +242,7 @@ const EditListingPage = () => {
           quantity: listing.quantity || 1,
           imageUrls: Array.isArray(listing.imageUrls) ? listing.imageUrls : [],
           coverImageIndex: typeof listing.coverImageIndex === 'number' ? listing.coverImageIndex : 0,
+          cardName: listing.cardName || '',
         });
         
         console.log('Form data initialized successfully');
@@ -308,6 +310,7 @@ const EditListingPage = () => {
         isGraded: formData.isGraded,
         quantity: formData.quantity,
         coverImageIndex: formData.coverImageIndex,
+        cardName: formData.cardName,
       };
 
       // Only include grading info if isGraded is true
@@ -369,6 +372,16 @@ const EditListingPage = () => {
           <CardContent className="pt-6">
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="space-y-6">
+                <div className="space-y-2">
+                  <Label htmlFor="cardName">Card Name</Label>
+                  <Input
+                    id="cardName"
+                    value={formData.cardName}
+                    onChange={(e) => setFormData({ ...formData, cardName: e.target.value })}
+                    placeholder="Enter card name (optional)"
+                  />
+                </div>
+
                 <div className="space-y-2">
                   <div className="flex items-center space-x-2">
                     <Label htmlFor="title">Listing Title *</Label>

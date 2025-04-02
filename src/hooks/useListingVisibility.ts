@@ -106,6 +106,8 @@ export function useListingVisibility(listings: Listing[]) {
           return false;
         }
         
+        // Note: We explicitly do NOT check for cardName as it's optional and should not affect visibility
+        
         // Include the listing if it passes all checks
         return true;
       } catch (error) {
