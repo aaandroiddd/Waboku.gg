@@ -5,6 +5,7 @@ import { useRouter } from 'next/router';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUnread } from '@/contexts/UnreadContext';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
+import { EmptyStateCard } from '@/components/EmptyStateCard';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -273,12 +274,11 @@ const OffersComponent = () => {
 
         <TabsContent value="received" className="space-y-4">
           {receivedOffers.length === 0 ? (
-            <div className="text-center py-12 border rounded-lg bg-background">
-              <h3 className="text-lg font-medium mb-2">No offers received</h3>
-              <p className="text-muted-foreground">
-                When someone makes an offer on your listings, they will appear here.
-              </p>
-            </div>
+            <EmptyStateCard
+              title="No offers received"
+              description="Received offers are price proposals from buyers interested in your listings."
+              actionText="When someone makes an offer on your listings, it will appear here for you to accept, decline, or counter."
+            />
           ) : (
             <div className="space-y-4">
               {receivedOffers.map((offer) => (
@@ -299,12 +299,11 @@ const OffersComponent = () => {
 
         <TabsContent value="sent" className="space-y-4">
           {sentOffers.length === 0 ? (
-            <div className="text-center py-12 border rounded-lg bg-background">
-              <h3 className="text-lg font-medium mb-2">No offers sent</h3>
-              <p className="text-muted-foreground">
-                When you make an offer on a listing, it will appear here.
-              </p>
-            </div>
+            <EmptyStateCard
+              title="No offers sent"
+              description="Sent offers are price proposals you've made on other users' listings."
+              actionText="To make an offer, visit a listing page and click the 'Make Offer' button."
+            />
           ) : (
             <div className="space-y-4">
               {sentOffers.map((offer) => (

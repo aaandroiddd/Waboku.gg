@@ -27,6 +27,8 @@ import { useListingVisibility } from '@/hooks/useListingVisibility';
 import { Listing } from '@/types/database';
 import { ContentLoader } from '@/components/ContentLoader';
 import { Skeleton } from '@/components/ui/skeleton';
+import { EmptyStateCard } from '@/components/EmptyStateCard';
+import { ArchivedListings } from '@/components/ArchivedListings';
 
 const DashboardComponent = () => {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -682,77 +684,19 @@ const DashboardComponent = () => {
         </TabsContent>
 
         <TabsContent value="previous" className="space-y-6">
-          <div>
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {previousListings.map((listing) => (
-                <Card key={listing.id} className="relative group hover:shadow-lg transition-shadow">
-                  <CardHeader>
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <CardTitle>{listing.title}</CardTitle>
-                        <CardDescription>{listing.game}</CardDescription>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2">
-                      <div className="flex justify-between items-center">
-                        <Badge className={getConditionColor(listing.condition)}>
-                          {listing.condition}
-                        </Badge>
-                        <span className="font-bold">${listing.price.toFixed(2)}</span>
-                      </div>
-                      <div className="text-sm text-muted-foreground">
-                        Listed on {new Date(listing.createdAt).toLocaleDateString()}
-                      </div>
-                      {/* Timer for archived listings */}
-                      <div className="mt-2">
-                        <ListingTimer
-                          createdAt={listing.createdAt}
-                          archivedAt={listing.archivedAt || listing.createdAt}
-                          accountTier={profile?.tier || 'free'}
-                          status="archived"
-                        />
-                      </div>
-                      <div className="flex flex-wrap gap-2 mt-4">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="text-green-600 hover:text-green-700 hover:bg-green-50"
-                          onClick={() => handleRestoreListing(listing.id)}
-                        >
-                          Restore Listing
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="text-red-500 hover:text-red-600"
-                          onClick={() => {
-                            setDialogState({
-                              isOpen: true,
-                              listingId: listing.id,
-                              mode: 'permanent'
-                            });
-                          }}
-                        >
-                          <Trash2 className="h-4 w-4 mr-1" />
-                          Delete Permanently
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleViewListing(listing.id)}
-                        >
-                          <ExternalLink className="h-4 w-4 mr-1" />
-                          View
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </div>
+          <ArchivedListings
+            listings={previousListings}
+            accountTier={profile?.tier || 'free'}
+            onRestore={handleRestoreListing}
+            onDelete={(listingId) => {
+              setDialogState({
+                isOpen: true,
+                listingId,
+                mode: 'permanent'
+              });
+            }}
+            onView={handleViewListing}
+          />
         </TabsContent>
       </Tabs>
     </DashboardLayout>
