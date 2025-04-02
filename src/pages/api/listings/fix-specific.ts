@@ -84,6 +84,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         status: 'active',
         expiresAt: thirtyDaysFromNow.toISOString()
       });
+    } else if (action === 'refresh') {
+      // Refresh the listing by updating the timestamp without changing other properties
+      // This helps with listings that are technically valid but not showing up due to caching issues
+      await listingRef.update({
+        updatedAt: Timestamp.now(),
+        // Add a small random value to force a change in the document
+        _refreshToken: Math.random().toString(36).substring(2, 15)
+      });
+      
+      console.log(`[Fix Specific] Successfully refreshed listing ${listingId}`);
+      
+      return res.status(200).json({
+        message: 'Listing refreshed successfully',
+        status: data.status,
+        refreshedAt: new Date().toISOString()
+      });
     } else if (action === 'debug') {
       // Return the current listing data for debugging
       const expiresAt = data.expiresAt instanceof Timestamp 

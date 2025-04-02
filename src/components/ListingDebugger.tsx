@@ -8,7 +8,9 @@ import { parseDate, isExpired } from '@/lib/date-utils';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AlertCircle, CheckCircle, XCircle } from 'lucide-react';
+import { AlertCircle, CheckCircle, XCircle, RefreshCw } from 'lucide-react';
+import { useCacheClearing } from '@/hooks/useCacheClearing';
+import { useToast } from '@/components/ui/use-toast';
 
 interface ListingDebuggerProps {
   listingId: string;
@@ -115,21 +117,36 @@ export function ListingDebugger({ listingId }: ListingDebuggerProps) {
     }
   }, [listingId]);
 
+  const { clearAllListingCaches, clearListingCache: clearSpecificListingCache } = useCacheClearing();
+  const { toast } = useToast();
+  
   const clearListingCache = () => {
     try {
-      // Clear all listing-related caches
-      const cacheKeys = Object.keys(localStorage).filter(key => 
-        key.startsWith('listings_')
-      );
+      // Use our enhanced cache clearing function
+      const success = clearAllListingCaches();
       
-      for (const key of cacheKeys) {
-        localStorage.removeItem(key);
+      if (success) {
+        toast({
+          title: "Cache Cleared",
+          description: "Listing cache cleared successfully. Please refresh the page.",
+          duration: 3000,
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to clear cache. Please try again.",
+          variant: "destructive",
+          duration: 3000,
+        });
       }
-      
-      alert('Listing cache cleared successfully. Please refresh the page.');
     } catch (error) {
       console.error('Error clearing cache:', error);
-      alert('Error clearing cache. Please try again.');
+      toast({
+        title: "Error",
+        description: "Failed to clear cache. Please try again.",
+        variant: "destructive",
+        duration: 3000,
+      });
     }
   };
 
@@ -273,6 +290,57 @@ export function ListingDebugger({ listingId }: ListingDebuggerProps) {
                 </Button>
                 
                 <Button 
+                  variant="default"
+                  className="bg-blue-600 hover:bg-blue-700"
+                  onClick={async () => {
+                    try {
+                      // First refresh the listing in Firestore
+                      const response = await fetch('/api/listings/fix-specific', {
+                        method: 'POST',
+                        headers: {
+                          'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ 
+                          listingId,
+                          action: 'refresh'
+                        }),
+                      });
+                      
+                      const data = await response.json();
+                      
+                      if (response.ok) {
+                        // Then clear all caches
+                        clearAllListingCaches();
+                        
+                        toast({
+                          title: "Listing Refreshed",
+                          description: "Listing has been refreshed and caches cleared. Please refresh the page to see changes.",
+                          duration: 5000,
+                        });
+                      } else {
+                        toast({
+                          title: "Error",
+                          description: "Failed to refresh listing. Please try again.",
+                          variant: "destructive",
+                          duration: 3000,
+                        });
+                      }
+                    } catch (error) {
+                      console.error('Error refreshing listing:', error);
+                      toast({
+                        title: "Error",
+                        description: "Failed to refresh listing. Please try again.",
+                        variant: "destructive",
+                        duration: 3000,
+                      });
+                    }
+                  }}
+                >
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Refresh Listing
+                </Button>
+                
+                <Button 
                   variant="default" 
                   onClick={async () => {
                     if (confirm('Are you sure you want to reactivate this listing?')) {
@@ -289,10 +357,32 @@ export function ListingDebugger({ listingId }: ListingDebuggerProps) {
                         });
                         
                         const data = await response.json();
-                        alert('Listing reactivated successfully. Please refresh the page.');
+                        
+                        if (response.ok) {
+                          // Clear caches after successful reactivation
+                          clearAllListingCaches();
+                          
+                          toast({
+                            title: "Listing Reactivated",
+                            description: "Listing has been reactivated successfully. Please refresh the page.",
+                            duration: 5000,
+                          });
+                        } else {
+                          toast({
+                            title: "Error",
+                            description: "Failed to reactivate listing. Please try again.",
+                            variant: "destructive",
+                            duration: 3000,
+                          });
+                        }
                       } catch (error) {
                         console.error('Error reactivating listing:', error);
-                        alert('Error reactivating listing. See console for details.');
+                        toast({
+                          title: "Error",
+                          description: "Failed to reactivate listing. Please try again.",
+                          variant: "destructive",
+                          duration: 3000,
+                        });
                       }
                     }
                   }}
@@ -317,10 +407,32 @@ export function ListingDebugger({ listingId }: ListingDebuggerProps) {
                         });
                         
                         const data = await response.json();
-                        alert('Listing archived successfully. Please refresh the page.');
+                        
+                        if (response.ok) {
+                          // Clear caches after successful archiving
+                          clearAllListingCaches();
+                          
+                          toast({
+                            title: "Listing Archived",
+                            description: "Listing has been archived successfully. Please refresh the page.",
+                            duration: 5000,
+                          });
+                        } else {
+                          toast({
+                            title: "Error",
+                            description: "Failed to archive listing. Please try again.",
+                            variant: "destructive",
+                            duration: 3000,
+                          });
+                        }
                       } catch (error) {
                         console.error('Error archiving listing:', error);
-                        alert('Error archiving listing. See console for details.');
+                        toast({
+                          title: "Error",
+                          description: "Failed to archive listing. Please try again.",
+                          variant: "destructive",
+                          duration: 3000,
+                        });
                       }
                     }
                   }}

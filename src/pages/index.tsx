@@ -266,6 +266,11 @@ export default function Home() {
       'ufKDqtR3DUt2Id2RdLfi'  // Known problematic listing
     ]);
     
+    // Add specific listing IDs to debug
+    const debugListingIds = new Set<string>([
+      'BND7c1ejRRZdlGLSCME' // Listing from screenshot that should be visible
+    ]);
+    
     // Flag to prevent multiple fetches
     let isFetching = false;
     // Flag to track if component is still mounted
@@ -392,6 +397,11 @@ export default function Home() {
         
         let fetchedListings = querySnapshot.docs
           .map(doc => {
+            // Log debug information for specific listings we're tracking
+            if (debugListingIds.has(doc.id)) {
+              console.log(`Found debug listing: ${doc.id}`, doc.data());
+            }
+            
             // Skip known problematic listings
             if (problematicListingIds.has(doc.id)) {
               console.log(`Skipping known problematic listing: ${doc.id}`);

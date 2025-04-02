@@ -118,7 +118,7 @@ export function useListingVisibility(listings: Listing[]) {
     });
     
     // Always log filtered out reasons for specific listings
-    const debugListingIds = ['BtND7c1ejRRZdlGLSCME']; // Add the listing ID from the screenshot
+    const debugListingIds = ['BtND7c1ejRRZdlGLSCME', 'BND7c1ejRRZdlGLSCME']; // Add the listing ID from the screenshot
     
     for (const debugId of debugListingIds) {
       if (filteredOutReasons.current[debugId]) {
