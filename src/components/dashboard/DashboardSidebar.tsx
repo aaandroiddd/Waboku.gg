@@ -5,10 +5,12 @@ import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAccount } from '@/contexts/AccountContext';
 import { Logo } from '@/components/Logo';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { SignOutDialog } from '@/components/SignOutDialog';
 import { Badge } from '@/components/ui/badge';
 import { useUnread } from '@/contexts/UnreadContext';
+import { useAccountCache } from '@/hooks/useAccountCache';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface DashboardSidebarProps {
   onNavigate?: () => void;
@@ -17,9 +19,29 @@ interface DashboardSidebarProps {
 export function DashboardSidebar({ onNavigate }: DashboardSidebarProps) {
   const router = useRouter();
   const { user, signOut, isEmailVerified } = useAuth();
-  const { accountTier, features } = useAccount();
+  const { accountTier, features, isLoading: isAccountLoading } = useAccount();
   const { unreadCounts } = useUnread();
   const [showSignOutDialog, setShowSignOutDialog] = useState(false);
+  const [sidebarReady, setSidebarReady] = useState(false);
+  const { getCachedAccountTier, cacheAccountTier } = useAccountCache();
+  const [displayTier, setDisplayTier] = useState<string | null>(null);
+
+  // Initialize sidebar with cached data or wait for account data
+  useEffect(() => {
+    // First try to get from cache
+    const cachedTier = getCachedAccountTier();
+    
+    if (cachedTier) {
+      // If we have cached data, use it immediately
+      setDisplayTier(cachedTier);
+      setSidebarReady(true);
+    } else if (!isAccountLoading && accountTier) {
+      // Once account data is loaded, use it and cache it
+      setDisplayTier(accountTier);
+      cacheAccountTier(accountTier);
+      setSidebarReady(true);
+    }
+  }, [accountTier, isAccountLoading, getCachedAccountTier, cacheAccountTier]);
 
   const handleSignOut = async () => {
     await signOut();
@@ -188,10 +210,10 @@ export function DashboardSidebar({ onNavigate }: DashboardSidebarProps) {
   ];
 
   // Combine navigation items based on account tier
-  const navigation = [...baseNavigation];
+  let navigation = [...baseNavigation];
   
-  // Add premium features if user has premium account
-  if (accountTier === 'premium') {
+  // Use cached/loaded tier if available, otherwise show loading state
+  if (displayTier === 'premium') {
     // Insert Analytics after Create Listing (index 2)
     navigation.splice(2, 0, ...premiumNavItems);
   }
@@ -200,6 +222,14 @@ export function DashboardSidebar({ onNavigate }: DashboardSidebarProps) {
     router.push(href);
     onNavigate?.();
   };
+
+  // Render a skeleton loader while determining account tier
+  const renderSkeletonNavItem = () => (
+    <div className="flex items-center gap-3 px-3 py-2.5">
+      <Skeleton className="h-5 w-5 rounded-md" />
+      <Skeleton className="h-4 w-24 rounded-md" />
+    </div>
+  );
 
   return (
     <div className="flex flex-col h-screen sticky top-0 bg-card border-r">
@@ -234,24 +264,36 @@ export function DashboardSidebar({ onNavigate }: DashboardSidebarProps) {
         )}
       </div>
       <div className="flex-1 flex flex-col py-6 overflow-y-auto">
-        <nav className="px-4 space-y-1">
-          {navigation.map((item) => (
-            <button
-              key={item.name}
-              onClick={() => handleNavigate(item.href)}
-              className={cn(
-                'flex items-center w-full gap-3 text-sm font-medium rounded-md px-3 py-2.5 hover:bg-accent hover:text-accent-foreground transition-colors',
-                router.pathname === item.href
-                  ? 'bg-accent text-accent-foreground'
-                  : 'text-muted-foreground'
-              )}
-            >
-              {item.icon}
-              {item.name}
-              {item.badge !== undefined && renderUnreadBadge(item.badge)}
-            </button>
-          ))}
-        </nav>
+        {!sidebarReady && !displayTier ? (
+          // Show skeleton loader while loading
+          <div className="px-4 space-y-1">
+            {Array(10).fill(0).map((_, i) => (
+              <div key={i} className="px-3 py-2.5">
+                {renderSkeletonNavItem()}
+              </div>
+            ))}
+          </div>
+        ) : (
+          // Show actual navigation items once loaded
+          <nav className="px-4 space-y-1">
+            {navigation.map((item) => (
+              <button
+                key={item.name}
+                onClick={() => handleNavigate(item.href)}
+                className={cn(
+                  'flex items-center w-full gap-3 text-sm font-medium rounded-md px-3 py-2.5 hover:bg-accent hover:text-accent-foreground transition-colors',
+                  router.pathname === item.href
+                    ? 'bg-accent text-accent-foreground'
+                    : 'text-muted-foreground'
+                )}
+              >
+                {item.icon}
+                {item.name}
+                {item.badge !== undefined && renderUnreadBadge(item.badge)}
+              </button>
+            ))}
+          </nav>
+        )}
         <div className="mt-auto p-4">
           <Button
             variant="outline"
