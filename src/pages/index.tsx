@@ -216,7 +216,7 @@ export default function Home() {
   const [selectedState, setSelectedState] = useState("all");
   const [selectedGame, setSelectedGame] = useState("all");
   const [selectedCondition, setSelectedCondition] = useState("all");
-  const [priceRange, setPriceRange] = useState([0, 10000]);
+  const [priceRange, setPriceRange] = useState([0, 50000]);
   const [stateOpen, setStateOpen] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
   const [randomSubtitle] = useState(() => 
@@ -553,7 +553,7 @@ export default function Home() {
       queryParams.minPrice = priceRange[0];
     }
     
-    if (priceRange[1] !== 10000) {
+    if (priceRange[1] !== 50000) {
       queryParams.maxPrice = priceRange[1];
     }
     
@@ -567,7 +567,7 @@ export default function Home() {
   const resetFilters = () => {
     setSelectedGame("all");
     setSelectedCondition("all");
-    setPriceRange([0, 10000]);
+    setPriceRange([0, 50000]);
     setFilterOpen(false);
   };
 
