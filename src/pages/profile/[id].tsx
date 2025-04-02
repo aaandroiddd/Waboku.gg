@@ -15,6 +15,8 @@ import { SellerBadge } from '@/components/SellerBadge';
 import { AdminBadge } from '@/components/AdminBadge';
 import { MessageDialog } from '@/components/MessageDialog';
 import { StripeSellerBadge } from '@/components/StripeSellerBadge';
+import { ProfileAvatar } from '@/components/ProfileAvatar';
+import { ProfileName } from '@/components/ProfileName';
 
 const LoadingProfile = () => (
   <div className="container mx-auto p-6">
@@ -116,7 +118,9 @@ const ProfileContent = ({ userId }: { userId: string | null }) => {
           <CardContent className="p-6">
             <div className="flex flex-col md:flex-row gap-6">
               <div className="w-full md:w-1/4 flex flex-col gap-4">
-                <div className="relative w-full aspect-square rounded-lg overflow-hidden bg-secondary">
+                {/* Custom ProfileAvatar component for profile page */}
+                <div className="relative w-full aspect-square rounded-lg overflow-hidden bg-secondary flex items-center justify-center">
+                  {/* We're using a wrapper div to maintain the aspect ratio */}
                   {profile.avatarUrl ? (
                     <Image
                       src={profile.avatarUrl}

@@ -12,6 +12,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
+import { ProfileAvatar } from "@/components/ProfileAvatar";
+import { ProfileName } from "@/components/ProfileName";
 import { Star, Edit2, Trash2, MessageCircle, Share2, ExternalLink } from "lucide-react";
 import { ListingTimer } from "@/components/ListingTimer";
 import { ListingList } from "@/components/ListingList";
@@ -447,14 +449,13 @@ const DashboardComponent = () => {
       {/* Dashboard Header */}
       <div className="mb-8">
         <div className="flex items-start gap-8">
-          <Avatar className="h-20 w-20">
-            <AvatarImage src={user.photoURL || undefined} alt={user.displayName || 'User avatar'} />
-            <AvatarFallback>{user.email ? user.email.charAt(0).toUpperCase() : 'U'}</AvatarFallback>
-          </Avatar>
+          {/* Use the new ProfileAvatar component for consistent avatar display */}
+          <ProfileAvatar user={user} size="xl" />
           <div className="flex-1 pt-2">
             <div className="group cursor-pointer" onClick={() => router.push(`/profile/${user.uid}`)}>
               <h1 className="text-3xl font-bold tracking-tight hover:text-primary transition-colors">
-                {user.displayName || profile?.username || 'User'}
+                {/* Use the new ProfileName component for consistent name display */}
+                <ProfileName user={user} />
               </h1>
               <p className="text-muted-foreground hover:text-primary transition-colors truncate max-w-[300px] mt-2">
                 {user.email}
