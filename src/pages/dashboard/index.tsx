@@ -464,36 +464,6 @@ const DashboardComponent = () => {
               </p>
             </div>
           </div>
-          <Button 
-            variant="outline" 
-            onClick={() => {
-              // Clear cache and refresh listings
-              if (user) {
-                try {
-                  // Create cache keys for the user's listings
-                  const userListingsCacheKey = `listings_${user.uid}_all_none`;
-                  const activeListingsCacheKey = `listings_${user.uid}_active_none`;
-                  
-                  // Clear from localStorage to ensure fresh data
-                  localStorage.removeItem(userListingsCacheKey);
-                  localStorage.removeItem(activeListingsCacheKey);
-                  
-                  // Refresh listings data
-                  refreshListings();
-                  
-                  toast({
-                    title: "Refreshed",
-                    description: "Your listings have been refreshed.",
-                    duration: 3000,
-                  });
-                } catch (cacheError) {
-                  console.error('Error clearing listings cache:', cacheError);
-                }
-              }
-            }}
-          >
-            Refresh Listings
-          </Button>
         </div>
       </div>
 
