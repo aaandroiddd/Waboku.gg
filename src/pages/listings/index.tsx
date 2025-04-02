@@ -131,7 +131,7 @@ export default function ListingsPage() {
   const [selectedState, setSelectedState] = useState("all");
   const [selectedGame, setSelectedGame] = useState("all");
   const [selectedCondition, setSelectedCondition] = useState("all");
-  const [priceRange, setPriceRange] = useState([0, 1000]);
+  const [priceRange, setPriceRange] = useState([0, 10000]);
   const [showGradedOnly, setShowGradedOnly] = useState(false);
 
   // Use the enhanced useListings hook without automatic search
@@ -283,7 +283,7 @@ export default function ListingsPage() {
         queryParams.minPrice = priceRange[0];
       }
       
-      if (priceRange[1] !== 1000) {
+      if (priceRange[1] !== 10000) {
         queryParams.maxPrice = priceRange[1];
       }
 
@@ -303,7 +303,7 @@ export default function ListingsPage() {
     setSelectedState("all");
     setSelectedGame("all");
     setSelectedCondition("all");
-    setPriceRange([0, 1000]);
+    setPriceRange([0, 10000]);
     router.push('/listings', undefined, { shallow: true });
   };
 
@@ -429,8 +429,8 @@ export default function ListingsPage() {
                               <Slider
                                 value={priceRange}
                                 min={0}
-                                max={1000}
-                                step={1}
+                                max={10000}
+                                step={10}
                                 onValueChange={setPriceRange}
                               />
                               <div className="flex items-center gap-2 mt-2">
@@ -458,13 +458,13 @@ export default function ListingsPage() {
                                     value={priceRange[1]}
                                     onChange={(e) => {
                                       const value = Number(e.target.value);
-                                      if (value >= priceRange[0] && value <= 1000) {
+                                      if (value >= priceRange[0] && value <= 10000) {
                                         setPriceRange([priceRange[0], value]);
                                       }
                                     }}
                                     className="w-24 h-8"
                                     min={priceRange[0]}
-                                    max={1000}
+                                    max={10000}
                                   />
                                 </div>
                               </div>
