@@ -9,8 +9,21 @@ const profileCache: Record<string, {
   timestamp: number;
 }> = {};
 
-// Cache expiration time (5 minutes)
-const CACHE_EXPIRATION = 5 * 60 * 1000;
+// Cache expiration time (2 minutes - reduced to ensure fresher data)
+const CACHE_EXPIRATION = 2 * 60 * 1000;
+
+// Function to check if there's a localStorage cache key for this profile
+const checkLocalStorageCache = (userId: string): boolean => {
+  if (typeof window === 'undefined') return false;
+  
+  try {
+    const profileCacheKey = `profile_${userId}`;
+    return localStorage.getItem(profileCacheKey) !== null;
+  } catch (e) {
+    console.warn('Error accessing localStorage:', e);
+    return false;
+  }
+};
 
 export function useProfile(userId: string | null) {
   const [profile, setProfile] = useState<UserProfile | null>(
@@ -24,12 +37,24 @@ export function useProfile(userId: string | null) {
       setIsLoading(true);
       setError(null);
       
-      // Check if we have a valid cached profile
+      // Check if we have a valid cached profile and no localStorage flag to force refresh
       const cachedData = profileCache[id];
-      if (cachedData && Date.now() - cachedData.timestamp < CACHE_EXPIRATION) {
+      const shouldForceRefresh = checkLocalStorageCache(id);
+      
+      if (cachedData && Date.now() - cachedData.timestamp < CACHE_EXPIRATION && !shouldForceRefresh) {
         setProfile(cachedData.profile);
         setIsLoading(false);
         return;
+      }
+      
+      // Clear localStorage cache flag if it exists
+      if (shouldForceRefresh && typeof window !== 'undefined') {
+        try {
+          const profileCacheKey = `profile_${id}`;
+          localStorage.removeItem(profileCacheKey);
+        } catch (e) {
+          console.warn('Error clearing localStorage cache:', e);
+        }
       }
       
       // First try to get the user document
@@ -39,7 +64,7 @@ export function useProfile(userId: string | null) {
       // Create a default profile even if the document doesn't exist
       const profileData: UserProfile = {
         uid: id,
-        username: userData?.displayName || userData?.username || 'Anonymous User',
+        username: userData?.username || userData?.displayName || 'Anonymous User',
         email: userData?.email || '',
         avatarUrl: userData?.avatarUrl || userData?.photoURL || null,
         bio: userData?.bio || '',
@@ -59,6 +84,15 @@ export function useProfile(userId: string | null) {
           status: 'inactive'
         }
       };
+      
+      // Log profile data for debugging
+      console.log('Fetched profile data:', {
+        uid: id,
+        username: profileData.username,
+        avatarUrl: profileData.avatarUrl,
+        photoURL: userData?.photoURL,
+        displayName: userData?.displayName
+      });
       
       // Update the cache
       profileCache[id] = {
@@ -91,11 +125,26 @@ export function useProfile(userId: string | null) {
     }
 
     fetchProfile(userId);
+    
+    // Set up a refresh interval to keep profile data fresh
+    const refreshInterval = setInterval(() => {
+      if (userId) {
+        // Check if we need to refresh based on cache expiration
+        const cachedData = profileCache[userId];
+        if (!cachedData || Date.now() - cachedData.timestamp >= CACHE_EXPIRATION) {
+          console.log('Refreshing profile data due to cache expiration');
+          fetchProfile(userId);
+        }
+      }
+    }, CACHE_EXPIRATION / 2); // Refresh at half the cache expiration time
+    
+    return () => clearInterval(refreshInterval);
   }, [userId, fetchProfile]);
 
   // Function to force refresh the profile
   const refreshProfile = useCallback(() => {
     if (userId) {
+      console.log('Forcing profile refresh for user:', userId);
       // Remove from cache to force a fresh fetch
       delete profileCache[userId];
       fetchProfile(userId);

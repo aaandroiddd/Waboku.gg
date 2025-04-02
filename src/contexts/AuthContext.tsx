@@ -566,18 +566,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         });
       }
 
-      if (data.username || data.photoURL) {
+      // Ensure photoURL is properly set in both places
+      const photoURL = data.photoURL || profile.avatarUrl || user.photoURL || '';
+
+      // Update Firebase Auth profile
+      if (data.username || photoURL) {
         await firebaseUpdateProfile(user, {
           displayName: data.username || user.displayName,
-          photoURL: data.photoURL || user.photoURL
+          photoURL: photoURL
         });
+        
+        // Reload user to ensure we have the latest data
+        await user.reload();
+        
+        // Update local user state with the latest data
+        if (auth.currentUser) {
+          setUser(auth.currentUser);
+        }
       }
 
+      // Ensure consistent data between Auth and Firestore
       const updatedProfile = {
         ...profile,
         username: data.username || profile.username,
         bio: data.bio || profile.bio || '',
-        avatarUrl: data.photoURL || profile.avatarUrl || '',
+        avatarUrl: photoURL, // Use the same photoURL value
+        displayName: data.username || profile.username, // Add displayName field for consistency
+        photoURL: photoURL, // Add photoURL field for consistency
         location: data.location || profile.location || '',
         social: {
           ...profile.social,
@@ -586,8 +601,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         lastUpdated: new Date().toISOString()
       };
 
+      // Update Firestore profile
       await setDoc(doc(db, 'users', user.uid), updatedProfile);
+      
+      // Update local profile state
       setProfile(updatedProfile as UserProfile);
+      
+      // Clear profile cache to ensure fresh data on next fetch
+      try {
+        if (typeof window !== 'undefined') {
+          // Create a cache key for this user's profile
+          const profileCacheKey = `profile_${user.uid}`;
+          localStorage.removeItem(profileCacheKey);
+          console.log('Cleared profile cache after update');
+        }
+      } catch (cacheError) {
+        console.error('Error clearing profile cache:', cacheError);
+      }
     } catch (err: any) {
       if (data.username && data.username !== profile.username) {
         try {
