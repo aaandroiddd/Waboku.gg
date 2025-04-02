@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { useUnread } from '@/contexts/UnreadContext';
 import { useAccountCache } from '@/hooks/useAccountCache';
 import { Skeleton } from '@/components/ui/skeleton';
+import { ThemeToggle } from '@/components/ThemeToggle';
 
 interface DashboardSidebarProps {
   onNavigate?: () => void;
@@ -271,6 +272,7 @@ export function DashboardSidebar({ onNavigate }: DashboardSidebarProps) {
                   </svg>
                   Verified
                 </div>
+                <ThemeToggle />
               </div>
             )}
           </div>

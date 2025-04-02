@@ -127,9 +127,6 @@ export const DashboardLayout = ({ children }: { children: ReactNode }) => {
               <div className="flex flex-wrap gap-2 items-center">
                 <VerificationStatus />
                 {profile?.isAdmin && <AdminBadge />}
-                <div className="ml-2">
-                  <ThemeToggle />
-                </div>
               </div>
             </div>
             <main className="flex-1 min-h-0 px-4 md:px-8">
