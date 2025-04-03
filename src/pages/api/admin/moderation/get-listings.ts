@@ -16,11 +16,33 @@ const handler = async (
   }
 
   try {
-    // Query Firestore for listings that need review
+    // Get the filter type from query parameters (pending, approved, rejected)
+    const filterType = req.query.filter || 'pending';
     const listingsRef = db.collection('listings');
-    const q = listingsRef
-      .where('needsReview', '==', true)
-      .where('status', '==', 'active');
+    let q;
+
+    // Build query based on filter type
+    if (filterType === 'pending') {
+      // Query for listings that need review
+      q = listingsRef
+        .where('needsReview', '==', true)
+        .where('status', '==', 'active');
+    } else if (filterType === 'approved') {
+      // Query for approved listings
+      q = listingsRef
+        .where('moderationStatus', '==', 'approved')
+        .where('needsReview', '==', false)
+        .orderBy('moderatedAt', 'desc')
+        .limit(50); // Limit to recent 50 approved listings
+    } else if (filterType === 'rejected') {
+      // Query for rejected listings
+      q = listingsRef
+        .where('moderationStatus', '==', 'rejected')
+        .orderBy('moderatedAt', 'desc')
+        .limit(50); // Limit to recent 50 rejected listings
+    } else {
+      return res.status(400).json({ error: 'Invalid filter type' });
+    }
 
     const querySnapshot = await q.get();
     
@@ -31,6 +53,7 @@ const handler = async (
       // Convert Firestore timestamps to ISO strings for serialization
       const createdAt = data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : null;
       const expiresAt = data.expiresAt?.toDate ? data.expiresAt.toDate().toISOString() : null;
+      const moderatedAt = data.moderatedAt?.toDate ? data.moderatedAt.toDate().toISOString() : null;
       
       // Process review reason with more detailed information
       let reviewReason = data.reviewReason || '';
@@ -64,6 +87,7 @@ const handler = async (
         ...data,
         createdAt,
         expiresAt,
+        moderatedAt,
         reviewReason,
         reviewCategory
       };
@@ -73,7 +97,8 @@ const handler = async (
     return res.status(200).json({ 
       success: true,
       listings,
-      count: listings.length
+      count: listings.length,
+      filterType
     });
   } catch (error) {
     console.error('Error fetching listings for moderation:', error);

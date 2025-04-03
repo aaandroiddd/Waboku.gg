@@ -87,7 +87,7 @@ export default function ModerationDashboard() {
         const token = await user.getIdToken(true);
         
         // Try to fetch listings using moderator authentication
-        const response = await fetch('/api/admin/moderation/get-listings', {
+        const response = await fetch('/api/admin/moderation/get-listings?filter=pending', {
           method: 'GET',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -108,10 +108,10 @@ export default function ModerationDashboard() {
     checkModeratorStatus();
   }, [user]);
 
-  const fetchListingsForModeration = async (secret: string) => {
+  const fetchListingsForModeration = async (secret: string, filterType: string = 'pending') => {
     setListingsLoading(true);
     try {
-      const response = await fetch('/api/admin/moderation/get-listings', {
+      const response = await fetch(`/api/admin/moderation/get-listings?filter=${filterType}`, {
         method: 'GET',
         headers: {
           'x-admin-secret': secret,
@@ -245,9 +245,15 @@ export default function ModerationDashboard() {
             </AlertDescription>
           </Alert>
 
-          <Tabs defaultValue="pending" className="space-y-4">
+          <Tabs defaultValue="pending" className="space-y-4" onValueChange={(value) => {
+            if (value === 'approved' || value === 'rejected' || value === 'pending') {
+              fetchListingsForModeration(adminSecret, value);
+            }
+          }}>
             <TabsList>
               <TabsTrigger value="pending">Pending Review</TabsTrigger>
+              <TabsTrigger value="approved">Approved</TabsTrigger>
+              <TabsTrigger value="rejected">Rejected</TabsTrigger>
               <TabsTrigger value="info">Guidelines</TabsTrigger>
             </TabsList>
 
@@ -351,6 +357,185 @@ export default function ModerationDashboard() {
                             Reject
                           </Button>
                         </div>
+                      </CardFooter>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="approved" className="space-y-4">
+              {listingsLoading ? (
+                <div className="flex justify-center items-center py-12">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  <span className="ml-2">Loading approved listings...</span>
+                </div>
+              ) : listings.length === 0 ? (
+                <div className="text-center py-12 bg-muted rounded-lg">
+                  <AlertTriangle className="h-12 w-12 mx-auto text-amber-500 mb-4" />
+                  <h3 className="text-xl font-medium mb-2">No Approved Listings Found</h3>
+                  <p className="text-muted-foreground">There are no recently approved listings to display.</p>
+                </div>
+              ) : (
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                  {listings.map((listing) => (
+                    <Card key={listing.id} className="overflow-hidden hover:shadow-md transition-shadow">
+                      <div className="aspect-video relative bg-muted">
+                        {listing.imageUrls && listing.imageUrls.length > 0 ? (
+                          <Image
+                            src={listing.imageUrls[0]}
+                            alt={listing.title}
+                            fill
+                            className="object-cover"
+                            onClick={() => viewImage(listing.imageUrls[0])}
+                            style={{ cursor: 'pointer' }}
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <span className="text-muted-foreground">No image</span>
+                          </div>
+                        )}
+                        <div className="absolute top-2 right-2">
+                          <Badge variant="success" className="font-medium bg-green-600 hover:bg-green-700">
+                            Approved
+                          </Badge>
+                        </div>
+                        {listing.moderatedAt && (
+                          <div className="absolute bottom-0 left-0 right-0 bg-black/70 p-2 text-xs text-white">
+                            <span className="font-semibold">Approved:</span> {new Date(listing.moderatedAt).toLocaleString()}
+                          </div>
+                        )}
+                      </div>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-lg truncate">{listing.title}</CardTitle>
+                        <CardDescription>
+                          <div className="flex justify-between">
+                            <span>By {listing.username}</span>
+                            <span className="font-medium">{formatPrice(listing.price)}</span>
+                          </div>
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="pb-2">
+                        <div className="flex flex-wrap gap-2 mb-2">
+                          <Badge variant="outline">{listing.game}</Badge>
+                          <Badge variant="outline">{listing.condition}</Badge>
+                          {listing.isGraded && (
+                            <Badge variant="outline" className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300">
+                              {listing.gradingCompany} {listing.gradeLevel}
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="text-sm text-muted-foreground line-clamp-2">
+                          {listing.description || 'No description provided'}
+                        </p>
+                        {listing.moderationDetails?.notes && (
+                          <div className="mt-2 p-2 bg-green-100 dark:bg-green-900/30 rounded text-xs">
+                            <span className="font-semibold">Moderator Notes:</span> {listing.moderationDetails.notes}
+                          </div>
+                        )}
+                      </CardContent>
+                      <CardFooter className="pt-2">
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          className="w-full"
+                          onClick={() => viewListing(listing)}
+                        >
+                          <Eye className="h-4 w-4 mr-1" />
+                          View Details
+                        </Button>
+                      </CardFooter>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="rejected" className="space-y-4">
+              {listingsLoading ? (
+                <div className="flex justify-center items-center py-12">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  <span className="ml-2">Loading rejected listings...</span>
+                </div>
+              ) : listings.length === 0 ? (
+                <div className="text-center py-12 bg-muted rounded-lg">
+                  <AlertTriangle className="h-12 w-12 mx-auto text-amber-500 mb-4" />
+                  <h3 className="text-xl font-medium mb-2">No Rejected Listings Found</h3>
+                  <p className="text-muted-foreground">There are no recently rejected listings to display.</p>
+                </div>
+              ) : (
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                  {listings.map((listing) => (
+                    <Card key={listing.id} className="overflow-hidden hover:shadow-md transition-shadow">
+                      <div className="aspect-video relative bg-muted">
+                        {listing.imageUrls && listing.imageUrls.length > 0 ? (
+                          <Image
+                            src={listing.imageUrls[0]}
+                            alt={listing.title}
+                            fill
+                            className="object-cover"
+                            onClick={() => viewImage(listing.imageUrls[0])}
+                            style={{ cursor: 'pointer' }}
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <span className="text-muted-foreground">No image</span>
+                          </div>
+                        )}
+                        <div className="absolute top-2 right-2">
+                          <Badge variant="destructive" className="font-medium">
+                            Rejected
+                          </Badge>
+                        </div>
+                        {listing.moderatedAt && (
+                          <div className="absolute bottom-0 left-0 right-0 bg-black/70 p-2 text-xs text-white">
+                            <span className="font-semibold">Rejected:</span> {new Date(listing.moderatedAt).toLocaleString()}
+                          </div>
+                        )}
+                      </div>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-lg truncate">{listing.title}</CardTitle>
+                        <CardDescription>
+                          <div className="flex justify-between">
+                            <span>By {listing.username}</span>
+                            <span className="font-medium">{formatPrice(listing.price)}</span>
+                          </div>
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="pb-2">
+                        <div className="flex flex-wrap gap-2 mb-2">
+                          <Badge variant="outline">{listing.game}</Badge>
+                          <Badge variant="outline">{listing.condition}</Badge>
+                          {listing.isGraded && (
+                            <Badge variant="outline" className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300">
+                              {listing.gradingCompany} {listing.gradeLevel}
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="text-sm text-muted-foreground line-clamp-2">
+                          {listing.description || 'No description provided'}
+                        </p>
+                        {listing.moderationDetails?.rejectionReason && (
+                          <div className="mt-2 p-2 bg-red-100 dark:bg-red-900/30 rounded text-xs">
+                            <span className="font-semibold">Rejection Reason:</span> {listing.moderationDetails.rejectionReason}
+                          </div>
+                        )}
+                        {listing.moderationDetails?.notes && (
+                          <div className="mt-2 p-2 bg-amber-100 dark:bg-amber-900/30 rounded text-xs">
+                            <span className="font-semibold">Moderator Notes:</span> {listing.moderationDetails.notes}
+                          </div>
+                        )}
+                      </CardContent>
+                      <CardFooter className="pt-2">
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          className="w-full"
+                          onClick={() => viewListing(listing)}
+                        >
+                          <Eye className="h-4 w-4 mr-1" />
+                          View Details
+                        </Button>
                       </CardFooter>
                     </Card>
                   ))}
@@ -492,36 +677,70 @@ export default function ModerationDashboard() {
                         <p className="text-sm">{selectedListing.reviewReason}</p>
                       </div>
                     )}
+                    
+                    {selectedListing.moderationStatus && (
+                      <div className={`mt-4 p-3 rounded-md ${selectedListing.moderationStatus === 'approved' ? 'bg-green-100 dark:bg-green-900/30' : 'bg-red-100 dark:bg-red-900/30'}`}>
+                        <h3 className="font-semibold mb-1 flex items-center">
+                          {selectedListing.moderationStatus === 'approved' ? (
+                            <CheckCircle className="h-4 w-4 mr-2 text-green-600 dark:text-green-400" />
+                          ) : (
+                            <XCircle className="h-4 w-4 mr-2 text-red-600 dark:text-red-400" />
+                          )}
+                          Moderation Status: {selectedListing.moderationStatus.charAt(0).toUpperCase() + selectedListing.moderationStatus.slice(1)}
+                        </h3>
+                        {selectedListing.moderatedAt && (
+                          <p className="text-sm mb-1">Date: {new Date(selectedListing.moderatedAt).toLocaleString()}</p>
+                        )}
+                        {selectedListing.moderationDetails?.notes && (
+                          <p className="text-sm mb-1">Notes: {selectedListing.moderationDetails.notes}</p>
+                        )}
+                        {selectedListing.moderationDetails?.rejectionReason && (
+                          <p className="text-sm">Rejection Reason: {selectedListing.moderationDetails.rejectionReason}</p>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
               
               <DialogFooter className="flex justify-between">
-                <Button 
-                  variant="destructive" 
-                  onClick={() => {
-                    setResponseDialog(false);
-                    if (selectedListing) {
-                      setConfirmDialog({isOpen: true, action: 'reject', listingId: selectedListing.id});
-                    }
-                  }}
-                >
-                  <XCircle className="h-4 w-4 mr-1" />
-                  Reject
-                </Button>
-                <Button 
-                  variant="default" 
-                  className="bg-green-600 hover:bg-green-700"
-                  onClick={() => {
-                    setResponseDialog(false);
-                    if (selectedListing) {
-                      setConfirmDialog({isOpen: true, action: 'approve', listingId: selectedListing.id});
-                    }
-                  }}
-                >
-                  <CheckCircle className="h-4 w-4 mr-1" />
-                  Approve
-                </Button>
+                {selectedListing && !selectedListing.moderationStatus ? (
+                  <>
+                    <Button 
+                      variant="destructive" 
+                      onClick={() => {
+                        setResponseDialog(false);
+                        if (selectedListing) {
+                          setConfirmDialog({isOpen: true, action: 'reject', listingId: selectedListing.id});
+                        }
+                      }}
+                    >
+                      <XCircle className="h-4 w-4 mr-1" />
+                      Reject
+                    </Button>
+                    <Button 
+                      variant="default" 
+                      className="bg-green-600 hover:bg-green-700"
+                      onClick={() => {
+                        setResponseDialog(false);
+                        if (selectedListing) {
+                          setConfirmDialog({isOpen: true, action: 'approve', listingId: selectedListing.id});
+                        }
+                      }}
+                    >
+                      <CheckCircle className="h-4 w-4 mr-1" />
+                      Approve
+                    </Button>
+                  </>
+                ) : (
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setResponseDialog(false)}
+                    className="ml-auto"
+                  >
+                    Close
+                  </Button>
+                )}
               </DialogFooter>
             </DialogContent>
           </Dialog>
