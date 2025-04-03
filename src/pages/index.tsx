@@ -52,6 +52,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { GAME_NAME_MAPPING } from '@/lib/game-mappings';
 
 const games = [
   { value: "all", label: "All Games" },
@@ -60,7 +61,7 @@ const games = [
   { value: "mtg", label: "Magic: The Gathering" },
   { value: "onepiece", label: "One Piece" },
   { value: "digimon", label: "Digimon" },
-  { value: "flesh", label: "Flesh and Blood" },
+  { value: "flesh-and-blood", label: "Flesh and Blood" },
   { value: "weiss", label: "Weiss Schwarz" },
 ];
 
@@ -527,9 +528,12 @@ export default function Home() {
 
     // Apply game filter
     if (selectedGame !== "all") {
-      filtered = filtered.filter(listing => 
-        listing.game?.toLowerCase() === selectedGame.toLowerCase()
-      );
+      filtered = filtered.filter(listing => {
+        const listingGameLower = listing.game?.toLowerCase() || '';
+        return GAME_NAME_MAPPING[selectedGame]?.some(name => 
+          listingGameLower === name.toLowerCase()
+        ) || false;
+      });
     }
 
     // Apply condition filter
@@ -571,13 +575,20 @@ export default function Home() {
       if (inOriginal && !inFiltered) {
         // Find the listing and log why it was filtered out
         const listing = listings.find(l => l.id === debugId);
+        const listingGameLower = listing?.game?.toLowerCase() || '';
+        const matchesGameFilter = selectedGame === "all" || 
+          (GAME_NAME_MAPPING[selectedGame]?.some(name => 
+            listingGameLower === name.toLowerCase()
+          ) || false);
+        
         console.log(`Debug listing ${debugId} was filtered out:`, {
           title: listing?.title,
           game: listing?.game,
           condition: listing?.condition,
           state: listing?.state,
           price: listing?.price,
-          matchesGameFilter: selectedGame === "all" || listing?.game?.toLowerCase() === selectedGame.toLowerCase(),
+          matchesGameFilter,
+          gameNames: GAME_NAME_MAPPING[selectedGame],
           matchesConditionFilter: selectedCondition === "all" || listing?.condition?.toLowerCase() === selectedCondition.toLowerCase(),
           matchesStateFilter: selectedState === "all" || listing?.state?.toLowerCase() === selectedState.toLowerCase(),
           matchesPriceFilter: listing?.price >= priceRange[0] && listing?.price <= priceRange[1]
