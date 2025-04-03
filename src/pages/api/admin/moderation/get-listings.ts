@@ -18,6 +18,8 @@ const handler = async (
   try {
     // Get the filter type from query parameters (pending, approved, rejected)
     const filterType = req.query.filter || 'pending';
+    console.log(`Fetching listings with filter: ${filterType}`);
+    
     const listingsRef = db.collection('listings');
     let q;
 
@@ -38,6 +40,7 @@ const handler = async (
       // Query for rejected listings
       q = listingsRef
         .where('moderationStatus', '==', 'rejected')
+        .where('needsReview', '==', false)
         .orderBy('moderatedAt', 'desc')
         .limit(50); // Limit to recent 50 rejected listings
     } else {
@@ -93,6 +96,18 @@ const handler = async (
       };
     });
 
+    // Log the results
+    console.log(`Found ${listings.length} listings for filter: ${filterType}`);
+    if (listings.length > 0) {
+      console.log('Sample listing data:', {
+        id: listings[0].id,
+        title: listings[0].title,
+        needsReview: listings[0].needsReview,
+        moderationStatus: listings[0].moderationStatus,
+        status: listings[0].status
+      });
+    }
+    
     // Return the listings
     return res.status(200).json({ 
       success: true,

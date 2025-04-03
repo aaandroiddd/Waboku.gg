@@ -158,6 +158,8 @@ export default function ModerationDashboard() {
         throw new Error('No authentication method available');
       }
       
+      console.log(`Sending ${action} request for listing ${listingId}`);
+      
       const response = await fetch('/api/admin/moderation/update-listing', {
         method: 'POST',
         headers,
@@ -169,6 +171,8 @@ export default function ModerationDashboard() {
         })
       });
       
+      console.log(`Response status: ${response.status}`);
+      
       const data = await response.json();
       
       if (!response.ok) {
@@ -177,6 +181,12 @@ export default function ModerationDashboard() {
       
       // Remove the listing from the list
       setListings(prev => prev.filter(listing => listing.id !== listingId));
+      
+      // Refresh the current tab's listings
+      const currentTab = document.querySelector('[role="tab"][aria-selected="true"]')?.getAttribute('data-value');
+      if (currentTab && (currentTab === 'pending' || currentTab === 'approved' || currentTab === 'rejected')) {
+        fetchListingsForModeration(adminSecret, currentTab);
+      }
       
       toast.success(`Listing ${action === 'approve' ? 'approved' : 'rejected'} successfully`);
     } catch (error) {
@@ -251,10 +261,10 @@ export default function ModerationDashboard() {
             }
           }}>
             <TabsList>
-              <TabsTrigger value="pending">Pending Review</TabsTrigger>
-              <TabsTrigger value="approved">Approved</TabsTrigger>
-              <TabsTrigger value="rejected">Rejected</TabsTrigger>
-              <TabsTrigger value="info">Guidelines</TabsTrigger>
+              <TabsTrigger value="pending" data-value="pending">Pending Review</TabsTrigger>
+              <TabsTrigger value="approved" data-value="approved">Approved</TabsTrigger>
+              <TabsTrigger value="rejected" data-value="rejected">Rejected</TabsTrigger>
+              <TabsTrigger value="info" data-value="info">Guidelines</TabsTrigger>
             </TabsList>
 
             <TabsContent value="pending" className="space-y-4">

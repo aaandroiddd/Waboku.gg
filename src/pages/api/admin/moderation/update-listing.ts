@@ -1,10 +1,9 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { getFirestore, doc, getDoc, updateDoc } from 'firebase/firestore';
-import { firebaseApp } from '@/lib/firebase';
+import { getFirebaseAdmin } from '@/lib/firebase-admin';
 import { moderatorAuthMiddleware } from '@/middleware/moderatorAuth';
 
-// Initialize Firestore
-const db = getFirestore(firebaseApp);
+// Initialize Firestore using Firebase Admin
+const { db } = getFirebaseAdmin();
 
 // Create a handler with middleware
 const handler = async (
@@ -28,12 +27,16 @@ const handler = async (
   }
 
   try {
+    // Log the request for debugging
+    console.log(`Moderation request: ${action} listing ${listingId}`);
+    console.log('Request headers:', req.headers);
+    console.log('Request body:', req.body);
     // Get reference to the listing document
-    const listingRef = doc(db, 'listings', listingId);
+    const listingRef = db.collection('listings').doc(listingId);
     
     // Check if listing exists
-    const listingSnap = await getDoc(listingRef);
-    if (!listingSnap.exists()) {
+    const listingSnap = await listingRef.get();
+    if (!listingSnap.exists) {
       return res.status(404).json({ error: 'Listing not found' });
     }
 
@@ -53,7 +56,7 @@ const handler = async (
     // Update the listing based on the action
     if (action === 'approve') {
       // Remove the needsReview flag and add detailed moderation info
-      await updateDoc(listingRef, {
+      await listingRef.update({
         needsReview: false,
         moderationStatus: 'approved',
         moderatedAt: new Date(),
@@ -75,7 +78,7 @@ const handler = async (
       });
     } else {
       // Reject the listing by changing its status to 'rejected' with detailed info
-      await updateDoc(listingRef, {
+      await listingRef.update({
         status: 'rejected',
         needsReview: false,
         moderationStatus: 'rejected',
