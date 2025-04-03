@@ -40,6 +40,7 @@ export default function AdminDashboard() {
   const [apiResponse, setApiResponse] = useState<ApiResponse | null>(null);
   const [userId, setUserId] = useState('');
   const [selectedTier, setSelectedTier] = useState<string>('');
+  const [moderatorUserId, setModeratorUserId] = useState('');
 
   useEffect(() => {
     const secret = localStorage.getItem('admin_secret');
@@ -276,6 +277,126 @@ export default function AdminDashboard() {
               >
                 Fix Subscriptions
               </Button>
+            </div>
+          </Card>
+          
+          {/* Content Moderation Section */}
+          <Card className="p-6 mb-8">
+            <h2 className="text-xl font-semibold mb-4">Content Moderation</h2>
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Review and moderate listings that have been flagged for review.
+              </p>
+              <Button 
+                onClick={() => router.push(`/admin/moderation?adminSecret=${adminSecret}`)}
+                className="w-full"
+              >
+                Moderation Dashboard
+              </Button>
+            </div>
+          </Card>
+          
+          {/* Moderator Management Section */}
+          <Card className="p-6 mb-8">
+            <h2 className="text-xl font-semibold mb-4">Moderator Management</h2>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="moderatorUserId">User ID</Label>
+                <Input
+                  id="moderatorUserId"
+                  placeholder="Enter Firebase User ID"
+                  value={moderatorUserId}
+                  onChange={(e) => setModeratorUserId(e.target.value)}
+                />
+              </div>
+              <div className="flex gap-2">
+                <Button 
+                  onClick={async () => {
+                    if (!moderatorUserId) {
+                      setApiResponse({ error: 'User ID is required' });
+                      setResponseDialog(true);
+                      return;
+                    }
+                    
+                    setLoading(true);
+                    try {
+                      const response = await fetch('/api/admin/assign-moderator', {
+                        method: 'POST',
+                        headers: {
+                          'x-admin-secret': adminSecret,
+                          'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                          userId: moderatorUserId,
+                          action: 'add'
+                        })
+                      });
+                      
+                      const data = await response.json();
+                      setApiResponse(data);
+                      setResponseDialog(true);
+                      
+                      if (response.ok) {
+                        // Clear form on success
+                        setModeratorUserId('');
+                      }
+                    } catch (error) {
+                      setApiResponse({ error: 'Failed to assign moderator role' });
+                      setResponseDialog(true);
+                    }
+                    setLoading(false);
+                  }}
+                  disabled={loading || !moderatorUserId}
+                  className="flex-1 bg-purple-600 hover:bg-purple-700 text-white"
+                >
+                  {loading ? 'Assigning...' : 'Assign Moderator'}
+                </Button>
+                <Button 
+                  onClick={async () => {
+                    if (!moderatorUserId) {
+                      setApiResponse({ error: 'User ID is required' });
+                      setResponseDialog(true);
+                      return;
+                    }
+                    
+                    setLoading(true);
+                    try {
+                      const response = await fetch('/api/admin/assign-moderator', {
+                        method: 'POST',
+                        headers: {
+                          'x-admin-secret': adminSecret,
+                          'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                          userId: moderatorUserId,
+                          action: 'remove'
+                        })
+                      });
+                      
+                      const data = await response.json();
+                      setApiResponse(data);
+                      setResponseDialog(true);
+                      
+                      if (response.ok) {
+                        // Clear form on success
+                        setModeratorUserId('');
+                      }
+                    } catch (error) {
+                      setApiResponse({ error: 'Failed to remove moderator role' });
+                      setResponseDialog(true);
+                    }
+                    setLoading(false);
+                  }}
+                  disabled={loading || !moderatorUserId}
+                  variant="outline"
+                  className="flex-1"
+                >
+                  {loading ? 'Removing...' : 'Remove Moderator'}
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Moderators can access the moderation dashboard to review flagged listings.
+              </p>
             </div>
           </Card>
           
