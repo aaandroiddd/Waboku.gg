@@ -58,12 +58,12 @@ const handler = async (
       // Remove the needsReview flag and add detailed moderation info
       await listingRef.update({
         needsReview: false,
-        moderationStatus: 'approved',
         moderatedAt: new Date(),
         hasBeenReviewed: true,
         moderationDetails: {
           moderatorId,
           actionTaken: 'approved',
+          moderationStatus: 'approved',
           timestamp: new Date(),
           notes: moderatorNotes,
           originalReviewReason: listingData.reviewReason || 'No reason provided'
@@ -82,12 +82,12 @@ const handler = async (
       await listingRef.update({
         status: 'rejected',
         needsReview: false,
-        moderationStatus: 'rejected',
         moderatedAt: new Date(),
         hasBeenReviewed: true,
         moderationDetails: {
           moderatorId,
           actionTaken: 'rejected',
+          moderationStatus: 'rejected',
           timestamp: new Date(),
           notes: moderatorNotes,
           rejectionReason: rejectionReason || 'Violation of platform guidelines',

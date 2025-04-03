@@ -30,15 +30,15 @@ const handler = async (
         .where('needsReview', '==', true)
         .where('status', '==', 'active');
     } else if (filterType === 'approved') {
-      // Query for approved listings
+      // Query for approved listings - using moderationDetails.actionTaken field
       q = listingsRef
-        .where('moderationStatus', '==', 'approved')
+        .where('moderationDetails.actionTaken', '==', 'approved')
         .orderBy('moderatedAt', 'desc')
         .limit(50); // Limit to recent 50 approved listings
     } else if (filterType === 'rejected') {
-      // Query for rejected listings
+      // Query for rejected listings - using moderationDetails.actionTaken field
       q = listingsRef
-        .where('moderationStatus', '==', 'rejected')
+        .where('moderationDetails.actionTaken', '==', 'rejected')
         .orderBy('moderatedAt', 'desc')
         .limit(50); // Limit to recent 50 rejected listings
     } else {
@@ -142,7 +142,20 @@ const handler = async (
     });
   } catch (error) {
     console.error('Error fetching listings for moderation:', error);
-    return res.status(500).json({ error: 'Failed to fetch listings for moderation' });
+    
+    // Add more detailed error logging
+    if (error instanceof Error) {
+      console.error('Error details:', {
+        message: error.message,
+        stack: error.stack,
+        filterType: req.query.filter
+      });
+    }
+    
+    return res.status(500).json({ 
+      error: 'Failed to fetch listings for moderation',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
   }
 };
 
