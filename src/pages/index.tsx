@@ -529,25 +529,44 @@ export default function Home() {
     // Apply game filter
     if (selectedGame !== "all") {
       filtered = filtered.filter(listing => {
-        const listingGameLower = listing.game?.toLowerCase() || '';
-        return GAME_NAME_MAPPING[selectedGame]?.some(name => 
-          listingGameLower === name.toLowerCase()
+        // First, normalize the listing game value
+        const listingGameLower = (listing.game?.toLowerCase() || '').trim();
+        
+        // Check if the listing game matches any of the mapped values for the selected game
+        const matchesGame = GAME_NAME_MAPPING[selectedGame]?.some(name => 
+          listingGameLower === name.toLowerCase().trim()
         ) || false;
+        
+        // Log detailed game matching for debugging
+        if (process.env.NODE_ENV === 'development' && 
+            (listing.id === 'BND7c1ejRRZdlGLSCME' || listing.id === 'BtND7c1ejRRZdlGLSCME')) {
+          console.log(`Game matching for listing ${listing.id}:`, {
+            listingGame: listing.game,
+            listingGameLower,
+            selectedGame,
+            mappedNames: GAME_NAME_MAPPING[selectedGame],
+            matches: matchesGame
+          });
+        }
+        
+        return matchesGame;
       });
     }
 
     // Apply condition filter
     if (selectedCondition !== "all") {
-      filtered = filtered.filter(listing => 
-        listing.condition?.toLowerCase() === selectedCondition.toLowerCase()
-      );
+      filtered = filtered.filter(listing => {
+        const listingConditionLower = (listing.condition?.toLowerCase() || '').trim();
+        return listingConditionLower === selectedCondition.toLowerCase().trim();
+      });
     }
 
     // Apply location filter
     if (selectedState !== "all") {
-      filtered = filtered.filter(listing => 
-        listing.state?.toLowerCase() === selectedState.toLowerCase()
-      );
+      filtered = filtered.filter(listing => {
+        const listingStateLower = (listing.state?.toLowerCase() || '').trim();
+        return listingStateLower === selectedState.toLowerCase().trim();
+      });
     }
 
     // Apply price filter
@@ -567,7 +586,7 @@ export default function Home() {
     });
 
     // If we have specific listings we're looking for, check if they're in the filtered results
-    const debugListingIds = ['BND7c1ejRRZdlGLSCME']; // Add specific listing IDs to debug
+    const debugListingIds = ['BND7c1ejRRZdlGLSCME', 'BtND7c1ejRRZdlGLSCME']; // Add specific listing IDs to debug
     for (const debugId of debugListingIds) {
       const inOriginal = listings.some(l => l.id === debugId);
       const inFiltered = filtered.some(l => l.id === debugId);
@@ -575,10 +594,10 @@ export default function Home() {
       if (inOriginal && !inFiltered) {
         // Find the listing and log why it was filtered out
         const listing = listings.find(l => l.id === debugId);
-        const listingGameLower = listing?.game?.toLowerCase() || '';
+        const listingGameLower = (listing?.game?.toLowerCase() || '').trim();
         const matchesGameFilter = selectedGame === "all" || 
           (GAME_NAME_MAPPING[selectedGame]?.some(name => 
-            listingGameLower === name.toLowerCase()
+            listingGameLower === name.toLowerCase().trim()
           ) || false);
         
         console.log(`Debug listing ${debugId} was filtered out:`, {
@@ -589,8 +608,10 @@ export default function Home() {
           price: listing?.price,
           matchesGameFilter,
           gameNames: GAME_NAME_MAPPING[selectedGame],
-          matchesConditionFilter: selectedCondition === "all" || listing?.condition?.toLowerCase() === selectedCondition.toLowerCase(),
-          matchesStateFilter: selectedState === "all" || listing?.state?.toLowerCase() === selectedState.toLowerCase(),
+          matchesConditionFilter: selectedCondition === "all" || 
+            (listing?.condition?.toLowerCase() || '').trim() === selectedCondition.toLowerCase().trim(),
+          matchesStateFilter: selectedState === "all" || 
+            (listing?.state?.toLowerCase() || '').trim() === selectedState.toLowerCase().trim(),
           matchesPriceFilter: listing?.price >= priceRange[0] && listing?.price <= priceRange[1]
         });
       } else if (inOriginal && inFiltered) {

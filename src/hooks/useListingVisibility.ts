@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Listing } from '@/types/database';
 import { parseDate, isExpired } from '@/lib/date-utils';
+import { GAME_NAME_MAPPING } from '@/lib/game-mappings';
 
 /**
  * Hook to handle listing visibility filtering

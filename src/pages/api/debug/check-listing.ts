@@ -3,6 +3,7 @@ import { getFirebaseServices } from '@/lib/firebase';
 import { doc, getDoc, collection, getDocs, limit, query } from 'firebase/firestore';
 import { getFirebaseAdmin } from '@/lib/firebase-admin';
 import { getFirestore } from 'firebase-admin/firestore';
+import { GAME_NAME_MAPPING } from '@/lib/game-mappings';
 
 export default async function handler(
   req: NextApiRequest,
@@ -98,8 +99,31 @@ export default async function handler(
       updatedAt: data.updatedAt?.toDate?.() ? data.updatedAt.toDate().toISOString() : data.updatedAt,
     };
     
-    // Return the listing data
-    return res.status(200).json(formattedData);
+    // Check game matching if game parameter is provided
+    const { game } = req.query;
+    let gameMatchingInfo = null;
+    
+    if (game && typeof game === 'string') {
+      const listingGameLower = (data.game?.toLowerCase() || '').trim();
+      const matchesGame = GAME_NAME_MAPPING[game]?.some(name => 
+        listingGameLower === name.toLowerCase().trim()
+      ) || false;
+      
+      gameMatchingInfo = {
+        listingGame: data.game,
+        listingGameLower,
+        selectedGame: game,
+        mappedNames: GAME_NAME_MAPPING[game],
+        matches: matchesGame
+      };
+    }
+    
+    // Return the listing data with game matching info if available
+    return res.status(200).json({
+      listing: formattedData,
+      gameMatching: gameMatchingInfo,
+      timestamp: new Date().toISOString()
+    });
   } catch (error: any) {
     console.error('Error checking listing:', error);
     return res.status(500).json({ error: error.message || 'Internal server error' });
