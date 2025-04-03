@@ -8,12 +8,8 @@ import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Footer } from '@/components/Footer';
 import { GlobalLoading } from '@/components/GlobalLoading';
-import { getFirestore, doc, getDoc } from 'firebase/firestore';
-import { firebaseApp } from '@/lib/firebase';
-import { AlertCircle, LogIn } from 'lucide-react';
 
-// Initialize Firestore
-const db = getFirestore(firebaseApp);
+import { AlertCircle, LogIn } from 'lucide-react';
 
 export default function ModeratorLogin() {
   const router = useRouter();
@@ -29,23 +25,24 @@ export default function ModeratorLogin() {
     const checkModeratorStatus = async () => {
       if (user) {
         try {
-          // Check if user has moderator role
-          const userRef = doc(db, 'users', user.uid);
-          const userSnap = await getDoc(userRef);
-          
-          if (userSnap.exists()) {
-            const userData = userSnap.data();
-            const roles = userData.roles || [];
-            
-            if (roles.includes('moderator') || roles.includes('admin')) {
-              // User is a moderator, redirect to moderation dashboard
-              router.push('/admin/moderation');
-              return;
+          // Check if user has moderator role by trying to access the moderation API
+          const token = await user.getIdToken(true);
+          const response = await fetch('/api/admin/moderation/get-listings?filter=pending', {
+            method: 'GET',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
             }
-          }
+          });
           
-          // User is logged in but not a moderator
-          setError('You do not have moderator permissions.');
+          if (response.ok) {
+            // User is a moderator, redirect to moderation dashboard
+            router.push('/admin/moderation');
+            return;
+          } else {
+            // User is logged in but not a moderator
+            setError('You do not have moderator permissions.');
+          }
         } catch (err) {
           console.error('Error checking moderator status:', err);
           setError('Failed to verify moderator status.');
@@ -68,23 +65,24 @@ export default function ModeratorLogin() {
       const userCredential = await signIn(email, password);
       
       if (userCredential && userCredential.user) {
-        // Check if user has moderator role
-        const userRef = doc(db, 'users', userCredential.user.uid);
-        const userSnap = await getDoc(userRef);
-        
-        if (userSnap.exists()) {
-          const userData = userSnap.data();
-          const roles = userData.roles || [];
-          
-          if (roles.includes('moderator') || roles.includes('admin')) {
-            // User is a moderator, redirect to moderation dashboard
-            router.push('/admin/moderation');
-            return;
+        // Check if user has moderator role by trying to access the moderation API
+        const token = await userCredential.user.getIdToken(true);
+        const response = await fetch('/api/admin/moderation/get-listings?filter=pending', {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
           }
-        }
+        });
         
-        // User is not a moderator
-        setError('You do not have moderator permissions.');
+        if (response.ok) {
+          // User is a moderator, redirect to moderation dashboard
+          router.push('/admin/moderation');
+          return;
+        } else {
+          // User is not a moderator
+          setError('You do not have moderator permissions.');
+        }
       }
     } catch (err: any) {
       console.error('Login error:', err);
