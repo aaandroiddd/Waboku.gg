@@ -209,6 +209,38 @@ export default function ListingPage() {
 
   const { startLoading, stopLoading } = useLoading();
 
+  // Track view count when listing is loaded
+  useEffect(() => {
+    if (listing && user) {
+      // Don't track views from the listing owner
+      if (listing.userId !== user.uid) {
+        const trackView = async () => {
+          try {
+            const response = await fetch('/api/listings/track-view', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                listingId: listing.id,
+                userId: user.uid
+              }),
+            });
+            
+            if (response.ok) {
+              const data = await response.json();
+              console.log('View tracked successfully:', data);
+            }
+          } catch (error) {
+            console.error('Error tracking view:', error);
+          }
+        };
+        
+        trackView();
+      }
+    }
+  }, [listing, user]);
+
   useEffect(() => {
     let isMounted = true;
     let retryCount = 0;

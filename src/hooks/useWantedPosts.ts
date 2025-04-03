@@ -29,6 +29,7 @@ export interface WantedPost {
   userId: string;
   userName: string;
   userAvatar?: string;
+  viewCount?: number;
 }
 
 interface WantedPostsOptions {

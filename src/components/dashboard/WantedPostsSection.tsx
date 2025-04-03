@@ -6,7 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { ContentLoader } from "@/components/ContentLoader";
 import { GameCategoryBadge } from "@/components/GameCategoryBadge";
-import { Calendar, MapPin, PlusCircle, Pencil, Trash2, ExternalLink } from "lucide-react";
+import { Calendar, MapPin, PlusCircle, Pencil, Trash2, ExternalLink, Eye } from "lucide-react";
 import { useWantedPosts, WantedPost } from "@/hooks/useWantedPosts";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/components/ui/use-toast";
@@ -171,38 +171,69 @@ export function WantedPostsSection() {
           {posts.length > 0 ? (
           <div className="space-y-4">
             {posts.map((post) => (
-              <Card key={post.id} className="overflow-hidden">
-                <CardContent className="p-4">
-                  <div className="flex flex-col sm:flex-row justify-between gap-4">
-                    <div>
-                      <h3 className="text-lg font-medium mb-1">{post.title}</h3>
-                      <p className="text-sm text-muted-foreground mb-3">{post.description}</p>
-                      
-                      <div className="flex flex-wrap gap-2 mb-3">
-                        <GameCategoryBadge game={post.game} />
-                        {post.condition && post.condition !== 'any' && (
-                          <Badge variant="outline">
-                            {formatCondition(post.condition)}
-                          </Badge>
-                        )}
+              <div key={post.id} className="relative">
+                <div className="absolute right-2 top-2 z-10 flex gap-1">
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    className="h-7 w-7 p-0 bg-background/80 backdrop-blur-sm"
+                    onClick={() => handleEditClick(post.id)}
+                  >
+                    <Pencil className="h-3 w-3" />
+                    <span className="sr-only">Edit</span>
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    className="h-7 w-7 p-0 bg-background/80 backdrop-blur-sm text-destructive hover:text-destructive"
+                    onClick={() => handleDeleteClick(post.id)}
+                  >
+                    <Trash2 className="h-3 w-3" />
+                    <span className="sr-only">Delete</span>
+                  </Button>
+                </div>
+                
+                <Card key={post.id} className="overflow-hidden">
+                  <CardContent className="p-4">
+                    <div className="flex flex-col sm:flex-row justify-between gap-4">
+                      <div>
+                        <h3 className="text-lg font-medium mb-1">{post.title}</h3>
+                        <p className="text-sm text-muted-foreground mb-3">{post.description}</p>
+                        
+                        <div className="flex flex-wrap gap-2 mb-3">
+                          <GameCategoryBadge game={post.game} />
+                          {post.condition && post.condition !== 'any' && (
+                            <Badge variant="outline">
+                              {formatCondition(post.condition)}
+                            </Badge>
+                          )}
+                        </div>
+                        
+                        <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                          <div className="flex items-center">
+                            <MapPin className="h-3 w-3 mr-1" />
+                            <span>{post.location}</span>
+                          </div>
+                          <div className="flex items-center">
+                            <Calendar className="h-3 w-3 mr-1" />
+                            <span>{new Date(post.createdAt).toLocaleDateString()}</span>
+                          </div>
+                          {post.viewCount !== undefined && (
+                            <div className="flex items-center">
+                              <Eye className="h-3 w-3 mr-1" />
+                              <span>{post.viewCount} views</span>
+                            </div>
+                          )}
+                        </div>
                       </div>
                       
-                      <div className="flex items-center text-sm text-muted-foreground">
-                        <MapPin className="h-3 w-3 mr-1" />
-                        <span className="mr-3">{post.location}</span>
-                        <Calendar className="h-3 w-3 mr-1" />
-                        <span>{new Date(post.createdAt).toLocaleDateString()}</span>
-                      </div>
-                    </div>
-                    
-                    <div className="flex flex-col gap-2">
-                      <div className="text-sm font-medium">
-                        {post.priceRange 
-                          ? `$${post.priceRange.min} - $${post.priceRange.max}` 
-                          : "Price Negotiable"
-                        }
-                      </div>
-                      <div className="flex flex-wrap gap-2 justify-center">
+                      <div className="flex flex-col gap-2">
+                        <div className="text-sm font-medium">
+                          {post.priceRange 
+                            ? `$${post.priceRange.min} - $${post.priceRange.max}` 
+                            : "Price Negotiable"
+                          }
+                        </div>
                         <Button 
                           variant="outline" 
                           size="sm"
@@ -210,31 +241,13 @@ export function WantedPostsSection() {
                           onClick={() => router.push(`/wanted/${post.id}`)}
                         >
                           <ExternalLink className="h-3 w-3" />
-                          <span>View</span>
-                        </Button>
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          className="flex items-center gap-1"
-                          onClick={() => handleEditClick(post.id)}
-                        >
-                          <Pencil className="h-3 w-3" />
-                          <span>Edit</span>
-                        </Button>
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          className="flex items-center gap-1 text-destructive hover:text-destructive"
-                          onClick={() => handleDeleteClick(post.id)}
-                        >
-                          <Trash2 className="h-3 w-3" />
-                          <span>Delete</span>
+                          <span>View Post</span>
                         </Button>
                       </div>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
+                  </CardContent>
+                </Card>
+              </div>
             ))}
           </div>
         ) : (

@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Listing } from "@/types/database";
-import { Edit2, ExternalLink, MessageCircle, Share2, Trash2 } from "lucide-react";
+import { Edit2, ExternalLink, MessageCircle, Share2, Trash2, Eye } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { formatPrice } from "@/lib/price";
@@ -108,7 +108,15 @@ export const ListingList = ({
                   <div className="flex flex-col sm:flex-row flex-grow gap-3 sm:gap-4 items-start sm:items-center">
                     <div className="flex-grow space-y-1">
                       <h3 className="font-semibold text-base sm:text-lg line-clamp-1">{listing.title}</h3>
-                      <p className="text-base sm:text-lg font-bold">{formatPrice(listing.price)}</p>
+                      <div className="flex items-center justify-between">
+                        <p className="text-base sm:text-lg font-bold">{formatPrice(listing.price)}</p>
+                        {listing.viewCount !== undefined && (
+                          <div className="flex items-center text-xs text-muted-foreground">
+                            <Eye className="h-3 w-3 mr-1" />
+                            <span>{listing.viewCount}</span>
+                          </div>
+                        )}
+                      </div>
                     </div>
                     
                     {/* Actions Section */}

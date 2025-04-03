@@ -50,6 +50,38 @@ export default function WantedPostDetailPage() {
     }
   }, [router.query.success, id, router, toast]);
 
+  // Track view count when post is loaded
+  useEffect(() => {
+    if (wantedPost && user) {
+      // Don't track views from the post owner
+      if (wantedPost.userId !== user.uid) {
+        const trackView = async () => {
+          try {
+            const response = await fetch('/api/wanted/track-view', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                postId: wantedPost.id,
+                userId: user.uid
+              }),
+            });
+            
+            if (response.ok) {
+              const data = await response.json();
+              console.log('View tracked successfully:', data);
+            }
+          } catch (error) {
+            console.error('Error tracking view:', error);
+          }
+        };
+        
+        trackView();
+      }
+    }
+  }, [wantedPost, user]);
+
   // Load the wanted post data
   useEffect(() => {
     // Only run this effect if router is ready, id exists, and we haven't already attempted to fetch

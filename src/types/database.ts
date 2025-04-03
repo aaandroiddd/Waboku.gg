@@ -19,6 +19,7 @@ export interface Listing {
   city: string;
   state: string;
   favoriteCount?: number;
+  viewCount?: number;
   cardName?: string;
   quantity?: number;
   latitude?: number;
