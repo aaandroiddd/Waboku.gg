@@ -34,14 +34,19 @@ export function removeWhitespace(str: string): string {
 * @param text The input string to check.
 * @returns True if the text contains explicit content, false otherwise.
 */
-export function containsExplicitContent(text: string): boolean {
+export function containsExplicitContent(text: string | null | undefined): boolean {
+  // Return false if text is null or undefined
+  if (text === null || text === undefined) {
+    return false;
+  }
+  
   // List of explicit words to filter (can be expanded)
   const explicitWords = [
     'fuck', 'shit', 'ass', 'bitch', 'dick', 'porn', 'nsfw',
     // Add more words as needed
   ];
 
-  const normalizedText = text.toLowerCase();
+  const normalizedText = String(text).toLowerCase();
   return explicitWords.some(word => 
     normalizedText.includes(word.toLowerCase()) ||
     // Check for common letter substitutions
@@ -55,8 +60,13 @@ export function containsExplicitContent(text: string): boolean {
 * @param maxLength The maximum allowed length.
 * @returns An object containing validation result and error message if any.
 */
-export function validateTextContent(text: string, maxLength: number): { isValid: boolean; error?: string } {
-  if (!text || text.trim().length === 0) {
+export function validateTextContent(text: string | null | undefined, maxLength: number): { isValid: boolean; error?: string } {
+  // Handle null or undefined values
+  if (text === null || text === undefined) {
+    return { isValid: false, error: 'Text cannot be empty' };
+  }
+
+  if (text.trim().length === 0) {
     return { isValid: false, error: 'Text cannot be empty' };
   }
 

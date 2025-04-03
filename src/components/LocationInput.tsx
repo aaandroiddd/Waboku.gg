@@ -114,7 +114,7 @@ export function LocationInput({
   };
 
   const handleFallbackSubmit = () => {
-    if (manualLocation.trim()) {
+    if (manualLocation && manualLocation.trim()) {
       // Check for explicit content before submitting
       if (containsExplicitContent(manualLocation)) {
         setError("Location contains inappropriate content");
@@ -219,7 +219,7 @@ export function LocationInput({
               }
               
               // Auto-update location as user types
-              if (newValue.trim()) {
+              if (newValue && newValue.trim()) {
                 setSearchValue(newValue);
                 
                 // Extract city and state-like information from manual input
@@ -297,13 +297,15 @@ export function LocationInput({
               }
               
               // Extract city and state-like information from manual input
-              const parts = newValue.split(',').map(part => part.trim());
-              const city = parts[0] || '';
-              const state = parts.length > 1 ? parts[1] : '';
-              
-              // Call onLocationSelect with the parsed city and state
-              if (onLocationSelect && city) {
-                onLocationSelect(city, state);
+              if (newValue && newValue.trim()) {
+                const parts = newValue.split(',').map(part => part.trim());
+                const city = parts[0] || '';
+                const state = parts.length > 1 ? parts[1] : '';
+                
+                // Call onLocationSelect with the parsed city and state
+                if (onLocationSelect && city) {
+                  onLocationSelect(city, state);
+                }
               }
             }}
             placeholder={placeholder}
