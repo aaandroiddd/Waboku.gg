@@ -1277,15 +1277,17 @@ export default function ListingPage() {
                     <Calendar className="h-4 w-4 mr-2" />
                     Listed on {listing.createdAt.toLocaleDateString()}
                   </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="text-red-500 hover:text-red-600"
-                    onClick={() => setIsReportDialogOpen(true)}
-                  >
-                    <Flag className="h-4 w-4 mr-1" />
-                    Report
-                  </Button>
+                  {user && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-red-500 hover:text-red-600"
+                      onClick={() => setIsReportDialogOpen(true)}
+                    >
+                      <Flag className="h-4 w-4 mr-1" />
+                      Report
+                    </Button>
+                  )}
                 </div>
                 
                 {/* Action buttons section - reorganized for better layout */}

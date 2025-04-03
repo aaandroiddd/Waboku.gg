@@ -1,7 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { getFirebaseServices } from '@/lib/firebase';
-import { collection, doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
-import { initAdmin } from '@/lib/firebase-admin';
+import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
+import { initAdmin, getFirebaseAdmin } from '@/lib/firebase-admin';
 import { getAuth } from 'firebase-admin/auth';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -21,24 +20,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     // Initialize Firebase Admin first
-    const admin = initAdmin();
-    if (!admin) {
+    console.log('Initializing Firebase Admin...');
+    const { admin, db: adminDb } = getFirebaseAdmin();
+    if (!admin || !adminDb) {
       console.error('Firebase Admin not initialized');
       return res.status(500).json({ error: 'Firebase Admin not initialized' });
     }
-
-    // Get Firebase services - this should be after admin initialization
-    let db;
-    try {
-      const services = getFirebaseServices();
-      db = services.db;
-      if (!db) {
-        throw new Error('Firestore DB not available');
-      }
-    } catch (error) {
-      console.error('Error getting Firebase services:', error);
-      return res.status(500).json({ error: 'Failed to initialize Firebase services', details: error instanceof Error ? error.message : 'Unknown error' });
-    }
+    console.log('Firebase Admin initialized successfully');
 
     // Verify the user is authenticated
     const authHeader = req.headers.authorization;
@@ -64,55 +52,57 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(401).json({ error: 'Invalid authentication token' });
     }
 
-    // Check if the listing exists
-    const listingRef = doc(db, 'listings', listingId);
-    const listingDoc = await getDoc(listingRef);
+    // Use Firestore from Firebase Admin instead of client SDK
+    console.log('Checking if listing exists...');
+    const listingRef = adminDb.collection('listings').doc(listingId);
+    const listingDoc = await listingRef.get();
     
-    if (!listingDoc.exists()) {
+    if (!listingDoc.exists) {
       console.log('Listing not found:', listingId);
       return res.status(404).json({ error: 'Listing not found' });
     }
 
     // Get listing data
     const listingData = listingDoc.data();
-    console.log('Listing found:', { title: listingData.title, id: listingId });
+    console.log('Listing found:', { title: listingData?.title, id: listingId });
 
     // Create a unique ID for the report
     const reportId = `${listingId}_${reportedBy}_${Date.now()}`;
     
     // Create the report document
-    const reportRef = doc(db, 'reports', reportId);
-    await setDoc(reportRef, {
+    console.log('Creating report document...');
+    const reportRef = adminDb.collection('reports').doc(reportId);
+    await reportRef.set({
       listingId,
-      listingTitle: listingData.title || 'Unknown Listing',
+      listingTitle: listingData?.title || 'Unknown Listing',
       reason,
       description,
       reportedBy,
-      reportedAt: serverTimestamp(),
+      reportedAt: admin.firestore.FieldValue.serverTimestamp(),
       status: 'pending', // pending, reviewed, resolved
-      listingOwnerId: listingData.userId,
-      listingOwnerUsername: listingData.username || 'Unknown User',
+      listingOwnerId: listingData?.userId,
+      listingOwnerUsername: listingData?.username || 'Unknown User',
       moderationAction: null, // Will be set when a moderator takes action
       moderatorNotes: null,
       moderatedBy: null,
       moderatedAt: null,
       // Add image URLs for easier moderation
-      listingImageUrl: listingData.imageUrls && listingData.imageUrls.length > 0 ? 
+      listingImageUrl: listingData?.imageUrls && listingData?.imageUrls.length > 0 ? 
         listingData.imageUrls[0] : null,
       // Add game and price for context
-      listingGame: listingData.game || 'Unknown',
-      listingPrice: listingData.price || 0,
+      listingGame: listingData?.game || 'Unknown',
+      listingPrice: listingData?.price || 0,
     });
 
     console.log('Report document created with ID:', reportId);
 
     // Update the listing to indicate it has been reported
     // This doesn't change the visibility of the listing yet
-    await setDoc(listingRef, {
+    await listingRef.update({
       hasBeenReported: true,
-      reportCount: (listingData.reportCount || 0) + 1,
-      lastReportedAt: serverTimestamp(),
-    }, { merge: true });
+      reportCount: (listingData?.reportCount || 0) + 1,
+      lastReportedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
 
     console.log('Listing updated with report information');
 

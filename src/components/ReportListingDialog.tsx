@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useRouter } from 'next/router';
 
 interface ReportListingDialogProps {
   open: boolean;
@@ -29,6 +30,25 @@ export function ReportListingDialog({ open, onOpenChange, listingId, listingTitl
   const [description, setDescription] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
   const { user } = useAuth();
+  const router = useRouter();
+
+  // If user is not logged in, redirect to sign-in page when dialog is opened
+  React.useEffect(() => {
+    if (open && !user) {
+      onOpenChange(false);
+      toast.error('Please sign in to report listings', {
+        action: {
+          label: 'Sign In',
+          onClick: () => router.push('/auth/sign-in')
+        }
+      });
+    }
+  }, [open, user, onOpenChange, router]);
+
+  // If no user, don't render the dialog content
+  if (!user) {
+    return null;
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,6 +65,7 @@ export function ReportListingDialog({ open, onOpenChange, listingId, listingTitl
 
     if (!user) {
       toast.error('You must be logged in to report a listing');
+      router.push('/auth/sign-in');
       return;
     }
 
