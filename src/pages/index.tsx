@@ -284,7 +284,22 @@ export default function Home() {
       // If we have valid cached listings, use them first for immediate display
       if (cacheValid) {
         try {
-          const parsedListings = JSON.parse(cachedListings as string) as Listing[];
+          // Parse the cached listings and ensure dates are properly handled
+          const rawParsedListings = JSON.parse(cachedListings as string);
+          
+          // Convert string dates back to Date objects
+          const parsedListings = rawParsedListings.map((listing: any) => ({
+            ...listing,
+            createdAt: listing.createdAt ? new Date(listing.createdAt) : new Date(),
+            expiresAt: listing.expiresAt ? new Date(listing.expiresAt) : undefined,
+            archivedAt: listing.archivedAt ? new Date(listing.archivedAt) : undefined,
+            moderatedAt: listing.moderatedAt ? new Date(listing.moderatedAt) : undefined,
+            moderationDetails: listing.moderationDetails ? {
+              ...listing.moderationDetails,
+              timestamp: listing.moderationDetails.timestamp ? new Date(listing.moderationDetails.timestamp) : undefined
+            } : undefined
+          })) as Listing[];
+          
           console.log('Home page: Using cached listings', parsedListings.length);
           
           // Filter out known problematic listings
@@ -362,7 +377,14 @@ export default function Home() {
         }
         
         // For listings beyond 50km, sort by recency
-        return (b.createdAt?.getTime() || 0) - (a.createdAt?.getTime() || 0);
+        // Handle both Date objects and string/number timestamps
+        const aTime = a.createdAt instanceof Date ? a.createdAt.getTime() : 
+                     (typeof a.createdAt === 'string' ? new Date(a.createdAt).getTime() : 
+                     (typeof a.createdAt === 'number' ? a.createdAt : 0));
+        const bTime = b.createdAt instanceof Date ? b.createdAt.getTime() : 
+                     (typeof b.createdAt === 'string' ? new Date(b.createdAt).getTime() : 
+                     (typeof b.createdAt === 'number' ? b.createdAt : 0));
+        return bTime - aTime;
       });
       
       return processedListings;
@@ -410,10 +432,17 @@ export default function Home() {
             
             try {
               const data = doc.data();
+              // Ensure createdAt is properly converted to a Date object
+              const createdAt = data.createdAt ? 
+                (typeof data.createdAt.toDate === 'function' ? data.createdAt.toDate() : 
+                (data.createdAt instanceof Date ? data.createdAt : 
+                (typeof data.createdAt === 'string' ? new Date(data.createdAt) : 
+                (typeof data.createdAt === 'number' ? new Date(data.createdAt) : new Date())))) : new Date();
+              
               return {
                 id: doc.id,
                 ...data,
-                createdAt: data.createdAt?.toDate() || new Date(),
+                createdAt: createdAt,
                 title: data.title || 'Untitled Listing',
                 price: data.price || 0,
                 condition: data.condition || 'Not Specified',
