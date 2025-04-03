@@ -68,7 +68,7 @@ export default function Header({ animate = true }: HeaderProps) {
       // Add layout="preserved" to maintain layout during animation
       layout="preserved"
     >
-      <div className="container mx-auto px-4 h-12 flex items-center justify-between gap-4">
+      <div className="container mx-auto px-4 h-10 flex items-center justify-between gap-4">
         <div>
           <Link href="/" className="flex items-center">
             <Logo />

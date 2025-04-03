@@ -600,9 +600,9 @@ export default function Home() {
               animate="visible"
             />
             
-            <div className="relative container mx-auto px-4 py-16 sm:py-20 md:py-24 lg:py-32">
-              <div className="text-center max-w-3xl mx-auto space-y-6 sm:space-y-8">
-                <div className="space-y-4 sm:space-y-6 pt-8 sm:pt-12 md:pt-16">
+            <div className="relative container mx-auto px-4 py-8 sm:py-10 md:py-12 lg:py-16">
+              <div className="text-center max-w-3xl mx-auto space-y-4 sm:space-y-6">
+                <div className="space-y-4 sm:space-y-6">
                   {/* Using placeholder divs with the same dimensions to prevent layout shift */}
                   <div className="invisible h-[3.75rem] sm:h-[4.5rem] md:h-[6rem] lg:h-[7.5rem]" aria-hidden="true">
                     Your Local TCG Marketplace
