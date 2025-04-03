@@ -439,7 +439,7 @@ export default function ModerationDashboard() {
                           {listing.description || 'No description provided'}
                         </p>
                         {listing.moderationDetails?.notes && (
-                          <div className="mt-2 p-2 bg-green-100 dark:bg-green-900/30 rounded text-xs">
+                          <div className="mt-2 p-2 bg-green-100 dark:bg-green-800/50 rounded text-xs border border-green-200 dark:border-green-700">
                             <span className="font-semibold">Moderator Notes:</span> {listing.moderationDetails.notes}
                           </div>
                         )}
@@ -526,12 +526,12 @@ export default function ModerationDashboard() {
                           {listing.description || 'No description provided'}
                         </p>
                         {listing.moderationDetails?.rejectionReason && (
-                          <div className="mt-2 p-2 bg-red-100 dark:bg-red-900/30 rounded text-xs">
+                          <div className="mt-2 p-2 bg-red-100 dark:bg-red-800/50 rounded text-xs border border-red-200 dark:border-red-700">
                             <span className="font-semibold">Rejection Reason:</span> {listing.moderationDetails.rejectionReason}
                           </div>
                         )}
                         {listing.moderationDetails?.notes && (
-                          <div className="mt-2 p-2 bg-amber-100 dark:bg-amber-900/30 rounded text-xs">
+                          <div className="mt-2 p-2 bg-amber-100 dark:bg-amber-800/50 rounded text-xs border border-amber-200 dark:border-amber-700">
                             <span className="font-semibold">Moderator Notes:</span> {listing.moderationDetails.notes}
                           </div>
                         )}
@@ -679,7 +679,7 @@ export default function ModerationDashboard() {
                     </div>
                     
                     {selectedListing.reviewReason && (
-                      <div className="mt-4 p-3 bg-amber-100 dark:bg-amber-900 rounded-md">
+                      <div className="mt-4 p-3 bg-amber-100 dark:bg-amber-800/50 rounded-md border border-amber-200 dark:border-amber-700">
                         <h3 className="font-semibold mb-1 flex items-center">
                           <AlertTriangle className="h-4 w-4 mr-2 text-amber-600 dark:text-amber-400" />
                           Review Reason
@@ -689,7 +689,7 @@ export default function ModerationDashboard() {
                     )}
                     
                     {selectedListing.moderationStatus && (
-                      <div className={`mt-4 p-3 rounded-md ${selectedListing.moderationStatus === 'approved' ? 'bg-green-100 dark:bg-green-900/30' : 'bg-red-100 dark:bg-red-900/30'}`}>
+                      <div className={`mt-4 p-3 rounded-md border ${selectedListing.moderationStatus === 'approved' ? 'bg-green-100 dark:bg-green-800/50 border-green-200 dark:border-green-700' : 'bg-red-100 dark:bg-red-800/50 border-red-200 dark:border-red-700'}`}>
                         <h3 className="font-semibold mb-1 flex items-center">
                           {selectedListing.moderationStatus === 'approved' ? (
                             <CheckCircle className="h-4 w-4 mr-2 text-green-600 dark:text-green-400" />
@@ -700,6 +700,9 @@ export default function ModerationDashboard() {
                         </h3>
                         {selectedListing.moderatedAt && (
                           <p className="text-sm mb-1">Date: {new Date(selectedListing.moderatedAt).toLocaleString()}</p>
+                        )}
+                        {selectedListing.moderationDetails?.moderatorId && (
+                          <p className="text-sm mb-1">Moderated by: {selectedListing.moderationDetails.moderatorId === 'system' ? 'Administrator' : 'Moderator'}</p>
                         )}
                         {selectedListing.moderationDetails?.notes && (
                           <p className="text-sm mb-1">Notes: {selectedListing.moderationDetails.notes}</p>
