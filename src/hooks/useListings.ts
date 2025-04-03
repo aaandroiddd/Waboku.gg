@@ -909,7 +909,10 @@ export function useListings({ userId, searchQuery, showOnlyActive = false }: Use
           
           // For listings in the same distance category, sort by date
           if (aIsNearby === bIsNearby) {
-            return b.createdAt.getTime() - a.createdAt.getTime();
+            // Safely handle date comparison by ensuring createdAt is a Date object
+            const aTime = a.createdAt instanceof Date ? a.createdAt.getTime() : new Date(a.createdAt).getTime();
+            const bTime = b.createdAt instanceof Date ? b.createdAt.getTime() : new Date(b.createdAt).getTime();
+            return bTime - aTime;
           }
           
           // If neither is nearby, sort by distance

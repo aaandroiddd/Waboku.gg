@@ -284,7 +284,10 @@ export default function Home() {
           }
           
           // For listings beyond 50km, sort by recency
-          return b.createdAt.getTime() - a.createdAt.getTime();
+          // Safely handle date comparison by ensuring createdAt is a Date object
+          const aTime = a.createdAt instanceof Date ? a.createdAt.getTime() : new Date(a.createdAt).getTime();
+          const bTime = b.createdAt instanceof Date ? b.createdAt.getTime() : new Date(b.createdAt).getTime();
+          return bTime - aTime;
         });
       }
       
