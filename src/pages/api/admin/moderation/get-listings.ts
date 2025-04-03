@@ -32,11 +32,15 @@ const handler = async (
       const createdAt = data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : null;
       const expiresAt = data.expiresAt?.toDate ? data.expiresAt.toDate().toISOString() : null;
       
+      // Include the review reason if available
+      const reviewReason = data.reviewReason || 'No specific reason provided';
+      
       return {
         id: doc.id,
         ...data,
         createdAt,
-        expiresAt
+        expiresAt,
+        reviewReason
       };
     });
 

@@ -278,6 +278,11 @@ export default function ModerationDashboard() {
                             Needs Review
                           </Badge>
                         </div>
+                        {listing.reviewReason && (
+                          <div className="absolute bottom-0 left-0 right-0 bg-black/70 p-2 text-xs text-white">
+                            <span className="font-semibold">Reason:</span> {listing.reviewReason}
+                          </div>
+                        )}
                       </div>
                       <CardHeader className="pb-2">
                         <CardTitle className="text-lg truncate">{listing.title}</CardTitle>
@@ -463,6 +468,16 @@ export default function ModerationDashboard() {
                       <p>Username: {selectedListing.username}</p>
                       <p>User ID: {selectedListing.userId}</p>
                     </div>
+                    
+                    {selectedListing.reviewReason && (
+                      <div className="mt-4 p-3 bg-amber-100 dark:bg-amber-900 rounded-md">
+                        <h3 className="font-semibold mb-1 flex items-center">
+                          <AlertTriangle className="h-4 w-4 mr-2 text-amber-600 dark:text-amber-400" />
+                          Review Reason
+                        </h3>
+                        <p className="text-sm">{selectedListing.reviewReason}</p>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}

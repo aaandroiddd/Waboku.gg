@@ -28,6 +28,10 @@ export interface Listing {
     latitude?: number;
     longitude?: number;
   };
+  needsReview?: boolean;
+  reviewReason?: string;
+  moderationStatus?: 'pending' | 'approved' | 'rejected';
+  moderatedAt?: Date;
 }
 
 export interface CreateListingData {
