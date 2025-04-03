@@ -32,17 +32,17 @@ const handler = async (
         .where('needsReview', '==', true)
         .where('status', '==', 'active');
     } else if (filterType === 'approved') {
-      // Query for approved listings - using moderationDetails.actionTaken field
+      // Query for approved listings - try with moderationStatus field first
+      console.log('Querying for approved listings with moderationStatus field');
       q = listingsRef
-        .where('moderationDetails.actionTaken', '==', 'approved')
-        .where('hasBeenReviewed', '==', true)
-        .limit(50); // Limit to recent 50 approved listings
+        .where('moderationStatus', '==', 'approved')
+        .limit(50);
     } else if (filterType === 'rejected') {
-      // Query for rejected listings - using moderationDetails.actionTaken field
+      // Query for rejected listings - try with moderationStatus field first
+      console.log('Querying for rejected listings with moderationStatus field');
       q = listingsRef
-        .where('moderationDetails.actionTaken', '==', 'rejected')
-        .where('hasBeenReviewed', '==', true)
-        .limit(50); // Limit to recent 50 rejected listings
+        .where('moderationStatus', '==', 'rejected')
+        .limit(50);
     } else {
       return res.status(400).json({ error: 'Invalid filter type' });
     }
@@ -119,13 +119,11 @@ const handler = async (
       // Log the query parameters for debugging
       if (filterType === 'approved') {
         console.log('Query parameters for approved listings:', {
-          'moderationDetails.actionTaken': 'approved',
-          'hasBeenReviewed': true
+          'moderationStatus': 'approved'
         });
       } else if (filterType === 'rejected') {
         console.log('Query parameters for rejected listings:', {
-          'moderationDetails.actionTaken': 'rejected',
-          'hasBeenReviewed': true
+          'moderationStatus': 'rejected'
         });
       } else if (filterType === 'pending') {
         console.log('Query parameters for pending listings:', {
