@@ -228,30 +228,12 @@ export default function ModerationDashboard() {
   }
 
   if (!isAuthorized) {
-    return (
-      <div className="min-h-screen flex flex-col">
-        <div className="container mx-auto p-8 flex-grow">
-          <Card className="p-6">
-            <h1 className="text-2xl font-bold mb-4">Admin Authentication</h1>
-            <div className="space-y-4">
-              <input
-                type="password"
-                placeholder="Enter admin secret"
-                className="w-full p-2 border rounded"
-                onChange={(e) => setAdminSecret(e.target.value)}
-              />
-              <Button 
-                onClick={() => verifyAdmin(adminSecret)}
-                disabled={!adminSecret}
-              >
-                Verify Admin Access
-              </Button>
-            </div>
-          </Card>
-        </div>
-        <Footer />
-      </div>
-    );
+    // Redirect to login page if not authorized
+    useEffect(() => {
+      router.push('/admin/login');
+    }, []);
+    
+    return <GlobalLoading message="Redirecting to login page..." />;
   }
 
   return (
