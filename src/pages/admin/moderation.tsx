@@ -222,17 +222,19 @@ export default function ModerationDashboard() {
     setViewImageDialog(true);
   };
 
+  // Handle redirect if not authorized
+  useEffect(() => {
+    if (!pageLoading && !isAuthorized) {
+      router.push('/admin/login');
+    }
+  }, [pageLoading, isAuthorized, router]);
+
   // Show loading animation while the page is initializing
   if (pageLoading) {
     return <GlobalLoading message="Loading moderation dashboard..." />;
   }
 
   if (!isAuthorized) {
-    // Redirect to login page if not authorized
-    useEffect(() => {
-      router.push('/admin/login');
-    }, []);
-    
     return <GlobalLoading message="Redirecting to login page..." />;
   }
 
