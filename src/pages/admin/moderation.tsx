@@ -86,7 +86,7 @@ export default function ModerationDashboard() {
   };
   
   // Check if user is a moderator
-  const { user } = useAuth();
+  const { user, getIdToken } = useAuth();
   
   useEffect(() => {
     const checkModeratorStatus = async () => {
@@ -199,7 +199,34 @@ export default function ModerationDashboard() {
       // Refresh the current tab's listings
       const currentTab = document.querySelector('[role="tab"][aria-selected="true"]')?.getAttribute('data-value');
       if (currentTab && (currentTab === 'pending' || currentTab === 'approved' || currentTab === 'rejected')) {
-        fetchListingsForModeration(adminSecret, currentTab);
+        if (adminSecret) {
+          fetchListingsForModeration(adminSecret, currentTab);
+        } else if (user) {
+          // Use Firebase auth token for moderator authentication
+          try {
+            setListingsLoading(true);
+            const token = await user.getIdToken(true);
+            const response = await fetch(`/api/admin/moderation/get-listings?filter=${currentTab}`, {
+              method: 'GET',
+              headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+              }
+            });
+            
+            if (!response.ok) {
+              throw new Error('Failed to fetch listings');
+            }
+            
+            const data = await response.json();
+            setListings(data.listings || []);
+          } catch (error) {
+            console.error(`Error refreshing ${currentTab} listings:`, error);
+            toast.error(`Failed to refresh listings`);
+          } finally {
+            setListingsLoading(false);
+          }
+        }
       }
       
       toast.success(`Listing ${action === 'approve' ? 'approved' : 'rejected'} successfully`);
@@ -258,9 +285,36 @@ export default function ModerationDashboard() {
             </AlertDescription>
           </Alert>
 
-          <Tabs defaultValue="pending" className="space-y-4" onValueChange={(value) => {
+          <Tabs defaultValue="pending" className="space-y-4" onValueChange={async (value) => {
             if (value === 'approved' || value === 'rejected' || value === 'pending') {
-              fetchListingsForModeration(adminSecret, value);
+              if (adminSecret) {
+                fetchListingsForModeration(adminSecret, value);
+              } else if (user) {
+                // Use Firebase auth token for moderator authentication
+                try {
+                  setListingsLoading(true);
+                  const token = await user.getIdToken(true);
+                  const response = await fetch(`/api/admin/moderation/get-listings?filter=${value}`, {
+                    method: 'GET',
+                    headers: {
+                      'Authorization': `Bearer ${token}`,
+                      'Content-Type': 'application/json'
+                    }
+                  });
+                  
+                  if (!response.ok) {
+                    throw new Error('Failed to fetch listings');
+                  }
+                  
+                  const data = await response.json();
+                  setListings(data.listings || []);
+                } catch (error) {
+                  console.error(`Error fetching ${value} listings:`, error);
+                  toast.error(`Failed to fetch ${value} listings`);
+                } finally {
+                  setListingsLoading(false);
+                }
+              }
             }
           }}>
             <TabsList>
