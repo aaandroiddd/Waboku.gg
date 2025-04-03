@@ -1078,18 +1078,6 @@ export default function ListingPage() {
 
               <div className="space-y-4 md:space-y-6 order-1 md:order-2">
                 <div className="relative">
-                  {/* Report button positioned above the carousel */}
-                  <div className="absolute top-2 left-2 z-10">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="bg-background/80 backdrop-blur-sm hover:bg-background/90 text-red-500 hover:text-red-600"
-                      onClick={() => setIsReportDialogOpen(true)}
-                    >
-                      <Flag className="h-4 w-4 mr-1" />
-                      Report
-                    </Button>
-                  </div>
                   <Carousel 
                     className="w-full h-[300px] md:h-[400px] touch-pan-y"
                     onSelect={handleCarouselChange}
@@ -1257,6 +1245,15 @@ export default function ListingPage() {
                     <Calendar className="h-4 w-4 mr-2" />
                     Listed on {listing.createdAt.toLocaleDateString()}
                   </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-red-500 hover:text-red-600"
+                    onClick={() => setIsReportDialogOpen(true)}
+                  >
+                    <Flag className="h-4 w-4 mr-1" />
+                    Report
+                  </Button>
                 </div>
                 
                 {/* Action buttons section - reorganized for better layout */}
