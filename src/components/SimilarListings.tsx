@@ -63,6 +63,9 @@ export const SimilarListings: React.FC<SimilarListingsProps> = ({
           title: currentListing.title
         });
         
+        // Log that we're filtering out archived and inactive listings
+        console.log('Filtering out archived and inactive listings from similar listings results');
+        
         // First try: Query with game category filter but without status filter
         // This is a temporary fix to ensure we get some listings
         let baseConstraints = [
@@ -110,10 +113,19 @@ export const SimilarListings: React.FC<SimilarListingsProps> = ({
               gradingCompany: data.gradingCompany || undefined
             } as Listing;
           })
-          // Filter out only the current listing - we want to show all other listings
-          .filter(listing => 
-            listing.id !== currentListing.id
-          );
+          // Filter out the current listing, archived, and inactive listings
+          .filter(listing => {
+            const isCurrentListing = listing.id === currentListing.id;
+            const isArchived = listing.status === 'archived';
+            const isInactive = listing.status === 'inactive';
+            
+            // Log filtered out listings for debugging
+            if (isArchived || isInactive) {
+              console.log(`Filtering out listing ${listing.id} with status: ${listing.status}`);
+            }
+            
+            return !isCurrentListing && !isArchived && !isInactive;
+          });
           
         console.log(`After filtering, ${fetchedListings.length} listings remain.`);
         
@@ -297,10 +309,19 @@ export const SimilarListings: React.FC<SimilarListingsProps> = ({
                   gradingCompany: data.gradingCompany || undefined
                 } as Listing;
               })
-              // Filter out only the current listing for fallback too
-              .filter(listing => 
-                listing.id !== currentListing.id
-              )
+              // Filter out the current listing, archived, and inactive listings for fallback too
+              .filter(listing => {
+                const isCurrentListing = listing.id === currentListing.id;
+                const isArchived = listing.status === 'archived';
+                const isInactive = listing.status === 'inactive';
+                
+                // Log filtered out listings for debugging
+                if (isArchived || isInactive) {
+                  console.log(`Filtering out fallback listing ${listing.id} with status: ${listing.status}`);
+                }
+                
+                return !isCurrentListing && !isArchived && !isInactive;
+              })
               // Take only what we need
               .slice(0, maxListings);
             
