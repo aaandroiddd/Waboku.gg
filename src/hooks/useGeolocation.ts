@@ -47,6 +47,7 @@ export const useGeolocation = () => {
   return state;
 };
 
+// Export the calculateDistance function so it can be imported elsewhere
 export const calculateDistance = (
   lat1: number,
   lon1: number,
