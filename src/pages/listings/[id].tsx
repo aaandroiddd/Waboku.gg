@@ -33,6 +33,7 @@ import { Footer } from '@/components/Footer';
 import dynamic from 'next/dynamic';
 import { DistanceIndicator } from '@/components/DistanceIndicator';
 import { useLoading } from '@/contexts/LoadingContext';
+import { SimilarListings } from '@/components/SimilarListings';
 
 const getConditionColor = (condition: string) => {
   const colors: Record<string, string> = {
@@ -1434,6 +1435,14 @@ export default function ListingPage() {
           </DialogContent>
         </Dialog>
       </div>
+      
+      {/* Similar Listings Section */}
+      {listing && listing.status === 'active' && (
+        <div className="container mx-auto p-4">
+          <SimilarListings currentListing={listing} maxListings={3} />
+        </div>
+      )}
+      
       <Footer />
 
       <Dialog open={isChatOpen} onOpenChange={setIsChatOpen}>
