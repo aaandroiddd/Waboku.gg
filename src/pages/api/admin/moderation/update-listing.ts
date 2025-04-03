@@ -45,27 +45,53 @@ const handler = async (
       return res.status(400).json({ error: 'Listing does not need review' });
     }
 
+    // Get moderator information from request if available
+    const moderatorId = req.headers.moderatorid || 'system';
+    const moderatorNotes = req.body.notes || '';
+    const rejectionReason = req.body.rejectionReason || '';
+    
     // Update the listing based on the action
     if (action === 'approve') {
-      // Remove the needsReview flag
+      // Remove the needsReview flag and add detailed moderation info
       await updateDoc(listingRef, {
         needsReview: false,
         moderationStatus: 'approved',
         moderatedAt: new Date(),
+        moderationDetails: {
+          moderatorId,
+          actionTaken: 'approved',
+          timestamp: new Date(),
+          notes: moderatorNotes,
+          originalReviewReason: listingData.reviewReason || 'No reason provided'
+        }
       });
+
+      // Log the approval for auditing purposes
+      console.log(`Listing ${listingId} approved by moderator ${moderatorId}`);
 
       return res.status(200).json({ 
         success: true,
         message: 'Listing approved successfully'
       });
     } else {
-      // Reject the listing by changing its status to 'rejected'
+      // Reject the listing by changing its status to 'rejected' with detailed info
       await updateDoc(listingRef, {
         status: 'rejected',
         needsReview: false,
         moderationStatus: 'rejected',
         moderatedAt: new Date(),
+        moderationDetails: {
+          moderatorId,
+          actionTaken: 'rejected',
+          timestamp: new Date(),
+          notes: moderatorNotes,
+          rejectionReason: rejectionReason || 'Violation of platform guidelines',
+          originalReviewReason: listingData.reviewReason || 'No reason provided'
+        }
       });
+
+      // Log the rejection for auditing purposes
+      console.log(`Listing ${listingId} rejected by moderator ${moderatorId}. Reason: ${rejectionReason || 'Not specified'}`);
 
       return res.status(200).json({ 
         success: true,

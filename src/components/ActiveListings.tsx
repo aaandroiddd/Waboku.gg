@@ -225,6 +225,9 @@ export const ActiveListings = ({
       processExpiredListings();
     }
   }, [expiredListings]);
+  // Check for listings under review
+  const listingsUnderReview = visibleListings.filter(listing => listing.needsReview === true);
+
   return (
     <div className="space-y-4">
       {/* Show alert for expired listings */}
@@ -235,6 +238,18 @@ export const ActiveListings = ({
             {isProcessingExpired 
               ? `Processing ${expiredListings.length} expired listings...` 
               : `${expiredListings.length} expired listings detected. These will be automatically archived.`}
+          </AlertDescription>
+        </Alert>
+      )}
+      
+      {/* Show alert for listings under review */}
+      {listingsUnderReview.length > 0 && (
+        <Alert variant="warning" className="bg-amber-50 text-amber-800 dark:bg-amber-900 dark:text-amber-100 border-amber-300 dark:border-amber-800">
+          <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+          <AlertDescription>
+            {listingsUnderReview.length === 1 
+              ? "1 listing is currently under review by our moderation team. It will be visible to others once approved."
+              : `${listingsUnderReview.length} listings are currently under review by our moderation team. They will be visible to others once approved.`}
           </AlertDescription>
         </Alert>
       )}

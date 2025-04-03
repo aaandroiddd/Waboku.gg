@@ -32,15 +32,40 @@ const handler = async (
       const createdAt = data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : null;
       const expiresAt = data.expiresAt?.toDate ? data.expiresAt.toDate().toISOString() : null;
       
-      // Include the review reason if available
-      const reviewReason = data.reviewReason || 'No specific reason provided';
+      // Process review reason with more detailed information
+      let reviewReason = data.reviewReason || '';
+      let reviewCategory = data.reviewCategory || '';
+      
+      // If no specific reason is provided, categorize it based on available data
+      if (!reviewReason) {
+        if (data.autoFlagged) {
+          reviewReason = 'Automatically flagged by content filtering system';
+          reviewCategory = reviewCategory || 'auto-flagged';
+        } else if (data.imageAnalysisFlag) {
+          reviewReason = 'Image analysis detected potentially inappropriate content';
+          reviewCategory = reviewCategory || 'image-content';
+        } else if (data.pricingAnomaly) {
+          reviewReason = 'Pricing anomaly detected (significantly above or below market value)';
+          reviewCategory = reviewCategory || 'pricing';
+        } else if (data.keywordFlag) {
+          reviewReason = 'Keyword-based content filtering flagged this listing';
+          reviewCategory = reviewCategory || 'keyword';
+        } else if (data.userTrustLevel === 'low') {
+          reviewReason = 'New seller or low trust level account';
+          reviewCategory = reviewCategory || 'user-trust';
+        } else {
+          reviewReason = 'No specific reason provided';
+          reviewCategory = reviewCategory || 'manual-review';
+        }
+      }
       
       return {
         id: doc.id,
         ...data,
         createdAt,
         expiresAt,
-        reviewReason
+        reviewReason,
+        reviewCategory
       };
     });
 

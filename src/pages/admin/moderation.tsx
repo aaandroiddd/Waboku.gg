@@ -133,11 +133,16 @@ export default function ModerationDashboard() {
     }
   };
 
-  const handleApproveReject = async (listingId: string, action: 'approve' | 'reject') => {
+  const handleApproveReject = async (
+    listingId: string, 
+    action: 'approve' | 'reject', 
+    notes: string = '', 
+    rejectionReason: string = ''
+  ) => {
     setLoading(true);
     try {
       // Try to use admin secret if available
-      let headers = {
+      let headers: Record<string, string> = {
         'Content-Type': 'application/json'
       };
       
@@ -147,6 +152,8 @@ export default function ModerationDashboard() {
         // Use Firebase auth token for moderator authentication
         const token = await user.getIdToken(true);
         headers['Authorization'] = `Bearer ${token}`;
+        // Add moderator ID if available
+        headers['moderatorId'] = user.uid;
       } else {
         throw new Error('No authentication method available');
       }
@@ -156,7 +163,9 @@ export default function ModerationDashboard() {
         headers,
         body: JSON.stringify({
           listingId,
-          action
+          action,
+          notes,
+          rejectionReason
         })
       });
       
@@ -281,6 +290,11 @@ export default function ModerationDashboard() {
                         {listing.reviewReason && (
                           <div className="absolute bottom-0 left-0 right-0 bg-black/70 p-2 text-xs text-white">
                             <span className="font-semibold">Reason:</span> {listing.reviewReason}
+                            {listing.reviewCategory && (
+                              <span className="ml-1 px-1.5 py-0.5 bg-gray-700 rounded text-xs">
+                                {listing.reviewCategory}
+                              </span>
+                            )}
                           </div>
                         )}
                       </div>
@@ -541,6 +555,44 @@ export default function ModerationDashboard() {
                     : 'This listing will be rejected and the seller will be notified.'}
                 </DialogDescription>
               </DialogHeader>
+              
+              {/* Additional fields based on action */}
+              <div className="space-y-4 py-4">
+                {/* Moderator notes field for both actions */}
+                <div className="space-y-2">
+                  <label htmlFor="moderatorNotes" className="text-sm font-medium">
+                    Moderator Notes (optional)
+                  </label>
+                  <textarea
+                    id="moderatorNotes"
+                    className="w-full min-h-[80px] p-2 border rounded-md"
+                    placeholder="Add any notes about this decision (internal use only)"
+                  />
+                </div>
+                
+                {/* Rejection reason field only for reject action */}
+                {confirmDialog.action === 'reject' && (
+                  <div className="space-y-2">
+                    <label htmlFor="rejectionReason" className="text-sm font-medium">
+                      Rejection Reason
+                    </label>
+                    <select
+                      id="rejectionReason"
+                      className="w-full p-2 border rounded-md"
+                      defaultValue=""
+                    >
+                      <option value="" disabled>Select a reason</option>
+                      <option value="counterfeit">Counterfeit or fake item</option>
+                      <option value="inappropriate">Inappropriate content</option>
+                      <option value="misleading">Misleading information</option>
+                      <option value="tos-violation">Terms of service violation</option>
+                      <option value="pricing">Unreasonable pricing</option>
+                      <option value="other">Other (specify in notes)</option>
+                    </select>
+                  </div>
+                )}
+              </div>
+              
               <DialogFooter>
                 <Button 
                   variant="outline" 
@@ -551,7 +603,21 @@ export default function ModerationDashboard() {
                 <Button 
                   variant={confirmDialog.action === 'approve' ? 'default' : 'destructive'}
                   className={confirmDialog.action === 'approve' ? 'bg-green-600 hover:bg-green-700' : ''}
-                  onClick={() => handleApproveReject(confirmDialog.listingId, confirmDialog.action)}
+                  onClick={() => {
+                    // Get values from form fields
+                    const notes = (document.getElementById('moderatorNotes') as HTMLTextAreaElement)?.value || '';
+                    const rejectionReason = confirmDialog.action === 'reject' 
+                      ? (document.getElementById('rejectionReason') as HTMLSelectElement)?.value 
+                      : '';
+                    
+                    // Pass these values to the API
+                    handleApproveReject(
+                      confirmDialog.listingId, 
+                      confirmDialog.action, 
+                      notes, 
+                      rejectionReason
+                    );
+                  }}
                   disabled={loading}
                 >
                   {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
