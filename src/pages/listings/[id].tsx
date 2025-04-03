@@ -1436,8 +1436,8 @@ export default function ListingPage() {
         </Dialog>
       </div>
       
-      {/* Similar Listings Section */}
-      {listing && listing.status === 'active' && (
+      {/* Similar Listings Section - Always shown */}
+      {listing && (
         <div className="container mx-auto p-4">
           <SimilarListings currentListing={listing} maxListings={3} />
         </div>

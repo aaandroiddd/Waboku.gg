@@ -170,10 +170,7 @@ export const SimilarListings: React.FC<SimilarListingsProps> = ({
     fetchSimilarListings();
   }, [currentListing, maxListings]);
 
-  // Don't render anything if no similar listings found
-  if (!isLoading && similarListings.length === 0) {
-    return null;
-  }
+  // Always render the component, even when no similar listings are found
 
   const handleViewAll = () => {
     // Navigate to listings page with game filter
@@ -192,7 +189,7 @@ export const SimilarListings: React.FC<SimilarListingsProps> = ({
               <div key={i} className="h-[300px] bg-muted/50 rounded-lg animate-pulse"></div>
             ))}
           </div>
-        ) : (
+        ) : similarListings.length > 0 ? (
           <>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
               {similarListings.map(listing => (
@@ -216,6 +213,18 @@ export const SimilarListings: React.FC<SimilarListingsProps> = ({
               </Button>
             </div>
           </>
+        ) : (
+          <div className="text-center py-8">
+            <p className="text-muted-foreground mb-4">No similar listings found. Check out all available listings instead.</p>
+            <Button 
+              variant="outline" 
+              onClick={handleViewAll}
+              className="group"
+            >
+              Browse All Listings
+              <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+            </Button>
+          </div>
         )}
       </CardContent>
     </Card>
