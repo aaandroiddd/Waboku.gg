@@ -49,22 +49,46 @@ export const SimilarListings: React.FC<SimilarListingsProps> = ({
         const { db } = await getFirebaseServices();
         
         // Create a query to find similar listings based on:
-        // 1. Same game category (highest priority)
-        // 2. Active status
-        // 3. Not the current listing
-        // 4. Not from the same seller
+        // 1. Active status
+        // 2. Not the current listing
+        // 3. Not from the same seller
+        // 4. Same game category if possible, but don't restrict too much
         const listingsRef = collection(db, 'listings');
         
-        // Base query constraints - prioritize same game category
-        const baseConstraints = [
+        // Log the current listing details for debugging
+        console.log('Current listing details:', {
+          id: currentListing.id,
+          game: currentListing.game,
+          cardName: currentListing.cardName,
+          title: currentListing.title
+        });
+        
+        // First try: Query with game category filter
+        let baseConstraints = [
           where('status', '==', 'active'),
           where('game', '==', currentListing.game),
           orderBy('createdAt', 'desc'),
           limit(30) // Fetch more than we need to have a good pool for filtering
         ];
         
-        const q = query(listingsRef, ...baseConstraints);
-        const querySnapshot = await getDocs(q);
+        let q = query(listingsRef, ...baseConstraints);
+        let querySnapshot = await getDocs(q);
+        
+        // If we don't have enough results, try a more general query
+        if (querySnapshot.docs.length < 5) {
+          console.log(`Found only ${querySnapshot.docs.length} listings with game=${currentListing.game}. Trying more general query.`);
+          
+          // Second try: Query without game category filter
+          baseConstraints = [
+            where('status', '==', 'active'),
+            orderBy('createdAt', 'desc'),
+            limit(50) // Increase limit for more options
+          ];
+          
+          q = query(listingsRef, ...baseConstraints);
+          querySnapshot = await getDocs(q);
+          console.log(`Found ${querySnapshot.docs.length} listings with general query.`);
+        }
         
         // Process the results
         let fetchedListings = querySnapshot.docs
@@ -92,6 +116,8 @@ export const SimilarListings: React.FC<SimilarListingsProps> = ({
             listing.id !== currentListing.id && 
             listing.userId !== currentListing.userId
           );
+          
+        console.log(`After filtering, ${fetchedListings.length} listings remain.`);
         
         // Calculate similarity score for each listing with enhanced keyword matching
         const listingsWithScore = fetchedListings.map(listing => {
@@ -217,14 +243,86 @@ export const SimilarListings: React.FC<SimilarListingsProps> = ({
         // Sort by similarity score (highest first)
         listingsWithScore.sort((a, b) => b.score - a.score);
         
+        // Log the top scoring listings for debugging
+        console.log('Top scoring listings:', 
+          listingsWithScore.slice(0, 5).map(item => ({
+            id: item.listing.id,
+            title: item.listing.title,
+            game: item.listing.game,
+            score: item.score
+          }))
+        );
+        
         // Take the top N listings
         const topSimilarListings = listingsWithScore
           .slice(0, maxListings)
           .map(item => item.listing);
         
-        setSimilarListings(topSimilarListings);
+        console.log(`Final similar listings count: ${topSimilarListings.length}`);
+        
+        // If we still don't have any similar listings, try to get any active listings as fallback
+        if (topSimilarListings.length === 0) {
+          console.log('No similar listings found, fetching fallback listings');
+          
+          try {
+            // Fallback query: Just get any active listings
+            const fallbackConstraints = [
+              where('status', '==', 'active'),
+              orderBy('createdAt', 'desc'),
+              limit(maxListings + 5) // Get a few extra to filter out current listing and same seller
+            ];
+            
+            const fallbackQuery = query(listingsRef, ...fallbackConstraints);
+            const fallbackSnapshot = await getDocs(fallbackQuery);
+            
+            console.log(`Found ${fallbackSnapshot.docs.length} fallback listings`);
+            
+            // Process fallback results
+            const fallbackListings = fallbackSnapshot.docs
+              .map(doc => {
+                const data = doc.data();
+                return {
+                  id: doc.id,
+                  ...data,
+                  createdAt: data.createdAt?.toDate() || new Date(),
+                  expiresAt: data.expiresAt?.toDate() || new Date(),
+                  price: Number(data.price) || 0,
+                  imageUrls: Array.isArray(data.imageUrls) ? data.imageUrls : [],
+                  isGraded: Boolean(data.isGraded),
+                  gradeLevel: data.gradeLevel ? Number(data.gradeLevel) : undefined,
+                  status: data.status || 'active',
+                  condition: data.condition || 'Not specified',
+                  game: data.game || 'Not specified',
+                  city: data.city || 'Unknown',
+                  state: data.state || 'Unknown',
+                  gradingCompany: data.gradingCompany || undefined
+                } as Listing;
+              })
+              // Filter out the current listing and listings from the same seller
+              .filter(listing => 
+                listing.id !== currentListing.id && 
+                listing.userId !== currentListing.userId
+              )
+              // Take only what we need
+              .slice(0, maxListings);
+            
+            if (fallbackListings.length > 0) {
+              console.log(`Using ${fallbackListings.length} fallback listings`);
+              setSimilarListings(fallbackListings);
+            } else {
+              console.log('No fallback listings available either');
+              setSimilarListings([]);
+            }
+          } catch (fallbackError) {
+            console.error('Error fetching fallback listings:', fallbackError);
+            setSimilarListings([]);
+          }
+        } else {
+          setSimilarListings(topSimilarListings);
+        }
       } catch (error) {
         console.error('Error fetching similar listings:', error);
+        setSimilarListings([]);
       } finally {
         setIsLoading(false);
       }
@@ -278,13 +376,35 @@ export const SimilarListings: React.FC<SimilarListingsProps> = ({
           </>
         ) : (
           <div className="text-center py-8">
-            <p className="text-muted-foreground mb-4">No similar listings found. Check out all available listings instead.</p>
+            <div className="mb-6">
+              <div className="mx-auto w-16 h-16 rounded-full bg-muted/30 flex items-center justify-center mb-4">
+                <svg 
+                  xmlns="http://www.w3.org/2000/svg" 
+                  className="h-8 w-8 text-muted-foreground" 
+                  fill="none" 
+                  viewBox="0 0 24 24" 
+                  stroke="currentColor"
+                >
+                  <path 
+                    strokeLinecap="round" 
+                    strokeLinejoin="round" 
+                    strokeWidth={1.5} 
+                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" 
+                  />
+                </svg>
+              </div>
+              <h3 className="text-lg font-medium mb-2">Looking for similar items?</h3>
+              <p className="text-muted-foreground mb-4">
+                We're still building our collection of {currentListing.game} listings.
+                <br />Check back soon or browse all available listings.
+              </p>
+            </div>
             <Button 
               variant="outline" 
               onClick={handleViewAll}
               className="group"
             >
-              Browse All Listings
+              Browse All {currentListing.game} Listings
               <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
             </Button>
           </div>
