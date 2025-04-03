@@ -33,14 +33,12 @@ const handler = async (
       // Query for approved listings
       q = listingsRef
         .where('moderationStatus', '==', 'approved')
-        .where('needsReview', '==', false)
         .orderBy('moderatedAt', 'desc')
         .limit(50); // Limit to recent 50 approved listings
     } else if (filterType === 'rejected') {
       // Query for rejected listings
       q = listingsRef
         .where('moderationStatus', '==', 'rejected')
-        .where('needsReview', '==', false)
         .orderBy('moderatedAt', 'desc')
         .limit(50); // Limit to recent 50 rejected listings
     } else {
@@ -104,8 +102,35 @@ const handler = async (
         title: listings[0].title,
         needsReview: listings[0].needsReview,
         moderationStatus: listings[0].moderationStatus,
-        status: listings[0].status
+        hasBeenReviewed: listings[0].hasBeenReviewed,
+        status: listings[0].status,
+        moderatedAt: listings[0].moderatedAt
       });
+      
+      // Log moderation details if available
+      if (listings[0].moderationDetails) {
+        console.log('Moderation details:', listings[0].moderationDetails);
+      }
+    } else {
+      console.log(`No listings found for filter: ${filterType}`);
+      
+      // Log the query parameters for debugging
+      if (filterType === 'approved') {
+        console.log('Query parameters for approved listings:', {
+          moderationStatus: 'approved',
+          orderBy: 'moderatedAt'
+        });
+      } else if (filterType === 'rejected') {
+        console.log('Query parameters for rejected listings:', {
+          moderationStatus: 'rejected',
+          orderBy: 'moderatedAt'
+        });
+      } else if (filterType === 'pending') {
+        console.log('Query parameters for pending listings:', {
+          needsReview: true,
+          status: 'active'
+        });
+      }
     }
     
     // Return the listings

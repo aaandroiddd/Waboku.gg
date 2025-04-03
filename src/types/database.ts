@@ -30,8 +30,18 @@ export interface Listing {
   };
   needsReview?: boolean;
   reviewReason?: string;
+  reviewCategory?: string;
   moderationStatus?: 'pending' | 'approved' | 'rejected';
   moderatedAt?: Date;
+  hasBeenReviewed?: boolean;
+  moderationDetails?: {
+    moderatorId?: string;
+    actionTaken?: string;
+    timestamp?: Date;
+    notes?: string;
+    rejectionReason?: string;
+    originalReviewReason?: string;
+  };
 }
 
 export interface CreateListingData {

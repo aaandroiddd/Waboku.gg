@@ -60,6 +60,7 @@ const handler = async (
         needsReview: false,
         moderationStatus: 'approved',
         moderatedAt: new Date(),
+        hasBeenReviewed: true,
         moderationDetails: {
           moderatorId,
           actionTaken: 'approved',
@@ -83,6 +84,7 @@ const handler = async (
         needsReview: false,
         moderationStatus: 'rejected',
         moderatedAt: new Date(),
+        hasBeenReviewed: true,
         moderationDetails: {
           moderatorId,
           actionTaken: 'rejected',
