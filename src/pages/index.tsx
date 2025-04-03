@@ -34,7 +34,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
-import { Search, MapPin, Star, Check, Filter } from "lucide-react";
+import { Search, MapPin, Star, Check, Filter, X } from "lucide-react";
 import Link from "next/link";
 import {
   Sheet,
@@ -552,6 +552,41 @@ export default function Home() {
       listing.price <= priceRange[1]
     );
 
+    // Log filtering results for debugging
+    console.log(`Filtering results: ${listings.length} total → ${filtered.length} after filters`);
+    console.log('Applied filters:', {
+      searchQuery: searchQuery || 'none',
+      game: selectedGame,
+      condition: selectedCondition,
+      state: selectedState,
+      priceRange
+    });
+
+    // If we have specific listings we're looking for, check if they're in the filtered results
+    const debugListingIds = ['BND7c1ejRRZdlGLSCME']; // Add specific listing IDs to debug
+    for (const debugId of debugListingIds) {
+      const inOriginal = listings.some(l => l.id === debugId);
+      const inFiltered = filtered.some(l => l.id === debugId);
+      
+      if (inOriginal && !inFiltered) {
+        // Find the listing and log why it was filtered out
+        const listing = listings.find(l => l.id === debugId);
+        console.log(`Debug listing ${debugId} was filtered out:`, {
+          title: listing?.title,
+          game: listing?.game,
+          condition: listing?.condition,
+          state: listing?.state,
+          price: listing?.price,
+          matchesGameFilter: selectedGame === "all" || listing?.game?.toLowerCase() === selectedGame.toLowerCase(),
+          matchesConditionFilter: selectedCondition === "all" || listing?.condition?.toLowerCase() === selectedCondition.toLowerCase(),
+          matchesStateFilter: selectedState === "all" || listing?.state?.toLowerCase() === selectedState.toLowerCase(),
+          matchesPriceFilter: listing?.price >= priceRange[0] && listing?.price <= priceRange[1]
+        });
+      } else if (inOriginal && inFiltered) {
+        console.log(`Debug listing ${debugId} passed all filters and is visible`);
+      }
+    }
+
     setFilteredListings(filtered);
   }, [listings, searchQuery, selectedGame, selectedCondition, selectedState, priceRange]);
 
@@ -675,6 +710,104 @@ export default function Home() {
                           onValueChange={(state) => setSelectedState(state.toLowerCase())}
                         />
                       </div>
+                      <Sheet open={filterOpen} onOpenChange={setFilterOpen}>
+                        <SheetTrigger asChild>
+                          <Button variant="outline" className="h-12">
+                            <Filter className="h-4 w-4" />
+                          </Button>
+                        </SheetTrigger>
+                        <SheetContent>
+                          <SheetHeader>
+                            <SheetTitle>Filters</SheetTitle>
+                            <SheetDescription>
+                              Refine your search with additional filters
+                            </SheetDescription>
+                          </SheetHeader>
+                          <div className="py-4 space-y-4">
+                            <div className="space-y-2">
+                              <label className="text-sm font-medium">Category</label>
+                              <Select value={selectedGame} onValueChange={setSelectedGame}>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select category" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {games.map((game) => (
+                                    <SelectItem key={game.value} value={game.value}>
+                                      {game.label}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="space-y-2">
+                              <label className="text-sm font-medium">Condition</label>
+                              <Select value={selectedCondition} onValueChange={setSelectedCondition}>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select condition" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {conditions.map((condition) => (
+                                    <SelectItem key={condition.value} value={condition.value}>
+                                      {condition.label}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="space-y-2">
+                              <label className="text-sm font-medium">Price Range</label>
+                              <div className="pt-4">
+                                <Slider
+                                  value={priceRange}
+                                  min={0}
+                                  max={50000}
+                                  step={10}
+                                  onValueChange={setPriceRange}
+                                />
+                                <div className="flex items-center gap-2 mt-2">
+                                  <div className="flex items-center">
+                                    <span className="text-sm mr-2">$</span>
+                                    <Input
+                                      type="number"
+                                      value={priceRange[0]}
+                                      onChange={(e) => {
+                                        const value = Number(e.target.value);
+                                        if (value >= 0 && value <= priceRange[1]) {
+                                          setPriceRange([value, priceRange[1]]);
+                                        }
+                                      }}
+                                      className="w-24 h-8"
+                                      min={0}
+                                      max={priceRange[1]}
+                                    />
+                                  </div>
+                                  <span className="text-sm">to</span>
+                                  <div className="flex items-center">
+                                    <span className="text-sm mr-2">$</span>
+                                    <Input
+                                      type="number"
+                                      value={priceRange[1]}
+                                      onChange={(e) => {
+                                        const value = Number(e.target.value);
+                                        if (value >= priceRange[0] && value <= 50000) {
+                                          setPriceRange([priceRange[0], value]);
+                                        }
+                                      }}
+                                      className="w-24 h-8"
+                                      min={priceRange[0]}
+                                      max={50000}
+                                    />
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                          <SheetFooter>
+                            <Button variant="outline" onClick={resetFilters}>Reset</Button>
+                            <Button onClick={() => setFilterOpen(false)}>Apply Filters</Button>
+                          </SheetFooter>
+                        </SheetContent>
+                      </Sheet>
                     </div>
                   </div>
 
@@ -696,13 +829,113 @@ export default function Home() {
                       />
                     </div>
                     
-                    <div className="flex">
+                    <div className="flex gap-2">
                       <div className="w-[180px]">
                         <StateSelect
                           value={selectedState}
                           onValueChange={(state) => setSelectedState(state.toLowerCase())}
                         />
                       </div>
+                      
+                      <Sheet open={filterOpen} onOpenChange={setFilterOpen}>
+                        <SheetTrigger asChild>
+                          <Button variant="outline" className="h-12">
+                            <Filter className="mr-2 h-4 w-4" />
+                            <span className="hidden sm:inline">Filters</span>
+                          </Button>
+                        </SheetTrigger>
+                        <SheetContent>
+                          <SheetHeader>
+                            <SheetTitle>Filters</SheetTitle>
+                            <SheetDescription>
+                              Refine your search with additional filters
+                            </SheetDescription>
+                          </SheetHeader>
+                          <div className="py-4 space-y-4">
+                            <div className="space-y-2">
+                              <label className="text-sm font-medium">Category</label>
+                              <Select value={selectedGame} onValueChange={setSelectedGame}>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select category" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {games.map((game) => (
+                                    <SelectItem key={game.value} value={game.value}>
+                                      {game.label}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="space-y-2">
+                              <label className="text-sm font-medium">Condition</label>
+                              <Select value={selectedCondition} onValueChange={setSelectedCondition}>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select condition" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {conditions.map((condition) => (
+                                    <SelectItem key={condition.value} value={condition.value}>
+                                      {condition.label}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="space-y-2">
+                              <label className="text-sm font-medium">Price Range</label>
+                              <div className="pt-4">
+                                <Slider
+                                  value={priceRange}
+                                  min={0}
+                                  max={50000}
+                                  step={10}
+                                  onValueChange={setPriceRange}
+                                />
+                                <div className="flex items-center gap-2 mt-2">
+                                  <div className="flex items-center">
+                                    <span className="text-sm mr-2">$</span>
+                                    <Input
+                                      type="number"
+                                      value={priceRange[0]}
+                                      onChange={(e) => {
+                                        const value = Number(e.target.value);
+                                        if (value >= 0 && value <= priceRange[1]) {
+                                          setPriceRange([value, priceRange[1]]);
+                                        }
+                                      }}
+                                      className="w-24 h-8"
+                                      min={0}
+                                      max={priceRange[1]}
+                                    />
+                                  </div>
+                                  <span className="text-sm">to</span>
+                                  <div className="flex items-center">
+                                    <span className="text-sm mr-2">$</span>
+                                    <Input
+                                      type="number"
+                                      value={priceRange[1]}
+                                      onChange={(e) => {
+                                        const value = Number(e.target.value);
+                                        if (value >= priceRange[0] && value <= 50000) {
+                                          setPriceRange([priceRange[0], value]);
+                                        }
+                                      }}
+                                      className="w-24 h-8"
+                                      min={priceRange[0]}
+                                      max={50000}
+                                    />
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                          <SheetFooter>
+                            <Button variant="outline" onClick={resetFilters}>Reset</Button>
+                            <Button onClick={() => setFilterOpen(false)}>Apply Filters</Button>
+                          </SheetFooter>
+                        </SheetContent>
+                      </Sheet>
                     </div>
                   </div>
 
@@ -717,7 +950,7 @@ export default function Home() {
 
           {/* Listings Section */}
           <section className="container mx-auto px-4 py-8 sm:py-12 relative z-10 bg-background mt-0">
-            <div className="flex items-center justify-between mb-8">
+            <div className="flex items-center justify-between mb-4">
               <h2 className="text-2xl font-semibold text-foreground">
                 {latitude && longitude ? "Latest Listings Near You" : "Latest Listings"}
               </h2>
@@ -725,6 +958,77 @@ export default function Home() {
                 <Button variant="outline" size="sm">View All</Button>
               </Link>
             </div>
+            
+            {/* Active filters display */}
+            {(selectedGame !== "all" || selectedCondition !== "all" || selectedState !== "all" || priceRange[0] > 0 || priceRange[1] < 50000) && (
+              <div className="mb-4 flex flex-wrap gap-2 items-center">
+                <span className="text-sm text-muted-foreground">Active filters:</span>
+                {selectedGame !== "all" && (
+                  <Badge variant="secondary" className="flex items-center gap-1">
+                    Game: {games.find(g => g.value === selectedGame)?.label}
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-4 w-4 p-0 ml-1" 
+                      onClick={() => setSelectedGame("all")}
+                    >
+                      <X className="h-3 w-3" />
+                      <span className="sr-only">Remove</span>
+                    </Button>
+                  </Badge>
+                )}
+                {selectedCondition !== "all" && (
+                  <Badge variant="secondary" className="flex items-center gap-1">
+                    Condition: {conditions.find(c => c.value === selectedCondition)?.label}
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-4 w-4 p-0 ml-1" 
+                      onClick={() => setSelectedCondition("all")}
+                    >
+                      <X className="h-3 w-3" />
+                      <span className="sr-only">Remove</span>
+                    </Button>
+                  </Badge>
+                )}
+                {selectedState !== "all" && (
+                  <Badge variant="secondary" className="flex items-center gap-1">
+                    Location: {usStates.find(s => s.value === selectedState)?.label}
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-4 w-4 p-0 ml-1" 
+                      onClick={() => setSelectedState("all")}
+                    >
+                      <X className="h-3 w-3" />
+                      <span className="sr-only">Remove</span>
+                    </Button>
+                  </Badge>
+                )}
+                {(priceRange[0] > 0 || priceRange[1] < 50000) && (
+                  <Badge variant="secondary" className="flex items-center gap-1">
+                    Price: ${priceRange[0]} - ${priceRange[1]}
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-4 w-4 p-0 ml-1" 
+                      onClick={() => setPriceRange([0, 50000])}
+                    >
+                      <X className="h-3 w-3" />
+                      <span className="sr-only">Remove</span>
+                    </Button>
+                  </Badge>
+                )}
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="h-7 text-xs" 
+                  onClick={resetFilters}
+                >
+                  Clear All
+                </Button>
+              </div>
+            )}
             <div className="max-w-[1400px] mx-auto">
               <ContentLoader 
                 isLoading={loading} 
