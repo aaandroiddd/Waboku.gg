@@ -1,20 +1,8 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { getFirestore, doc, getDoc } from 'firebase/firestore';
-import { firebaseApp } from '@/lib/firebase';
-import { getAuth, verifyIdToken } from 'firebase-admin/auth';
-import { initializeApp as initializeAdminApp } from 'firebase-admin/app';
+import { getFirebaseAdmin } from '@/lib/firebase-admin';
 
-// Initialize Firestore
-const db = getFirestore(firebaseApp);
-
-// Initialize Firebase Admin if not already initialized
-let adminApp;
-try {
-  adminApp = initializeAdminApp();
-} catch (error) {
-  // App already exists, use existing app
-  console.log('Firebase admin app already initialized');
-}
+// Initialize Firestore and Auth using Firebase Admin
+const { db, auth } = getFirebaseAdmin();
 
 /**
  * Middleware to check if the user is a moderator or admin
@@ -43,14 +31,14 @@ export const moderatorAuthMiddleware = async (
 
   try {
     // Verify the token
-    const decodedToken = await getAuth().verifyIdToken(token);
+    const decodedToken = await auth.verifyIdToken(token);
     const uid = decodedToken.uid;
 
     // Check if user has moderator role
-    const userRef = doc(db, 'users', uid);
-    const userSnap = await getDoc(userRef);
+    const userRef = db.collection('users').doc(uid);
+    const userSnap = await userRef.get();
     
-    if (!userSnap.exists()) {
+    if (!userSnap.exists) {
       return res.status(403).json({ error: 'Forbidden - User not found' });
     }
 
@@ -75,10 +63,10 @@ export const moderatorAuthMiddleware = async (
  */
 export const isUserModerator = async (userId: string): Promise<boolean> => {
   try {
-    const userRef = doc(db, 'users', userId);
-    const userSnap = await getDoc(userRef);
+    const userRef = db.collection('users').doc(userId);
+    const userSnap = await userRef.get();
     
-    if (!userSnap.exists()) {
+    if (!userSnap.exists) {
       return false;
     }
 

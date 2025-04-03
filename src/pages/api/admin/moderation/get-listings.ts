@@ -1,10 +1,9 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { getFirestore, collection, query, where, getDocs } from 'firebase/firestore';
-import { firebaseApp } from '@/lib/firebase';
+import { getFirebaseAdmin } from '@/lib/firebase-admin';
 import { moderatorAuthMiddleware } from '@/middleware/moderatorAuth';
 
-// Initialize Firestore
-const db = getFirestore(firebaseApp);
+// Initialize Firestore using Firebase Admin
+const { db } = getFirebaseAdmin();
 
 // Create a handler with middleware
 const handler = async (
@@ -18,14 +17,12 @@ const handler = async (
 
   try {
     // Query Firestore for listings that need review
-    const listingsRef = collection(db, 'listings');
-    const q = query(
-      listingsRef,
-      where('needsReview', '==', true),
-      where('status', '==', 'active')
-    );
+    const listingsRef = db.collection('listings');
+    const q = listingsRef
+      .where('needsReview', '==', true)
+      .where('status', '==', 'active');
 
-    const querySnapshot = await getDocs(q);
+    const querySnapshot = await q.get();
     
     // Convert query snapshot to array of listings
     const listings = querySnapshot.docs.map(doc => {
