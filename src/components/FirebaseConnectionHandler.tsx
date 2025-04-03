@@ -56,32 +56,11 @@ export function FirebaseConnectionHandler() {
     criticalErrors: 0
   });
 
-  // Special handler for Firestore Listen channel fetch errors
+  // Forward declaration for handleListenChannelError
   const handleListenChannelError = useCallback(() => {
-    console.log('[ConnectionHandler] Handling specific Firestore Listen channel error');
-    
-    // Immediately show the connection error UI
-    setConnectionError(true);
-    setShowAlert(true);
-    
-    // Clear any existing timeouts
-    if (errorTimeoutRef.current) {
-      clearTimeout(errorTimeoutRef.current);
-    }
-    if (reconnectTimeoutRef.current) {
-      clearTimeout(reconnectTimeoutRef.current);
-    }
-    
-    // Attempt immediate reconnection
-    if (!isReconnectingRef.current) {
-      console.log('[ConnectionHandler] Initiating immediate reconnection for Listen channel error');
-      
-      // Use a very short delay to allow the UI to update
-      errorTimeoutRef.current = setTimeout(() => {
-        attemptReconnection(true); // Force reconnection
-      }, 200);
-    }
-  }, [attemptReconnection]);
+    // Implementation will be updated after attemptReconnection is defined
+    console.log('[ConnectionHandler] Placeholder for handleListenChannelError');
+  }, []);
   
   // More aggressive reconnection strategy with debouncing and circuit breaker pattern
   const attemptReconnection = useCallback(async (forcedReconnect = false) => {
@@ -181,6 +160,38 @@ export function FirebaseConnectionHandler() {
     }
   }, [db]);
 
+  // Update the handleListenChannelError implementation now that attemptReconnection is defined
+  const handleListenChannelErrorImpl = useCallback(() => {
+    console.log('[ConnectionHandler] Handling specific Firestore Listen channel error');
+    
+    // Immediately show the connection error UI
+    setConnectionError(true);
+    setShowAlert(true);
+    
+    // Clear any existing timeouts
+    if (errorTimeoutRef.current) {
+      clearTimeout(errorTimeoutRef.current);
+    }
+    if (reconnectTimeoutRef.current) {
+      clearTimeout(reconnectTimeoutRef.current);
+    }
+    
+    // Attempt immediate reconnection
+    if (!isReconnectingRef.current) {
+      console.log('[ConnectionHandler] Initiating immediate reconnection for Listen channel error');
+      
+      // Use a very short delay to allow the UI to update
+      errorTimeoutRef.current = setTimeout(() => {
+        attemptReconnection(true); // Force reconnection
+      }, 200);
+    }
+  }, [attemptReconnection]);
+  
+  // Override the placeholder implementation
+  Object.assign(handleListenChannelError, {
+    current: handleListenChannelErrorImpl
+  });
+  
   // Handle errors with improved debouncing and deduplication
   const handleFirebaseError = useCallback((errorMessage: string, stack?: string) => {
     // Skip if we're already reconnecting
@@ -214,7 +225,7 @@ export function FirebaseConnectionHandler() {
       tracker.criticalErrors += 2; // Count this as multiple critical errors to escalate priority
       
       // Use our specialized handler for this specific error
-      handleListenChannelError();
+      handleListenChannelErrorImpl();
       
       return; // Skip normal processing for this specific error
     }
@@ -327,7 +338,7 @@ export function FirebaseConnectionHandler() {
         if (event.error?.stack && event.error.stack.includes('firestore.googleapis.com/google.firestore.v1.Firestore/Listen')) {
           console.log('[ConnectionHandler] Detected specific Firestore Listen channel fetch error');
           // Use our specialized handler for this specific error
-          handleListenChannelError();
+          handleListenChannelErrorImpl();
           return;
         }
       }
@@ -353,7 +364,7 @@ export function FirebaseConnectionHandler() {
         if (errorStack.includes('firestore.googleapis.com/google.firestore.v1.Firestore/Listen')) {
           console.log('[ConnectionHandler] Detected specific Firestore Listen channel fetch error in promise rejection');
           // Use our specialized handler for this specific error
-          handleListenChannelError();
+          handleListenChannelErrorImpl();
           return;
         }
       }
