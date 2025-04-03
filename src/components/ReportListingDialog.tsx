@@ -51,10 +51,16 @@ export function ReportListingDialog({ open, onOpenChange, listingId, listingTitl
     setLoading(true);
 
     try {
+      // Get the user's authentication token
+      const token = await user.getIdToken();
+      
+      console.log('Submitting report with token:', token ? 'Token exists' : 'No token');
+      
       const response = await fetch('/api/listings/report', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({
           listingId,
@@ -66,6 +72,7 @@ export function ReportListingDialog({ open, onOpenChange, listingId, listingTitl
 
       if (!response.ok) {
         const errorData = await response.json();
+        console.error('Report submission error:', errorData);
         throw new Error(errorData.error || 'Failed to submit report');
       }
 

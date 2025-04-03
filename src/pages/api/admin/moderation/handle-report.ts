@@ -1,6 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { getFirebaseServices } from '@/lib/firebase';
-import { doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, serverTimestamp, setDoc } from 'firebase/firestore';
 import { getAuth } from 'firebase-admin/auth';
 import { initAdmin } from '@/lib/firebase-admin';
 
@@ -11,6 +11,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
+    console.log('Handle report API called');
+    
     // Initialize Firebase Admin if needed
     initAdmin();
     
@@ -18,6 +20,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // Validate required fields
     if (!reportId || !action) {
+      console.log('Missing required fields:', { reportId, action });
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
@@ -29,12 +32,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const adminSecret = req.headers['x-admin-secret'];
     if (adminSecret && process.env.ADMIN_SECRET && adminSecret === process.env.ADMIN_SECRET) {
       isAuthorized = true;
+      console.log('Authorized via admin secret');
     } 
     // Check for Firebase auth token
     else if (req.headers.authorization?.startsWith('Bearer ')) {
       const token = req.headers.authorization.split('Bearer ')[1];
       try {
         const decodedToken = await getAuth().verifyIdToken(token);
+        console.log('Token verified for user:', decodedToken.uid);
         
         // Check if user is a moderator
         const { db } = getFirebaseServices();
@@ -45,11 +50,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         // Get user document to check if they're a moderator
         const userDoc = await getDoc(doc(db, 'users', decodedToken.uid));
         
-        if (!userDoc.empty) {
+        if (userDoc.exists()) {
           const userData = userDoc.data();
           if (userData.isModerator || userData.isAdmin) {
             isAuthorized = true;
             moderatorId = decodedToken.uid;
+            console.log('User authorized as moderator/admin:', moderatorId);
           }
         }
       } catch (error) {
@@ -59,12 +65,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
     
     if (!isAuthorized) {
+      console.log('User not authorized');
       return res.status(401).json({ error: 'Unauthorized' });
     }
     
     // Get Firebase services
     const { db } = getFirebaseServices();
     if (!db) {
+      console.error('Firebase services not initialized');
       throw new Error('Firebase services not initialized');
     }
     
@@ -73,17 +81,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const reportDoc = await getDoc(reportRef);
     
     if (!reportDoc.exists()) {
+      console.log('Report not found:', reportId);
       return res.status(404).json({ error: 'Report not found' });
     }
     
     const reportData = reportDoc.data();
     const listingId = reportData.listingId;
+    console.log('Report found for listing:', listingId);
     
     // Get the listing document
     const listingRef = doc(db, 'listings', listingId);
     const listingDoc = await getDoc(listingRef);
     
     if (!listingDoc.exists()) {
+      console.log('Listing not found:', listingId);
       return res.status(404).json({ error: 'Listing not found' });
     }
     
@@ -95,6 +106,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       moderatorNotes: notes || null,
       actionTaken: action
     });
+    
+    console.log('Report updated with status:', action === 'dismiss' ? 'dismissed' : 'actioned');
     
     // If the action is to remove the listing, update the listing status
     if (action === 'remove') {
@@ -112,21 +125,29 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }
       });
       
+      console.log('Listing archived due to report');
+      
       // Send a notification to the listing owner
       const listingData = listingDoc.data();
       const ownerId = listingData.userId;
       
       if (ownerId) {
-        const notificationRef = doc(db, 'users', ownerId, 'notifications', `report_${reportId}`);
-        await updateDoc(notificationRef, {
-          type: 'listing_removed',
-          listingId,
-          listingTitle: listingData.title,
-          reason: rejectionReason || 'reported_by_user',
-          message: 'Your listing has been removed due to a user report.',
-          createdAt: serverTimestamp(),
-          read: false
-        });
+        try {
+          const notificationRef = doc(db, 'users', ownerId, 'notifications', `report_${reportId}`);
+          await setDoc(notificationRef, {
+            type: 'listing_removed',
+            listingId,
+            listingTitle: listingData.title,
+            reason: rejectionReason || 'reported_by_user',
+            message: 'Your listing has been removed due to a user report.',
+            createdAt: serverTimestamp(),
+            read: false
+          });
+          console.log('Notification sent to listing owner:', ownerId);
+        } catch (notificationError) {
+          console.error('Error sending notification to owner:', notificationError);
+          // Continue even if notification fails
+        }
       }
     }
     

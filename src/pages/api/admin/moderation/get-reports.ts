@@ -1,6 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { getFirebaseServices } from '@/lib/firebase';
-import { collection, getDocs, query, where, orderBy, limit } from 'firebase/firestore';
+import { collection, getDocs, query, where, orderBy, limit, getDoc, doc } from 'firebase/firestore';
 import { getAuth } from 'firebase-admin/auth';
 import { initAdmin } from '@/lib/firebase-admin';
 
@@ -11,12 +11,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
+    console.log('Get reports API called');
+    
     // Initialize Firebase Admin if needed
     initAdmin();
     
     // Get filter parameter (pending, resolved, all)
     const { filter = 'pending', limit: limitParam = '20' } = req.query;
     const limitNumber = parseInt(limitParam as string) || 20;
+    
+    console.log('Fetching reports with filter:', filter, 'limit:', limitNumber);
     
     // Authenticate the request
     let isAuthorized = false;
@@ -26,12 +30,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const adminSecret = req.headers['x-admin-secret'];
     if (adminSecret && process.env.ADMIN_SECRET && adminSecret === process.env.ADMIN_SECRET) {
       isAuthorized = true;
+      console.log('Authorized via admin secret');
     } 
     // Check for Firebase auth token
     else if (req.headers.authorization?.startsWith('Bearer ')) {
       const token = req.headers.authorization.split('Bearer ')[1];
       try {
         const decodedToken = await getAuth().verifyIdToken(token);
+        console.log('Token verified for user:', decodedToken.uid);
         
         // Check if user is a moderator
         const { db } = getFirebaseServices();
@@ -40,16 +46,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }
         
         // Get user document to check if they're a moderator
-        const userDoc = await getDocs(query(
-          collection(db, 'users'),
-          where('uid', '==', decodedToken.uid)
-        ));
+        const userDoc = await getDoc(doc(db, 'users', decodedToken.uid));
         
-        if (!userDoc.empty) {
-          const userData = userDoc.docs[0].data();
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
           if (userData.isModerator || userData.isAdmin) {
             isAuthorized = true;
             moderatorId = decodedToken.uid;
+            console.log('User authorized as moderator/admin:', moderatorId);
           }
         }
       } catch (error) {
@@ -59,12 +63,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
     
     if (!isAuthorized) {
+      console.log('User not authorized');
       return res.status(401).json({ error: 'Unauthorized' });
     }
     
     // Fetch reports from Firestore
     const { db } = getFirebaseServices();
     if (!db) {
+      console.error('Firebase services not initialized');
       throw new Error('Firebase services not initialized');
     }
     
@@ -86,6 +92,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
     
     const reportsSnapshot = await getDocs(reportsQuery);
+    console.log(`Found ${reportsSnapshot.size} reports`);
     
     // Process reports and fetch associated listings
     const reports = [];
@@ -97,7 +104,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       reports.push({
         id: doc.id,
         ...reportData,
-        reportedAt: reportData.reportedAt?.toDate?.() || null
+        reportedAt: reportData.reportedAt?.toDate?.() || null,
+        moderatedAt: reportData.moderatedAt?.toDate?.() || null
       });
       
       if (reportData.listingId) {
@@ -108,15 +116,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Fetch all listings in a single batch
     const listingsMap = {};
     if (listingIds.size > 0) {
-      const listingPromises = Array.from(listingIds).map(async (listingId) => {
+      console.log(`Fetching ${listingIds.size} associated listings`);
+      
+      for (const listingId of listingIds) {
         try {
-          const listingDoc = await getDocs(query(
-            collection(db, 'listings'),
-            where('id', '==', listingId)
-          ));
+          const listingDocRef = doc(db, 'listings', listingId as string);
+          const listingDocSnap = await getDoc(listingDocRef);
           
-          if (!listingDoc.empty) {
-            const listingData = listingDoc.docs[0].data();
+          if (listingDocSnap.exists()) {
+            const listingData = listingDocSnap.data();
             listingsMap[listingId] = {
               ...listingData,
               id: listingId,
@@ -125,20 +133,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
               archivedAt: listingData.archivedAt?.toDate?.() || null,
               moderatedAt: listingData.moderatedAt?.toDate?.() || null
             };
+          } else {
+            console.log(`Listing ${listingId} not found`);
           }
         } catch (error) {
           console.error(`Error fetching listing ${listingId}:`, error);
         }
-      });
-      
-      await Promise.all(listingPromises);
+      }
     }
     
     // Combine reports with their listings
     const reportedListings = reports.map(report => {
-      const listing = listingsMap[report.listingId] || null;
-      
-      if (listing) {
+      // If the listing exists in our map, combine it with the report data
+      if (listingsMap[report.listingId]) {
+        const listing = listingsMap[report.listingId];
         return {
           ...listing,
           reportId: report.id,
@@ -146,12 +154,38 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           reportDescription: report.description,
           reportedBy: report.reportedBy,
           reportedAt: report.reportedAt,
-          reportStatus: report.status
+          reportStatus: report.status,
+          moderatedAt: report.moderatedAt,
+          moderatedBy: report.moderatedBy,
+          moderatorNotes: report.moderatorNotes
         };
       }
       
-      return null;
-    }).filter(Boolean); // Remove null entries
+      // If the listing doesn't exist, create a placeholder with report data
+      // This handles cases where the listing might have been deleted
+      return {
+        id: report.listingId,
+        title: report.listingTitle || 'Unknown Listing',
+        description: 'Listing details not available',
+        price: report.listingPrice || 0,
+        game: report.listingGame || 'Unknown',
+        imageUrls: report.listingImageUrl ? [report.listingImageUrl] : [],
+        username: report.listingOwnerUsername || 'Unknown User',
+        userId: report.listingOwnerId || '',
+        reportId: report.id,
+        reportReason: report.reason,
+        reportDescription: report.description,
+        reportedBy: report.reportedBy,
+        reportedAt: report.reportedAt,
+        reportStatus: report.status,
+        moderatedAt: report.moderatedAt,
+        moderatedBy: report.moderatedBy,
+        moderatorNotes: report.moderatorNotes,
+        status: 'unknown'
+      };
+    });
+    
+    console.log(`Returning ${reportedListings.length} reported listings`);
     
     return res.status(200).json({ 
       success: true, 
