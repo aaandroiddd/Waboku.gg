@@ -19,6 +19,8 @@ const handler = async (
     // Get the filter type from query parameters (pending, approved, rejected)
     const filterType = req.query.filter || 'pending';
     console.log(`Fetching listings with filter: ${filterType}`);
+    console.log('Request headers:', req.headers);
+    console.log('Request query parameters:', req.query);
     
     const listingsRef = db.collection('listings');
     let q;
@@ -33,13 +35,13 @@ const handler = async (
       // Query for approved listings - using moderationDetails.actionTaken field
       q = listingsRef
         .where('moderationDetails.actionTaken', '==', 'approved')
-        .orderBy('moderatedAt', 'desc')
+        .where('hasBeenReviewed', '==', true)
         .limit(50); // Limit to recent 50 approved listings
     } else if (filterType === 'rejected') {
       // Query for rejected listings - using moderationDetails.actionTaken field
       q = listingsRef
         .where('moderationDetails.actionTaken', '==', 'rejected')
-        .orderBy('moderatedAt', 'desc')
+        .where('hasBeenReviewed', '==', true)
         .limit(50); // Limit to recent 50 rejected listings
     } else {
       return res.status(400).json({ error: 'Invalid filter type' });
@@ -117,13 +119,13 @@ const handler = async (
       // Log the query parameters for debugging
       if (filterType === 'approved') {
         console.log('Query parameters for approved listings:', {
-          moderationStatus: 'approved',
-          orderBy: 'moderatedAt'
+          'moderationDetails.actionTaken': 'approved',
+          'hasBeenReviewed': true
         });
       } else if (filterType === 'rejected') {
         console.log('Query parameters for rejected listings:', {
-          moderationStatus: 'rejected',
-          orderBy: 'moderatedAt'
+          'moderationDetails.actionTaken': 'rejected',
+          'hasBeenReviewed': true
         });
       } else if (filterType === 'pending') {
         console.log('Query parameters for pending listings:', {
