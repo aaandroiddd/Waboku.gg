@@ -16,6 +16,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Footer } from '@/components/Footer';
+import { GlobalLoading } from '@/components/GlobalLoading';
 import { Listing } from '@/types/database';
 import Image from 'next/image';
 import { formatPrice } from '@/lib/price';
@@ -34,6 +35,7 @@ export default function ModerationDashboard() {
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [adminSecret, setAdminSecret] = useState('');
   const [loading, setLoading] = useState(false);
+  const [pageLoading, setPageLoading] = useState(true);
   const [listingsLoading, setListingsLoading] = useState(false);
   const [responseDialog, setResponseDialog] = useState(false);
   const [apiResponse, setApiResponse] = useState<ApiResponse | null>(null);
@@ -48,6 +50,12 @@ export default function ModerationDashboard() {
     if (secret) {
       setAdminSecret(secret);
       verifyAdmin(secret);
+    } else {
+      // If no admin secret is found, we'll check if user is a moderator in the other useEffect
+      // Only set pageLoading to false if we're not going to verify admin
+      if (!user) {
+        setPageLoading(false);
+      }
     }
   }, []);
 
@@ -72,6 +80,8 @@ export default function ModerationDashboard() {
     } catch (error) {
       console.error('Error verifying admin:', error);
       setIsAuthorized(false);
+    } finally {
+      setPageLoading(false);
     }
   };
   
@@ -102,10 +112,14 @@ export default function ModerationDashboard() {
         }
       } catch (error) {
         console.error('Error checking moderator status:', error);
+      } finally {
+        setPageLoading(false);
       }
     };
     
-    checkModeratorStatus();
+    if (user) {
+      checkModeratorStatus();
+    }
   }, [user]);
 
   const fetchListingsForModeration = async (secret: string, filterType: string = 'pending') => {
@@ -207,6 +221,11 @@ export default function ModerationDashboard() {
     setSelectedImage(imageUrl);
     setViewImageDialog(true);
   };
+
+  // Show loading animation while the page is initializing
+  if (pageLoading) {
+    return <GlobalLoading message="Loading moderation dashboard..." />;
+  }
 
   if (!isAuthorized) {
     return (
