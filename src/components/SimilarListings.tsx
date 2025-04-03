@@ -63,31 +63,30 @@ export const SimilarListings: React.FC<SimilarListingsProps> = ({
           title: currentListing.title
         });
         
-        // First try: Query with game category filter
+        // First try: Query with game category filter but without status filter
+        // This is a temporary fix to ensure we get some listings
         let baseConstraints = [
-          where('status', '==', 'active'),
-          where('game', '==', currentListing.game),
           orderBy('createdAt', 'desc'),
           limit(30) // Fetch more than we need to have a good pool for filtering
         ];
         
         let q = query(listingsRef, ...baseConstraints);
         let querySnapshot = await getDocs(q);
+        console.log(`Found ${querySnapshot.docs.length} listings with general query without status filter.`);
         
-        // If we don't have enough results, try a more general query
+        // If we still don't have enough results, try an even more general query
         if (querySnapshot.docs.length < 5) {
-          console.log(`Found only ${querySnapshot.docs.length} listings with game=${currentListing.game}. Trying more general query.`);
+          console.log(`Found only ${querySnapshot.docs.length} listings. Trying even more general query.`);
           
-          // Second try: Query without game category filter
+          // Second try: Query with increased limit
           baseConstraints = [
-            where('status', '==', 'active'),
             orderBy('createdAt', 'desc'),
-            limit(50) // Increase limit for more options
+            limit(100) // Significantly increase limit to find any listings
           ];
           
           q = query(listingsRef, ...baseConstraints);
           querySnapshot = await getDocs(q);
-          console.log(`Found ${querySnapshot.docs.length} listings with general query.`);
+          console.log(`Found ${querySnapshot.docs.length} listings with expanded general query.`);
         }
         
         // Process the results
@@ -111,10 +110,9 @@ export const SimilarListings: React.FC<SimilarListingsProps> = ({
               gradingCompany: data.gradingCompany || undefined
             } as Listing;
           })
-          // Filter out the current listing and listings from the same seller
+          // Filter out only the current listing - we want to show all other listings
           .filter(listing => 
-            listing.id !== currentListing.id && 
-            listing.userId !== currentListing.userId
+            listing.id !== currentListing.id
           );
           
         console.log(`After filtering, ${fetchedListings.length} listings remain.`);
@@ -123,8 +121,10 @@ export const SimilarListings: React.FC<SimilarListingsProps> = ({
         const listingsWithScore = fetchedListings.map(listing => {
           let score = 0;
           
-          // Same game category (already filtered in query) - highest priority
-          score += 10; // Increased from 5 to emphasize game category importance
+          // Same game category - highest priority
+          if (listing.game === currentListing.game) {
+            score += 20; // Give a significant boost to listings in the same game category
+          }
           
           // Extract keywords from titles and descriptions for better matching
           const extractKeywords = (text: string): string[] => {
@@ -265,11 +265,10 @@ export const SimilarListings: React.FC<SimilarListingsProps> = ({
           console.log('No similar listings found, fetching fallback listings');
           
           try {
-            // Fallback query: Just get any active listings
+            // Fallback query: Just get any listings without status filter
             const fallbackConstraints = [
-              where('status', '==', 'active'),
               orderBy('createdAt', 'desc'),
-              limit(maxListings + 5) // Get a few extra to filter out current listing and same seller
+              limit(maxListings + 10) // Get extra listings to ensure we have enough after filtering
             ];
             
             const fallbackQuery = query(listingsRef, ...fallbackConstraints);
@@ -298,10 +297,9 @@ export const SimilarListings: React.FC<SimilarListingsProps> = ({
                   gradingCompany: data.gradingCompany || undefined
                 } as Listing;
               })
-              // Filter out the current listing and listings from the same seller
+              // Filter out only the current listing for fallback too
               .filter(listing => 
-                listing.id !== currentListing.id && 
-                listing.userId !== currentListing.userId
+                listing.id !== currentListing.id
               )
               // Take only what we need
               .slice(0, maxListings);
