@@ -20,15 +20,25 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
-    // Get Firebase services
-    const { db } = getFirebaseServices();
-    if (!db) {
-      console.error('Firebase services not initialized');
-      return res.status(500).json({ error: 'Firebase services not initialized' });
+    // Initialize Firebase Admin first
+    const admin = initAdmin();
+    if (!admin) {
+      console.error('Firebase Admin not initialized');
+      return res.status(500).json({ error: 'Firebase Admin not initialized' });
     }
 
-    // Initialize Firebase Admin
-    initAdmin();
+    // Get Firebase services - this should be after admin initialization
+    let db;
+    try {
+      const services = getFirebaseServices();
+      db = services.db;
+      if (!db) {
+        throw new Error('Firestore DB not available');
+      }
+    } catch (error) {
+      console.error('Error getting Firebase services:', error);
+      return res.status(500).json({ error: 'Failed to initialize Firebase services', details: error instanceof Error ? error.message : 'Unknown error' });
+    }
 
     // Verify the user is authenticated
     const authHeader = req.headers.authorization;
