@@ -17,25 +17,24 @@ const AnimatedBackground: React.FC<AnimatedBackgroundProps> = ({ className }) =>
     // Check if we're on a mobile device
     const isMobile = window.innerWidth < 768;
     
-    // Set canvas dimensions to match window size
+    // Set canvas dimensions immediately to prevent layout shifts
+    // This is important to avoid the page jumping after load
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    
+    // Set canvas dimensions to match window size on resize
     const resizeCanvas = () => {
-      // Set dimensions with a small delay to prevent layout shifts during page load
-      requestAnimationFrame(() => {
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
-      });
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
     };
     
     // Handle scroll events to ensure canvas covers the viewport
     const handleScroll = () => {
       if (canvas) {
-        // Use requestAnimationFrame to avoid layout thrashing
-        requestAnimationFrame(() => {
-          // Ensure the canvas height is at least the viewport height
-          if (canvas.height < window.innerHeight) {
-            canvas.height = window.innerHeight;
-          }
-        });
+        // Ensure the canvas height is at least the viewport height
+        if (canvas.height < window.innerHeight) {
+          canvas.height = window.innerHeight;
+        }
       }
     };
     

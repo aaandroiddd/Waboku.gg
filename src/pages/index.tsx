@@ -591,9 +591,10 @@ export default function Home() {
 
           {/* Hero Section */}
           <div className="relative overflow-hidden min-h-screen">
-            {/* Original Background Animation */}
+            {/* Original Background Animation - Using placeholder div to prevent layout shift */}
+            <div className="hero-background opacity-0"></div>
             <motion.div 
-              className="hero-background"
+              className="hero-background absolute inset-0"
               variants={heroBackgroundVariants}
               initial="hidden"
               animate="visible"
@@ -602,10 +603,18 @@ export default function Home() {
             <div className="relative container mx-auto px-4 py-16 sm:py-20 md:py-24 lg:py-32">
               <div className="text-center max-w-3xl mx-auto space-y-6 sm:space-y-8">
                 <div className="space-y-4 sm:space-y-6 pt-8 sm:pt-12 md:pt-16">
-                  <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight glow-text animate-title">
+                  {/* Using placeholder divs with the same dimensions to prevent layout shift */}
+                  <div className="invisible h-[3.75rem] sm:h-[4.5rem] md:h-[6rem] lg:h-[7.5rem]" aria-hidden="true">
+                    Your Local TCG Marketplace
+                  </div>
+                  <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight glow-text animate-title absolute left-0 right-0">
                     Your Local TCG Marketplace
                   </h1>
-                  <p className="text-base sm:text-lg md:text-xl glow-text-subtle animate-subtitle">
+                  
+                  <div className="invisible h-[1.5rem] sm:h-[1.75rem] md:h-[2rem]" aria-hidden="true">
+                    {randomSubtitle}
+                  </div>
+                  <p className="text-base sm:text-lg md:text-xl glow-text-subtle animate-subtitle absolute left-0 right-0">
                     {randomSubtitle}
                   </p>
                 </div>

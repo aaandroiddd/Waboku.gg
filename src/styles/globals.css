@@ -7,12 +7,15 @@
   top: 0;
   left: 0;
   right: 0;
+  bottom: 0;
   height: 100vh; /* Use viewport height instead of percentage */
   min-height: 100%; /* Ensure it covers the container */
   z-index: 0;
   overflow: hidden;
   @apply bg-background;
   background: hsl(var(--background));
+  /* Prevent layout shifts by ensuring the element is present from the start */
+  will-change: transform;
 }
 
 .hero-background::before {
@@ -63,12 +66,18 @@
   animation: fade-in 0.8s ease-out forwards, float-up 6s ease-in-out infinite;
   animation-delay: 0.2s, 1s;
   opacity: 0;
+  /* Prevent layout shifts by ensuring the element doesn't affect layout */
+  position: relative;
+  transform: translateZ(0);
 }
 
 .animate-subtitle {
   animation: fade-in 0.8s ease-out forwards;
   animation-delay: 0.4s;
   opacity: 0;
+  /* Prevent layout shifts by ensuring the element doesn't affect layout */
+  position: relative;
+  transform: translateZ(0);
 }
 
 .dark .hero-background {
