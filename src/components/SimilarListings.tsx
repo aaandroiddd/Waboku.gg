@@ -49,18 +49,18 @@ export const SimilarListings: React.FC<SimilarListingsProps> = ({
         const { db } = await getFirebaseServices();
         
         // Create a query to find similar listings based on:
-        // 1. Same game category
+        // 1. Same game category (highest priority)
         // 2. Active status
         // 3. Not the current listing
         // 4. Not from the same seller
         const listingsRef = collection(db, 'listings');
         
-        // Base query constraints
+        // Base query constraints - prioritize same game category
         const baseConstraints = [
           where('status', '==', 'active'),
           where('game', '==', currentListing.game),
           orderBy('createdAt', 'desc'),
-          limit(20) // Fetch more than we need to filter
+          limit(30) // Fetch more than we need to have a good pool for filtering
         ];
         
         const q = query(listingsRef, ...baseConstraints);
@@ -93,12 +93,91 @@ export const SimilarListings: React.FC<SimilarListingsProps> = ({
             listing.userId !== currentListing.userId
           );
         
-        // Calculate similarity score for each listing
+        // Calculate similarity score for each listing with enhanced keyword matching
         const listingsWithScore = fetchedListings.map(listing => {
           let score = 0;
           
-          // Same game category (already filtered in query)
-          score += 5;
+          // Same game category (already filtered in query) - highest priority
+          score += 10; // Increased from 5 to emphasize game category importance
+          
+          // Extract keywords from titles and descriptions for better matching
+          const extractKeywords = (text: string): string[] => {
+            if (!text) return [];
+            // Remove special characters, convert to lowercase, and split by spaces
+            return text.toLowerCase()
+              .replace(/[^\w\s]/g, ' ')
+              .split(/\s+/)
+              .filter(word => word.length > 2); // Only keep words with 3+ characters
+          };
+          
+          // Get keywords from both listings
+          const currentKeywords = new Set([
+            ...extractKeywords(currentListing.title),
+            ...extractKeywords(currentListing.description),
+            ...(currentListing.cardName ? extractKeywords(currentListing.cardName) : [])
+          ]);
+          
+          const listingKeywords = new Set([
+            ...extractKeywords(listing.title),
+            ...extractKeywords(listing.description),
+            ...(listing.cardName ? extractKeywords(listing.cardName) : [])
+          ]);
+          
+          // Count matching keywords
+          let matchingKeywords = 0;
+          currentKeywords.forEach(keyword => {
+            if (listingKeywords.has(keyword)) {
+              matchingKeywords++;
+            }
+          });
+          
+          // Add score based on keyword matches (higher weight)
+          score += matchingKeywords * 2;
+          
+          // Card name similarity (highest priority for card-specific matches)
+          if (listing.cardName && currentListing.cardName) {
+            const listingCardName = listing.cardName.toLowerCase();
+            const currentCardName = currentListing.cardName.toLowerCase();
+            
+            // Exact match
+            if (listingCardName === currentCardName) {
+              score += 15;
+            } 
+            // Partial match (one contains the other)
+            else if (listingCardName.includes(currentCardName) || 
+                     currentCardName.includes(listingCardName)) {
+              score += 10;
+            }
+            // Word-level match
+            else {
+              const listingCardWords = listingCardName.split(/\s+/);
+              const currentCardWords = currentCardName.split(/\s+/);
+              
+              const sharedCardWords = listingCardWords.filter(word => 
+                word.length > 2 && currentCardWords.includes(word)
+              );
+              
+              score += sharedCardWords.length * 3;
+            }
+          }
+          
+          // Title similarity with improved matching
+          const currentTitleWords = currentListing.title.toLowerCase().split(/\s+/);
+          const listingTitleWords = listing.title.toLowerCase().split(/\s+/);
+          
+          // Check for exact phrases (2+ words in sequence)
+          for (let i = 0; i < currentTitleWords.length - 1; i++) {
+            const phrase = `${currentTitleWords[i]} ${currentTitleWords[i+1]}`;
+            if (listing.title.toLowerCase().includes(phrase)) {
+              score += 5; // Higher score for matching phrases
+            }
+          }
+          
+          // Individual word matches
+          const sharedTitleWords = currentTitleWords.filter(word => 
+            word.length > 2 && listingTitleWords.includes(word)
+          );
+          score += sharedTitleWords.length * 2; // Increased from 1 to emphasize title matches
           
           // Similar condition
           if (listing.condition === currentListing.condition) {
@@ -109,7 +188,7 @@ export const SimilarListings: React.FC<SimilarListingsProps> = ({
           const priceDiff = Math.abs(listing.price - currentListing.price);
           const pricePercentDiff = (priceDiff / currentListing.price) * 100;
           if (pricePercentDiff <= 20) {
-            score += 3;
+            score += 2; // Reduced from 3 to prioritize content matches over price
           }
           
           // Both graded or both not graded
@@ -131,22 +210,6 @@ export const SimilarListings: React.FC<SimilarListingsProps> = ({
               }
             }
           }
-          
-          // Similar card name if available
-          if (listing.cardName && currentListing.cardName) {
-            if (listing.cardName.toLowerCase().includes(currentListing.cardName.toLowerCase()) ||
-                currentListing.cardName.toLowerCase().includes(listing.cardName.toLowerCase())) {
-              score += 4;
-            }
-          }
-          
-          // Title similarity (check if titles share words)
-          const currentTitleWords = currentListing.title.toLowerCase().split(/\s+/);
-          const listingTitleWords = listing.title.toLowerCase().split(/\s+/);
-          const sharedWords = currentTitleWords.filter(word => 
-            word.length > 3 && listingTitleWords.includes(word)
-          );
-          score += sharedWords.length * 1;
           
           return { listing, score };
         });
