@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { connectionManager, db, disableNetwork, enableNetwork } from '@/lib/firebase';
+import { connectionManager, db, disableNetwork, enableNetwork, firebaseApp } from '@/lib/firebase';
 import { AlertCircle, WifiOff, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -20,7 +20,10 @@ const CRITICAL_ERROR_PATTERNS = [
   'network error',
   'Network Error',
   'NetworkError',
-  'AbortError'
+  'AbortError',
+  'QuotaExceededError',
+  'PERMISSION_DENIED',
+  'RESOURCE_EXHAUSTED'
 ];
 
 export function FirebaseConnectionHandler() {
@@ -53,6 +56,33 @@ export function FirebaseConnectionHandler() {
     criticalErrors: 0
   });
 
+  // Special handler for Firestore Listen channel fetch errors
+  const handleListenChannelError = useCallback(() => {
+    console.log('[ConnectionHandler] Handling specific Firestore Listen channel error');
+    
+    // Immediately show the connection error UI
+    setConnectionError(true);
+    setShowAlert(true);
+    
+    // Clear any existing timeouts
+    if (errorTimeoutRef.current) {
+      clearTimeout(errorTimeoutRef.current);
+    }
+    if (reconnectTimeoutRef.current) {
+      clearTimeout(reconnectTimeoutRef.current);
+    }
+    
+    // Attempt immediate reconnection
+    if (!isReconnectingRef.current) {
+      console.log('[ConnectionHandler] Initiating immediate reconnection for Listen channel error');
+      
+      // Use a very short delay to allow the UI to update
+      errorTimeoutRef.current = setTimeout(() => {
+        attemptReconnection(true); // Force reconnection
+      }, 200);
+    }
+  }, [attemptReconnection]);
+  
   // More aggressive reconnection strategy with debouncing and circuit breaker pattern
   const attemptReconnection = useCallback(async (forcedReconnect = false) => {
     if (!db || (isReconnectingRef.current && !forcedReconnect)) return;
@@ -176,6 +206,19 @@ export function FirebaseConnectionHandler() {
       tracker.errors.add(errorMessage);
     }
     
+    // Special handling for "Failed to fetch" errors related to Firestore Listen channel
+    if ((errorMessage.includes('Failed to fetch') || (stack && stack.includes('Failed to fetch'))) &&
+        (stack && stack.includes('firestore.googleapis.com/google.firestore.v1.Firestore/Listen'))) {
+      console.log('[ConnectionHandler] Detected Firestore Listen channel fetch error - prioritizing reconnection');
+      // This is the specific error we're seeing in the user reports
+      tracker.criticalErrors += 2; // Count this as multiple critical errors to escalate priority
+      
+      // Use our specialized handler for this specific error
+      handleListenChannelError();
+      
+      return; // Skip normal processing for this specific error
+    }
+    
     // Check if this is a critical error that should trigger immediate reconnection
     let isCriticalError = false;
     for (const pattern of CRITICAL_ERROR_PATTERNS) {
@@ -227,7 +270,7 @@ export function FirebaseConnectionHandler() {
         }
       }
     }
-  }, [attemptReconnection]);
+  }, [attemptReconnection, handleListenChannelError]);
 
   useEffect(() => {
     // Set up error handling for all pages, but with different sensitivity levels
@@ -278,6 +321,17 @@ export function FirebaseConnectionHandler() {
         return;
       }
       
+      // Special handling for "Failed to fetch" errors
+      if (event.message.includes('Failed to fetch')) {
+        // Check if the stack trace contains Firestore Listen channel references
+        if (event.error?.stack && event.error.stack.includes('firestore.googleapis.com/google.firestore.v1.Firestore/Listen')) {
+          console.log('[ConnectionHandler] Detected specific Firestore Listen channel fetch error');
+          // Use our specialized handler for this specific error
+          handleListenChannelError();
+          return;
+        }
+      }
+      
       // Check if the error is related to Firebase/Firestore
       if (
         event.message.includes('firestore') ||
@@ -292,6 +346,17 @@ export function FirebaseConnectionHandler() {
     const handleRejection = (event: PromiseRejectionEvent) => {
       const errorMessage = event.reason?.message || 'Unknown error';
       const errorStack = event.reason?.stack || '';
+      
+      // Special handling for "Failed to fetch" errors in promise rejections
+      if (errorMessage.includes('Failed to fetch') || errorStack.includes('Failed to fetch')) {
+        // Check if the stack trace contains Firestore Listen channel references
+        if (errorStack.includes('firestore.googleapis.com/google.firestore.v1.Firestore/Listen')) {
+          console.log('[ConnectionHandler] Detected specific Firestore Listen channel fetch error in promise rejection');
+          // Use our specialized handler for this specific error
+          handleListenChannelError();
+          return;
+        }
+      }
       
       // Only handle Firebase-related errors
       if (
@@ -370,7 +435,7 @@ export function FirebaseConnectionHandler() {
       }
       clearInterval(connectionCheckInterval);
     };
-  }, [connectionError, handleFirebaseError, attemptReconnection]);
+  }, [connectionError, handleFirebaseError, attemptReconnection, handleListenChannelError]);
 
   const handleReconnect = () => {
     attemptReconnection(true); // Force reconnection when user clicks the button
