@@ -23,8 +23,9 @@ import { Separator } from '@/components/ui/separator';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Chat } from '@/components/Chat';
 import { MakeOfferDialog } from '@/components/MakeOfferDialog';
+import { ReportListingDialog } from '@/components/ReportListingDialog';
 import Image from 'next/image';
-import { ArrowLeft, Calendar, Heart, MapPin, MessageCircle, User, ZoomIn, Minus, Plus, RotateCw, X } from 'lucide-react';
+import { ArrowLeft, Calendar, Heart, MapPin, MessageCircle, User, ZoomIn, Minus, Plus, RotateCw, X, Flag } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useFavorites } from '@/hooks/useFavorites';
 import { toast } from 'sonner';
@@ -173,6 +174,7 @@ export default function ListingPage() {
   const [isFavorited, setIsFavorited] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isOfferDialogOpen, setIsOfferDialogOpen] = useState(false);
+  const [isReportDialogOpen, setIsReportDialogOpen] = useState(false);
   const { user } = useAuth();
 
   // Get favorites functionality from the hook
@@ -1076,6 +1078,18 @@ export default function ListingPage() {
 
               <div className="space-y-4 md:space-y-6 order-1 md:order-2">
                 <div className="relative">
+                  {/* Report button positioned above the carousel */}
+                  <div className="absolute top-2 left-2 z-10">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="bg-background/80 backdrop-blur-sm hover:bg-background/90 text-red-500 hover:text-red-600"
+                      onClick={() => setIsReportDialogOpen(true)}
+                    >
+                      <Flag className="h-4 w-4 mr-1" />
+                      Report
+                    </Button>
+                  </div>
                   <Carousel 
                     className="w-full h-[300px] md:h-[400px] touch-pan-y"
                     onSelect={handleCarouselChange}
@@ -1471,6 +1485,15 @@ export default function ListingPage() {
           listingTitle={listing.title}
           listingPrice={listing.price}
           listingImageUrl={listing.imageUrls[0] || ''}
+        />
+      )}
+
+      {listing && (
+        <ReportListingDialog
+          open={isReportDialogOpen}
+          onOpenChange={setIsReportDialogOpen}
+          listingId={listing.id}
+          listingTitle={listing.title}
         />
       )}
     </div>

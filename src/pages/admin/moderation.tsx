@@ -315,12 +315,48 @@ export default function ModerationDashboard() {
                   setListingsLoading(false);
                 }
               }
+            } else if (value === 'reports') {
+              // Fetch reports
+              try {
+                setListingsLoading(true);
+                
+                // Try to use admin secret if available
+                let headers: Record<string, string> = {
+                  'Content-Type': 'application/json'
+                };
+                
+                if (adminSecret) {
+                  headers['x-admin-secret'] = adminSecret;
+                } else if (user) {
+                  // Use Firebase auth token for moderator authentication
+                  const token = await user.getIdToken(true);
+                  headers['Authorization'] = `Bearer ${token}`;
+                }
+                
+                const response = await fetch('/api/admin/moderation/get-reports?filter=pending', {
+                  method: 'GET',
+                  headers
+                });
+                
+                if (!response.ok) {
+                  throw new Error('Failed to fetch reports');
+                }
+                
+                const data = await response.json();
+                setListings(data.reports || []);
+              } catch (error) {
+                console.error('Error fetching reports:', error);
+                toast.error('Failed to fetch reports');
+              } finally {
+                setListingsLoading(false);
+              }
             }
           }}>
             <TabsList>
               <TabsTrigger value="pending" data-value="pending">Pending Review</TabsTrigger>
               <TabsTrigger value="approved" data-value="approved">Approved</TabsTrigger>
               <TabsTrigger value="rejected" data-value="rejected">Rejected</TabsTrigger>
+              <TabsTrigger value="reports" data-value="reports">Reports</TabsTrigger>
               <TabsTrigger value="info" data-value="info">Guidelines</TabsTrigger>
             </TabsList>
 
@@ -608,6 +644,133 @@ export default function ModerationDashboard() {
                   ))}
                 </div>
               )}
+            </TabsContent>
+
+            <TabsContent value="reports" className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle>User Reports</CardTitle>
+                  <CardDescription>
+                    Review and take action on listings reported by users
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {listingsLoading ? (
+                    <div className="flex justify-center items-center py-12">
+                      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                      <span className="ml-2">Loading reported listings...</span>
+                    </div>
+                  ) : (
+                    <div className="rounded-md border">
+                      <div className="p-4 bg-muted">
+                        <h3 className="text-lg font-medium">Reported Listings</h3>
+                        <p className="text-sm text-muted-foreground">
+                          These listings have been reported by users for potential violations.
+                        </p>
+                      </div>
+                      <div className="divide-y">
+                        {listings.length === 0 ? (
+                          <div className="p-6 text-center">
+                            <CheckCircle className="h-12 w-12 mx-auto text-green-500 mb-4" />
+                            <h3 className="text-xl font-medium mb-2">No Reports Found</h3>
+                            <p className="text-muted-foreground">There are no reported listings to review at this time.</p>
+                          </div>
+                        ) : (
+                          listings.map((listing) => (
+                            <div key={listing.id} className="p-4 hover:bg-muted/50">
+                              <div className="flex flex-col md:flex-row gap-4">
+                                <div className="w-full md:w-1/4">
+                                  {listing.imageUrls && listing.imageUrls.length > 0 ? (
+                                    <div className="relative aspect-square rounded-md overflow-hidden">
+                                      <Image
+                                        src={listing.imageUrls[0]}
+                                        alt={listing.title}
+                                        fill
+                                        className="object-cover cursor-pointer"
+                                        onClick={() => viewImage(listing.imageUrls[0])}
+                                      />
+                                    </div>
+                                  ) : (
+                                    <div className="aspect-square bg-muted rounded-md flex items-center justify-center">
+                                      <span className="text-muted-foreground">No image</span>
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="flex-1">
+                                  <div className="flex justify-between items-start mb-2">
+                                    <div>
+                                      <h4 className="font-medium">{listing.title}</h4>
+                                      <p className="text-sm text-muted-foreground">By {listing.username}</p>
+                                    </div>
+                                    <Badge variant="destructive">Reported</Badge>
+                                  </div>
+                                  
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mb-3">
+                                    <div>
+                                      <span className="text-xs text-muted-foreground">Price:</span>
+                                      <p className="font-medium">{formatPrice(listing.price)}</p>
+                                    </div>
+                                    <div>
+                                      <span className="text-xs text-muted-foreground">Condition:</span>
+                                      <p>{listing.condition}</p>
+                                    </div>
+                                    <div>
+                                      <span className="text-xs text-muted-foreground">Game:</span>
+                                      <p>{listing.game}</p>
+                                    </div>
+                                    <div>
+                                      <span className="text-xs text-muted-foreground">Location:</span>
+                                      <p>{listing.city}, {listing.state}</p>
+                                    </div>
+                                  </div>
+                                  
+                                  <div className="bg-red-50 dark:bg-red-950/30 p-3 rounded-md mb-3 border border-red-200 dark:border-red-800">
+                                    <h5 className="text-sm font-medium text-red-800 dark:text-red-300 mb-1">Report Details</h5>
+                                    <div className="text-xs text-red-700 dark:text-red-400">
+                                      <p><span className="font-medium">Reason:</span> {listing.reportReason || "Not specified"}</p>
+                                      <p><span className="font-medium">Description:</span> {listing.reportDescription || "No description provided"}</p>
+                                      <p><span className="font-medium">Reported by:</span> User ID: {listing.reportedBy || "Unknown"}</p>
+                                      <p><span className="font-medium">Date:</span> {listing.reportedAt ? new Date(listing.reportedAt).toLocaleString() : "Unknown"}</p>
+                                    </div>
+                                  </div>
+                                  
+                                  <div className="flex flex-wrap gap-2">
+                                    <Button 
+                                      variant="outline" 
+                                      size="sm"
+                                      onClick={() => viewListing(listing)}
+                                    >
+                                      <Eye className="h-4 w-4 mr-1" />
+                                      View Details
+                                    </Button>
+                                    <Button 
+                                      variant="default" 
+                                      size="sm"
+                                      className="bg-green-600 hover:bg-green-700"
+                                      onClick={() => setConfirmDialog({isOpen: true, action: 'approve', listingId: listing.id})}
+                                    >
+                                      <CheckCircle className="h-4 w-4 mr-1" />
+                                      Dismiss Report
+                                    </Button>
+                                    <Button 
+                                      variant="destructive" 
+                                      size="sm"
+                                      onClick={() => setConfirmDialog({isOpen: true, action: 'reject', listingId: listing.id})}
+                                    >
+                                      <XCircle className="h-4 w-4 mr-1" />
+                                      Remove Listing
+                                    </Button>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
             </TabsContent>
 
             <TabsContent value="info">
