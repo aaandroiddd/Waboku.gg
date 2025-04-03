@@ -439,7 +439,7 @@ export default function ModerationDashboard() {
                           {listing.description || 'No description provided'}
                         </p>
                         {listing.moderationDetails?.notes && (
-                          <div className="mt-2 p-2 bg-green-100 dark:bg-green-800/50 rounded text-xs border border-green-200 dark:border-green-700">
+                          <div className="mt-2 p-2 bg-green-100 dark:bg-green-950/60 rounded text-xs border border-green-200 dark:border-green-600 text-green-900 dark:text-green-100">
                             <span className="font-semibold">Moderator Notes:</span> {listing.moderationDetails.notes}
                           </div>
                         )}
@@ -526,12 +526,12 @@ export default function ModerationDashboard() {
                           {listing.description || 'No description provided'}
                         </p>
                         {listing.moderationDetails?.rejectionReason && (
-                          <div className="mt-2 p-2 bg-red-100 dark:bg-red-800/50 rounded text-xs border border-red-200 dark:border-red-700">
+                          <div className="mt-2 p-2 bg-red-100 dark:bg-red-950/60 rounded text-xs border border-red-200 dark:border-red-600 text-red-900 dark:text-red-100">
                             <span className="font-semibold">Rejection Reason:</span> {listing.moderationDetails.rejectionReason}
                           </div>
                         )}
                         {listing.moderationDetails?.notes && (
-                          <div className="mt-2 p-2 bg-amber-100 dark:bg-amber-800/50 rounded text-xs border border-amber-200 dark:border-amber-700">
+                          <div className="mt-2 p-2 bg-amber-100 dark:bg-amber-950/60 rounded text-xs border border-amber-200 dark:border-amber-600 text-amber-900 dark:text-amber-100">
                             <span className="font-semibold">Moderator Notes:</span> {listing.moderationDetails.notes}
                           </div>
                         )}
@@ -679,9 +679,9 @@ export default function ModerationDashboard() {
                     </div>
                     
                     {selectedListing.reviewReason && (
-                      <div className="mt-4 p-3 bg-amber-100 dark:bg-amber-800/50 rounded-md border border-amber-200 dark:border-amber-700">
+                      <div className="mt-4 p-3 bg-amber-100 dark:bg-amber-950/60 rounded-md border border-amber-200 dark:border-amber-600 text-amber-900 dark:text-amber-100">
                         <h3 className="font-semibold mb-1 flex items-center">
-                          <AlertTriangle className="h-4 w-4 mr-2 text-amber-600 dark:text-amber-400" />
+                          <AlertTriangle className="h-4 w-4 mr-2 text-amber-600 dark:text-amber-300" />
                           Review Reason
                         </h3>
                         <p className="text-sm">{selectedListing.reviewReason}</p>
@@ -689,12 +689,16 @@ export default function ModerationDashboard() {
                     )}
                     
                     {selectedListing.moderationStatus && (
-                      <div className={`mt-4 p-3 rounded-md border ${selectedListing.moderationStatus === 'approved' ? 'bg-green-100 dark:bg-green-800/50 border-green-200 dark:border-green-700' : 'bg-red-100 dark:bg-red-800/50 border-red-200 dark:border-red-700'}`}>
+                      <div className={`mt-4 p-3 rounded-md border ${
+                        selectedListing.moderationStatus === 'approved' 
+                          ? 'bg-green-100 dark:bg-green-950/60 border-green-200 dark:border-green-600 text-green-900 dark:text-green-100' 
+                          : 'bg-red-100 dark:bg-red-950/60 border-red-200 dark:border-red-600 text-red-900 dark:text-red-100'
+                      }`}>
                         <h3 className="font-semibold mb-1 flex items-center">
                           {selectedListing.moderationStatus === 'approved' ? (
-                            <CheckCircle className="h-4 w-4 mr-2 text-green-600 dark:text-green-400" />
+                            <CheckCircle className="h-4 w-4 mr-2 text-green-600 dark:text-green-300" />
                           ) : (
-                            <XCircle className="h-4 w-4 mr-2 text-red-600 dark:text-red-400" />
+                            <XCircle className="h-4 w-4 mr-2 text-red-600 dark:text-red-300" />
                           )}
                           Moderation Status: {selectedListing.moderationStatus.charAt(0).toUpperCase() + selectedListing.moderationStatus.slice(1)}
                         </h3>
