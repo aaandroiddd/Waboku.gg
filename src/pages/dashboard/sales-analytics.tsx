@@ -12,7 +12,7 @@ import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { getFirebaseServices } from '@/lib/firebase';
-import { collection, query, where, orderBy, getDocs } from 'firebase/firestore';
+import { collection, query, where, orderBy, getDocs, getDoc, doc } from 'firebase/firestore';
 import { Order } from '@/types/order';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { AlertCircle, DollarSign, Package, TrendingUp, Users, Calendar, ArrowUpRight, Download } from 'lucide-react';
@@ -82,95 +82,180 @@ export default function SalesAnalytics() {
           setLoading(false);
           return;
         }
+
+        // First, try to fetch the specific order we know exists (for debugging)
+        try {
+          const specificOrderId = '0PEKaLYZcfnq2GkK2FFu';
+          const specificOrderRef = doc(db, 'orders', specificOrderId);
+          const specificOrderDoc = await getDoc(specificOrderRef);
+          
+          if (specificOrderDoc.exists()) {
+            const data = specificOrderDoc.data();
+            console.log(`Found specific order ${specificOrderId}:`, data);
+            console.log(`Order seller ID: ${data.sellerId}, Current user ID: ${user.uid}`);
+          } else {
+            console.log(`Specific order ${specificOrderId} not found`);
+          }
+        } catch (err) {
+          console.error('Error checking specific order:', err);
+        }
         
-        // Fetch sales from orders collection
+        // Fetch sales from orders collection - try without the orderBy to avoid potential index issues
         const salesQuery = query(
           collection(db, 'orders'),
-          where('sellerId', '==', user.uid),
-          orderBy('createdAt', 'desc')
+          where('sellerId', '==', user.uid)
         );
 
         console.log('Executing Firestore query with params:', {
           collection: 'orders',
           sellerId: user.uid,
-          queryType: 'where-orderBy'
+          queryType: 'where'
         });
 
         const salesSnapshot = await getDocs(salesQuery);
         console.log(`Found ${salesSnapshot.docs.length} sales documents`);
 
         if (salesSnapshot.empty) {
-          console.log('No sales found for this user');
+          // Try a different approach - fetch all orders and filter client-side
+          // This is less efficient but helps diagnose if there's an issue with the query
+          console.log('No sales found with direct query, trying alternative approach...');
+          
+          try {
+            const allOrdersQuery = query(collection(db, 'orders'));
+            const allOrdersSnapshot = await getDocs(allOrdersQuery);
+            console.log(`Found ${allOrdersSnapshot.docs.length} total orders in the database`);
+            
+            // Filter orders that belong to this seller
+            const userOrders = allOrdersSnapshot.docs.filter(doc => {
+              const data = doc.data();
+              return data.sellerId === user.uid;
+            });
+            
+            console.log(`Found ${userOrders.length} orders for this user after client-side filtering`);
+            
+            if (userOrders.length > 0) {
+              // Process these orders instead
+              const salesData = processOrderDocuments(userOrders, user.uid);
+              setSales(salesData);
+              setLoading(false);
+              return;
+            }
+          } catch (err) {
+            console.error('Error with alternative query approach:', err);
+          }
+          
+          console.log('No sales found for this user after all attempts');
           setSales([]);
           setLoading(false);
           return;
         }
 
-        const salesData = salesSnapshot.docs.map(doc => {
-          try {
-            const data = doc.data();
-            console.log(`Processing sale document ${doc.id}:`, data);
-            
-            // Safely convert timestamps to dates
-            let createdAt = new Date();
-            let updatedAt = new Date();
-            
-            if (data.createdAt) {
-              if (typeof data.createdAt.toDate === 'function') {
-                createdAt = data.createdAt.toDate();
-              } else if (data.createdAt instanceof Date) {
-                createdAt = data.createdAt;
-              } else if (typeof data.createdAt === 'string') {
-                createdAt = new Date(data.createdAt);
-              }
-            }
-            
-            if (data.updatedAt) {
-              if (typeof data.updatedAt.toDate === 'function') {
-                updatedAt = data.updatedAt.toDate();
-              } else if (data.updatedAt instanceof Date) {
-                updatedAt = data.updatedAt;
-              } else if (typeof data.updatedAt === 'string') {
-                updatedAt = new Date(data.updatedAt);
-              }
-            }
-            
-            // Ensure amount is a number
-            const amount = typeof data.amount === 'number' ? data.amount : 
-                          (typeof data.amount === 'string' ? parseFloat(data.amount) : 0);
-            
-            return {
-              id: doc.id,
-              ...data,
-              createdAt,
-              updatedAt,
-              amount,
-              // Ensure we have a valid status
-              status: data.status || 'pending',
-            };
-          } catch (err) {
-            console.error(`Error processing sale document ${doc.id}:`, err);
-            // Return a minimal valid order object instead of null
-            return {
-              id: doc.id,
-              listingId: 'unknown',
-              buyerId: 'unknown',
-              sellerId: user.uid,
-              amount: 0,
-              status: 'pending',
-              createdAt: new Date(),
-              updatedAt: new Date(),
-            };
-          }
-        }) as Order[];
-
+        const salesData = processOrderDocuments(salesSnapshot.docs, user.uid);
         console.log(`Successfully processed ${salesData.length} sales`);
         setSales(salesData);
       } catch (error) {
         console.error('Error fetching sales data:', error);
+        setSales([]);
       } finally {
         setLoading(false);
       }
+    };
+
+    // Helper function to process order documents consistently
+    const processOrderDocuments = (docs: any[], userId: string): Order[] => {
+      return docs.map(doc => {
+        try {
+          const data = doc.data();
+          console.log(`Processing sale document ${doc.id}:`, data);
+          
+          // Safely convert timestamps to dates
+          let createdAt = new Date();
+          let updatedAt = new Date();
+          
+          if (data.createdAt) {
+            if (typeof data.createdAt.toDate === 'function') {
+              createdAt = data.createdAt.toDate();
+            } else if (data.createdAt instanceof Date) {
+              createdAt = data.createdAt;
+            } else if (typeof data.createdAt === 'string') {
+              createdAt = new Date(data.createdAt);
+            } else if (typeof data.createdAt === 'number') {
+              createdAt = new Date(data.createdAt);
+            }
+          }
+          
+          if (data.updatedAt) {
+            if (typeof data.updatedAt.toDate === 'function') {
+              updatedAt = data.updatedAt.toDate();
+            } else if (data.updatedAt instanceof Date) {
+              updatedAt = data.updatedAt;
+            } else if (typeof data.updatedAt === 'string') {
+              updatedAt = new Date(data.updatedAt);
+            } else if (typeof data.updatedAt === 'number') {
+              updatedAt = new Date(data.updatedAt);
+            }
+          }
+          
+          // Ensure amount is a number
+          let amount = 0;
+          if (data.amount !== undefined && data.amount !== null) {
+            if (typeof data.amount === 'number') {
+              amount = data.amount;
+            } else if (typeof data.amount === 'string') {
+              amount = parseFloat(data.amount);
+            } else if (data.paymentIntent && data.paymentIntent.amount) {
+              // Try to get amount from payment intent if available
+              amount = typeof data.paymentIntent.amount === 'number' ? 
+                data.paymentIntent.amount / 100 : // Convert from cents if needed
+                parseFloat(data.paymentIntent.amount) / 100;
+            }
+          }
+          
+          // Handle listing snapshot
+          let listingSnapshot = data.listingSnapshot || {};
+          if (!listingSnapshot.title && data.listing) {
+            // Try to extract from listing field if available
+            listingSnapshot = {
+              title: data.listing.title || 'Unknown Product',
+              price: data.listing.price || amount,
+              imageUrl: data.listing.imageUrl || null
+            };
+          }
+          
+          return {
+            id: doc.id,
+            listingId: data.listingId || 'unknown',
+            buyerId: data.buyerId || 'unknown',
+            sellerId: data.sellerId || userId,
+            amount: isNaN(amount) ? 0 : amount,
+            status: data.status || 'pending',
+            createdAt,
+            updatedAt,
+            listingSnapshot,
+            paymentSessionId: data.paymentSessionId,
+            paymentIntentId: data.paymentIntentId || (data.paymentIntent ? data.paymentIntent.id : undefined),
+            transferId: data.transferId,
+            transferAmount: data.transferAmount,
+            platformFee: data.platformFee,
+            paymentStatus: data.paymentStatus,
+            shippingAddress: data.shippingAddress,
+            trackingInfo: data.trackingInfo,
+          };
+        } catch (err) {
+          console.error(`Error processing sale document ${doc.id}:`, err);
+          // Return a minimal valid order object instead of null
+          return {
+            id: doc.id,
+            listingId: 'unknown',
+            buyerId: 'unknown',
+            sellerId: userId,
+            amount: 0,
+            status: 'pending',
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          };
+        }
+      }) as Order[];
     };
 
     // Always attempt to fetch sales data, even if hasStripeAccount is false
