@@ -63,7 +63,7 @@ export default function SalesAnalytics() {
 
   // Fetch sales data
   useEffect(() => {
-    if (!user || !hasStripeAccount) {
+    if (!user) {
       setLoading(false);
       return;
     }
@@ -73,6 +73,8 @@ export default function SalesAnalytics() {
         setLoading(true);
         const { db } = getFirebaseServices();
         
+        console.log('Fetching sales data for user:', user.uid);
+        
         // Fetch sales from orders collection
         const salesQuery = query(
           collection(db, 'orders'),
@@ -81,26 +83,74 @@ export default function SalesAnalytics() {
         );
 
         const salesSnapshot = await getDocs(salesQuery);
+        console.log(`Found ${salesSnapshot.docs.length} sales documents`);
+
+        if (salesSnapshot.empty) {
+          console.log('No sales found for this user');
+          setSales([]);
+          setLoading(false);
+          return;
+        }
 
         const salesData = salesSnapshot.docs.map(doc => {
           try {
             const data = doc.data();
+            console.log(`Processing sale document ${doc.id}:`, data);
+            
             // Safely convert timestamps to dates
-            const createdAt = data.createdAt?.toDate?.() || new Date();
-            const updatedAt = data.updatedAt?.toDate?.() || new Date();
+            let createdAt = new Date();
+            let updatedAt = new Date();
+            
+            if (data.createdAt) {
+              if (typeof data.createdAt.toDate === 'function') {
+                createdAt = data.createdAt.toDate();
+              } else if (data.createdAt instanceof Date) {
+                createdAt = data.createdAt;
+              } else if (typeof data.createdAt === 'string') {
+                createdAt = new Date(data.createdAt);
+              }
+            }
+            
+            if (data.updatedAt) {
+              if (typeof data.updatedAt.toDate === 'function') {
+                updatedAt = data.updatedAt.toDate();
+              } else if (data.updatedAt instanceof Date) {
+                updatedAt = data.updatedAt;
+              } else if (typeof data.updatedAt === 'string') {
+                updatedAt = new Date(data.updatedAt);
+              }
+            }
+            
+            // Ensure amount is a number
+            const amount = typeof data.amount === 'number' ? data.amount : 
+                          (typeof data.amount === 'string' ? parseFloat(data.amount) : 0);
             
             return {
               id: doc.id,
               ...data,
               createdAt,
               updatedAt,
+              amount,
+              // Ensure we have a valid status
+              status: data.status || 'pending',
             };
           } catch (err) {
             console.error(`Error processing sale document ${doc.id}:`, err);
-            return null;
+            // Return a minimal valid order object instead of null
+            return {
+              id: doc.id,
+              listingId: 'unknown',
+              buyerId: 'unknown',
+              sellerId: user.uid,
+              amount: 0,
+              status: 'pending',
+              createdAt: new Date(),
+              updatedAt: new Date(),
+            };
           }
-        }).filter(Boolean) as Order[];
+        }) as Order[];
 
+        console.log(`Successfully processed ${salesData.length} sales`);
         setSales(salesData);
       } catch (error) {
         console.error('Error fetching sales data:', error);
@@ -109,8 +159,10 @@ export default function SalesAnalytics() {
       }
     };
 
+    // Always attempt to fetch sales data, even if hasStripeAccount is false
+    // This ensures we can see if there's data that should be displayed
     fetchSales();
-  }, [user, hasStripeAccount]);
+  }, [user]);
 
   // Filter sales based on selected time range
   const filteredSales = useMemo(() => {
@@ -347,11 +399,11 @@ export default function SalesAnalytics() {
         <Separator />
 
         {!hasStripeAccount && (
-          <Alert className="bg-primary/10 border-primary">
+          <Alert className="bg-primary/10 border-primary mb-6">
             <AlertCircle className="h-4 w-4" />
-            <AlertTitle>Stripe Connect Required</AlertTitle>
+            <AlertTitle>Stripe Connect Recommended</AlertTitle>
             <AlertDescription className="flex flex-col sm:flex-row sm:items-center gap-4">
-              <span>You need to set up a Stripe Connect account to access sales analytics.</span>
+              <span>Setting up a Stripe Connect account is recommended for full sales analytics features.</span>
               <Button 
                 onClick={() => router.push('/dashboard/connect-account')}
                 size="sm"
@@ -363,266 +415,262 @@ export default function SalesAnalytics() {
           </Alert>
         )}
 
-        {hasStripeAccount && (
-          <>
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-              <Select
-                value={timeRange}
-                onValueChange={(value) => setTimeRange(value as TimeRange)}
-              >
-                <SelectTrigger className="w-full sm:w-[180px]">
-                  <SelectValue placeholder="Select time range" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="7days">Last 7 days</SelectItem>
-                  <SelectItem value="30days">Last 30 days</SelectItem>
-                  <SelectItem value="90days">Last 90 days</SelectItem>
-                  <SelectItem value="thisMonth">This month</SelectItem>
-                  <SelectItem value="lastMonth">Last month</SelectItem>
-                  <SelectItem value="allTime">All time</SelectItem>
-                </SelectContent>
-              </Select>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <Select
+            value={timeRange}
+            onValueChange={(value) => setTimeRange(value as TimeRange)}
+          >
+            <SelectTrigger className="w-full sm:w-[180px]">
+              <SelectValue placeholder="Select time range" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="7days">Last 7 days</SelectItem>
+              <SelectItem value="30days">Last 30 days</SelectItem>
+              <SelectItem value="90days">Last 90 days</SelectItem>
+              <SelectItem value="thisMonth">This month</SelectItem>
+              <SelectItem value="lastMonth">Last month</SelectItem>
+              <SelectItem value="allTime">All time</SelectItem>
+            </SelectContent>
+          </Select>
 
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={handleExportSalesData}
-                disabled={filteredSales.length === 0}
-              >
-                <Download className="mr-2 h-4 w-4" />
-                Export Data
-              </Button>
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={handleExportSalesData}
+            disabled={filteredSales.length === 0}
+          >
+            <Download className="mr-2 h-4 w-4" />
+            Export Data
+          </Button>
+        </div>
+
+        {!loading && (
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {/* Total Sales Card */}
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">
+                    Total Orders
+                  </CardTitle>
+                  <Package className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{metrics.totalSales}</div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {timeRangeToText(timeRange)}
+                  </p>
+                </CardContent>
+              </Card>
+
+              {/* Total Revenue Card */}
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">
+                    Total Revenue
+                  </CardTitle>
+                  <DollarSign className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">
+                    ${metrics.totalRevenue.toFixed(2)}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {timeRangeToText(timeRange)}
+                  </p>
+                </CardContent>
+              </Card>
+
+              {/* Average Order Value Card */}
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">
+                    Average Order Value
+                  </CardTitle>
+                  <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">
+                    ${metrics.averageOrderValue.toFixed(2)}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {timeRangeToText(timeRange)}
+                  </p>
+                </CardContent>
+              </Card>
+
+              {/* Order Status Card */}
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">
+                    Order Status
+                  </CardTitle>
+                  <Calendar className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="flex flex-col space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs">Completed:</span>
+                      <Badge variant="outline" className="text-xs">{metrics.completedOrders}</Badge>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs">Pending:</span>
+                      <Badge variant="outline" className="text-xs">{metrics.pendingOrders}</Badge>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs">Cancelled:</span>
+                      <Badge variant="outline" className="text-xs">{metrics.cancelledOrders}</Badge>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
 
-            {!loading && (
-              <>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                  {/* Total Sales Card */}
-                  <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                      <CardTitle className="text-sm font-medium">
-                        Total Orders
-                      </CardTitle>
-                      <Package className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-2xl font-bold">{metrics.totalSales}</div>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {timeRangeToText(timeRange)}
-                      </p>
-                    </CardContent>
-                  </Card>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
+              {/* Sales Over Time Chart */}
+              <Card className="col-span-1 lg:col-span-2">
+                <CardHeader>
+                  <CardTitle>Sales Over Time</CardTitle>
+                  <CardDescription>
+                    Number of orders and revenue by day
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="h-80">
+                  {dailySalesData.length > 0 ? (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart
+                        data={dailySalesData}
+                        margin={{
+                          top: 5,
+                          right: 30,
+                          left: 20,
+                          bottom: 5,
+                        }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="date" />
+                        <YAxis yAxisId="left" orientation="left" stroke="#8884d8" />
+                        <YAxis yAxisId="right" orientation="right" stroke="#82ca9d" />
+                        <Tooltip />
+                        <Bar yAxisId="left" dataKey="sales" fill="#8884d8" name="Orders" />
+                        <Bar yAxisId="right" dataKey="revenue" fill="#82ca9d" name="Revenue ($)" />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="flex items-center justify-center h-full">
+                      <p className="text-muted-foreground">No sales data available</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
 
-                  {/* Total Revenue Card */}
-                  <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                      <CardTitle className="text-sm font-medium">
-                        Total Revenue
-                      </CardTitle>
-                      <DollarSign className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-2xl font-bold">
-                        ${metrics.totalRevenue.toFixed(2)}
+              {/* Order Status Distribution */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Order Status Distribution</CardTitle>
+                  <CardDescription>
+                    Breakdown of orders by status
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="h-80">
+                  {statusDistributionData.length > 0 ? (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={statusDistributionData}
+                          cx="50%"
+                          cy="50%"
+                          labelLine={false}
+                          label={renderCustomizedLabel}
+                          outerRadius={80}
+                          fill="#8884d8"
+                          dataKey="value"
+                        >
+                          {statusDistributionData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                          ))}
+                        </Pie>
+                        <Tooltip />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="flex items-center justify-center h-full">
+                      <p className="text-muted-foreground">No status data available</p>
+                    </div>
+                  )}
+                </CardContent>
+                <CardFooter className="flex flex-wrap gap-2 justify-center">
+                  {statusDistributionData.map((entry, index) => (
+                    <div key={`legend-${index}`} className="flex items-center">
+                      <div 
+                        className="w-3 h-3 mr-1" 
+                        style={{ backgroundColor: COLORS[index % COLORS.length] }}
+                      />
+                      <span className="text-xs">{entry.name}</span>
+                    </div>
+                  ))}
+                </CardFooter>
+              </Card>
+            </div>
+
+            {/* Recent Sales Table */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Recent Sales</CardTitle>
+                <CardDescription>
+                  Your most recent orders
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {filteredSales.length > 0 ? (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-5 text-xs font-medium text-muted-foreground">
+                      <div>Date</div>
+                      <div className="col-span-2">Product</div>
+                      <div>Status</div>
+                      <div className="text-right">Amount</div>
+                    </div>
+                    <Separator />
+                    {filteredSales.slice(0, 5).map((sale) => (
+                      <div 
+                        key={sale.id} 
+                        className="grid grid-cols-5 text-sm py-2 hover:bg-muted/50 rounded-md cursor-pointer transition-colors"
+                        onClick={() => router.push(`/dashboard/orders/${sale.id}`)}
+                      >
+                        <div>{format(sale.createdAt, 'MMM dd, yyyy')}</div>
+                        <div className="col-span-2 truncate">{sale.listingSnapshot?.title || 'Unknown Product'}</div>
+                        <div>
+                          <Badge variant="outline">{formatStatus(sale.status)}</Badge>
+                        </div>
+                        <div className="text-right font-medium">${sale.amount.toFixed(2)}</div>
                       </div>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {timeRangeToText(timeRange)}
-                      </p>
-                    </CardContent>
-                  </Card>
-
-                  {/* Average Order Value Card */}
-                  <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                      <CardTitle className="text-sm font-medium">
-                        Average Order Value
-                      </CardTitle>
-                      <TrendingUp className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-2xl font-bold">
-                        ${metrics.averageOrderValue.toFixed(2)}
-                      </div>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {timeRangeToText(timeRange)}
-                      </p>
-                    </CardContent>
-                  </Card>
-
-                  {/* Order Status Card */}
-                  <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                      <CardTitle className="text-sm font-medium">
-                        Order Status
-                      </CardTitle>
-                      <Calendar className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                      <div className="flex flex-col space-y-1">
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs">Completed:</span>
-                          <Badge variant="outline" className="text-xs">{metrics.completedOrders}</Badge>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs">Pending:</span>
-                          <Badge variant="outline" className="text-xs">{metrics.pendingOrders}</Badge>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs">Cancelled:</span>
-                          <Badge variant="outline" className="text-xs">{metrics.cancelledOrders}</Badge>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
-                  {/* Sales Over Time Chart */}
-                  <Card className="col-span-1 lg:col-span-2">
-                    <CardHeader>
-                      <CardTitle>Sales Over Time</CardTitle>
-                      <CardDescription>
-                        Number of orders and revenue by day
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="h-80">
-                      {dailySalesData.length > 0 ? (
-                        <ResponsiveContainer width="100%" height="100%">
-                          <BarChart
-                            data={dailySalesData}
-                            margin={{
-                              top: 5,
-                              right: 30,
-                              left: 20,
-                              bottom: 5,
-                            }}
-                          >
-                            <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis dataKey="date" />
-                            <YAxis yAxisId="left" orientation="left" stroke="#8884d8" />
-                            <YAxis yAxisId="right" orientation="right" stroke="#82ca9d" />
-                            <Tooltip />
-                            <Bar yAxisId="left" dataKey="sales" fill="#8884d8" name="Orders" />
-                            <Bar yAxisId="right" dataKey="revenue" fill="#82ca9d" name="Revenue ($)" />
-                          </BarChart>
-                        </ResponsiveContainer>
-                      ) : (
-                        <div className="flex items-center justify-center h-full">
-                          <p className="text-muted-foreground">No sales data available</p>
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-
-                  {/* Order Status Distribution */}
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Order Status Distribution</CardTitle>
-                      <CardDescription>
-                        Breakdown of orders by status
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="h-80">
-                      {statusDistributionData.length > 0 ? (
-                        <ResponsiveContainer width="100%" height="100%">
-                          <PieChart>
-                            <Pie
-                              data={statusDistributionData}
-                              cx="50%"
-                              cy="50%"
-                              labelLine={false}
-                              label={renderCustomizedLabel}
-                              outerRadius={80}
-                              fill="#8884d8"
-                              dataKey="value"
-                            >
-                              {statusDistributionData.map((entry, index) => (
-                                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                              ))}
-                            </Pie>
-                            <Tooltip />
-                          </PieChart>
-                        </ResponsiveContainer>
-                      ) : (
-                        <div className="flex items-center justify-center h-full">
-                          <p className="text-muted-foreground">No status data available</p>
-                        </div>
-                      )}
-                    </CardContent>
-                    <CardFooter className="flex flex-wrap gap-2 justify-center">
-                      {statusDistributionData.map((entry, index) => (
-                        <div key={`legend-${index}`} className="flex items-center">
-                          <div 
-                            className="w-3 h-3 mr-1" 
-                            style={{ backgroundColor: COLORS[index % COLORS.length] }}
-                          />
-                          <span className="text-xs">{entry.name}</span>
-                        </div>
-                      ))}
-                    </CardFooter>
-                  </Card>
-                </div>
-
-                {/* Recent Sales Table */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Recent Sales</CardTitle>
-                    <CardDescription>
-                      Your most recent orders
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    {filteredSales.length > 0 ? (
-                      <div className="space-y-4">
-                        <div className="grid grid-cols-5 text-xs font-medium text-muted-foreground">
-                          <div>Date</div>
-                          <div className="col-span-2">Product</div>
-                          <div>Status</div>
-                          <div className="text-right">Amount</div>
-                        </div>
-                        <Separator />
-                        {filteredSales.slice(0, 5).map((sale) => (
-                          <div 
-                            key={sale.id} 
-                            className="grid grid-cols-5 text-sm py-2 hover:bg-muted/50 rounded-md cursor-pointer transition-colors"
-                            onClick={() => router.push(`/dashboard/orders/${sale.id}`)}
-                          >
-                            <div>{format(sale.createdAt, 'MMM dd, yyyy')}</div>
-                            <div className="col-span-2 truncate">{sale.listingSnapshot?.title || 'Unknown Product'}</div>
-                            <div>
-                              <Badge variant="outline">{formatStatus(sale.status)}</Badge>
-                            </div>
-                            <div className="text-right font-medium">${sale.amount.toFixed(2)}</div>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="text-center py-6">
-                        <p className="text-muted-foreground">No recent sales</p>
-                      </div>
-                    )}
-                  </CardContent>
-                  <CardFooter className="flex flex-col sm:flex-row gap-2">
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="w-full"
-                      onClick={() => router.push('/dashboard/orders?tab=sales')}
-                    >
-                      View All Sales
-                    </Button>
-                    <Button 
-                      variant="default" 
-                      size="sm" 
-                      className="w-full"
-                      onClick={() => router.push('/dashboard/orders/index')}
-                    >
-                      Manage Orders
-                    </Button>
-                  </CardFooter>
-                </Card>
-              </>
-            )}
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-6">
+                    <p className="text-muted-foreground">No recent sales</p>
+                  </div>
+                )}
+              </CardContent>
+              <CardFooter className="flex flex-col sm:flex-row gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="w-full"
+                  onClick={() => router.push('/dashboard/orders?tab=sales')}
+                >
+                  View All Sales
+                </Button>
+                <Button 
+                  variant="default" 
+                  size="sm" 
+                  className="w-full"
+                  onClick={() => router.push('/dashboard/orders/index')}
+                >
+                  Manage Orders
+                </Button>
+              </CardFooter>
+            </Card>
           </>
         )}
       </div>
