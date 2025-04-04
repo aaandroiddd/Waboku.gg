@@ -12,7 +12,7 @@ import { Separator } from '@/components/ui/separator';
 import { formatPrice } from '@/lib/price';
 import Image from 'next/image';
 import { format } from 'date-fns';
-import { Loader2, ArrowLeft, Package, CreditCard, User, MapPin, Calendar, Clock, Truck, AlertTriangle, Copy, ExternalLink, Info, RefreshCw } from 'lucide-react';
+import { Loader2, ArrowLeft, Package, CreditCard, User, MapPin, Calendar, Clock, Truck, AlertTriangle, Copy, ExternalLink, Info, RefreshCw, CheckCircle, Star } from 'lucide-react';
 import { toast } from 'sonner';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -37,9 +37,11 @@ export default function OrderDetailsPage() {
   const [trackingNotes, setTrackingNotes] = useState('');
   const [isUpdatingShipping, setIsUpdatingShipping] = useState(false);
   const [isConfirmingDelivery, setIsConfirmingDelivery] = useState(false);
+  const [isCompletingPickup, setIsCompletingPickup] = useState(false);
   const [showTrackingDialog, setShowTrackingDialog] = useState(false);
   const [showNoTrackingDialog, setShowNoTrackingDialog] = useState(false);
   const [showConfirmDeliveryDialog, setShowConfirmDeliveryDialog] = useState(false);
+  const [showCompletePickupDialog, setShowCompletePickupDialog] = useState(false);
 
   useEffect(() => {
     async function fetchOrderDetails() {
@@ -256,6 +258,51 @@ export default function OrderDetailsPage() {
       toast.error('Failed to update order status');
     } finally {
       setIsConfirmingDelivery(false);
+    }
+  };
+  
+  // Function for seller to mark a pickup order as completed
+  const handleCompletePickup = async () => {
+    if (!order || !id) return;
+    
+    try {
+      setIsCompletingPickup(true);
+      
+      // Call the API to complete the pickup
+      const response = await fetch('/api/orders/complete-pickup', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          orderId: id,
+          userId: user?.uid,
+        }),
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to complete pickup');
+      }
+      
+      // Update local state
+      setOrder({
+        ...order,
+        status: 'completed',
+        pickupCompleted: true,
+        pickupCompletedAt: new Date(),
+        updatedAt: new Date()
+      });
+      
+      toast.success('Pickup completed successfully');
+      setShowCompletePickupDialog(false);
+      
+    } catch (error) {
+      console.error('Error completing pickup:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to complete pickup');
+    } finally {
+      setIsCompletingPickup(false);
     }
   };
 
@@ -515,15 +562,70 @@ export default function OrderDetailsPage() {
               </Card>
             </div>
             
-            {/* Shipping Status Section */}
+            {/* Shipping/Pickup Status Section */}
             <div>
               <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                <Truck className="h-5 w-5" />
-                Shipping Status
+                {order.isPickup ? (
+                  <>
+                    <MapPin className="h-5 w-5" />
+                    Pickup Status
+                  </>
+                ) : (
+                  <>
+                    <Truck className="h-5 w-5" />
+                    Shipping Status
+                  </>
+                )}
               </h3>
               <Card>
                 <CardContent className="pt-6">
-                  {order.status === 'shipped' || order.status === 'completed' ? (
+                  {order.isPickup ? (
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2">
+                        <Badge 
+                          variant={order.status === 'completed' ? 'success' : 'warning'} 
+                          className={`px-2 py-1 ${
+                            order.status === 'completed' 
+                              ? 'bg-green-100 hover:bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 dark:hover:bg-green-900/40 border-green-200 dark:border-green-800' 
+                              : 'bg-yellow-100 hover:bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300 dark:hover:bg-yellow-900/40 border-yellow-200 dark:border-yellow-800'
+                          }`}
+                        >
+                          {order.status === 'completed' ? 'Pickup Completed' : 'Awaiting Pickup'}
+                        </Badge>
+                        <span>
+                          {order.status === 'completed' 
+                            ? 'This item has been picked up by the buyer.' 
+                            : 'This item is ready for pickup.'}
+                        </span>
+                      </div>
+                      
+                      {order.pickupCompleted && (
+                        <div className="flex items-center gap-2 p-3 rounded-md bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 mt-2">
+                          <CheckCircle className="h-4 w-4" />
+                          <p>
+                            Pickup was completed on {order.pickupCompletedAt && 
+                              (typeof order.pickupCompletedAt === 'object' && 'seconds' in order.pickupCompletedAt
+                                ? format(new Date(order.pickupCompletedAt.seconds * 1000), 'PPP')
+                                : format(new Date(order.pickupCompletedAt), 'PPP')
+                              )}
+                          </p>
+                        </div>
+                      )}
+                      
+                      {!order.pickupCompleted && (order.status === 'paid' || order.status === 'awaiting_shipping') && (
+                        <div className="flex items-center gap-2 p-3 rounded-md bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 mt-2">
+                          <Info className="h-4 w-4" />
+                          <div>
+                            <p className="font-medium">Local Pickup Instructions</p>
+                            <p className="mt-1">Contact the {isUserBuyer ? 'seller' : 'buyer'} to arrange a pickup time and location.</p>
+                            {!isUserBuyer && (
+                              <p className="mt-1">Once the buyer has picked up the item, click "Complete Pickup" to mark this order as completed.</p>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ) : order.status === 'shipped' || order.status === 'completed' ? (
                     <div className="space-y-4">
                       <div className="flex items-center gap-2">
                         <Badge 
@@ -697,8 +799,8 @@ export default function OrderDetailsPage() {
               <ArrowLeft className="mr-2 h-4 w-4" /> Back to Orders
             </Button>
             
-            {/* Seller shipping actions */}
-            {!isUserBuyer && (order.status === 'paid' || order.status === 'awaiting_shipping') && (
+            {/* Seller shipping actions for regular orders */}
+            {!isUserBuyer && !order.isPickup && (order.status === 'paid' || order.status === 'awaiting_shipping') && (
               <div className="flex gap-2">
                 <Button 
                   variant="outline" 
@@ -715,13 +817,28 @@ export default function OrderDetailsPage() {
               </div>
             )}
             
+            {/* Seller actions for pickup orders */}
+            {!isUserBuyer && order.isPickup && (order.status === 'paid' || order.status === 'awaiting_shipping') && (
+              <Button 
+                variant="primary" 
+                onClick={() => setShowCompletePickupDialog(true)}
+              >
+                <CheckCircle className="mr-2 h-4 w-4" /> Complete Pickup
+              </Button>
+            )}
+            
             {/* Buyer actions */}
             {isUserBuyer && order.status === 'shipped' && (
               <Button variant="primary" onClick={() => setShowConfirmDeliveryDialog(true)}>
                 <Package className="mr-2 h-4 w-4" /> Confirm Delivery
               </Button>
             )}
-            {isUserBuyer && order.status === 'completed' && (
+            {isUserBuyer && order.status === 'completed' && !order.reviewSubmitted && (
+              <Button variant="primary" onClick={() => toast.info('Review feature coming soon!')}>
+                <Star className="mr-2 h-4 w-4" /> Leave Review
+              </Button>
+            )}
+            {isUserBuyer && order.status === 'completed' && order.reviewSubmitted && (
               <Button variant="outline" onClick={() => toast.info('Contact support for any issues with this order')}>
                 <Package className="mr-2 h-4 w-4" /> Report Issue
               </Button>
@@ -835,6 +952,30 @@ export default function OrderDetailsPage() {
             >
               {isConfirmingDelivery && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Confirm Delivery
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      
+      {/* Complete Pickup Dialog */}
+      <AlertDialog open={showCompletePickupDialog} onOpenChange={setShowCompletePickupDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Complete Pickup</AlertDialogTitle>
+            <AlertDialogDescription>
+              By marking this order as completed, you confirm that the buyer has picked up the item.
+              This will allow the buyer to leave a review.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleCompletePickup}
+              disabled={isCompletingPickup}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              {isCompletingPickup && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Complete Pickup
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -14,6 +14,9 @@ export interface Order {
   offerPrice?: number; // Price from an accepted offer
   originalListingPrice?: number; // Original listing price before offer
   isPickup?: boolean; // Flag to indicate if this is a local pickup
+  pickupCompleted?: boolean; // Flag to indicate if pickup has been completed
+  pickupCompletedAt?: Date; // When the pickup was completed
+  reviewSubmitted?: boolean; // Flag to indicate if a review has been submitted
   shippingAddress?: {
     name: string;
     line1: string;
