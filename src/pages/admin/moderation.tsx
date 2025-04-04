@@ -248,6 +248,80 @@ export default function ModerationDashboard() {
     setSelectedImage(imageUrl);
     setViewImageDialog(true);
   };
+  
+  // Handle report actions (dismiss or remove)
+  const handleReportAction = async (reportId: string, action: 'dismiss' | 'remove', listingId: string) => {
+    if (!reportId) {
+      toast.error('Report ID is missing');
+      return;
+    }
+    
+    setLoading(true);
+    try {
+      // Try to use admin secret if available
+      let headers: Record<string, string> = {
+        'Content-Type': 'application/json'
+      };
+      
+      if (adminSecret) {
+        headers['x-admin-secret'] = adminSecret;
+      } else if (user) {
+        // Use Firebase auth token for moderator authentication
+        const token = await user.getIdToken(true);
+        headers['Authorization'] = `Bearer ${token}`;
+      } else {
+        throw new Error('No authentication method available');
+      }
+      
+      console.log(`Handling report ${reportId} with action: ${action}`);
+      
+      // Get notes from the form if dialog is open
+      const notes = document.getElementById('moderatorNotes') 
+        ? (document.getElementById('moderatorNotes') as HTMLTextAreaElement)?.value || ''
+        : '';
+        
+      // Get rejection reason if action is remove
+      const rejectionReason = action === 'remove' && document.getElementById('rejectionReason')
+        ? (document.getElementById('rejectionReason') as HTMLSelectElement)?.value || 'reported_by_user'
+        : 'reported_by_user';
+      
+      const response = await fetch('/api/admin/moderation/handle-report', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          reportId,
+          action,
+          notes,
+          rejectionReason,
+          listingId
+        })
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `Failed to ${action} report`);
+      }
+      
+      // Remove the report from the list
+      setListings(prev => prev.filter(item => 
+        (item.reportId !== reportId) && (item.id !== reportId)
+      ));
+      
+      toast.success(action === 'dismiss' 
+        ? 'Report dismissed successfully' 
+        : 'Listing removed and report actioned successfully'
+      );
+      
+      // Close any open dialogs
+      setConfirmDialog({isOpen: false, action: 'approve', listingId: ''});
+      
+    } catch (error: any) {
+      console.error(`Error handling report:`, error);
+      toast.error(error.message || `Failed to ${action} report`);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Handle redirect if not authorized
   useEffect(() => {
@@ -676,18 +750,18 @@ export default function ModerationDashboard() {
                             <p className="text-muted-foreground">There are no reported listings to review at this time.</p>
                           </div>
                         ) : (
-                          listings.map((listing) => (
-                            <div key={listing.id} className="p-4 hover:bg-muted/50">
+                          listings.map((report) => (
+                            <div key={report.reportId || report.id} className="p-4 hover:bg-muted/50">
                               <div className="flex flex-col md:flex-row gap-4">
                                 <div className="w-full md:w-1/4">
-                                  {listing.imageUrls && listing.imageUrls.length > 0 ? (
+                                  {report.imageUrls && report.imageUrls.length > 0 ? (
                                     <div className="relative aspect-square rounded-md overflow-hidden">
                                       <Image
-                                        src={listing.imageUrls[0]}
-                                        alt={listing.title}
+                                        src={report.imageUrls[0]}
+                                        alt={report.title}
                                         fill
                                         className="object-cover cursor-pointer"
-                                        onClick={() => viewImage(listing.imageUrls[0])}
+                                        onClick={() => viewImage(report.imageUrls[0])}
                                       />
                                     </div>
                                   ) : (
@@ -699,8 +773,8 @@ export default function ModerationDashboard() {
                                 <div className="flex-1">
                                   <div className="flex justify-between items-start mb-2">
                                     <div>
-                                      <h4 className="font-medium">{listing.title}</h4>
-                                      <p className="text-sm text-muted-foreground">By {listing.username}</p>
+                                      <h4 className="font-medium">{report.title}</h4>
+                                      <p className="text-sm text-muted-foreground">By {report.username}</p>
                                     </div>
                                     <Badge variant="destructive">Reported</Badge>
                                   </div>
@@ -708,29 +782,29 @@ export default function ModerationDashboard() {
                                   <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mb-3">
                                     <div>
                                       <span className="text-xs text-muted-foreground">Price:</span>
-                                      <p className="font-medium">{formatPrice(listing.price)}</p>
+                                      <p className="font-medium">{formatPrice(report.price)}</p>
                                     </div>
                                     <div>
                                       <span className="text-xs text-muted-foreground">Condition:</span>
-                                      <p>{listing.condition}</p>
+                                      <p>{report.condition || 'Not specified'}</p>
                                     </div>
                                     <div>
                                       <span className="text-xs text-muted-foreground">Game:</span>
-                                      <p>{listing.game}</p>
+                                      <p>{report.game}</p>
                                     </div>
                                     <div>
                                       <span className="text-xs text-muted-foreground">Location:</span>
-                                      <p>{listing.city}, {listing.state}</p>
+                                      <p>{report.city && report.state ? `${report.city}, ${report.state}` : 'Not specified'}</p>
                                     </div>
                                   </div>
                                   
                                   <div className="bg-red-50 dark:bg-red-950/30 p-3 rounded-md mb-3 border border-red-200 dark:border-red-800">
                                     <h5 className="text-sm font-medium text-red-800 dark:text-red-300 mb-1">Report Details</h5>
                                     <div className="text-xs text-red-700 dark:text-red-400">
-                                      <p><span className="font-medium">Reason:</span> {listing.reportReason || "Not specified"}</p>
-                                      <p><span className="font-medium">Description:</span> {listing.reportDescription || "No description provided"}</p>
-                                      <p><span className="font-medium">Reported by:</span> User ID: {listing.reportedBy || "Unknown"}</p>
-                                      <p><span className="font-medium">Date:</span> {listing.reportedAt ? new Date(listing.reportedAt).toLocaleString() : "Unknown"}</p>
+                                      <p><span className="font-medium">Reason:</span> {report.reportReason || "Not specified"}</p>
+                                      <p><span className="font-medium">Description:</span> {report.reportDescription || "No description provided"}</p>
+                                      <p><span className="font-medium">Reported by:</span> User ID: {report.reportedBy || "Unknown"}</p>
+                                      <p><span className="font-medium">Date:</span> {report.reportedAt ? new Date(report.reportedAt).toLocaleString() : "Unknown"}</p>
                                     </div>
                                   </div>
                                   
@@ -738,7 +812,7 @@ export default function ModerationDashboard() {
                                     <Button 
                                       variant="outline" 
                                       size="sm"
-                                      onClick={() => viewListing(listing)}
+                                      onClick={() => viewListing(report)}
                                     >
                                       <Eye className="h-4 w-4 mr-1" />
                                       View Details
@@ -747,7 +821,10 @@ export default function ModerationDashboard() {
                                       variant="default" 
                                       size="sm"
                                       className="bg-green-600 hover:bg-green-700"
-                                      onClick={() => setConfirmDialog({isOpen: true, action: 'approve', listingId: listing.id})}
+                                      onClick={() => {
+                                        // Handle dismiss report action
+                                        handleReportAction(report.reportId, 'dismiss', report.id);
+                                      }}
                                     >
                                       <CheckCircle className="h-4 w-4 mr-1" />
                                       Dismiss Report
@@ -755,7 +832,10 @@ export default function ModerationDashboard() {
                                     <Button 
                                       variant="destructive" 
                                       size="sm"
-                                      onClick={() => setConfirmDialog({isOpen: true, action: 'reject', listingId: listing.id})}
+                                      onClick={() => {
+                                        // Handle remove listing action
+                                        handleReportAction(report.reportId, 'remove', report.id);
+                                      }}
                                     >
                                       <XCircle className="h-4 w-4 mr-1" />
                                       Remove Listing
