@@ -501,7 +501,29 @@ export default function OrderDetailsPage() {
             </div>
 
             {/* Shipping Information */}
-            {order.shippingAddress && (
+            {order.isPickup ? (
+              <div>
+                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                  <MapPin className="h-5 w-5" />
+                  Shipping Information
+                </h3>
+                <Card>
+                  <CardContent className="pt-6">
+                    <div className="flex items-center gap-2 p-3 rounded-md bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300">
+                      <Info className="h-4 w-4 flex-shrink-0" />
+                      <p>This is a local pickup order. No shipping address is required.</p>
+                    </div>
+                    <div className="mt-4">
+                      <p className="font-medium">Local Pickup</p>
+                      <p className="mt-1">To be arranged with seller</p>
+                      <p className="text-sm text-muted-foreground mt-2">
+                        Contact the {isUserBuyer ? 'seller' : 'buyer'} to arrange pickup details.
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            ) : order.shippingAddress && (
               <div>
                 <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
                   <MapPin className="h-5 w-5" />
@@ -532,6 +554,12 @@ export default function OrderDetailsPage() {
               </h3>
               <Card>
                 <CardContent className="pt-6">
+                  {order.isPickup && (
+                    <div className="flex items-center gap-2 p-3 rounded-md bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 mb-4">
+                      <Info className="h-4 w-4 flex-shrink-0" />
+                      <p>For local pickup orders, payment details are handled directly between buyer and seller at the time of pickup.</p>
+                    </div>
+                  )}
                   <div className="space-y-2">
                     {order.paymentSessionId && (
                       <div className="flex justify-between">
@@ -555,6 +583,11 @@ export default function OrderDetailsPage() {
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Transfer Amount:</span>
                         <span>{formatPrice(order.transferAmount)}</span>
+                      </div>
+                    )}
+                    {order.isPickup && !order.paymentSessionId && !order.paymentIntentId && (
+                      <div className="text-center text-muted-foreground py-2">
+                        No online payment information available for local pickup orders.
                       </div>
                     )}
                   </div>
@@ -581,10 +614,10 @@ export default function OrderDetailsPage() {
                 <CardContent className="pt-6">
                   {order.isPickup ? (
                     <div className="space-y-4">
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full">
                         <Badge 
                           variant={order.status === 'completed' ? 'success' : 'warning'} 
-                          className={`px-2 py-1 ${
+                          className={`px-2 py-1 inline-flex ${
                             order.status === 'completed' 
                               ? 'bg-green-100 hover:bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 dark:hover:bg-green-900/40 border-green-200 dark:border-green-800' 
                               : 'bg-yellow-100 hover:bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300 dark:hover:bg-yellow-900/40 border-yellow-200 dark:border-yellow-800'
@@ -592,16 +625,28 @@ export default function OrderDetailsPage() {
                         >
                           {order.status === 'completed' ? 'Pickup Completed' : 'Awaiting Pickup'}
                         </Badge>
-                        <span>
+                        <span className="flex-1">
                           {order.status === 'completed' 
                             ? 'This item has been picked up by the buyer.' 
                             : 'This item is ready for pickup.'}
                         </span>
+                        
+                        {/* Complete Pickup Button - Only visible to seller and when not completed */}
+                        {!isUserBuyer && !order.pickupCompleted && (order.status === 'paid' || order.status === 'awaiting_shipping') && (
+                          <Button 
+                            variant="primary" 
+                            size="sm"
+                            className="mt-2 sm:mt-0 w-full sm:w-auto"
+                            onClick={() => setShowCompletePickupDialog(true)}
+                          >
+                            <CheckCircle className="mr-2 h-4 w-4" /> Complete Pickup
+                          </Button>
+                        )}
                       </div>
                       
                       {order.pickupCompleted && (
                         <div className="flex items-center gap-2 p-3 rounded-md bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 mt-2">
-                          <CheckCircle className="h-4 w-4" />
+                          <CheckCircle className="h-4 w-4 flex-shrink-0" />
                           <p>
                             Pickup was completed on {order.pickupCompletedAt && 
                               (typeof order.pickupCompletedAt === 'object' && 'seconds' in order.pickupCompletedAt
@@ -614,12 +659,12 @@ export default function OrderDetailsPage() {
                       
                       {!order.pickupCompleted && (order.status === 'paid' || order.status === 'awaiting_shipping') && (
                         <div className="flex items-center gap-2 p-3 rounded-md bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 mt-2">
-                          <Info className="h-4 w-4" />
+                          <Info className="h-4 w-4 flex-shrink-0" />
                           <div>
                             <p className="font-medium">Local Pickup Instructions</p>
                             <p className="mt-1">Contact the {isUserBuyer ? 'seller' : 'buyer'} to arrange a pickup time and location.</p>
                             {!isUserBuyer && (
-                              <p className="mt-1">Once the buyer has picked up the item, click "Complete Pickup" to mark this order as completed.</p>
+                              <p className="mt-1 font-medium">Once the buyer has picked up the item, use the "Complete Pickup" button to mark this order as completed.</p>
                             )}
                           </div>
                         </div>
