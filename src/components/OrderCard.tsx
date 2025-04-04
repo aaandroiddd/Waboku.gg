@@ -84,6 +84,9 @@ export function OrderCard({ order, isSale = false }: OrderCardProps) {
     return null;
   }
   
+  // Determine if this is an awaiting payment order
+  const isAwaitingPayment = order.paymentStatus === 'awaiting_payment';
+  
   // Ensure we have valid data for the order
   const safeOrder = {
     ...order,
@@ -93,12 +96,9 @@ export function OrderCard({ order, isSale = false }: OrderCardProps) {
       imageUrl: order.listingSnapshot?.imageUrl || '',
     },
     createdAt: order.createdAt instanceof Date ? order.createdAt : new Date(),
-    // Default to pending if status is missing or if paymentStatus is awaiting_payment
-    status: order.status || 'pending'
+    // Default to pending if status is missing
+    status: isAwaitingPayment ? 'pending' : (order.status || 'pending')
   };
-  
-  // Determine if this is an awaiting payment order
-  const isAwaitingPayment = order.paymentStatus === 'awaiting_payment';
 
   return (
     <Card className="mb-4 cursor-pointer hover:shadow-md transition-shadow duration-200" onClick={handleViewOrder}>

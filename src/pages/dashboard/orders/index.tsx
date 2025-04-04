@@ -126,6 +126,7 @@ const OrdersComponent = () => {
       setLoading(true);
       const { db } = getFirebaseServices();
       console.log('[Orders Page] Fetching orders for user:', user.uid);
+      console.log('[Orders Page] Will specifically check for orders with paymentStatus: "awaiting_payment"');
       
       // Log the query paths we're going to check
       console.log('[Orders Page] Will check the following paths:');
@@ -260,6 +261,28 @@ const OrdersComponent = () => {
             }
           }).filter(Boolean) as Order[];
 
+          // Log any orders with paymentStatus: "awaiting_payment" for debugging
+          const awaitingPaymentPurchases = purchasesData.filter(order => order.paymentStatus === 'awaiting_payment');
+          const awaitingPaymentSales = salesData.filter(order => order.paymentStatus === 'awaiting_payment');
+          
+          if (awaitingPaymentPurchases.length > 0) {
+            console.log(`[Orders Page] Found ${awaitingPaymentPurchases.length} purchases with paymentStatus: "awaiting_payment":`);
+            awaitingPaymentPurchases.forEach(order => {
+              console.log(`- Order ID: ${order.id}, Status: ${order.status}, PaymentStatus: ${order.paymentStatus}`);
+            });
+          } else {
+            console.log('[Orders Page] No purchases with paymentStatus: "awaiting_payment" found');
+          }
+          
+          if (awaitingPaymentSales.length > 0) {
+            console.log(`[Orders Page] Found ${awaitingPaymentSales.length} sales with paymentStatus: "awaiting_payment":`);
+            awaitingPaymentSales.forEach(order => {
+              console.log(`- Order ID: ${order.id}, Status: ${order.status}, PaymentStatus: ${order.paymentStatus}`);
+            });
+          } else {
+            console.log('[Orders Page] No sales with paymentStatus: "awaiting_payment" found');
+          }
+          
           setPurchases(purchasesData);
           setSales(salesData);
         } catch (err) {
@@ -348,6 +371,16 @@ const OrdersComponent = () => {
     toast.success(`${ordersToExport.length} orders exported successfully`);
   };
 
+  // Helper function to determine the effective status of an order
+  const getEffectiveStatus = (order: Order): string => {
+    // If the order has paymentStatus 'awaiting_payment', treat it as pending
+    if (order.paymentStatus === 'awaiting_payment') {
+      return 'pending';
+    }
+    // Otherwise use the order's status or default to pending
+    return order.status || 'pending';
+  };
+
   // Filter and sort orders
   const filteredOrders = useMemo(() => {
     let result = [...purchases];
@@ -396,9 +429,12 @@ const OrdersComponent = () => {
           ? a.amount - b.amount
           : b.amount - a.amount;
       } else if (sortField === 'status') {
+        // Use the effective status for sorting
+        const statusA = getEffectiveStatus(a);
+        const statusB = getEffectiveStatus(b);
         return sortDirection === 'asc'
-          ? (a.status || 'pending').localeCompare(b.status || 'pending')
-          : (b.status || 'pending').localeCompare(a.status || 'pending');
+          ? statusA.localeCompare(statusB)
+          : statusB.localeCompare(statusA);
       }
       return 0;
     });
@@ -454,9 +490,12 @@ const OrdersComponent = () => {
           ? a.amount - b.amount
           : b.amount - a.amount;
       } else if (sortField === 'status') {
+        // Use the effective status for sorting
+        const statusA = getEffectiveStatus(a);
+        const statusB = getEffectiveStatus(b);
         return sortDirection === 'asc'
-          ? (a.status || 'pending').localeCompare(b.status || 'pending')
-          : (b.status || 'pending').localeCompare(a.status || 'pending');
+          ? statusA.localeCompare(statusB)
+          : statusB.localeCompare(statusA);
       }
       return 0;
     });
@@ -477,12 +516,12 @@ const OrdersComponent = () => {
     };
     
     orders.forEach(order => {
-      // Count orders with missing status as pending
-      if (!order.status || order.status === '') {
+      // First check if this is an awaiting payment order
+      if (order.paymentStatus === 'awaiting_payment') {
         counts.pending++;
-      } 
-      // Count orders with awaiting_payment status as pending
-      else if (order.paymentStatus === 'awaiting_payment') {
+      }
+      // Then check for missing status (count as pending)
+      else if (!order.status || order.status === '') {
         counts.pending++;
       }
       // Count other orders by their status
