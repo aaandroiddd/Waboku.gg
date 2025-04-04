@@ -84,6 +84,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     
     // Build query based on filter
     let reportsQuery;
+    let reportsSnapshot;
+    
+    console.log('Building reports query');
+    
+    // First try with the most specific query
     if (filter === 'all') {
       reportsQuery = query(
         collection(db, 'reports'),
@@ -95,20 +100,73 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const statusFilter = filter === 'pending' ? 'pending' : filter;
       console.log(`Using status filter: ${statusFilter}`);
       
-      reportsQuery = query(
-        collection(db, 'reports'),
-        where('status', '==', statusFilter),
-        orderBy('reportedAt', 'desc'),
-        limit(limitNumber)
-      );
+      // Try different query approaches in order of preference
+      try {
+        console.log('Trying query with where and orderBy');
+        // First try with both where and orderBy (requires composite index)
+        reportsQuery = query(
+          collection(db, 'reports'),
+          where('status', '==', statusFilter),
+          orderBy('reportedAt', 'desc'),
+          limit(limitNumber)
+        );
+        
+        // Execute the query to see if it works
+        reportsSnapshot = await getDocs(reportsQuery);
+        console.log(`Query with where and orderBy succeeded, found ${reportsSnapshot.size} reports`);
+      } catch (indexError) {
+        console.warn('Composite index error, falling back to simple query:', indexError);
+        
+        // Fall back to just using where without orderBy if index doesn't exist
+        try {
+          console.log('Trying query with where only');
+          reportsQuery = query(
+            collection(db, 'reports'),
+            where('status', '==', statusFilter),
+            limit(limitNumber)
+          );
+          
+          // Execute the query
+          reportsSnapshot = await getDocs(reportsQuery);
+          console.log(`Query with where only succeeded, found ${reportsSnapshot.size} reports`);
+        } catch (whereError) {
+          console.error('Error with where query, using basic query:', whereError);
+          
+          // Last resort - just get all reports with a limit
+          reportsQuery = query(
+            collection(db, 'reports'),
+            limit(limitNumber)
+          );
+          
+          // Execute the query
+          reportsSnapshot = await getDocs(reportsQuery);
+          console.log(`Basic query succeeded, found ${reportsSnapshot.size} reports`);
+        }
+      }
     }
     
-    const reportsSnapshot = await getDocs(reportsQuery);
-    console.log(`Found ${reportsSnapshot.size} reports`);
+    // If we haven't executed the query yet (for the 'all' case), do it now
+    if (!reportsSnapshot) {
+      console.log('Executing query for all reports');
+      reportsSnapshot = await getDocs(reportsQuery);
+      console.log(`Found ${reportsSnapshot.size} reports`);
+    }
     
     // Process reports and fetch associated listings
     const reports = [];
     const listingIds = new Set();
+    
+    // Check if we have any reports
+    if (reportsSnapshot.empty) {
+      console.log('No reports found in the collection');
+      // Return empty array early
+      return res.status(200).json({ 
+        success: true, 
+        reports: [],
+        total: 0,
+        message: 'No reports found'
+      });
+    }
     
     // First, collect all report data and listing IDs
     reportsSnapshot.forEach(doc => {
@@ -225,7 +283,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       total: reportedListings.length
     });
   } catch (error) {
+    // More detailed error logging
     console.error('Error fetching reports:', error);
+    
+    // Log the error details
+    if (error instanceof Error) {
+      console.error('Error name:', error.name);
+      console.error('Error message:', error.message);
+      console.error('Error stack:', error.stack);
+    }
+    
+    // Check if it's a Firebase error with code
+    if (error && typeof error === 'object' && 'code' in error) {
+      console.error('Firebase error code:', (error as any).code);
+    }
+    
     return res.status(500).json({ error: 'Failed to fetch reports' });
   }
 }
