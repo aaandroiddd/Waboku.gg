@@ -356,10 +356,8 @@ export function OfferCard({ offer, type, onCounterOffer }: OfferCardProps) {
                     // If successful, also clear the offer to remove it from the dashboard
                     await clearOffer(offer.id);
                     
-                    // Remove from local state
-                    setReceivedOffers(prev => 
-                      prev.filter(o => o.id !== offer.id)
-                    );
+                    // Note: We don't need to manually update local state here
+                    // as the clearOffer function already handles this
                     
                     toast.success('Listing marked as sold', {
                       description: 'The listing has been manually marked as sold and the offer has been cleared.'

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { getFirebaseServices } from '@/lib/firebase';
-import { collection, query, where, orderBy, getDocs, doc, updateDoc, serverTimestamp, getDoc, addDoc } from 'firebase/firestore';
+import { collection, query, where, orderBy, getDocs, doc, updateDoc, serverTimestamp, getDoc, addDoc, setDoc } from 'firebase/firestore';
 import { Offer } from '@/types/offer';
 import { Order } from '@/types/order';
 import { toast } from 'sonner';
@@ -456,7 +456,29 @@ export function useOffers() {
           // Create the order document
           const ordersCollection = collection(db, 'orders');
           const orderDocRef = await addDoc(ordersCollection, orderData);
-          console.log('Order created successfully with ID:', orderDocRef.id);
+          const orderId = orderDocRef.id;
+          console.log('Order created successfully with ID:', orderId);
+          
+          // Create references in user-specific subcollections for both buyer and seller
+          console.log('Creating user-specific order references...');
+          
+          // Create buyer's order reference
+          const buyerOrderRef = doc(db, 'users', offerData.buyerId, 'orders', orderId);
+          await setDoc(buyerOrderRef, {
+            orderId: orderId,
+            role: 'buyer',
+            createdAt: serverTimestamp()
+          });
+          console.log(`Created buyer's order reference for user ${offerData.buyerId}`);
+          
+          // Create seller's order reference
+          const sellerOrderRef = doc(db, 'users', offerData.sellerId, 'orders', orderId);
+          await setDoc(sellerOrderRef, {
+            orderId: orderId,
+            role: 'seller',
+            createdAt: serverTimestamp()
+          });
+          console.log(`Created seller's order reference for user ${offerData.sellerId}`);
           
           // Mark the offer as cleared
           console.log('Marking offer as cleared...');

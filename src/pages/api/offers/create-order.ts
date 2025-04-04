@@ -93,7 +93,27 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Create the order document
     console.log('Creating order document via server-side API...');
     const orderRef = await db.collection('orders').add(orderData);
-    console.log('Order created with ID:', orderRef.id);
+    const orderId = orderRef.id;
+    console.log('Order created with ID:', orderId);
+    
+    // Create references in user-specific subcollections for both buyer and seller
+    console.log('Creating user-specific order references...');
+    
+    // Create buyer's order reference
+    await db.collection('users').doc(offerData.buyerId).collection('orders').doc(orderId).set({
+      orderId: orderId,
+      role: 'buyer',
+      createdAt: admin.firestore.FieldValue.serverTimestamp()
+    });
+    console.log(`Created buyer's order reference for user ${offerData.buyerId}`);
+    
+    // Create seller's order reference
+    await db.collection('users').doc(offerData.sellerId).collection('orders').doc(orderId).set({
+      orderId: orderId,
+      role: 'seller',
+      createdAt: admin.firestore.FieldValue.serverTimestamp()
+    });
+    console.log(`Created seller's order reference for user ${offerData.sellerId}`);
     
     // Mark the offer as cleared
     console.log('Marking offer as cleared...');
