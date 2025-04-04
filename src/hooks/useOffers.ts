@@ -374,7 +374,7 @@ export function useOffers() {
     }
   };
 
-  const createOrderFromOffer = async (offerId: string) => {
+  const createOrderFromOffer = async (offerId: string, markAsSold: boolean = false) => {
     if (!user) return false;
     
     try {
@@ -431,6 +431,16 @@ export function useOffers() {
         updatedAt: serverTimestamp()
       });
       
+      // If markAsSold is true, update the listing status to sold
+      if (markAsSold) {
+        const listingRef = doc(db, 'listings', offerData.listingId);
+        await updateDoc(listingRef, {
+          status: 'sold',
+          soldTo: offerData.buyerId,
+          updatedAt: serverTimestamp()
+        });
+      }
+      
       // Update local state
       setReceivedOffers(prev => 
         prev.filter(offer => offer.id !== offerId)
@@ -440,6 +450,28 @@ export function useOffers() {
     } catch (err: any) {
       console.error('Error creating order from offer:', err);
       toast.error(err.message || 'Failed to create order from offer');
+      return false;
+    }
+  };
+  
+  const markListingAsSold = async (listingId: string, buyerId: string) => {
+    if (!user) return false;
+    
+    try {
+      const { db } = getFirebaseServices();
+      const listingRef = doc(db, 'listings', listingId);
+      
+      // Update the listing status to sold
+      await updateDoc(listingRef, {
+        status: 'sold',
+        soldTo: buyerId,
+        updatedAt: serverTimestamp()
+      });
+      
+      return true;
+    } catch (err: any) {
+      console.error('Error marking listing as sold:', err);
+      toast.error(err.message || 'Failed to mark listing as sold');
       return false;
     }
   };
@@ -454,6 +486,7 @@ export function useOffers() {
     makeCounterOffer,
     cancelOffer,
     clearOffer,
-    createOrderFromOffer
+    createOrderFromOffer,
+    markListingAsSold
   };
 }

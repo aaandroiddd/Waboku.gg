@@ -8,11 +8,14 @@ import Image from 'next/image';
 import { UserNameLink } from '@/components/UserNameLink';
 import { Check, X, RefreshCw, Send, Trash2, XCircle } from 'lucide-react';
 import { useOffers } from '@/hooks/useOffers';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { CancelOfferDialog } from '@/components/CancelOfferDialog';
 import { ClearOfferDialog } from '@/components/ClearOfferDialog';
+import { MarkAsSoldDialog } from '@/components/MarkAsSoldDialog';
 import { toast } from 'sonner';
+import { getFirebaseServices } from '@/lib/firebase';
+import { doc, getDoc } from 'firebase/firestore';
 
 interface OfferCardProps {
   offer: Offer;
@@ -21,16 +24,43 @@ interface OfferCardProps {
 }
 
 export function OfferCard({ offer, type, onCounterOffer }: OfferCardProps) {
-  const { updateOfferStatus, cancelOffer, clearOffer, createOrderFromOffer } = useOffers();
+  const { updateOfferStatus, cancelOffer, clearOffer, createOrderFromOffer, markListingAsSold } = useOffers();
   const [isUpdating, setIsUpdating] = useState(false);
   const router = useRouter();
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [clearDialogOpen, setClearDialogOpen] = useState(false);
+  const [markAsSoldDialogOpen, setMarkAsSoldDialogOpen] = useState(false);
+  const [hasStripeAccount, setHasStripeAccount] = useState(false);
+
+  // Check if the seller has a Stripe account when the component mounts
+  useEffect(() => {
+    const checkStripeAccount = async () => {
+      if (type === 'received' && offer.sellerId) {
+        try {
+          const { db } = getFirebaseServices();
+          const userDoc = await getDoc(doc(db, 'users', offer.sellerId));
+          if (userDoc.exists()) {
+            const userData = userDoc.data();
+            setHasStripeAccount(!!userData.stripeConnectAccountId && userData.stripeConnectStatus === 'active');
+          }
+        } catch (error) {
+          console.error('Error checking Stripe account:', error);
+        }
+      }
+    };
+
+    checkStripeAccount();
+  }, [offer.sellerId, type]);
 
   const handleAccept = async () => {
     setIsUpdating(true);
-    await updateOfferStatus(offer.id, 'accepted');
+    const success = await updateOfferStatus(offer.id, 'accepted');
     setIsUpdating(false);
+    
+    // If this is a received offer and it was successfully accepted, show the mark as sold dialog
+    if (success && type === 'received') {
+      setMarkAsSoldDialogOpen(true);
+    }
   };
 
   const handleDecline = async () => {
@@ -239,16 +269,7 @@ export function OfferCard({ offer, type, onCounterOffer }: OfferCardProps) {
                 <Button 
                   variant="default"
                   className="bg-green-600 hover:bg-green-700"
-                  onClick={async () => {
-                    setIsUpdating(true);
-                    const success = await createOrderFromOffer(offer.id);
-                    setIsUpdating(false);
-                    if (success) {
-                      toast.success('Offer moved to sales', {
-                        description: 'The accepted offer has been converted to a sale'
-                      });
-                    }
-                  }}
+                  onClick={() => setMarkAsSoldDialogOpen(true)}
                   disabled={isUpdating}
                 >
                   <Send className="mr-2 h-4 w-4" />
@@ -288,6 +309,42 @@ export function OfferCard({ offer, type, onCounterOffer }: OfferCardProps) {
               // This is now handled by the custom event in the dialog component
             }}
           />
+          
+          {/* Mark as Sold Dialog */}
+          {type === 'received' && (
+            <MarkAsSoldDialog
+              open={markAsSoldDialogOpen}
+              onOpenChange={setMarkAsSoldDialogOpen}
+              offerId={offer.id}
+              listingId={offer.listingId}
+              listingTitle={safeOffer.listingSnapshot.title}
+              hasStripeAccount={hasStripeAccount}
+              onConfirm={async (createOrder) => {
+                setIsUpdating(true);
+                try {
+                  // If createOrder is true, create an order and mark as sold
+                  if (createOrder) {
+                    const success = await createOrderFromOffer(offer.id, true);
+                    return success;
+                  }
+                  return false;
+                } finally {
+                  setIsUpdating(false);
+                }
+              }}
+              onManualMarkAsSold={async () => {
+                setIsUpdating(true);
+                try {
+                  await markListingAsSold(offer.listingId, offer.buyerId);
+                  toast.success('Listing marked as sold', {
+                    description: 'The listing has been manually marked as sold.'
+                  });
+                } finally {
+                  setIsUpdating(false);
+                }
+              }}
+            />
+          )}
         </div>
       </CardContent>
     </Card>
