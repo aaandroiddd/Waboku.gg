@@ -251,10 +251,18 @@ export default function ModerationDashboard() {
   
   // Handle report actions (dismiss or remove)
   const handleReportAction = async (reportId: string, action: 'dismiss' | 'remove', listingId: string) => {
+    // Make sure we have a valid report ID
     if (!reportId) {
-      toast.error('Report ID is missing');
-      return;
+      console.error('Report ID is missing, trying to use the listing ID as fallback');
+      reportId = listingId; // Use listing ID as fallback if report ID is missing
+      
+      if (!reportId) {
+        toast.error('Report ID is missing and no fallback available');
+        return;
+      }
     }
+    
+    console.log(`Handling report action: ${action} for report ID: ${reportId}, listing ID: ${listingId}`);
     
     setLoading(true);
     try {
@@ -801,10 +809,11 @@ export default function ModerationDashboard() {
                                   <div className="bg-red-50 dark:bg-red-950/30 p-3 rounded-md mb-3 border border-red-200 dark:border-red-800">
                                     <h5 className="text-sm font-medium text-red-800 dark:text-red-300 mb-1">Report Details</h5>
                                     <div className="text-xs text-red-700 dark:text-red-400">
-                                      <p><span className="font-medium">Reason:</span> {report.reportReason || "Not specified"}</p>
-                                      <p><span className="font-medium">Description:</span> {report.reportDescription || "No description provided"}</p>
+                                      <p><span className="font-medium">Reason:</span> {report.reportReason || report.reason || "Not specified"}</p>
+                                      <p><span className="font-medium">Description:</span> {report.reportDescription || report.description || "No description provided"}</p>
                                       <p><span className="font-medium">Reported by:</span> User ID: {report.reportedBy || "Unknown"}</p>
                                       <p><span className="font-medium">Date:</span> {report.reportedAt ? new Date(report.reportedAt).toLocaleString() : "Unknown"}</p>
+                                      <p><span className="font-medium">Status:</span> {report.reportStatus || report.status || "pending"}</p>
                                     </div>
                                   </div>
                                   

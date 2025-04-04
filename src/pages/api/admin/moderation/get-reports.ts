@@ -83,9 +83,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         limit(limitNumber)
       );
     } else {
+      // Check if we need to use 'pending' as the status filter
+      const statusFilter = filter === 'pending' ? 'pending' : filter;
+      console.log(`Using status filter: ${statusFilter}`);
+      
       reportsQuery = query(
         collection(db, 'reports'),
-        where('status', '==', filter),
+        where('status', '==', statusFilter),
         orderBy('reportedAt', 'desc'),
         limit(limitNumber)
       );
@@ -144,27 +148,37 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     
     // Combine reports with their listings
     const reportedListings = reports.map(report => {
+      // Log the report data to help with debugging
+      console.log('Processing report:', {
+        id: report.id,
+        listingId: report.listingId,
+        fields: Object.keys(report)
+      });
+      
       // If the listing exists in our map, combine it with the report data
       if (listingsMap[report.listingId]) {
         const listing = listingsMap[report.listingId];
         return {
           ...listing,
           reportId: report.id,
-          reportReason: report.reason,
-          reportDescription: report.description,
-          reportedBy: report.reportedBy,
+          reportReason: report.reason || '',
+          reportDescription: report.description || '',
+          reportedBy: report.reportedBy || '',
           reportedAt: report.reportedAt,
-          reportStatus: report.status,
+          reportStatus: report.status || 'pending',
           moderatedAt: report.moderatedAt,
           moderatedBy: report.moderatedBy,
-          moderatorNotes: report.moderatorNotes
+          moderatorNotes: report.moderatorNotes,
+          // Add fields from the screenshot
+          reason: report.reason || '',
+          status: report.status || 'pending'
         };
       }
       
       // If the listing doesn't exist, create a placeholder with report data
       // This handles cases where the listing might have been deleted
       return {
-        id: report.listingId,
+        id: report.listingId || '',
         title: report.listingTitle || 'Unknown Listing',
         description: 'Listing details not available',
         price: report.listingPrice || 0,
@@ -173,15 +187,25 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         username: report.listingOwnerUsername || 'Unknown User',
         userId: report.listingOwnerId || '',
         reportId: report.id,
-        reportReason: report.reason,
-        reportDescription: report.description,
-        reportedBy: report.reportedBy,
+        reportReason: report.reason || '',
+        reportDescription: report.description || '',
+        reportedBy: report.reportedBy || '',
         reportedAt: report.reportedAt,
-        reportStatus: report.status,
+        reportStatus: report.status || 'pending',
         moderatedAt: report.moderatedAt,
         moderatedBy: report.moderatedBy,
         moderatorNotes: report.moderatorNotes,
-        status: 'unknown'
+        // Add fields from the screenshot
+        reason: report.reason || '',
+        status: report.status || 'pending',
+        // Add listing fields from the report data
+        listingId: report.listingId || '',
+        listingTitle: report.listingTitle || 'Unknown Listing',
+        listingPrice: report.listingPrice || 0,
+        listingGame: report.listingGame || 'Unknown',
+        listingImageUrl: report.listingImageUrl || '',
+        listingOwnerId: report.listingOwnerId || '',
+        listingOwnerUsername: report.listingOwnerUsername || 'Unknown User'
       };
     });
     

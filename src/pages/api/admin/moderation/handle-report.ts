@@ -1,8 +1,92 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { getFirebaseServices } from '@/lib/firebase';
-import { doc, getDoc, updateDoc, serverTimestamp, setDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, serverTimestamp, setDoc, collection, query, where, limit, getDocs } from 'firebase/firestore';
 import { getAuth } from 'firebase-admin/auth';
 import { initAdmin } from '@/lib/firebase-admin';
+
+// Helper function to handle report processing
+async function processReport(
+  reportDoc: any, 
+  reportRef: any, 
+  listingId: string, 
+  action: 'dismiss' | 'remove', 
+  notes: string | null, 
+  rejectionReason: string | null, 
+  moderatorId: string,
+  db: any,
+  res: NextApiResponse
+) {
+  const reportData = reportDoc.data();
+  listingId = listingId || reportData.listingId;
+  console.log('Processing report for listing:', listingId);
+  
+  // Get the listing document
+  const listingRef = doc(db, 'listings', listingId);
+  const listingDoc = await getDoc(listingRef);
+  
+  if (!listingDoc.exists()) {
+    console.log('Listing not found:', listingId);
+    return res.status(404).json({ error: 'Listing not found' });
+  }
+  
+  // Update the report status
+  await updateDoc(reportRef, {
+    status: action === 'dismiss' ? 'dismissed' : 'actioned',
+    moderatedBy: moderatorId,
+    moderatedAt: serverTimestamp(),
+    moderatorNotes: notes || null,
+    actionTaken: action
+  });
+  
+  console.log('Report updated with status:', action === 'dismiss' ? 'dismissed' : 'actioned');
+  
+  // If the action is to remove the listing, update the listing status
+  if (action === 'remove') {
+    await updateDoc(listingRef, {
+      status: 'archived',
+      archivedAt: serverTimestamp(),
+      archivedReason: 'reported',
+      archivedBy: moderatorId,
+      moderationDetails: {
+        moderatorId,
+        actionTaken: 'reject',
+        timestamp: serverTimestamp(),
+        notes: notes || null,
+        rejectionReason: rejectionReason || 'reported_by_user'
+      }
+    });
+    
+    console.log('Listing archived due to report');
+    
+    // Send a notification to the listing owner
+    const listingData = listingDoc.data();
+    const ownerId = listingData.userId;
+    
+    if (ownerId) {
+      try {
+        const notificationRef = doc(db, 'users', ownerId, 'notifications', `report_${reportDoc.id}`);
+        await setDoc(notificationRef, {
+          type: 'listing_removed',
+          listingId,
+          listingTitle: listingData.title,
+          reason: rejectionReason || 'reported_by_user',
+          message: 'Your listing has been removed due to a user report.',
+          createdAt: serverTimestamp(),
+          read: false
+        });
+        console.log('Notification sent to listing owner:', ownerId);
+      } catch (notificationError) {
+        console.error('Error sending notification to owner:', notificationError);
+        // Continue even if notification fails
+      }
+    }
+  }
+  
+  return res.status(200).json({ 
+    success: true, 
+    message: action === 'dismiss' ? 'Report dismissed' : 'Listing removed and report actioned' 
+  });
+}
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   // Only allow POST requests
@@ -81,80 +165,63 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const reportDoc = await getDoc(reportRef);
     
     if (!reportDoc.exists()) {
-      console.log('Report not found:', reportId);
+      console.log('Report not found with ID:', reportId);
+      
+      // Check if we have a listing ID in the request body
+      const { listingId } = req.body;
+      if (listingId) {
+        console.log('Trying to find report using listing ID:', listingId);
+        
+        // Try to find a pending report for this listing
+        const reportsCollection = collection(db, 'reports');
+        const q = query(
+          reportsCollection,
+          where('listingId', '==', listingId),
+          where('status', '==', 'pending'),
+          limit(1)
+        );
+        
+        const querySnapshot = await getDocs(q);
+        
+        if (!querySnapshot.empty) {
+          // Found a report for this listing
+          const foundReportDoc = querySnapshot.docs[0];
+          const foundReportRef = doc(db, 'reports', foundReportDoc.id);
+          
+          console.log('Found report with ID:', foundReportDoc.id, 'for listing:', listingId);
+          
+          // Process the report using our helper function
+          return processReport(
+            foundReportDoc,
+            foundReportRef,
+            listingId,
+            action,
+            notes,
+            rejectionReason,
+            moderatorId,
+            db,
+            res
+          );
+        } else {
+          console.log('No pending reports found for listing:', listingId);
+        }
+      }
+      
       return res.status(404).json({ error: 'Report not found' });
     }
     
-    const reportData = reportDoc.data();
-    const listingId = reportData.listingId;
-    console.log('Report found for listing:', listingId);
-    
-    // Get the listing document
-    const listingRef = doc(db, 'listings', listingId);
-    const listingDoc = await getDoc(listingRef);
-    
-    if (!listingDoc.exists()) {
-      console.log('Listing not found:', listingId);
-      return res.status(404).json({ error: 'Listing not found' });
-    }
-    
-    // Update the report status
-    await updateDoc(reportRef, {
-      status: action === 'dismiss' ? 'dismissed' : 'actioned',
-      moderatedBy: moderatorId,
-      moderatedAt: serverTimestamp(),
-      moderatorNotes: notes || null,
-      actionTaken: action
-    });
-    
-    console.log('Report updated with status:', action === 'dismiss' ? 'dismissed' : 'actioned');
-    
-    // If the action is to remove the listing, update the listing status
-    if (action === 'remove') {
-      await updateDoc(listingRef, {
-        status: 'archived',
-        archivedAt: serverTimestamp(),
-        archivedReason: 'reported',
-        archivedBy: moderatorId,
-        moderationDetails: {
-          moderatorId,
-          actionTaken: 'reject',
-          timestamp: serverTimestamp(),
-          notes: notes || null,
-          rejectionReason: rejectionReason || 'reported_by_user'
-        }
-      });
-      
-      console.log('Listing archived due to report');
-      
-      // Send a notification to the listing owner
-      const listingData = listingDoc.data();
-      const ownerId = listingData.userId;
-      
-      if (ownerId) {
-        try {
-          const notificationRef = doc(db, 'users', ownerId, 'notifications', `report_${reportId}`);
-          await setDoc(notificationRef, {
-            type: 'listing_removed',
-            listingId,
-            listingTitle: listingData.title,
-            reason: rejectionReason || 'reported_by_user',
-            message: 'Your listing has been removed due to a user report.',
-            createdAt: serverTimestamp(),
-            read: false
-          });
-          console.log('Notification sent to listing owner:', ownerId);
-        } catch (notificationError) {
-          console.error('Error sending notification to owner:', notificationError);
-          // Continue even if notification fails
-        }
-      }
-    }
-    
-    return res.status(200).json({ 
-      success: true, 
-      message: action === 'dismiss' ? 'Report dismissed' : 'Listing removed and report actioned' 
-    });
+    // If we found the report directly, process it
+    return processReport(
+      reportDoc,
+      reportRef,
+      reportDoc.data().listingId,
+      action,
+      notes,
+      rejectionReason,
+      moderatorId,
+      db,
+      res
+    );
   } catch (error) {
     console.error('Error handling report:', error);
     return res.status(500).json({ error: 'Failed to handle report' });
