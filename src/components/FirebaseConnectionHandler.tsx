@@ -1,10 +1,11 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { connectionManager, db, disableNetwork, enableNetwork, firebaseApp } from '@/lib/firebase';
+import { connectionManager, db, disableNetwork, enableNetwork, firebaseApp, database } from '@/lib/firebase';
 import { AlertCircle, WifiOff, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/router';
+import { ref, onValue } from 'firebase/database';
 
 // Known problematic listing IDs that should be ignored
 const PROBLEMATIC_LISTING_IDS = new Set([
@@ -167,17 +168,101 @@ export function FirebaseConnectionHandler() {
   const handleListenChannelErrorImpl = useCallback(() => {
     console.log('[ConnectionHandler] Handling specific Firestore Listen channel error');
     
+    // Check if we're on the messages page
+    const isMessagesPage = router.pathname.includes('/dashboard/messages');
+    
+    // For messages page, we should be using Realtime Database exclusively
+    if (isMessagesPage) {
+      console.log('[ConnectionHandler] Detected Firestore Listen error on messages page - we should be using Realtime Database exclusively');
+      console.log('[ConnectionHandler] Disabling Firestore and refreshing page to fix connection');
+      
+      // Immediately show the connection error UI
+      setConnectionError(true);
+      setShowAlert(true);
+      
+      // Clear any existing timeouts
+      if (errorTimeoutRef.current) {
+        clearTimeout(errorTimeoutRef.current);
+      }
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+      }
+      
+      // For messages page, we'll disable Firestore completely and refresh
+      errorTimeoutRef.current = setTimeout(async () => {
+        try {
+          if (db) {
+            // Disable Firestore network to prevent further Listen requests
+            await disableNetwork(db);
+            console.log('[ConnectionHandler] Firestore network disabled for messages page');
+            
+            // Check if Realtime Database is connected
+            if (database) {
+              try {
+                const connectedRef = ref(database, '.info/connected');
+                onValue(connectedRef, (snapshot) => {
+                  const connected = snapshot.val();
+                  console.log(`[ConnectionHandler] Realtime Database connection: ${connected ? 'connected' : 'disconnected'}`);
+                  
+                  // If Realtime Database is connected, refresh the page
+                  if (connected) {
+                    console.log('[ConnectionHandler] Realtime Database is connected, refreshing page');
+                    if (typeof window !== 'undefined') {
+                      window.location.reload();
+                    }
+                  } else {
+                    console.log('[ConnectionHandler] Realtime Database is not connected, waiting for connection');
+                    // Wait for connection before refreshing
+                    setTimeout(() => {
+                      if (typeof window !== 'undefined') {
+                        window.location.reload();
+                      }
+                    }, 3000);
+                  }
+                }, { onlyOnce: true });
+              } catch (error) {
+                console.error('[ConnectionHandler] Error checking Realtime Database connection:', error);
+                // Refresh anyway after a delay
+                setTimeout(() => {
+                  if (typeof window !== 'undefined') {
+                    window.location.reload();
+                  }
+                }, 1000);
+              }
+            } else {
+              // No Realtime Database, just refresh
+              setTimeout(() => {
+                if (typeof window !== 'undefined') {
+                  window.location.reload();
+                }
+              }, 1000);
+            }
+          } else {
+            // No Firestore, just refresh
+            setTimeout(() => {
+              if (typeof window !== 'undefined') {
+                window.location.reload();
+              }
+            }, 1000);
+          }
+        } catch (error) {
+          console.error('[ConnectionHandler] Error handling Listen channel error:', error);
+          // Just refresh the page as a last resort
+          setTimeout(() => {
+            if (typeof window !== 'undefined') {
+              window.location.reload();
+            }
+          }, 1000);
+        }
+      }, 200);
+      
+      return;
+    }
+    
+    // For non-messages pages, use the original approach
     // Immediately show the connection error UI
     setConnectionError(true);
     setShowAlert(true);
-    
-    // Clear any existing timeouts
-    if (errorTimeoutRef.current) {
-      clearTimeout(errorTimeoutRef.current);
-    }
-    if (reconnectTimeoutRef.current) {
-      clearTimeout(reconnectTimeoutRef.current);
-    }
     
     // Attempt immediate reconnection
     if (!isReconnectingRef.current) {
@@ -237,7 +322,7 @@ export function FirebaseConnectionHandler() {
         }
       }, 200);
     }
-  }, [attemptReconnection, db]);
+  }, [attemptReconnection, db, router.pathname, database]);
   
   // Override the placeholder implementation
   Object.assign(handleListenChannelError, {

@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { ChevronLeft } from 'lucide-react';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { UserNameLink } from '@/components/UserNameLink';
+import { MessagesPageInitializer } from '@/components/MessagesPageInitializer';
 
 interface ChatPreview {
   id: string;
@@ -271,6 +272,9 @@ export default function MessagesPage() {
 
   return (
     <DashboardLayout>
+      {/* Initialize the messages page to disable Firestore and use only Realtime Database */}
+      <MessagesPageInitializer />
+      
       <div className="h-[calc(100vh-8rem)] flex overflow-hidden">
         {showChatList && (
           <div className={`${isMobileView ? 'w-full' : 'w-80'} border-r bg-background flex flex-col overflow-hidden`}>
