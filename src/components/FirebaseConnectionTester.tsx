@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Separator } from '@/components/ui/separator';
 import { Loader2, CheckCircle2, XCircle, AlertCircle, RefreshCw, Wifi, WifiOff } from 'lucide-react';
-import { FirebaseConnectionTester } from '@/lib/firebase-connection-tester';
+import { FirebaseConnectionTester as ConnectionTester } from '@/lib/firebase-connection-tester';
 
 export function FirebaseConnectionTester() {
   const [isRunningTests, setIsRunningTests] = useState(false);
@@ -18,7 +18,7 @@ export function FirebaseConnectionTester() {
     setError(null);
     
     try {
-      const tester = new FirebaseConnectionTester();
+      const tester = new ConnectionTester();
       const results = await tester.runAllTests();
       setTestResults(results);
     } catch (err) {
