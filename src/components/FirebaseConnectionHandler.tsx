@@ -16,6 +16,7 @@ const PROBLEMATIC_LISTING_IDS = new Set([
 const CRITICAL_ERROR_PATTERNS = [
   'Failed to fetch',
   'firestore.googleapis.com/google.firestore.v1.Firestore/Listen',
+  'Firestore/Listen/channel',
   'The operation couldn\'t be completed',
   'network error',
   'Network Error',
@@ -180,12 +181,47 @@ export function FirebaseConnectionHandler() {
     if (!isReconnectingRef.current) {
       console.log('[ConnectionHandler] Initiating immediate reconnection for Listen channel error');
       
-      // Use a very short delay to allow the UI to update
-      errorTimeoutRef.current = setTimeout(() => {
-        attemptReconnection(true); // Force reconnection
+      // For this specific error, we'll try a more aggressive approach:
+      // 1. First try a normal reconnection
+      errorTimeoutRef.current = setTimeout(async () => {
+        try {
+          // Try to disable and re-enable the network
+          if (db) {
+            console.log('[ConnectionHandler] Attempting aggressive reconnection for Listen channel error');
+            
+            // First disable the network
+            await disableNetwork(db);
+            console.log('[ConnectionHandler] Network disabled for Listen channel error recovery');
+            
+            // Short delay to ensure disconnection is complete
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            // Then re-enable the network
+            await enableNetwork(db);
+            console.log('[ConnectionHandler] Network re-enabled for Listen channel error recovery');
+            
+            // If we get here, the reconnection might have worked
+            console.log('[ConnectionHandler] Aggressive reconnection completed, monitoring for success');
+            
+            // If we still see errors after a short period, try a page refresh
+            setTimeout(() => {
+              if (errorTracker.current.count > 0 && typeof window !== 'undefined') {
+                console.log('[ConnectionHandler] Errors persist after reconnection attempt, refreshing page');
+                window.location.reload();
+              }
+            }, 5000);
+          } else {
+            // Fallback to normal reconnection if db is not available
+            attemptReconnection(true);
+          }
+        } catch (error) {
+          console.error('[ConnectionHandler] Error during aggressive reconnection:', error);
+          // Fallback to normal reconnection
+          attemptReconnection(true);
+        }
       }, 200);
     }
-  }, [attemptReconnection]);
+  }, [attemptReconnection, db]);
   
   // Override the placeholder implementation
   Object.assign(handleListenChannelError, {
@@ -219,7 +255,8 @@ export function FirebaseConnectionHandler() {
     
     // Special handling for "Failed to fetch" errors related to Firestore Listen channel
     if ((errorMessage.includes('Failed to fetch') || (stack && stack.includes('Failed to fetch'))) &&
-        (stack && stack.includes('firestore.googleapis.com/google.firestore.v1.Firestore/Listen'))) {
+        (stack && (stack.includes('firestore.googleapis.com/google.firestore.v1.Firestore/Listen') || 
+                  stack.includes('Firestore/Listen/channel')))) {
       console.log('[ConnectionHandler] Detected Firestore Listen channel fetch error - prioritizing reconnection');
       // This is the specific error we're seeing in the user reports
       tracker.criticalErrors += 2; // Count this as multiple critical errors to escalate priority
@@ -335,7 +372,10 @@ export function FirebaseConnectionHandler() {
       // Special handling for "Failed to fetch" errors
       if (event.message.includes('Failed to fetch')) {
         // Check if the stack trace contains Firestore Listen channel references
-        if (event.error?.stack && event.error.stack.includes('firestore.googleapis.com/google.firestore.v1.Firestore/Listen')) {
+        if (event.error?.stack && (
+          event.error.stack.includes('firestore.googleapis.com/google.firestore.v1.Firestore/Listen') ||
+          event.error.stack.includes('Firestore/Listen/channel')
+        )) {
           console.log('[ConnectionHandler] Detected specific Firestore Listen channel fetch error');
           // Use our specialized handler for this specific error
           handleListenChannelErrorImpl();
@@ -361,7 +401,8 @@ export function FirebaseConnectionHandler() {
       // Special handling for "Failed to fetch" errors in promise rejections
       if (errorMessage.includes('Failed to fetch') || errorStack.includes('Failed to fetch')) {
         // Check if the stack trace contains Firestore Listen channel references
-        if (errorStack.includes('firestore.googleapis.com/google.firestore.v1.Firestore/Listen')) {
+        if (errorStack.includes('firestore.googleapis.com/google.firestore.v1.Firestore/Listen') ||
+            errorStack.includes('Firestore/Listen/channel')) {
           console.log('[ConnectionHandler] Detected specific Firestore Listen channel fetch error in promise rejection');
           // Use our specialized handler for this specific error
           handleListenChannelErrorImpl();
