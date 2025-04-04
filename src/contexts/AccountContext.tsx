@@ -63,7 +63,7 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
         
         // Add timeout and retry logic for better network resilience
         let attempts = 0;
-        const maxAttempts = 3;
+        const maxAttempts = 2; // Reduced from 3 to 2 to fail faster
         
         while (attempts < maxAttempts) {
           try {
@@ -71,7 +71,7 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
             
             // Use AbortController to implement timeout
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+            const timeoutId = setTimeout(() => controller.abort(), 5000); // Reduced from 10s to 5s
             
             const response = await fetch('/api/stripe/check-subscription', {
               headers: {
@@ -96,6 +96,17 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
                 }
               }
               
+              // If we get a 401, don't block the app functionality - return a default response
+              if (response.status === 401) {
+                console.log('Returning default subscription data due to auth error');
+                return {
+                  isPremium: false,
+                  status: 'none',
+                  tier: 'free',
+                  error: 'auth'
+                };
+              }
+              
               throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
             }
             
@@ -110,10 +121,15 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
           } catch (fetchError: any) {
             attempts++;
             
-            // If this is our last attempt, rethrow the error
+            // If this is our last attempt, don't block the app - return a default response
             if (attempts >= maxAttempts) {
-              console.error('Max subscription check attempts reached');
-              throw fetchError;
+              console.error('Max subscription check attempts reached, using default subscription data');
+              return {
+                isPremium: false,
+                status: 'none',
+                tier: 'free',
+                error: 'network'
+              };
             }
             
             // For network errors, wait before retrying
@@ -122,15 +138,20 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
                                   fetchError.message.includes('fetch');
             
             if (isNetworkError) {
-              const delay = Math.min(1000 * Math.pow(2, attempts), 5000);
+              const delay = Math.min(1000 * Math.pow(2, attempts), 3000); // Reduced max delay
               console.log(`Network error, waiting ${delay}ms before retry...`);
               await new Promise(resolve => setTimeout(resolve, delay));
             }
           }
         }
         
-        // This should never be reached due to the throw in the loop
-        return null;
+        // This should never be reached due to the return in the loop
+        return {
+          isPremium: false,
+          status: 'none',
+          tier: 'free',
+          error: 'unknown'
+        };
       } catch (error) {
         console.error('Error checking subscription status:', error);
         // Return a default object instead of null to prevent UI errors

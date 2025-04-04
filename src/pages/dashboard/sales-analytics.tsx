@@ -75,12 +75,26 @@ export default function SalesAnalytics() {
         
         console.log('Fetching sales data for user:', user.uid);
         
+        // Ensure we have a valid user ID
+        if (!user.uid) {
+          console.error('Invalid user ID for sales query');
+          setSales([]);
+          setLoading(false);
+          return;
+        }
+        
         // Fetch sales from orders collection
         const salesQuery = query(
           collection(db, 'orders'),
           where('sellerId', '==', user.uid),
           orderBy('createdAt', 'desc')
         );
+
+        console.log('Executing Firestore query with params:', {
+          collection: 'orders',
+          sellerId: user.uid,
+          queryType: 'where-orderBy'
+        });
 
         const salesSnapshot = await getDocs(salesQuery);
         console.log(`Found ${salesSnapshot.docs.length} sales documents`);

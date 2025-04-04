@@ -94,6 +94,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Extract the token
     const idToken = authHeader.split('Bearer ')[1];
     
+    // Basic token validation before attempting Firebase verification
+    if (!idToken || idToken.length < 50) {
+      console.warn(`[Subscription Check ${requestId}] Token appears invalid (length: ${idToken?.length || 0})`);
+      return res.status(401).json({ 
+        error: 'Unauthorized',
+        message: 'Invalid token format',
+        code: 'AUTH_TOKEN_INVALID_FORMAT'
+      });
+    }
+    
     try {
       // Initialize Firebase Admin and verify token
       const admin = getFirebaseAdmin();
