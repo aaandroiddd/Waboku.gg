@@ -13,6 +13,7 @@ import { ChevronLeft } from 'lucide-react';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { UserNameLink } from '@/components/UserNameLink';
 import { MessagesPageInitializer } from '@/components/MessagesPageInitializer';
+import { DatabaseConnectionStatus } from '@/components/DatabaseConnectionStatus';
 
 interface ChatPreview {
   id: string;
@@ -255,14 +256,32 @@ export default function MessagesPage() {
             <h3 className="text-lg font-semibold text-red-600 mb-2">Error Loading Messages</h3>
             <p className="text-muted-foreground mb-4">{error}</p>
             
-            {/* Additional troubleshooting information */}
+            {/* Additional troubleshooting information with more detailed steps */}
             <div className="bg-muted p-4 rounded-lg text-left mb-4">
               <h4 className="font-medium mb-2">Troubleshooting steps:</h4>
+              <ul className="list-disc list-inside space-y-2 text-sm text-muted-foreground">
+                <li>Check your internet connection and make sure you're online</li>
+                <li>
+                  Try clearing your browser cache:
+                  <ul className="list-circle list-inside ml-4 mt-1 space-y-1 text-xs">
+                    <li>This will reset your Firebase connection</li>
+                    <li>Your account will remain logged in</li>
+                    <li>Use the "Clear Cache & Retry" button below</li>
+                  </ul>
+                </li>
+                <li>If you're using a VPN or firewall, try disabling it temporarily</li>
+                <li>If the issue persists, try using a different browser or device</li>
+                <li>Make sure your browser is up to date</li>
+              </ul>
+            </div>
+            
+            <div className="bg-amber-500/10 border border-amber-500 p-4 rounded-lg text-left mb-4">
+              <h4 className="font-medium mb-2 text-amber-600">Common causes:</h4>
               <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
-                <li>Check your internet connection</li>
-                <li>Try clearing your browser cache</li>
-                <li>If you're using a VPN, try disabling it</li>
-                <li>If the issue persists, try using a different browser</li>
+                <li>Temporary network connectivity issues</li>
+                <li>Browser cache conflicts with Firebase</li>
+                <li>VPN or firewall blocking Firebase connections</li>
+                <li>Browser extensions interfering with web connections</li>
               </ul>
             </div>
             
@@ -276,10 +295,19 @@ export default function MessagesPage() {
               </Button>
               <Button
                 onClick={() => {
-                  // Clear Firebase cache and reload
+                  // Enhanced cache clearing and reload
                   if (typeof window !== 'undefined') {
+                    // Clear Firebase-specific cache items
                     localStorage.removeItem('firebase:previous_websocket_failure');
+                    localStorage.removeItem('firebase:host:waboku-gg-default-rtdb.firebaseio.com');
+                    
+                    // Clear session storage
                     sessionStorage.clear();
+                    
+                    // Add a flag to indicate we're coming back from a cache clear
+                    localStorage.setItem('messages_cache_cleared', Date.now().toString());
+                    
+                    // Reload the page
                     window.location.reload();
                   }
                 }}
@@ -302,6 +330,14 @@ export default function MessagesPage() {
     <DashboardLayout>
       {/* Initialize the messages page to disable Firestore and use only Realtime Database */}
       <MessagesPageInitializer />
+      
+      {/* Add database connection status component */}
+      <DatabaseConnectionStatus onConnectionChange={(connected) => {
+        if (connected && error) {
+          // If we're connected but there was an error, try to reload the data
+          window.location.reload();
+        }
+      }} />
       
       <div className="h-[calc(100vh-8rem)] flex overflow-hidden">
         {showChatList && (

@@ -30,30 +30,92 @@ export const useMessages = (chatId?: string) => {
   const { user } = useAuth();
   const [database, setDatabase] = useState<ReturnType<typeof getDatabase> | null>(null);
   
-  // Initialize database safely
+  // Initialize database safely with retry mechanism
   useEffect(() => {
-    try {
-      // First try to use the imported database instance
-      if (firebaseDatabase) {
-        console.log('Using pre-initialized Firebase Realtime Database');
-        setDatabase(firebaseDatabase);
-        return;
-      }
-      
-      // Fallback to getting it from services
-      const { database: dbFromServices } = getFirebaseServices();
-      if (dbFromServices) {
-        console.log('Using Firebase Realtime Database from services');
-        setDatabase(dbFromServices);
-      } else {
-        console.error('Firebase Realtime Database not initialized properly');
-        setError('Database connection failed');
+    const initializeDatabase = async (retryCount = 0) => {
+      try {
+        // First try to use the imported database instance
+        if (firebaseDatabase) {
+          console.log('[useMessages] Using pre-initialized Firebase Realtime Database');
+          setDatabase(firebaseDatabase);
+          return;
+        }
+        
+        // Fallback to getting it from services
+        const { database: dbFromServices } = getFirebaseServices();
+        if (dbFromServices) {
+          console.log('[useMessages] Using Firebase Realtime Database from services');
+          setDatabase(dbFromServices);
+          return;
+        }
+        
+        // Last resort: try to initialize directly
+        try {
+          console.log('[useMessages] Attempting direct database initialization');
+          const directDb = getDatabase();
+          if (directDb) {
+            console.log('[useMessages] Direct database initialization successful');
+            setDatabase(directDb);
+            return;
+          }
+        } catch (directError) {
+          console.error('[useMessages] Direct database initialization failed:', directError);
+        }
+        
+        // If we get here, all initialization attempts failed
+        console.error('[useMessages] Firebase Realtime Database not initialized properly');
+        
+        // Retry with exponential backoff if we haven't tried too many times
+        if (retryCount < 3) {
+          const delay = Math.min(1000 * Math.pow(1.5, retryCount), 5000);
+          console.log(`[useMessages] Retrying database initialization in ${delay}ms (attempt ${retryCount + 1})`);
+          
+          setTimeout(() => {
+            initializeDatabase(retryCount + 1);
+          }, delay);
+          return;
+        }
+        
+        // If we've tried too many times, set error state
+        setError('Database connection failed. Please try refreshing the page.');
+        setLoading(false);
+      } catch (err) {
+        console.error('[useMessages] Error initializing database:', err);
+        
+        // Retry with exponential backoff if we haven't tried too many times
+        if (retryCount < 3) {
+          const delay = Math.min(1000 * Math.pow(1.5, retryCount), 5000);
+          console.log(`[useMessages] Retrying database initialization in ${delay}ms (attempt ${retryCount + 1})`);
+          
+          setTimeout(() => {
+            initializeDatabase(retryCount + 1);
+          }, delay);
+          return;
+        }
+        
+        setError('Database connection failed. Please try refreshing the page.');
         setLoading(false);
       }
-    } catch (err) {
-      console.error('Error initializing database:', err);
-      setError('Database connection failed');
-      setLoading(false);
+    };
+    
+    // Start initialization process
+    initializeDatabase();
+    
+    // Check if we're coming back from a cache clear
+    if (typeof window !== 'undefined') {
+      const cacheCleared = localStorage.getItem('messages_cache_cleared');
+      if (cacheCleared) {
+        // Remove the flag
+        localStorage.removeItem('messages_cache_cleared');
+        
+        // Log that we're coming back from a cache clear
+        console.log('[useMessages] Detected return from cache clear, reinitializing database');
+        
+        // Force a fresh initialization after a short delay
+        setTimeout(() => {
+          initializeDatabase(0);
+        }, 1000);
+      }
     }
   }, []);
 
