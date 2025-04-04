@@ -208,7 +208,7 @@ const OrdersComponent = () => {
             orderBy('createdAt', 'desc')
           );
           
-          // Fetch sales
+          // Fetch sales - include both regular sales and orders from offers
           const salesQuery = query(
             collection(db, 'orders'),
             where('sellerId', '==', user.uid),
@@ -222,6 +222,16 @@ const OrdersComponent = () => {
           ]);
 
           console.log(`Found ${purchasesSnapshot.size} purchases and ${salesSnapshot.size} sales in main collection`);
+          
+          // Log if any orders have offerPrice field (indicating they came from offers)
+          const offersBasedOrders = salesSnapshot.docs.filter(doc => doc.data().offerPrice !== undefined);
+          if (offersBasedOrders.length > 0) {
+            console.log(`Found ${offersBasedOrders.length} sales that originated from offers:`);
+            offersBasedOrders.forEach(doc => {
+              const data = doc.data();
+              console.log(`- Order ID: ${doc.id}, Amount: ${data.amount}, OfferPrice: ${data.offerPrice}, Status: ${data.status}`);
+            });
+          }
 
           const purchasesData = purchasesSnapshot.docs.map(doc => {
             try {

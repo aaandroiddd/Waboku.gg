@@ -211,6 +211,12 @@ export default function SalesAnalytics() {
             }
           }
           
+          // Check if this is an order from an offer
+          const isOfferOrder = data.offerPrice !== undefined;
+          if (isOfferOrder) {
+            console.log(`Processing order from offer: ${doc.id}, Amount: ${amount}, OfferPrice: ${data.offerPrice}`);
+          }
+          
           // Handle listing snapshot
           let listingSnapshot = data.listingSnapshot || {};
           if (!listingSnapshot.title && data.listing) {
