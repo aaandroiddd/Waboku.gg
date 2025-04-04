@@ -1292,6 +1292,24 @@ export default function ListingPage() {
                 
                 {/* Action buttons section - reorganized for better layout */}
                 <div className="flex flex-col gap-3">
+                  {/* Sold Banner */}
+                  {listing.status === 'sold' && (
+                    <div className="bg-amber-500/90 text-white p-3 rounded-md mb-2 shadow-md">
+                      <div className="flex items-center">
+                        <svg 
+                          viewBox="0 0 24 24" 
+                          className="w-5 h-5 mr-2" 
+                          fill="none" 
+                          stroke="currentColor" 
+                          strokeWidth="2"
+                        >
+                          <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <span className="font-semibold">This item has been sold</span>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Save and Message buttons - always on top */}
                   <div className="flex gap-2 w-full">
                     <Button
@@ -1304,7 +1322,7 @@ export default function ListingPage() {
                       }}
                       className={`flex-1 ${isFavorited ? "text-red-500" : ""}`}
                       type="button"
-                      disabled={listing.soldTo || listing.archivedAt}
+                      disabled={listing.soldTo || listing.archivedAt || listing.status === 'sold'}
                     >
                       <Heart className={`h-4 w-4 mr-2 ${isFavorited ? "fill-current" : ""}`} />
                       {isFavorited ? "Saved" : "Save"}
@@ -1314,7 +1332,7 @@ export default function ListingPage() {
                       size="sm"
                       onClick={handleMessage}
                       className="flex-1"
-                      disabled={listing.soldTo || listing.archivedAt}
+                      disabled={listing.soldTo || listing.archivedAt || listing.status === 'sold'}
                     >
                       <MessageCircle className="h-4 w-4 mr-2" />
                       Message
@@ -1323,14 +1341,14 @@ export default function ListingPage() {
                   
                   {/* Buy Now and Make Offer buttons */}
                   <div className="flex flex-col sm:flex-row gap-2">
-                    {listing.soldTo || listing.archivedAt ? (
+                    {listing.soldTo || listing.archivedAt || listing.status === 'sold' ? (
                       <Button
                         variant="outline"
                         size="lg"
                         className="flex-1 bg-gray-200 text-gray-500 hover:bg-gray-200 cursor-not-allowed"
                         disabled={true}
                       >
-                        No Longer Available
+                        {listing.status === 'sold' ? 'Item Sold' : 'No Longer Available'}
                       </Button>
                     ) : sellerHasActiveStripeAccount ? (
                       <Button
@@ -1358,7 +1376,7 @@ export default function ListingPage() {
                       size="lg"
                       onClick={handleMakeOffer}
                       className="flex-1 border-blue-500 text-blue-500 hover:bg-blue-500/10"
-                      disabled={user?.uid === listing.userId || listing.soldTo || listing.archivedAt}
+                      disabled={user?.uid === listing.userId || listing.soldTo || listing.archivedAt || listing.status === 'sold'}
                     >
                       Make Offer
                     </Button>

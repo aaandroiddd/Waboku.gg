@@ -352,6 +352,29 @@ export const ListingCard = memo(({ listing, isFavorite, onFavoriteClick, getCond
                       </motion.div>
                     )}
                     
+                    {/* Sold Badge */}
+                    {listing.status === 'sold' && (
+                      <motion.div 
+                        className="flex-shrink-0"
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: 0.2 }}
+                      >
+                        <span className="px-2 py-1 bg-amber-500/90 text-white rounded-md font-semibold flex items-center gap-1 text-xs sm:text-sm whitespace-nowrap">
+                          <svg 
+                            viewBox="0 0 24 24" 
+                            className="w-3 h-3 sm:w-4 sm:h-4" 
+                            fill="none" 
+                            stroke="currentColor" 
+                            strokeWidth="2"
+                          >
+                            <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          <span>Sold</span>
+                        </span>
+                      </motion.div>
+                    )}
+                    
                     {/* Under Review Badge */}
                     {listing.needsReview && listing.status === 'active' && (
                       <motion.div 

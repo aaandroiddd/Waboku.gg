@@ -118,13 +118,14 @@ export const SimilarListings: React.FC<SimilarListingsProps> = ({
             const isCurrentListing = listing.id === currentListing.id;
             const isArchived = listing.status === 'archived';
             const isInactive = listing.status === 'inactive';
+            const isSold = listing.status === 'sold';
             
             // Log filtered out listings for debugging
-            if (isArchived || isInactive) {
+            if (isArchived || isInactive || isSold) {
               console.log(`Filtering out listing ${listing.id} with status: ${listing.status}`);
             }
             
-            return !isCurrentListing && !isArchived && !isInactive;
+            return !isCurrentListing && !isArchived && !isInactive && !isSold;
           });
           
         console.log(`After filtering, ${fetchedListings.length} listings remain.`);
@@ -314,13 +315,14 @@ export const SimilarListings: React.FC<SimilarListingsProps> = ({
                 const isCurrentListing = listing.id === currentListing.id;
                 const isArchived = listing.status === 'archived';
                 const isInactive = listing.status === 'inactive';
+                const isSold = listing.status === 'sold';
                 
                 // Log filtered out listings for debugging
-                if (isArchived || isInactive) {
+                if (isArchived || isInactive || isSold) {
                   console.log(`Filtering out fallback listing ${listing.id} with status: ${listing.status}`);
                 }
                 
-                return !isCurrentListing && !isArchived && !isInactive;
+                return !isCurrentListing && !isArchived && !isInactive && !isSold;
               })
               // Take only what we need
               .slice(0, maxListings);
