@@ -51,12 +51,27 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         if (userDoc.exists()) {
           const userData = userDoc.data();
           // Check for moderator role in different possible formats
-          if (userData.isModerator || 
-              userData.isAdmin || 
-              userData.roles === 'moderator' || 
-              userData.roles === 'admin' || 
-              (userData.roles && userData.roles[0] === 'moderator') ||
-              (userData.roles && userData.roles.includes && userData.roles.includes('moderator'))) {
+          const isAdmin = 
+            userData.isAdmin || 
+            userData.roles === 'admin' || 
+            (userData.roles && Array.isArray(userData.roles) && userData.roles.includes('admin')) || 
+            false;
+            
+          const isModerator = 
+            userData.isModerator || 
+            userData.roles === 'moderator' || 
+            (userData.roles && Array.isArray(userData.roles) && userData.roles.includes('moderator')) || 
+            false;
+            
+          console.log('User roles check in get-reports:', {
+            uid: decodedToken.uid,
+            roles: userData.roles,
+            isArray: Array.isArray(userData.roles),
+            isAdmin,
+            isModerator
+          });
+          
+          if (isAdmin || isModerator) {
             isAuthorized = true;
             moderatorId = decodedToken.uid;
             console.log('User authorized as moderator/admin:', moderatorId, 'Role format:', userData.roles);

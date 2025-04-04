@@ -49,16 +49,22 @@ export const moderatorAuthMiddleware = async (
     const isAdmin = 
       userData.isAdmin || 
       userData.roles === 'admin' || 
-      (userData.roles && userData.roles[0] === 'admin') ||
-      (userData.roles && userData.roles.includes && userData.roles.includes('admin')) || 
+      (userData.roles && Array.isArray(userData.roles) && userData.roles.includes('admin')) || 
       false;
       
     const isModerator = 
       userData.isModerator || 
       userData.roles === 'moderator' || 
-      (userData.roles && userData.roles[0] === 'moderator') ||
-      (userData.roles && userData.roles.includes && userData.roles.includes('moderator')) || 
+      (userData.roles && Array.isArray(userData.roles) && userData.roles.includes('moderator')) || 
       false;
+      
+    console.log('User roles check:', {
+      uid,
+      roles: userData.roles,
+      isArray: Array.isArray(userData.roles),
+      isAdmin,
+      isModerator
+    });
 
     if (!isAdmin && !isModerator) {
       console.log('User is not a moderator or admin:', uid);
@@ -93,16 +99,22 @@ export const isUserModerator = async (userId: string): Promise<boolean> => {
     const isAdmin = 
       userData.isAdmin || 
       userData.roles === 'admin' || 
-      (userData.roles && userData.roles[0] === 'admin') ||
-      (userData.roles && userData.roles.includes && userData.roles.includes('admin')) || 
+      (userData.roles && Array.isArray(userData.roles) && userData.roles.includes('admin')) || 
       false;
       
     const isModerator = 
       userData.isModerator || 
       userData.roles === 'moderator' || 
-      (userData.roles && userData.roles[0] === 'moderator') ||
-      (userData.roles && userData.roles.includes && userData.roles.includes('moderator')) || 
+      (userData.roles && Array.isArray(userData.roles) && userData.roles.includes('moderator')) || 
       false;
+      
+    console.log('Helper function - User roles check:', {
+      userId,
+      roles: userData.roles,
+      isArray: Array.isArray(userData.roles),
+      isAdmin,
+      isModerator
+    });
       
     return isAdmin || isModerator;
   } catch (error) {
