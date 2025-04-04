@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { getDatabase, ref, onValue, push, set, get, update, remove } from 'firebase/database';
 import { useAuth } from '@/contexts/AuthContext';
+import { getFirebaseServices } from '@/lib/firebase';
 
 export interface Message {
   id: string;
@@ -27,7 +28,25 @@ export const useMessages = (chatId?: string) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { user } = useAuth();
-  const database = getDatabase();
+  const [database, setDatabase] = useState<ReturnType<typeof getDatabase> | null>(null);
+  
+  // Initialize database safely
+  useEffect(() => {
+    try {
+      const { database: firebaseDatabase } = getFirebaseServices();
+      if (firebaseDatabase) {
+        setDatabase(firebaseDatabase);
+      } else {
+        console.error('Firebase Realtime Database not initialized properly');
+        setError('Database connection failed');
+        setLoading(false);
+      }
+    } catch (err) {
+      console.error('Error initializing database:', err);
+      setError('Database connection failed');
+      setLoading(false);
+    }
+  }, []);
 
   const resetState = () => {
     setMessages([]);
@@ -36,10 +55,13 @@ export const useMessages = (chatId?: string) => {
   };
 
   useEffect(() => {
-    if (!chatId || !user) {
-      console.log('No chat ID or user, skipping messages load');
+    if (!chatId || !user || !database) {
+      console.log('No chat ID, user, or database connection, skipping messages load');
       setMessages([]);
       setLoading(false);
+      if (!database) {
+        setError('Database connection failed');
+      }
       return;
     }
 
@@ -119,9 +141,14 @@ export const useMessages = (chatId?: string) => {
     return () => {
       unsubscribe();
     };
-  }, [chatId, user]);
+  }, [chatId, user, database]);
 
   const findExistingChat = async (userId: string, receiverId: string, listingId?: string) => {
+    if (!database) {
+      console.error('Database not initialized');
+      throw new Error('Database connection failed');
+    }
+    
     const chatsRef = ref(database, 'chats');
     const snapshot = await get(chatsRef);
     const chats = snapshot.val();
@@ -153,7 +180,7 @@ export const useMessages = (chatId?: string) => {
   };
 
   const markAsRead = async (messageIds: string[]) => {
-    if (!chatId || !user) return;
+    if (!chatId || !user || !database) return;
 
     const updates: Record<string, boolean> = {};
     messageIds.forEach(messageId => {
@@ -169,6 +196,7 @@ export const useMessages = (chatId?: string) => {
 
   const deleteChat = async (chatId: string) => {
     if (!user) throw new Error('User not authenticated');
+    if (!database) throw new Error('Database connection failed');
 
     const chatRef = ref(database, `chats/${chatId}`);
     const chatSnapshot = await get(chatRef);
@@ -200,6 +228,7 @@ export const useMessages = (chatId?: string) => {
 
   const sendMessage = async (content: string, receiverId: string, listingId?: string, listingTitle?: string) => {
     if (!user) throw new Error('User not authenticated');
+    if (!database) throw new Error('Database connection failed');
 
     let chatReference = chatId;
     
