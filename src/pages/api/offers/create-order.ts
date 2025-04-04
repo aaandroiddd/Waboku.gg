@@ -119,6 +119,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         imageUrl: ''
       },
       offerPrice: offerData.amount, // Store the accepted offer price
+      originalListingPrice: offerData.listingSnapshot?.price || offerData.amount, // Store the original listing price
       offerId: offerId // Reference to the original offer
     };
     

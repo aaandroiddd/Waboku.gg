@@ -420,10 +420,17 @@ export default function OrderDetailsPage() {
                 <div className="mt-6">
                   <h3 className="text-lg font-semibold mb-2">Price Details</h3>
                   <div className="space-y-2">
-                    <div className="flex justify-between">
-                      <span>Item Price:</span>
-                      <span>{formatPrice(order.listingSnapshot?.price || order.amount)}</span>
-                    </div>
+                    {order.originalListingPrice !== undefined && order.offerPrice !== undefined ? (
+                      <div className="flex justify-between">
+                        <span>Original Listing Price:</span>
+                        <span className="text-muted-foreground line-through">{formatPrice(order.originalListingPrice)}</span>
+                      </div>
+                    ) : (
+                      <div className="flex justify-between">
+                        <span>Item Price:</span>
+                        <span>{formatPrice(order.listingSnapshot?.price || order.amount)}</span>
+                      </div>
+                    )}
                     {order.offerPrice !== undefined && (
                       <div className="flex justify-between">
                         <span>Accepted Offer Price:</span>

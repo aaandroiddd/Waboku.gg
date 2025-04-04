@@ -12,6 +12,7 @@ export interface Order {
   platformFee?: number;
   paymentStatus?: string;
   offerPrice?: number; // Price from an accepted offer
+  originalListingPrice?: number; // Original listing price before offer
   isPickup?: boolean; // Flag to indicate if this is a local pickup
   shippingAddress?: {
     name: string;
