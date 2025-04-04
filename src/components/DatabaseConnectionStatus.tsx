@@ -134,7 +134,7 @@ export function DatabaseConnectionStatus({ onConnectionChange }: DatabaseConnect
               Unable to connect to the messaging service. This may affect your ability to send and receive messages.
             </AlertDescription>
           </div>
-          <div className="flex gap-2 mt-2">
+          <div className="flex flex-wrap gap-2 mt-2">
             <Button
               variant="outline"
               size="sm"
@@ -169,6 +169,18 @@ export function DatabaseConnectionStatus({ onConnectionChange }: DatabaseConnect
                 Clear Cache
               </Button>
             )}
+            <Button
+              variant="secondary"
+              size="sm"
+              className="text-xs h-8"
+              onClick={() => {
+                if (typeof window !== 'undefined') {
+                  window.location.href = '/dashboard/firebase-diagnostics';
+                }
+              }}
+            >
+              Run Diagnostics
+            </Button>
           </div>
         </Alert>
       ) : (

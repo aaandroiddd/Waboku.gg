@@ -285,7 +285,7 @@ export default function MessagesPage() {
               </ul>
             </div>
             
-            <div className="flex gap-2 justify-center">
+            <div className="flex flex-col sm:flex-row gap-2 justify-center">
               <Button
                 onClick={() => window.location.reload()}
                 className="mt-2"
@@ -315,6 +315,13 @@ export default function MessagesPage() {
                 variant="default"
               >
                 Clear Cache & Retry
+              </Button>
+              <Button
+                onClick={() => router.push('/dashboard/firebase-diagnostics')}
+                className="mt-2"
+                variant="secondary"
+              >
+                Run Diagnostics
               </Button>
             </div>
           </div>
