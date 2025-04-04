@@ -360,7 +360,14 @@ const OrdersComponent = () => {
     
     // Apply status filter
     if (statusFilter !== 'all') {
-      result = result.filter(order => order.status === statusFilter);
+      if (statusFilter === 'pending') {
+        // For pending filter, include both 'pending' status and any orders without a status
+        result = result.filter(order => 
+          order.status === 'pending' || !order.status || order.status === ''
+        );
+      } else {
+        result = result.filter(order => order.status === statusFilter);
+      }
     }
     
     // Apply search filter
@@ -384,8 +391,8 @@ const OrdersComponent = () => {
           : b.amount - a.amount;
       } else if (sortField === 'status') {
         return sortDirection === 'asc'
-          ? a.status.localeCompare(b.status)
-          : b.status.localeCompare(a.status);
+          ? (a.status || 'pending').localeCompare(b.status || 'pending')
+          : (b.status || 'pending').localeCompare(a.status || 'pending');
       }
       return 0;
     });
@@ -405,7 +412,14 @@ const OrdersComponent = () => {
     
     // Apply status filter
     if (statusFilter !== 'all') {
-      result = result.filter(order => order.status === statusFilter);
+      if (statusFilter === 'pending') {
+        // For pending filter, include both 'pending' status and any orders without a status
+        result = result.filter(order => 
+          order.status === 'pending' || !order.status || order.status === ''
+        );
+      } else {
+        result = result.filter(order => order.status === statusFilter);
+      }
     }
     
     // Apply search filter
@@ -429,8 +443,8 @@ const OrdersComponent = () => {
           : b.amount - a.amount;
       } else if (sortField === 'status') {
         return sortDirection === 'asc'
-          ? a.status.localeCompare(b.status)
-          : b.status.localeCompare(a.status);
+          ? (a.status || 'pending').localeCompare(b.status || 'pending')
+          : (b.status || 'pending').localeCompare(a.status || 'pending');
       }
       return 0;
     });
@@ -451,7 +465,10 @@ const OrdersComponent = () => {
     };
     
     orders.forEach(order => {
-      if (counts[order.status as keyof typeof counts] !== undefined) {
+      // Count orders with missing status as pending
+      if (!order.status || order.status === '') {
+        counts.pending++;
+      } else if (counts[order.status as keyof typeof counts] !== undefined) {
         counts[order.status as keyof typeof counts]++;
       }
     });

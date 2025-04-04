@@ -319,7 +319,7 @@ export default function SalesAnalytics() {
       ['completed', 'shipped'].includes(sale.status)
     ).length;
     const pendingOrders = filteredSales.filter(sale => 
-      ['pending', 'paid', 'awaiting_shipping'].includes(sale.status)
+      ['pending', 'paid', 'awaiting_shipping'].includes(sale.status) || !sale.status || sale.status === ''
     ).length;
     const cancelledOrders = filteredSales.filter(sale => 
       sale.status === 'cancelled'
@@ -407,7 +407,8 @@ export default function SalesAnalytics() {
     if (!filteredSales.length) return [];
 
     const statusCounts = filteredSales.reduce((acc, sale) => {
-      const status = sale.status;
+      // Handle orders with missing status as 'pending'
+      const status = sale.status || 'pending';
       acc[status] = (acc[status] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);

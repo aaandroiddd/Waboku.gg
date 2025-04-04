@@ -93,7 +93,7 @@ export function OrderCard({ order, isSale = false }: OrderCardProps) {
       imageUrl: order.listingSnapshot?.imageUrl || '',
     },
     createdAt: order.createdAt instanceof Date ? order.createdAt : new Date(),
-    status: order.status || 'pending'
+    status: order.status || 'pending' // Default to pending if status is missing
   };
 
   return (
