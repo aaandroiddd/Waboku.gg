@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/router';
 import { useAuth } from '@/contexts/AuthContext';
+import { LoadingAnimation } from '@/components/LoadingAnimation';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -329,6 +330,12 @@ export default function SalesAnalytics() {
 
   return (
     <DashboardLayout>
+      {loading && (
+        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center">
+          <LoadingAnimation size="80" color="currentColor" className="text-primary" />
+        </div>
+      )}
+      
       <div className="container mx-auto py-6 space-y-6">
         <div className="flex flex-col space-y-2">
           <h1 className="text-3xl font-bold tracking-tight">Sales Analytics</h1>
@@ -387,13 +394,7 @@ export default function SalesAnalytics() {
               </Button>
             </div>
 
-            {loading ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                {[...Array(4)].map((_, i) => (
-                  <Skeleton key={i} className="h-32 w-full" />
-                ))}
-              </div>
-            ) : (
+            {!loading && (
               <>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                   {/* Total Sales Card */}
@@ -581,7 +582,11 @@ export default function SalesAnalytics() {
                         </div>
                         <Separator />
                         {filteredSales.slice(0, 5).map((sale) => (
-                          <div key={sale.id} className="grid grid-cols-5 text-sm">
+                          <div 
+                            key={sale.id} 
+                            className="grid grid-cols-5 text-sm py-2 hover:bg-muted/50 rounded-md cursor-pointer transition-colors"
+                            onClick={() => router.push(`/dashboard/orders/${sale.id}`)}
+                          >
                             <div>{format(sale.createdAt, 'MMM dd, yyyy')}</div>
                             <div className="col-span-2 truncate">{sale.listingSnapshot?.title || 'Unknown Product'}</div>
                             <div>
@@ -597,7 +602,7 @@ export default function SalesAnalytics() {
                       </div>
                     )}
                   </CardContent>
-                  <CardFooter>
+                  <CardFooter className="flex flex-col sm:flex-row gap-2">
                     <Button 
                       variant="outline" 
                       size="sm" 
@@ -605,6 +610,14 @@ export default function SalesAnalytics() {
                       onClick={() => router.push('/dashboard/orders?tab=sales')}
                     >
                       View All Sales
+                    </Button>
+                    <Button 
+                      variant="default" 
+                      size="sm" 
+                      className="w-full"
+                      onClick={() => router.push('/dashboard/orders/index')}
+                    >
+                      Manage Orders
                     </Button>
                   </CardFooter>
                 </Card>
