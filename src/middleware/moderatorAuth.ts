@@ -45,19 +45,42 @@ export const moderatorAuthMiddleware = async (
     const userData = userSnap.data();
     console.log('Checking moderator status for user:', uid, 'User data:', JSON.stringify(userData));
     
-    // Check for moderator/admin role in different possible formats
-    const isAdmin = 
-      userData.isAdmin || 
-      userData.roles === 'admin' || 
-      (userData.roles && Array.isArray(userData.roles) && userData.roles.includes('admin')) || 
-      false;
-      
-    const isModerator = 
-      userData.isModerator || 
-      userData.roles === 'moderator' || 
-      (userData.roles && Array.isArray(userData.roles) && userData.roles.includes('moderator')) || 
-      false;
-      
+    // Log the raw roles data to help with debugging
+    console.log('Raw user roles data:', {
+      uid,
+      roles: userData.roles,
+      rolesType: typeof userData.roles,
+      isArray: Array.isArray(userData.roles),
+      hasRoles: !!userData.roles
+    });
+    
+    // Handle different role formats
+    let isAdmin = false;
+    let isModerator = false;
+    
+    // Direct boolean flags
+    if (userData.isAdmin === true) {
+      isAdmin = true;
+    }
+    if (userData.isModerator === true) {
+      isModerator = true;
+    }
+    
+    // String role
+    if (typeof userData.roles === 'string') {
+      if (userData.roles === 'admin') isAdmin = true;
+      if (userData.roles === 'moderator') isModerator = true;
+    }
+    
+    // Array of roles
+    if (Array.isArray(userData.roles)) {
+      // Check each item in the array
+      for (const role of userData.roles) {
+        if (role === 'admin') isAdmin = true;
+        if (role === 'moderator') isModerator = true;
+      }
+    }
+    
     console.log('User roles check:', {
       uid,
       roles: userData.roles,
@@ -95,19 +118,42 @@ export const isUserModerator = async (userId: string): Promise<boolean> => {
 
     const userData = userSnap.data();
     
-    // Check for moderator/admin role in different possible formats
-    const isAdmin = 
-      userData.isAdmin || 
-      userData.roles === 'admin' || 
-      (userData.roles && Array.isArray(userData.roles) && userData.roles.includes('admin')) || 
-      false;
-      
-    const isModerator = 
-      userData.isModerator || 
-      userData.roles === 'moderator' || 
-      (userData.roles && Array.isArray(userData.roles) && userData.roles.includes('moderator')) || 
-      false;
-      
+    // Log the raw roles data to help with debugging
+    console.log('Helper function - Raw user roles data:', {
+      userId,
+      roles: userData.roles,
+      rolesType: typeof userData.roles,
+      isArray: Array.isArray(userData.roles),
+      hasRoles: !!userData.roles
+    });
+    
+    // Handle different role formats
+    let isAdmin = false;
+    let isModerator = false;
+    
+    // Direct boolean flags
+    if (userData.isAdmin === true) {
+      isAdmin = true;
+    }
+    if (userData.isModerator === true) {
+      isModerator = true;
+    }
+    
+    // String role
+    if (typeof userData.roles === 'string') {
+      if (userData.roles === 'admin') isAdmin = true;
+      if (userData.roles === 'moderator') isModerator = true;
+    }
+    
+    // Array of roles
+    if (Array.isArray(userData.roles)) {
+      // Check each item in the array
+      for (const role of userData.roles) {
+        if (role === 'admin') isAdmin = true;
+        if (role === 'moderator') isModerator = true;
+      }
+    }
+    
     console.log('Helper function - User roles check:', {
       userId,
       roles: userData.roles,
