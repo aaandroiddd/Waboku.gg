@@ -361,9 +361,15 @@ const OrdersComponent = () => {
     // Apply status filter
     if (statusFilter !== 'all') {
       if (statusFilter === 'pending') {
-        // For pending filter, include both 'pending' status and any orders without a status
+        // For pending filter, include:
+        // 1. Orders with 'pending' status
+        // 2. Orders without a status
+        // 3. Orders with paymentStatus 'awaiting_payment'
         result = result.filter(order => 
-          order.status === 'pending' || !order.status || order.status === ''
+          order.status === 'pending' || 
+          !order.status || 
+          order.status === '' ||
+          order.paymentStatus === 'awaiting_payment'
         );
       } else {
         result = result.filter(order => order.status === statusFilter);
@@ -413,9 +419,15 @@ const OrdersComponent = () => {
     // Apply status filter
     if (statusFilter !== 'all') {
       if (statusFilter === 'pending') {
-        // For pending filter, include both 'pending' status and any orders without a status
+        // For pending filter, include:
+        // 1. Orders with 'pending' status
+        // 2. Orders without a status
+        // 3. Orders with paymentStatus 'awaiting_payment'
         result = result.filter(order => 
-          order.status === 'pending' || !order.status || order.status === ''
+          order.status === 'pending' || 
+          !order.status || 
+          order.status === '' ||
+          order.paymentStatus === 'awaiting_payment'
         );
       } else {
         result = result.filter(order => order.status === statusFilter);
@@ -465,8 +477,8 @@ const OrdersComponent = () => {
     };
     
     orders.forEach(order => {
-      // Count orders with missing status as pending
-      if (!order.status || order.status === '') {
+      // Count orders with missing status or awaiting_payment as pending
+      if (!order.status || order.status === '' || order.paymentStatus === 'awaiting_payment') {
         counts.pending++;
       } else if (counts[order.status as keyof typeof counts] !== undefined) {
         counts[order.status as keyof typeof counts]++;

@@ -93,7 +93,8 @@ export function OrderCard({ order, isSale = false }: OrderCardProps) {
       imageUrl: order.listingSnapshot?.imageUrl || '',
     },
     createdAt: order.createdAt instanceof Date ? order.createdAt : new Date(),
-    status: order.status || 'pending' // Default to pending if status is missing
+    // Default to pending if status is missing or if paymentStatus is awaiting_payment
+    status: order.status || (order.paymentStatus === 'awaiting_payment' ? 'pending' : 'pending')
   };
 
   return (
@@ -152,6 +153,13 @@ export function OrderCard({ order, isSale = false }: OrderCardProps) {
                     ? 'Awaiting Shipping' 
                     : safeOrder.status.charAt(0).toUpperCase() + safeOrder.status.slice(1).replace('_', ' ')}
                 </Badge>
+                
+                {/* Show awaiting payment badge */}
+                {order.paymentStatus === 'awaiting_payment' && (
+                  <Badge variant="outline" className="bg-yellow-50 text-yellow-800 border-yellow-300">
+                    Awaiting Payment
+                  </Badge>
+                )}
                 
                 {/* Show tracking requirement badge */}
                 {safeOrder.status === 'shipped' && safeOrder.trackingRequired && !safeOrder.trackingInfo && (
