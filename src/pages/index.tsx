@@ -278,7 +278,7 @@ export default function Home() {
             
             <div className="relative container mx-auto px-4 py-8 sm:py-10 md:py-12 lg:py-16">
               <div className="text-center max-w-3xl mx-auto space-y-4 sm:space-y-6">
-                <div className="space-y-4 sm:space-y-6">
+                <div className="space-y-2 sm:space-y-3">
                   {/* Using placeholder divs with the same dimensions to prevent layout shift */}
                   <div className="invisible h-[3.75rem] sm:h-[4.5rem] md:h-[6rem] lg:h-[7.5rem]" aria-hidden="true">
                     Your Local TCG Marketplace
@@ -290,7 +290,7 @@ export default function Home() {
                   <div className="invisible h-[1.5rem] sm:h-[1.75rem] md:h-[2rem]" aria-hidden="true">
                     {randomSubtitle}
                   </div>
-                  <p className="text-base sm:text-lg md:text-xl glow-text-subtle animate-subtitle absolute left-0 right-0">
+                  <p className="text-base sm:text-lg md:text-xl glow-text-subtle animate-subtitle absolute left-0 right-0 mt-1 sm:mt-0">
                     {randomSubtitle}
                   </p>
                 </div>
