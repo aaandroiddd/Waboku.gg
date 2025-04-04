@@ -40,9 +40,20 @@ export const SimilarListings: React.FC<SimilarListingsProps> = ({
   const { toggleFavorite, isFavorite } = useFavorites();
   const router = useRouter();
 
+  // Use a ref to track if we've already fetched listings for this listing ID
+  const fetchedForListingRef = React.useRef<string | null>(null);
+
   useEffect(() => {
+    // Skip if we've already fetched for this listing ID
+    if (fetchedForListingRef.current === currentListing?.id) {
+      return;
+    }
+    
     const fetchSimilarListings = async () => {
-      if (!currentListing) return;
+      if (!currentListing || !currentListing.id) return;
+      
+      // Set the ref to the current listing ID to prevent duplicate fetches
+      fetchedForListingRef.current = currentListing.id;
       
       try {
         setIsLoading(true);
@@ -350,7 +361,7 @@ export const SimilarListings: React.FC<SimilarListingsProps> = ({
     };
 
     fetchSimilarListings();
-  }, [currentListing, maxListings]);
+  }, [currentListing?.id, maxListings]);
 
   // Always render the component, even when no similar listings are found
 
