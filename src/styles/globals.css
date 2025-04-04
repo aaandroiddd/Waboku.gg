@@ -115,8 +115,11 @@
     linear-gradient(45deg, transparent 48%, rgba(0, 140, 255, 0.08) 50%, transparent 52%),
     linear-gradient(-45deg, transparent 48%, rgba(0, 160, 255, 0.08) 50%, transparent 52%);
   background-size: 60px 60px;
-  opacity: 0.6;
-  animation: gradientMove 8s linear infinite;
+  opacity: 0.4; /* Reduced opacity */
+  /* Use will-change to optimize animation performance */
+  will-change: transform;
+  /* Slower animation for better performance */
+  animation: gradientMove 12s linear infinite;
   mask-image: linear-gradient(to bottom,
     rgba(0, 0, 0, 1) 0%,
     rgba(0, 0, 0, 1) 60%,
@@ -129,6 +132,8 @@
     rgba(0, 0, 0, 0.3) 85%,
     rgba(0, 0, 0, 0) 100%
   );
+  /* Add transform to use GPU acceleration */
+  transform: translateZ(0);
 }
 
 .dark .hero-background::after {
@@ -141,12 +146,13 @@
   background: 
     radial-gradient(2px 2px at 40px 60px, rgba(0, 140, 255, 0.15), transparent),
     radial-gradient(2px 2px at 20px 50px, rgba(0, 120, 255, 0.15), transparent),
-    radial-gradient(2px 2px at 30px 100px, rgba(0, 180, 255, 0.15), transparent),
-    radial-gradient(2px 2px at 80px 120px, rgba(0, 160, 255, 0.15), transparent),
-    radial-gradient(2px 2px at 110px 80px, rgba(0, 140, 255, 0.15), transparent),
-    radial-gradient(2px 2px at 90px 40px, rgba(0, 180, 255, 0.15), transparent);
+    radial-gradient(2px 2px at 30px 100px, rgba(0, 180, 255, 0.15), transparent);
+  /* Reduced number of gradients */
   background-size: 120px 120px;
-  animation: starsMove 20s linear infinite;
+  /* Use will-change to optimize animation performance */
+  will-change: transform;
+  /* Slower animation for better performance */
+  animation: starsMove 30s linear infinite;
   mask-image: linear-gradient(to bottom,
     rgba(0, 0, 0, 1) 0%,
     rgba(0, 0, 0, 1) 50%,
@@ -159,6 +165,8 @@
     rgba(0, 0, 0, 0.2) 90%,
     rgba(0, 0, 0, 0) 100%
   );
+  /* Add transform to use GPU acceleration */
+  transform: translateZ(0);
 }
 
 @keyframes gradientMove {
@@ -210,8 +218,11 @@
     linear-gradient(45deg, transparent 48%, rgba(0, 120, 255, 0.1) 50%, transparent 52%),
     linear-gradient(-45deg, transparent 48%, rgba(0, 140, 255, 0.1) 50%, transparent 52%);
   background-size: 60px 60px;
-  opacity: 0.4;
-  animation: gradientMove 10s linear infinite;
+  opacity: 0.3; /* Reduced opacity */
+  /* Use will-change to optimize animation performance */
+  will-change: transform;
+  /* Slower animation for better performance */
+  animation: gradientMove 15s linear infinite;
   mask-image: linear-gradient(to bottom,
     rgba(0, 0, 0, 1) 0%,
     rgba(0, 0, 0, 1) 60%,
@@ -224,6 +235,8 @@
     rgba(0, 0, 0, 0.3) 85%,
     rgba(0, 0, 0, 0) 100%
   );
+  /* Add transform to use GPU acceleration */
+  transform: translateZ(0);
 }
 
 .midnight .hero-background::after {
@@ -236,12 +249,13 @@
   background: 
     radial-gradient(2px 2px at 40px 60px, rgba(0, 120, 255, 0.3), transparent),
     radial-gradient(2px 2px at 20px 50px, rgba(0, 100, 255, 0.3), transparent),
-    radial-gradient(2px 2px at 30px 100px, rgba(0, 160, 255, 0.3), transparent),
-    radial-gradient(2px 2px at 80px 120px, rgba(0, 140, 255, 0.3), transparent),
-    radial-gradient(2px 2px at 110px 80px, rgba(0, 120, 255, 0.3), transparent),
-    radial-gradient(2px 2px at 90px 40px, rgba(0, 160, 255, 0.3), transparent);
+    radial-gradient(2px 2px at 30px 100px, rgba(0, 160, 255, 0.3), transparent);
+  /* Reduced number of gradients */
   background-size: 120px 120px;
-  animation: starsMove 15s linear infinite;
+  /* Use will-change to optimize animation performance */
+  will-change: transform;
+  /* Slower animation for better performance */
+  animation: starsMove 30s linear infinite;
   mask-image: linear-gradient(to bottom,
     rgba(0, 0, 0, 1) 0%,
     rgba(0, 0, 0, 1) 50%,
@@ -254,6 +268,8 @@
     rgba(0, 0, 0, 0.2) 90%,
     rgba(0, 0, 0, 0) 100%
   );
+  /* Add transform to use GPU acceleration */
+  transform: translateZ(0);
 }
 
 @layer base {

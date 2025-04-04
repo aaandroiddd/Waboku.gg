@@ -267,14 +267,16 @@ export default function Home() {
 
           {/* Hero Section */}
           <div className="relative overflow-hidden min-h-screen">
-            {/* Original Background Animation - Using placeholder div to prevent layout shift */}
+            {/* Optimized Background Animation with performance improvements */}
             <div className="hero-background opacity-0"></div>
             <motion.div 
               className="hero-background absolute inset-0"
               variants={heroBackgroundVariants}
               initial="hidden"
               animate="visible"
-            />
+            >
+              <AnimatedBackground className="opacity-80" />
+            </motion.div>
             
             <div className="relative container mx-auto px-4 py-8 sm:py-10 md:py-12 lg:py-16">
               <div className="text-center max-w-3xl mx-auto space-y-4 sm:space-y-6">

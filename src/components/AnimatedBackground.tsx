@@ -1,90 +1,90 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 
 interface AnimatedBackgroundProps {
   className?: string;
 }
 
+interface Card {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  rotation: number;
+  rotationSpeed: number;
+  opacity: number;
+  color: string;
+  scale: number;
+  scaleDirection: number;
+  moveX: number;
+  moveY: number;
+}
+
 const AnimatedBackground: React.FC<AnimatedBackgroundProps> = ({ className }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [isVisible, setIsVisible] = useState(true);
   
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext('2d', { alpha: true });
     if (!ctx) return;
     
     // Check if we're on a mobile device
     const isMobile = window.innerWidth < 768;
     
-    // Set canvas dimensions immediately to prevent layout shifts
-    // This is important to avoid the page jumping after load
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-    
-    // Set canvas dimensions to match window size on resize
-    const resizeCanvas = () => {
+    // Set initial canvas dimensions
+    const updateCanvasDimensions = () => {
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
     };
     
-    // Handle scroll events to ensure canvas covers the viewport
-    const handleScroll = () => {
-      if (canvas) {
-        // Ensure the canvas height is at least the viewport height
-        if (canvas.height < window.innerHeight) {
-          canvas.height = window.innerHeight;
-        }
-      }
+    updateCanvasDimensions();
+    
+    // Debounce resize handler for better performance
+    let resizeTimeout: NodeJS.Timeout;
+    const handleResize = () => {
+      clearTimeout(resizeTimeout);
+      resizeTimeout = setTimeout(() => {
+        updateCanvasDimensions();
+        // Recreate cards when canvas is resized to ensure proper distribution
+        initializeCards();
+      }, 200);
     };
     
-    // Set initial size with a small delay to ensure the DOM is ready
-    setTimeout(resizeCanvas, 10);
-    window.addEventListener('resize', resizeCanvas);
-    window.addEventListener('scroll', handleScroll);
-    
     // Card shapes
-    const cards: Card[] = [];
-    // Reduce card count on mobile for better performance
-    const cardCount = isMobile 
-      ? Math.min(6, Math.floor(window.innerWidth / 200)) 
-      : Math.min(15, Math.floor(window.innerWidth / 150));
+    let cards: Card[] = [];
     
-    interface Card {
-      x: number;
-      y: number;
-      width: number;
-      height: number;
-      rotation: number;
-      rotationSpeed: number;
-      opacity: number;
-      color: string;
-      scale: number;
-      scaleDirection: number;
-      moveX: number;
-      moveY: number;
-    }
-    
-    // Create cards
-    for (let i = 0; i < cardCount; i++) {
-      const width = 60 + Math.random() * 40;
-      const height = width * 1.4; // Card aspect ratio
+    // Initialize cards with proper positioning
+    const initializeCards = () => {
+      // Clear existing cards
+      cards = [];
       
-      cards.push({
-        x: Math.random() * canvas.width,
-        y: Math.random() * canvas.height,
-        width,
-        height,
-        rotation: Math.random() * 360,
-        rotationSpeed: (Math.random() - 0.5) * 0.2,
-        opacity: 0.03 + Math.random() * 0.05,
-        color: getRandomColor(),
-        scale: 0.8 + Math.random() * 0.4,
-        scaleDirection: Math.random() > 0.5 ? 1 : -1,
-        moveX: (Math.random() - 0.5) * 0.2,
-        moveY: (Math.random() - 0.5) * 0.2
-      });
-    }
+      // Reduce card count on mobile for better performance
+      const cardCount = isMobile 
+        ? Math.min(4, Math.floor(window.innerWidth / 250)) 
+        : Math.min(10, Math.floor(window.innerWidth / 200));
+      
+      for (let i = 0; i < cardCount; i++) {
+        const width = 60 + Math.random() * 40;
+        const height = width * 1.4; // Card aspect ratio
+        
+        cards.push({
+          x: Math.random() * canvas.width,
+          y: Math.random() * canvas.height,
+          width,
+          height,
+          rotation: Math.random() * 360,
+          rotationSpeed: (Math.random() - 0.5) * 0.1, // Reduced rotation speed
+          opacity: 0.02 + Math.random() * 0.03, // Reduced opacity
+          color: getRandomColor(),
+          scale: 0.8 + Math.random() * 0.4,
+          scaleDirection: Math.random() > 0.5 ? 1 : -1,
+          moveX: (Math.random() - 0.5) * 0.1, // Reduced movement speed
+          moveY: (Math.random() - 0.5) * 0.1  // Reduced movement speed
+        });
+      }
+    };
     
     function getRandomColor() {
       const colors = [
@@ -97,10 +97,48 @@ const AnimatedBackground: React.FC<AnimatedBackgroundProps> = ({ className }) =>
       return colors[Math.floor(Math.random() * colors.length)];
     }
     
-    // Animation loop
-    let animationFrameId: number;
+    // Initialize cards
+    initializeCards();
     
-    const render = () => {
+    // Animation variables
+    let animationFrameId: number;
+    let lastFrameTime = 0;
+    const targetFPS = isMobile ? 30 : 60; // Lower FPS on mobile
+    const frameInterval = 1000 / targetFPS;
+    
+    // Visibility change detection
+    const handleVisibilityChange = () => {
+      setIsVisible(!document.hidden);
+    };
+    
+    // Intersection Observer to pause animation when not in viewport
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach(entry => {
+          setIsVisible(entry.isIntersecting);
+        });
+      },
+      { threshold: 0.1 }
+    );
+    
+    observer.observe(canvas);
+    
+    // Animation loop with frame rate control
+    const render = (timestamp: number) => {
+      if (!isVisible) {
+        animationFrameId = window.requestAnimationFrame(render);
+        return;
+      }
+      
+      // Control frame rate
+      const elapsed = timestamp - lastFrameTime;
+      if (elapsed < frameInterval) {
+        animationFrameId = window.requestAnimationFrame(render);
+        return;
+      }
+      
+      lastFrameTime = timestamp - (elapsed % frameInterval);
+      
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       
       // Draw cards
@@ -116,8 +154,8 @@ const AnimatedBackground: React.FC<AnimatedBackgroundProps> = ({ className }) =>
         if (card.y < -card.height) card.y = canvas.height + card.height;
         if (card.y > canvas.height + card.height) card.y = -card.height;
         
-        // Subtle scale animation
-        card.scale += 0.0005 * card.scaleDirection;
+        // Subtle scale animation - reduced frequency
+        card.scale += 0.0002 * card.scaleDirection;
         if (card.scale > 1.2 || card.scale < 0.8) {
           card.scaleDirection *= -1;
         }
@@ -136,7 +174,7 @@ const AnimatedBackground: React.FC<AnimatedBackgroundProps> = ({ className }) =>
         ctx.roundRect(-card.width / 2, -card.height / 2, card.width, card.height, 8);
         ctx.stroke();
         
-        // Card inner frame
+        // Card inner frame - simplified for better performance
         ctx.beginPath();
         ctx.roundRect(-card.width / 2 + 5, -card.height / 2 + 5, card.width - 10, card.height / 2 - 10, 4);
         ctx.stroke();
@@ -147,20 +185,28 @@ const AnimatedBackground: React.FC<AnimatedBackgroundProps> = ({ className }) =>
       animationFrameId = window.requestAnimationFrame(render);
     };
     
-    render();
+    // Start animation
+    animationFrameId = window.requestAnimationFrame(render);
+    
+    // Set up event listeners
+    window.addEventListener('resize', handleResize);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
     
     // Cleanup
     return () => {
-      window.removeEventListener('resize', resizeCanvas);
-      window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('resize', handleResize);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      observer.disconnect();
       window.cancelAnimationFrame(animationFrameId);
+      clearTimeout(resizeTimeout);
     };
-  }, []);
+  }, [isVisible]);
   
   return (
     <canvas 
       ref={canvasRef} 
       className={`fixed inset-0 w-full h-full pointer-events-none z-0 ${className || ''}`}
+      aria-hidden="true"
     />
   );
 };
