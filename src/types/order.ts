@@ -11,6 +11,7 @@ export interface Order {
   transferAmount?: number;
   platformFee?: number;
   paymentStatus?: string;
+  offerPrice?: number; // Price from an accepted offer
   shippingAddress?: {
     name: string;
     line1: string;

@@ -140,7 +140,18 @@ export function OrderCard({ order, isSale = false }: OrderCardProps) {
               <p className="text-muted-foreground">
                 Date: {format(safeOrder.createdAt, 'PPP')}
               </p>
-              <p className="font-semibold">{formatPrice(safeOrder.amount || 0)}</p>
+              <div>
+                {safeOrder.offerPrice ? (
+                  <div>
+                    <p className="font-semibold">{formatPrice(safeOrder.amount || 0)}</p>
+                    <p className="text-sm text-green-600 dark:text-green-400">
+                      Accepted Offer: {formatPrice(safeOrder.offerPrice)}
+                    </p>
+                  </div>
+                ) : (
+                  <p className="font-semibold">{formatPrice(safeOrder.amount || 0)}</p>
+                )}
+              </div>
               <div className="flex flex-wrap gap-2">
                 {/* Show awaiting payment badge as primary status if applicable */}
                 {isAwaitingPayment ? (

@@ -152,6 +152,21 @@ export default async function handler(
       });
     }
 
+    // Check if this order came from an accepted offer
+    let offerPrice = null;
+    if (session.metadata?.offerId) {
+      try {
+        const offerDoc = await firestoreDb.collection('offers').doc(session.metadata.offerId).get();
+        if (offerDoc.exists) {
+          const offerData = offerDoc.data();
+          offerPrice = offerData.amount;
+          console.log(`[Ensure Order Created] Found offer price: ${offerPrice} for offer ID: ${session.metadata.offerId}`);
+        }
+      } catch (err) {
+        console.error('[Ensure Order Created] Error fetching offer data:', err);
+      }
+    }
+
     // Create an order record
     const orderData = {
       listingId,
@@ -165,6 +180,8 @@ export default async function handler(
       trackingRequired: true, // Set tracking as required by default
       createdAt: new Date(),
       updatedAt: new Date(),
+      // Include offer price if available
+      ...(offerPrice && { offerPrice }),
       shippingAddress: session.shipping?.address ? {
         name: session.shipping.name,
         line1: session.shipping.address.line1,

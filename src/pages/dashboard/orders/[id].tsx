@@ -424,6 +424,12 @@ export default function OrderDetailsPage() {
                       <span>Item Price:</span>
                       <span>{formatPrice(order.listingSnapshot?.price || order.amount)}</span>
                     </div>
+                    {order.offerPrice !== undefined && (
+                      <div className="flex justify-between">
+                        <span>Accepted Offer Price:</span>
+                        <span className="font-medium text-green-600 dark:text-green-400">{formatPrice(order.offerPrice)}</span>
+                      </div>
+                    )}
                     {order.platformFee !== undefined && (
                       <div className="flex justify-between">
                         <span>Platform Fee:</span>
@@ -433,7 +439,7 @@ export default function OrderDetailsPage() {
                     <Separator />
                     <div className="flex justify-between font-semibold">
                       <span>Total:</span>
-                      <span>{formatPrice(order.amount)}</span>
+                      <span>{formatPrice(order.amount || (order.offerPrice || 0))}</span>
                     </div>
                   </div>
                 </div>
