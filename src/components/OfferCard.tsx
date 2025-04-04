@@ -347,10 +347,37 @@ export function OfferCard({ offer, type, onCounterOffer }: OfferCardProps) {
               onManualMarkAsSold={async () => {
                 setIsUpdating(true);
                 try {
-                  await markListingAsSold(offer.listingId, offer.buyerId);
-                  toast.success('Listing marked as sold', {
-                    description: 'The listing has been manually marked as sold.'
+                  console.log('Manually marking listing as sold from OfferCard:', offer.listingId);
+                  
+                  // First try to mark the listing as sold
+                  const success = await markListingAsSold(offer.listingId, offer.buyerId);
+                  
+                  if (success) {
+                    // If successful, also clear the offer to remove it from the dashboard
+                    await clearOffer(offer.id);
+                    
+                    // Remove from local state
+                    setReceivedOffers(prev => 
+                      prev.filter(o => o.id !== offer.id)
+                    );
+                    
+                    toast.success('Listing marked as sold', {
+                      description: 'The listing has been manually marked as sold and the offer has been cleared.'
+                    });
+                    
+                    // Redirect to dashboard after a short delay
+                    setTimeout(() => {
+                      router.push('/dashboard');
+                    }, 1500);
+                  } else {
+                    throw new Error('Failed to mark listing as sold');
+                  }
+                } catch (error: any) {
+                  console.error('Error in manual mark as sold:', error);
+                  toast.error('Failed to mark listing as sold', {
+                    description: error.message || 'Please try again or contact support'
                   });
+                  throw error; // Re-throw to be handled by the dialog
                 } finally {
                   setIsUpdating(false);
                 }

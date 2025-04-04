@@ -5,6 +5,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { getFirebaseServices } from '@/lib/firebase';
 import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { useRouter } from 'next/router';
+import { toast as sonnerToast } from 'sonner';
 
 interface MarkAsSoldDialogProps {
   open: boolean;
@@ -31,24 +32,53 @@ export function MarkAsSoldDialog({
   const router = useRouter();
   const [isProcessing, setIsProcessing] = useState(false);
   const [showManualOption, setShowManualOption] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const handleConfirm = async () => {
     setIsProcessing(true);
+    setErrorMessage(null);
+    
+    // Show a loading toast that we can update later
+    const loadingToastId = sonnerToast.loading('Processing your request...', {
+      description: 'Creating order and marking listing as sold'
+    });
+    
     try {
+      console.log('Confirming mark as sold for offer:', offerId);
       const success = await onConfirm(true);
+      
       if (success) {
-        toast({
-          title: "Listing marked as sold",
-          description: "The listing has been marked as sold and an order has been created.",
+        // Update the loading toast to success
+        sonnerToast.success('Listing marked as sold', {
+          id: loadingToastId,
+          description: "The listing has been marked as sold and an order has been created."
         });
+        
         onOpenChange(false);
+        
+        // Redirect to orders page after a short delay
+        setTimeout(() => {
+          router.push('/dashboard/orders');
+        }, 1500);
+      } else {
+        // If not successful but no error was thrown
+        sonnerToast.error('Failed to mark listing as sold', {
+          id: loadingToastId,
+          description: "Please try again or contact support if the issue persists."
+        });
+        setErrorMessage('The operation could not be completed. Please try again.');
       }
     } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to mark listing as sold",
-        variant: "destructive",
+      console.error('Error in handleConfirm:', error);
+      
+      // Update the loading toast to error
+      sonnerToast.error('Error', {
+        id: loadingToastId,
+        description: error.message || "Failed to mark listing as sold"
       });
+      
+      // Set error message for display in the dialog
+      setErrorMessage(error.message || "Failed to mark listing as sold. Please try again or use the manual option.");
     } finally {
       setIsProcessing(false);
     }
@@ -66,19 +96,35 @@ export function MarkAsSoldDialog({
     if (!onManualMarkAsSold) return;
     
     setIsProcessing(true);
+    setErrorMessage(null);
+    
+    // Show a loading toast
+    const loadingToastId = sonnerToast.loading('Processing your request...', {
+      description: 'Manually marking listing as sold'
+    });
+    
     try {
+      console.log('Manually marking listing as sold:', listingId);
       await onManualMarkAsSold();
-      toast({
-        title: "Listing marked as sold",
-        description: "The listing has been manually marked as sold.",
+      
+      // Update the loading toast to success
+      sonnerToast.success('Listing marked as sold', {
+        id: loadingToastId,
+        description: "The listing has been manually marked as sold."
       });
+      
       onOpenChange(false);
     } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to mark listing as sold",
-        variant: "destructive",
+      console.error('Error in handleManualMarkAsSold:', error);
+      
+      // Update the loading toast to error
+      sonnerToast.error('Error', {
+        id: loadingToastId,
+        description: error.message || "Failed to mark listing as sold"
       });
+      
+      // Set error message for display in the dialog
+      setErrorMessage(error.message || "Failed to mark listing as sold");
     } finally {
       setIsProcessing(false);
     }
@@ -111,6 +157,17 @@ export function MarkAsSoldDialog({
                 <li>Allow the buyer to complete payment via Stripe</li>
               )}
             </ul>
+          </div>
+        )}
+        
+        {errorMessage && (
+          <div className="py-2 px-3 bg-destructive/10 border border-destructive/20 rounded-md">
+            <p className="text-sm text-destructive font-medium">Error: {errorMessage}</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              {showManualOption 
+                ? "You can try again or contact support if the issue persists."
+                : "You can try again, use the manual option, or contact support if the issue persists."}
+            </p>
           </div>
         )}
 

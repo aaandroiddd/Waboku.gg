@@ -375,78 +375,165 @@ export function useOffers() {
   };
 
   const createOrderFromOffer = async (offerId: string, markAsSold: boolean = false) => {
-    if (!user) return false;
+    if (!user) {
+      console.error('Cannot create order: User not authenticated');
+      toast.error('You must be logged in to create an order');
+      return false;
+    }
     
     try {
-      const { db } = getFirebaseServices();
-      const offerRef = doc(db, 'offers', offerId);
+      console.log(`Creating order from offer ${offerId}, markAsSold=${markAsSold}`);
       
-      // Get the current offer
-      const offerSnap = await getDoc(offerRef);
-      if (!offerSnap.exists()) {
-        throw new Error('Offer not found');
-      }
-      
-      const offerData = offerSnap.data();
-      
-      // Verify the user is the seller
-      if (offerData.sellerId !== user.uid) {
-        throw new Error('Only the seller can create an order from an offer');
-      }
-      
-      // Verify the offer is accepted
-      if (offerData.status !== 'accepted') {
-        throw new Error('Only accepted offers can be converted to orders');
-      }
-      
-      // Create a placeholder shipping address (this would normally come from the buyer)
-      const placeholderAddress = {
-        name: 'To be provided by buyer',
-        line1: 'Address pending',
-        city: 'TBD',
-        state: 'TBD',
-        postal_code: 'TBD',
-        country: 'TBD'
-      };
-      
-      // Create the order
-      const orderData = {
-        listingId: offerData.listingId,
-        buyerId: offerData.buyerId,
-        sellerId: offerData.sellerId,
-        amount: offerData.amount,
-        status: 'pending',
-        shippingAddress: placeholderAddress,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-        listingSnapshot: offerData.listingSnapshot,
-        offerId: offerId // Reference to the original offer
-      };
-      
-      await addDoc(collection(db, 'orders'), orderData);
-      
-      // Mark the offer as cleared
-      await updateDoc(offerRef, {
-        cleared: true,
-        updatedAt: serverTimestamp()
-      });
-      
-      // If markAsSold is true, update the listing status to sold
-      if (markAsSold) {
-        const listingRef = doc(db, 'listings', offerData.listingId);
-        await updateDoc(listingRef, {
-          status: 'sold',
-          soldTo: offerData.buyerId,
-          updatedAt: serverTimestamp()
+      // First try client-side Firebase
+      try {
+        const { db } = getFirebaseServices();
+        if (!db) {
+          throw new Error('Firebase database not initialized');
+        }
+        
+        console.log('Getting offer reference...');
+        const offerRef = doc(db, 'offers', offerId);
+        
+        // Get the current offer
+        console.log('Fetching offer data...');
+        const offerSnap = await getDoc(offerRef);
+        if (!offerSnap.exists()) {
+          throw new Error('Offer not found');
+        }
+        
+        const offerData = offerSnap.data();
+        console.log('Offer data retrieved:', { 
+          offerId, 
+          sellerId: offerData.sellerId,
+          buyerId: offerData.buyerId,
+          status: offerData.status
         });
+        
+        // Verify the user is the seller
+        if (offerData.sellerId !== user.uid) {
+          throw new Error('Only the seller can create an order from an offer');
+        }
+        
+        // Verify the offer is accepted
+        if (offerData.status !== 'accepted') {
+          throw new Error('Only accepted offers can be converted to orders');
+        }
+        
+        // Create a placeholder shipping address (this would normally come from the buyer)
+        const placeholderAddress = {
+          name: 'To be provided by buyer',
+          line1: 'Address pending',
+          city: 'TBD',
+          state: 'TBD',
+          postal_code: 'TBD',
+          country: 'TBD'
+        };
+        
+        // Create the order
+        const orderData = {
+          listingId: offerData.listingId,
+          buyerId: offerData.buyerId,
+          sellerId: offerData.sellerId,
+          amount: offerData.amount,
+          status: 'pending',
+          shippingAddress: placeholderAddress,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+          listingSnapshot: offerData.listingSnapshot || {
+            title: 'Unknown Listing',
+            price: offerData.amount || 0,
+            imageUrl: ''
+          },
+          offerId: offerId // Reference to the original offer
+        };
+        
+        console.log('Creating order document...');
+        try {
+          // Get a fresh auth token before creating the order
+          const token = await user.getIdToken(true);
+          console.log('Got fresh auth token, length:', token.length);
+          
+          // Create the order document
+          const ordersCollection = collection(db, 'orders');
+          const orderDocRef = await addDoc(ordersCollection, orderData);
+          console.log('Order created successfully with ID:', orderDocRef.id);
+          
+          // Mark the offer as cleared
+          console.log('Marking offer as cleared...');
+          await updateDoc(offerRef, {
+            cleared: true,
+            updatedAt: serverTimestamp()
+          });
+          
+          // If markAsSold is true, update the listing status to sold
+          if (markAsSold) {
+            console.log('Marking listing as sold...');
+            const listingRef = doc(db, 'listings', offerData.listingId);
+            await updateDoc(listingRef, {
+              status: 'sold',
+              soldTo: offerData.buyerId,
+              updatedAt: serverTimestamp()
+            });
+          }
+          
+          // Update local state
+          setReceivedOffers(prev => 
+            prev.filter(offer => offer.id !== offerId)
+          );
+          
+          console.log('Order creation process completed successfully');
+          return true;
+        } catch (writeError: any) {
+          console.error('Error writing to Firestore:', writeError);
+          
+          // Check if this is an authentication error
+          if (writeError.code === 'permission-denied' || 
+              writeError.message?.includes('permission') || 
+              writeError.message?.includes('unauthorized')) {
+            console.log('Permission denied error detected, will try server-side API as fallback');
+            throw new Error('Authentication error: ' + writeError.message);
+          }
+          
+          throw writeError;
+        }
+      } catch (clientError: any) {
+        console.error('Client-side order creation failed:', clientError);
+        console.log('Attempting to create order via server API...');
+        
+        // Try server-side API as fallback
+        try {
+          const token = await user.getIdToken(true);
+          const response = await fetch('/api/offers/create-order', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+              offerId,
+              markAsSold
+            })
+          });
+          
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || `API error: ${response.status}`);
+          }
+          
+          const data = await response.json();
+          console.log('Order created via API:', data);
+          
+          // Update local state
+          setReceivedOffers(prev => 
+            prev.filter(offer => offer.id !== offerId)
+          );
+          
+          return true;
+        } catch (apiError: any) {
+          console.error('API order creation failed:', apiError);
+          throw apiError;
+        }
       }
-      
-      // Update local state
-      setReceivedOffers(prev => 
-        prev.filter(offer => offer.id !== offerId)
-      );
-      
-      return true;
     } catch (err: any) {
       console.error('Error creating order from offer:', err);
       toast.error(err.message || 'Failed to create order from offer');
