@@ -214,14 +214,23 @@ export default function ConnectAccount() {
               )}
 
               {accountStatus === 'active' && (
-                <Button
-                  onClick={handleUpdateConnectAccount}
-                  variant="outline"
-                  className="w-full sm:w-auto"
-                >
-                  Update Account Details
-                  <ExternalLink className="ml-2 h-4 w-4" />
-                </Button>
+                <>
+                  <Button
+                    onClick={handleUpdateConnectAccount}
+                    variant="outline"
+                    className="w-full sm:w-auto"
+                  >
+                    Update Account Details
+                    <ExternalLink className="ml-2 h-4 w-4" />
+                  </Button>
+                  <Button
+                    onClick={() => router.push('/dashboard/sales-analytics')}
+                    className="w-full sm:w-auto mt-2 sm:mt-0"
+                  >
+                    View Sales Analytics
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                </>
               )}
 
               <Button
