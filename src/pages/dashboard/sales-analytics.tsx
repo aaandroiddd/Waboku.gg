@@ -407,9 +407,14 @@ export default function SalesAnalytics() {
     if (!filteredSales.length) return [];
 
     const statusCounts = filteredSales.reduce((acc, sale) => {
-      // Handle orders with missing status as 'pending'
-      const status = sale.status || 'pending';
-      acc[status] = (acc[status] || 0) + 1;
+      // For orders with awaiting_payment status, use that as the primary status
+      if (sale.paymentStatus === 'awaiting_payment') {
+        acc['awaiting_payment'] = (acc['awaiting_payment'] || 0) + 1;
+      } else {
+        // Handle orders with missing status as 'pending'
+        const status = sale.status || 'pending';
+        acc[status] = (acc[status] || 0) + 1;
+      }
       return acc;
     }, {} as Record<string, number>);
 
@@ -428,6 +433,7 @@ export default function SalesAnalytics() {
       case 'shipped': return 'Shipped';
       case 'completed': return 'Completed';
       case 'cancelled': return 'Cancelled';
+      case 'awaiting_payment': return 'Awaiting Payment';
       default: return status.charAt(0).toUpperCase() + status.slice(1).replace('_', ' ');
     }
   }
@@ -740,7 +746,11 @@ export default function SalesAnalytics() {
                         <div>{format(sale.createdAt, 'MMM dd, yyyy')}</div>
                         <div className="col-span-2 truncate">{sale.listingSnapshot?.title || 'Unknown Product'}</div>
                         <div>
-                          <Badge variant="outline">{formatStatus(sale.status)}</Badge>
+                          <Badge variant="outline">
+                            {sale.paymentStatus === 'awaiting_payment' 
+                              ? formatStatus('awaiting_payment') 
+                              : formatStatus(sale.status)}
+                          </Badge>
                         </div>
                         <div className="text-right font-medium">${sale.amount.toFixed(2)}</div>
                       </div>

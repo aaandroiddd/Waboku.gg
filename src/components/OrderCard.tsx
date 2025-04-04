@@ -94,8 +94,11 @@ export function OrderCard({ order, isSale = false }: OrderCardProps) {
     },
     createdAt: order.createdAt instanceof Date ? order.createdAt : new Date(),
     // Default to pending if status is missing or if paymentStatus is awaiting_payment
-    status: order.status || (order.paymentStatus === 'awaiting_payment' ? 'pending' : 'pending')
+    status: order.status || 'pending'
   };
+  
+  // Determine if this is an awaiting payment order
+  const isAwaitingPayment = order.paymentStatus === 'awaiting_payment';
 
   return (
     <Card className="mb-4 cursor-pointer hover:shadow-md transition-shadow duration-200" onClick={handleViewOrder}>
@@ -139,25 +142,25 @@ export function OrderCard({ order, isSale = false }: OrderCardProps) {
               </p>
               <p className="font-semibold">{formatPrice(safeOrder.amount || 0)}</p>
               <div className="flex flex-wrap gap-2">
-                <Badge
-                  variant={
-                    safeOrder.status === 'completed' ? 'default' : 
-                    safeOrder.status === 'paid' ? 'success' :
-                    safeOrder.status === 'awaiting_shipping' ? 'warning' :
-                    safeOrder.status === 'shipped' ? 'info' :
-                    safeOrder.status === 'cancelled' ? 'destructive' : 
-                    'secondary'
-                  }
-                >
-                  {safeOrder.status === 'awaiting_shipping' 
-                    ? 'Awaiting Shipping' 
-                    : safeOrder.status.charAt(0).toUpperCase() + safeOrder.status.slice(1).replace('_', ' ')}
-                </Badge>
-                
-                {/* Show awaiting payment badge */}
-                {order.paymentStatus === 'awaiting_payment' && (
-                  <Badge variant="outline" className="bg-yellow-50 text-yellow-800 border-yellow-300">
+                {/* Show awaiting payment badge as primary status if applicable */}
+                {isAwaitingPayment ? (
+                  <Badge variant="warning" className="bg-yellow-500 text-white">
                     Awaiting Payment
+                  </Badge>
+                ) : (
+                  <Badge
+                    variant={
+                      safeOrder.status === 'completed' ? 'default' : 
+                      safeOrder.status === 'paid' ? 'success' :
+                      safeOrder.status === 'awaiting_shipping' ? 'warning' :
+                      safeOrder.status === 'shipped' ? 'info' :
+                      safeOrder.status === 'cancelled' ? 'destructive' : 
+                      'secondary'
+                    }
+                  >
+                    {safeOrder.status === 'awaiting_shipping' 
+                      ? 'Awaiting Shipping' 
+                      : safeOrder.status.charAt(0).toUpperCase() + safeOrder.status.slice(1).replace('_', ' ')}
                   </Badge>
                 )}
                 

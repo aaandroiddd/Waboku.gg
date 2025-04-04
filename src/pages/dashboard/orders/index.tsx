@@ -477,10 +477,16 @@ const OrdersComponent = () => {
     };
     
     orders.forEach(order => {
-      // Count orders with missing status or awaiting_payment as pending
-      if (!order.status || order.status === '' || order.paymentStatus === 'awaiting_payment') {
+      // Count orders with missing status as pending
+      if (!order.status || order.status === '') {
         counts.pending++;
-      } else if (counts[order.status as keyof typeof counts] !== undefined) {
+      } 
+      // Count orders with awaiting_payment status as pending
+      else if (order.paymentStatus === 'awaiting_payment') {
+        counts.pending++;
+      }
+      // Count other orders by their status
+      else if (counts[order.status as keyof typeof counts] !== undefined) {
         counts[order.status as keyof typeof counts]++;
       }
     });
