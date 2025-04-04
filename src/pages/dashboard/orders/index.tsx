@@ -3,7 +3,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUnread } from '@/contexts/UnreadContext';
 import { getFirebaseServices } from '@/lib/firebase';
-import { collection, query, where, orderBy, getDocs, doc, getDoc } from 'firebase/firestore';
+import { collection, query, where, orderBy, getDocs, doc, getDoc, setDoc } from 'firebase/firestore';
 import { Order } from '@/types/order';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -312,6 +312,56 @@ const OrdersComponent = () => {
   useEffect(() => {
     fetchOrders();
   }, [user]);
+  
+  // Debug function to check for missing user references in orders
+  const checkForMissingReferences = async () => {
+    if (!user) return;
+    
+    try {
+      console.log('[Orders Page] Running diagnostic check for missing user references');
+      const { db } = getFirebaseServices();
+      
+      // Query orders that have the current user as seller
+      const sellerOrdersQuery = query(
+        collection(db, 'orders'),
+        where('sellerId', '==', user.uid)
+      );
+      
+      const sellerOrdersSnapshot = await getDocs(sellerOrdersQuery);
+      console.log(`[Orders Page] Found ${sellerOrdersSnapshot.size} orders where user is seller`);
+      
+      // Check each order to see if it has a corresponding user reference
+      for (const orderDoc of sellerOrdersSnapshot.docs) {
+        const orderId = orderDoc.id;
+        const orderData = orderDoc.data();
+        
+        // Check if there's a corresponding reference in the user's orders subcollection
+        const userOrderRef = doc(db, 'users', user.uid, 'orders', orderId);
+        const userOrderDoc = await getDoc(userOrderRef);
+        
+        if (!userOrderDoc.exists()) {
+          console.log(`[Orders Page] Found missing user reference for order ${orderId}`);
+          
+          // Create the missing reference
+          await setDoc(userOrderRef, {
+            orderId: orderId,
+            role: 'seller',
+            createdAt: orderData.createdAt || new Date()
+          });
+          
+          console.log(`[Orders Page] Created missing reference for order ${orderId}`);
+        }
+      }
+      
+      // After fixing references, refresh the orders
+      await fetchOrders();
+      toast.success('Order references checked and fixed');
+      
+    } catch (error) {
+      console.error('Error checking for missing references:', error);
+      toast.error('Failed to check order references');
+    }
+  };
 
   const handleRefresh = async () => {
     if (isRefreshing) return;
@@ -569,24 +619,34 @@ const OrdersComponent = () => {
               Manage your purchases and sales
             </p>
           </div>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={handleRefresh}
-            disabled={isRefreshing}
-          >
-            {isRefreshing ? (
-              <>
-                <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                Refreshing...
-              </>
-            ) : (
-              <>
-                <RefreshCw className="mr-2 h-4 w-4" />
-                Refresh
-              </>
-            )}
-          </Button>
+          <div className="flex gap-2">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+            >
+              {isRefreshing ? (
+                <>
+                  <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                  Refreshing...
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                  Refresh
+                </>
+              )}
+            </Button>
+            <Button 
+              variant="secondary" 
+              size="sm" 
+              onClick={checkForMissingReferences}
+              disabled={isRefreshing}
+            >
+              Fix Missing References
+            </Button>
+          </div>
         </div>
       </div>
 
