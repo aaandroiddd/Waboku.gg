@@ -15,13 +15,24 @@
   }
   
   /* Optimize animations for mobile */
-  .animate-title, 
-  .animate-subtitle,
   .float-animation,
   .motion-safe\:animate-float {
     /* Reduce animation complexity on mobile */
     animation-duration: 8s !important;
     /* Use transform for better performance */
+    transform: translateZ(0);
+  }
+  
+  /* Preserve fade-in animation speed for title and subtitle to match desktop */
+  .animate-title {
+    animation: fade-in 0.8s ease-out forwards, float-up 6s ease-in-out infinite !important;
+    animation-delay: 0.2s, 1s !important;
+    transform: translateZ(0);
+  }
+  
+  .animate-subtitle {
+    animation: fade-in 0.8s ease-out forwards !important;
+    animation-delay: 0.4s !important;
     transform: translateZ(0);
   }
   
