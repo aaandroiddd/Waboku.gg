@@ -43,12 +43,29 @@ export const moderatorAuthMiddleware = async (
     }
 
     const userData = userSnap.data();
-    const isAdmin = userData.roles?.includes('admin') || false;
-    const isModerator = userData.roles?.includes('moderator') || false;
+    console.log('Checking moderator status for user:', uid, 'User data:', JSON.stringify(userData));
+    
+    // Check for moderator/admin role in different possible formats
+    const isAdmin = 
+      userData.isAdmin || 
+      userData.roles === 'admin' || 
+      (userData.roles && userData.roles[0] === 'admin') ||
+      (userData.roles && userData.roles.includes && userData.roles.includes('admin')) || 
+      false;
+      
+    const isModerator = 
+      userData.isModerator || 
+      userData.roles === 'moderator' || 
+      (userData.roles && userData.roles[0] === 'moderator') ||
+      (userData.roles && userData.roles.includes && userData.roles.includes('moderator')) || 
+      false;
 
     if (!isAdmin && !isModerator) {
+      console.log('User is not a moderator or admin:', uid);
       return res.status(403).json({ error: 'Forbidden - Insufficient permissions' });
     }
+    
+    console.log('User authorized as moderator/admin:', uid, 'isAdmin:', isAdmin, 'isModerator:', isModerator);
 
     // User is a moderator or admin, proceed
     return next();
@@ -71,7 +88,23 @@ export const isUserModerator = async (userId: string): Promise<boolean> => {
     }
 
     const userData = userSnap.data();
-    return userData.roles?.includes('admin') || userData.roles?.includes('moderator') || false;
+    
+    // Check for moderator/admin role in different possible formats
+    const isAdmin = 
+      userData.isAdmin || 
+      userData.roles === 'admin' || 
+      (userData.roles && userData.roles[0] === 'admin') ||
+      (userData.roles && userData.roles.includes && userData.roles.includes('admin')) || 
+      false;
+      
+    const isModerator = 
+      userData.isModerator || 
+      userData.roles === 'moderator' || 
+      (userData.roles && userData.roles[0] === 'moderator') ||
+      (userData.roles && userData.roles.includes && userData.roles.includes('moderator')) || 
+      false;
+      
+    return isAdmin || isModerator;
   } catch (error) {
     console.error('Error checking moderator status:', error);
     return false;

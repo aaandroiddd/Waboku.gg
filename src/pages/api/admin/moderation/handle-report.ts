@@ -136,10 +136,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         
         if (userDoc.exists()) {
           const userData = userDoc.data();
-          if (userData.isModerator || userData.isAdmin) {
+          // Check for moderator role in different possible formats
+          if (userData.isModerator || 
+              userData.isAdmin || 
+              userData.roles === 'moderator' || 
+              userData.roles === 'admin' || 
+              (userData.roles && userData.roles[0] === 'moderator') ||
+              (userData.roles && userData.roles.includes && userData.roles.includes('moderator'))) {
             isAuthorized = true;
             moderatorId = decodedToken.uid;
-            console.log('User authorized as moderator/admin:', moderatorId);
+            console.log('User authorized as moderator/admin:', moderatorId, 'Role format:', userData.roles);
+          } else {
+            console.log('User not authorized as moderator. User data:', JSON.stringify(userData));
           }
         }
       } catch (error) {
