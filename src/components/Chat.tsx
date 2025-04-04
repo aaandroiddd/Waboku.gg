@@ -110,6 +110,17 @@ export function Chat({
 
   const { messages, loading: messagesLoading, sendMessage, markAsRead, deleteChat } = useMessages(chatId);
   const [loadingState, setLoadingState] = useState<'loading' | 'error' | 'success'>('loading');
+  
+  // Handle loading state changes
+  useEffect(() => {
+    if (messagesLoading) {
+      setLoadingState('loading');
+    } else if (error) {
+      setLoadingState('error');
+    } else {
+      setLoadingState('success');
+    }
+  }, [messagesLoading, error]);
   const { user } = useAuth();
   const { toast } = useToast();
   const router = useRouter();

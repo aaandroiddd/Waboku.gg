@@ -24,7 +24,9 @@ const CRITICAL_ERROR_PATTERNS = [
   'AbortError',
   'QuotaExceededError',
   'PERMISSION_DENIED',
-  'RESOURCE_EXHAUSTED'
+  'RESOURCE_EXHAUSTED',
+  'Bad Request',
+  '400 (Bad Request)'
 ];
 
 export function FirebaseConnectionHandler() {
@@ -182,7 +184,6 @@ export function FirebaseConnectionHandler() {
       console.log('[ConnectionHandler] Initiating immediate reconnection for Listen channel error');
       
       // For this specific error, we'll try a more aggressive approach:
-      // 1. First try a normal reconnection
       errorTimeoutRef.current = setTimeout(async () => {
         try {
           // Try to disable and re-enable the network
@@ -202,6 +203,21 @@ export function FirebaseConnectionHandler() {
             
             // If we get here, the reconnection might have worked
             console.log('[ConnectionHandler] Aggressive reconnection completed, monitoring for success');
+            
+            // For 400 Bad Request errors, we need a more aggressive approach - refresh the page
+            // This is likely due to an invalid session or token that needs to be reset
+            if (errorTracker.current.errors.has('400 (Bad Request)') || 
+                Array.from(errorTracker.current.errors).some(err => err.includes('Bad Request'))) {
+              console.log('[ConnectionHandler] 400 Bad Request detected, refreshing page to reset session');
+              
+              // Short delay before refresh to allow logging to complete
+              setTimeout(() => {
+                if (typeof window !== 'undefined') {
+                  window.location.reload();
+                }
+              }, 1000);
+              return;
+            }
             
             // If we still see errors after a short period, try a page refresh
             setTimeout(() => {

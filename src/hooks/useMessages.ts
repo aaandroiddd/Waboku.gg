@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { getDatabase, ref, onValue, push, set, get, update, remove } from 'firebase/database';
 import { useAuth } from '@/contexts/AuthContext';
-import { getFirebaseServices } from '@/lib/firebase';
+import { getFirebaseServices, database as firebaseDatabase } from '@/lib/firebase';
 
 export interface Message {
   id: string;
@@ -33,9 +33,18 @@ export const useMessages = (chatId?: string) => {
   // Initialize database safely
   useEffect(() => {
     try {
-      const { database: firebaseDatabase } = getFirebaseServices();
+      // First try to use the imported database instance
       if (firebaseDatabase) {
+        console.log('Using pre-initialized Firebase Realtime Database');
         setDatabase(firebaseDatabase);
+        return;
+      }
+      
+      // Fallback to getting it from services
+      const { database: dbFromServices } = getFirebaseServices();
+      if (dbFromServices) {
+        console.log('Using Firebase Realtime Database from services');
+        setDatabase(dbFromServices);
       } else {
         console.error('Firebase Realtime Database not initialized properly');
         setError('Database connection failed');
