@@ -63,15 +63,15 @@ export function MarkAsSoldDialog({
   };
 
   const handleManualMarkAsSold = async () => {
+    if (!onManualMarkAsSold) return;
+    
     setIsProcessing(true);
     try {
-      if (onManualMarkAsSold) {
-        await onManualMarkAsSold();
-        toast({
-          title: "Listing marked as sold",
-          description: "The listing has been manually marked as sold.",
-        });
-      }
+      await onManualMarkAsSold();
+      toast({
+        title: "Listing marked as sold",
+        description: "The listing has been manually marked as sold.",
+      });
       onOpenChange(false);
     } catch (error: any) {
       toast({

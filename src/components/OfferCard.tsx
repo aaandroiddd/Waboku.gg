@@ -38,13 +38,25 @@ export function OfferCard({ offer, type, onCounterOffer }: OfferCardProps) {
       if (type === 'received' && offer.sellerId) {
         try {
           const { db } = getFirebaseServices();
-          const userDoc = await getDoc(doc(db, 'users', offer.sellerId));
+          if (!db) {
+            console.error('Firebase DB not initialized');
+            return;
+          }
+          
+          const userDocRef = doc(db, 'users', offer.sellerId);
+          const userDoc = await getDoc(userDocRef);
+          
           if (userDoc.exists()) {
             const userData = userDoc.data();
-            setHasStripeAccount(!!userData.stripeConnectAccountId && userData.stripeConnectStatus === 'active');
+            const hasActiveStripeAccount = 
+              !!userData.stripeConnectAccountId && 
+              userData.stripeConnectStatus === 'active';
+            
+            setHasStripeAccount(hasActiveStripeAccount);
           }
         } catch (error) {
           console.error('Error checking Stripe account:', error);
+          // Don't update state on error, keep default false
         }
       }
     };

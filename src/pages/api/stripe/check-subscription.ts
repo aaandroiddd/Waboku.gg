@@ -106,7 +106,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     
     try {
       // Initialize Firebase Admin and verify token
-      const admin = getFirebaseAdmin();
+      const { admin } = getFirebaseAdmin();
       console.log(`[Subscription Check ${requestId}] Firebase Admin initialized successfully`);
       
       // Log token details for debugging (safely)

@@ -1,7 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { getFirebaseServices } from '@/lib/firebase';
-import { doc, getDoc, updateDoc, increment } from 'firebase/firestore';
-import { getAuth } from 'firebase-admin/auth';
+import { getFirebaseAdmin } from '@/lib/firebase-admin';
 
 export default async function handler(
   req: NextApiRequest,
@@ -18,24 +16,24 @@ export default async function handler(
       return res.status(400).json({ error: 'Missing listingId parameter' });
     }
 
-    // Initialize Firebase services
-    const { db, admin } = getFirebaseServices();
-    if (!db || !admin) {
+    // Initialize Firebase Admin services
+    const { db, admin } = getFirebaseAdmin();
+    if (!db) {
       console.error('Firebase services not initialized');
       return res.status(500).json({ error: 'Internal server error' });
     }
 
     // Get the listing document
-    const listingRef = doc(db, 'listings', listingId);
-    const listingDoc = await getDoc(listingRef);
+    const listingRef = db.collection('listings').doc(listingId);
+    const listingDoc = await listingRef.get();
 
-    if (!listingDoc.exists()) {
+    if (!listingDoc.exists) {
       return res.status(404).json({ error: 'Listing not found' });
     }
 
     // Don't count views from the listing owner
     const listingData = listingDoc.data();
-    if (userId && userId === listingData.userId) {
+    if (userId && userId === listingData?.userId) {
       return res.status(200).json({ 
         success: true, 
         message: 'View not counted - owner view',
@@ -44,12 +42,12 @@ export default async function handler(
     }
 
     // Increment the view count
-    await updateDoc(listingRef, {
-      viewCount: increment(1)
+    await listingRef.update({
+      viewCount: admin.firestore.FieldValue.increment(1)
     });
 
     // Get the updated view count
-    const updatedListingDoc = await getDoc(listingRef);
+    const updatedListingDoc = await listingRef.get();
     const updatedListingData = updatedListingDoc.data();
 
     return res.status(200).json({ 
