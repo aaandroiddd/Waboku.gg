@@ -12,10 +12,11 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { Menu, LayoutDashboard, Heart, MessageSquare, Settings, Store, LogOut } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { SignOutDialog } from "./SignOutDialog";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
 
 // Dynamically import the auth-dependent navigation component
 const AuthNav = dynamic(() => import("./AuthNav"), {
@@ -32,6 +33,22 @@ export default function Header({ animate = true }: HeaderProps) {
   const isAuthPage = router.pathname.startsWith("/auth/");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [showSignOutDialog, setShowSignOutDialog] = useState(false);
+  const [isMenuAnimating, setIsMenuAnimating] = useState(false);
+  const isMobile = useMediaQuery("(max-width: 768px)");
+  const prefersReducedMotion = useReducedMotion();
+  
+  // Throttle menu opening/closing to prevent performance issues
+  const handleMenuToggle = useCallback((open: boolean) => {
+    if (isMenuAnimating) return;
+    
+    setIsMenuAnimating(true);
+    setIsMobileMenuOpen(open);
+    
+    // Reset animation lock after animation completes
+    setTimeout(() => {
+      setIsMenuAnimating(false);
+    }, 300); // Match this with the animation duration
+  }, [isMenuAnimating]);
 
   const handleSignOut = async () => {
     await signOut();
@@ -44,17 +61,17 @@ export default function Header({ animate = true }: HeaderProps) {
     setIsMobileMenuOpen(false);
   };
 
-  // Animation variants for the slide-down effect
+  // Simplified animation variants for mobile
   const headerVariants = {
-    hidden: { y: 0, opacity: 0 }, // Changed from y: -100 to y: 0 to prevent layout shift
+    hidden: { y: 0, opacity: 0 },
     visible: { 
       y: 0, 
       opacity: 1,
       transition: {
-        type: "spring",
-        damping: 20,
-        stiffness: 100,
-        duration: 0.3 // Reduced from 0.5 to 0.3 for faster appearance
+        type: prefersReducedMotion || isMobile ? "tween" : "spring",
+        damping: isMobile ? 25 : 20,
+        stiffness: isMobile ? 120 : 100,
+        duration: isMobile ? 0.2 : 0.3
       }
     }
   };
@@ -91,22 +108,41 @@ export default function Header({ animate = true }: HeaderProps) {
         {/* Mobile Navigation */}
         <div className="md:hidden flex items-center gap-2">
           <ThemeToggle />
-          <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
+          <Sheet open={isMobileMenuOpen} onOpenChange={handleMenuToggle}>
             <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="md:hidden">
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="md:hidden will-change-transform"
+                style={{ transform: 'translateZ(0)' }} // Force hardware acceleration
+              >
                 <Menu className="h-5 w-5" />
                 <span className="sr-only">Toggle menu</span>
               </Button>
             </SheetTrigger>
-            <SheetContent side="right" className="w-[280px] sm:w-[320px]">
+            <SheetContent 
+              side="right" 
+              className="w-[280px] sm:w-[320px] will-change-transform"
+              style={{ 
+                transform: 'translateZ(0)', // Force hardware acceleration
+                overscrollBehavior: 'contain' // Prevent scroll chaining
+              }}
+            >
               <SheetHeader className="mb-4">
                 <SheetTitle>Menu</SheetTitle>
               </SheetHeader>
-              <nav className="flex flex-col space-y-3">
+              <nav 
+                className="flex flex-col space-y-3 overflow-y-auto overscroll-contain"
+                style={{ 
+                  WebkitOverflowScrolling: 'touch', // Smooth scrolling on iOS
+                  maxHeight: 'calc(100vh - 6rem)' // Prevent overflow issues
+                }}
+              >
                 <Link 
                   href="/" 
                   className="flex items-center gap-2 px-2 py-2 hover:bg-accent rounded-md transition-colors"
                   onClick={() => setIsMobileMenuOpen(false)}
+                  prefetch={false} // Prevent prefetching for better performance
                 >
                   Home
                 </Link>
@@ -114,6 +150,7 @@ export default function Header({ animate = true }: HeaderProps) {
                   href="/listings" 
                   className="flex items-center gap-2 px-2 py-2 hover:bg-accent rounded-md transition-colors"
                   onClick={() => setIsMobileMenuOpen(false)}
+                  prefetch={false}
                 >
                   Browse Listings
                 </Link>
@@ -121,6 +158,7 @@ export default function Header({ animate = true }: HeaderProps) {
                   href="/wanted" 
                   className="flex items-center gap-2 px-2 py-2 hover:bg-accent rounded-md transition-colors"
                   onClick={() => setIsMobileMenuOpen(false)}
+                  prefetch={false}
                 >
                   Wanted Board
                 </Link>
@@ -183,10 +221,10 @@ export default function Header({ animate = true }: HeaderProps) {
                   </>
                 ) : (
                   <div className="flex flex-col gap-2 pt-2">
-                    <Link href="/auth/sign-in">
+                    <Link href="/auth/sign-in" prefetch={false}>
                       <Button variant="outline" className="w-full">Sign In</Button>
                     </Link>
-                    <Link href="/auth/sign-up">
+                    <Link href="/auth/sign-up" prefetch={false}>
                       <Button className="w-full bg-sky-400 hover:bg-sky-500">Get Started</Button>
                     </Link>
                   </div>

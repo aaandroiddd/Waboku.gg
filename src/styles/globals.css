@@ -2,6 +2,75 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Mobile performance optimizations */
+@media (max-width: 768px) {
+  html, body {
+    /* Optimize scrolling on mobile */
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
+    /* Prevent unnecessary repaints */
+    will-change: scroll-position;
+    /* Force hardware acceleration for smoother scrolling */
+    transform: translateZ(0);
+  }
+  
+  /* Optimize animations for mobile */
+  .animate-title, 
+  .animate-subtitle,
+  .float-animation,
+  .motion-safe\:animate-float {
+    /* Reduce animation complexity on mobile */
+    animation-duration: 8s !important;
+    /* Use transform for better performance */
+    transform: translateZ(0);
+  }
+  
+  /* Optimize menu transitions */
+  .sheet-content {
+    will-change: transform;
+    transform: translateZ(0);
+  }
+  
+  /* Optimize background animations for mobile */
+  .hero-background::before,
+  .hero-background::after,
+  .dark .hero-background::before,
+  .dark .hero-background::after,
+  .midnight .hero-background::before,
+  .midnight .hero-background::after {
+    /* Slower animations on mobile */
+    animation-duration: 20s !important;
+    /* Reduce opacity for better performance */
+    opacity: 0.2 !important;
+  }
+  
+  /* Simplify gradient animations on mobile */
+  .dark .hero-background,
+  .midnight .hero-background {
+    background: linear-gradient(217deg, rgba(0, 140, 255, 0.05), rgba(0, 140, 255, 0) 70.71%);
+    background-color: var(--background);
+  }
+  
+  /* Optimize keyframe animations */
+  @keyframes gradientMove {
+    0% {
+      background-position: 0 0;
+    }
+    100% {
+      background-position: 120px 120px;
+    }
+  }
+  
+  @keyframes starsMove {
+    0% {
+      background-position: 0 0;
+    }
+    100% {
+      background-position: 240px 240px;
+    }
+  }
+}
+
 .hero-background {
   position: absolute;
   top: 0;

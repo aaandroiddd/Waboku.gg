@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 
 interface AnimatedBackgroundProps {
   className?: string;
@@ -22,6 +22,27 @@ interface Card {
 const AnimatedBackground: React.FC<AnimatedBackgroundProps> = ({ className }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isVisible, setIsVisible] = useState(true);
+  const [isMobile, setIsMobile] = useState(false);
+  const [isLowEndDevice, setIsLowEndDevice] = useState(false);
+  const cardsRef = useRef<Card[]>([]);
+  const frameCountRef = useRef(0);
+  
+  // Detect device capabilities
+  const detectDeviceCapabilities = useCallback(() => {
+    // Check if we're on a mobile device
+    const mobile = window.innerWidth < 768;
+    setIsMobile(mobile);
+    
+    // Check for low-end devices based on hardware concurrency
+    // Most low-end mobile devices have 4 or fewer cores
+    const lowEnd = mobile && (
+      navigator.hardwareConcurrency === undefined || 
+      navigator.hardwareConcurrency <= 4
+    );
+    setIsLowEndDevice(lowEnd);
+    
+    return { mobile, lowEnd };
+  }, []);
   
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -30,58 +51,80 @@ const AnimatedBackground: React.FC<AnimatedBackgroundProps> = ({ className }) =>
     const ctx = canvas.getContext('2d', { alpha: true });
     if (!ctx) return;
     
-    // Check if we're on a mobile device
-    const isMobile = window.innerWidth < 768;
+    // Detect device capabilities
+    const { mobile, lowEnd } = detectDeviceCapabilities();
     
-    // Set initial canvas dimensions
+    // Set initial canvas dimensions with proper device pixel ratio handling
     const updateCanvasDimensions = () => {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
+      const pixelRatio = mobile ? 1 : (window.devicePixelRatio || 1);
+      const displayWidth = window.innerWidth;
+      const displayHeight = window.innerHeight;
+      
+      // Set canvas size with pixel ratio consideration
+      canvas.width = displayWidth * pixelRatio;
+      canvas.height = displayHeight * pixelRatio;
+      
+      // Scale the context to ensure correct drawing dimensions
+      ctx.scale(pixelRatio, pixelRatio);
+      
+      // Set CSS size
+      canvas.style.width = `${displayWidth}px`;
+      canvas.style.height = `${displayHeight}px`;
     };
     
     updateCanvasDimensions();
     
-    // Debounce resize handler for better performance
+    // Throttled resize handler for better performance
     let resizeTimeout: NodeJS.Timeout;
     const handleResize = () => {
+      // Cancel previous resize timeout
       clearTimeout(resizeTimeout);
+      
+      // Set a timeout to handle resize after user stops resizing
       resizeTimeout = setTimeout(() => {
+        const { mobile: newMobile } = detectDeviceCapabilities();
         updateCanvasDimensions();
         // Recreate cards when canvas is resized to ensure proper distribution
-        initializeCards();
-      }, 200);
+        initializeCards(newMobile);
+      }, mobile ? 300 : 200); // Longer delay on mobile for better performance
     };
     
-    // Card shapes
-    let cards: Card[] = [];
-    
     // Initialize cards with proper positioning
-    const initializeCards = () => {
+    const initializeCards = (isMobileDevice: boolean) => {
       // Clear existing cards
-      cards = [];
+      cardsRef.current = [];
       
       // Reduce card count on mobile for better performance
-      const cardCount = isMobile 
-        ? Math.min(4, Math.floor(window.innerWidth / 250)) 
-        : Math.min(10, Math.floor(window.innerWidth / 200));
+      // Further reduce for low-end devices
+      const cardCount = lowEnd 
+        ? Math.min(2, Math.floor(window.innerWidth / 400))
+        : isMobileDevice 
+          ? Math.min(3, Math.floor(window.innerWidth / 300)) 
+          : Math.min(8, Math.floor(window.innerWidth / 200));
       
       for (let i = 0; i < cardCount; i++) {
-        const width = 60 + Math.random() * 40;
+        // Smaller cards on mobile
+        const width = isMobileDevice ? (50 + Math.random() * 30) : (60 + Math.random() * 40);
         const height = width * 1.4; // Card aspect ratio
         
-        cards.push({
-          x: Math.random() * canvas.width,
-          y: Math.random() * canvas.height,
+        // Slower movement and rotation on mobile
+        const speedFactor = isMobileDevice ? 0.5 : 1;
+        const rotationSpeed = (Math.random() - 0.5) * 0.1 * speedFactor;
+        const moveSpeed = (Math.random() - 0.5) * 0.1 * speedFactor;
+        
+        cardsRef.current.push({
+          x: Math.random() * window.innerWidth,
+          y: Math.random() * window.innerHeight,
           width,
           height,
           rotation: Math.random() * 360,
-          rotationSpeed: (Math.random() - 0.5) * 0.1, // Reduced rotation speed
-          opacity: 0.02 + Math.random() * 0.03, // Reduced opacity
+          rotationSpeed,
+          opacity: isMobileDevice ? (0.01 + Math.random() * 0.02) : (0.02 + Math.random() * 0.03), // Lower opacity on mobile
           color: getRandomColor(),
           scale: 0.8 + Math.random() * 0.4,
           scaleDirection: Math.random() > 0.5 ? 1 : -1,
-          moveX: (Math.random() - 0.5) * 0.1, // Reduced movement speed
-          moveY: (Math.random() - 0.5) * 0.1  // Reduced movement speed
+          moveX: moveSpeed,
+          moveY: moveSpeed
         });
       }
     };
@@ -98,12 +141,14 @@ const AnimatedBackground: React.FC<AnimatedBackgroundProps> = ({ className }) =>
     }
     
     // Initialize cards
-    initializeCards();
+    initializeCards(mobile);
     
     // Animation variables
     let animationFrameId: number;
     let lastFrameTime = 0;
-    const targetFPS = isMobile ? 30 : 60; // Lower FPS on mobile
+    
+    // Adjust target FPS based on device capability
+    const targetFPS = lowEnd ? 20 : (mobile ? 30 : 60);
     const frameInterval = 1000 / targetFPS;
     
     // Visibility change detection
@@ -111,20 +156,22 @@ const AnimatedBackground: React.FC<AnimatedBackgroundProps> = ({ className }) =>
       setIsVisible(!document.hidden);
     };
     
-    // Intersection Observer to pause animation when not in viewport
+    // Intersection Observer with lower threshold for mobile
+    const observerThreshold = mobile ? 0.05 : 0.1;
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach(entry => {
           setIsVisible(entry.isIntersecting);
         });
       },
-      { threshold: 0.1 }
+      { threshold: observerThreshold }
     );
     
     observer.observe(canvas);
     
-    // Animation loop with frame rate control
+    // Animation loop with frame rate control and mobile optimizations
     const render = (timestamp: number) => {
+      // Skip rendering if not visible
       if (!isVisible) {
         animationFrameId = window.requestAnimationFrame(render);
         return;
@@ -138,46 +185,57 @@ const AnimatedBackground: React.FC<AnimatedBackgroundProps> = ({ className }) =>
       }
       
       lastFrameTime = timestamp - (elapsed % frameInterval);
+      frameCountRef.current++;
       
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      // Clear canvas
+      ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
+      
+      // On mobile, only update animation every other frame for better performance
+      const shouldUpdatePositions = !mobile || (frameCountRef.current % 2 === 0);
       
       // Draw cards
-      cards.forEach(card => {
-        // Update card position and rotation
-        card.rotation += card.rotationSpeed;
-        card.x += card.moveX;
-        card.y += card.moveY;
-        
-        // Bounce off edges
-        if (card.x < -card.width) card.x = canvas.width + card.width;
-        if (card.x > canvas.width + card.width) card.x = -card.width;
-        if (card.y < -card.height) card.y = canvas.height + card.height;
-        if (card.y > canvas.height + card.height) card.y = -card.height;
-        
-        // Subtle scale animation - reduced frequency
-        card.scale += 0.0002 * card.scaleDirection;
-        if (card.scale > 1.2 || card.scale < 0.8) {
-          card.scaleDirection *= -1;
+      cardsRef.current.forEach(card => {
+        // Update card position and rotation - only on certain frames for mobile
+        if (shouldUpdatePositions) {
+          card.rotation += card.rotationSpeed;
+          card.x += card.moveX;
+          card.y += card.moveY;
+          
+          // Bounce off edges
+          if (card.x < -card.width) card.x = window.innerWidth + card.width;
+          if (card.x > window.innerWidth + card.width) card.x = -card.width;
+          if (card.y < -card.height) card.y = window.innerHeight + card.height;
+          if (card.y > window.innerHeight + card.height) card.y = -card.height;
+          
+          // Subtle scale animation - reduced frequency and only on certain frames
+          if (frameCountRef.current % 4 === 0) {
+            card.scale += 0.0002 * card.scaleDirection;
+            if (card.scale > 1.2 || card.scale < 0.8) {
+              card.scaleDirection *= -1;
+            }
+          }
         }
         
-        // Draw card
+        // Draw card with hardware acceleration hints
         ctx.save();
         ctx.translate(card.x, card.y);
         ctx.rotate((card.rotation * Math.PI) / 180);
         ctx.scale(card.scale, card.scale);
         ctx.globalAlpha = card.opacity;
         
-        // Card outline
+        // Card outline - simplified for mobile
         ctx.strokeStyle = card.color;
-        ctx.lineWidth = 1;
+        ctx.lineWidth = mobile ? 0.5 : 1; // Thinner lines on mobile
         ctx.beginPath();
         ctx.roundRect(-card.width / 2, -card.height / 2, card.width, card.height, 8);
         ctx.stroke();
         
-        // Card inner frame - simplified for better performance
-        ctx.beginPath();
-        ctx.roundRect(-card.width / 2 + 5, -card.height / 2 + 5, card.width - 10, card.height / 2 - 10, 4);
-        ctx.stroke();
+        // Card inner frame - only draw on desktop or every 3rd frame on mobile
+        if (!mobile || frameCountRef.current % 3 === 0) {
+          ctx.beginPath();
+          ctx.roundRect(-card.width / 2 + 5, -card.height / 2 + 5, card.width - 10, card.height / 2 - 10, 4);
+          ctx.stroke();
+        }
         
         ctx.restore();
       });
@@ -188,8 +246,8 @@ const AnimatedBackground: React.FC<AnimatedBackgroundProps> = ({ className }) =>
     // Start animation
     animationFrameId = window.requestAnimationFrame(render);
     
-    // Set up event listeners
-    window.addEventListener('resize', handleResize);
+    // Set up event listeners with passive option for better touch performance
+    window.addEventListener('resize', handleResize, { passive: true });
     document.addEventListener('visibilitychange', handleVisibilityChange);
     
     // Cleanup
@@ -200,12 +258,13 @@ const AnimatedBackground: React.FC<AnimatedBackgroundProps> = ({ className }) =>
       window.cancelAnimationFrame(animationFrameId);
       clearTimeout(resizeTimeout);
     };
-  }, [isVisible]);
+  }, [detectDeviceCapabilities, isVisible]);
   
   return (
     <canvas 
       ref={canvasRef} 
-      className={`fixed inset-0 w-full h-full pointer-events-none z-0 ${className || ''}`}
+      className={`fixed inset-0 w-full h-full pointer-events-none z-0 will-change-transform ${className || ''}`}
+      style={{ transform: 'translateZ(0)' }} // Force hardware acceleration
       aria-hidden="true"
     />
   );
