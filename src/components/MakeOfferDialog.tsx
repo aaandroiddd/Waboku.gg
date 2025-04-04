@@ -9,6 +9,10 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/router';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { StateSelect } from '@/components/StateSelect';
 
 interface MakeOfferDialogProps {
   open: boolean;
@@ -34,6 +38,16 @@ export function MakeOfferDialog({
   const [error, setError] = useState<string | null>(null);
   const { user } = useAuth();
   const router = useRouter();
+  const [deliveryMethod, setDeliveryMethod] = useState<'shipping' | 'pickup'>('shipping');
+  
+  // Shipping address state
+  const [name, setName] = useState('');
+  const [line1, setLine1] = useState('');
+  const [line2, setLine2] = useState('');
+  const [city, setCity] = useState('');
+  const [state, setState] = useState('');
+  const [postalCode, setPostalCode] = useState('');
+  const [country, setCountry] = useState('US');
 
   // Reset error and form when dialog opens/closes
   const handleOpenChange = (open: boolean) => {
@@ -66,12 +80,34 @@ export function MakeOfferDialog({
       setError('Please enter a valid amount greater than 0');
       return;
     }
+    
+    // Validate shipping information if shipping is selected
+    if (deliveryMethod === 'shipping') {
+      if (!name || !line1 || !city || !state || !postalCode) {
+        setError('Please complete all required shipping information');
+        return;
+      }
+    }
 
     setIsSubmitting(true);
 
     try {
       // Get the auth token
       const token = await user.getIdToken();
+      
+      // Prepare shipping address if applicable
+      let shippingAddress = null;
+      if (deliveryMethod === 'shipping') {
+        shippingAddress = {
+          name,
+          line1,
+          line2: line2 || undefined,
+          city,
+          state,
+          postal_code: postalCode,
+          country
+        };
+      }
       
       // Prepare the request payload
       const payload = {
@@ -82,7 +118,9 @@ export function MakeOfferDialog({
           title: listingTitle || 'Unknown Listing',
           price: listingPrice || 0,
           imageUrl: listingImageUrl || ''
-        }
+        },
+        shippingAddress,
+        isPickup: deliveryMethod === 'pickup'
       };
       
       console.log('Sending offer request with data:', {
@@ -226,6 +264,123 @@ export function MakeOfferDialog({
                 />
               </div>
               <p className="text-xs text-muted-foreground">Enter the amount you want to offer for this item</p>
+            </div>
+            
+            <div className="grid gap-2 mt-2">
+              <Label>Delivery Method</Label>
+              <Tabs 
+                value={deliveryMethod} 
+                onValueChange={(value) => setDeliveryMethod(value as 'shipping' | 'pickup')}
+                className="w-full"
+              >
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="shipping">Shipping</TabsTrigger>
+                  <TabsTrigger value="pickup">Local Pickup</TabsTrigger>
+                </TabsList>
+                <TabsContent value="shipping" className="mt-4">
+                  <div className="space-y-3">
+                    <div className="grid gap-2">
+                      <Label htmlFor="name">Full Name</Label>
+                      <Input
+                        id="name"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        placeholder="John Doe"
+                        required={deliveryMethod === 'shipping'}
+                        disabled={isSubmitting}
+                      />
+                    </div>
+                    
+                    <div className="grid gap-2">
+                      <Label htmlFor="line1">Address Line 1</Label>
+                      <Input
+                        id="line1"
+                        value={line1}
+                        onChange={(e) => setLine1(e.target.value)}
+                        placeholder="123 Main St"
+                        required={deliveryMethod === 'shipping'}
+                        disabled={isSubmitting}
+                      />
+                    </div>
+                    
+                    <div className="grid gap-2">
+                      <Label htmlFor="line2">Address Line 2 (Optional)</Label>
+                      <Input
+                        id="line2"
+                        value={line2}
+                        onChange={(e) => setLine2(e.target.value)}
+                        placeholder="Apt 4B"
+                        disabled={isSubmitting}
+                      />
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="grid gap-2">
+                        <Label htmlFor="city">City</Label>
+                        <Input
+                          id="city"
+                          value={city}
+                          onChange={(e) => setCity(e.target.value)}
+                          placeholder="New York"
+                          required={deliveryMethod === 'shipping'}
+                          disabled={isSubmitting}
+                        />
+                      </div>
+                      
+                      <div className="grid gap-2">
+                        <Label htmlFor="state">State</Label>
+                        <StateSelect
+                          value={state}
+                          onValueChange={setState}
+                          disabled={isSubmitting}
+                          required={deliveryMethod === 'shipping'}
+                        />
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="grid gap-2">
+                        <Label htmlFor="postalCode">ZIP Code</Label>
+                        <Input
+                          id="postalCode"
+                          value={postalCode}
+                          onChange={(e) => setPostalCode(e.target.value)}
+                          placeholder="10001"
+                          required={deliveryMethod === 'shipping'}
+                          disabled={isSubmitting}
+                        />
+                      </div>
+                      
+                      <div className="grid gap-2">
+                        <Label htmlFor="country">Country</Label>
+                        <Select
+                          value={country}
+                          onValueChange={setCountry}
+                          disabled={isSubmitting}
+                        >
+                          <SelectTrigger id="country">
+                            <SelectValue placeholder="Select country" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="US">United States</SelectItem>
+                            <SelectItem value="CA">Canada</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  </div>
+                </TabsContent>
+                <TabsContent value="pickup" className="mt-4">
+                  <div className="space-y-3">
+                    <Alert>
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertDescription className="ml-2">
+                        You'll arrange pickup details with the seller if your offer is accepted.
+                      </AlertDescription>
+                    </Alert>
+                  </div>
+                </TabsContent>
+              </Tabs>
             </div>
             
             {error && (

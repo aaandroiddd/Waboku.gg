@@ -62,24 +62,55 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ message: 'Only accepted offers can be converted to orders' });
     }
     
-    // Create a placeholder shipping address
-    const placeholderAddress = {
-      name: 'To be provided by buyer',
-      line1: 'Address pending',
-      city: 'TBD',
-      state: 'TBD',
-      postal_code: 'TBD',
-      country: 'TBD'
+    // Generate a unique ID for the order (similar to Stripe format)
+    const generateOrderId = () => {
+      const prefix = 'pi_';
+      const timestamp = Date.now().toString().substring(0, 10);
+      const randomChars = Math.random().toString(36).substring(2, 10).toUpperCase();
+      return `${prefix}${timestamp}${randomChars}`;
     };
+    
+    const customOrderId = generateOrderId();
+    console.log(`Generated custom order ID: ${customOrderId}`);
+    
+    // Use shipping address from offer if available, otherwise use placeholder
+    let shippingAddress;
+    let isPickup = false;
+    
+    if (offerData.isPickup) {
+      isPickup = true;
+      shippingAddress = {
+        name: 'Local Pickup',
+        line1: 'To be arranged with seller',
+        city: 'N/A',
+        state: 'N/A',
+        postal_code: 'N/A',
+        country: 'N/A'
+      };
+    } else if (offerData.shippingAddress) {
+      shippingAddress = offerData.shippingAddress;
+    } else {
+      // Fallback to placeholder
+      shippingAddress = {
+        name: 'To be provided by buyer',
+        line1: 'Address pending',
+        city: 'TBD',
+        state: 'TBD',
+        postal_code: 'TBD',
+        country: 'TBD'
+      };
+    }
     
     // Create the order
     const orderData = {
+      id: customOrderId, // Use the custom ID
       listingId: offerData.listingId,
       buyerId: offerData.buyerId,
       sellerId: offerData.sellerId,
       amount: offerData.amount,
       status: 'pending',
-      shippingAddress: placeholderAddress,
+      shippingAddress: shippingAddress,
+      isPickup: isPickup,
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
       listingSnapshot: offerData.listingSnapshot || {
@@ -87,14 +118,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         price: offerData.amount || 0,
         imageUrl: ''
       },
+      offerPrice: offerData.amount, // Store the accepted offer price
       offerId: offerId // Reference to the original offer
     };
     
-    // Create the order document
-    console.log('Creating order document via server-side API...');
-    const orderRef = await db.collection('orders').add(orderData);
-    const orderId = orderRef.id;
-    console.log('Order created with ID:', orderId);
+    // Create the order document with the custom ID
+    console.log('Creating order document via server-side API with custom ID...');
+    const orderRef = db.collection('orders').doc(customOrderId);
+    await orderRef.set(orderData);
+    const orderId = customOrderId;
+    console.log('Order created with custom ID:', orderId);
     
     // Create references in user-specific subcollections for both buyer and seller
     console.log('Creating user-specific order references...');
@@ -136,7 +169,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(200).json({ 
       success: true, 
       message: 'Order created successfully',
-      orderId: orderRef.id
+      orderId: orderId
     });
   } catch (error: any) {
     console.error('Error in create-order API:', error);

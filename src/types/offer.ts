@@ -14,4 +14,14 @@ export interface Offer {
     price: number;
     imageUrl: string;
   };
+  shippingAddress?: {
+    name: string;
+    line1: string;
+    line2?: string;
+    city: string;
+    state: string;
+    postal_code: string;
+    country: string;
+  };
+  isPickup?: boolean; // Flag to indicate if this is a pickup instead of shipping
 }
