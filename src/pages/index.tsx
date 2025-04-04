@@ -11,122 +11,17 @@ import Head from "next/head";
 import Header from "@/components/Header";
 import { GameCategories } from "@/components/GameCategories";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Slider } from "@/components/ui/slider";
 import { TrendingSearches } from "@/components/TrendingSearches";
 import { checkAndClearStaleAuthData } from "@/lib/auth-token-manager";
 import AnimatedBackground from "@/components/AnimatedBackground";
 import { ContentLoader } from "@/components/ContentLoader";
 import { useListings } from "@/hooks/useListings";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { Badge } from "@/components/ui/badge";
-import { Search, MapPin, Star, Check, Filter, X } from "lucide-react";
 import Link from "next/link";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-  SheetFooter,
-} from "@/components/ui/sheet";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { GAME_NAME_MAPPING } from '@/lib/game-mappings';
 
 // Import game mappings from centralized file
 import { GAME_MAPPING, OTHER_GAME_MAPPING } from '@/lib/game-mappings';
-
-const games = [
-  { value: "all", label: "All Categories" },
-  ...Object.entries(GAME_MAPPING).map(([label, value]) => ({ value, label })),
-  ...Object.entries(OTHER_GAME_MAPPING).map(([label, value]) => ({ value, label })),
-];
-
-const conditions = [
-  { value: "all", label: "All Conditions" },
-  { value: "mint", label: "Mint" },
-  { value: "near-mint", label: "Near Mint" },
-  { value: "excellent", label: "Excellent" },
-  { value: "good", label: "Good" },
-  { value: "light-played", label: "Light Played" },
-  { value: "played", label: "Played" },
-  { value: "poor", label: "Poor" },
-];
-
-// US States for location filter
-const usStates = [
-  { value: "all", label: "All Locations" },
-  { value: "al", label: "Alabama" },
-  { value: "ak", label: "Alaska" },
-  { value: "az", label: "Arizona" },
-  { value: "ar", label: "Arkansas" },
-  { value: "ca", label: "California" },
-  { value: "co", label: "Colorado" },
-  { value: "ct", label: "Connecticut" },
-  { value: "de", label: "Delaware" },
-  { value: "fl", label: "Florida" },
-  { value: "ga", label: "Georgia" },
-  { value: "hi", label: "Hawaii" },
-  { value: "id", label: "Idaho" },
-  { value: "il", label: "Illinois" },
-  { value: "in", label: "Indiana" },
-  { value: "ia", label: "Iowa" },
-  { value: "ks", label: "Kansas" },
-  { value: "ky", label: "Kentucky" },
-  { value: "la", label: "Louisiana" },
-  { value: "me", label: "Maine" },
-  { value: "md", label: "Maryland" },
-  { value: "ma", label: "Massachusetts" },
-  { value: "mi", label: "Michigan" },
-  { value: "mn", label: "Minnesota" },
-  { value: "ms", label: "Mississippi" },
-  { value: "mo", label: "Missouri" },
-  { value: "mt", label: "Montana" },
-  { value: "ne", label: "Nebraska" },
-  { value: "nv", label: "Nevada" },
-  { value: "nh", label: "New Hampshire" },
-  { value: "nj", label: "New Jersey" },
-  { value: "nm", label: "New Mexico" },
-  { value: "ny", label: "New York" },
-  { value: "nc", label: "North Carolina" },
-  { value: "nd", label: "North Dakota" },
-  { value: "oh", label: "Ohio" },
-  { value: "ok", label: "Oklahoma" },
-  { value: "or", label: "Oregon" },
-  { value: "pa", label: "Pennsylvania" },
-  { value: "ri", label: "Rhode Island" },
-  { value: "sc", label: "South Carolina" },
-  { value: "sd", label: "South Dakota" },
-  { value: "tn", label: "Tennessee" },
-  { value: "tx", label: "Texas" },
-  { value: "ut", label: "Utah" },
-  { value: "vt", label: "Vermont" },
-  { value: "va", label: "Virginia" },
-  { value: "wa", label: "Washington" },
-  { value: "wv", label: "West Virginia" },
-  { value: "wi", label: "Wisconsin" },
-  { value: "wy", label: "Wyoming" }
-];
 
 const subtitles = [
   "Your deck isn't 'meta' until your wallet cries.",
@@ -212,16 +107,10 @@ const scaleIn = {
 export default function Home() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedState, setSelectedState] = useState("all");
-  const [selectedGame, setSelectedGame] = useState("all");
-  const [selectedCondition, setSelectedCondition] = useState("all");
-  const [priceRange, setPriceRange] = useState([0, 50000]);
-  const [stateOpen, setStateOpen] = useState(false);
-  const [filterOpen, setFilterOpen] = useState(false);
   const [randomSubtitle] = useState(() => 
     subtitles[Math.floor(Math.random() * subtitles.length)]
   );
   const [listings, setListings] = useState<Listing[]>([]);
-  const [filteredListings, setFilteredListings] = useState<Listing[]>([]);
   const [loading, setLoading] = useState(true);
   const [displayCount, setDisplayCount] = useState(8);
 
@@ -292,7 +181,6 @@ export default function Home() {
       }
       
       setListings(processedListings);
-      setFilteredListings(processedListings);
       setLoading(false);
     }
   }, [allListings, isLoading, latitude, longitude]);
@@ -306,104 +194,6 @@ export default function Home() {
       }
     }
   }, []);
-
-  const [activeSearchParams, setActiveSearchParams] = useState({
-    query: "",
-    state: "all",
-    game: "all",
-    condition: "all",
-    priceRange: [0, 1000]
-  });
-
-  useEffect(() => {
-    // First filter out inactive listings
-    let filtered = [...listings].filter(listing => listing.status === 'active');
-
-    // Apply search query filter
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(listing => 
-        listing.title?.toLowerCase().includes(query) ||
-        listing.description?.toLowerCase().includes(query)
-      );
-    }
-
-    // Apply game filter
-    if (selectedGame !== "all") {
-      filtered = filtered.filter(listing => {
-        const listingGameLower = (listing.game?.toLowerCase() || '').trim();
-        return GAME_NAME_MAPPING[selectedGame]?.some(name => 
-          listingGameLower === name.toLowerCase().trim()
-        ) || false;
-      });
-    }
-
-    // Apply condition filter
-    if (selectedCondition !== "all") {
-      filtered = filtered.filter(listing => 
-        listing.condition?.toLowerCase() === selectedCondition.toLowerCase()
-      );
-    }
-
-    // Apply location filter
-    if (selectedState !== "all") {
-      filtered = filtered.filter(listing => 
-        listing.state?.toLowerCase() === selectedState.toLowerCase()
-      );
-    }
-
-    // Apply price filter
-    filtered = filtered.filter(listing => 
-      listing.price >= priceRange[0] && 
-      listing.price <= priceRange[1]
-    );
-
-    // Log filtering results for debugging
-    console.log(`Filtering results: ${listings.length} total → ${filtered.length} after filters`);
-    console.log('Applied filters:', {
-      searchQuery: searchQuery || 'none',
-      game: selectedGame,
-      condition: selectedCondition,
-      state: selectedState,
-      priceRange
-    });
-
-    // If we have specific listings we're looking for, check if they're in the filtered results
-    const debugListingIds = ['BND7c1ejRRZdlGLSCME', 'BtND7c1ejRRZdlGLSCME']; // Add specific listing IDs to debug
-    for (const debugId of debugListingIds) {
-      const inOriginal = listings.some(l => l.id === debugId);
-      const inFiltered = filtered.some(l => l.id === debugId);
-      
-      if (inOriginal && !inFiltered) {
-        // Find the listing and log why it was filtered out
-        const listing = listings.find(l => l.id === debugId);
-        const listingGameLower = (listing?.game?.toLowerCase() || '').trim();
-        const matchesGameFilter = selectedGame === "all" || 
-          (GAME_NAME_MAPPING[selectedGame]?.some(name => 
-            listingGameLower === name.toLowerCase().trim()
-          ) || false);
-        
-        console.log(`Debug listing ${debugId} was filtered out:`, {
-          title: listing?.title,
-          game: listing?.game,
-          condition: listing?.condition,
-          state: listing?.state,
-          price: listing?.price,
-          matchesGameFilter,
-          gameNames: GAME_NAME_MAPPING[selectedGame],
-          matchesConditionFilter: selectedCondition === "all" || 
-            (listing?.condition?.toLowerCase() || '').trim() === selectedCondition.toLowerCase().trim(),
-          matchesStateFilter: selectedState === "all" || 
-            (listing?.state?.toLowerCase() || '').trim() === selectedState.toLowerCase().trim(),
-          matchesPriceFilter: listing?.price >= priceRange[0] && listing?.price <= priceRange[1]
-        });
-      } else if (inOriginal && inFiltered) {
-        console.log(`Debug listing ${debugId} passed all filters and is visible`);
-      }
-    }
-
-    setFilteredListings(filtered);
-  }, [listings, searchQuery, selectedGame, selectedCondition, selectedState, priceRange]);
 
   const router = useRouter();
 
@@ -445,22 +235,6 @@ export default function Home() {
       if (selectedState !== 'all') {
         queryParams.state = selectedState;
       }
-      
-      if (selectedGame !== 'all') {
-        queryParams.game = selectedGame;
-      }
-      
-      if (selectedCondition !== 'all') {
-        queryParams.condition = selectedCondition;
-      }
-      
-      if (priceRange[0] !== 0) {
-        queryParams.minPrice = priceRange[0];
-      }
-      
-      if (priceRange[1] !== 50000) {
-        queryParams.maxPrice = priceRange[1];
-      }
 
       // Update URL with search parameters
       router.push({
@@ -471,13 +245,6 @@ export default function Home() {
       console.error('Search error:', error);
       alert('An error occurred while processing your search. Please try again.');
     }
-  };
-
-  const resetFilters = () => {
-    setSelectedGame("all");
-    setSelectedCondition("all");
-    setPriceRange([0, 50000]);
-    setFilterOpen(false);
   };
 
   return (
@@ -548,111 +315,11 @@ export default function Home() {
                       />
                     </div>
                     
-                    <div className="flex gap-2">
-                      <div className="flex-1">
-                        <StateSelect
-                          value={selectedState}
-                          onValueChange={(state) => setSelectedState(state.toLowerCase())}
-                        />
-                      </div>
-                      <Sheet open={filterOpen} onOpenChange={setFilterOpen}>
-                        <SheetTrigger asChild>
-                          <Button variant="outline" className="h-12">
-                            <Filter className="h-4 w-4" />
-                          </Button>
-                        </SheetTrigger>
-                        <SheetContent>
-                          <SheetHeader>
-                            <SheetTitle>Filters</SheetTitle>
-                            <SheetDescription>
-                              Refine your search with additional filters
-                            </SheetDescription>
-                          </SheetHeader>
-                          <div className="py-4 space-y-4">
-                            <div className="space-y-2">
-                              <label className="text-sm font-medium">Category</label>
-                              <Select value={selectedGame} onValueChange={setSelectedGame}>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Select category" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {games.map((game) => (
-                                    <SelectItem key={game.value} value={game.value}>
-                                      {game.label}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </div>
-                            <div className="space-y-2">
-                              <label className="text-sm font-medium">Condition</label>
-                              <Select value={selectedCondition} onValueChange={setSelectedCondition}>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Select condition" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {conditions.map((condition) => (
-                                    <SelectItem key={condition.value} value={condition.value}>
-                                      {condition.label}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </div>
-                            <div className="space-y-2">
-                              <label className="text-sm font-medium">Price Range</label>
-                              <div className="pt-4">
-                                <Slider
-                                  value={priceRange}
-                                  min={0}
-                                  max={50000}
-                                  step={10}
-                                  onValueChange={setPriceRange}
-                                />
-                                <div className="flex items-center gap-2 mt-2">
-                                  <div className="flex items-center">
-                                    <span className="text-sm mr-2">$</span>
-                                    <Input
-                                      type="number"
-                                      value={priceRange[0]}
-                                      onChange={(e) => {
-                                        const value = Number(e.target.value);
-                                        if (value >= 0 && value <= priceRange[1]) {
-                                          setPriceRange([value, priceRange[1]]);
-                                        }
-                                      }}
-                                      className="w-24 h-8"
-                                      min={0}
-                                      max={priceRange[1]}
-                                    />
-                                  </div>
-                                  <span className="text-sm">to</span>
-                                  <div className="flex items-center">
-                                    <span className="text-sm mr-2">$</span>
-                                    <Input
-                                      type="number"
-                                      value={priceRange[1]}
-                                      onChange={(e) => {
-                                        const value = Number(e.target.value);
-                                        if (value >= priceRange[0] && value <= 50000) {
-                                          setPriceRange([priceRange[0], value]);
-                                        }
-                                      }}
-                                      className="w-24 h-8"
-                                      min={priceRange[0]}
-                                      max={50000}
-                                    />
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                          <SheetFooter>
-                            <Button variant="outline" onClick={resetFilters}>Reset</Button>
-                            <Button onClick={() => setFilterOpen(false)}>Apply Filters</Button>
-                          </SheetFooter>
-                        </SheetContent>
-                      </Sheet>
+                    <div className="flex-1">
+                      <StateSelect
+                        value={selectedState}
+                        onValueChange={(state) => setSelectedState(state.toLowerCase())}
+                      />
                     </div>
                   </div>
 
@@ -674,113 +341,11 @@ export default function Home() {
                       />
                     </div>
                     
-                    <div className="flex gap-2">
-                      <div className="w-[180px]">
-                        <StateSelect
-                          value={selectedState}
-                          onValueChange={(state) => setSelectedState(state.toLowerCase())}
-                        />
-                      </div>
-                      
-                      <Sheet open={filterOpen} onOpenChange={setFilterOpen}>
-                        <SheetTrigger asChild>
-                          <Button variant="outline" className="h-12">
-                            <Filter className="mr-2 h-4 w-4" />
-                            <span className="hidden sm:inline">Filters</span>
-                          </Button>
-                        </SheetTrigger>
-                        <SheetContent>
-                          <SheetHeader>
-                            <SheetTitle>Filters</SheetTitle>
-                            <SheetDescription>
-                              Refine your search with additional filters
-                            </SheetDescription>
-                          </SheetHeader>
-                          <div className="py-4 space-y-4">
-                            <div className="space-y-2">
-                              <label className="text-sm font-medium">Category</label>
-                              <Select value={selectedGame} onValueChange={setSelectedGame}>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Select category" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {games.map((game) => (
-                                    <SelectItem key={game.value} value={game.value}>
-                                      {game.label}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </div>
-                            <div className="space-y-2">
-                              <label className="text-sm font-medium">Condition</label>
-                              <Select value={selectedCondition} onValueChange={setSelectedCondition}>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Select condition" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {conditions.map((condition) => (
-                                    <SelectItem key={condition.value} value={condition.value}>
-                                      {condition.label}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </div>
-                            <div className="space-y-2">
-                              <label className="text-sm font-medium">Price Range</label>
-                              <div className="pt-4">
-                                <Slider
-                                  value={priceRange}
-                                  min={0}
-                                  max={50000}
-                                  step={10}
-                                  onValueChange={setPriceRange}
-                                />
-                                <div className="flex items-center gap-2 mt-2">
-                                  <div className="flex items-center">
-                                    <span className="text-sm mr-2">$</span>
-                                    <Input
-                                      type="number"
-                                      value={priceRange[0]}
-                                      onChange={(e) => {
-                                        const value = Number(e.target.value);
-                                        if (value >= 0 && value <= priceRange[1]) {
-                                          setPriceRange([value, priceRange[1]]);
-                                        }
-                                      }}
-                                      className="w-24 h-8"
-                                      min={0}
-                                      max={priceRange[1]}
-                                    />
-                                  </div>
-                                  <span className="text-sm">to</span>
-                                  <div className="flex items-center">
-                                    <span className="text-sm mr-2">$</span>
-                                    <Input
-                                      type="number"
-                                      value={priceRange[1]}
-                                      onChange={(e) => {
-                                        const value = Number(e.target.value);
-                                        if (value >= priceRange[0] && value <= 50000) {
-                                          setPriceRange([priceRange[0], value]);
-                                        }
-                                      }}
-                                      className="w-24 h-8"
-                                      min={priceRange[0]}
-                                      max={50000}
-                                    />
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                          <SheetFooter>
-                            <Button variant="outline" onClick={resetFilters}>Reset</Button>
-                            <Button onClick={() => setFilterOpen(false)}>Apply Filters</Button>
-                          </SheetFooter>
-                        </SheetContent>
-                      </Sheet>
+                    <div className="w-[180px]">
+                      <StateSelect
+                        value={selectedState}
+                        onValueChange={(state) => setSelectedState(state.toLowerCase())}
+                      />
                     </div>
                   </div>
 
@@ -804,76 +369,6 @@ export default function Home() {
               </Link>
             </div>
             
-            {/* Active filters display */}
-            {(selectedGame !== "all" || selectedCondition !== "all" || selectedState !== "all" || priceRange[0] > 0 || priceRange[1] < 50000) && (
-              <div className="mb-4 flex flex-wrap gap-2 items-center">
-                <span className="text-sm text-muted-foreground">Active filters:</span>
-                {selectedGame !== "all" && (
-                  <Badge variant="secondary" className="flex items-center gap-1">
-                    Game: {games.find(g => g.value === selectedGame)?.label}
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      className="h-4 w-4 p-0 ml-1" 
-                      onClick={() => setSelectedGame("all")}
-                    >
-                      <X className="h-3 w-3" />
-                      <span className="sr-only">Remove</span>
-                    </Button>
-                  </Badge>
-                )}
-                {selectedCondition !== "all" && (
-                  <Badge variant="secondary" className="flex items-center gap-1">
-                    Condition: {conditions.find(c => c.value === selectedCondition)?.label}
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      className="h-4 w-4 p-0 ml-1" 
-                      onClick={() => setSelectedCondition("all")}
-                    >
-                      <X className="h-3 w-3" />
-                      <span className="sr-only">Remove</span>
-                    </Button>
-                  </Badge>
-                )}
-                {selectedState !== "all" && (
-                  <Badge variant="secondary" className="flex items-center gap-1">
-                    Location: {usStates.find(s => s.value === selectedState)?.label}
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      className="h-4 w-4 p-0 ml-1" 
-                      onClick={() => setSelectedState("all")}
-                    >
-                      <X className="h-3 w-3" />
-                      <span className="sr-only">Remove</span>
-                    </Button>
-                  </Badge>
-                )}
-                {(priceRange[0] > 0 || priceRange[1] < 50000) && (
-                  <Badge variant="secondary" className="flex items-center gap-1">
-                    Price: ${priceRange[0]} - ${priceRange[1]}
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      className="h-4 w-4 p-0 ml-1" 
-                      onClick={() => setPriceRange([0, 50000])}
-                    >
-                      <X className="h-3 w-3" />
-                      <span className="sr-only">Remove</span>
-                    </Button>
-                  </Badge>
-                )}
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="h-7 text-xs" 
-                  onClick={resetFilters}
-                >
-                  Clear All
-                </Button>
-              </div>
-            )}
             <div className="max-w-[1400px] mx-auto">
               <ContentLoader 
                 isLoading={loading} 
@@ -888,10 +383,10 @@ export default function Home() {
                 }
               >
                 <ListingGrid 
-                  listings={filteredListings} 
+                  listings={listings} 
                   loading={false} // We're handling loading state with ContentLoader
                   displayCount={displayCount}
-                  hasMore={filteredListings.length > displayCount}
+                  hasMore={listings.length > displayCount}
                   onLoadMore={() => setDisplayCount(prev => prev + 8)}
                 />
               </ContentLoader>
