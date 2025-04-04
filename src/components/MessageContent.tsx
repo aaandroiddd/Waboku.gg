@@ -1,5 +1,5 @@
-import React from 'react';
-import { Link } from 'lucide-react';
+import React, { useState } from 'react';
+import { Link, AlertCircle, Image as ImageIcon } from 'lucide-react';
 
 interface MessageContentProps {
   content: string;
@@ -7,6 +7,8 @@ interface MessageContentProps {
 }
 
 export function MessageContent({ content, className = '' }: MessageContentProps) {
+  const [imageError, setImageError] = useState(false);
+  
   // URL regex pattern
   const urlPattern = /(https?:\/\/[^\s]+)/g;
   
@@ -16,13 +18,28 @@ export function MessageContent({ content, className = '' }: MessageContentProps)
   // Check if content is an image markdown
   const imageMatch = content.match(/!\[.*?\]\((.*?)\)/);
   if (imageMatch) {
+    const imageUrl = imageMatch[1];
+    
+    if (imageError) {
+      return (
+        <div className={`max-w-full ${className} p-3 bg-muted/30 rounded-lg flex items-center gap-2 text-sm text-muted-foreground`}>
+          <AlertCircle className="h-4 w-4 text-amber-500" />
+          <span>Image failed to load. It may have been deleted or you may not have permission to view it.</span>
+        </div>
+      );
+    }
+    
     return (
       <div className={`max-w-full ${className}`}>
         <img 
-          src={imageMatch[1]} 
+          src={imageUrl} 
           alt="Message attachment" 
           className="max-w-full h-auto rounded-lg"
           loading="lazy"
+          onError={() => {
+            console.error(`Failed to load image: ${imageUrl}`);
+            setImageError(true);
+          }}
         />
       </div>
     );

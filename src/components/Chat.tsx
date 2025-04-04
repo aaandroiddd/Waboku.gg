@@ -335,24 +335,48 @@ export function Chat({
       const storage = getStorage();
       console.log("Storage initialized:", !!storage);
       
-      // Create a unique filename
-      const fileName = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+      if (!storage) {
+        throw new Error("Firebase Storage not initialized");
+      }
+      
+      // Create a unique filename with better sanitization
+      const sanitizedName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_').substring(0, 50);
+      const fileName = `${Date.now()}_${sanitizedName}`;
       
       // Create a storage reference
-      const chatFolder = chatId || 'new-chat';
+      // Use a more reliable folder structure that doesn't depend on chatId
+      // This helps avoid permission issues when chatId is not yet established
+      const chatFolder = chatId || `temp_${user.uid}_${Date.now()}`;
       const imagePath = `chat-images/${chatFolder}/${fileName}`;
       console.log("Uploading to path:", imagePath);
       
       const imageRef = storageRef(storage, imagePath);
       
-      // Upload the file
+      // Upload the file with metadata to ensure proper content type
       console.log("Starting upload...");
-      const snapshot = await uploadBytes(imageRef, file);
+      const metadata = {
+        contentType: file.type,
+        customMetadata: {
+          uploadedBy: user.uid,
+          uploadTime: new Date().toISOString()
+        }
+      };
+      
+      const snapshot = await uploadBytes(imageRef, file, metadata);
       console.log("Upload complete:", snapshot.metadata.name);
       
-      // Get the download URL
-      const imageUrl = await getDownloadURL(imageRef);
-      console.log("Download URL obtained");
+      // Get the download URL with retry logic
+      let imageUrl;
+      try {
+        imageUrl = await getDownloadURL(imageRef);
+        console.log("Download URL obtained");
+      } catch (urlError) {
+        console.error("Error getting download URL, retrying:", urlError);
+        // Wait a moment and retry
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        imageUrl = await getDownloadURL(imageRef);
+        console.log("Download URL obtained on retry");
+      }
       
       // Send the message with the image URL
       await sendMessage(`![Image](${imageUrl})`, receiverId, listingId, listingTitle);
@@ -371,6 +395,7 @@ export function Chat({
         // Check for specific Firebase Storage errors
         if (error.message.includes("storage/unauthorized")) {
           errorMessage = "You don't have permission to upload images. Please check your account status.";
+          console.error("Storage permission error:", error.message);
         } else if (error.message.includes("storage/quota-exceeded")) {
           errorMessage = "Storage quota exceeded. Please try again later.";
         } else if (error.message.includes("storage/canceled")) {
@@ -379,9 +404,23 @@ export function Chat({
           errorMessage = "Invalid file format. Please upload a valid image file.";
         } else if (error.message.includes("network")) {
           errorMessage = "Network error. Please check your internet connection and try again.";
+        } else if (error.message.includes("Firebase Storage not initialized")) {
+          errorMessage = "Storage service is not available. Please refresh the page and try again.";
+          console.error("Storage initialization error");
+        } else if (error.message.includes("storage/object-not-found")) {
+          errorMessage = "The uploaded image could not be accessed. Please try again.";
+          console.error("Storage object not found error:", error.message);
+        } else if (error.message.includes("storage/retry-limit-exceeded")) {
+          errorMessage = "Upload failed due to network issues. Please check your connection and try again.";
+        } else if (error.message.includes("permission_denied")) {
+          errorMessage = "Permission denied. You may not have access to upload images.";
+          console.error("Storage permission denied error:", error.message);
         }
         
         console.error("Detailed error:", error.message);
+        if (error.stack) {
+          console.error("Error stack:", error.stack);
+        }
       }
       
       toast({

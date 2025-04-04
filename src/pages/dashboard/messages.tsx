@@ -251,16 +251,44 @@ export default function MessagesPage() {
     return (
       <DashboardLayout>
         <div className="h-[calc(100vh-8rem)] flex items-center justify-center">
-          <div className="text-center">
+          <div className="text-center max-w-md mx-auto">
             <h3 className="text-lg font-semibold text-red-600 mb-2">Error Loading Messages</h3>
-            <p className="text-muted-foreground">{error}</p>
-            <Button
-              onClick={() => window.location.reload()}
-              className="mt-4"
-              variant="outline"
-            >
-              Retry
-            </Button>
+            <p className="text-muted-foreground mb-4">{error}</p>
+            
+            {/* Additional troubleshooting information */}
+            <div className="bg-muted p-4 rounded-lg text-left mb-4">
+              <h4 className="font-medium mb-2">Troubleshooting steps:</h4>
+              <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
+                <li>Check your internet connection</li>
+                <li>Try clearing your browser cache</li>
+                <li>If you're using a VPN, try disabling it</li>
+                <li>If the issue persists, try using a different browser</li>
+              </ul>
+            </div>
+            
+            <div className="flex gap-2 justify-center">
+              <Button
+                onClick={() => window.location.reload()}
+                className="mt-2"
+                variant="outline"
+              >
+                Retry
+              </Button>
+              <Button
+                onClick={() => {
+                  // Clear Firebase cache and reload
+                  if (typeof window !== 'undefined') {
+                    localStorage.removeItem('firebase:previous_websocket_failure');
+                    sessionStorage.clear();
+                    window.location.reload();
+                  }
+                }}
+                className="mt-2"
+                variant="default"
+              >
+                Clear Cache & Retry
+              </Button>
+            </div>
           </div>
         </div>
       </DashboardLayout>

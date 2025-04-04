@@ -68,7 +68,8 @@ service firebase.storage {
     
     // Chat images
     match /chat-images/{chatId}/{filename} {
-      // Allow read access to chat participants
+      // Allow read access to any authenticated user
+      // This ensures all chat participants can view images regardless of chat structure
       allow read: if isAuthenticated();
       
       // Allow users to upload chat images
