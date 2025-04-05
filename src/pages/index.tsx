@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { motion } from "framer-motion";
 import { useRouter } from "next/router";
-import { StateSelect } from "@/components/StateSelect";
 import SearchBar from "@/components/SearchBar";
 import { useGeolocation, calculateDistance } from "@/hooks/useGeolocation";
 import { Footer } from "@/components/Footer";
@@ -81,7 +80,6 @@ const itemVariants = {
 
 export default function Home() {
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedState, setSelectedState] = useState("all");
   // Use useMemo to compute random subtitle only once on component mount
   const randomSubtitle = useMemo(() => 
     subtitles[Math.floor(Math.random() * subtitles.length)],
@@ -186,10 +184,6 @@ export default function Home() {
       if (searchQuery.trim()) {
         queryParams.query = searchQuery;
       }
-      
-      if (selectedState !== 'all') {
-        queryParams.state = selectedState;
-      }
 
       // Update URL with search parameters
       router.push({
@@ -200,7 +194,7 @@ export default function Home() {
       console.error('Search error:', error);
       alert('An error occurred while processing your search. Please try again.');
     }
-  }, [searchQuery, selectedState, router]);
+  }, [searchQuery, router]);
 
   // Handle card selection
   const handleCardSelect = useCallback((cardName: string) => {
@@ -269,34 +263,18 @@ export default function Home() {
                         onSearch={handleSearch}
                         initialValue={searchQuery}
                         showSearchButton={true}
-                        selectedState={selectedState}
-                      />
-                    </div>
-                    
-                    <div className="flex-1">
-                      <StateSelect
-                        value={selectedState}
-                        onValueChange={(state) => setSelectedState(state.toLowerCase())}
                       />
                     </div>
                   </div>
 
                   {/* Desktop Search Controls */}
                   <div className="hidden sm:flex gap-4">
-                    <div className="relative flex-1">
+                    <div className="relative w-full">
                       <SearchBar
                         onSelect={handleCardSelect}
                         onSearch={handleSearch}
                         initialValue={searchQuery}
                         showSearchButton={true}
-                        selectedState={selectedState}
-                      />
-                    </div>
-                    
-                    <div className="w-[180px]">
-                      <StateSelect
-                        value={selectedState}
-                        onValueChange={(state) => setSelectedState(state.toLowerCase())}
                       />
                     </div>
                   </div>
