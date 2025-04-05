@@ -14,6 +14,8 @@ import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { UserNameLink } from '@/components/UserNameLink';
 import { MessagesPageInitializer } from '@/components/MessagesPageInitializer';
 import { DatabaseConnectionStatus } from '@/components/DatabaseConnectionStatus';
+import { FirestoreDisabler } from '@/components/FirestoreDisabler';
+import { ClearFirestoreCache } from '@/components/ClearFirestoreCache';
 
 interface ChatPreview {
   id: string;
@@ -293,29 +295,11 @@ export default function MessagesPage() {
               >
                 Retry
               </Button>
-              <Button
-                onClick={() => {
-                  // Enhanced cache clearing and reload
-                  if (typeof window !== 'undefined') {
-                    // Clear Firebase-specific cache items
-                    localStorage.removeItem('firebase:previous_websocket_failure');
-                    localStorage.removeItem('firebase:host:waboku-gg-default-rtdb.firebaseio.com');
-                    
-                    // Clear session storage
-                    sessionStorage.clear();
-                    
-                    // Add a flag to indicate we're coming back from a cache clear
-                    localStorage.setItem('messages_cache_cleared', Date.now().toString());
-                    
-                    // Reload the page
-                    window.location.reload();
-                  }
-                }}
+              <ClearFirestoreCache
                 className="mt-2"
                 variant="default"
-              >
-                Clear Cache & Retry
-              </Button>
+                buttonText="Clear Cache & Retry"
+              />
               <Button
                 onClick={() => router.push('/dashboard/firebase-diagnostics')}
                 className="mt-2"
@@ -337,6 +321,9 @@ export default function MessagesPage() {
     <DashboardLayout>
       {/* Initialize the messages page to disable Firestore and use only Realtime Database */}
       <MessagesPageInitializer />
+      
+      {/* Disable Firestore to prevent 400 Bad Request errors */}
+      <FirestoreDisabler />
       
       {/* Add database connection status component */}
       <DatabaseConnectionStatus onConnectionChange={(connected) => {

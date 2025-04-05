@@ -8,6 +8,8 @@ import { Separator } from '@/components/ui/separator';
 import { MessagesPageInitializer } from '@/components/MessagesPageInitializer';
 import { DatabaseConnectionStatus } from '@/components/DatabaseConnectionStatus';
 import { UpdateDatabaseRules } from '@/components/UpdateDatabaseRules';
+import { FirestoreDisabler } from '@/components/FirestoreDisabler';
+import { ClearFirestoreCache } from '@/components/ClearFirestoreCache';
 import { useRouter } from 'next/router';
 import { ArrowLeft, MessageCircle, Database, RefreshCw, Shield } from 'lucide-react';
 
@@ -19,6 +21,8 @@ export default function FirebaseDiagnosticsPage() {
     <DashboardLayout>
       {/* Initialize the messages page components to ensure proper Firebase setup */}
       <MessagesPageInitializer />
+      {/* Disable Firestore to prevent 400 Bad Request errors */}
+      <FirestoreDisabler />
       
       <div className="container mx-auto py-6 space-y-6">
         <div className="flex items-center justify-between">
@@ -116,25 +120,7 @@ export default function FirebaseDiagnosticsPage() {
                       </div>
                       
                       <div className="flex justify-center pt-4">
-                        <Button 
-                          onClick={() => {
-                            // Clear Firebase-specific cache items
-                            localStorage.removeItem('firebase:previous_websocket_failure');
-                            localStorage.removeItem('firebase:host:waboku-gg-default-rtdb.firebaseio.com');
-                            
-                            // Clear session storage
-                            sessionStorage.clear();
-                            
-                            // Add a flag to indicate we're coming back from a cache clear
-                            localStorage.setItem('messages_cache_cleared', Date.now().toString());
-                            
-                            // Reload the page
-                            window.location.reload();
-                          }}
-                          className="w-full sm:w-auto"
-                        >
-                          Clear Cache & Reload
-                        </Button>
+                        <ClearFirestoreCache className="w-full sm:w-auto" />
                       </div>
                     </CardContent>
                   </Card>

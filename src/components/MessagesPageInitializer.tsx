@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
-import { db, disableNetwork, database, getFirebaseServices } from '@/lib/firebase';
+import { database, getFirebaseServices } from '@/lib/firebase';
 import { ref, onValue, get, getDatabase } from 'firebase/database';
 import { useToast } from '@/components/ui/use-toast';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/router';
+import { FirestoreDisabler } from './FirestoreDisabler';
 
 /**
  * This component initializes the messages page by ensuring that:
@@ -200,21 +201,7 @@ export function MessagesPageInitializer() {
   };
 
   useEffect(() => {
-    // Disable Firestore for the messages page - we only use Realtime Database
-    const disableFirestore = async () => {
-      if (db) {
-        try {
-          console.log('[MessagesPageInitializer] Disabling Firestore for messages page');
-          await disableNetwork(db);
-          console.log('[MessagesPageInitializer] Firestore disabled successfully');
-        } catch (error) {
-          console.error('[MessagesPageInitializer] Error disabling Firestore:', error);
-        }
-      }
-    };
-
-    // Run initialization
-    disableFirestore();
+    // Run initialization - we now use FirestoreDisabler component instead
     verifyDatabaseConnection();
 
     // Listen for online/offline events to trigger reconnection
