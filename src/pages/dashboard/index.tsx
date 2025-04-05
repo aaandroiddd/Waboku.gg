@@ -128,7 +128,8 @@ const DashboardComponent = () => {
     allListings.filter(listing => listing.status === 'active')
   );
   
-  const loading = authLoading || listingsLoading || profileLoading;
+  const { isLoading: loadingState } = useLoading();
+const loading = authLoading || listingsLoading || profileLoading;
 
   const handleShare = (listingId: string) => {
     const url = `${window.location.origin}/listings/${listingId}`;
@@ -470,7 +471,7 @@ const DashboardComponent = () => {
             <h3 className="text-lg font-medium mb-4">Listing Visibility Troubleshooter</h3>
             <ListingVisibilityFixer 
               onRefresh={refreshListings} 
-              isLoading={loading} 
+              isLoading={loadingState} 
             />
           </div>
         </div>
