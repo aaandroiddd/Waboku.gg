@@ -31,6 +31,8 @@ import { ContentLoader } from '@/components/ContentLoader';
 import { Skeleton } from '@/components/ui/skeleton';
 import { EmptyStateCard } from '@/components/EmptyStateCard';
 import { ArchivedListings } from '@/components/ArchivedListings';
+import { FirebaseConnectionHandler } from '@/components/FirebaseConnectionHandler';
+import { useLoading } from '@/hooks/useLoading';
 
 const DashboardComponent = () => {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -440,15 +442,16 @@ const DashboardComponent = () => {
 
   return (
     <DashboardLayout>
-      <DeleteListingDialog
-        isOpen={dialogState.isOpen}
-        onClose={() => setDialogState({ ...dialogState, isOpen: false })}
-        onConfirm={() => {
-          handleDeleteListing(dialogState.listingId, dialogState.mode);
-          setDialogState({ ...dialogState, isOpen: false });
-        }}
-        mode={dialogState.mode}
-      />
+      <FirebaseConnectionHandler>
+        <DeleteListingDialog
+          isOpen={dialogState.isOpen}
+          onClose={() => setDialogState({ ...dialogState, isOpen: false })}
+          onConfirm={() => {
+            handleDeleteListing(dialogState.listingId, dialogState.mode);
+            setDialogState({ ...dialogState, isOpen: false });
+          }}
+          mode={dialogState.mode}
+        />
       
       {/* Show the listing visibility fixer if there are no active listings but there are listings in total */}
       {allListings.length > 0 && properlyFilteredActiveListings.length === 0 && (
@@ -467,7 +470,7 @@ const DashboardComponent = () => {
             <h3 className="text-lg font-medium mb-4">Listing Visibility Troubleshooter</h3>
             <ListingVisibilityFixer 
               onRefresh={refreshListings} 
-              isLoading={isLoading} 
+              isLoading={loading} 
             />
           </div>
         </div>
@@ -694,6 +697,7 @@ const DashboardComponent = () => {
           />
         </TabsContent>
       </Tabs>
+      </FirebaseConnectionHandler>
     </DashboardLayout>
   );
 };

@@ -1,13 +1,14 @@
 import { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { AlertCircle, RefreshCw } from "lucide-react";
+import { AlertCircle, RefreshCw, WifiOff } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/use-toast";
 import { Listing } from "@/types/database";
 import { useAuth } from '@/contexts/AuthContext';
 import { getFirebaseServices } from '@/lib/firebase';
 import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
+import { useLoading } from '@/hooks/useLoading';
 
 interface ListingVisibilityFixerProps {
   onRefresh: () => Promise<void>;
@@ -27,6 +28,9 @@ export function ListingVisibilityFixer({ onRefresh, isLoading }: ListingVisibili
   const { toast } = useToast();
   const { user } = useAuth();
 
+  const [connectionError, setConnectionError] = useState<string | null>(null);
+  const { isLoading: loadingState, withLoading } = useLoading();
+
   const runDiagnosis = async () => {
     if (!user) {
       toast({
@@ -40,19 +44,39 @@ export function ListingVisibilityFixer({ onRefresh, isLoading }: ListingVisibili
     try {
       setDiagnosing(true);
       setDiagnosisResult(null);
+      setConnectionError(null);
       
       console.log("Starting listing visibility diagnosis");
       
-      // Fetch all user listings directly from Firestore
-      const { db } = await getFirebaseServices();
-      const listingsRef = collection(db, 'listings');
-      const q = query(
-        listingsRef, 
-        where('userId', '==', user.uid),
-        orderBy('createdAt', 'desc')
-      );
+      // Wrap Firebase operations in a try-catch with timeout
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error("Firebase connection timed out")), 10000);
+      });
       
-      const querySnapshot = await getDocs(q);
+      // Fetch all user listings directly from Firestore with timeout
+      const fetchListings = async () => {
+        try {
+          const { db } = await getFirebaseServices();
+          const listingsRef = collection(db, 'listings');
+          const q = query(
+            listingsRef, 
+            where('userId', '==', user.uid),
+            orderBy('createdAt', 'desc')
+          );
+          
+          return await getDocs(q);
+        } catch (error) {
+          console.error("Firebase fetch error:", error);
+          throw new Error(`Firebase connection error: ${error instanceof Error ? error.message : String(error)}`);
+        }
+      };
+      
+      // Race between the fetch and the timeout
+      const querySnapshot = await Promise.race([fetchListings(), timeoutPromise])
+        .catch(error => {
+          setConnectionError(error.message);
+          throw error;
+        }) as any;
       
       // Process the results
       const allListings: Listing[] = [];
@@ -211,7 +235,31 @@ export function ListingVisibilityFixer({ onRefresh, isLoading }: ListingVisibili
 
   return (
     <div className="space-y-4">
-      {diagnosisResult ? (
+      {connectionError && (
+        <Alert variant="destructive">
+          <WifiOff className="h-4 w-4" />
+          <AlertTitle>Connection Error</AlertTitle>
+          <AlertDescription>
+            <div className="mt-2 space-y-2">
+              <p>There was a problem connecting to the database: {connectionError}</p>
+              <p>This could be due to network issues or temporary service disruption.</p>
+              <div className="mt-4">
+                <Button 
+                  onClick={() => {
+                    setConnectionError(null);
+                    runDiagnosis();
+                  }}
+                  variant="outline"
+                >
+                  Try Again
+                </Button>
+              </div>
+            </div>
+          </AlertDescription>
+        </Alert>
+      )}
+      
+      {diagnosisResult && !connectionError ? (
         <Alert variant={diagnosisResult.issues.length > 0 ? "destructive" : "default"}>
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Listing Visibility Diagnosis</AlertTitle>

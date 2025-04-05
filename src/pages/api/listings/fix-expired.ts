@@ -23,14 +23,122 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   // Log the request body to help debug
   console.log('[Fix Expired] Request body:', req.body);
   
-  const { listingId } = req.body;
+  const { listingId, userId } = req.body;
   
-  if (!listingId) {
-    console.error('[Fix Expired] Missing listing ID in request body');
-    return res.status(400).json({ error: 'Listing ID is required' });
+  // Handle case when userId is provided instead of listingId
+  if (userId) {
+    console.log(`[Fix Expired] Processing listings for user ID: ${userId}`);
+    try {
+      const { db } = getFirebaseAdmin();
+      
+      // Get all listings for this user
+      const listingsRef = db.collection('listings');
+      const querySnapshot = await listingsRef.where('userId', '==', userId).get();
+      
+      if (querySnapshot.empty) {
+        console.log(`[Fix Expired] No listings found for user ${userId}`);
+        return res.status(200).json({ 
+          message: 'No listings found for this user',
+          processed: 0
+        });
+      }
+      
+      console.log(`[Fix Expired] Found ${querySnapshot.size} listings for user ${userId}`);
+      
+      // Process each listing
+      const now = new Date();
+      const results = {
+        processed: 0,
+        archived: 0,
+        active: 0,
+        errors: 0
+      };
+      
+      for (const doc of querySnapshot.docs) {
+        try {
+          const data = doc.data();
+          
+          // Skip if no data
+          if (!data) {
+            console.log(`[Fix Expired] No data for listing ${doc.id}`);
+            continue;
+          }
+          
+          // Process based on status
+          if (data.status === 'active') {
+            // Check if listing has expired
+            const createdAt = data.createdAt?.toDate() || new Date();
+            
+            // Get user data to determine account tier
+            const userRef = db.collection('users').doc(userId);
+            const userDoc = await userRef.get();
+            const userData = userDoc.data();
+            
+            const accountTier = userData?.accountTier || 'free';
+            const tierDuration = ACCOUNT_TIERS[accountTier]?.listingDuration || ACCOUNT_TIERS.free.listingDuration;
+            
+            // Calculate expiration time based on tier duration
+            const expirationTime = new Date(createdAt.getTime() + (tierDuration * 60 * 60 * 1000));
+            
+            // Check if listing has expired
+            if (now > expirationTime) {
+              // Archive the listing
+              const sevenDaysFromNow = new Date(now);
+              sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
+              
+              await doc.ref.update({
+                status: 'archived',
+                archivedAt: Timestamp.now(),
+                originalCreatedAt: data.createdAt,
+                expirationReason: 'tier_duration_exceeded',
+                expiresAt: Timestamp.fromDate(sevenDaysFromNow),
+                updatedAt: Timestamp.now(),
+                previousStatus: data.status,
+                previousExpiresAt: data.expiresAt
+              });
+              
+              console.log(`[Fix Expired] Archived listing ${doc.id} (${accountTier} tier)`);
+              results.archived++;
+            } else {
+              // Update the expiresAt field to ensure it's correct
+              await doc.ref.update({
+                expiresAt: Timestamp.fromDate(expirationTime),
+                updatedAt: Timestamp.now()
+              });
+              
+              console.log(`[Fix Expired] Updated expiration for listing ${doc.id} to ${expirationTime.toISOString()}`);
+              results.active++;
+            }
+          }
+          
+          results.processed++;
+        } catch (error) {
+          console.error(`[Fix Expired] Error processing listing ${doc.id}:`, error);
+          results.errors++;
+        }
+      }
+      
+      return res.status(200).json({
+        message: `Processed ${results.processed} listings, archived ${results.archived}, updated ${results.active}`,
+        results
+      });
+    } catch (error: any) {
+      logError('Fix expired listings for user', error, { userId });
+      return res.status(500).json({ 
+        error: 'Failed to fix listings',
+        details: error.message,
+        stack: error.stack
+      });
+    }
   }
   
-  console.log(`[Fix Expired] Processing listing ID: ${listingId}`);
+  // Handle single listing case
+  if (!listingId) {
+    console.error('[Fix Expired] Missing listing ID or user ID in request body');
+    return res.status(400).json({ error: 'Either listing ID or user ID is required' });
+  }
+  
+  console.log(`[Fix Expired] Processing single listing ID: ${listingId}`);
 
   try {
     const { db } = getFirebaseAdmin();
