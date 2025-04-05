@@ -1,18 +1,72 @@
 import { useState, useEffect, useRef } from 'react';
 import { getFirebaseServices } from '@/lib/firebase';
-import { doc, onSnapshot, getDoc } from 'firebase/firestore';
+import { doc, onSnapshot, getDoc, getDocs, query, collection, where, limit } from 'firebase/firestore';
 
-// Global cache for user data with longer expiration (10 minutes)
+// Global cache for user data with longer expiration (15 minutes)
 const userDataCache: Record<string, {
   data: { username: string; avatarUrl?: string };
   timestamp: number;
 }> = {};
 
-// Cache expiration time (10 minutes)
-const CACHE_EXPIRATION = 10 * 60 * 1000;
+// Cache expiration time (15 minutes)
+const CACHE_EXPIRATION = 15 * 60 * 1000;
 
 // Maximum number of retries
 const MAX_RETRIES = 3;
+
+// Batch prefetch size
+const BATCH_SIZE = 10;
+
+// Prefetch user data for multiple users at once
+export const prefetchUserData = async (userIds: string[]) => {
+  if (!userIds.length) return;
+  
+  // Filter out userIds that are already in cache and not expired
+  const uncachedUserIds = userIds.filter(id => 
+    !userDataCache[id] || Date.now() - userDataCache[id].timestamp >= CACHE_EXPIRATION
+  );
+  
+  if (!uncachedUserIds.length) return;
+  
+  console.log(`Prefetching data for ${uncachedUserIds.length} users`);
+  
+  try {
+    const { db } = getFirebaseServices();
+    if (!db) return;
+    
+    // Process in batches to avoid large queries
+    for (let i = 0; i < uncachedUserIds.length; i += BATCH_SIZE) {
+      const batchIds = uncachedUserIds.slice(i, i + BATCH_SIZE);
+      
+      // Create a query to get multiple users at once
+      const usersQuery = query(
+        collection(db, 'users'),
+        where('__name__', 'in', batchIds),
+        limit(BATCH_SIZE)
+      );
+      
+      const querySnapshot = await getDocs(usersQuery);
+      
+      querySnapshot.forEach(doc => {
+        if (doc.exists()) {
+          const data = doc.data();
+          const userData = {
+            username: data.displayName || data.username || 'Unknown User',
+            avatarUrl: data.avatarUrl || data.photoURL
+          };
+          
+          // Update cache
+          userDataCache[doc.id] = {
+            data: userData,
+            timestamp: Date.now()
+          };
+        }
+      });
+    }
+  } catch (err) {
+    console.error('Error prefetching user data:', err);
+  }
+};
 
 export function useUserData(userId: string | undefined) {
   const [userData, setUserData] = useState<{
@@ -24,11 +78,15 @@ export function useUserData(userId: string | undefined) {
   const [error, setError] = useState<string | null>(null);
   const retryCountRef = useRef(0);
   const isMountedRef = useRef(true);
+  const fetchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     isMountedRef.current = true;
     return () => {
       isMountedRef.current = false;
+      if (fetchTimeoutRef.current) {
+        clearTimeout(fetchTimeoutRef.current);
+      }
     };
   }, []);
 
@@ -40,6 +98,12 @@ export function useUserData(userId: string | undefined) {
 
     // Reset retry count when userId changes
     retryCountRef.current = 0;
+    
+    // Clear any existing timeout
+    if (fetchTimeoutRef.current) {
+      clearTimeout(fetchTimeoutRef.current);
+      fetchTimeoutRef.current = null;
+    }
 
     // Check cache first
     if (userDataCache[userId] && Date.now() - userDataCache[userId].timestamp < CACHE_EXPIRATION) {
@@ -52,12 +116,26 @@ export function useUserData(userId: string | undefined) {
     if (!db) {
       setError('Database not initialized');
       setLoading(false);
+      // Set fallback data even when database fails
+      setUserData({
+        username: 'Unknown User',
+        avatarUrl: undefined
+      });
       return;
     }
 
     // Function to fetch user data with retry logic
     const fetchUserData = async (retry = 0) => {
       try {
+        // First try to get from cache
+        if (userDataCache[userId] && Date.now() - userDataCache[userId].timestamp < CACHE_EXPIRATION) {
+          if (isMountedRef.current) {
+            setUserData(userDataCache[userId].data);
+            setLoading(false);
+          }
+          return true;
+        }
+        
         const docSnap = await getDoc(doc(db, 'users', userId));
         
         if (docSnap.exists()) {
@@ -83,11 +161,13 @@ export function useUserData(userId: string | undefined) {
           const delay = Math.pow(2, retry) * 500; // 500ms, 1s, 2s, etc.
           console.log(`User data not found for ${userId}, retrying in ${delay}ms (attempt ${retry + 1}/${MAX_RETRIES})`);
           
-          setTimeout(() => {
-            if (isMountedRef.current) {
-              fetchUserData(retry + 1);
-            }
-          }, delay);
+          if (isMountedRef.current) {
+            fetchTimeoutRef.current = setTimeout(() => {
+              if (isMountedRef.current) {
+                fetchUserData(retry + 1);
+              }
+            }, delay);
+          }
           return false;
         } else {
           // Max retries reached, set fallback data
@@ -116,11 +196,13 @@ export function useUserData(userId: string | undefined) {
           const delay = Math.pow(2, retry) * 500;
           console.log(`Error fetching user data for ${userId}, retrying in ${delay}ms (attempt ${retry + 1}/${MAX_RETRIES})`);
           
-          setTimeout(() => {
-            if (isMountedRef.current) {
-              fetchUserData(retry + 1);
-            }
-          }, delay);
+          if (isMountedRef.current) {
+            fetchTimeoutRef.current = setTimeout(() => {
+              if (isMountedRef.current) {
+                fetchUserData(retry + 1);
+              }
+            }, delay);
+          }
           return false;
         } else {
           // Max retries reached, set error
@@ -134,6 +216,12 @@ export function useUserData(userId: string | undefined) {
               avatarUrl: undefined
             };
             setUserData(fallbackData);
+            
+            // Cache the fallback with shorter expiration
+            userDataCache[userId] = {
+              data: fallbackData,
+              timestamp: Date.now() - (CACHE_EXPIRATION - 60000) // Will expire in 1 minute
+            };
           }
           return true;
         }
@@ -171,19 +259,29 @@ export function useUserData(userId: string | undefined) {
           retryCountRef.current++;
           
           // Try to fetch again after a delay
-          setTimeout(() => {
-            if (isMountedRef.current) {
-              fetchUserData(retryCountRef.current);
-            }
-          }, 1000 * retryCountRef.current);
+          if (isMountedRef.current) {
+            fetchTimeoutRef.current = setTimeout(() => {
+              if (isMountedRef.current) {
+                fetchUserData(retryCountRef.current);
+              }
+            }, 1000 * retryCountRef.current);
+          }
         } else {
           // Max retries reached, set fallback data
           if (isMountedRef.current) {
-            setUserData({
+            const fallbackData = {
               username: 'Unknown User',
               avatarUrl: undefined
-            });
+            };
+            
+            setUserData(fallbackData);
             setLoading(false);
+            
+            // Cache the fallback with shorter expiration
+            userDataCache[userId] = {
+              data: fallbackData,
+              timestamp: Date.now() - (CACHE_EXPIRATION - 60000) // Will expire in 1 minute
+            };
           }
         }
       },
@@ -194,16 +292,26 @@ export function useUserData(userId: string | undefined) {
           setLoading(false);
           
           // Set fallback data
-          setUserData({
+          const fallbackData = {
             username: 'Unknown User',
             avatarUrl: undefined
-          });
+          };
+          setUserData(fallbackData);
+          
+          // Cache the fallback with shorter expiration
+          userDataCache[userId] = {
+            data: fallbackData,
+            timestamp: Date.now() - (CACHE_EXPIRATION - 60000) // Will expire in 1 minute
+          };
         }
       }
     );
 
     return () => {
       unsubscribe();
+      if (fetchTimeoutRef.current) {
+        clearTimeout(fetchTimeoutRef.current);
+      }
     };
   }, [userId]);
 

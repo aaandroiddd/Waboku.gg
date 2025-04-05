@@ -1,5 +1,5 @@
 import { useRouter } from 'next/router';
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useMemo } from 'react';
 import { getDatabase, ref, onValue, get } from 'firebase/database';
 import { doc, getDoc } from 'firebase/firestore';
 import { db, getFirebaseServices } from '@/lib/firebase';
@@ -16,6 +16,7 @@ import { MessagesPageInitializer } from '@/components/MessagesPageInitializer';
 import { DatabaseConnectionStatus } from '@/components/DatabaseConnectionStatus';
 import { FirestoreDisabler } from '@/components/FirestoreDisabler';
 import { ClearFirestoreCache } from '@/components/ClearFirestoreCache';
+import { prefetchUserData } from '@/hooks/useUserData';
 
 interface ChatPreview {
   id: string;
@@ -165,6 +166,10 @@ export default function MessagesPage() {
         )
         .sort((a, b) => (b.lastMessage?.timestamp || 0) - (a.lastMessage?.timestamp || 0));
 
+      // Set chats immediately to improve perceived performance
+      setChats(chatList);
+      
+      // Then fetch user profiles in the background
       const uniqueParticipants = new Set<string>();
       chatList.forEach(chat => {
         Object.keys(chat.participants || {}).forEach(participantId => {
@@ -174,9 +179,16 @@ export default function MessagesPage() {
         });
       });
 
+      // Use the new batch prefetch function for better performance
+      const participantIds = Array.from(uniqueParticipants);
+      
+      // Prefetch all user data in batches
+      await prefetchUserData(participantIds);
+      
+      // Then fetch individual profiles to update the UI
       const profiles: Record<string, ParticipantProfile> = {};
       await Promise.all(
-        Array.from(uniqueParticipants).map(async (id) => {
+        participantIds.map(async (id) => {
           const profile = await fetchUserProfile(id);
           if (profile) {
             profiles[id] = profile;
@@ -185,17 +197,18 @@ export default function MessagesPage() {
       );
       
       setParticipantProfiles(prev => ({ ...prev, ...profiles }));
-      setChats(chatList);
+      setLoading(false);
     };
 
     // Initial load
+    setLoading(true);
     get(chatsRef)
       .then(snapshot => processChats(snapshot.val()))
       .catch(err => {
         console.error('Error loading initial chats:', err);
         setError('Failed to load messages');
-      })
-      .finally(() => setLoading(false));
+        setLoading(false);
+      });
 
     // Real-time updates
     const unsubscribe = onValue(chatsRef, 

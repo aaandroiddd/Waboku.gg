@@ -34,6 +34,7 @@ import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from 'fire
 import { getDatabase, ref as dbRef, remove, set } from 'firebase/database';
 import { getDoc, doc } from 'firebase/firestore';
 import { firebaseDb, getFirebaseServices } from '@/lib/firebase';
+import { prefetchUserData } from '@/hooks/useUserData';
 
 interface ChatProps {
   chatId?: string;
@@ -537,81 +538,66 @@ export function Chat({
   // Track user profiles for messages using the centralized useUserData hook
   const [userProfiles, setUserProfiles] = useState<Record<string, any>>({});
   
-  // Fetch user profiles for messages using the centralized hook
+  // Fetch user profiles for messages using the improved batch prefetching
   useEffect(() => {
     if (messages.length === 0) return;
     
     const uniqueUserIds = [...new Set(messages.map(msg => msg.senderId))];
     
-    // Create a map to store all the profile promises
-    const profilePromises: Record<string, Promise<any>> = {};
+    // Skip if we already have all profiles in state with valid usernames
+    const missingUserIds = uniqueUserIds.filter(userId => 
+      !userId || 
+      !userProfiles[userId]?.username || 
+      userProfiles[userId]?.username === 'Unknown User'
+    );
     
-    // For each unique user ID, create a promise that resolves with the user data
-    uniqueUserIds.forEach(userId => {
-      if (!userId) return;
-      
-      // Skip if we already have this profile in state
-      if (userProfiles[userId]?.username && userProfiles[userId]?.username !== 'Unknown User') return;
-      
-      // Create a promise that resolves when the user data is fetched
-      profilePromises[userId] = new Promise((resolve) => {
-        // Use a local variable to track if this promise has been resolved
-        let isResolved = false;
-        
-        // Get the Firebase services
-        const { db } = getFirebaseServices();
-        if (!db) {
-          resolve({ username: 'Unknown User', avatarUrl: null });
-          return;
-        }
-        
-        // Set up a one-time listener for the user document
-        const userRef = doc(db, 'users', userId);
-        
-        // First try to get from cache
-        getDoc(userRef)
-          .then(docSnap => {
-            if (docSnap.exists() && !isResolved) {
+    if (missingUserIds.length === 0) return;
+    
+    // First use batch prefetching to efficiently load all user data
+    prefetchUserData(missingUserIds)
+      .then(() => {
+        // Then fetch individual profiles to update the UI
+        const profilePromises = missingUserIds.map(async (userId) => {
+          if (!userId) return [userId, { username: 'Unknown User', avatarUrl: null }];
+          
+          try {
+            // Get the Firebase services
+            const { db } = getFirebaseServices();
+            if (!db) {
+              return [userId, { username: 'Unknown User', avatarUrl: null }];
+            }
+            
+            // Get user data from Firestore
+            const userRef = doc(db, 'users', userId);
+            const docSnap = await getDoc(userRef);
+            
+            if (docSnap.exists()) {
               const data = docSnap.data();
-              isResolved = true;
-              resolve({
+              return [userId, {
                 username: data.displayName || data.username || 'Unknown User',
                 avatarUrl: data.avatarUrl || data.photoURL || null
-              });
+              }];
+            } else {
+              return [userId, { username: 'Unknown User', avatarUrl: null }];
             }
-          })
-          .catch(err => {
+          } catch (err) {
             console.error(`Error fetching user data for ${userId}:`, err);
-            if (!isResolved) {
-              isResolved = true;
-              resolve({ username: 'Unknown User', avatarUrl: null });
-            }
-          });
-          
-        // Set a timeout to resolve with Unknown User if taking too long
-        setTimeout(() => {
-          if (!isResolved) {
-            console.warn(`Timeout fetching user data for ${userId}`);
-            isResolved = true;
-            resolve({ username: 'Unknown User', avatarUrl: null });
+            return [userId, { username: 'Unknown User', avatarUrl: null }];
           }
-        }, 5000); // 5 second timeout
+        });
+        
+        // Update profiles as they resolve
+        Promise.all(profilePromises).then(results => {
+          const newProfiles = Object.fromEntries(results);
+          setUserProfiles(prev => ({
+            ...prev,
+            ...newProfiles
+          }));
+        });
+      })
+      .catch(err => {
+        console.error('Error prefetching user data:', err);
       });
-    });
-    
-    // Wait for all promises to resolve and update the state
-    if (Object.keys(profilePromises).length > 0) {
-      Promise.all(Object.entries(profilePromises).map(async ([userId, promise]) => {
-        const userData = await promise;
-        return [userId, userData];
-      })).then(results => {
-        const newProfiles = Object.fromEntries(results);
-        setUserProfiles(prev => ({
-          ...prev,
-          ...newProfiles
-        }));
-      });
-    }
   }, [messages]);
 
   return (
