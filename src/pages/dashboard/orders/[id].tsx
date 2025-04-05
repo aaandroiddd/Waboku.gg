@@ -672,6 +672,16 @@ export default function OrderDetailsPage() {
                                   Once the buyer has picked up the item, click the "Complete Pickup" button to mark this order as completed.
                                   This will allow the buyer to leave a review for this transaction.
                                 </p>
+                                <div className="mt-3">
+                                  <Button 
+                                    variant="primary" 
+                                    size="sm"
+                                    className="w-full sm:w-auto"
+                                    onClick={() => setShowCompletePickupDialog(true)}
+                                  >
+                                    <CheckCircle className="mr-2 h-4 w-4" /> Complete Pickup
+                                  </Button>
+                                </div>
                               </div>
                             ) : (
                               <div className="mt-2 border-t border-blue-200 dark:border-blue-800 pt-2">
@@ -881,7 +891,7 @@ export default function OrderDetailsPage() {
             )}
             
             {/* Seller actions for pickup orders */}
-            {!isUserBuyer && order.isPickup && (order.status === 'paid' || order.status === 'awaiting_shipping') && (
+            {!isUserBuyer && order.isPickup && !order.pickupCompleted && (
               <Button 
                 variant="primary" 
                 onClick={() => setShowCompletePickupDialog(true)}
