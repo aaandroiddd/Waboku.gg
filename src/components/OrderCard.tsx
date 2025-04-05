@@ -97,6 +97,7 @@ export function OrderCard({ order, isSale = false }: OrderCardProps) {
     
     try {
       setIsCompletingPickup(true);
+      console.log('Completing pickup for order:', order.id, 'by user:', user.uid);
       
       // Call the API to complete the pickup
       const response = await fetch('/api/orders/complete-pickup', {
@@ -110,7 +111,9 @@ export function OrderCard({ order, isSale = false }: OrderCardProps) {
         }),
       });
       
+      console.log('API response status:', response.status);
       const data = await response.json();
+      console.log('API response data:', data);
       
       if (!response.ok) {
         throw new Error(data.message || 'Failed to complete pickup');
