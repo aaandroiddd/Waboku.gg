@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { motion } from "framer-motion";
 import { useRouter } from "next/router";
 import { StateSelect } from "@/components/StateSelect";
@@ -18,11 +18,8 @@ import AnimatedBackground from "@/components/AnimatedBackground";
 import { ContentLoader } from "@/components/ContentLoader";
 import { useListings } from "@/hooks/useListings";
 import Link from "next/link";
-import { GAME_NAME_MAPPING } from '@/lib/game-mappings';
 
-// Import game mappings from centralized file
-import { GAME_MAPPING, OTHER_GAME_MAPPING } from '@/lib/game-mappings';
-
+// Subtitles array - moved outside component to prevent recreation on each render
 const subtitles = [
   "Your deck isn't 'meta' until your wallet cries.",
   "One more booster won't hurt—unless it's another bulk rare.",
@@ -39,6 +36,7 @@ const subtitles = [
   "Alt-art cards appreciate in value. Your self-control doesn't."
 ];
 
+// Animation variants - moved outside component to prevent recreation on each render
 const containerVariants = {
   hidden: { opacity: 0 },
   visible: {
@@ -80,45 +78,22 @@ const itemVariants = {
   }
 };
 
-const fadeInUp = {
-  hidden: { opacity: 0, y: 20 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: {
-      duration: 0.6,
-      ease: "easeOut"
-    }
-  }
-};
-
-const scaleIn = {
-  hidden: { opacity: 0, scale: 0.9 },
-  visible: {
-    opacity: 1,
-    scale: 1,
-    transition: {
-      duration: 0.5,
-      ease: [0.23, 1, 0.32, 1]
-    }
-  }
-};
-
 export default function Home() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedState, setSelectedState] = useState("all");
-  const [randomSubtitle] = useState(() => 
-    subtitles[Math.floor(Math.random() * subtitles.length)]
+  // Use useMemo to compute random subtitle only once on component mount
+  const randomSubtitle = useMemo(() => 
+    subtitles[Math.floor(Math.random() * subtitles.length)],
+    []
   );
-  const [listings, setListings] = useState<Listing[]>([]);
-  const [loading, setLoading] = useState(true);
   const [displayCount, setDisplayCount] = useState(8);
 
   const { latitude, longitude, loading: geoLoading } = useGeolocation();
+  const { listings: allListings, isLoading } = useListings();
+  const router = useRouter();
 
+  // Check for stale auth data only once on mount
   useEffect(() => {
-    // Check for and clear stale auth data on page load
-    // This helps prevent issues with corrupted auth state
     if (typeof window !== 'undefined') {
       const staleDataFound = checkAndClearStaleAuthData();
       if (staleDataFound) {
@@ -126,18 +101,18 @@ export default function Home() {
       }
     }
   }, []);
-
-  // Use the useListings hook to fetch listings
-  const { listings: allListings, isLoading } = useListings();
   
-  // Function to calculate distances and add proximity categories
-  const addDistanceInfo = (listings: Listing[]) => {
-    if (!latitude || !longitude) return listings;
+  // Memoize the processed listings to avoid recalculation on every render
+  const processedListings = useMemo(() => {
+    if (isLoading || allListings.length === 0) {
+      return [];
+    }
 
-    return listings.map(listing => {
+    // Add distance information to listings
+    const withDistance = allListings.map(listing => {
       const listingLat = listing.coordinates?.latitude;
       const listingLng = listing.coordinates?.longitude;
-      const distance = listingLat && listingLng
+      const distance = (latitude && longitude && listingLat && listingLng)
         ? calculateDistance(latitude, longitude, listingLat, listingLng)
         : Infinity;
       
@@ -149,55 +124,34 @@ export default function Home() {
       
       return { ...listing, distance, proximity };
     });
-  };
-  
-  // Set listings when they're loaded from the hook
-  useEffect(() => {
-    if (!isLoading && allListings.length > 0) {
-      // Add distance information to listings
-      const processedListings = addDistanceInfo(allListings);
-      
-      // Sort listings by distance if location is available
-      if (latitude && longitude) {
-        processedListings.sort((a, b) => {
-          // Prioritize listings within 50km
-          const aWithin50 = (a.distance || Infinity) <= 50;
-          const bWithin50 = (b.distance || Infinity) <= 50;
-          
-          if (aWithin50 && !bWithin50) return -1;
-          if (!aWithin50 && bWithin50) return 1;
-          
-          // For listings within 50km, sort by distance
-          if (aWithin50 && bWithin50) {
-            return (a.distance || Infinity) - (b.distance || Infinity);
-          }
-          
-          // For listings beyond 50km, sort by recency
-          // Safely handle date comparison by ensuring createdAt is a Date object
-          const aTime = a.createdAt instanceof Date ? a.createdAt.getTime() : new Date(a.createdAt).getTime();
-          const bTime = b.createdAt instanceof Date ? b.createdAt.getTime() : new Date(b.createdAt).getTime();
-          return bTime - aTime;
-        });
-      }
-      
-      setListings(processedListings);
-      setLoading(false);
+    
+    // Sort listings by distance if location is available
+    if (latitude && longitude) {
+      return [...withDistance].sort((a, b) => {
+        // Prioritize listings within 50km
+        const aWithin50 = (a.distance || Infinity) <= 50;
+        const bWithin50 = (b.distance || Infinity) <= 50;
+        
+        if (aWithin50 && !bWithin50) return -1;
+        if (!aWithin50 && bWithin50) return 1;
+        
+        // For listings within 50km, sort by distance
+        if (aWithin50 && bWithin50) {
+          return (a.distance || Infinity) - (b.distance || Infinity);
+        }
+        
+        // For listings beyond 50km, sort by recency
+        const aTime = a.createdAt instanceof Date ? a.createdAt.getTime() : new Date(a.createdAt).getTime();
+        const bTime = b.createdAt instanceof Date ? b.createdAt.getTime() : new Date(b.createdAt).getTime();
+        return bTime - aTime;
+      });
     }
+    
+    return withDistance;
   }, [allListings, isLoading, latitude, longitude]);
-  
-  // Check for and clear stale auth data on page load
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const staleDataFound = checkAndClearStaleAuthData();
-      if (staleDataFound) {
-        console.log('Stale authentication data was found and cleared');
-      }
-    }
-  }, []);
 
-  const router = useRouter();
-
-  const handleSearch = async () => {
+  // Memoize the search handler to prevent recreation on each render
+  const handleSearch = useCallback(async () => {
     try {
       // Only record search term if there is one
       if (searchQuery.trim()) {
@@ -225,7 +179,7 @@ export default function Home() {
       }
 
       // Create query object
-      const queryParams: any = {};
+      const queryParams: Record<string, string> = {};
       
       // Only add parameters that have values
       if (searchQuery.trim()) {
@@ -245,7 +199,14 @@ export default function Home() {
       console.error('Search error:', error);
       alert('An error occurred while processing your search. Please try again.');
     }
-  };
+  }, [searchQuery, selectedState, router]);
+
+  // Handle card selection
+  const handleCardSelect = useCallback((cardName: string) => {
+    setSearchQuery(cardName);
+    // Use setTimeout to ensure state is updated before search
+    setTimeout(() => handleSearch(), 0);
+  }, [handleSearch]);
 
   return (
     <>
@@ -303,14 +264,8 @@ export default function Home() {
                   <div className="flex sm:hidden flex-col gap-4 mb-4 px-2">
                     <div className="relative w-full">
                       <SearchBar
-                        onSelect={(cardName) => {
-                          setSearchQuery(cardName);
-                          handleSearch();
-                        }}
-                        onSearch={(query) => {
-                          setSearchQuery(query);
-                          handleSearch();
-                        }}
+                        onSelect={handleCardSelect}
+                        onSearch={handleSearch}
                         initialValue={searchQuery}
                         showSearchButton={true}
                         selectedState={selectedState}
@@ -329,14 +284,8 @@ export default function Home() {
                   <div className="hidden sm:flex gap-4">
                     <div className="relative flex-1">
                       <SearchBar
-                        onSelect={(cardName) => {
-                          setSearchQuery(cardName);
-                          handleSearch();
-                        }}
-                        onSearch={(query) => {
-                          setSearchQuery(query);
-                          handleSearch();
-                        }}
+                        onSelect={handleCardSelect}
+                        onSearch={handleSearch}
                         initialValue={searchQuery}
                         showSearchButton={true}
                         selectedState={selectedState}
@@ -373,7 +322,7 @@ export default function Home() {
             
             <div className="max-w-[1400px] mx-auto">
               <ContentLoader 
-                isLoading={loading} 
+                isLoading={isLoading} 
                 loadingMessage="Loading listings..."
                 minHeight="400px"
                 fallback={
@@ -385,10 +334,10 @@ export default function Home() {
                 }
               >
                 <ListingGrid 
-                  listings={listings} 
+                  listings={processedListings} 
                   loading={false} // We're handling loading state with ContentLoader
                   displayCount={displayCount}
-                  hasMore={listings.length > displayCount}
+                  hasMore={processedListings.length > displayCount}
                   onLoadMore={() => setDisplayCount(prev => prev + 8)}
                 />
               </ContentLoader>
