@@ -35,6 +35,10 @@ export function useListingVisibility(listings: Listing[]) {
     // Reset filtered out reasons for this batch
     filteredOutReasons.current = {};
     
+    // Clear problematic listings cache when listings array changes
+    // This allows previously problematic listings to be re-evaluated
+    problematicListingIds.current.clear();
+    
     // Filter listings to ensure only active ones are shown
     const filtered = listings.filter(listing => {
       // Skip listings without proper status or if they're known to be problematic
@@ -93,7 +97,7 @@ export function useListingVisibility(listings: Listing[]) {
         }
         
         // Check for required fields
-        const requiredFields = ['title', 'price', 'imageUrls', 'userId', 'username'];
+        const requiredFields = ['title', 'price', 'userId', 'username'];
         const missingFields = requiredFields.filter(field => !listing[field as keyof Listing]);
         
         if (missingFields.length > 0) {
@@ -101,9 +105,26 @@ export function useListingVisibility(listings: Listing[]) {
           return false;
         }
         
-        // Check for valid images
-        if (!Array.isArray(listing.imageUrls) || listing.imageUrls.length === 0) {
-          filteredOutReasons.current[listing.id] = 'No valid images';
+        // Check for valid images - with more detailed logging
+        if (!listing.imageUrls) {
+          filteredOutReasons.current[listing.id] = 'imageUrls is undefined or null';
+          return false;
+        }
+        
+        if (!Array.isArray(listing.imageUrls)) {
+          filteredOutReasons.current[listing.id] = `imageUrls is not an array: ${typeof listing.imageUrls}`;
+          return false;
+        }
+        
+        if (listing.imageUrls.length === 0) {
+          filteredOutReasons.current[listing.id] = 'imageUrls array is empty';
+          return false;
+        }
+        
+        // Verify the first image URL is valid
+        const firstImageUrl = listing.imageUrls[0];
+        if (!firstImageUrl || typeof firstImageUrl !== 'string' || !firstImageUrl.startsWith('http')) {
+          filteredOutReasons.current[listing.id] = `Invalid first image URL: ${firstImageUrl}`;
           return false;
         }
         

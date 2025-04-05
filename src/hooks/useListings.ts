@@ -205,7 +205,33 @@ export function useListings({ userId, searchQuery, showOnlyActive = false }: Use
   };
 
   const restoreListing = async (listingId: string) => {
-    return updateListingStatus(listingId, 'active');
+    try {
+      console.log(`Starting restoration of listing ${listingId}`);
+      
+      // First, clear all listing-related caches to ensure fresh data
+      if (typeof window !== 'undefined') {
+        const cacheKeys = Object.keys(localStorage).filter(key => 
+          key.startsWith('listings_')
+        );
+        
+        for (const key of cacheKeys) {
+          localStorage.removeItem(key);
+          console.log(`Cleared cache: ${key}`);
+        }
+      }
+      
+      // Call the update status function
+      const result = await updateListingStatus(listingId, 'active');
+      
+      // Force a refresh of the listings data
+      await refreshListings();
+      
+      console.log(`Successfully restored listing ${listingId}`);
+      return result;
+    } catch (error) {
+      console.error(`Error restoring listing ${listingId}:`, error);
+      throw error;
+    }
   };
   const updateListingStatus = async (listingId: string, status: 'active' | 'inactive' | 'archived') => {
     if (!user) throw new Error('Must be logged in to update a listing');

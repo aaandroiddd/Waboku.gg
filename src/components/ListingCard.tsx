@@ -442,20 +442,42 @@ export const ListingCard = memo(({ listing, isFavorite, onFavoriteClick, getCond
                       ease: "easeInOut"
                     }}
                   />
-                  <Image
-                    src={listing.imageUrls[listing.coverImageIndex ?? 0]}
-                    alt={listing.title}
-                    className="rounded-lg object-cover"
-                    fill
-                    sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
-                    priority={false}
-                    quality={80}
-                    loading="lazy"
-                    onError={(e) => {
-                      const target = e.target as HTMLImageElement;
-                      target.src = '/images/rect.png';
-                    }}
-                  />
+                  {(() => {
+                    // Safely determine the image URL to use
+                    const coverIndex = typeof listing.coverImageIndex === 'number' ? listing.coverImageIndex : 0;
+                    const imageUrl = Array.isArray(listing.imageUrls) && 
+                                    listing.imageUrls.length > 0 && 
+                                    listing.imageUrls[coverIndex] ? 
+                                    listing.imageUrls[coverIndex] : 
+                                    '/images/rect.png';
+                    
+                    // Log image loading issues in development
+                    if (process.env.NODE_ENV === 'development') {
+                      console.log(`Loading image for listing ${listing.id}:`, {
+                        imageUrl,
+                        coverIndex,
+                        totalImages: listing.imageUrls.length
+                      });
+                    }
+                    
+                    return (
+                      <Image
+                        src={imageUrl}
+                        alt={listing.title}
+                        className="rounded-lg object-cover"
+                        fill
+                        sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                        priority={false}
+                        quality={80}
+                        loading="lazy"
+                        onError={(e) => {
+                          console.error(`Image load error for listing ${listing.id}:`, imageUrl);
+                          const target = e.target as HTMLImageElement;
+                          target.src = '/images/rect.png';
+                        }}
+                      />
+                    );
+                  })()}
                 </motion.div>
               ) : (
                 <div className="w-full h-full flex items-center justify-center bg-secondary">
