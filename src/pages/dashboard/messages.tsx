@@ -164,7 +164,45 @@ export default function MessagesPage() {
         // Prefetch user data for all participants
         if (participantIds.size > 0) {
           console.log(`Prefetching data for ${participantIds.size} message participants`);
+          
+          // First prefetch in batches
           await prefetchUserData(Array.from(participantIds));
+          
+          // Then individually fetch the first few participants to ensure they're loaded immediately
+          // This helps with the initial rendering of the chat list
+          const priorityParticipants = Array.from(participantIds).slice(0, 5);
+          await Promise.allSettled(
+            priorityParticipants.map(async (userId) => {
+              try {
+                const userDoc = await getDoc(doc(db, 'users', userId));
+                if (userDoc.exists()) {
+                  const data = userDoc.data();
+                  const username = data.displayName || data.username || 'Unknown User';
+                  
+                  // Update the profile cache directly
+                  profileCache.current[userId] = {
+                    data: {
+                      username,
+                      avatarUrl: data.avatarUrl || data.photoURL || null
+                    },
+                    timestamp: Date.now()
+                  };
+                  
+                  // Also store in localStorage for persistence
+                  if (typeof window !== 'undefined') {
+                    const profileCacheKey = `profile_${userId}`;
+                    localStorage.setItem(profileCacheKey, JSON.stringify({
+                      username,
+                      avatarUrl: data.avatarUrl || data.photoURL || null,
+                      timestamp: Date.now()
+                    }));
+                  }
+                }
+              } catch (err) {
+                console.error(`Error prefetching priority user ${userId}:`, err);
+              }
+            })
+          );
         }
       } catch (err) {
         console.error('Error preloading user data:', err);
