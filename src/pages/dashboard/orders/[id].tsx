@@ -634,9 +634,9 @@ export default function OrderDetailsPage() {
                         {/* Complete Pickup Button - Only visible to seller and when not completed */}
                         {!isUserBuyer && !order.pickupCompleted && (order.status === 'paid' || order.status === 'awaiting_shipping') && (
                           <Button 
-                            variant="primary" 
+                            variant="default" 
                             size="sm"
-                            className="mt-2 sm:mt-0 w-full sm:w-auto"
+                            className="mt-2 sm:mt-0 w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white font-medium"
                             onClick={() => setShowCompletePickupDialog(true)}
                           >
                             <CheckCircle className="mr-2 h-4 w-4" /> Complete Pickup
@@ -893,7 +893,8 @@ export default function OrderDetailsPage() {
             {/* Seller actions for pickup orders */}
             {!isUserBuyer && order.isPickup && !order.pickupCompleted && (
               <Button 
-                variant="primary" 
+                variant="default" 
+                className="bg-green-600 hover:bg-green-700 text-white font-medium"
                 onClick={() => setShowCompletePickupDialog(true)}
               >
                 <CheckCircle className="mr-2 h-4 w-4" /> Complete Pickup

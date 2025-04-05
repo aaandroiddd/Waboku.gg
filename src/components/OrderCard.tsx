@@ -11,6 +11,10 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { getFirebaseServices } from '@/lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
+import { CheckCircle, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
+import { useAuth } from '@/contexts/AuthContext';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
 interface OrderCardProps {
   order: Order;
@@ -19,9 +23,12 @@ interface OrderCardProps {
 
 export function OrderCard({ order, isSale = false }: OrderCardProps) {
   const router = useRouter();
+  const { user } = useAuth();
   const [buyerName, setBuyerName] = useState<string | null>(null);
   const [sellerName, setSellerName] = useState<string | null>(null);
   const [isLoadingUser, setIsLoadingUser] = useState<boolean>(false);
+  const [isCompletingPickup, setIsCompletingPickup] = useState(false);
+  const [showCompletePickupDialog, setShowCompletePickupDialog] = useState(false);
   
   // Fetch user information when component mounts
   useEffect(() => {
@@ -75,6 +82,51 @@ export function OrderCard({ order, isSale = false }: OrderCardProps) {
     e.stopPropagation(); // Prevent triggering the card click
     if (order.listingId) {
       router.push(`/listings/${order.listingId}`);
+    }
+  };
+  
+  // Function to handle the complete pickup button click
+  const handleCompletePickup = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent triggering the card click
+    setShowCompletePickupDialog(true);
+  };
+  
+  // Function to actually complete the pickup
+  const completePickup = async () => {
+    if (!order.id || !user) return;
+    
+    try {
+      setIsCompletingPickup(true);
+      
+      // Call the API to complete the pickup
+      const response = await fetch('/api/orders/complete-pickup', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          orderId: order.id,
+          userId: user.uid,
+        }),
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to complete pickup');
+      }
+      
+      toast.success('Pickup completed successfully! The buyer can now leave a review for this transaction.');
+      
+      // Refresh the page to show updated status
+      router.reload();
+      
+    } catch (error) {
+      console.error('Error completing pickup:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to complete pickup');
+    } finally {
+      setIsCompletingPickup(false);
+      setShowCompletePickupDialog(false);
     }
   };
   
@@ -222,6 +274,21 @@ export function OrderCard({ order, isSale = false }: OrderCardProps) {
                 View Listing
               </Button>
             )}
+            {/* Complete Pickup Button - Only visible for sellers with pickup orders that aren't completed */}
+            {isSale && safeOrder.isPickup && !safeOrder.pickupCompleted && 
+             (safeOrder.status === 'paid' || safeOrder.status === 'awaiting_shipping') && (
+              <Button 
+                variant="default" 
+                className="bg-green-600 hover:bg-green-700 text-white font-medium"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleCompletePickup(e);
+                }}
+              >
+                <CheckCircle className="mr-2 h-4 w-4" />
+                Complete Pickup
+              </Button>
+            )}
           </div>
           
           {safeOrder.isPickup ? (
@@ -248,6 +315,42 @@ export function OrderCard({ order, isSale = false }: OrderCardProps) {
           )}
         </div>
       </CardContent>
+      
+      {/* Complete Pickup Dialog */}
+      <AlertDialog open={showCompletePickupDialog} onOpenChange={setShowCompletePickupDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Complete Pickup</AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2">
+              <p>
+                By marking this order as completed, you confirm that the buyer has picked up the item.
+              </p>
+              <div className="flex items-start gap-2 p-3 rounded-md bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 mt-2">
+                <CheckCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-medium">What happens next?</p>
+                  <ul className="list-disc list-inside mt-1 space-y-1 text-sm">
+                    <li>The order will be marked as completed</li>
+                    <li>The buyer will be able to leave a review for this transaction</li>
+                    <li>The review will be visible on your seller profile</li>
+                  </ul>
+                </div>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={completePickup}
+              disabled={isCompletingPickup}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              {isCompletingPickup && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Complete Pickup
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 }
