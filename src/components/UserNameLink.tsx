@@ -4,6 +4,7 @@ import { Skeleton } from './ui/skeleton';
 import { useEffect, useState, useRef } from 'react';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { useRouter } from 'next/router';
 
 interface UserNameLinkProps {
   userId: string;
@@ -18,6 +19,7 @@ export function UserNameLink({
   className = '',
   showSkeleton = true
 }: UserNameLinkProps) {
+  const router = useRouter();
   const { userData, loading, error } = useUserData(userId);
   const [displayName, setDisplayName] = useState(initialUsername || 'Loading...');
   const [loadingState, setLoadingState] = useState<'initial' | 'loading' | 'success' | 'error'>(
@@ -26,6 +28,7 @@ export function UserNameLink({
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const MAX_RETRIES = 3;
   const retryCountRef = useRef(0);
+  const profileDataPreloaded = useRef(false);
 
   // Directly fetch user data as a fallback when hook fails
   const fetchUserDirectly = async () => {
@@ -101,16 +104,75 @@ export function UserNameLink({
     return <span className={className}>{displayName}</span>;
   }
 
+  // Preload profile data before navigation
+  const preloadProfileData = async () => {
+    if (profileDataPreloaded.current) return;
+    
+    try {
+      profileDataPreloaded.current = true;
+      
+      // Ensure we have user data in localStorage cache
+      if (typeof window !== 'undefined') {
+        const profileCacheKey = `profile_${userId}`;
+        
+        // Check if we already have cached data
+        if (!localStorage.getItem(profileCacheKey)) {
+          // Fetch user data directly to ensure it's available
+          const userDoc = await getDoc(doc(db, 'users', userId));
+          if (userDoc.exists()) {
+            // Store minimal data in localStorage to indicate we've prefetched
+            localStorage.setItem(profileCacheKey, JSON.stringify({
+              prefetched: true,
+              timestamp: Date.now()
+            }));
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Error preloading profile data:', err);
+    }
+  };
+
   // Handle click event safely to prevent the "event source is null" error
-  const handleClick = (e: React.MouseEvent) => {
-    if (e) e.stopPropagation();
+  const handleClick = async (e: React.MouseEvent | null) => {
+    // Only stop propagation if the event exists and has a stopPropagation method
+    if (e && typeof e.stopPropagation === 'function') {
+      e.stopPropagation();
+    }
+    
+    // Ensure profile data is preloaded
+    await preloadProfileData();
+  };
+
+  // Preload data on hover
+  const handleMouseEnter = () => {
+    preloadProfileData();
   };
 
   return (
     <Link
       href={`/profile/${userId}`}
       className={`hover:text-primary hover:underline transition-colors ${className}`}
-      onClick={handleClick}
+      onClick={(e) => {
+        try {
+          // Handle the click event
+          handleClick(e);
+        } catch (error) {
+          console.error('Error handling click event:', error);
+          // Prevent default behavior if there's an error
+          if (e && typeof e.preventDefault === 'function') {
+            e.preventDefault();
+          }
+          
+          // Ensure profile data is preloaded before navigation
+          preloadProfileData().then(() => {
+            // Navigate programmatically as a fallback
+            window.location.href = `/profile/${userId}`;
+          });
+        }
+      }}
+      onMouseEnter={handleMouseEnter}
+      prefetch={false} // Disable Next.js prefetching to use our custom preloading
     >
       {displayName}
     </Link>
