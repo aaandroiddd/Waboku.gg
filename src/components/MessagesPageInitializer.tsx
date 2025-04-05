@@ -61,22 +61,9 @@ export function MessagesPageInitializer() {
       console.error('[MessagesPageInitializer] Failed to get database instance after all attempts');
       setConnectionStatus('disconnected');
       
-      // Show toast with recovery option if we've tried multiple times
-      if (retryCount >= 2) {
-        toast({
-          title: "Database Connection Failed",
-          description: "Unable to connect to the messaging service. Please try clearing your cache and reloading.",
-          action: (
-            <Button 
-              variant="secondary" 
-              onClick={clearCacheAndReload}
-            >
-              Clear & Reload
-            </Button>
-          ),
-          duration: 10000,
-        });
-      }
+      // Connection alerts have been disabled as requested
+      // Still log the error for debugging purposes
+      console.log('[MessagesPageInitializer] Database connection failed after multiple attempts');
       
       // Retry with exponential backoff if we haven't tried too many times
       if (retryCount < 5) {
@@ -122,20 +109,8 @@ export function MessagesPageInitializer() {
           console.log(`[MessagesPageInitializer] Connection lost, retrying in ${delay}ms`);
           setTimeout(() => verifyDatabaseConnection(retryCount + 1), delay);
         } else {
-          // If we've tried too many times, show toast with recovery option
-          toast({
-            title: "Database Connection Failed",
-            description: "Unable to connect to the messaging service. Please try clearing your cache and reloading.",
-            action: (
-              <Button 
-                variant="secondary" 
-                onClick={clearCacheAndReload}
-              >
-                Clear & Reload
-              </Button>
-            ),
-            duration: 10000,
-          });
+          // Connection alerts have been disabled as requested
+          console.log('[MessagesPageInitializer] Connection lost after multiple retry attempts');
         }
       }, { onlyOnce: true });
       
@@ -150,20 +125,8 @@ export function MessagesPageInitializer() {
           if (retryCount < 5) {
             verifyDatabaseConnection(retryCount + 1);
           } else {
-            // If we've tried too many times, show toast with recovery option
-            toast({
-              title: "Database Connection Timeout",
-              description: "Connection to the messaging service timed out. Please try clearing your cache and reloading.",
-              action: (
-                <Button 
-                  variant="secondary" 
-                  onClick={clearCacheAndReload}
-                >
-                  Clear & Reload
-                </Button>
-              ),
-              duration: 10000,
-            });
+            // Connection alerts have been disabled as requested
+            console.log('[MessagesPageInitializer] Connection check timed out after multiple attempts');
           }
         }
       }, 5000);
@@ -182,20 +145,8 @@ export function MessagesPageInitializer() {
         console.log(`[MessagesPageInitializer] Error during connection check, retrying in ${delay}ms`);
         setTimeout(() => verifyDatabaseConnection(retryCount + 1), delay);
       } else {
-        // If we've tried too many times, show toast with recovery option
-        toast({
-          title: "Database Connection Error",
-          description: "Error connecting to the messaging service. Please try clearing your cache and reloading.",
-          action: (
-            <Button 
-              variant="secondary" 
-              onClick={clearCacheAndReload}
-            >
-              Clear & Reload
-            </Button>
-          ),
-          duration: 10000,
-        });
+        // Connection alerts have been disabled as requested
+        console.log('[MessagesPageInitializer] Connection error after multiple retry attempts');
       }
     }
   };

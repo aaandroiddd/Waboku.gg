@@ -604,57 +604,6 @@ export function FirebaseConnectionHandler() {
   // Only render if there's a connection error and we should show the alert
   if (!showAlert) return null;
 
-  return (
-    <AnimatePresence>
-      {showAlert && (
-        <motion.div
-          className="fixed bottom-4 right-4 z-50 max-w-md"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: 20 }}
-          transition={{ duration: 0.3 }}
-        >
-          <Alert variant="destructive" className="border-amber-500 bg-amber-500/10">
-            <AlertCircle className="h-4 w-4 text-amber-500" />
-            <div className="flex-1">
-              <AlertTitle className="text-amber-500">Connection Issue</AlertTitle>
-              <AlertDescription className="text-sm">
-                We're having trouble connecting to our servers. This might affect some features.
-                {errorCount > 5 && " If this persists, try clearing your browser cache or using a different browser."}
-              </AlertDescription>
-            </div>
-            <div className="flex gap-2 mt-2">
-              <Button
-                variant="outline"
-                size="sm"
-                className="text-xs h-8"
-                onClick={handleDismiss}
-              >
-                Dismiss
-              </Button>
-              <Button
-                variant="default"
-                size="sm"
-                className="text-xs h-8 bg-amber-500 hover:bg-amber-600"
-                onClick={handleReconnect}
-                disabled={isReconnecting}
-              >
-                {isReconnecting ? (
-                  <>
-                    <RefreshCw className="h-3 w-3 mr-1 animate-spin" />
-                    Reconnecting...
-                  </>
-                ) : (
-                  <>
-                    <RefreshCw className="h-3 w-3 mr-1" />
-                    Reconnect
-                  </>
-                )}
-              </Button>
-            </div>
-          </Alert>
-        </motion.div>
-      )}
-    </AnimatePresence>
-  );
+  // Connection alerts have been disabled as requested
+  return null;
 }

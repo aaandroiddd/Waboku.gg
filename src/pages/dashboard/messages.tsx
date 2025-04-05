@@ -350,13 +350,7 @@ export default function MessagesPage() {
       {/* Disable Firestore to prevent 400 Bad Request errors */}
       <FirestoreDisabler />
       
-      {/* Add database connection status component */}
-      <DatabaseConnectionStatus onConnectionChange={(connected) => {
-        if (connected && error) {
-          // If we're connected but there was an error, try to reload the data
-          window.location.reload();
-        }
-      }} />
+      {/* Database connection status alerts have been disabled as requested */}
       
       <div className="h-[calc(100vh-8rem)] flex overflow-hidden">
         {showChatList && (
