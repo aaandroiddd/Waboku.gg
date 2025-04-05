@@ -209,34 +209,47 @@ export default function ListingPage() {
 
   const { startLoading, stopLoading } = useLoading();
 
-  // Track view count when listing is loaded
+  // Track view count when listing is loaded - with debounce to prevent duplicate requests
   useEffect(() => {
+    // Create a unique key for this listing view to prevent duplicate tracking
+    const viewTrackingKey = `view_tracked_${listing?.id}`;
+    
     if (listing && user) {
       // Don't track views from the listing owner
       if (listing.userId !== user.uid) {
-        const trackView = async () => {
-          try {
-            const response = await fetch('/api/listings/track-view', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                listingId: listing.id,
-                userId: user.uid
-              }),
-            });
-            
-            if (response.ok) {
-              const data = await response.json();
-              console.log('View tracked successfully:', data);
+        // Check if we've already tracked this view in this session
+        if (typeof window !== 'undefined' && !sessionStorage.getItem(viewTrackingKey)) {
+          const trackView = async () => {
+            try {
+              // Mark as tracked immediately to prevent duplicate requests
+              sessionStorage.setItem(viewTrackingKey, 'true');
+              
+              const response = await fetch('/api/listings/track-view', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  listingId: listing.id,
+                  userId: user.uid
+                }),
+              });
+              
+              if (response.ok) {
+                const data = await response.json();
+                console.log('View tracked successfully:', data);
+              }
+            } catch (error) {
+              console.error('Error tracking view:', error);
+              // If there was an error, remove the tracking flag to allow retry
+              sessionStorage.removeItem(viewTrackingKey);
             }
-          } catch (error) {
-            console.error('Error tracking view:', error);
-          }
-        };
-        
-        trackView();
+          };
+          
+          trackView();
+        } else {
+          console.log('View already tracked for this listing in this session');
+        }
       }
     }
   }, [listing, user]);
