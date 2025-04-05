@@ -18,6 +18,8 @@ import AnimatedBackground from "@/components/AnimatedBackground";
 import { ContentLoader } from "@/components/ContentLoader";
 import { useListings } from "@/hooks/useListings";
 import Link from "next/link";
+import { FirebaseConnectionHandler } from "@/components/FirebaseConnectionHandler";
+import { ListingDebuggerTool } from "@/components/ListingDebuggerTool";
 
 // Subtitles array - moved outside component to prevent recreation on each render
 const subtitles = [
@@ -321,26 +323,33 @@ export default function Home() {
             </div>
             
             <div className="max-w-[1400px] mx-auto">
-              <ContentLoader 
-                isLoading={isLoading} 
-                loadingMessage="Loading listings..."
-                minHeight="400px"
-                fallback={
-                  <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                    {[...Array(8)].map((_, i) => (
-                      <Skeleton key={i} className="h-64 w-full" />
-                    ))}
-                  </div>
-                }
-              >
-                <ListingGrid 
-                  listings={processedListings} 
-                  loading={false} // We're handling loading state with ContentLoader
-                  displayCount={displayCount}
-                  hasMore={processedListings.length > displayCount}
-                  onLoadMore={() => setDisplayCount(prev => prev + 8)}
-                />
-              </ContentLoader>
+              <FirebaseConnectionHandler>
+                <ContentLoader 
+                  isLoading={isLoading} 
+                  loadingMessage="Loading listings..."
+                  minHeight="400px"
+                  fallback={
+                    <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                      {[...Array(8)].map((_, i) => (
+                        <Skeleton key={i} className="h-64 w-full" />
+                      ))}
+                    </div>
+                  }
+                >
+                  <ListingGrid 
+                    listings={processedListings} 
+                    loading={false} // We're handling loading state with ContentLoader
+                    displayCount={displayCount}
+                    hasMore={processedListings.length > displayCount}
+                    onLoadMore={() => setDisplayCount(prev => prev + 8)}
+                  />
+                </ContentLoader>
+                
+                {/* Add the ListingDebuggerTool at the bottom of the listings section */}
+                <div className="mt-8">
+                  <ListingDebuggerTool />
+                </div>
+              </FirebaseConnectionHandler>
             </div>
           </section>
         </main>

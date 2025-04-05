@@ -13,6 +13,8 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Search, MapPin, Filter, Check, LayoutGrid, List, X } from 'lucide-react';
 import { useListings } from '@/hooks/useListings';
+import { FirebaseConnectionHandler } from '@/components/FirebaseConnectionHandler';
+import { ListingDebuggerTool } from '@/components/ListingDebuggerTool';
 import {
   Select,
   SelectContent,
@@ -321,6 +323,8 @@ export default function ListingsPage() {
         <Header />
         <main className="container mx-auto px-4 py-8">
           <div className="max-w-[1400px] mx-auto">
+            {/* Firebase Connection Handler wraps the content */}
+            <FirebaseConnectionHandler>
             {/* Search Section */}
             <div className="mb-8">
               <div className="space-y-4">
@@ -550,6 +554,12 @@ export default function ListingsPage() {
             ) : (
               <SearchListingList listings={filteredListings} loading={isLoading} />
             )}
+            
+            {/* Listing Debugger Tool */}
+            <div className="mt-8">
+              <ListingDebuggerTool />
+            </div>
+            </FirebaseConnectionHandler>
           </div>
         </main>
       </div>
