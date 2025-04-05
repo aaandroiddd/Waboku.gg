@@ -42,16 +42,18 @@ const LoadingProfile = () => (
   </div>
 );
 
-const ErrorCard = ({ message, onRetry }: { message: string; onRetry?: () => void }) => (
+const ErrorCard = ({ message, onRetry, isOffline }: { message: string; onRetry?: () => void; isOffline?: boolean }) => (
   <div className="container mx-auto p-6">
     <Card>
       <CardContent className="p-6">
         <div className="text-center">
           <h1 className="text-2xl font-bold text-destructive mb-2">
-            {message}
+            {isOffline ? "You're currently offline" : message}
           </h1>
           <p className="text-muted-foreground mb-4">
-            Please try again later or contact support if the issue persists.
+            {isOffline 
+              ? "We couldn't load this profile because your device appears to be offline. Please check your internet connection and try again."
+              : "Please try again later or contact support if the issue persists."}
           </p>
           {onRetry && (
             <Button 
@@ -73,8 +75,25 @@ const ProfileContent = ({ userId }: { userId: string | null }) => {
   }
   const { user, checkVerificationStatus } = useAuth();
   const router = useRouter();
-  const { profile, isLoading, error } = useProfile(userId);
+  const { profile, isLoading, error, isOffline } = useProfile(userId);
   const [mounted, setMounted] = useState(false);
+  const [networkStatus, setNetworkStatus] = useState<'online' | 'offline'>(
+    typeof navigator !== 'undefined' ? (navigator.onLine ? 'online' : 'offline') : 'online'
+  );
+
+  // Monitor network status
+  useEffect(() => {
+    const handleOnline = () => setNetworkStatus('online');
+    const handleOffline = () => setNetworkStatus('offline');
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
   useEffect(() => {
     if (user && user.uid === userId) {
@@ -92,6 +111,15 @@ const ProfileContent = ({ userId }: { userId: string | null }) => {
 
   if (isLoading) {
     return <LoadingProfile />;
+  }
+
+  // Handle offline state
+  if (isOffline || networkStatus === 'offline') {
+    return <ErrorCard 
+      message="Connection Error" 
+      isOffline={true}
+      onRetry={() => window.location.reload()}
+    />;
   }
 
   if (error || !profile) {

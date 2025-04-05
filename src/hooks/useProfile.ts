@@ -31,11 +31,30 @@ export function useProfile(userId: string | null) {
   );
   const [isLoading, setIsLoading] = useState(!profile);
   const [error, setError] = useState<string | null>(null);
+  const [isOffline, setIsOffline] = useState<boolean>(false);
 
   const fetchProfile = useCallback(async (id: string) => {
     try {
       setIsLoading(true);
       setError(null);
+      setIsOffline(false);
+      
+      // Check if browser is offline
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        console.log('Browser is offline, checking for cached profile data');
+        setIsOffline(true);
+        
+        // If we have cached data, use it even if expired when offline
+        const cachedData = profileCache[id];
+        if (cachedData) {
+          console.log('Using cached profile data while offline');
+          setProfile(cachedData.profile);
+          setIsLoading(false);
+          return;
+        } else {
+          throw new Error('You are currently offline and no cached data is available');
+        }
+      }
       
       // Check if we have a valid cached profile and no localStorage flag to force refresh
       const cachedData = profileCache[id];
@@ -102,15 +121,38 @@ export function useProfile(userId: string | null) {
       
       setProfile(profileData);
     } catch (err: any) {
-      setError(err.message || 'Error fetching profile');
-      setProfile(null);
       console.error('Error fetching profile:', err);
       
-      // Retry once after a short delay if it's a network error
-      if (err.message?.includes('network') || err.code === 'unavailable') {
-        setTimeout(() => {
-          fetchProfile(id).catch(console.error);
-        }, 2000);
+      // Check if the error is related to being offline
+      if (
+        err.message?.includes('network') || 
+        err.message?.includes('offline') || 
+        err.code === 'unavailable' || 
+        err.code === 'failed-precondition'
+      ) {
+        console.log('Detected offline or network error');
+        setIsOffline(true);
+        
+        // Try to use cached data even if expired when offline
+        const cachedData = profileCache[id];
+        if (cachedData) {
+          console.log('Using cached profile data after network error');
+          setProfile(cachedData.profile);
+          setError(null);
+        } else {
+          setError('Unable to load profile due to network issues');
+          setProfile(null);
+        }
+      } else {
+        setError(err.message || 'Error fetching profile');
+        setProfile(null);
+        
+        // Retry once after a short delay if it's a network error
+        if (err.message?.includes('network') || err.code === 'unavailable') {
+          setTimeout(() => {
+            fetchProfile(id).catch(console.error);
+          }, 2000);
+        }
       }
     } finally {
       setIsLoading(false);
@@ -124,11 +166,32 @@ export function useProfile(userId: string | null) {
       return;
     }
 
+    // Set up network status listeners
+    const handleOnline = () => {
+      console.log('Browser went online, refreshing profile data');
+      setIsOffline(false);
+      if (userId) {
+        // Small delay to allow network to stabilize
+        setTimeout(() => fetchProfile(userId), 1000);
+      }
+    };
+
+    const handleOffline = () => {
+      console.log('Browser went offline');
+      setIsOffline(true);
+    };
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('online', handleOnline);
+      window.addEventListener('offline', handleOffline);
+    }
+
     fetchProfile(userId);
     
     // Set up a refresh interval to keep profile data fresh
     const refreshInterval = setInterval(() => {
-      if (userId) {
+      if (userId && typeof navigator !== 'undefined' && navigator.onLine) {
+        // Only refresh if online
         // Check if we need to refresh based on cache expiration
         const cachedData = profileCache[userId];
         if (!cachedData || Date.now() - cachedData.timestamp >= CACHE_EXPIRATION) {
@@ -138,7 +201,13 @@ export function useProfile(userId: string | null) {
       }
     }, CACHE_EXPIRATION / 2); // Refresh at half the cache expiration time
     
-    return () => clearInterval(refreshInterval);
+    return () => {
+      clearInterval(refreshInterval);
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('online', handleOnline);
+        window.removeEventListener('offline', handleOffline);
+      }
+    };
   }, [userId, fetchProfile]);
 
   // Function to force refresh the profile
@@ -151,5 +220,5 @@ export function useProfile(userId: string | null) {
     }
   }, [userId, fetchProfile]);
 
-  return { profile, isLoading, error, refreshProfile };
+  return { profile, isLoading, error, isOffline, refreshProfile };
 }
