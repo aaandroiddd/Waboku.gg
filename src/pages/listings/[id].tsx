@@ -258,8 +258,8 @@ export default function ListingPage() {
     let isMounted = true;
     let retryCount = 0;
     let expirationCheckDone = false;
-    const maxRetries = 3;
-    const retryDelay = 1000; // 1 second delay between retries
+    const maxRetries = 5; // Increased from 3 to 5
+    const retryDelay = 1500; // Increased from 1000ms to 1500ms
     // Track any active listeners to clean them up
     const activeListeners: (() => void)[] = [];
 
@@ -275,10 +275,32 @@ export default function ListingPage() {
           startLoading(); // Start global loading indicator
         }
 
-        const { db } = getFirebaseServices();
+        // Get Firebase services with retry logic
+        let db = null;
+        let firebaseError = null;
+        
+        for (let attempt = 0; attempt < 3; attempt++) {
+          try {
+            console.log(`[Listing] Attempting to initialize Firebase (attempt ${attempt + 1}/3)`);
+            const services = getFirebaseServices();
+            db = services.db;
+            
+            if (db) {
+              console.log('[Listing] Firebase initialized successfully');
+              break;
+            } else {
+              console.error('[Listing] Firebase services returned null db');
+              await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+          } catch (err) {
+            console.error(`[Listing] Firebase initialization error (attempt ${attempt + 1}):`, err);
+            firebaseError = err;
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          }
+        }
         
         if (!db) {
-          throw new Error('Database not initialized');
+          throw firebaseError || new Error('Database not initialized after multiple attempts');
         }
 
         // First, trigger a background check for listing expiration

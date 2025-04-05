@@ -207,14 +207,76 @@ function initializeFirebase() {
 // Initialize Firebase on module load
 let services: ReturnType<typeof initializeFirebase>;
 
-// Initialize Firebase services only once
+// Initialize Firebase services with retry mechanism
 if (typeof window !== 'undefined') {
+  const initializeWithRetry = async (maxRetries = 3, delay = 1500) => {
+    let lastError = null;
+    
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      try {
+        console.log(`[Firebase] Initialization attempt ${attempt + 1}/${maxRetries}`);
+        const initializedServices = initializeFirebase();
+        
+        // Verify that critical services are available
+        if (initializedServices.app && initializedServices.db) {
+          console.log('[Firebase] Services initialized successfully on attempt', attempt + 1);
+          return initializedServices;
+        } else {
+          console.warn('[Firebase] Incomplete initialization, missing critical services');
+          // Wait before retrying
+          if (attempt < maxRetries - 1) {
+            await new Promise(resolve => setTimeout(resolve, delay));
+          }
+        }
+      } catch (error) {
+        lastError = error;
+        console.error(`[Firebase] Initialization attempt ${attempt + 1} failed:`, error);
+        
+        // Wait before retrying
+        if (attempt < maxRetries - 1) {
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
+      }
+    }
+    
+    console.error(`[Firebase] All ${maxRetries} initialization attempts failed`);
+    return { 
+      app: null, 
+      auth: null, 
+      db: null, 
+      storage: null, 
+      database: null,
+      initializationError: lastError
+    };
+  };
+
+  // Initialize immediately but with retry capability
   try {
-    // Always initialize Firebase services immediately to prevent "Firebase services not initialized" errors
     services = initializeFirebase();
-    console.log('Firebase services initialized successfully');
+    
+    // If initial attempt failed or is incomplete, retry in the background
+    if (!services.app || !services.db) {
+      console.warn('[Firebase] Initial initialization incomplete, scheduling background retry');
+      
+      // Schedule a background retry that will update the services object
+      setTimeout(async () => {
+        try {
+          const retryServices = await initializeWithRetry(3, 2000);
+          
+          // Update the services with retry results if better than what we have
+          if (retryServices.app && retryServices.db && (!services.app || !services.db)) {
+            console.log('[Firebase] Background retry succeeded, updating services');
+            Object.assign(services, retryServices);
+          }
+        } catch (retryError) {
+          console.error('[Firebase] Background retry failed:', retryError);
+        }
+      }, 1000);
+    } else {
+      console.log('[Firebase] Services initialized successfully on first attempt');
+    }
   } catch (error) {
-    console.error('Failed to initialize Firebase services:', error);
+    console.error('[Firebase] Initial initialization failed:', error);
     services = { 
       app: null, 
       auth: null, 
@@ -223,6 +285,16 @@ if (typeof window !== 'undefined') {
       database: null,
       initializationError: error
     };
+    
+    // Schedule a background retry
+    setTimeout(async () => {
+      try {
+        const retryServices = await initializeWithRetry(3, 2000);
+        Object.assign(services, retryServices);
+      } catch (retryError) {
+        console.error('[Firebase] Background retry failed:', retryError);
+      }
+    }, 1000);
   }
 } else {
   // Server-side initialization with empty services
@@ -249,11 +321,36 @@ export const firebaseDb = db;
 export const firebaseStorage = storage;
 export const firebaseDatabase = database;
 
-// Helper function to get Firebase services
+// Helper function to get Firebase services with better error handling
 export function getFirebaseServices() {
-  if (!app || !auth || !db) {
-    throw new Error('Firebase services not initialized');
+  // Check if services are initialized
+  if (app && auth && db) {
+    return services;
   }
+  
+  // If we're in the browser, try to reinitialize
+  if (typeof window !== 'undefined') {
+    console.warn('[Firebase] Services not fully initialized when requested, attempting to reinitialize');
+    
+    try {
+      // Try to initialize again
+      const reinitialized = initializeFirebase();
+      
+      // If we got valid services, update the global services object
+      if (reinitialized.app && reinitialized.auth && reinitialized.db) {
+        console.log('[Firebase] Reinitialization successful');
+        Object.assign(services, reinitialized);
+        return services;
+      } else {
+        console.error('[Firebase] Reinitialization failed to produce valid services');
+      }
+    } catch (error) {
+      console.error('[Firebase] Error during reinitialization:', error);
+    }
+  }
+  
+  // Return the services even if incomplete - the calling code should handle null values
+  console.warn('[Firebase] Returning potentially incomplete services');
   return services;
 }
 
