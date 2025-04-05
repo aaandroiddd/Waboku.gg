@@ -7,8 +7,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { MessagesPageInitializer } from '@/components/MessagesPageInitializer';
 import { DatabaseConnectionStatus } from '@/components/DatabaseConnectionStatus';
+import { UpdateDatabaseRules } from '@/components/UpdateDatabaseRules';
 import { useRouter } from 'next/router';
-import { ArrowLeft, MessageCircle, Database, RefreshCw } from 'lucide-react';
+import { ArrowLeft, MessageCircle, Database, RefreshCw, Shield } from 'lucide-react';
 
 export default function FirebaseDiagnosticsPage() {
   const router = useRouter();
@@ -54,7 +55,7 @@ export default function FirebaseDiagnosticsPage() {
             </CardHeader>
             <CardContent>
               <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                <TabsList className="grid w-full grid-cols-2">
+                <TabsList className="grid w-full grid-cols-3">
                   <TabsTrigger value="connection-test" className="flex items-center gap-2">
                     <Database className="h-4 w-4" />
                     Connection Test
@@ -62,6 +63,10 @@ export default function FirebaseDiagnosticsPage() {
                   <TabsTrigger value="messages-status" className="flex items-center gap-2">
                     <MessageCircle className="h-4 w-4" />
                     Messages Status
+                  </TabsTrigger>
+                  <TabsTrigger value="database-rules" className="flex items-center gap-2">
+                    <Shield className="h-4 w-4" />
+                    Database Rules
                   </TabsTrigger>
                 </TabsList>
                 
@@ -130,6 +135,50 @@ export default function FirebaseDiagnosticsPage() {
                         >
                           Clear Cache & Reload
                         </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+                
+                <TabsContent value="database-rules" className="pt-4">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Database Rules Management</CardTitle>
+                      <CardDescription>
+                        Update Firebase Realtime Database security rules to fix permission issues
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="bg-amber-500/10 border border-amber-500 rounded-md p-4 mb-4">
+                        <h3 className="text-amber-500 font-medium flex items-center gap-2">
+                          <Shield className="h-4 w-4" />
+                          Permission Issues Detected
+                        </h3>
+                        <p className="text-sm mt-2">
+                          The connection test is showing permission denied errors for database operations. 
+                          This is likely due to restrictive security rules in your Firebase Realtime Database.
+                        </p>
+                        <p className="text-sm mt-2">
+                          Click the button below to update the database rules to allow the connection tests to work properly.
+                          This will add permissions for the test path while maintaining security for your actual data.
+                        </p>
+                      </div>
+                      
+                      <UpdateDatabaseRules />
+                      
+                      <Separator className="my-4" />
+                      
+                      <div className="space-y-2">
+                        <h4 className="font-medium">After Updating Rules</h4>
+                        <p className="text-sm text-muted-foreground">
+                          After updating the database rules:
+                        </p>
+                        <ol className="list-decimal list-inside text-sm text-muted-foreground space-y-1 ml-4">
+                          <li>Wait about 30 seconds for the rules to propagate</li>
+                          <li>Go back to the "Connection Test" tab</li>
+                          <li>Click "Run Tests Again" to verify the permission issues are resolved</li>
+                          <li>If issues persist, try clearing your browser cache and reloading</li>
+                        </ol>
                       </div>
                     </CardContent>
                   </Card>
