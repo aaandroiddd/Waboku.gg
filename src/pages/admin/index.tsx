@@ -419,6 +419,22 @@ export default function AdminDashboard() {
             </div>
           </Card>
           
+          {/* Listing Visibility Diagnostics Section */}
+          <Card className="p-6 mb-8">
+            <h2 className="text-xl font-semibold mb-4">Listing Visibility Diagnostics</h2>
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Diagnose and fix issues with listing visibility in the marketplace.
+              </p>
+              <Button 
+                onClick={() => router.push(`/admin/listing-diagnostics`)}
+                className="w-full"
+              >
+                Listing Diagnostics
+              </Button>
+            </div>
+          </Card>
+          
           {/* Wanted Posts Debugger Section */}
           <div className="mt-8">
             <h2 className="text-xl font-semibold mb-4">Wanted Posts Debugging Tools</h2>
