@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 interface GeolocationState {
   latitude: number | null;
@@ -7,15 +7,19 @@ interface GeolocationState {
   loading: boolean;
 }
 
-export const useGeolocation = () => {
+interface GeolocationOptions {
+  autoRequest?: boolean;
+}
+
+export const useGeolocation = (options: GeolocationOptions = { autoRequest: false }) => {
   const [state, setState] = useState<GeolocationState>({
     latitude: null,
     longitude: null,
     error: null,
-    loading: true,
+    loading: false,
   });
 
-  useEffect(() => {
+  const requestLocation = useCallback(() => {
     if (!navigator.geolocation) {
       setState(prev => ({
         ...prev,
@@ -24,6 +28,8 @@ export const useGeolocation = () => {
       }));
       return;
     }
+
+    setState(prev => ({ ...prev, loading: true }));
 
     navigator.geolocation.getCurrentPosition(
       (position) => {
@@ -44,7 +50,15 @@ export const useGeolocation = () => {
     );
   }, []);
 
-  return state;
+  useEffect(() => {
+    if (options.autoRequest) {
+      requestLocation();
+    } else {
+      setState(prev => ({ ...prev, loading: false }));
+    }
+  }, [options.autoRequest, requestLocation]);
+
+  return { ...state, requestLocation };
 };
 
 // Export the calculateDistance function so it can be imported elsewhere

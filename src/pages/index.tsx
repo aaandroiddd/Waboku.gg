@@ -87,7 +87,7 @@ export default function Home() {
   );
   const [displayCount, setDisplayCount] = useState(8);
 
-  const { latitude, longitude, loading: geoLoading } = useGeolocation();
+  const { latitude, longitude, loading: geoLoading } = useGeolocation({ autoRequest: false });
   const { listings: allListings, isLoading } = useListings();
   const router = useRouter();
 
