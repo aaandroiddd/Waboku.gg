@@ -252,22 +252,91 @@ const loading = authLoading || listingsLoading || profileLoading;
   });
   
   const filteredAndSortedListings = sortedListings.filter(listing => {
-    const matchesGameFilter = gameFilter === 'all' || listing.game === gameFilter;
+    // Improved game filtering with case-insensitive matching
+    const matchesGameFilter = gameFilter === 'all' || 
+      (listing.game && listing.game.toLowerCase() === gameFilter.toLowerCase()) ||
+      (listing.game && gameFilter === 'mtg' && listing.game.toLowerCase().includes('magic')) ||
+      (listing.game && gameFilter === 'yugioh' && (
+        listing.game.toLowerCase().includes('yu-gi-oh') || 
+        listing.game.toLowerCase().includes('yugioh')
+      )) ||
+      (listing.game && gameFilter === 'pokemon' && listing.game.toLowerCase().includes('pokemon')) ||
+      (listing.game && gameFilter === 'onepiece' && listing.game.toLowerCase().includes('one piece')) ||
+      (listing.game && gameFilter === 'lorcana' && listing.game.toLowerCase().includes('lorcana')) ||
+      (listing.game && gameFilter === 'dbs' && (
+        listing.game.toLowerCase().includes('dragon ball') || 
+        listing.game.toLowerCase().includes('dbs')
+      )) ||
+      (listing.game && gameFilter === 'flesh-and-blood' && listing.game.toLowerCase().includes('flesh')) ||
+      (listing.game && gameFilter === 'star-wars' && listing.game.toLowerCase().includes('star wars')) ||
+      (listing.game && gameFilter === 'digimon' && listing.game.toLowerCase().includes('digimon'));
+    
+    // Improved search with case-insensitive matching
+    const searchLower = searchQuery.toLowerCase();
     const matchesSearch = searchQuery === '' || 
-      listing.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      listing.description?.toLowerCase().includes(searchQuery.toLowerCase());
+      (listing.title && listing.title.toLowerCase().includes(searchLower)) ||
+      (listing.description && listing.description.toLowerCase().includes(searchLower));
     
     return matchesGameFilter && matchesSearch;
   });
 
-  // Use the properly filtered active listings instead of just filtering by status
-  const activeListings = properlyFilteredActiveListings;
+  // First filter active listings properly, then apply sorting and filtering
+  const filteredActiveListings = properlyFilteredActiveListings.filter(listing => {
+    // Improved game filtering with case-insensitive matching
+    const matchesGameFilter = gameFilter === 'all' || 
+      (listing.game && listing.game.toLowerCase() === gameFilter.toLowerCase()) ||
+      (listing.game && gameFilter === 'mtg' && listing.game.toLowerCase().includes('magic')) ||
+      (listing.game && gameFilter === 'yugioh' && (
+        listing.game.toLowerCase().includes('yu-gi-oh') || 
+        listing.game.toLowerCase().includes('yugioh')
+      )) ||
+      (listing.game && gameFilter === 'pokemon' && listing.game.toLowerCase().includes('pokemon')) ||
+      (listing.game && gameFilter === 'onepiece' && listing.game.toLowerCase().includes('one piece')) ||
+      (listing.game && gameFilter === 'lorcana' && listing.game.toLowerCase().includes('lorcana')) ||
+      (listing.game && gameFilter === 'dbs' && (
+        listing.game.toLowerCase().includes('dragon ball') || 
+        listing.game.toLowerCase().includes('dbs')
+      )) ||
+      (listing.game && gameFilter === 'flesh-and-blood' && listing.game.toLowerCase().includes('flesh')) ||
+      (listing.game && gameFilter === 'star-wars' && listing.game.toLowerCase().includes('star wars')) ||
+      (listing.game && gameFilter === 'digimon' && listing.game.toLowerCase().includes('digimon'));
+    
+    // Improved search with case-insensitive matching
+    const searchLower = searchQuery.toLowerCase();
+    const matchesSearch = searchQuery === '' || 
+      (listing.title && listing.title.toLowerCase().includes(searchLower)) ||
+      (listing.description && listing.description.toLowerCase().includes(searchLower));
+    
+    return matchesGameFilter && matchesSearch;
+  });
+
+  // Then sort the filtered active listings
+  const activeListings = [...filteredActiveListings].sort((a, b) => {
+    if (sortBy === 'date') {
+      const dateA = a.createdAt instanceof Date ? a.createdAt : new Date(a.createdAt);
+      const dateB = b.createdAt instanceof Date ? b.createdAt : new Date(b.createdAt);
+      return sortOrder === 'desc' ? dateB.getTime() - dateA.getTime() : dateA.getTime() - dateB.getTime();
+    } else if (sortBy === 'price') {
+      return sortOrder === 'desc' ? b.price - a.price : a.price - b.price;
+    } else {
+      return sortOrder === 'desc' 
+        ? b.title.localeCompare(a.title)
+        : a.title.localeCompare(b.title);
+    }
+  });
   
   // Debug logging for active listings
   useEffect(() => {
     console.log('Dashboard - All listings count:', allListings.length);
     console.log('Dashboard - Active listings count:', allListings.filter(l => l.status === 'active').length);
     console.log('Dashboard - Properly filtered active listings count:', properlyFilteredActiveListings.length);
+    console.log('Dashboard - Filtered and sorted active listings count:', activeListings.length);
+    console.log('Dashboard - Current filters:', {
+      gameFilter,
+      sortBy,
+      sortOrder,
+      searchQuery
+    });
     
     // Log the first few listings for debugging
     if (allListings.length > 0) {
@@ -276,10 +345,11 @@ const loading = authLoading || listingsLoading || profileLoading;
         title: allListings[0].title,
         status: allListings[0].status,
         createdAt: allListings[0].createdAt,
-        expiresAt: allListings[0].expiresAt
+        expiresAt: allListings[0].expiresAt,
+        game: allListings[0].game
       });
     }
-  }, [allListings, properlyFilteredActiveListings]);
+  }, [allListings, properlyFilteredActiveListings, activeListings, gameFilter, sortBy, sortOrder, searchQuery]);
   const previousListings = filteredAndSortedListings.filter(listing => listing.status !== 'active');
 
   useEffect(() => {
