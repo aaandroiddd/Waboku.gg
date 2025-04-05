@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { getFirebaseServices } from '@/lib/firebase';
-import { doc, getDoc, updateDoc, Timestamp } from 'firebase/firestore';
+import { initializeFirebaseAdmin } from '@/lib/firebase-admin';
+import { Timestamp } from 'firebase-admin/firestore';
 
 type ResponseData = {
   success: boolean;
@@ -34,11 +34,11 @@ export default async function handler(
 
     console.log('[complete-pickup] Processing request:', { orderId, userId });
     
-    // Get Firebase services with error handling
+    // Get Firebase Admin services with error handling
     let db;
     try {
-      const services = getFirebaseServices();
-      db = services.db;
+      const { db: firestore } = initializeFirebaseAdmin();
+      db = firestore;
       if (!db) {
         throw new Error('Firebase database not initialized');
       }
@@ -54,8 +54,8 @@ export default async function handler(
     // Get the order document with error handling
     let orderDoc;
     try {
-      const orderRef = doc(db, 'orders', orderId);
-      orderDoc = await getDoc(orderRef);
+      const orderRef = db.collection('orders').doc(orderId);
+      orderDoc = await orderRef.get();
     } catch (docError) {
       console.error('[complete-pickup] Error fetching order document:', docError);
       return res.status(500).json({ 
@@ -65,7 +65,7 @@ export default async function handler(
       });
     }
     
-    if (!orderDoc.exists()) {
+    if (!orderDoc.exists) {
       console.log('[complete-pickup] Order not found:', orderId);
       return res.status(404).json({ success: false, message: 'Order not found' });
     }
@@ -125,7 +125,7 @@ export default async function handler(
       const now = Timestamp.now();
       console.log('[complete-pickup] Updating order with timestamp:', now);
       
-      const orderRef = doc(db, 'orders', orderId);
+      const orderRef = db.collection('orders').doc(orderId);
       const updateData = {
         status: 'completed',
         pickupCompleted: true,
@@ -135,7 +135,7 @@ export default async function handler(
       
       console.log('[complete-pickup] Update data:', updateData);
       
-      await updateDoc(orderRef, updateData);
+      await orderRef.update(updateData);
       
       console.log('[complete-pickup] Order marked as completed successfully:', orderId);
       
