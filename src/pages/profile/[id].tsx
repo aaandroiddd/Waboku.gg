@@ -17,6 +17,7 @@ import { MessageDialog } from '@/components/MessageDialog';
 import { StripeSellerBadge } from '@/components/StripeSellerBadge';
 import { ProfileAvatar } from '@/components/ProfileAvatar';
 import { ProfileName } from '@/components/ProfileName';
+import { ReviewsList } from '@/components/ReviewsList';
 
 const LoadingProfile = () => (
   <div className="container mx-auto p-6">
@@ -283,7 +284,7 @@ const ProfileContent = ({ userId }: { userId: string | null }) => {
             <Card className="mt-6">
               <CardContent className="p-6">
                 <h3 className="text-xl font-semibold mb-4">User Reviews</h3>
-                <p className="text-muted-foreground">No reviews yet.</p>
+                {userId && <ReviewsList sellerId={userId} showFilters={true} />}
               </CardContent>
             </Card>
           </TabsContent>

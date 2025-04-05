@@ -21,6 +21,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { TrackingStatusComponent } from '@/components/TrackingStatus';
 import { UserNameLink } from '@/components/UserNameLink';
+import { ReviewForm } from '@/components/ReviewForm';
 
 export default function OrderDetailsPage() {
   const router = useRouter();
@@ -42,6 +43,7 @@ export default function OrderDetailsPage() {
   const [showNoTrackingDialog, setShowNoTrackingDialog] = useState(false);
   const [showConfirmDeliveryDialog, setShowConfirmDeliveryDialog] = useState(false);
   const [showCompletePickupDialog, setShowCompletePickupDialog] = useState(false);
+  const [showReviewDialog, setShowReviewDialog] = useState(false);
 
   useEffect(() => {
     async function fetchOrderDetails() {
@@ -911,7 +913,10 @@ export default function OrderDetailsPage() {
               </Button>
             )}
             {isUserBuyer && order.status === 'completed' && !order.reviewSubmitted && (
-              <Button variant="primary" onClick={() => toast.info('Review feature coming soon!')}>
+              <Button 
+                variant="primary" 
+                onClick={() => setShowReviewDialog(true)}
+              >
                 <Star className="mr-2 h-4 w-4" /> Leave Review
               </Button>
             )}
@@ -1069,6 +1074,32 @@ export default function OrderDetailsPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      
+      {/* Review Dialog */}
+      <Dialog open={showReviewDialog} onOpenChange={setShowReviewDialog}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Leave a Review</DialogTitle>
+            <DialogDescription>
+              Share your experience with this seller and help other buyers make informed decisions.
+            </DialogDescription>
+          </DialogHeader>
+          {order && (
+            <ReviewForm 
+              orderId={order.id} 
+              onSuccess={() => {
+                setShowReviewDialog(false);
+                // Update local state to reflect that a review has been submitted
+                setOrder({
+                  ...order,
+                  reviewSubmitted: true
+                });
+              }}
+              onCancel={() => setShowReviewDialog(false)}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 }
