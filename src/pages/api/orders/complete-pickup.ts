@@ -25,6 +25,7 @@ export default async function handler(
       return res.status(400).json({ success: false, message: 'Missing required fields' });
     }
 
+    console.log('[complete-pickup] Processing request:', { orderId, userId });
     const { db } = getFirebaseServices();
     
     // Get the order document
@@ -37,6 +38,12 @@ export default async function handler(
     }
     
     const orderData = orderDoc.data();
+    console.log('[complete-pickup] Order data:', { 
+      orderId, 
+      sellerId: orderData.sellerId, 
+      isPickup: orderData.isPickup, 
+      status: orderData.status 
+    });
     
     // Verify that the user is the seller of this order
     if (orderData.sellerId !== userId) {
@@ -60,20 +67,31 @@ export default async function handler(
       });
     }
     
-    // Update the order status to completed
-    await updateDoc(orderRef, {
-      status: 'completed',
-      pickupCompleted: true,
-      pickupCompletedAt: Timestamp.now(),
-      updatedAt: Timestamp.now()
-    });
-    
-    console.log('[complete-pickup] Order marked as completed:', orderId);
-    
-    return res.status(200).json({ 
-      success: true, 
-      message: 'Order marked as completed successfully. The buyer can now leave a review for this transaction.',
-    });
+    try {
+      // Update the order status to completed
+      const now = Timestamp.now();
+      console.log('[complete-pickup] Updating order with timestamp:', now);
+      
+      await updateDoc(orderRef, {
+        status: 'completed',
+        pickupCompleted: true,
+        pickupCompletedAt: now,
+        updatedAt: now
+      });
+      
+      console.log('[complete-pickup] Order marked as completed:', orderId);
+      
+      return res.status(200).json({ 
+        success: true, 
+        message: 'Order marked as completed successfully. The buyer can now leave a review for this transaction.',
+      });
+    } catch (updateError) {
+      console.error('[complete-pickup] Error updating order document:', updateError);
+      return res.status(500).json({ 
+        success: false, 
+        message: 'Failed to update order status. Please try again.' 
+      });
+    }
   } catch (error) {
     console.error('[complete-pickup] Error completing order:', error);
     return res.status(500).json({ success: false, message: 'Internal server error' });
