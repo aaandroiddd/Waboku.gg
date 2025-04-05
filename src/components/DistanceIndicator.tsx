@@ -22,7 +22,7 @@ const formatDistance = (distance: number): string => {
 };
 
 export function DistanceIndicator({ targetLat, targetLon, distance: propDistance }: DistanceIndicatorProps) {
-  const geolocation = useGeolocation();
+  const geolocation = useGeolocation({ autoRequest: false });
   const [distance, setDistance] = useState<number | null>(propDistance || null);
 
   useEffect(() => {

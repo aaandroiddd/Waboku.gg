@@ -158,7 +158,7 @@ const BuyNowButton = ({ listing, className }: BuyNowButtonProps) => {
 };
 
 export const ListingCard = memo(({ listing, isFavorite, onFavoriteClick, getConditionColor }: ListingCardProps) => {
-  const { location } = useLocation();
+  const { location } = useLocation({ autoRequest: false });
   const [calculatedDistance, setCalculatedDistance] = useState<number | null>(null);
   const [isCheckingExpiration, setIsCheckingExpiration] = useState(false);
 
