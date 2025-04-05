@@ -17,6 +17,12 @@ const MAX_RETRIES = 3;
 // Batch prefetch size
 const BATCH_SIZE = 10;
 
+// Fallback data for when user data can't be retrieved
+const FALLBACK_DATA = {
+  username: 'Unknown User',
+  avatarUrl: undefined
+};
+
 // Prefetch user data for multiple users at once
 export const prefetchUserData = async (userIds: string[]) => {
   if (!userIds.length) return;
@@ -109,6 +115,20 @@ export function useUserData(userId: string | undefined) {
   const fetchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const unsubscribeRef = useRef<(() => void) | null>(null);
 
+  // Helper to set fallback data with short cache expiration
+  const setFallbackData = () => {
+    if (!isMountedRef.current || !userId) return;
+    
+    setUserData(FALLBACK_DATA);
+    setLoading(false);
+    
+    // Cache the fallback with shorter expiration (1 minute)
+    userDataCache[userId] = {
+      data: FALLBACK_DATA,
+      timestamp: Date.now() - (CACHE_EXPIRATION - 60000) // Will expire in 1 minute
+    };
+  };
+
   useEffect(() => {
     isMountedRef.current = true;
     return () => {
@@ -154,11 +174,7 @@ export function useUserData(userId: string | undefined) {
     if (!db) {
       setError('Database not initialized');
       setLoading(false);
-      // Set fallback data even when database fails
-      setUserData({
-        username: 'Unknown User',
-        avatarUrl: undefined
-      });
+      setUserData(FALLBACK_DATA);
       return;
     }
 
@@ -197,7 +213,6 @@ export function useUserData(userId: string | undefined) {
         } else if (retry < MAX_RETRIES) {
           // Retry with exponential backoff
           const delay = Math.pow(2, retry) * 500; // 500ms, 1s, 2s, etc.
-          console.log(`User data not found for ${userId}, retrying in ${delay}ms (attempt ${retry + 1}/${MAX_RETRIES})`);
           
           if (isMountedRef.current) {
             fetchTimeoutRef.current = setTimeout(() => {
@@ -209,21 +224,7 @@ export function useUserData(userId: string | undefined) {
           return false;
         } else {
           // Max retries reached, set fallback data
-          const fallbackData = {
-            username: 'Unknown User',
-            avatarUrl: undefined
-          };
-          
-          // Cache the fallback with shorter expiration (1 minute)
-          userDataCache[userId] = {
-            data: fallbackData,
-            timestamp: Date.now() - (CACHE_EXPIRATION - 60000) // Will expire in 1 minute
-          };
-          
-          if (isMountedRef.current) {
-            setUserData(fallbackData);
-            setLoading(false);
-          }
+          setFallbackData();
           return true;
         }
       } catch (err) {
@@ -232,7 +233,6 @@ export function useUserData(userId: string | undefined) {
         if (retry < MAX_RETRIES) {
           // Retry with exponential backoff
           const delay = Math.pow(2, retry) * 500;
-          console.log(`Error fetching user data for ${userId}, retrying in ${delay}ms (attempt ${retry + 1}/${MAX_RETRIES})`);
           
           if (isMountedRef.current) {
             fetchTimeoutRef.current = setTimeout(() => {
@@ -247,19 +247,7 @@ export function useUserData(userId: string | undefined) {
           if (isMountedRef.current) {
             setError(err instanceof Error ? err.message : 'Unknown error');
             setLoading(false);
-            
-            // Set fallback data
-            const fallbackData = {
-              username: 'Unknown User',
-              avatarUrl: undefined
-            };
-            setUserData(fallbackData);
-            
-            // Cache the fallback with shorter expiration
-            userDataCache[userId] = {
-              data: fallbackData,
-              timestamp: Date.now() - (CACHE_EXPIRATION - 60000) // Will expire in 1 minute
-            };
+            setFallbackData();
           }
           return true;
         }
@@ -308,19 +296,7 @@ export function useUserData(userId: string | undefined) {
           } else {
             // Max retries reached, set fallback data
             if (isMountedRef.current) {
-              const fallbackData = {
-                username: 'Unknown User',
-                avatarUrl: undefined
-              };
-              
-              setUserData(fallbackData);
-              setLoading(false);
-              
-              // Cache the fallback with shorter expiration
-              userDataCache[userId] = {
-                data: fallbackData,
-                timestamp: Date.now() - (CACHE_EXPIRATION - 60000) // Will expire in 1 minute
-              };
+              setFallbackData();
             }
           }
         },
@@ -329,19 +305,7 @@ export function useUserData(userId: string | undefined) {
           if (isMountedRef.current) {
             setError(error.message);
             setLoading(false);
-            
-            // Set fallback data
-            const fallbackData = {
-              username: 'Unknown User',
-              avatarUrl: undefined
-            };
-            setUserData(fallbackData);
-            
-            // Cache the fallback with shorter expiration
-            userDataCache[userId] = {
-              data: fallbackData,
-              timestamp: Date.now() - (CACHE_EXPIRATION - 60000) // Will expire in 1 minute
-            };
+            setFallbackData();
           }
         }
       );

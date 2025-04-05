@@ -24,8 +24,8 @@ export function UserNameLink({
     initialUsername ? 'success' : 'initial'
   );
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const retryCountRef = useRef(0);
   const MAX_RETRIES = 3;
+  const retryCountRef = useRef(0);
 
   // Directly fetch user data as a fallback when hook fails
   const fetchUserDirectly = async () => {
@@ -33,13 +33,10 @@ export function UserNameLink({
     
     try {
       retryCountRef.current += 1;
-      console.log(`Direct fetch attempt ${retryCountRef.current} for user ${userId}`);
-      
       const userDoc = await getDoc(doc(db, 'users', userId));
       if (userDoc.exists()) {
         const data = userDoc.data();
         const username = data.displayName || data.username || 'Unknown User';
-        console.log(`Direct fetch success for ${userId}: ${username}`);
         setDisplayName(username);
         setLoadingState('success');
         return true;
@@ -72,9 +69,7 @@ export function UserNameLink({
       
       // If there's an error, try direct fetch as fallback
       if (userId) {
-        timeoutRef.current = setTimeout(() => {
-          fetchUserDirectly();
-        }, 500);
+        timeoutRef.current = setTimeout(() => fetchUserDirectly(), 500);
       }
     } else if (userData) {
       setLoadingState('success');
@@ -89,9 +84,7 @@ export function UserNameLink({
       // If we still don't have a username after loading completes
       // Try direct fetch as a fallback
       if (userId && (displayName === 'Loading...' || displayName === 'Unknown User')) {
-        timeoutRef.current = setTimeout(() => {
-          fetchUserDirectly();
-        }, 500);
+        timeoutRef.current = setTimeout(() => fetchUserDirectly(), 500);
       } else {
         setDisplayName('Unknown User');
       }
@@ -110,12 +103,7 @@ export function UserNameLink({
 
   // Handle click event safely to prevent the "event source is null" error
   const handleClick = (e: React.MouseEvent) => {
-    // Check if the event exists before stopping propagation
-    if (e) {
-      e.stopPropagation();
-    } else {
-      console.warn("Click event was null in UserNameLink");
-    }
+    if (e) e.stopPropagation();
   };
 
   return (
