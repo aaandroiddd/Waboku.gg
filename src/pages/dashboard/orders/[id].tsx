@@ -295,7 +295,7 @@ export default function OrderDetailsPage() {
         updatedAt: new Date()
       });
       
-      toast.success('Pickup completed successfully');
+      toast.success('Pickup completed successfully! The buyer can now leave a review for this transaction.');
       setShowCompletePickupDialog(false);
       
     } catch (error) {
@@ -658,13 +658,31 @@ export default function OrderDetailsPage() {
                       )}
                       
                       {!order.pickupCompleted && (order.status === 'paid' || order.status === 'awaiting_shipping') && (
-                        <div className="flex items-center gap-2 p-3 rounded-md bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 mt-2">
-                          <Info className="h-4 w-4 flex-shrink-0" />
+                        <div className="flex items-start gap-2 p-3 rounded-md bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 mt-2">
+                          <Info className="h-4 w-4 flex-shrink-0 mt-0.5" />
                           <div>
                             <p className="font-medium">Local Pickup Instructions</p>
                             <p className="mt-1">Contact the {isUserBuyer ? 'seller' : 'buyer'} to arrange a pickup time and location.</p>
-                            {!isUserBuyer && (
-                              <p className="mt-1 font-medium">Once the buyer has picked up the item, use the "Complete Pickup" button to mark this order as completed.</p>
+                            {!isUserBuyer ? (
+                              <div className="mt-2 border-t border-blue-200 dark:border-blue-800 pt-2">
+                                <p className="font-medium flex items-center">
+                                  <CheckCircle className="h-4 w-4 mr-1" /> Seller Action Required
+                                </p>
+                                <p className="mt-1">
+                                  Once the buyer has picked up the item, click the "Complete Pickup" button to mark this order as completed.
+                                  This will allow the buyer to leave a review for this transaction.
+                                </p>
+                              </div>
+                            ) : (
+                              <div className="mt-2 border-t border-blue-200 dark:border-blue-800 pt-2">
+                                <p className="font-medium flex items-center">
+                                  <Info className="h-4 w-4 mr-1" /> Next Steps
+                                </p>
+                                <p className="mt-1">
+                                  After you pick up the item, the seller will mark the order as completed.
+                                  You'll then be able to leave a review for this transaction.
+                                </p>
+                              </div>
                             )}
                           </div>
                         </div>
@@ -1007,9 +1025,21 @@ export default function OrderDetailsPage() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Complete Pickup</AlertDialogTitle>
-            <AlertDialogDescription>
-              By marking this order as completed, you confirm that the buyer has picked up the item.
-              This will allow the buyer to leave a review.
+            <AlertDialogDescription className="space-y-2">
+              <p>
+                By marking this order as completed, you confirm that the buyer has picked up the item.
+              </p>
+              <div className="flex items-start gap-2 p-3 rounded-md bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 mt-2">
+                <Info className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-medium">What happens next?</p>
+                  <ul className="list-disc list-inside mt-1 space-y-1 text-sm">
+                    <li>The order will be marked as completed</li>
+                    <li>The buyer will be able to leave a review for this transaction</li>
+                    <li>The review will be visible on your seller profile</li>
+                  </ul>
+                </div>
+              </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

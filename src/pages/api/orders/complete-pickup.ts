@@ -72,7 +72,7 @@ export default async function handler(
     
     return res.status(200).json({ 
       success: true, 
-      message: 'Order marked as completed successfully',
+      message: 'Order marked as completed successfully. The buyer can now leave a review for this transaction.',
     });
   } catch (error) {
     console.error('[complete-pickup] Error completing order:', error);
