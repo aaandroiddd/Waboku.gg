@@ -132,7 +132,8 @@ export function ListingGrid({
   onLoadMore,
   loading: propLoading = false
 }: ListingGridProps) {
-  const { location } = useLocation();
+  // Don't automatically request location
+  const location = { latitude: null, longitude: null };
   // Only use useListings if no listings are provided and userId is provided
   const { listings: fetchedListings, isLoading } = useListings({ 
     userId, 

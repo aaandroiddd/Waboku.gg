@@ -582,19 +582,9 @@ export function useListings({ userId, searchQuery, showOnlyActive = false }: Use
       const expiresAt = new Date();
       expiresAt.setHours(expiresAt.getHours() + tierDuration);
 
-      // Get user's location for the listing
+      // Don't automatically request user's location for the listing
       let latitude = null;
       let longitude = null;
-      
-      try {
-        const position = await new Promise<GeolocationPosition>((resolve, reject) => {
-          navigator.geolocation.getCurrentPosition(resolve, reject);
-        });
-        latitude = position.coords.latitude;
-        longitude = position.coords.longitude;
-      } catch (locationError) {
-        console.log('Location access not granted or unavailable');
-      }
 
       const newListing = {
         ...dataWithoutCard,
@@ -719,20 +709,8 @@ export function useListings({ userId, searchQuery, showOnlyActive = false }: Use
           return;
         }
         
-        // Get user's location
+        // Don't automatically request user's location
         let userLocation: { latitude: number | null; longitude: number | null } = { latitude: null, longitude: null };
-        
-        try {
-          const position = await new Promise<GeolocationPosition>((resolve, reject) => {
-            navigator.geolocation.getCurrentPosition(resolve, reject);
-          });
-          userLocation = {
-            latitude: position.coords.latitude,
-            longitude: position.coords.longitude
-          };
-        } catch (locationError) {
-          console.log('Location access not granted or unavailable');
-        }
 
         const { db } = await getFirebaseServices();
         const listingsRef = collection(db, 'listings');
@@ -869,20 +847,8 @@ const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: numbe
       // Clear the cache for this specific query
       localStorage.removeItem(cacheKey);
       
-      // Get user's location
+      // Don't automatically request user's location
       let userLocation: { latitude: number | null; longitude: number | null } = { latitude: null, longitude: null };
-      
-      try {
-        const position = await new Promise<GeolocationPosition>((resolve, reject) => {
-          navigator.geolocation.getCurrentPosition(resolve, reject);
-        });
-        userLocation = {
-          latitude: position.coords.latitude,
-          longitude: position.coords.longitude
-        };
-      } catch (locationError) {
-        console.log('Location access not granted or unavailable');
-      }
 
       const { db } = await getFirebaseServices();
       const listingsRef = collection(db, 'listings');
