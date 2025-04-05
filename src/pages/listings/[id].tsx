@@ -1056,9 +1056,24 @@ export default function ListingPage() {
                           }
                         });
                         
-                        return <div className="max-w-full overflow-hidden">
-                          <MarkdownContent content={listing.description} className="text-muted-foreground text-sm md:text-base" />
-                        </div>;
+                        try {
+                          return (
+                            <div className="max-w-full overflow-hidden min-h-[50px]">
+                              <MarkdownContent 
+                                content={listing.description || ''} 
+                                className="text-muted-foreground text-sm md:text-base"
+                                emptyMessage="No description provided for this listing."
+                              />
+                            </div>
+                          );
+                        } catch (error) {
+                          console.error('Error rendering description:', error);
+                          return (
+                            <div className="text-muted-foreground italic text-sm md:text-base">
+                              Error loading description. Please try refreshing the page.
+                            </div>
+                          );
+                        }
                       })()}
                     </div>
 
@@ -1327,9 +1342,27 @@ export default function ListingPage() {
                         }
                       });
                       
-                      return <div className="max-w-full overflow-hidden">
-                        <MarkdownContent content={listing.description} className="text-muted-foreground text-sm md:text-base" />
-                      </div>;
+                      try {
+                        // Check if description exists and is not empty
+                        const hasDescription = listing.description && listing.description.trim() !== '';
+                        
+                        return (
+                          <div className="max-w-full overflow-hidden min-h-[50px]">
+                            <MarkdownContent 
+                              content={listing.description || ''} 
+                              className="text-muted-foreground text-sm md:text-base"
+                              emptyMessage="No description provided for this listing."
+                            />
+                          </div>
+                        );
+                      } catch (error) {
+                        console.error('Error rendering description:', error);
+                        return (
+                          <div className="text-muted-foreground italic text-sm md:text-base">
+                            Error loading description. Please try refreshing the page.
+                          </div>
+                        );
+                      }
                     })()}
                   </div>
 

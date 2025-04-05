@@ -10,9 +10,23 @@ const ReactMarkdown = dynamic(() => import('react-markdown'), {
 interface MarkdownContentProps {
   content: string;
   className?: string;
+  emptyMessage?: string;
 }
 
-export function MarkdownContent({ content, className = '' }: MarkdownContentProps) {
+export function MarkdownContent({ 
+  content, 
+  className = '', 
+  emptyMessage = 'No description provided.' 
+}: MarkdownContentProps) {
+  // Handle empty, null, or undefined content
+  if (!content || content.trim() === '') {
+    return (
+      <div className={`text-muted-foreground italic ${className}`}>
+        {emptyMessage}
+      </div>
+    );
+  }
+
   // If the content doesn't contain any markdown syntax, render it as plain text
   const hasMarkdown = /[*#\[\]()!\-`]/.test(content);
 
