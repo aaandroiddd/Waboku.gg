@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getFirebaseServices } from '@/lib/firebase';
-import { collection, query, where, orderBy, limit, getDocs, getDoc, doc } from 'firebase/firestore';
+import { collection, query, where, orderBy, limit as firestoreLimit, getDocs, getDoc, doc, startAfter } from 'firebase/firestore';
 import { Review, ReviewStats } from '@/types/review';
 
 type ResponseData = {
@@ -38,6 +38,22 @@ export default async function handler(
     
     if (statsDoc.exists()) {
       stats = statsDoc.data() as ReviewStats;
+    } else {
+      console.log('[get-seller-reviews] No stats found for seller:', sellerId);
+      // Create default stats object if none exists
+      stats = {
+        sellerId: sellerId as string,
+        totalReviews: 0,
+        averageRating: 0,
+        ratingCounts: {
+          1: 0,
+          2: 0,
+          3: 0,
+          4: 0,
+          5: 0
+        },
+        lastUpdated: new Date()
+      };
     }
     
     // Build the query
@@ -57,63 +73,150 @@ export default async function handler(
     }
     
     // Add sorting
+    let sortField = 'createdAt';
+    let sortDirection: 'asc' | 'desc' = 'desc';
+    
     switch (sortBy) {
       case 'oldest':
-        reviewsQuery = query(reviewsQuery, orderBy('createdAt', 'asc'));
+        sortDirection = 'asc';
         break;
       case 'highest_rating':
-        reviewsQuery = query(reviewsQuery, orderBy('rating', 'desc'), orderBy('createdAt', 'desc'));
+        sortField = 'rating';
+        sortDirection = 'desc';
         break;
       case 'lowest_rating':
-        reviewsQuery = query(reviewsQuery, orderBy('rating', 'asc'), orderBy('createdAt', 'desc'));
+        sortField = 'rating';
+        sortDirection = 'asc';
         break;
       case 'most_helpful':
-        reviewsQuery = query(reviewsQuery, orderBy('helpfulCount', 'desc'), orderBy('createdAt', 'desc'));
+        sortField = 'helpfulCount';
+        sortDirection = 'desc';
         break;
       case 'newest':
       default:
-        reviewsQuery = query(reviewsQuery, orderBy('createdAt', 'desc'));
+        // Default is already set
         break;
     }
     
-    // Add pagination
+    reviewsQuery = query(reviewsQuery, orderBy(sortField, sortDirection));
+    
+    // If not sorting by createdAt as primary field, add it as secondary sort
+    if (sortField !== 'createdAt') {
+      reviewsQuery = query(reviewsQuery, orderBy('createdAt', 'desc'));
+    }
+    
+    // Get total count first
+    const countSnapshot = await getDocs(reviewsQuery);
+    const totalCount = countSnapshot.size;
+    
+    // Apply pagination
     const pageSize = parseInt(limitParam as string);
     const pageNumber = parseInt(page as string);
-    const startAt = (pageNumber - 1) * pageSize;
+    
+    // Add limit to query
+    reviewsQuery = query(reviewsQuery, firestoreLimit(pageSize));
+    
+    // If not first page, we need to use startAfter
+    if (pageNumber > 1) {
+      try {
+        // Get all documents up to the start of our page
+        const previousPageQuery = query(
+          collection(db, 'reviews'),
+          where('sellerId', '==', sellerId),
+          where('isPublic', '==', true),
+          where('status', '==', 'published'),
+          orderBy(sortField, sortDirection),
+          firestoreLimit((pageNumber - 1) * pageSize)
+        );
+        
+        const previousPageSnapshot = await getDocs(previousPageQuery);
+        const lastVisible = previousPageSnapshot.docs[previousPageSnapshot.docs.length - 1];
+        
+        if (lastVisible) {
+          reviewsQuery = query(reviewsQuery, startAfter(lastVisible));
+        }
+      } catch (paginationError) {
+        console.error('[get-seller-reviews] Pagination error:', paginationError);
+        // If pagination fails, return empty results rather than error
+        return res.status(200).json({
+          success: true,
+          message: 'No more reviews available',
+          reviews: [],
+          stats: stats as ReviewStats,
+          total: totalCount
+        });
+      }
+    }
     
     // Execute the query
     const reviewsSnapshot = await getDocs(reviewsQuery);
     
     // Convert the results to an array of reviews
-    const allReviews = reviewsSnapshot.docs.map(doc => {
+    const reviews = reviewsSnapshot.docs.map(doc => {
       const data = doc.data();
+      const reviewId = doc.id;
       
-      // Convert Firestore timestamps to JavaScript dates
-      const createdAt = data.createdAt?.toDate?.() || new Date();
-      const updatedAt = data.updatedAt?.toDate?.() || new Date();
-      
-      return {
-        ...data,
-        createdAt,
-        updatedAt,
-        sellerResponse: data.sellerResponse ? {
-          ...data.sellerResponse,
-          createdAt: data.sellerResponse.createdAt?.toDate?.() || new Date()
-        } : undefined
-      } as Review;
+      try {
+        // Convert Firestore timestamps to JavaScript dates
+        const createdAt = data.createdAt?.toDate?.() || new Date();
+        const updatedAt = data.updatedAt?.toDate?.() || new Date();
+        
+        const review: Review = {
+          id: reviewId,
+          orderId: data.orderId || '',
+          listingId: data.listingId || '',
+          reviewerId: data.reviewerId || '',
+          sellerId: data.sellerId || '',
+          rating: data.rating || 0,
+          comment: data.comment || '',
+          title: data.title,
+          images: data.images || [],
+          isVerifiedPurchase: data.isVerifiedPurchase || false,
+          isPublic: data.isPublic || true,
+          status: data.status || 'published',
+          helpfulCount: data.helpfulCount || 0,
+          reportCount: data.reportCount || 0,
+          createdAt,
+          updatedAt
+        };
+        
+        // Add seller response if it exists
+        if (data.sellerResponse) {
+          review.sellerResponse = {
+            comment: data.sellerResponse.comment || '',
+            createdAt: data.sellerResponse.createdAt?.toDate?.() || new Date()
+          };
+        }
+        
+        return review;
+      } catch (docError) {
+        console.error('[get-seller-reviews] Error processing review document:', docError, data);
+        // Return a minimal valid review object if there's an error
+        return {
+          id: reviewId,
+          orderId: data.orderId || '',
+          listingId: data.listingId || '',
+          reviewerId: data.reviewerId || '',
+          sellerId: data.sellerId || '',
+          rating: data.rating || 0,
+          comment: data.comment || '',
+          isVerifiedPurchase: false,
+          isPublic: true,
+          status: 'published',
+          createdAt: new Date(),
+          updatedAt: new Date()
+        } as Review;
+      }
     });
     
-    // Apply pagination manually (Firestore doesn't have a built-in offset)
-    const paginatedReviews = allReviews.slice(startAt, startAt + pageSize);
-    
-    console.log('[get-seller-reviews] Found reviews:', paginatedReviews.length);
+    console.log('[get-seller-reviews] Found reviews:', reviews.length, 'of total:', totalCount);
     
     return res.status(200).json({ 
       success: true, 
       message: 'Reviews retrieved successfully',
-      reviews: paginatedReviews,
+      reviews,
       stats: stats as ReviewStats,
-      total: allReviews.length
+      total: totalCount
     });
   } catch (error) {
     console.error('[get-seller-reviews] Error retrieving reviews:', error);
