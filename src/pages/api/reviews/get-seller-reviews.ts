@@ -1,6 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { getFirebaseServices } from '@/lib/firebase';
-import { collection, query, where, orderBy, limit as firestoreLimit, getDocs, getDoc, doc, startAfter, QueryConstraint } from 'firebase/firestore';
+import { initializeFirebaseAdmin } from '@/lib/firebase-admin';
 import { Review, ReviewStats } from '@/types/review';
 
 type ResponseData = {
@@ -30,31 +29,33 @@ export default async function handler(
     }
 
     console.log('[get-seller-reviews] Processing request:', { sellerId, page, limit: limitParam, rating, sortBy });
-    const { db } = getFirebaseServices();
+    
+    // Initialize Firebase Admin SDK
+    const { db } = initializeFirebaseAdmin();
     
     // Get the seller's review stats
     let stats: ReviewStats;
     try {
-      const statsRef = doc(db, 'reviewStats', sellerId as string);
-      const statsDoc = await getDoc(statsRef);
+      const statsRef = db.collection('reviewStats').doc(sellerId as string);
+      const statsDoc = await statsRef.get();
       
-      if (statsDoc.exists()) {
+      if (statsDoc.exists) {
         const statsData = statsDoc.data();
         console.log('[get-seller-reviews] Found stats for seller:', sellerId, statsData);
         
         // Ensure the stats object has all required fields
         stats = {
           sellerId: sellerId as string,
-          totalReviews: statsData.totalReviews || 0,
-          averageRating: statsData.averageRating || 0,
+          totalReviews: statsData?.totalReviews || 0,
+          averageRating: statsData?.averageRating || 0,
           ratingCounts: {
-            1: (statsData.ratingCounts && statsData.ratingCounts[1]) || 0,
-            2: (statsData.ratingCounts && statsData.ratingCounts[2]) || 0,
-            3: (statsData.ratingCounts && statsData.ratingCounts[3]) || 0,
-            4: (statsData.ratingCounts && statsData.ratingCounts[4]) || 0,
-            5: (statsData.ratingCounts && statsData.ratingCounts[5]) || 0
+            1: (statsData?.ratingCounts && statsData.ratingCounts[1]) || 0,
+            2: (statsData?.ratingCounts && statsData.ratingCounts[2]) || 0,
+            3: (statsData?.ratingCounts && statsData.ratingCounts[3]) || 0,
+            4: (statsData?.ratingCounts && statsData.ratingCounts[4]) || 0,
+            5: (statsData?.ratingCounts && statsData.ratingCounts[5]) || 0
           },
-          lastUpdated: statsData.lastUpdated?.toDate?.() || new Date()
+          lastUpdated: statsData?.lastUpdated?.toDate?.() || new Date()
         };
       } else {
         console.log('[get-seller-reviews] No stats found for seller:', sellerId);
@@ -92,18 +93,17 @@ export default async function handler(
     }
     
     // Build the query with constraints
-    const queryConstraints: QueryConstraint[] = [
-      where('sellerId', '==', sellerId),
-      where('isPublic', '==', true),
-      where('status', '==', 'published')
-    ];
+    let reviewsQuery = db.collection('reviews')
+      .where('sellerId', '==', sellerId)
+      .where('isPublic', '==', true)
+      .where('status', '==', 'published');
     
     // Add rating filter if provided
     if (rating) {
       try {
         const ratingValue = parseInt(rating as string);
         if (!isNaN(ratingValue) && ratingValue >= 1 && ratingValue <= 5) {
-          queryConstraints.push(where('rating', '==', ratingValue));
+          reviewsQuery = reviewsQuery.where('rating', '==', ratingValue);
         }
       } catch (ratingError) {
         console.error('[get-seller-reviews] Invalid rating parameter:', rating, ratingError);
@@ -136,22 +136,18 @@ export default async function handler(
         break;
     }
     
-    // Create the base query
-    let reviewsQuery = query(
-      collection(db, 'reviews'),
-      ...queryConstraints,
-      orderBy(sortField, sortDirection)
-    );
+    // Apply sorting
+    reviewsQuery = reviewsQuery.orderBy(sortField, sortDirection);
     
     // If not sorting by createdAt as primary field, add it as secondary sort
     if (sortField !== 'createdAt') {
-      reviewsQuery = query(reviewsQuery, orderBy('createdAt', 'desc'));
+      reviewsQuery = reviewsQuery.orderBy('createdAt', 'desc');
     }
     
     // Get total count first
     let totalCount = 0;
     try {
-      const countSnapshot = await getDocs(reviewsQuery);
+      const countSnapshot = await reviewsQuery.get();
       totalCount = countSnapshot.size;
       console.log('[get-seller-reviews] Total reviews count:', totalCount);
     } catch (countError) {
@@ -176,21 +172,12 @@ export default async function handler(
     
     console.log('[get-seller-reviews] Using pagination:', { pageSize, pageNumber });
     
-    // Add limit to query
-    reviewsQuery = query(reviewsQuery, firestoreLimit(pageSize));
-    
     // If not first page, we need to use startAfter
     if (pageNumber > 1 && totalCount > 0) {
       try {
         // Get all documents up to the start of our page
-        const previousPageQuery = query(
-          collection(db, 'reviews'),
-          ...queryConstraints,
-          orderBy(sortField, sortDirection),
-          firestoreLimit((pageNumber - 1) * pageSize)
-        );
-        
-        const previousPageSnapshot = await getDocs(previousPageQuery);
+        const previousPageQuery = reviewsQuery.limit((pageNumber - 1) * pageSize);
+        const previousPageSnapshot = await previousPageQuery.get();
         
         if (previousPageSnapshot.empty) {
           console.log('[get-seller-reviews] No documents found for previous pages');
@@ -206,7 +193,7 @@ export default async function handler(
         const lastVisible = previousPageSnapshot.docs[previousPageSnapshot.docs.length - 1];
         
         if (lastVisible) {
-          reviewsQuery = query(reviewsQuery, startAfter(lastVisible));
+          reviewsQuery = reviewsQuery.startAfter(lastVisible);
         }
       } catch (paginationError) {
         console.error('[get-seller-reviews] Pagination error:', paginationError);
@@ -221,10 +208,13 @@ export default async function handler(
       }
     }
     
+    // Add limit to query
+    reviewsQuery = reviewsQuery.limit(pageSize);
+    
     // Execute the query
     let reviews: Review[] = [];
     try {
-      const reviewsSnapshot = await getDocs(reviewsQuery);
+      const reviewsSnapshot = await reviewsQuery.get();
       console.log('[get-seller-reviews] Query returned documents:', reviewsSnapshot.size);
       
       // Convert the results to an array of reviews
