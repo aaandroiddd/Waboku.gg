@@ -45,7 +45,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       let chatId = null
 
       // If there's a subject, always create a new chat thread
-      // If there's a listingId, try to find existing chat or create new one
+      // If there's a listingId, try to find existing chat with the EXACT SAME listing ID
       if (!subject && listingId) {
         const chatsSnapshot = await chatsRef.once('value')
         const chats = chatsSnapshot.val() || {}
@@ -64,6 +64,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           }
         }
       }
+      
+      // We no longer fall back to finding any chat between these users
+      // Each listing gets its own thread
 
       // If no existing chat found or if there's a subject, create a new one
       if (!chatId) {

@@ -82,6 +82,14 @@ export function MessageDialog({ recipientId, recipientName }: MessageDialogProps
       if (currentUser.uid === recipientId) {
         throw new Error("You cannot send messages to yourself")
       }
+      
+      // Log the message details to help with debugging
+      console.log('Sending message:', {
+        recipientId,
+        subject: subject.trim(),
+        hasListingId: !!listingId,
+        messageLength: message.trim().length
+      });
 
       const token = await currentUser.getIdToken()
       

@@ -166,26 +166,26 @@ export const useMessages = (chatId?: string) => {
     
     if (!chats) return null;
 
-    // First try to find a chat with the same listing
+    // Only find a chat with the exact same listing ID
+    // This ensures each listing gets its own thread
     let existingChatId = Object.entries(chats).find(([_, chat]: [string, any]) => {
       const participants = chat.participants || {};
       const notDeleted = !chat.deletedBy?.[userId];
-      return participants[userId] && 
-             participants[receiverId] && 
-             chat.listingId === listingId && 
-             notDeleted;
-    })?.[0];
-
-    // If no chat found with the same listing, find any existing chat between these users
-    if (!existingChatId) {
-      existingChatId = Object.entries(chats).find(([_, chat]: [string, any]) => {
-        const participants = chat.participants || {};
-        const notDeleted = !chat.deletedBy?.[userId];
+      
+      // If listingId is provided, we must match it exactly
+      if (listingId) {
         return participants[userId] && 
                participants[receiverId] && 
+               chat.listingId === listingId && 
                notDeleted;
-      })?.[0];
-    }
+      }
+      
+      // If no listingId is provided (general message), find a thread without a listingId
+      return participants[userId] && 
+             participants[receiverId] && 
+             !chat.listingId && 
+             notDeleted;
+    })?.[0];
 
     return existingChatId;
   };
