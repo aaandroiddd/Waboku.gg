@@ -33,6 +33,7 @@ import { EmptyStateCard } from '@/components/EmptyStateCard';
 import { ArchivedListings } from '@/components/ArchivedListings';
 import { FirebaseConnectionHandler } from '@/components/FirebaseConnectionHandler';
 import { useLoading } from '@/hooks/useLoading';
+import { ViewCounter } from '@/components/ViewCounter';
 
 const DashboardComponent = () => {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -687,6 +688,11 @@ const loading = authLoading || listingsLoading || profileLoading;
                         </Badge>
                         <span className="font-bold">${listing.price.toFixed(2)}</span>
                       </div>
+                      {profile?.tier === 'premium' && (
+                        <div className="flex justify-end mt-1">
+                          <ViewCounter viewCount={listing.viewCount || 0} />
+                        </div>
+                      )}
                       <div className="flex justify-between items-center text-sm text-muted-foreground">
                         <span>Listed on {new Date(listing.createdAt).toLocaleDateString()}</span>
                       </div>

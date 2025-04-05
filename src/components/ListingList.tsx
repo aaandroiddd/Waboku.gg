@@ -9,6 +9,8 @@ import { ContentLoader } from "./ContentLoader";
 import { Skeleton } from "./ui/skeleton";
 import { useListingVisibility } from "@/hooks/useListingVisibility";
 import { useEffect, useState } from "react";
+import { ViewCounter } from "./ViewCounter";
+import { useAccount } from "@/contexts/AccountContext";
 
 interface ListingListProps {
   listings: Listing[];
@@ -110,12 +112,7 @@ export const ListingList = ({
                       <h3 className="font-semibold text-base sm:text-lg line-clamp-1">{listing.title}</h3>
                       <div className="flex items-center justify-between">
                         <p className="text-base sm:text-lg font-bold">{formatPrice(listing.price)}</p>
-                        {listing.viewCount !== undefined && (
-                          <div className="flex items-center text-xs text-muted-foreground">
-                            <Eye className="h-3 w-3 mr-1" />
-                            <span>{listing.viewCount}</span>
-                          </div>
-                        )}
+                        <ViewCounter viewCount={listing.viewCount || 0} />
                       </div>
                     </div>
                     
