@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
+import { useRouter } from 'next/router';
 import { FirebaseConnectionTester } from '@/components/FirebaseConnectionTester';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,14 +10,48 @@ import { DatabaseConnectionStatus } from '@/components/DatabaseConnectionStatus'
 import { UpdateDatabaseRules } from '@/components/UpdateDatabaseRules';
 import { FirestoreDisabler } from '@/components/FirestoreDisabler';
 import { ClearFirestoreCache } from '@/components/ClearFirestoreCache';
-import { useRouter } from 'next/router';
 import { ArrowLeft, MessageCircle, Database, RefreshCw, Shield } from 'lucide-react';
 import { getDatabase, ref, onValue } from 'firebase/database';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Footer } from '@/components/Footer';
 
-export default function FirebaseDiagnosticsPage() {
+export default function AdminFirebaseDiagnosticsPage() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState('connection-test');
   const unsubscribeRef = useRef<(() => void) | null>(null);
+  const [isAuthorized, setIsAuthorized] = useState(false);
+  const [adminSecret, setAdminSecret] = useState('');
+  
+  useEffect(() => {
+    const secret = localStorage.getItem('admin_secret');
+    if (secret) {
+      setAdminSecret(secret);
+      verifyAdmin(secret);
+    }
+  }, []);
+
+  const verifyAdmin = async (secret: string) => {
+    try {
+      const response = await fetch('/api/admin/verify', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${secret}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        setIsAuthorized(true);
+        localStorage.setItem('admin_secret', secret);
+      } else {
+        setIsAuthorized(false);
+        localStorage.removeItem('admin_secret');
+      }
+    } catch (error) {
+      console.error('Error verifying admin:', error);
+      setIsAuthorized(false);
+    }
+  };
   
   // Clean up any Firebase listeners when component unmounts
   useEffect(() => {
@@ -49,25 +83,52 @@ export default function FirebaseDiagnosticsPage() {
       console.error('Error setting up test listener:', error);
     }
   };
+
+  if (!isAuthorized) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <div className="container mx-auto p-8 flex-grow">
+          <Card className="p-6">
+            <h1 className="text-2xl font-bold mb-4">Admin Authentication</h1>
+            <div className="space-y-4">
+              <input
+                type="password"
+                placeholder="Enter admin secret"
+                className="w-full p-2 border rounded"
+                onChange={(e) => setAdminSecret(e.target.value)}
+              />
+              <Button 
+                onClick={() => verifyAdmin(adminSecret)}
+                disabled={!adminSecret}
+              >
+                Verify Admin Access
+              </Button>
+            </div>
+          </Card>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
   
   return (
-    <DashboardLayout>
-      {/* Initialize the messages page components to ensure proper Firebase setup */}
-      <MessagesPageInitializer />
-      {/* Disable Firestore to prevent 400 Bad Request errors */}
-      <FirestoreDisabler />
-      
+    <div className="min-h-screen flex flex-col">
       <div className="container mx-auto py-6 space-y-6">
+        {/* Initialize the messages page components to ensure proper Firebase setup */}
+        <MessagesPageInitializer />
+        {/* Disable Firestore to prevent 400 Bad Request errors */}
+        <FirestoreDisabler />
+        
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Button 
               variant="ghost" 
               size="sm" 
-              onClick={() => router.push('/dashboard/messages')}
+              onClick={() => router.push('/admin')}
               className="gap-2"
             >
               <ArrowLeft className="h-4 w-4" />
-              Back to Messages
+              Back to Admin Dashboard
             </Button>
           </div>
           
@@ -81,6 +142,12 @@ export default function FirebaseDiagnosticsPage() {
             Refresh Page
           </Button>
         </div>
+        
+        <Alert className="mb-6">
+          <AlertDescription>
+            ⚠️ These diagnostic tools are for admin use only. They help troubleshoot Firebase connection issues.
+          </AlertDescription>
+        </Alert>
         
         <div className="grid gap-6">
           <Card>
@@ -207,6 +274,7 @@ export default function FirebaseDiagnosticsPage() {
           </Card>
         </div>
       </div>
-    </DashboardLayout>
+      <Footer />
+    </div>
   );
 }

@@ -403,6 +403,22 @@ export default function AdminDashboard() {
           {/* Stripe Webhook Fix Section */}
           <WebhookFixTrigger adminSecret={adminSecret} />
           
+          {/* Firebase Diagnostics Section */}
+          <Card className="p-6 mb-8">
+            <h2 className="text-xl font-semibold mb-4">Firebase Diagnostics</h2>
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Troubleshoot Firebase connection issues and database rules.
+              </p>
+              <Button 
+                onClick={() => router.push(`/admin/firebase-diagnostics`)}
+                className="w-full"
+              >
+                Firebase Diagnostics
+              </Button>
+            </div>
+          </Card>
+          
           {/* Wanted Posts Debugger Section */}
           <div className="mt-8">
             <h2 className="text-xl font-semibold mb-4">Wanted Posts Debugging Tools</h2>

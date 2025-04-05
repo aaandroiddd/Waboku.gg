@@ -314,11 +314,23 @@ export default function MessagesPage() {
                 buttonText="Clear Cache & Retry"
               />
               <Button
-                onClick={() => router.push('/dashboard/firebase-diagnostics')}
+                onClick={() => {
+                  // Check if user is admin
+                  const adminSecret = localStorage.getItem('admin_secret');
+                  if (adminSecret) {
+                    router.push('/admin/firebase-diagnostics');
+                  } else {
+                    toast({
+                      title: "Admin access required",
+                      description: "Firebase diagnostics are only available to administrators.",
+                      variant: "destructive"
+                    });
+                  }
+                }}
                 className="mt-2"
                 variant="secondary"
               >
-                Run Diagnostics
+                Contact Support
               </Button>
             </div>
           </div>
