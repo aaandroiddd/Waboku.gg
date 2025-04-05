@@ -14,7 +14,6 @@ import { Button } from '@/components/ui/button';
 import { Search, MapPin, Filter, Check, LayoutGrid, List, X } from 'lucide-react';
 import { useListings } from '@/hooks/useListings';
 import { FirebaseConnectionHandler } from '@/components/FirebaseConnectionHandler';
-import { ListingDebuggerTool } from '@/components/ListingDebuggerTool';
 import {
   Select,
   SelectContent,
@@ -554,11 +553,6 @@ export default function ListingsPage() {
             ) : (
               <SearchListingList listings={filteredListings} loading={isLoading} />
             )}
-            
-            {/* Listing Debugger Tool */}
-            <div className="mt-8">
-              <ListingDebuggerTool />
-            </div>
             </FirebaseConnectionHandler>
           </div>
         </main>

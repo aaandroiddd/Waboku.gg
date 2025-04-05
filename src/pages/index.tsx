@@ -19,7 +19,6 @@ import { ContentLoader } from "@/components/ContentLoader";
 import { useListings } from "@/hooks/useListings";
 import Link from "next/link";
 import { FirebaseConnectionHandler } from "@/components/FirebaseConnectionHandler";
-import { ListingDebuggerTool } from "@/components/ListingDebuggerTool";
 
 // Subtitles array - moved outside component to prevent recreation on each render
 const subtitles = [
@@ -344,11 +343,6 @@ export default function Home() {
                     onLoadMore={() => setDisplayCount(prev => prev + 8)}
                   />
                 </ContentLoader>
-                
-                {/* Add the ListingDebuggerTool at the bottom of the listings section */}
-                <div className="mt-8">
-                  <ListingDebuggerTool />
-                </div>
               </FirebaseConnectionHandler>
             </div>
           </section>
