@@ -1035,7 +1035,25 @@ export default function ListingPage() {
                       {(() => {
                         const MarkdownContent = dynamic(() => import('@/components/MarkdownContent').then(mod => mod.MarkdownContent), {
                           ssr: false,
-                          loading: () => <p className="text-muted-foreground whitespace-pre-wrap text-sm md:text-base overflow-hidden break-words">{listing.description}</p>
+                          loading: () => {
+                            // Import LoadingAnimation component
+                            const LoadingAnimation = dynamic(() => import('@/components/LoadingAnimation').then(mod => mod.LoadingAnimation), {
+                              ssr: false,
+                              loading: () => (
+                                <div className="animate-pulse">
+                                  <div className="h-4 bg-gray-200/20 dark:bg-gray-700/20 rounded w-full mb-2"></div>
+                                  <div className="h-4 bg-gray-200/20 dark:bg-gray-700/20 rounded w-5/6 mb-2"></div>
+                                  <div className="h-4 bg-gray-200/20 dark:bg-gray-700/20 rounded w-4/6"></div>
+                                </div>
+                              )
+                            });
+                            
+                            return (
+                              <div className="min-h-[100px] flex flex-col">
+                                <LoadingAnimation size="40" color="currentColor" className="text-muted-foreground/50 my-4" />
+                              </div>
+                            );
+                          }
                         });
                         
                         return <div className="max-w-full overflow-hidden">
@@ -1288,7 +1306,25 @@ export default function ListingPage() {
                     {(() => {
                       const MarkdownContent = dynamic(() => import('@/components/MarkdownContent').then(mod => mod.MarkdownContent), {
                         ssr: false,
-                        loading: () => <p className="text-muted-foreground whitespace-pre-wrap text-sm md:text-base overflow-hidden break-words">{listing.description}</p>
+                        loading: () => {
+                          // Import LoadingAnimation component
+                          const LoadingAnimation = dynamic(() => import('@/components/LoadingAnimation').then(mod => mod.LoadingAnimation), {
+                            ssr: false,
+                            loading: () => (
+                              <div className="animate-pulse">
+                                <div className="h-4 bg-gray-200/20 dark:bg-gray-700/20 rounded w-full mb-2"></div>
+                                <div className="h-4 bg-gray-200/20 dark:bg-gray-700/20 rounded w-5/6 mb-2"></div>
+                                <div className="h-4 bg-gray-200/20 dark:bg-gray-700/20 rounded w-4/6"></div>
+                              </div>
+                            )
+                          });
+                          
+                          return (
+                            <div className="min-h-[100px] flex flex-col">
+                              <LoadingAnimation size="40" color="currentColor" className="text-muted-foreground/50 my-4" />
+                            </div>
+                          );
+                        }
                       });
                       
                       return <div className="max-w-full overflow-hidden">
