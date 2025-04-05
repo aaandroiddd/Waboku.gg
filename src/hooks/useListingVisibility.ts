@@ -28,6 +28,17 @@ export function useListingVisibility(listings: Listing[]) {
     previousListingsRef.current = listings;
     
     if (!listings || !Array.isArray(listings)) {
+      console.warn('useListingVisibility received invalid listings data:', listings);
+      setVisibleListings([]);
+      return;
+    }
+    
+    // Log the initial count for debugging
+    console.log(`useListingVisibility processing ${listings.length} listings`);
+    
+    // Check for empty listings array
+    if (listings.length === 0) {
+      console.log('useListingVisibility: Empty listings array received');
       setVisibleListings([]);
       return;
     }

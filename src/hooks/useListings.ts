@@ -678,6 +678,26 @@ export function useListings({ userId, searchQuery, showOnlyActive = false }: Use
       return R * c;
     };
 
+    // Function to clear all listing-related caches
+    const clearAllListingCaches = () => {
+      if (typeof window === 'undefined') return;
+      
+      try {
+        const cacheKeys = Object.keys(localStorage).filter(key => 
+          key.startsWith('listings_')
+        );
+        
+        for (const key of cacheKeys) {
+          localStorage.removeItem(key);
+          console.log(`Cleared cache: ${key}`);
+        }
+        
+        console.log('Cleared all listing caches');
+      } catch (error) {
+        console.error('Error clearing listing caches:', error);
+      }
+    };
+
     const fetchListings = async () => {
       try {
         setIsLoading(true);

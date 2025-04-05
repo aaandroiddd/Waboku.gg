@@ -11,10 +11,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useToast } from "@/components/ui/use-toast";
+import { ListingVisibilityFixer } from "@/components/ListingVisibilityFixer";
 import { ProfileAvatar } from "@/components/ProfileAvatar";
 import { ProfileName } from "@/components/ProfileName";
-import { Star, Edit2, Trash2, MessageCircle, Share2, ExternalLink } from "lucide-react";
+import { Star, Edit2, Trash2, MessageCircle, Share2, ExternalLink, AlertCircle } from "lucide-react";
 import { ListingTimer } from "@/components/ListingTimer";
 import { ListingList } from "@/components/ListingList";
 import { DeleteListingDialog } from "@/components/DeleteListingDialog";
@@ -447,6 +449,29 @@ const DashboardComponent = () => {
         }}
         mode={dialogState.mode}
       />
+      
+      {/* Show the listing visibility fixer if there are no active listings but there are listings in total */}
+      {allListings.length > 0 && properlyFilteredActiveListings.length === 0 && (
+        <div className="mb-6">
+          <Alert variant="warning" className="mb-4">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>No Active Listings Visible</AlertTitle>
+            <AlertDescription>
+              You have {allListings.length} total listings, but none are currently showing as active. 
+              This could be due to expired listings, caching issues, or visibility problems.
+              Use the tools below to diagnose and fix the issue.
+            </AlertDescription>
+          </Alert>
+          
+          <div className="p-4 border rounded-lg bg-card">
+            <h3 className="text-lg font-medium mb-4">Listing Visibility Troubleshooter</h3>
+            <ListingVisibilityFixer 
+              onRefresh={refreshListings} 
+              isLoading={isLoading} 
+            />
+          </div>
+        </div>
+      )}
       
       {/* Dashboard Header */}
       <div className="mb-8">
