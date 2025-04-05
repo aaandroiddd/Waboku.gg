@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { getAuth } from "firebase/auth"
 import { useToast } from "./ui/use-toast"
 import { getFirebaseServices } from "@/lib/firebase"
@@ -25,9 +25,41 @@ export function MessageDialog({ recipientId, recipientName }: MessageDialogProps
   const [message, setMessage] = useState("")
   const [isOpen, setIsOpen] = useState(false)
   const [isSending, setIsSending] = useState(false)
+  const [isSelfMessage, setIsSelfMessage] = useState(false)
   const { toast } = useToast()
 
+  // Check if user is trying to message themselves
+  useEffect(() => {
+    if (isOpen) {
+      const { auth } = getFirebaseServices()
+      const currentUser = auth.currentUser
+      
+      if (currentUser && currentUser.uid === recipientId) {
+        setIsSelfMessage(true)
+        toast({
+          variant: "destructive",
+          title: "Cannot message yourself",
+          description: "You cannot send messages to yourself.",
+        })
+        // Close the dialog after showing the toast
+        setTimeout(() => setIsOpen(false), 1500)
+      } else {
+        setIsSelfMessage(false)
+      }
+    }
+  }, [isOpen, recipientId, toast])
+
   const handleSendMessage = async () => {
+    if (isSelfMessage) {
+      toast({
+        variant: "destructive",
+        title: "Cannot message yourself",
+        description: "You cannot send messages to yourself.",
+      })
+      setIsOpen(false)
+      return
+    }
+
     if (!subject.trim() || !message.trim()) {
       toast({
         variant: "destructive",
@@ -44,6 +76,11 @@ export function MessageDialog({ recipientId, recipientName }: MessageDialogProps
       
       if (!currentUser) {
         throw new Error("You must be logged in to send messages")
+      }
+
+      // Double-check to prevent self-messaging
+      if (currentUser.uid === recipientId) {
+        throw new Error("You cannot send messages to yourself")
       }
 
       const token = await currentUser.getIdToken()
@@ -97,36 +134,44 @@ export function MessageDialog({ recipientId, recipientName }: MessageDialogProps
             Start a conversation with this user. Be clear and respectful in your communication.
           </DialogDescription>
         </DialogHeader>
-        <div className="grid gap-4 py-4">
-          <div className="grid gap-2">
-            <Input
-              id="subject"
-              placeholder="Subject (required)"
-              value={subject}
-              onChange={(e) => setSubject(e.target.value)}
-              required
-              aria-required="true"
-            />
+        {isSelfMessage ? (
+          <div className="py-4 text-center text-destructive font-medium">
+            You cannot send messages to yourself.
           </div>
-          <div className="grid gap-2">
-            <Textarea
-              id="message"
-              placeholder="Type your message here..."
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              className="h-32"
-            />
-          </div>
-        </div>
-        <DialogFooter>
-          <Button
-            type="submit"
-            onClick={handleSendMessage}
-            disabled={isSending}
-          >
-            {isSending ? "Sending..." : "Send Message"}
-          </Button>
-        </DialogFooter>
+        ) : (
+          <>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Input
+                  id="subject"
+                  placeholder="Subject (required)"
+                  value={subject}
+                  onChange={(e) => setSubject(e.target.value)}
+                  required
+                  aria-required="true"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Textarea
+                  id="message"
+                  placeholder="Type your message here..."
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  className="h-32"
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                type="submit"
+                onClick={handleSendMessage}
+                disabled={isSending}
+              >
+                {isSending ? "Sending..." : "Send Message"}
+              </Button>
+            </DialogFooter>
+          </>
+        )}
       </DialogContent>
     </Dialog>
   )

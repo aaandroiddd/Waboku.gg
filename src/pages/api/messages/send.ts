@@ -27,6 +27,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (!recipientId || !message) {
         return res.status(400).json({ error: 'Missing required fields' })
       }
+      
+      // Prevent users from messaging themselves
+      if (senderId === recipientId) {
+        return res.status(400).json({ error: 'You cannot send messages to yourself' })
+      }
 
       // Verify recipient exists
       try {
