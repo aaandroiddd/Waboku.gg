@@ -497,12 +497,14 @@ export function Chat({
     
     try {
       const database = getDatabase();
+      // Store deletion timestamp to help with thread restoration logic
+      const deletionTimestamp = Date.now();
       const chatRef = dbRef(database, `chats/${chatId}/deletedBy/${user.uid}`);
-      await set(chatRef, true);
+      await set(chatRef, deletionTimestamp);
       
       toast({
         title: "Success",
-        description: "The conversation has been deleted from your messages."
+        description: "The conversation has been deleted from your messages. If the other user sends a new message, the conversation will reappear."
       });
       if (onDelete) {
         onDelete();
@@ -900,8 +902,12 @@ export function Chat({
                 <li>Remove the messages from your view</li>
                 <li>Keep the conversation visible for {displayName}</li>
                 <li>Not affect the other person&apos;s access to the messages</li>
+                <li>The conversation will reappear if {displayName} sends you a new message</li>
               </ul>
-              <p className="text-sm text-muted-foreground mt-2">This action cannot be undone.</p>
+              <div className="bg-muted p-3 rounded-md mt-3 text-sm">
+                <p className="font-medium">Note:</p>
+                <p>If you want to permanently stop receiving messages from this user, use the block feature instead.</p>
+              </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

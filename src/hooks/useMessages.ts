@@ -58,6 +58,58 @@ export const useMessages = (chatId?: string) => {
       setLoading(false);
     }
   }, []);
+  
+  // Set up a listener to restore deleted threads when new messages are received
+  useEffect(() => {
+    if (!user || !database) return;
+    
+    // Listen for changes to all chats
+    const chatsRef = ref(database, 'chats');
+    
+    const unsubscribe = onValue(chatsRef, async (snapshot) => {
+      try {
+        const chatsData = snapshot.val();
+        if (!chatsData) return;
+        
+        // Check each chat to see if it's deleted but has new messages
+        Object.entries(chatsData).forEach(async ([chatId, chatData]: [string, any]) => {
+          // Skip if not a participant or no lastMessage
+          if (!chatData.participants?.[user.uid] || !chatData.lastMessage) return;
+          
+          // Check if chat is deleted by current user
+          const deletedTimestamp = chatData.deletedBy?.[user.uid];
+          const isDeletedByUser = !!deletedTimestamp;
+          
+          if (isDeletedByUser) {
+            // Check if the last message is from another user
+            const lastMessageIsFromOtherUser = chatData.lastMessage.senderId !== user.uid;
+            
+            // Check if the last message is newer than when the user deleted the thread
+            // If deletedTimestamp is just a boolean (true) from older versions, assume any new message should restore
+            const lastMessageTimestamp = chatData.lastMessage.timestamp;
+            const isMessageNewerThanDeletion = typeof deletedTimestamp === 'number' 
+              ? lastMessageTimestamp > deletedTimestamp 
+              : true; // If we don't have a timestamp, assume any message should restore the thread
+            
+            if (lastMessageIsFromOtherUser && isMessageNewerThanDeletion) {
+              console.log(`New message detected in deleted thread ${chatId}. Restoring thread.`);
+              console.log(`Message timestamp: ${new Date(lastMessageTimestamp).toISOString()}, Deletion timestamp: ${typeof deletedTimestamp === 'number' ? new Date(deletedTimestamp).toISOString() : 'unknown'}`);
+              
+              // Remove the deletedBy flag for the current user to restore the thread
+              const deletedByRef = ref(database, `chats/${chatId}/deletedBy/${user.uid}`);
+              await set(deletedByRef, null);
+              
+              console.log(`Thread ${chatId} has been restored due to new message.`);
+            }
+          }
+        });
+      } catch (error) {
+        console.error('Error in thread restoration listener:', error);
+      }
+    });
+    
+    return () => unsubscribe();
+  }, [user, database]);
 
   const resetState = () => {
     setMessages([]);
@@ -215,9 +267,11 @@ export const useMessages = (chatId?: string) => {
 
     if (!chatData) throw new Error('Chat not found');
 
-    // Mark chat as deleted for the current user
+    // Mark chat as deleted for the current user with a timestamp
+    // This timestamp helps determine if new messages arrived after deletion
+    const deletionTimestamp = Date.now();
     const updates: Record<string, any> = {
-      [`chats/${chatId}/deletedBy/${user.uid}`]: true
+      [`chats/${chatId}/deletedBy/${user.uid}`]: deletionTimestamp
     };
 
     // If all participants have deleted the chat, remove it completely
