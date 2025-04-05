@@ -110,6 +110,12 @@ export function Chat({
 
   const { messages, loading: messagesLoading, sendMessage, markAsRead, deleteChat } = useMessages(chatId);
   const [loadingState, setLoadingState] = useState<'loading' | 'error' | 'success'>('loading');
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const router = useRouter();
+  const [newMessage, setNewMessage] = useState('');
+  const [error, setError] = useState('');
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
   
   // Handle loading state changes
   useEffect(() => {
@@ -121,12 +127,6 @@ export function Chat({
       setLoadingState('success');
     }
   }, [messagesLoading, error]);
-  const { user } = useAuth();
-  const { toast } = useToast();
-  const router = useRouter();
-  const [newMessage, setNewMessage] = useState('');
-  const [error, setError] = useState('');
-  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
   const [isAtBottom, setIsAtBottom] = useState(true);
   const [displayedListingTitle, setDisplayedListingTitle] = useState(listingTitle);
   const [isUploading, setIsUploading] = useState(false);

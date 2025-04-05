@@ -2,12 +2,13 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import { getDatabase } from 'firebase-admin/database';
 import { validateSearchTerm } from '@/lib/search-validation';
 import { getFirebaseAdmin } from '@/lib/firebase-admin';
+import { initializeApp, getApps, cert } from 'firebase-admin/app';
 
-const CACHE_DURATION = 300 * 1000; // 300 seconds cache (5 minutes, increased from 120 seconds)
+const CACHE_DURATION = 300 * 1000; // 300 seconds cache (5 minutes)
 let cachedTrending: any = null;
 let lastCacheTime = 0;
 
-// No fallback data - we'll return an empty array instead
+// Fallback data - we'll return an empty array if no data is available
 const FALLBACK_TRENDING: Array<{ term: string, count: number }> = [];
 
 export default async function handler(
@@ -52,7 +53,7 @@ export default async function handler(
     if (!res.writableEnded) {
       res.status(200).json(FALLBACK_TRENDING);
     }
-  }, 3000); // 3 seconds timeout (reduced from 4.5s to avoid client-side timeouts)
+  }, 3000); // 3 seconds timeout
 
   try {
     // Check if the request has already been aborted by the client
@@ -84,29 +85,67 @@ export default async function handler(
       return res.status(200).json(FALLBACK_TRENDING);
     }
     
-    // Use the centralized Firebase Admin initialization with timeout
-    const adminInitPromise = Promise.race([
-      getFirebaseAdmin(),
-      new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Firebase Admin initialization timeout')), 2000)
-      )
-    ]);
+    // Initialize Firebase Admin
+    let admin;
+    try {
+      // Try using the centralized Firebase Admin initialization with timeout
+      admin = await Promise.race([
+        getFirebaseAdmin(),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Firebase Admin initialization timeout')), 2000)
+        )
+      ]);
+    } catch (initError) {
+      console.error(`Path: /api/trending-searches [${requestId}] Firebase admin initialization error:`, initError);
+      
+      // Try direct initialization as a fallback
+      if (getApps().length === 0) {
+        try {
+          console.log(`Path: /api/trending-searches [${requestId}] Attempting direct Firebase admin initialization`);
+          
+          // Format private key correctly if it's provided as a string with escaped newlines
+          const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n');
+          
+          initializeApp({
+            credential: cert({
+              projectId: process.env.FIREBASE_PROJECT_ID || process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+              clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+              privateKey
+            }),
+            databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL
+          });
+          
+          console.log(`Path: /api/trending-searches [${requestId}] Direct Firebase admin initialization successful`);
+        } catch (directInitError) {
+          console.error(`Path: /api/trending-searches [${requestId}] Direct Firebase admin initialization failed:`, directInitError);
+          clearTimeout(requestTimeout);
+          return res.status(200).json(FALLBACK_TRENDING);
+        }
+      }
+    }
     
-    // Check again if the request has been aborted
+    // Check if the request has been aborted
     if (req.socket?.destroyed) {
       console.warn(`Path: /api/trending-searches [${requestId}] Request aborted during Firebase admin init`);
       clearTimeout(requestTimeout);
       return res.status(499).end();
     }
     
-    const admin = await adminInitPromise;
-    const database = getDatabase();
-    
-    if (!database) {
-      throw new Error('Failed to get Firebase database instance');
+    // Get database instance
+    let database;
+    try {
+      database = getDatabase();
+      
+      if (!database) {
+        throw new Error('Failed to get Firebase database instance');
+      }
+    } catch (dbError) {
+      console.error(`Path: /api/trending-searches [${requestId}] Failed to get Firebase database instance:`, dbError);
+      clearTimeout(requestTimeout);
+      return res.status(200).json(FALLBACK_TRENDING);
     }
     
-    // Check again if the request has been aborted
+    // Check if the request has been aborted
     if (req.socket?.destroyed) {
       console.warn(`Path: /api/trending-searches [${requestId}] Request aborted after database init`);
       clearTimeout(requestTimeout);
@@ -116,25 +155,26 @@ export default async function handler(
     // Calculate timestamp for 24 hours ago
     const twentyFourHoursAgo = Date.now() - (24 * 60 * 60 * 1000);
     
-    // Set a timeout for the database query
-    const dbQueryPromise = Promise.race([
-      database
-        .ref('searchTerms')
-        .orderByChild('lastUpdated')
-        .startAt(twentyFourHoursAgo)
-        .once('value')
-        .catch(err => {
-          console.error(`Path: /api/trending-searches [${requestId}] Database query error:`, err);
-          return { exists: () => false, val: () => null };
-        }),
-      new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Database query timeout')), 2500)
-      )
-    ]);
+    // Query the database with timeout
+    let snapshot;
+    try {
+      snapshot = await Promise.race([
+        database
+          .ref('searchTerms')
+          .orderByChild('lastUpdated')
+          .startAt(twentyFourHoursAgo)
+          .once('value'),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Database query timeout')), 2500)
+        )
+      ]);
+    } catch (queryError) {
+      console.error(`Path: /api/trending-searches [${requestId}] Database query error:`, queryError);
+      clearTimeout(requestTimeout);
+      return res.status(200).json(FALLBACK_TRENDING);
+    }
     
-    const snapshot = await dbQueryPromise;
-    
-    if (!snapshot.exists()) {
+    if (!snapshot || !snapshot.exists()) {
       console.info(`Path: /api/trending-searches [${requestId}] No trending searches found in the last 24 hours`);
       clearTimeout(requestTimeout);
       return res.status(200).json(FALLBACK_TRENDING);

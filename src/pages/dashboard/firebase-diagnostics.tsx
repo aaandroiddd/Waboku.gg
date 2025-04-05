@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { FirebaseConnectionTester } from '@/components/FirebaseConnectionTester';
 import { Button } from '@/components/ui/button';
@@ -12,10 +12,43 @@ import { FirestoreDisabler } from '@/components/FirestoreDisabler';
 import { ClearFirestoreCache } from '@/components/ClearFirestoreCache';
 import { useRouter } from 'next/router';
 import { ArrowLeft, MessageCircle, Database, RefreshCw, Shield } from 'lucide-react';
+import { getDatabase, ref, onValue } from 'firebase/database';
 
 export default function FirebaseDiagnosticsPage() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState('connection-test');
+  const unsubscribeRef = useRef<(() => void) | null>(null);
+  
+  // Clean up any Firebase listeners when component unmounts
+  useEffect(() => {
+    return () => {
+      if (unsubscribeRef.current) {
+        unsubscribeRef.current();
+      }
+    };
+  }, []);
+  
+  // Example of properly setting up a Firebase listener with unsubscribe
+  const setupTestListener = () => {
+    try {
+      const database = getDatabase();
+      if (!database) return;
+      
+      const testRef = ref(database, 'connection_tests/status');
+      
+      // Store the unsubscribe function in the ref
+      const unsubscribe = onValue(testRef, (snapshot) => {
+        console.log('Connection test status:', snapshot.val());
+      }, (error) => {
+        console.error('Error in connection test listener:', error);
+      });
+      
+      // Save the unsubscribe function to the ref
+      unsubscribeRef.current = unsubscribe;
+    } catch (error) {
+      console.error('Error setting up test listener:', error);
+    }
+  };
   
   return (
     <DashboardLayout>
