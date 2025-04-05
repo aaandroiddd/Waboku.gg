@@ -88,7 +88,7 @@ export function UserNameLink({
     } else if (!loading && !userData?.username && !initialUsername) {
       // If we still don't have a username after loading completes
       // Try direct fetch as a fallback
-      if (userId && displayName === 'Loading...' || displayName === 'Unknown User') {
+      if (userId && (displayName === 'Loading...' || displayName === 'Unknown User')) {
         timeoutRef.current = setTimeout(() => {
           fetchUserDirectly();
         }, 500);
@@ -108,11 +108,21 @@ export function UserNameLink({
     return <span className={className}>{displayName}</span>;
   }
 
+  // Handle click event safely to prevent the "event source is null" error
+  const handleClick = (e: React.MouseEvent) => {
+    // Check if the event exists before stopping propagation
+    if (e) {
+      e.stopPropagation();
+    } else {
+      console.warn("Click event was null in UserNameLink");
+    }
+  };
+
   return (
     <Link
       href={`/profile/${userId}`}
       className={`hover:text-primary hover:underline transition-colors ${className}`}
-      onClick={(e) => e.stopPropagation()}
+      onClick={handleClick}
     >
       {displayName}
     </Link>

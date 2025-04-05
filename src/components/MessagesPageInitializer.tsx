@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { database, getFirebaseServices } from '@/lib/firebase';
-import { ref, onValue, get, getDatabase } from 'firebase/database';
+import { ref, onValue, get, getDatabase, goOnline, goOffline } from 'firebase/database';
 import { useToast } from '@/components/ui/use-toast';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/router';
@@ -11,12 +11,16 @@ import { FirestoreDisabler } from './FirestoreDisabler';
  * 1. Firestore is disabled for the messages page (we only use Realtime Database)
  * 2. Realtime Database connection is verified and established
  * 3. Provides recovery mechanisms for connection issues
+ * 4. Optimizes database connection for better performance
  */
 export function MessagesPageInitializer() {
   const [connectionStatus, setConnectionStatus] = useState<'checking' | 'connected' | 'disconnected'>('checking');
   const [connectionAttempts, setConnectionAttempts] = useState(0);
   const { toast } = useToast();
   const router = useRouter();
+  const dbInstanceRef = useRef<any>(null);
+  const unsubscribeRef = useRef<(() => void) | null>(null);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Function to clear Firebase cache and reload
   const clearCacheAndReload = () => {
@@ -33,8 +37,20 @@ export function MessagesPageInitializer() {
   const verifyDatabaseConnection = async (retryCount = 0) => {
     console.log(`[MessagesPageInitializer] Verifying Realtime Database connection (attempt ${retryCount + 1})`);
     
-    // First try to use the imported database instance
-    let db = database;
+    // Clear any existing timeout
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+    
+    // Unsubscribe from previous listener
+    if (unsubscribeRef.current) {
+      unsubscribeRef.current();
+      unsubscribeRef.current = null;
+    }
+    
+    // First try to use the cached database instance
+    let db = dbInstanceRef.current || database;
     
     // If that fails, try to get a fresh instance
     if (!db) {
@@ -57,6 +73,11 @@ export function MessagesPageInitializer() {
       }
     }
     
+    // Cache the database instance
+    if (db) {
+      dbInstanceRef.current = db;
+    }
+    
     if (!db) {
       console.error('[MessagesPageInitializer] Failed to get database instance after all attempts');
       setConnectionStatus('disconnected');
@@ -69,13 +90,20 @@ export function MessagesPageInitializer() {
       if (retryCount < 5) {
         const delay = Math.min(1000 * Math.pow(1.5, retryCount), 10000);
         console.log(`[MessagesPageInitializer] Retrying in ${delay}ms`);
-        setTimeout(() => verifyDatabaseConnection(retryCount + 1), delay);
+        timeoutRef.current = setTimeout(() => verifyDatabaseConnection(retryCount + 1), delay);
       }
       
       return;
     }
     
     try {
+      // Explicitly go online to ensure connection
+      try {
+        goOnline(db);
+      } catch (error) {
+        console.error('[MessagesPageInitializer] Error calling goOnline:', error);
+      }
+      
       // Check connection status
       const connectedRef = ref(db, '.info/connected');
       
@@ -107,19 +135,26 @@ export function MessagesPageInitializer() {
           // If disconnected and we haven't tried too many times, retry
           const delay = Math.min(1000 * Math.pow(1.5, retryCount), 10000);
           console.log(`[MessagesPageInitializer] Connection lost, retrying in ${delay}ms`);
-          setTimeout(() => verifyDatabaseConnection(retryCount + 1), delay);
+          timeoutRef.current = setTimeout(() => verifyDatabaseConnection(retryCount + 1), delay);
         } else {
           // Connection alerts have been disabled as requested
           console.log('[MessagesPageInitializer] Connection lost after multiple retry attempts');
         }
       }, { onlyOnce: true });
       
+      // Store the unsubscribe function
+      unsubscribeRef.current = unsubscribe;
+      
       // If we're still checking after 5 seconds, assume disconnected
-      const timeout = setTimeout(() => {
+      timeoutRef.current = setTimeout(() => {
         if (connectionStatus === 'checking') {
           console.log('[MessagesPageInitializer] Connection check timed out, assuming disconnected');
           setConnectionStatus('disconnected');
-          unsubscribe();
+          
+          if (unsubscribeRef.current) {
+            unsubscribeRef.current();
+            unsubscribeRef.current = null;
+          }
           
           // Retry if we haven't tried too many times
           if (retryCount < 5) {
@@ -130,11 +165,6 @@ export function MessagesPageInitializer() {
           }
         }
       }, 5000);
-      
-      return () => {
-        clearTimeout(timeout);
-        unsubscribe();
-      };
     } catch (error) {
       console.error('[MessagesPageInitializer] Error verifying Realtime Database connection:', error);
       setConnectionStatus('disconnected');
@@ -143,7 +173,7 @@ export function MessagesPageInitializer() {
       if (retryCount < 5) {
         const delay = Math.min(1000 * Math.pow(1.5, retryCount), 10000);
         console.log(`[MessagesPageInitializer] Error during connection check, retrying in ${delay}ms`);
-        setTimeout(() => verifyDatabaseConnection(retryCount + 1), delay);
+        timeoutRef.current = setTimeout(() => verifyDatabaseConnection(retryCount + 1), delay);
       } else {
         // Connection alerts have been disabled as requested
         console.log('[MessagesPageInitializer] Connection error after multiple retry attempts');
@@ -166,12 +196,43 @@ export function MessagesPageInitializer() {
       setConnectionStatus('disconnected');
     };
 
+    // Listen for visibility changes to optimize connection
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        console.log('[MessagesPageInitializer] Page became visible, ensuring connection');
+        // Ensure we're online when the page is visible
+        if (dbInstanceRef.current) {
+          try {
+            goOnline(dbInstanceRef.current);
+          } catch (error) {
+            console.error('[MessagesPageInitializer] Error calling goOnline on visibility change:', error);
+          }
+        }
+        verifyDatabaseConnection(connectionAttempts);
+      } else if (document.visibilityState === 'hidden') {
+        console.log('[MessagesPageInitializer] Page hidden, connection will be maintained');
+        // We keep the connection when hidden to ensure messages are still received
+        // This is a change from previous behavior where we would go offline
+      }
+    };
+
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      
+      // Clean up on unmount
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+      
+      if (unsubscribeRef.current) {
+        unsubscribeRef.current();
+      }
     };
   }, [connectionAttempts]);
 

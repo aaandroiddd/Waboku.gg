@@ -131,6 +131,49 @@ export default function MessagesPage() {
       resetUnreadCount('messages');
     };
   }, [clearUnreadCount, resetUnreadCount]);
+  
+  // Prefetch user profiles when component mounts to improve loading performance
+  useEffect(() => {
+    if (!user) return;
+    
+    // Preload common user data to improve performance
+    const preloadUserData = async () => {
+      try {
+        const { database } = getFirebaseServices();
+        if (!database) return;
+        
+        // Get a snapshot of recent chats to prefetch user profiles
+        const chatsRef = ref(database, 'chats');
+        const snapshot = await get(chatsRef);
+        const data = snapshot.val();
+        
+        if (!data) return;
+        
+        // Extract unique participant IDs
+        const participantIds = new Set<string>();
+        Object.values(data).forEach((chat: any) => {
+          if (chat.participants && typeof chat.participants === 'object') {
+            Object.keys(chat.participants).forEach(id => {
+              if (id !== user.uid) {
+                participantIds.add(id);
+              }
+            });
+          }
+        });
+        
+        // Prefetch user data for all participants
+        if (participantIds.size > 0) {
+          console.log(`Prefetching data for ${participantIds.size} message participants`);
+          await prefetchUserData(Array.from(participantIds));
+        }
+      } catch (err) {
+        console.error('Error preloading user data:', err);
+        // Non-critical error, don't need to show to user
+      }
+    };
+    
+    preloadUserData();
+  }, [user]);
 
   useEffect(() => {
     if (!user) {

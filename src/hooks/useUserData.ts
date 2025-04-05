@@ -45,23 +45,51 @@ export const prefetchUserData = async (userIds: string[]) => {
         limit(BATCH_SIZE)
       );
       
-      const querySnapshot = await getDocs(usersQuery);
-      
-      querySnapshot.forEach(doc => {
-        if (doc.exists()) {
-          const data = doc.data();
-          const userData = {
-            username: data.displayName || data.username || 'Unknown User',
-            avatarUrl: data.avatarUrl || data.photoURL
-          };
-          
-          // Update cache
-          userDataCache[doc.id] = {
-            data: userData,
-            timestamp: Date.now()
-          };
-        }
-      });
+      try {
+        const querySnapshot = await getDocs(usersQuery);
+        
+        querySnapshot.forEach(doc => {
+          if (doc.exists()) {
+            const data = doc.data();
+            const userData = {
+              username: data.displayName || data.username || 'Unknown User',
+              avatarUrl: data.avatarUrl || data.photoURL
+            };
+            
+            // Update cache
+            userDataCache[doc.id] = {
+              data: userData,
+              timestamp: Date.now()
+            };
+          }
+        });
+      } catch (batchError) {
+        console.error(`Error fetching batch of users:`, batchError);
+        
+        // If batch query fails, fall back to individual queries
+        await Promise.allSettled(
+          batchIds.map(async (userId) => {
+            try {
+              const docSnap = await getDoc(doc(db, 'users', userId));
+              if (docSnap.exists()) {
+                const data = docSnap.data();
+                const userData = {
+                  username: data.displayName || data.username || 'Unknown User',
+                  avatarUrl: data.avatarUrl || data.photoURL
+                };
+                
+                // Update cache
+                userDataCache[userId] = {
+                  data: userData,
+                  timestamp: Date.now()
+                };
+              }
+            } catch (err) {
+              console.error(`Error fetching individual user ${userId}:`, err);
+            }
+          })
+        );
+      }
     }
   } catch (err) {
     console.error('Error prefetching user data:', err);
@@ -79,6 +107,7 @@ export function useUserData(userId: string | undefined) {
   const retryCountRef = useRef(0);
   const isMountedRef = useRef(true);
   const fetchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const unsubscribeRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -86,6 +115,9 @@ export function useUserData(userId: string | undefined) {
       isMountedRef.current = false;
       if (fetchTimeoutRef.current) {
         clearTimeout(fetchTimeoutRef.current);
+      }
+      if (unsubscribeRef.current) {
+        unsubscribeRef.current();
       }
     };
   }, []);
@@ -103,6 +135,12 @@ export function useUserData(userId: string | undefined) {
     if (fetchTimeoutRef.current) {
       clearTimeout(fetchTimeoutRef.current);
       fetchTimeoutRef.current = null;
+    }
+    
+    // Unsubscribe from previous listener
+    if (unsubscribeRef.current) {
+      unsubscribeRef.current();
+      unsubscribeRef.current = null;
     }
 
     // Check cache first
@@ -231,51 +269,73 @@ export function useUserData(userId: string | undefined) {
     // First try to get the data immediately
     fetchUserData();
 
-    // Then set up real-time listener for updates
-    const userRef = doc(db, 'users', userId);
-    
-    const unsubscribe = onSnapshot(
-      userRef, 
-      (doc) => {
-        if (doc.exists()) {
-          const data = doc.data();
-          const userData = {
-            username: data.displayName || data.username || 'Unknown User',
-            avatarUrl: data.avatarUrl || data.photoURL
-          };
-          
-          // Update cache
-          userDataCache[userId] = {
-            data: userData,
-            timestamp: Date.now()
-          };
-          
+    // Then set up real-time listener for updates with error handling
+    try {
+      const userRef = doc(db, 'users', userId);
+      
+      const unsubscribe = onSnapshot(
+        userRef, 
+        (doc) => {
+          if (doc.exists()) {
+            const data = doc.data();
+            const userData = {
+              username: data.displayName || data.username || 'Unknown User',
+              avatarUrl: data.avatarUrl || data.photoURL
+            };
+            
+            // Update cache
+            userDataCache[userId] = {
+              data: userData,
+              timestamp: Date.now()
+            };
+            
+            if (isMountedRef.current) {
+              setUserData(userData);
+              setLoading(false);
+            }
+          } else if (retryCountRef.current < MAX_RETRIES) {
+            // Increment retry count
+            retryCountRef.current++;
+            
+            // Try to fetch again after a delay
+            if (isMountedRef.current) {
+              fetchTimeoutRef.current = setTimeout(() => {
+                if (isMountedRef.current) {
+                  fetchUserData(retryCountRef.current);
+                }
+              }, 1000 * retryCountRef.current);
+            }
+          } else {
+            // Max retries reached, set fallback data
+            if (isMountedRef.current) {
+              const fallbackData = {
+                username: 'Unknown User',
+                avatarUrl: undefined
+              };
+              
+              setUserData(fallbackData);
+              setLoading(false);
+              
+              // Cache the fallback with shorter expiration
+              userDataCache[userId] = {
+                data: fallbackData,
+                timestamp: Date.now() - (CACHE_EXPIRATION - 60000) // Will expire in 1 minute
+              };
+            }
+          }
+        },
+        (error) => {
+          console.error('Error in user data snapshot:', error);
           if (isMountedRef.current) {
-            setUserData(userData);
+            setError(error.message);
             setLoading(false);
-          }
-        } else if (retryCountRef.current < MAX_RETRIES) {
-          // Increment retry count
-          retryCountRef.current++;
-          
-          // Try to fetch again after a delay
-          if (isMountedRef.current) {
-            fetchTimeoutRef.current = setTimeout(() => {
-              if (isMountedRef.current) {
-                fetchUserData(retryCountRef.current);
-              }
-            }, 1000 * retryCountRef.current);
-          }
-        } else {
-          // Max retries reached, set fallback data
-          if (isMountedRef.current) {
+            
+            // Set fallback data
             const fallbackData = {
               username: 'Unknown User',
               avatarUrl: undefined
             };
-            
             setUserData(fallbackData);
-            setLoading(false);
             
             // Cache the fallback with shorter expiration
             userDataCache[userId] = {
@@ -284,33 +344,23 @@ export function useUserData(userId: string | undefined) {
             };
           }
         }
-      },
-      (error) => {
-        console.error('Error in user data snapshot:', error);
-        if (isMountedRef.current) {
-          setError(error.message);
-          setLoading(false);
-          
-          // Set fallback data
-          const fallbackData = {
-            username: 'Unknown User',
-            avatarUrl: undefined
-          };
-          setUserData(fallbackData);
-          
-          // Cache the fallback with shorter expiration
-          userDataCache[userId] = {
-            data: fallbackData,
-            timestamp: Date.now() - (CACHE_EXPIRATION - 60000) // Will expire in 1 minute
-          };
-        }
-      }
-    );
+      );
+      
+      // Store the unsubscribe function
+      unsubscribeRef.current = unsubscribe;
+    } catch (err) {
+      console.error('Error setting up snapshot listener:', err);
+      // If setting up the listener fails, rely on the one-time fetch
+    }
 
     return () => {
-      unsubscribe();
+      if (unsubscribeRef.current) {
+        unsubscribeRef.current();
+        unsubscribeRef.current = null;
+      }
       if (fetchTimeoutRef.current) {
         clearTimeout(fetchTimeoutRef.current);
+        fetchTimeoutRef.current = null;
       }
     };
   }, [userId]);
