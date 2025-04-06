@@ -130,12 +130,16 @@ export function useReviews() {
     images: string[] = []
   ) => {
     if (!user) {
-      setError('You must be logged in to submit a review');
+      const errorMsg = 'You must be logged in to submit a review';
+      setError(errorMsg);
+      toast.error(errorMsg);
       return null;
     }
     
     if (!orderId || !rating) {
-      setError('Missing required fields');
+      const errorMsg = 'Missing required fields';
+      setError(errorMsg);
+      toast.error(errorMsg);
       return null;
     }
     
@@ -143,22 +147,29 @@ export function useReviews() {
     setError(null);
     
     try {
+      console.log('Submitting review:', { orderId, rating, title, userId: user.uid });
+      
+      const requestBody = {
+        orderId,
+        rating,
+        comment,
+        title,
+        images: [], // Removed image upload functionality
+        userId: user.uid,
+      };
+      
+      console.log('Request body:', requestBody);
+      
       const response = await fetch('/api/reviews/create', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          orderId,
-          rating,
-          comment,
-          title,
-          images,
-          userId: user.uid,
-        }),
+        body: JSON.stringify(requestBody),
       });
       
       const data = await response.json();
+      console.log('Review submission response:', data);
       
       if (!response.ok) {
         throw new Error(data.message || 'Failed to submit review');

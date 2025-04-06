@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Star, Loader2, Upload } from 'lucide-react';
+import { Star, Loader2 } from 'lucide-react';
 import { useReviews } from '@/hooks/useReviews';
 import { toast } from 'sonner';
 
@@ -114,21 +114,7 @@ export function ReviewForm({ orderId, onSuccess, onCancel }: ReviewFormProps) {
             </p>
           </div>
           
-          {/* Image upload functionality would go here */}
-          <div className="space-y-2">
-            <Label>Add Photos (Coming Soon)</Label>
-            <Button 
-              type="button" 
-              variant="outline" 
-              className="w-full h-24 border-dashed"
-              disabled={true}
-            >
-              <div className="flex flex-col items-center justify-center">
-                <Upload className="h-6 w-6 mb-2 text-muted-foreground" />
-                <span className="text-sm text-muted-foreground">Upload photos (Coming soon)</span>
-              </div>
-            </Button>
-          </div>
+
         </CardContent>
         <CardFooter className="flex justify-between">
           <Button 
