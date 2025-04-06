@@ -19,7 +19,7 @@ export default async function handler(
   }
 
   try {
-    console.log('[create-review] Request body:', req.body);
+    console.log('[create-review] Request body:', JSON.stringify(req.body));
     
     const { 
       orderId, 
@@ -29,6 +29,15 @@ export default async function handler(
       images = [],
       userId 
     } = req.body;
+
+    console.log('[create-review] Extracted fields:', { 
+      orderId, 
+      rating, 
+      commentLength: comment ? comment.length : 0, 
+      title, 
+      imagesCount: images.length, 
+      userId 
+    });
 
     if (!orderId || !rating || !userId) {
       console.log('[create-review] Missing required fields:', { orderId, rating, userId });
@@ -41,94 +50,125 @@ export default async function handler(
     }
 
     console.log('[create-review] Processing request:', { orderId, userId });
-    const { db } = getFirebaseServices();
-    
-    // Get the order document to verify the user is the buyer
-    const orderRef = doc(db, 'orders', orderId);
-    const orderDoc = await getDoc(orderRef);
-    
-    if (!orderDoc.exists()) {
-      console.log('[create-review] Order not found:', orderId);
-      return res.status(404).json({ success: false, message: 'Order not found' });
-    }
-    
-    const orderData = orderDoc.data();
-    
-    // Verify that the user is the buyer of this order
-    if (orderData.buyerId !== userId) {
-      console.log('[create-review] Unauthorized: User is not the buyer', { buyerId: orderData.buyerId, userId });
-      return res.status(403).json({ success: false, message: 'Unauthorized: Only the buyer can leave a review' });
-    }
-    
-    // Verify the order is completed
-    if (orderData.status !== 'completed') {
-      console.log('[create-review] Order not completed:', orderData.status);
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Reviews can only be left for completed orders' 
-      });
-    }
-    
-    // Check if a review already exists for this order
-    if (orderData.reviewSubmitted) {
-      console.log('[create-review] Review already submitted for order:', orderId);
-      return res.status(400).json({ 
-        success: false, 
-        message: 'A review has already been submitted for this order' 
-      });
-    }
     
     try {
-      // Create a new review document
-      const reviewId = uuidv4();
-      const reviewRef = doc(db, 'reviews', reviewId);
-      const now = Timestamp.now();
+      const { db } = getFirebaseServices();
+      console.log('[create-review] Firebase services initialized');
       
-      await setDoc(reviewRef, {
-        id: reviewId,
-        orderId,
-        listingId: orderData.listingId,
-        reviewerId: userId,
+      // Get the order document to verify the user is the buyer
+      const orderRef = doc(db, 'orders', orderId);
+      console.log('[create-review] Getting order document:', orderId);
+      const orderDoc = await getDoc(orderRef);
+      
+      if (!orderDoc.exists()) {
+        console.log('[create-review] Order not found:', orderId);
+        return res.status(404).json({ success: false, message: 'Order not found' });
+      }
+      
+      const orderData = orderDoc.data();
+      console.log('[create-review] Order data retrieved:', { 
+        buyerId: orderData.buyerId, 
         sellerId: orderData.sellerId,
-        rating,
-        comment: comment || '',
-        title: title || '',
-        images: images || [],
-        isVerifiedPurchase: true,
-        isPublic: true,
-        status: 'published',
-        helpfulCount: 0,
-        reportCount: 0,
-        createdAt: now,
-        updatedAt: now
+        status: orderData.status,
+        reviewSubmitted: orderData.reviewSubmitted
       });
       
-      // Update the order to mark that a review has been submitted
-      await updateDoc(orderRef, {
-        reviewSubmitted: true,
-        reviewId,
-        updatedAt: now
-      });
+      // Verify that the user is the buyer of this order
+      if (orderData.buyerId !== userId) {
+        console.log('[create-review] Unauthorized: User is not the buyer', { buyerId: orderData.buyerId, userId });
+        return res.status(403).json({ success: false, message: 'Unauthorized: Only the buyer can leave a review' });
+      }
       
-      // Update the seller's review stats
-      await updateSellerReviewStats(db, orderData.sellerId, rating);
+      // Verify the order is completed
+      if (orderData.status !== 'completed') {
+        console.log('[create-review] Order not completed:', orderData.status);
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Reviews can only be left for completed orders' 
+        });
+      }
       
-      console.log('[create-review] Review created successfully:', reviewId);
+      // Check if a review already exists for this order
+      if (orderData.reviewSubmitted) {
+        console.log('[create-review] Review already submitted for order:', orderId);
+        return res.status(400).json({ 
+          success: false, 
+          message: 'A review has already been submitted for this order' 
+        });
+      }
       
-      return res.status(200).json({ 
-        success: true, 
-        message: 'Review submitted successfully',
-        reviewId
-      });
+      try {
+        // Create a new review document
+        const reviewId = uuidv4();
+        console.log('[create-review] Generated review ID:', reviewId);
+        
+        const reviewRef = doc(db, 'reviews', reviewId);
+        const now = Timestamp.now();
+        
+        const reviewData = {
+          id: reviewId,
+          orderId,
+          listingId: orderData.listingId,
+          reviewerId: userId,
+          sellerId: orderData.sellerId,
+          rating,
+          comment: comment || '',
+          title: title || '',
+          images: images || [],
+          isVerifiedPurchase: true,
+          isPublic: true,
+          status: 'published',
+          helpfulCount: 0,
+          reportCount: 0,
+          createdAt: now,
+          updatedAt: now
+        };
+        
+        console.log('[create-review] Creating review document with data:', JSON.stringify(reviewData));
+        await setDoc(reviewRef, reviewData);
+        console.log('[create-review] Review document created successfully');
+        
+        // Update the order to mark that a review has been submitted
+        const orderUpdateData = {
+          reviewSubmitted: true,
+          reviewId,
+          updatedAt: now
+        };
+        
+        console.log('[create-review] Updating order with data:', orderUpdateData);
+        await updateDoc(orderRef, orderUpdateData);
+        console.log('[create-review] Order updated successfully');
+        
+        // Update the seller's review stats
+        console.log('[create-review] Updating seller review stats for:', orderData.sellerId);
+        await updateSellerReviewStats(db, orderData.sellerId, rating);
+        
+        console.log('[create-review] Review created successfully:', reviewId);
+        
+        return res.status(200).json({ 
+          success: true, 
+          message: 'Review submitted successfully',
+          reviewId
+        });
+      } catch (error) {
+        console.error('[create-review] Error creating review document:', error);
+        console.error('[create-review] Error details:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
+        return res.status(500).json({ 
+          success: false, 
+          message: 'Failed to submit review. Please try again.' 
+        });
+      }
     } catch (error) {
-      console.error('[create-review] Error creating review:', error);
+      console.error('[create-review] Error accessing Firebase:', error);
+      console.error('[create-review] Error details:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
       return res.status(500).json({ 
         success: false, 
-        message: 'Failed to submit review. Please try again.' 
+        message: 'Database error. Please try again later.' 
       });
     }
   } catch (error) {
     console.error('[create-review] Error processing review:', error);
+    console.error('[create-review] Error details:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
     return res.status(500).json({ success: false, message: 'Internal server error' });
   }
 }
@@ -143,55 +183,72 @@ async function updateSellerReviewStats(db: any, sellerId: string, newRating: num
       return;
     }
     
-    const statsRef = doc(db, 'reviewStats', sellerId);
-    const statsDoc = await getDoc(statsRef);
-    
-    if (statsDoc.exists()) {
-      // Update existing stats
-      const stats = statsDoc.data();
-      console.log('[update-review-stats] Existing stats:', stats);
-      
-      // Ensure totalReviews is a number
-      const currentTotal = typeof stats.totalReviews === 'number' ? stats.totalReviews : 0;
-      const currentAvg = typeof stats.averageRating === 'number' ? stats.averageRating : 0;
-      
-      const totalReviews = currentTotal + 1;
-      const totalRatingPoints = currentAvg * currentTotal + newRating;
-      const newAverage = totalRatingPoints / totalReviews;
-      
-      // Update the rating counts
-      const ratingCounts = stats.ratingCounts || { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
-      ratingCounts[newRating] = (ratingCounts[newRating] || 0) + 1;
-      
-      const updateData = {
-        totalReviews,
-        averageRating: newAverage,
-        ratingCounts,
-        lastUpdated: Timestamp.now()
-      };
-      
-      console.log('[update-review-stats] Updating with data:', updateData);
-      await updateDoc(statsRef, updateData);
-    } else {
-      // Create new stats document
-      const ratingCounts = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
-      ratingCounts[newRating] = 1;
-      
-      const newStats = {
-        sellerId,
-        totalReviews: 1,
-        averageRating: newRating,
-        ratingCounts,
-        lastUpdated: Timestamp.now()
-      };
-      
-      console.log('[update-review-stats] Creating new stats:', newStats);
-      await setDoc(statsRef, newStats);
+    if (!db) {
+      console.error('[update-review-stats] Database reference is undefined');
+      return;
     }
     
-    console.log('[update-review-stats] Successfully updated review stats for seller:', sellerId);
+    try {
+      console.log('[update-review-stats] Creating document reference for:', sellerId);
+      const statsRef = doc(db, 'reviewStats', sellerId);
+      
+      console.log('[update-review-stats] Getting document data');
+      const statsDoc = await getDoc(statsRef);
+      
+      if (statsDoc.exists()) {
+        // Update existing stats
+        const stats = statsDoc.data();
+        console.log('[update-review-stats] Existing stats:', JSON.stringify(stats));
+        
+        // Ensure totalReviews is a number
+        const currentTotal = typeof stats.totalReviews === 'number' ? stats.totalReviews : 0;
+        const currentAvg = typeof stats.averageRating === 'number' ? stats.averageRating : 0;
+        
+        const totalReviews = currentTotal + 1;
+        const totalRatingPoints = currentAvg * currentTotal + newRating;
+        const newAverage = totalRatingPoints / totalReviews;
+        
+        // Update the rating counts
+        const ratingCounts = stats.ratingCounts || { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+        ratingCounts[newRating] = (ratingCounts[newRating] || 0) + 1;
+        
+        const updateData = {
+          totalReviews,
+          averageRating: newAverage,
+          ratingCounts,
+          lastUpdated: Timestamp.now()
+        };
+        
+        console.log('[update-review-stats] Updating with data:', JSON.stringify(updateData));
+        await updateDoc(statsRef, updateData);
+        console.log('[update-review-stats] Document updated successfully');
+      } else {
+        // Create new stats document
+        console.log('[update-review-stats] No existing stats, creating new document');
+        const ratingCounts = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+        ratingCounts[newRating] = 1;
+        
+        const newStats = {
+          sellerId,
+          totalReviews: 1,
+          averageRating: newRating,
+          ratingCounts,
+          lastUpdated: Timestamp.now()
+        };
+        
+        console.log('[update-review-stats] Creating new stats:', JSON.stringify(newStats));
+        await setDoc(statsRef, newStats);
+        console.log('[update-review-stats] New document created successfully');
+      }
+      
+      console.log('[update-review-stats] Successfully updated review stats for seller:', sellerId);
+    } catch (error) {
+      console.error('[update-review-stats] Error in Firestore operations:', error);
+      console.error('[update-review-stats] Error details:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
+    }
   } catch (error) {
     console.error('[update-review-stats] Error updating review stats:', error);
+    console.error('[update-review-stats] Error details:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
     // Don't throw the error, just log it to prevent the review creation from failing
   }
 }

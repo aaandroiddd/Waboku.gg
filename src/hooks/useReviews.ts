@@ -158,25 +158,32 @@ export function useReviews() {
         userId: user.uid,
       };
       
-      console.log('Request body:', requestBody);
+      console.log('Request body:', JSON.stringify(requestBody));
       
-      const response = await fetch('/api/reviews/create', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(requestBody),
-      });
-      
-      const data = await response.json();
-      console.log('Review submission response:', data);
-      
-      if (!response.ok) {
-        throw new Error(data.message || 'Failed to submit review');
+      try {
+        const response = await fetch('/api/reviews/create', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(requestBody),
+        });
+        
+        console.log('Response status:', response.status);
+        
+        const data = await response.json();
+        console.log('Review submission response:', data);
+        
+        if (!response.ok) {
+          throw new Error(data.message || 'Failed to submit review');
+        }
+        
+        toast.success('Review submitted successfully');
+        return data.reviewId;
+      } catch (fetchError) {
+        console.error('Fetch error during review submission:', fetchError);
+        throw new Error(fetchError instanceof Error ? fetchError.message : 'Network error during review submission');
       }
-      
-      toast.success('Review submitted successfully');
-      return data.reviewId;
     } catch (error) {
       console.error('Error submitting review:', error);
       const errorMessage = error instanceof Error ? error.message : 'Failed to submit review';

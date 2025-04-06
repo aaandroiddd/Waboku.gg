@@ -35,12 +35,24 @@ export function ReviewForm({ orderId, onSuccess, onCancel }: ReviewFormProps) {
       return;
     }
     
-    const reviewId = await submitReview(orderId, rating, comment, title, images);
-    
-    if (reviewId) {
-      if (onSuccess) {
-        onSuccess();
+    try {
+      console.log('Submitting review with data:', { orderId, rating, commentLength: comment.length, title });
+      const reviewId = await submitReview(orderId, rating, comment, title, []);
+      
+      console.log('Review submission result:', reviewId);
+      
+      if (reviewId) {
+        toast.success('Review submitted successfully');
+        if (onSuccess) {
+          onSuccess();
+        }
+      } else {
+        console.error('Review submission failed: No reviewId returned');
+        toast.error('Failed to submit review. Please try again.');
       }
+    } catch (error) {
+      console.error('Error in handleSubmit:', error);
+      toast.error('An error occurred while submitting your review. Please try again.');
     }
   };
   
