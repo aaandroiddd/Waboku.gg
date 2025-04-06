@@ -111,7 +111,7 @@ export default async function handler(
     }
     
     // Verify the order is in a valid state to be completed
-    const validStates = ['paid', 'awaiting_shipping'];
+    const validStates = ['paid', 'awaiting_shipping', 'pending'];
     if (!validStates.includes(orderData.status)) {
       console.log('[complete-pickup] Invalid order status:', orderData.status);
       return res.status(400).json({ 
