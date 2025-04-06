@@ -45,6 +45,13 @@ export default function OrderDetailsPage() {
   const [showCompletePickupDialog, setShowCompletePickupDialog] = useState(false);
   const [showReviewDialog, setShowReviewDialog] = useState(false);
 
+  // Check if we should show the review dialog based on URL query param
+  useEffect(() => {
+    if (router.query.review === 'true' && order?.status === 'completed' && !order?.reviewSubmitted) {
+      setShowReviewDialog(true);
+    }
+  }, [router.query, order]);
+
   useEffect(() => {
     async function fetchOrderDetails() {
       if (!id || !user) return;

@@ -292,6 +292,20 @@ export function OrderCard({ order, isSale = false }: OrderCardProps) {
                 Complete Pickup
               </Button>
             )}
+            {/* Leave Review Button - Only visible for buyers with completed orders that don't have a review yet */}
+            {!isSale && safeOrder.status === 'completed' && !safeOrder.reviewSubmitted && (
+              <Button 
+                variant="default" 
+                className="bg-primary hover:bg-primary/90 text-white font-medium"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  router.push(`/dashboard/orders/${safeOrder.id}?review=true`);
+                }}
+              >
+                <Star className="mr-2 h-4 w-4" />
+                Leave Review
+              </Button>
+            )}
           </div>
           
           {safeOrder.isPickup ? (
