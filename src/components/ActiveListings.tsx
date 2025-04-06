@@ -51,7 +51,53 @@ export const ActiveListings = ({
   const { toast } = useToast();
   
   // Use the enhanced listing visibility hook to properly filter active listings
-  const { visibleListings, filteredOutReasons } = useListingVisibility(listings);
+  const { visibleListings: unsortedVisibleListings, filteredOutReasons } = useListingVisibility(listings);
+  
+  // Sort the visible listings based on sortBy and sortOrder
+  const visibleListings = [...unsortedVisibleListings].sort((a, b) => {
+    if (sortBy === 'date') {
+      const dateA = a.createdAt instanceof Date ? a.createdAt : new Date(a.createdAt);
+      const dateB = b.createdAt instanceof Date ? b.createdAt : new Date(b.createdAt);
+      return sortOrder === 'desc' ? dateB.getTime() - dateA.getTime() : dateA.getTime() - dateB.getTime();
+    } else if (sortBy === 'price') {
+      return sortOrder === 'desc' ? b.price - a.price : a.price - b.price;
+    } else {
+      return sortOrder === 'desc' 
+        ? b.title.localeCompare(a.title)
+        : a.title.localeCompare(b.title);
+    }
+  });
+  
+  // Log sorting information for debugging
+  useEffect(() => {
+    console.log(`ActiveListings: Sorting by ${sortBy} in ${sortOrder} order`);
+    console.log(`ActiveListings: Listings count before sorting: ${unsortedVisibleListings.length}`);
+    console.log(`ActiveListings: Listings count after sorting: ${visibleListings.length}`);
+    
+    // Log a sample of listings before and after sorting if available
+    if (unsortedVisibleListings.length > 0 && visibleListings.length > 0) {
+      const sampleBefore = unsortedVisibleListings.slice(0, Math.min(3, unsortedVisibleListings.length));
+      const sampleAfter = visibleListings.slice(0, Math.min(3, visibleListings.length));
+      
+      console.log('ActiveListings: Sample before sorting:', 
+        sampleBefore.map(l => ({ 
+          id: l.id, 
+          title: l.title, 
+          price: l.price, 
+          date: l.createdAt instanceof Date ? l.createdAt : new Date(l.createdAt) 
+        }))
+      );
+      
+      console.log('ActiveListings: Sample after sorting:', 
+        sampleAfter.map(l => ({ 
+          id: l.id, 
+          title: l.title, 
+          price: l.price, 
+          date: l.createdAt instanceof Date ? l.createdAt : new Date(l.createdAt) 
+        }))
+      );
+    }
+  }, [sortBy, sortOrder, unsortedVisibleListings, visibleListings]);
   
   // Log detailed filtering reasons in development
   useEffect(() => {
