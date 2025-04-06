@@ -141,7 +141,13 @@ export default async function handler(
         
         // Update the seller's review stats
         console.log('[create-review] Updating seller review stats for:', orderData.sellerId);
-        await updateSellerReviewStats(db, orderData.sellerId, rating);
+        try {
+          const statsUpdateResult = await updateSellerReviewStats(db, orderData.sellerId, rating);
+          console.log('[create-review] Stats update result:', statsUpdateResult);
+        } catch (statsError) {
+          // Log the error but don't fail the review creation
+          console.error('[create-review] Error updating seller stats, but continuing:', statsError);
+        }
         
         console.log('[create-review] Review created successfully:', reviewId);
         
@@ -188,6 +194,15 @@ async function updateSellerReviewStats(db: any, sellerId: string, newRating: num
       return;
     }
     
+    // Validate rating is a number between 1-5
+    if (typeof newRating !== 'number' || newRating < 1 || newRating > 5) {
+      console.error('[update-review-stats] Invalid rating value:', newRating);
+      return;
+    }
+    
+    // Ensure rating is an integer
+    const rating = Math.round(newRating);
+    
     try {
       console.log('[update-review-stats] Creating document reference for:', sellerId);
       const statsRef = doc(db, 'reviewStats', sellerId);
@@ -205,12 +220,19 @@ async function updateSellerReviewStats(db: any, sellerId: string, newRating: num
         const currentAvg = typeof stats.averageRating === 'number' ? stats.averageRating : 0;
         
         const totalReviews = currentTotal + 1;
-        const totalRatingPoints = currentAvg * currentTotal + newRating;
-        const newAverage = totalRatingPoints / totalReviews;
+        const totalRatingPoints = currentAvg * currentTotal + rating;
+        const newAverage = parseFloat((totalRatingPoints / totalReviews).toFixed(2));
         
-        // Update the rating counts
-        const ratingCounts = stats.ratingCounts || { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
-        ratingCounts[newRating] = (ratingCounts[newRating] || 0) + 1;
+        // Initialize ratingCounts with default values if missing or invalid
+        let ratingCounts = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+        
+        // If stats.ratingCounts exists and is an object, merge it with our default
+        if (stats.ratingCounts && typeof stats.ratingCounts === 'object') {
+          ratingCounts = { ...ratingCounts, ...stats.ratingCounts };
+        }
+        
+        // Ensure the rating key exists and is a number
+        ratingCounts[rating] = (typeof ratingCounts[rating] === 'number' ? ratingCounts[rating] : 0) + 1;
         
         const updateData = {
           totalReviews,
@@ -226,12 +248,12 @@ async function updateSellerReviewStats(db: any, sellerId: string, newRating: num
         // Create new stats document
         console.log('[update-review-stats] No existing stats, creating new document');
         const ratingCounts = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
-        ratingCounts[newRating] = 1;
+        ratingCounts[rating] = 1;
         
         const newStats = {
           sellerId,
           totalReviews: 1,
-          averageRating: newRating,
+          averageRating: rating,
           ratingCounts,
           lastUpdated: Timestamp.now()
         };
@@ -242,13 +264,17 @@ async function updateSellerReviewStats(db: any, sellerId: string, newRating: num
       }
       
       console.log('[update-review-stats] Successfully updated review stats for seller:', sellerId);
+      return true;
     } catch (error) {
       console.error('[update-review-stats] Error in Firestore operations:', error);
       console.error('[update-review-stats] Error details:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
+      // Don't throw the error to prevent the review creation from failing
+      return false;
     }
   } catch (error) {
     console.error('[update-review-stats] Error updating review stats:', error);
     console.error('[update-review-stats] Error details:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
     // Don't throw the error, just log it to prevent the review creation from failing
+    return false;
   }
 }
