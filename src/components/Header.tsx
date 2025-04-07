@@ -11,7 +11,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { Menu, LayoutDashboard, Heart, MessageSquare, Settings, Store } from "lucide-react";
+import { Menu, LayoutDashboard, Heart, MessageSquare, Settings, Store, LogOut } from "lucide-react";
 import { useState, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { motion, useReducedMotion } from "framer-motion";
@@ -28,7 +28,7 @@ interface HeaderProps {
 
 export default function Header({ animate = true }: HeaderProps) {
   const router = useRouter();
-  const { user, profile } = useAuth();
+  const { user, profile, signOut } = useAuth();
   const isAuthPage = router.pathname.startsWith("/auth/");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isMenuAnimating, setIsMenuAnimating] = useState(false);
@@ -51,6 +51,16 @@ export default function Header({ animate = true }: HeaderProps) {
   const handleNavigation = (path: string) => {
     router.push(path);
     setIsMobileMenuOpen(false);
+  };
+  
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      router.push('/');
+      setIsMobileMenuOpen(false);
+    } catch (error) {
+      console.error('Error signing out:', error);
+    }
   };
 
   // Simplified animation variants for mobile
@@ -93,6 +103,17 @@ export default function Header({ animate = true }: HeaderProps) {
           {!isAuthPage && (
             <div className="flex items-center">
               <AuthNav />
+              {user && (
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="gap-2 ml-2" 
+                  onClick={handleSignOut}
+                >
+                  <LogOut className="h-4 w-4" />
+                  Sign Out
+                </Button>
+              )}
             </div>
           )}
         </nav>
@@ -122,6 +143,16 @@ export default function Header({ animate = true }: HeaderProps) {
             >
               <SheetHeader className="mb-4">
                 <SheetTitle>Menu</SheetTitle>
+                {user && (
+                  <Button
+                    variant="ghost"
+                    className="flex items-center justify-start gap-2 h-auto py-2 mt-2"
+                    onClick={handleSignOut}
+                  >
+                    <LogOut className="h-4 w-4" />
+                    Sign Out
+                  </Button>
+                )}
               </SheetHeader>
               <nav 
                 className="flex flex-col space-y-3 overflow-y-auto overscroll-contain"
