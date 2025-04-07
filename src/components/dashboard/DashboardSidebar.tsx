@@ -310,7 +310,7 @@ export function DashboardSidebar({ onNavigate }: DashboardSidebarProps) {
           </div>
         ) : (
           // Show actual navigation items once loaded
-          <nav className="px-4 space-y-1">
+          <nav className="px-4 space-y-1 pb-20 md:pb-6">
             {navigation.map((item) => (
               <button
                 key={item.name}
@@ -329,9 +329,10 @@ export function DashboardSidebar({ onNavigate }: DashboardSidebarProps) {
             ))}
           </nav>
         )}
-        <div className="mt-auto p-4">
-          {user && <SignOutButton onNavigate={onNavigate} />}
-        </div>
+      </div>
+      {/* Fixed sign out button container at the bottom */}
+      <div className="p-4 border-t sticky bottom-0 bg-card mt-auto">
+        {user && <SignOutButton onNavigate={onNavigate} />}
       </div>
     </div>
   );
