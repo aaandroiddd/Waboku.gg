@@ -47,13 +47,27 @@ interface SearchBarProps {
   showSearchButton?: boolean;
   initialValue?: string;
   selectedState?: string;
+  onSearch?: (query: string) => void;
+  onSelect?: (cardName: string) => void;
 }
 
-export default function SearchBar({ showSearchButton = false, initialValue = "", selectedState = "all" }: SearchBarProps) {
+export default function SearchBar({ 
+  showSearchButton = false, 
+  initialValue = "", 
+  selectedState = "all",
+  onSearch,
+  onSelect
+}: SearchBarProps) {
   const router = useRouter();
   const { recordSearch } = useTrendingSearches();
 
   const handleSearch = async (query: string) => {
+    // If custom onSearch handler is provided, use it
+    if (onSearch) {
+      onSearch(query);
+      return;
+    }
+    
     // If query has content, try to record it but don't wait for it to complete
     if (query.trim()) {
       try {
@@ -113,6 +127,12 @@ export default function SearchBar({ showSearchButton = false, initialValue = "",
     }
     
     if (searchTerm) {
+      // If custom onSelect handler is provided, use it
+      if (onSelect) {
+        onSelect(searchTerm.trim());
+        return;
+      }
+      
       await recordSearch(searchTerm.trim());
       const currentQuery = router.query;
       router.push({

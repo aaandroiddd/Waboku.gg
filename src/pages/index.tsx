@@ -192,11 +192,18 @@ export default function Home() {
         queryParams.state = selectedState;
       }
 
-      // Update URL with search parameters
-      router.push({
-        pathname: '/listings',
-        query: queryParams,
-      });
+      // Only proceed with navigation if we have at least one filter parameter
+      // This ensures we can filter by state even when search query is empty
+      if (Object.keys(queryParams).length > 0) {
+        // Update URL with search parameters
+        router.push({
+          pathname: '/listings',
+          query: queryParams,
+        });
+      } else {
+        // If no filters are applied, just go to the listings page
+        router.push('/listings');
+      }
     } catch (error) {
       console.error('Search error:', error);
       alert('An error occurred while processing your search. Please try again.');
