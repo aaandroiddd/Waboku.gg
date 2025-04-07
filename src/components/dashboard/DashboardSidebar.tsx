@@ -11,6 +11,8 @@ import { useUnread } from '@/contexts/UnreadContext';
 import { useAccountCache } from '@/hooks/useAccountCache';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import { LogOut } from 'lucide-react';
+import { useToast } from '@/components/ui/use-toast';
 
 interface DashboardSidebarProps {
   onNavigate?: () => void;
@@ -327,8 +329,52 @@ export function DashboardSidebar({ onNavigate }: DashboardSidebarProps) {
             ))}
           </nav>
         )}
-        <div className="mt-auto p-4"></div>
+        <div className="mt-auto p-4">
+          {user && <SignOutButton onNavigate={onNavigate} />}
+        </div>
       </div>
     </div>
+  );
+}
+
+// Separate component for sign-out button to avoid React hooks rules issues
+function SignOutButton({ onNavigate }: { onNavigate?: () => void }) {
+  const { signOut } = useAuth();
+  const router = useRouter();
+  const { toast } = useToast();
+  
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      router.push('/');
+      if (onNavigate) onNavigate();
+      
+      // Show success toast notification
+      toast({
+        title: "Success",
+        description: "You have been signed out successfully",
+        variant: "default",
+      });
+    } catch (error) {
+      console.error('Error signing out:', error);
+      
+      // Show error toast if sign-out fails
+      toast({
+        title: "Error",
+        description: "Failed to sign out. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+  
+  return (
+    <Button
+      variant="destructive"
+      className="w-full flex items-center justify-center gap-2"
+      onClick={handleSignOut}
+    >
+      <LogOut className="h-4 w-4" />
+      Sign Out
+    </Button>
   );
 }

@@ -16,6 +16,7 @@ import { useState, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { motion, useReducedMotion } from "framer-motion";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
+import { useToast } from "@/components/ui/use-toast";
 
 // Dynamically import the auth-dependent navigation component
 const AuthNav = dynamic(() => import("./AuthNav"), {
@@ -53,13 +54,29 @@ export default function Header({ animate = true }: HeaderProps) {
     setIsMobileMenuOpen(false);
   };
   
+  const { toast } = useToast();
+  
   const handleSignOut = async () => {
     try {
       await signOut();
       router.push('/');
       setIsMobileMenuOpen(false);
+      
+      // Show success toast notification
+      toast({
+        title: "Success",
+        description: "You have been signed out successfully",
+        variant: "default",
+      });
     } catch (error) {
       console.error('Error signing out:', error);
+      
+      // Show error toast if sign-out fails
+      toast({
+        title: "Error",
+        description: "Failed to sign out. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -105,7 +122,7 @@ export default function Header({ animate = true }: HeaderProps) {
               <AuthNav />
               {user && (
                 <Button 
-                  variant="ghost" 
+                  variant="destructive" 
                   size="sm" 
                   className="gap-2 ml-2" 
                   onClick={handleSignOut}
@@ -145,7 +162,7 @@ export default function Header({ animate = true }: HeaderProps) {
                 <SheetTitle>Menu</SheetTitle>
                 {user && (
                   <Button
-                    variant="ghost"
+                    variant="destructive"
                     className="flex items-center justify-start gap-2 h-auto py-2 mt-2"
                     onClick={handleSignOut}
                   >
