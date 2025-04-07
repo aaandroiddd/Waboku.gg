@@ -124,7 +124,7 @@ export default function Header({ animate = true }: HeaderProps) {
                 <Button 
                   variant="destructive" 
                   size="sm" 
-                  className="gap-2 ml-2" 
+                  className="gap-2 ml-2 bg-[#b71c1c] hover:bg-[#b71c1c]/90" 
                   onClick={handleSignOut}
                 >
                   <LogOut className="h-4 w-4" />
@@ -163,7 +163,7 @@ export default function Header({ animate = true }: HeaderProps) {
                 {user && (
                   <Button
                     variant="destructive"
-                    className="flex items-center justify-start gap-2 h-auto py-2 mt-2"
+                    className="flex items-center justify-start gap-2 h-auto py-2 mt-2 bg-[#b71c1c] hover:bg-[#b71c1c]/90"
                     onClick={handleSignOut}
                   >
                     <LogOut className="h-4 w-4" />

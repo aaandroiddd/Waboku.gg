@@ -371,7 +371,7 @@ function SignOutButton({ onNavigate }: { onNavigate?: () => void }) {
   return (
     <Button
       variant="destructive"
-      className="w-full flex items-center justify-center gap-2"
+      className="w-full flex items-center justify-center gap-2 bg-[#b71c1c] hover:bg-[#b71c1c]/90"
       onClick={handleSignOut}
     >
       <LogOut className="h-4 w-4" />
