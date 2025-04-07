@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { useRouter } from 'next/router';
 
 interface LoadingContextType {
@@ -6,6 +6,7 @@ interface LoadingContextType {
   setLoading: (loading: boolean) => void;
   startLoading: () => void;
   stopLoading: () => void;
+  cachedPages: Set<string>;
 }
 
 const LoadingContext = createContext<LoadingContextType>({
@@ -13,6 +14,7 @@ const LoadingContext = createContext<LoadingContextType>({
   setLoading: () => {},
   startLoading: () => {},
   stopLoading: () => {},
+  cachedPages: new Set(),
 });
 
 export const useLoading = () => useContext(LoadingContext);
@@ -23,6 +25,7 @@ interface LoadingProviderProps {
 
 export function LoadingProvider({ children }: LoadingProviderProps) {
   const [isLoading, setIsLoading] = useState(false);
+  const [cachedPages, setCachedPages] = useState<Set<string>>(new Set());
   const router = useRouter();
 
   // Set up router event listeners for page transitions
@@ -32,32 +35,52 @@ export function LoadingProvider({ children }: LoadingProviderProps) {
       if (url.includes('#') && router.asPath.split('#')[0] === url.split('#')[0]) {
         return;
       }
+      
+      // Don't show loading for cached pages
+      const urlWithoutQuery = url.split('?')[0];
+      if (cachedPages.has(urlWithoutQuery)) {
+        return;
+      }
+      
       // Immediately set loading to true when navigation starts
       setIsLoading(true);
     };
 
-    const handleComplete = () => {
+    const handleComplete = (url: string) => {
+      // Add the page to cached pages
+      const urlWithoutQuery = url.split('?')[0];
+      setCachedPages(prev => new Set([...prev, urlWithoutQuery]));
+      
       // Reduce the delay before hiding the loading screen
-      // This helps prevent layout shifts by allowing content to render faster
+      setTimeout(() => setIsLoading(false), 100);
+    };
+
+    const handleError = () => {
       setTimeout(() => setIsLoading(false), 100);
     };
 
     router.events.on('routeChangeStart', handleStart);
     router.events.on('routeChangeComplete', handleComplete);
-    router.events.on('routeChangeError', handleComplete);
+    router.events.on('routeChangeError', handleError);
 
     return () => {
       router.events.off('routeChangeStart', handleStart);
       router.events.off('routeChangeComplete', handleComplete);
-      router.events.off('routeChangeError', handleComplete);
+      router.events.off('routeChangeError', handleError);
     };
-  }, [router]);
+  }, [router, cachedPages]);
 
-  const startLoading = () => setIsLoading(true);
-  const stopLoading = () => setIsLoading(false);
+  const startLoading = useCallback(() => setIsLoading(true), []);
+  const stopLoading = useCallback(() => setIsLoading(false), []);
 
   return (
-    <LoadingContext.Provider value={{ isLoading, setLoading: setIsLoading, startLoading, stopLoading }}>
+    <LoadingContext.Provider value={{ 
+      isLoading, 
+      setLoading: setIsLoading, 
+      startLoading, 
+      stopLoading,
+      cachedPages
+    }}>
       {children}
     </LoadingContext.Provider>
   );

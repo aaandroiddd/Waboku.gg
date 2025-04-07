@@ -15,6 +15,7 @@ import { AnimatePresence } from 'framer-motion';
 import Head from 'next/head';
 import { LoadingProvider, useLoading } from '@/contexts/LoadingContext';
 import { FirebaseConnectionHandler } from '@/components/FirebaseConnectionHandler';
+import { useCallback } from 'react';
 
 const LoadingScreen = dynamic(() => import('@/components/LoadingScreen').then(mod => ({ default: mod.LoadingScreen })), {
   ssr: false
