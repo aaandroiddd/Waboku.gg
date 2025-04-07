@@ -3,6 +3,9 @@ import { Listing } from '@/types/database';
 import { parseDate, isExpired } from '@/lib/date-utils';
 import { GAME_NAME_MAPPING } from '@/lib/game-mappings';
 
+// Debug flag to help troubleshoot visibility issues
+const DEBUG_VISIBILITY = process.env.NODE_ENV === 'development' || true;
+
 /**
  * Hook to handle listing visibility filtering
  * This hook ensures listings are properly filtered based on their status and other criteria

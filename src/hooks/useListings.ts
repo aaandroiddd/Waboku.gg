@@ -713,6 +713,10 @@ export function useListings({ userId, searchQuery, showOnlyActive = false }: Use
         let userLocation: { latitude: number | null; longitude: number | null } = { latitude: null, longitude: null };
 
         const { db } = await getFirebaseServices();
+        if (!db) {
+          throw new Error('Firebase Firestore is not initialized');
+        }
+        
         const listingsRef = collection(db, 'listings');
         
         // Create base query for listings
@@ -735,21 +739,67 @@ export function useListings({ userId, searchQuery, showOnlyActive = false }: Use
         // Always add sorting by creation date
         queryConstraints.push(orderBy('createdAt', 'desc'));
 
+        console.log(`Creating query with constraints: userId=${userId}, showOnlyActive=${showOnlyActive}`);
         const q = query(listingsRef, ...queryConstraints);
+        
+        console.log('Executing Firestore query...');
         const querySnapshot = await getDocs(q);
+        console.log(`Query returned ${querySnapshot.docs.length} listings`);
         
         let fetchedListings = querySnapshot.docs.map(doc => {
           const data = doc.data();
+          
+          // Log the first few listings for debugging
+          if (querySnapshot.docs.indexOf(doc) < 3) {
+            console.log(`Listing ${doc.id} data:`, {
+              id: doc.id,
+              title: data.title,
+              status: data.status,
+              createdAt: data.createdAt,
+              expiresAt: data.expiresAt,
+              imageUrls: Array.isArray(data.imageUrls) ? `${data.imageUrls.length} images` : typeof data.imageUrls
+            });
+          }
+          
+          // Create a default expiration date if none exists
+          let expiresAt;
+          try {
+            if (data.expiresAt?.toDate) {
+              expiresAt = data.expiresAt.toDate();
+            } else if (data.expiresAt) {
+              expiresAt = new Date(data.expiresAt);
+            } else {
+              const defaultExpiry = new Date();
+              defaultExpiry.setDate(defaultExpiry.getDate() + 30); // 30 days from now
+              expiresAt = defaultExpiry;
+            }
+          } catch (e) {
+            console.error(`Error parsing expiresAt for listing ${doc.id}:`, e);
+            const defaultExpiry = new Date();
+            defaultExpiry.setDate(defaultExpiry.getDate() + 30);
+            expiresAt = defaultExpiry;
+          }
+          
+          // Create a default createdAt if none exists
+          let createdAt;
+          try {
+            if (data.createdAt?.toDate) {
+              createdAt = data.createdAt.toDate();
+            } else if (data.createdAt) {
+              createdAt = new Date(data.createdAt);
+            } else {
+              createdAt = new Date();
+            }
+          } catch (e) {
+            console.error(`Error parsing createdAt for listing ${doc.id}:`, e);
+            createdAt = new Date();
+          }
+          
           const listing = {
             id: doc.id,
             ...data,
-            createdAt: data.createdAt?.toDate() || new Date(),
-            expiresAt: data.expiresAt?.toDate() || (() => {
-              // Create a default expiration date if none exists
-              const defaultExpiry = new Date();
-              defaultExpiry.setDate(defaultExpiry.getDate() + 30); // 30 days from now
-              return defaultExpiry;
-            })(),
+            createdAt,
+            expiresAt,
             price: Number(data.price) || 0,
             imageUrls: Array.isArray(data.imageUrls) ? data.imageUrls : [],
             isGraded: Boolean(data.isGraded),
@@ -812,6 +862,14 @@ export function useListings({ userId, searchQuery, showOnlyActive = false }: Use
       } catch (err: any) {
         console.error('Error fetching listings:', err);
         setError(err.message || 'Error fetching listings');
+        
+        // If there was an error, try to clear the cache and retry once
+        try {
+          clearAllListingCaches();
+          console.log('Cleared cache after error, will retry on next render');
+        } catch (cacheError) {
+          console.error('Error clearing cache:', cacheError);
+        }
       } finally {
         setIsLoading(false);
       }

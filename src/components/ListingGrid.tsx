@@ -196,11 +196,36 @@ export function ListingGrid({
       
       // Perform a one-time loading state update with a short timeout
       setLoading(true);
-      const timer = setTimeout(() => setLoading(false), 300);
+      const timer = setTimeout(() => {
+        setLoading(false);
+        
+        // If we still have no visible listings after the check, log detailed information
+        if (listings.length === 0) {
+          console.warn('Still no visible listings after visibility check. Detailed reasons:', filteredOutReasons);
+          
+          // Try to clear the cache to force a fresh fetch on next page load
+          try {
+            if (typeof window !== 'undefined') {
+              const cacheKeys = Object.keys(localStorage).filter(key => 
+                key.startsWith('listings_')
+              );
+              
+              for (const key of cacheKeys) {
+                localStorage.removeItem(key);
+                console.log(`Cleared cache: ${key}`);
+              }
+              
+              console.log('Cleared listings cache due to visibility issues');
+            }
+          } catch (error) {
+            console.error('Error clearing cache:', error);
+          }
+        }
+      }, 300);
       
       return () => clearTimeout(timer);
     }
-  }, [rawListings.length, listings.length, visibilityCheckDone]);
+  }, [rawListings.length, listings.length, visibilityCheckDone, filteredOutReasons]);
   
   // Update global loading state when our loading state changes
   useEffect(() => {
