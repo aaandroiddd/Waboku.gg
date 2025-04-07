@@ -51,10 +51,10 @@ export default function Header({ animate = true }: HeaderProps) {
   }, [isMenuAnimating]);
 
   const handleSignOut = async () => {
+    setShowSignOutDialog(false); // Close dialog first
+    setIsMobileMenuOpen(false); // Close mobile menu
     await signOut();
     router.push("/");
-    setIsMobileMenuOpen(false);
-    setShowSignOutDialog(false);
   };
 
   const handleNavigation = (path: string) => {
@@ -214,7 +214,13 @@ export default function Header({ animate = true }: HeaderProps) {
                     <Button
                       variant="ghost"
                       className="flex items-center justify-start gap-2 h-auto py-2 text-red-500 hover:text-red-600 hover:bg-red-50"
-                      onClick={() => setShowSignOutDialog(true)}
+                      onClick={() => {
+                        setIsMobileMenuOpen(false); // Close the mobile menu first
+                        // Add a small delay to ensure the menu is closed before showing the dialog
+                        setTimeout(() => {
+                          setShowSignOutDialog(true);
+                        }, 100);
+                      }}
                     >
                       <LogOut className="h-4 w-4" />
                       Sign Out
@@ -235,11 +241,14 @@ export default function Header({ animate = true }: HeaderProps) {
           </Sheet>
         </div>
       </div>
-      <SignOutDialog
-        isOpen={showSignOutDialog}
-        onConfirm={handleSignOut}
-        onCancel={() => setShowSignOutDialog(false)}
-      />
+      {/* Render the SignOutDialog outside of any other components */}
+      {typeof window !== 'undefined' && (
+        <SignOutDialog
+          isOpen={showSignOutDialog}
+          onConfirm={handleSignOut}
+          onCancel={() => setShowSignOutDialog(false)}
+        />
+      )}
     </motion.header>
   );
 }
