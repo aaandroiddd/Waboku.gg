@@ -113,10 +113,11 @@ export function UserNameLink({
       let displayNameFound = false;
       
       if (database) {
-        // Try multiple paths where user data might be stored
+        // Try multiple paths where user data might be stored, prioritizing userProfiles
+        // which is where our sync function stores the data
         const paths = [
+          `userProfiles/${userId}`, // Check this first (our sync function target)
           `users/${userId}`,
-          `userProfiles/${userId}`,
           `profiles/${userId}`,
           `userData/${userId}`
         ];
