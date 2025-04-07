@@ -184,27 +184,50 @@ export default function ListingPage() {
   useEffect(() => {
     if (!listing || !listing.userId) return;
     
-    async function checkSellerStripeStatus() {
-      try {
-        const { db } = getFirebaseServices();
-        if (!db) return;
-        
-        const sellerDoc = await getDoc(doc(db, 'users', listing.userId));
-        if (!sellerDoc.exists()) return;
+    // Import the hook dynamically to avoid SSR issues
+    import('@/hooks/useStripeSellerStatus').then(({ useStripeSellerStatus }) => {
+      // Preload the seller's Stripe status into the cache
+      // This will help make the badge appear more smoothly
+      const { app } = getFirebaseServices();
+      const firestore = getFirestore(app);
+      const userDocRef = doc(firestore, 'users', listing.userId);
+      
+      getDoc(userDocRef).then(sellerDoc => {
+        if (!sellerDoc.exists()) {
+          setSellerHasActiveStripeAccount(false);
+          return;
+        }
         
         const sellerData = sellerDoc.data();
         // Check if seller has completed Stripe Connect onboarding
-        setSellerHasActiveStripeAccount(
+        const hasActiveAccount = (
           !!sellerData.stripeConnectAccountId && 
           sellerData.stripeConnectStatus === 'active'
+        ) || (
+          !!sellerData.stripeConnectAccount?.accountId && 
+          sellerData.stripeConnectAccount?.status === 'active'
         );
-      } catch (error) {
+        
+        setSellerHasActiveStripeAccount(hasActiveAccount);
+        
+        // Store in the cache for the badge component to use
+        if (typeof window !== 'undefined') {
+          try {
+            const stripeSellerCache = JSON.parse(sessionStorage.getItem('stripeSellerCache') || '{}');
+            stripeSellerCache[listing.userId] = {
+              hasAccount: hasActiveAccount,
+              timestamp: Date.now()
+            };
+            sessionStorage.setItem('stripeSellerCache', JSON.stringify(stripeSellerCache));
+          } catch (error) {
+            console.error('Error updating stripe seller cache:', error);
+          }
+        }
+      }).catch(error => {
         console.error('Error checking seller Stripe status:', error);
         setSellerHasActiveStripeAccount(false);
-      }
-    }
-    
-    checkSellerStripeStatus();
+      });
+    });
   }, [listing]);
 
   const { startLoading, stopLoading } = useLoading();
