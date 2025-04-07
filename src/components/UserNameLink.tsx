@@ -61,6 +61,42 @@ export function UserNameLink({
         setUsername(profileCache[userId].data.username);
         setLoading(false);
         clearTimeout(timeoutRef.current);
+        
+        // Even if we have a cached value, we'll do a background refresh 
+        // to ensure we have the latest displayName (but we won't wait for it)
+        setTimeout(() => {
+          // This runs after returning the cached value to keep the UI responsive
+          getDoc(doc(db, 'users', userId)).then(userDoc => {
+            if (userDoc.exists()) {
+              const userData = userDoc.data();
+              const latestDisplayName = userData.displayName || userData.username || null;
+              
+              // If the display name has changed, update the cache and UI
+              if (latestDisplayName && latestDisplayName !== profileCache[userId].data.username) {
+                console.log(`Background refresh: Display name changed for ${userId}`, {
+                  cached: profileCache[userId].data.username,
+                  latest: latestDisplayName
+                });
+                
+                // Update cache
+                profileCache[userId] = {
+                  data: { 
+                    username: latestDisplayName, 
+                    avatarUrl: userData.avatarUrl || userData.photoURL || null 
+                  },
+                  timestamp: Date.now()
+                };
+                
+                // Update UI if component is still mounted
+                setUsername(latestDisplayName);
+              }
+            }
+          }).catch(err => {
+            // Silent fail for background refresh
+            console.error('Background refresh error:', err);
+          });
+        }, 100);
+        
         return;
       }
       
@@ -80,7 +116,15 @@ export function UserNameLink({
           
           if (snapshot.exists()) {
             const userData = snapshot.val();
+            
+            // Explicitly prioritize displayName from Realtime Database
             const displayName = userData.displayName || userData.username || null;
+            
+            console.log(`Realtime DB data for ${userId} at ${path}:`, { 
+              displayName: userData.displayName,
+              username: userData.username,
+              resolved: displayName 
+            });
             
             if (displayName) {
               // Update cache
@@ -107,7 +151,16 @@ export function UserNameLink({
         
         if (userDoc.exists()) {
           const userData = userDoc.data();
+          
+          // Explicitly prioritize displayName from Firestore
+          // This ensures we're always using the display name when available
           const displayName = userData.displayName || userData.username || 'Unknown User';
+          
+          console.log(`Firestore data for ${userId}:`, { 
+            displayName: userData.displayName,
+            username: userData.username,
+            resolved: displayName 
+          });
           
           // Update cache
           profileCache[userId] = {
@@ -121,6 +174,7 @@ export function UserNameLink({
           setUsername(displayName);
         } else {
           // If no data found, fall back to initialUsername or "Unknown User"
+          console.log(`No Firestore data found for ${userId}, using fallback:`, initialUsername || 'Unknown User');
           setUsername(initialUsername || 'Unknown User');
           setError(!initialUsername);
         }
