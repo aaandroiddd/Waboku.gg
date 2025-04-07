@@ -54,6 +54,7 @@ export default function Header({ animate = true }: HeaderProps) {
     await signOut();
     router.push("/");
     setIsMobileMenuOpen(false);
+    setShowSignOutDialog(false);
   };
 
   const handleNavigation = (path: string) => {
