@@ -11,10 +11,9 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { Menu, LayoutDashboard, Heart, MessageSquare, Settings, Store, LogOut } from "lucide-react";
-import { useState, useEffect, useCallback } from "react";
+import { Menu, LayoutDashboard, Heart, MessageSquare, Settings, Store } from "lucide-react";
+import { useState, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { SignOutDialog } from "./SignOutDialog";
 import { motion, useReducedMotion } from "framer-motion";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 
@@ -29,10 +28,9 @@ interface HeaderProps {
 
 export default function Header({ animate = true }: HeaderProps) {
   const router = useRouter();
-  const { user, profile, signOut } = useAuth();
+  const { user, profile } = useAuth();
   const isAuthPage = router.pathname.startsWith("/auth/");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [showSignOutDialog, setShowSignOutDialog] = useState(false);
   const [isMenuAnimating, setIsMenuAnimating] = useState(false);
   const isMobile = useMediaQuery("(max-width: 768px)");
   const prefersReducedMotion = useReducedMotion();
@@ -49,13 +47,6 @@ export default function Header({ animate = true }: HeaderProps) {
       setIsMenuAnimating(false);
     }, 300); // Match this with the animation duration
   }, [isMenuAnimating]);
-
-  const handleSignOut = async () => {
-    setShowSignOutDialog(false); // Close dialog first
-    setIsMobileMenuOpen(false); // Close mobile menu
-    await signOut();
-    router.push("/");
-  };
 
   const handleNavigation = (path: string) => {
     router.push(path);
@@ -211,20 +202,6 @@ export default function Header({ animate = true }: HeaderProps) {
                       <Settings className="h-4 w-4" />
                       Settings
                     </Button>
-                    <Button
-                      variant="ghost"
-                      className="flex items-center justify-start gap-2 h-auto py-2 text-red-500 hover:text-red-600 hover:bg-red-50"
-                      onClick={() => {
-                        setIsMobileMenuOpen(false); // Close the mobile menu first
-                        // Add a small delay to ensure the menu is closed before showing the dialog
-                        setTimeout(() => {
-                          setShowSignOutDialog(true);
-                        }, 100);
-                      }}
-                    >
-                      <LogOut className="h-4 w-4" />
-                      Sign Out
-                    </Button>
                   </>
                 ) : (
                   <div className="flex flex-col gap-2 pt-2">
@@ -241,14 +218,6 @@ export default function Header({ animate = true }: HeaderProps) {
           </Sheet>
         </div>
       </div>
-      {/* Render the SignOutDialog outside of any other components */}
-      {typeof window !== 'undefined' && (
-        <SignOutDialog
-          isOpen={showSignOutDialog}
-          onConfirm={handleSignOut}
-          onCancel={() => setShowSignOutDialog(false)}
-        />
-      )}
     </motion.header>
   );
 }
