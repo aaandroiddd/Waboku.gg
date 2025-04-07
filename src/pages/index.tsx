@@ -18,6 +18,7 @@ import { ContentLoader } from "@/components/ContentLoader";
 import { useListings } from "@/hooks/useListings";
 import Link from "next/link";
 import { FirebaseConnectionHandler } from "@/components/FirebaseConnectionHandler";
+import { StateSelect } from "@/components/StateSelect";
 
 // Subtitles array - moved outside component to prevent recreation on each render
 const subtitles = [
@@ -80,6 +81,7 @@ const itemVariants = {
 
 export default function Home() {
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedState, setSelectedState] = useState<string>("all");
   // Use useMemo to compute random subtitle only once on component mount
   const randomSubtitle = useMemo(() => 
     subtitles[Math.floor(Math.random() * subtitles.length)],
@@ -184,6 +186,11 @@ export default function Home() {
       if (searchQuery.trim()) {
         queryParams.query = searchQuery;
       }
+      
+      // Add location filter if a specific state is selected
+      if (selectedState && selectedState !== "all") {
+        queryParams.state = selectedState;
+      }
 
       // Update URL with search parameters
       router.push({
@@ -194,7 +201,7 @@ export default function Home() {
       console.error('Search error:', error);
       alert('An error occurred while processing your search. Please try again.');
     }
-  }, [searchQuery, router]);
+  }, [searchQuery, selectedState, router]);
 
   // Handle card selection
   const handleCardSelect = useCallback((cardName: string) => {
@@ -265,6 +272,13 @@ export default function Home() {
                         showSearchButton={true}
                       />
                     </div>
+                    {/* Mobile Location Dropdown */}
+                    <div className="relative w-full">
+                      <StateSelect 
+                        value={selectedState || "all"} 
+                        onValueChange={(value) => setSelectedState(value)}
+                      />
+                    </div>
                   </div>
 
                   {/* Desktop Search Controls */}
@@ -275,6 +289,13 @@ export default function Home() {
                         onSearch={handleSearch}
                         initialValue={searchQuery}
                         showSearchButton={true}
+                      />
+                    </div>
+                    {/* Desktop Location Dropdown */}
+                    <div className="relative w-[200px]">
+                      <StateSelect 
+                        value={selectedState || "all"} 
+                        onValueChange={(value) => setSelectedState(value)}
                       />
                     </div>
                   </div>
