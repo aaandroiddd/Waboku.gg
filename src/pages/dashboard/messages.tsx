@@ -240,11 +240,16 @@ export default function MessagesPage() {
           id,
           ...chat,
         }))
-        .filter((chat) => 
-          chat.participants && 
-          chat.participants[user.uid] && 
-          (!chat.deletedBy || !chat.deletedBy[user.uid])
-        )
+        .filter((chat) => {
+          // Check if the chat has participants and the current user is a participant
+          const isParticipant = chat.participants && chat.participants[user.uid];
+          
+          // Check if the chat is not deleted by the current user
+          // This handles both boolean and timestamp-based deletion flags
+          const isNotDeleted = !chat.deletedBy || chat.deletedBy[user.uid] === undefined;
+          
+          return isParticipant && isNotDeleted;
+        })
         .sort((a, b) => (b.lastMessage?.timestamp || 0) - (a.lastMessage?.timestamp || 0));
 
       // Set chats immediately to improve perceived performance

@@ -133,76 +133,134 @@ export const useMessages = (chatId?: string) => {
     const messagesRef = ref(database, `messages/${chatId}`);
     console.log('Fetching messages from:', messagesRef.toString());
     
-    // First, get the initial data
-    get(messagesRef).then((snapshot) => {
+    // First, check if the chat is deleted for the current user
+    const checkChatDeletion = async () => {
       try {
-        const data = snapshot.val();
-        console.log('Raw messages data:', data ? 'Data present' : 'No data');
+        const chatRef = ref(database, `chats/${chatId}`);
+        const chatSnapshot = await get(chatRef);
+        const chatData = chatSnapshot.val();
         
-        if (data) {
-          const messageList = Object.entries(data).map(([id, message]: [string, any]) => {
-            console.log(`Processing message ${id}:`, {
-              senderId: message.senderId,
-              timestamp: new Date(message.timestamp).toISOString(),
-              type: message.type
-            });
-            return {
-              id,
-              ...message,
-            };
-          });
-          const sortedMessages = messageList.sort((a, b) => a.timestamp - b.timestamp);
-          setMessages(sortedMessages);
-          
-          // Mark unread messages as read
-          const unreadMessages = sortedMessages.filter(
-            msg => msg.senderId !== user?.uid && !msg.read
-          );
-          
-          if (unreadMessages.length > 0) {
-            markAsRead(unreadMessages.map(msg => msg.id));
-          }
-          
-          console.log(`Loaded ${sortedMessages.length} messages`);
-        } else {
-          console.log('No messages found for this chat');
+        // If chat is deleted for the current user, don't load messages
+        if (chatData?.deletedBy?.[user.uid]) {
+          console.log(`Chat ${chatId} is deleted for current user, not loading messages`);
           setMessages([]);
+          setLoading(false);
+          return true;
         }
+        return false;
       } catch (error) {
-        console.error('Error processing initial messages:', error);
-        setMessages([]);
-      } finally {
-        setLoading(false);
+        console.error('Error checking chat deletion status:', error);
+        return false;
       }
-    }).catch((error) => {
-      console.error('Error getting initial messages:', error);
-      setMessages([]);
-      setLoading(false);
+    };
+    
+    checkChatDeletion().then(isDeleted => {
+      if (isDeleted) return;
+      
+      // First, get the initial data
+      get(messagesRef).then((snapshot) => {
+        try {
+          const data = snapshot.val();
+          console.log('Raw messages data:', data ? 'Data present' : 'No data');
+          
+          if (data) {
+            const messageList = Object.entries(data).map(([id, message]: [string, any]) => {
+              console.log(`Processing message ${id}:`, {
+                senderId: message.senderId,
+                timestamp: new Date(message.timestamp).toISOString(),
+                type: message.type
+              });
+              return {
+                id,
+                ...message,
+              };
+            });
+            const sortedMessages = messageList.sort((a, b) => a.timestamp - b.timestamp);
+            setMessages(sortedMessages);
+            
+            // Mark unread messages as read
+            const unreadMessages = sortedMessages.filter(
+              msg => msg.senderId !== user?.uid && !msg.read
+            );
+            
+            if (unreadMessages.length > 0) {
+              markAsRead(unreadMessages.map(msg => msg.id));
+            }
+            
+            console.log(`Loaded ${sortedMessages.length} messages`);
+          } else {
+            console.log('No messages found for this chat');
+            setMessages([]);
+          }
+        } catch (error) {
+          console.error('Error processing initial messages:', error);
+          setMessages([]);
+        } finally {
+          setLoading(false);
+        }
+      }).catch((error) => {
+        console.error('Error getting initial messages:', error);
+        setMessages([]);
+        setLoading(false);
+      });
     });
 
-    // Then set up the real-time listener
-    const unsubscribe = onValue(messagesRef, (snapshot) => {
+    // Then set up the real-time listener for both messages and chat deletion status
+    const messagesUnsubscribe = onValue(messagesRef, (snapshot) => {
       try {
-        const data = snapshot.val();
-        if (data) {
-          const messageList = Object.entries(data).map(([id, message]: [string, any]) => ({
-            id,
-            ...message,
-          }));
-          const sortedMessages = messageList.sort((a, b) => a.timestamp - b.timestamp);
-          setMessages(sortedMessages);
-        } else {
-          setMessages([]);
-        }
+        // First check if the chat is deleted
+        const chatRef = ref(database, `chats/${chatId}`);
+        get(chatRef).then(chatSnapshot => {
+          const chatData = chatSnapshot.val();
+          
+          // If chat is deleted for the current user, don't show messages
+          if (chatData?.deletedBy?.[user.uid]) {
+            console.log(`Chat ${chatId} is deleted for current user, clearing messages`);
+            setMessages([]);
+            return;
+          }
+          
+          // Otherwise, process messages normally
+          const data = snapshot.val();
+          if (data) {
+            const messageList = Object.entries(data).map(([id, message]: [string, any]) => ({
+              id,
+              ...message,
+            }));
+            const sortedMessages = messageList.sort((a, b) => a.timestamp - b.timestamp);
+            setMessages(sortedMessages);
+          } else {
+            setMessages([]);
+          }
+        }).catch(error => {
+          console.error('Error checking chat deletion status in listener:', error);
+        });
       } catch (error) {
         console.error('Error processing messages update:', error);
       }
     }, (error) => {
       console.error('Error in message subscription:', error);
     });
+    
+    // Also listen for changes to the chat's deletion status
+    const chatRef = ref(database, `chats/${chatId}`);
+    const chatUnsubscribe = onValue(chatRef, (snapshot) => {
+      try {
+        const chatData = snapshot.val();
+        
+        // If chat is deleted for the current user, clear messages
+        if (chatData?.deletedBy?.[user.uid]) {
+          console.log(`Chat ${chatId} deletion status changed, clearing messages`);
+          setMessages([]);
+        }
+      } catch (error) {
+        console.error('Error processing chat update:', error);
+      }
+    });
 
     return () => {
-      unsubscribe();
+      messagesUnsubscribe();
+      chatUnsubscribe();
     };
   }, [chatId, user, database]);
 

@@ -502,6 +502,9 @@ export function Chat({
       const chatRef = dbRef(database, `chats/${chatId}/deletedBy/${user.uid}`);
       await set(chatRef, deletionTimestamp);
       
+      // Clear local state immediately to improve perceived performance
+      setMessages([]);
+      
       toast({
         title: "Success",
         description: "The conversation has been deleted from your messages. If the other user sends a new message, the conversation will reappear."
@@ -510,6 +513,11 @@ export function Chat({
         onDelete();
       }
       setShowDeleteDialog(false);
+      
+      // Force a refresh of the messages page to ensure the deleted chat is removed from the list
+      if (router.pathname === '/dashboard/messages') {
+        router.replace(router.asPath);
+      }
     } catch (error) {
       console.error('Error deleting chat:', error);
       toast({
