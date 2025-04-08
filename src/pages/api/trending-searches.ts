@@ -4,6 +4,27 @@ import { validateSearchTerm } from '@/lib/search-validation';
 import { getFirebaseAdmin } from '@/lib/firebase-admin';
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
 
+// Ensure we have a proper origin for CORS
+const getAllowedOrigins = () => {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || '';
+  const origins = [
+    'http://localhost:3000',
+    'https://localhost:3000',
+    'https://waboku.vercel.app',
+    'https://waboku-ee453.vercel.app'
+  ];
+  
+  // Add the app URL if it exists
+  if (appUrl && !origins.includes(appUrl)) {
+    origins.push(appUrl);
+  }
+  
+  // Add preview URLs for co.dev
+  origins.push('https://*.preview.co.dev');
+  
+  return origins;
+};
+
 const CACHE_DURATION = 300 * 1000; // 300 seconds cache (5 minutes)
 let cachedTrending: any = null;
 let lastCacheTime = 0;
@@ -19,9 +40,30 @@ export default async function handler(
   console.info(`Path: /api/trending-searches START RequestId: ${requestId}`);
   
   // Add CORS headers
-  res.setHeader('Access-Control-Allow-Origin', '*');
+  const allowedOrigins = getAllowedOrigins();
+  const origin = req.headers.origin || '';
+  
+  // Check if the origin is allowed or matches a wildcard pattern
+  const isAllowed = allowedOrigins.some(allowedOrigin => {
+    if (allowedOrigin.includes('*')) {
+      const pattern = allowedOrigin.replace(/\*/g, '.*');
+      return new RegExp(pattern).test(origin);
+    }
+    return allowedOrigin === origin;
+  });
+  
+  // Set the appropriate CORS headers
+  if (isAllowed) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  } else {
+    // For security, we'll still respond but with a restricted CORS policy
+    // This allows the API to work in development and production environments
+    res.setHeader('Access-Control-Allow-Origin', process.env.NEXT_PUBLIC_APP_URL || 'https://waboku.vercel.app');
+  }
+  
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Content-Type', 'application/json');
   res.setHeader('Cache-Control', 'public, max-age=300'); // Allow caching for 5 minutes
   

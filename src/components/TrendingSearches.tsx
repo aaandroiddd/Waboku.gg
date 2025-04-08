@@ -6,6 +6,7 @@ import { Loader2, TrendingUp, RefreshCw, AlertCircle } from 'lucide-react';
 import { motion, AnimatePresence } from "framer-motion";
 import Link from 'next/link';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { FirebaseErrorBoundary } from '@/components/FirebaseErrorBoundary';
 
 const itemVariants = {
   initial: { opacity: 0, x: -20 },
@@ -28,12 +29,24 @@ const itemVariants = {
   },
 };
 
-export function TrendingSearches() {
+// The main component that will be wrapped with error boundary
+function TrendingSearchesContent() {
   const { trendingSearches, loading, error, refreshTrending } = useTrendingSearches();
   const router = useRouter();
   const [refreshAttempt, setRefreshAttempt] = useState(0);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [localTrending, setLocalTrending] = useState<Array<{term: string, count: number}>>([]);
+  
+  // Use local state as a fallback when API fails
+  useEffect(() => {
+    if (trendingSearches && trendingSearches.length > 0) {
+      setLocalTrending(trendingSearches);
+    }
+  }, [trendingSearches]);
+  
+  // The trending searches to display - use local cache if API fails
+  const displayTrending = trendingSearches.length > 0 ? trendingSearches : localTrending;
 
   const handleSearchClick = useCallback((term: string) => {
     router.push({
@@ -94,7 +107,7 @@ export function TrendingSearches() {
             <Loader2 className="h-4 w-4 animate-spin" />
             <span className="text-sm">Loading trending searches...</span>
           </motion.div>
-        ) : (!trendingSearches.length) ? (
+        ) : (!displayTrending.length) ? (
           <motion.div 
             key="empty-state"
             className="flex items-center gap-2 text-muted-foreground"
@@ -153,7 +166,7 @@ export function TrendingSearches() {
             </div>
             
             <AnimatePresence>
-              {trendingSearches.slice(0, 3).map((search, index) => (
+              {displayTrending.slice(0, 3).map((search, index) => (
                 <motion.div
                   key={search.term}
                   custom={index}
@@ -171,7 +184,7 @@ export function TrendingSearches() {
                 </motion.div>
               ))}
 
-              {trendingSearches.length > 3 && (
+              {displayTrending.length > 3 && (
                 <motion.div
                   key="more-link"
                   variants={itemVariants}
@@ -193,5 +206,14 @@ export function TrendingSearches() {
         )}
       </AnimatePresence>
     </div>
+  );
+}
+
+// Export the component wrapped with error boundary
+export function TrendingSearches() {
+  return (
+    <FirebaseErrorBoundary>
+      <TrendingSearchesContent />
+    </FirebaseErrorBoundary>
   );
 }

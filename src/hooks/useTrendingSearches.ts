@@ -62,13 +62,28 @@ export function useTrendingSearches() {
       }, REQUEST_TIMEOUT);
 
       // Use absolute URL with origin to avoid path resolution issues
+      // Add a cache-busting parameter to prevent browser caching
+      const timestamp = Date.now();
       const apiUrl = typeof window !== 'undefined' 
-        ? `${window.location.origin}/api/trending-searches` 
-        : '/api/trending-searches';
+        ? `${window.location.origin}/api/trending-searches?_=${timestamp}` 
+        : `/api/trending-searches?_=${timestamp}`;
       
       console.log(`[TrendingSearches] Fetching from ${apiUrl}`);
       
-      const response = await fetch(apiUrl, {
+      // Use a more robust fetch with retry mechanism for network errors
+      const fetchWithTimeout = async (url: string, options: RequestInit, attempts = 3): Promise<Response> => {
+        try {
+          return await fetch(url, options);
+        } catch (error: any) {
+          if (attempts <= 1 || controller.signal.aborted) throw error;
+          
+          console.warn(`[TrendingSearches] Fetch attempt failed (${attempts-1} retries left):`, error.message);
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          return fetchWithTimeout(url, options, attempts - 1);
+        }
+      };
+      
+      const response = await fetchWithTimeout(apiUrl, {
         signal: controller.signal,
         method: 'GET',
         headers: {
@@ -76,9 +91,13 @@ export function useTrendingSearches() {
           'Cache-Control': 'no-cache, no-store',
           'Pragma': 'no-cache'
         },
+        // Use 'no-store' to prevent caching
         cache: 'no-store',
-        credentials: 'same-origin'
-      });
+        // Include credentials for same-origin requests
+        credentials: 'same-origin',
+        // Add a longer timeout for slow connections
+        timeout: REQUEST_TIMEOUT
+      }, 3);
 
       if (timeoutId) {
         clearTimeout(timeoutId);
