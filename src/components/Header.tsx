@@ -58,9 +58,15 @@ export default function Header({ animate = true }: HeaderProps) {
   
   const handleSignOut = async () => {
     try {
+      console.log('Header: Initiating sign out process');
       await signOut();
-      router.push('/');
+      
+      // Always close the mobile menu regardless of success/failure
       setIsMobileMenuOpen(false);
+      
+      // Navigate to home page
+      console.log('Header: Sign out successful, navigating to home page');
+      router.push('/');
       
       // Show success toast notification
       toast({
@@ -69,14 +75,30 @@ export default function Header({ animate = true }: HeaderProps) {
         variant: "default",
       });
     } catch (error) {
-      console.error('Error signing out:', error);
+      console.error('Header: Error signing out:', error);
       
-      // Show error toast if sign-out fails
+      // Close mobile menu even on error
+      setIsMobileMenuOpen(false);
+      
+      // Extract error message
+      let errorMessage = "Failed to sign out. Please try again.";
+      if (error instanceof Error) {
+        errorMessage = error.message || errorMessage;
+      }
+      
+      // Show error toast with more specific message if available
       toast({
-        title: "Error",
-        description: "Failed to sign out. Please try again.",
+        title: "Sign Out Error",
+        description: errorMessage,
         variant: "destructive",
       });
+      
+      // Still try to navigate to home page on error
+      try {
+        router.push('/');
+      } catch (navError) {
+        console.error('Header: Navigation error after failed sign out:', navError);
+      }
     }
   };
 

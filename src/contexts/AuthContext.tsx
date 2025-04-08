@@ -531,13 +531,78 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = async () => {
     try {
-      await firebaseSignOut(auth);
-      // Clear all stored auth data from localStorage
+      console.log('Starting sign out process...');
+      
+      // Check if auth is properly initialized
+      if (!auth) {
+        console.error('Auth is not initialized during sign out');
+        throw new Error('Authentication service is not available. Please try again later.');
+      }
+      
+      // Check if there's a current user before attempting to sign out
+      if (!auth.currentUser) {
+        console.log('No current user found during sign out, cleaning up state only');
+        // Still clear local data even if no current user
+        clearStoredAuthData();
+        setUser(null);
+        setProfile(null);
+        return;
+      }
+      
+      // Attempt to sign out with retry logic
+      let signOutSuccess = false;
+      let attempts = 0;
+      const maxAttempts = 3;
+      
+      while (!signOutSuccess && attempts < maxAttempts) {
+        try {
+          console.log(`Attempting to sign out (attempt ${attempts + 1}/${maxAttempts})...`);
+          await firebaseSignOut(auth);
+          signOutSuccess = true;
+          console.log('Firebase sign out successful');
+        } catch (signOutErr: any) {
+          attempts++;
+          console.error(`Sign out attempt ${attempts} failed:`, signOutErr);
+          
+          // If this is a network error, wait and retry
+          const isNetworkError = signOutErr.code === 'auth/network-request-failed' || 
+                                signOutErr.message?.includes('network') ||
+                                signOutErr.message?.includes('timeout');
+          
+          if (isNetworkError && attempts < maxAttempts) {
+            // Exponential backoff with jitter
+            const delay = Math.min(1000 * Math.pow(2, attempts - 1), 4000) + (Math.random() * 500);
+            console.log(`Waiting ${Math.round(delay)}ms before retry...`);
+            await new Promise(resolve => setTimeout(resolve, delay));
+          } else if (attempts >= maxAttempts) {
+            // If we've exhausted all retries, continue with cleanup anyway
+            console.warn('Max sign out attempts reached, proceeding with local cleanup');
+            break;
+          }
+        }
+      }
+      
+      // Always clear local state and storage data, even if Firebase sign out failed
+      console.log('Clearing stored auth data and resetting state...');
       clearStoredAuthData();
       setUser(null);
       setProfile(null);
+      
+      console.log('Sign out process completed');
     } catch (err: any) {
-      setError(err.message);
+      console.error('Error in sign out process:', err);
+      
+      // Still attempt to clear local state even if there was an error
+      try {
+        clearStoredAuthData();
+        setUser(null);
+        setProfile(null);
+        console.log('Cleared local state despite error');
+      } catch (cleanupErr) {
+        console.error('Error during cleanup after failed sign out:', cleanupErr);
+      }
+      
+      setError(err.message || 'An error occurred during sign out');
       throw err;
     }
   };

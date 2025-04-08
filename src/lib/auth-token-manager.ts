@@ -184,34 +184,93 @@ export function clearAuthState() {
 
 /**
  * Clears any stored authentication data from localStorage
+ * Enhanced with better error handling and more comprehensive cleanup
  */
 export const clearStoredAuthData = (): void => {
   try {
-    if (typeof window !== 'undefined' && window.localStorage) {
-      // Clear auth redirect state
-      localStorage.removeItem('waboku_auth_redirect');
-      localStorage.removeItem('waboku_auth_state');
-      
-      // Clear any token refresh timestamps
-      const keysToRemove: string[] = [];
+    if (typeof window === 'undefined' || !window.localStorage) {
+      console.log('localStorage not available for auth data clearing');
+      return;
+    }
+    
+    console.log('Starting to clear stored auth data...');
+    
+    // List of specific keys to remove
+    const specificKeys = [
+      'waboku_auth_redirect',
+      'waboku_auth_state',
+      'needs_profile_completion',
+      'firebase:authUser',
+      'firebase:previousAuthUser'
+    ];
+    
+    // Remove specific keys
+    specificKeys.forEach(key => {
+      try {
+        localStorage.removeItem(key);
+      } catch (keyError) {
+        console.warn(`Failed to remove ${key} from localStorage:`, keyError);
+      }
+    });
+    
+    // Find and remove all keys with specific prefixes
+    const prefixesToRemove = [
+      'waboku_last_token_refresh_',
+      'waboku_token_access_',
+      'firebase:',
+      'profile_'
+    ];
+    
+    // Collect keys to remove
+    const keysToRemove: string[] = [];
+    try {
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
-        if (key && (
-          key.startsWith('waboku_last_token_refresh_') || 
-          key.startsWith('waboku_token_access_')
-        )) {
+        if (key && prefixesToRemove.some(prefix => key.startsWith(prefix))) {
           keysToRemove.push(key);
         }
       }
-      
-      // Remove the keys in a separate loop to avoid issues with changing localStorage during iteration
-      keysToRemove.forEach(key => localStorage.removeItem(key));
-      
-      // Clear profile completion flag
-      localStorage.removeItem('needs_profile_completion');
+    } catch (iterationError) {
+      console.warn('Error iterating through localStorage keys:', iterationError);
     }
+    
+    // Remove collected keys in a separate step
+    if (keysToRemove.length > 0) {
+      console.log(`Found ${keysToRemove.length} auth-related items to remove from localStorage`);
+      keysToRemove.forEach(key => {
+        try {
+          localStorage.removeItem(key);
+        } catch (removeError) {
+          console.warn(`Failed to remove ${key} from localStorage:`, removeError);
+        }
+      });
+    }
+    
+    // Try to clear session storage as well
+    try {
+      if (window.sessionStorage) {
+        // Clear Firebase-related session storage items
+        for (let i = 0; i < sessionStorage.length; i++) {
+          const key = sessionStorage.key(i);
+          if (key && key.startsWith('firebase:')) {
+            sessionStorage.removeItem(key);
+          }
+        }
+      }
+    } catch (sessionError) {
+      console.warn('Error clearing session storage:', sessionError);
+    }
+    
+    console.log('Completed clearing stored auth data');
   } catch (e) {
-    console.warn('Error clearing stored auth data:', e);
+    console.error('Error during auth data clearing process:', e);
+    // Even if there's an error, try to remove the most critical items
+    try {
+      localStorage.removeItem('waboku_auth_redirect');
+      localStorage.removeItem('waboku_auth_state');
+    } catch (fallbackError) {
+      console.error('Critical error clearing auth data:', fallbackError);
+    }
   }
 };
 

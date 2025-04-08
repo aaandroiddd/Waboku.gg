@@ -346,9 +346,18 @@ function SignOutButton({ onNavigate }: { onNavigate?: () => void }) {
   
   const handleSignOut = async () => {
     try {
+      console.log('DashboardSidebar: Initiating sign out process');
       await signOut();
+      
+      // Call onNavigate callback if provided
+      if (onNavigate) {
+        console.log('DashboardSidebar: Calling navigation callback');
+        onNavigate();
+      }
+      
+      // Navigate to home page
+      console.log('DashboardSidebar: Sign out successful, navigating to home page');
       router.push('/');
-      if (onNavigate) onNavigate();
       
       // Show success toast notification
       toast({
@@ -357,14 +366,30 @@ function SignOutButton({ onNavigate }: { onNavigate?: () => void }) {
         variant: "default",
       });
     } catch (error) {
-      console.error('Error signing out:', error);
+      console.error('DashboardSidebar: Error signing out:', error);
       
-      // Show error toast if sign-out fails
+      // Extract error message
+      let errorMessage = "Failed to sign out. Please try again.";
+      if (error instanceof Error) {
+        errorMessage = error.message || errorMessage;
+      }
+      
+      // Show error toast with more specific message if available
       toast({
-        title: "Error",
-        description: "Failed to sign out. Please try again.",
+        title: "Sign Out Error",
+        description: errorMessage,
         variant: "destructive",
       });
+      
+      // Still try to navigate to home page on error
+      try {
+        // Call onNavigate callback even on error
+        if (onNavigate) onNavigate();
+        
+        router.push('/');
+      } catch (navError) {
+        console.error('DashboardSidebar: Navigation error after failed sign out:', navError);
+      }
     }
   };
   
