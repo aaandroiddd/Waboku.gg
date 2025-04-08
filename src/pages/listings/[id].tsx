@@ -188,9 +188,8 @@ export default function ListingPage() {
     import('@/hooks/useStripeSellerStatus').then(({ useStripeSellerStatus }) => {
       // Preload the seller's Stripe status into the cache
       // This will help make the badge appear more smoothly
-      const { app } = getFirebaseServices();
-      const firestore = getFirestore(app);
-      const userDocRef = doc(firestore, 'users', listing.userId);
+      const { app, db } = getFirebaseServices();
+      const userDocRef = doc(db, 'users', listing.userId);
       
       getDoc(userDocRef).then(sellerDoc => {
         if (!sellerDoc.exists()) {
