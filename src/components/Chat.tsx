@@ -307,7 +307,8 @@ export function Chat({
         // Update the chat's lastMessage.read status in the database
         if (unreadMessages.some(msg => msg.id === messages[messages.length - 1].id)) {
           const database = getDatabase();
-          const lastMessageReadRef = ref(database, `chats/${chatId}/lastMessage/read`);
+          // Use the imported dbRef function instead of undefined 'ref'
+          const lastMessageReadRef = dbRef(database, `chats/${chatId}/lastMessage/read`);
           set(lastMessageReadRef, true).catch(err => {
             console.error('Error updating lastMessage read status:', err);
           });
