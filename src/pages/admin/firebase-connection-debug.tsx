@@ -3,6 +3,7 @@ import { FirebaseConfigVerifier } from '@/components/FirebaseConfigVerifier';
 import { FirebaseConnectionDebugger } from '@/components/FirebaseConnectionDebugger';
 import { FirebaseConnectionFixer } from '@/components/FirebaseConnectionFixer';
 import { FirebaseDatabaseTester } from '@/components/FirebaseDatabaseTester';
+import { UpdateDatabaseRules } from '@/components/UpdateDatabaseRules';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -306,7 +307,20 @@ export default function FirebaseConnectionDebugPage() {
         </TabsContent>
         
         <TabsContent value="fixes" className="mt-4">
-          <FirebaseConnectionFixer />
+          <div className="space-y-6">
+            <FirebaseConnectionFixer />
+            <Card>
+              <CardHeader>
+                <CardTitle>Database Rules Update</CardTitle>
+                <CardDescription>
+                  Update Firebase Realtime Database rules to fix read/write access issues
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <UpdateDatabaseRules />
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
         
         <TabsContent value="manual" className="mt-4">

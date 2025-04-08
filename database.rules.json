@@ -1,5 +1,16 @@
 {
   "rules": {
+    ".info": {
+      ".read": true
+    },
+    "connection_tests": {
+      ".read": true,
+      ".write": true
+    },
+    "debug": {
+      ".read": true,
+      ".write": true
+    },
     "chats": {
       ".indexOn": ["createdAt", "participants"],
       "$chatId": {
@@ -48,10 +59,6 @@
           ".validate": false
         }
       }
-    },
-    "connection_tests": {
-      ".read": true,
-      ".write": true
     },
     
     "users": {
