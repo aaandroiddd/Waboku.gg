@@ -208,12 +208,17 @@ export default function FirebaseConnectionDebugPage() {
     <div className="container py-8 space-y-8">
       <h1 className="text-3xl font-bold">Firebase Connection Debugging</h1>
       
-      <Tabs defaultValue="diagnostics">
-        <TabsList className="grid w-full grid-cols-3">
+      <Tabs defaultValue="config">
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="config">Configuration</TabsTrigger>
           <TabsTrigger value="diagnostics">Automated Diagnostics</TabsTrigger>
           <TabsTrigger value="fixes">Connection Fixes</TabsTrigger>
           <TabsTrigger value="manual">Manual Tests</TabsTrigger>
         </TabsList>
+        
+        <TabsContent value="config" className="mt-4">
+          <FirebaseConfigVerifier />
+        </TabsContent>
         
         <TabsContent value="diagnostics" className="mt-4">
           <FirebaseConnectionDebugger />
