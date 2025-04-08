@@ -410,12 +410,20 @@ export default function AdminDashboard() {
               <p className="text-sm text-muted-foreground">
                 Troubleshoot Firebase connection issues and database rules.
               </p>
-              <Button 
-                onClick={() => router.push(`/admin/firebase-diagnostics`)}
-                className="w-full"
-              >
-                Firebase Diagnostics
-              </Button>
+              <div className="grid grid-cols-2 gap-2">
+                <Button 
+                  onClick={() => router.push(`/admin/firebase-diagnostics`)}
+                  className="w-full"
+                >
+                  Firebase Diagnostics
+                </Button>
+                <Button 
+                  onClick={() => router.push(`/admin/firebase-connection-debug`)}
+                  className="w-full bg-blue-600 hover:bg-blue-700"
+                >
+                  Connection Debugger
+                </Button>
+              </div>
             </div>
           </Card>
           
