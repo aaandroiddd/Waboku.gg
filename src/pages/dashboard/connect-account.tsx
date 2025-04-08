@@ -6,8 +6,9 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
-import { CheckCircle, AlertCircle, ExternalLink, ArrowRight } from 'lucide-react';
+import { CheckCircle, AlertCircle, ExternalLink, ArrowRight, ShoppingBag } from 'lucide-react';
 import { StripeConnectGuide } from '@/components/StripeConnectGuide';
+import { useSellerAccountEligibility } from '@/hooks/useSellerAccountEligibility';
 
 export default function ConnectAccount() {
   const { user } = useAuth();
@@ -16,6 +17,7 @@ export default function ConnectAccount() {
   const [accountStatus, setAccountStatus] = useState<'none' | 'pending' | 'active' | 'error'>('none');
   const [errorMessage, setErrorMessage] = useState('');
   const { success, error } = router.query;
+  const { isEligible, isLoading: eligibilityLoading, hasActiveListings } = useSellerAccountEligibility();
 
   useEffect(() => {
     if (!user) return;
@@ -138,113 +140,138 @@ export default function ConnectAccount() {
 
         <Separator />
 
-        {accountStatus === 'active' && (
-          <Alert className="bg-green-500/10 border-green-500 text-green-500">
-            <CheckCircle className="h-4 w-4" />
-            <AlertTitle>Account Connected</AlertTitle>
-            <AlertDescription>
-              Your Stripe Connect account is active and ready to receive payments.
-            </AlertDescription>
-          </Alert>
-        )}
-
-        {accountStatus === 'error' && (
-          <Alert variant="destructive">
+        {/* Show not eligible message if user is not eligible */}
+        {!eligibilityLoading && !isEligible && (
+          <Alert variant="default" className="bg-amber-500/10 border-amber-500 text-amber-500">
             <AlertCircle className="h-4 w-4" />
-            <AlertTitle>Error</AlertTitle>
+            <AlertTitle>Seller Account Not Available</AlertTitle>
             <AlertDescription>
-              {errorMessage || 'There was an error with your Stripe Connect account. Please try again.'}
+              You need to create at least one listing before you can set up a seller account.
+              <div className="mt-4">
+                <Button 
+                  onClick={() => router.push('/dashboard/create-listing')}
+                  className="bg-amber-500 hover:bg-amber-600 text-white"
+                >
+                  <ShoppingBag className="mr-2 h-4 w-4" />
+                  Create Your First Listing
+                </Button>
+              </div>
             </AlertDescription>
           </Alert>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Stripe Connect</CardTitle>
-              <CardDescription>
-                Connect your Stripe account to receive payments directly from buyers on our platform.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-4">
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <h3 className="font-medium">Benefits of Stripe Connect</h3>
-                    <ul className="list-disc pl-5 space-y-1 text-sm text-muted-foreground">
-                      <li>Receive payments directly to your bank account</li>
-                      <li>Secure payment processing</li>
-                      <li>Automatic payouts on a schedule you choose</li>
-                      <li>Detailed reporting and transaction history</li>
-                    </ul>
-                  </div>
-                  <div className="space-y-2">
-                    <h3 className="font-medium">How it works</h3>
-                    <ul className="list-disc pl-5 space-y-1 text-sm text-muted-foreground">
-                      <li>Complete the Stripe onboarding process</li>
-                      <li>Verify your identity and banking information</li>
-                      <li>Start selling cards and receiving payments</li>
-                      <li>Platform fee: 10% of each transaction</li>
-                    </ul>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-            <CardFooter className="flex flex-col space-y-4 sm:flex-row sm:space-y-0 sm:space-x-4 sm:justify-between">
-              {accountStatus === 'none' && (
-                <Button
-                  onClick={handleCreateConnectAccount}
-                  disabled={loading}
-                  className="w-full sm:w-auto"
-                >
-                  {loading ? 'Setting up...' : 'Set Up Stripe Connect'}
-                  {!loading && <ArrowRight className="ml-2 h-4 w-4" />}
-                </Button>
-              )}
+        {/* Only show the seller account UI if user is eligible */}
+        {(!eligibilityLoading && isEligible) && (
+          <>
+            {accountStatus === 'active' && (
+              <Alert className="bg-green-500/10 border-green-500 text-green-500">
+                <CheckCircle className="h-4 w-4" />
+                <AlertTitle>Account Connected</AlertTitle>
+                <AlertDescription>
+                  Your Stripe Connect account is active and ready to receive payments.
+                </AlertDescription>
+              </Alert>
+            )}
 
-              {accountStatus === 'pending' && (
-                <Button
-                  onClick={handleUpdateConnectAccount}
-                  disabled={loading}
-                  className="w-full sm:w-auto"
-                >
-                  {loading ? 'Loading...' : 'Complete Onboarding'}
-                  {!loading && <ArrowRight className="ml-2 h-4 w-4" />}
-                </Button>
-              )}
+            {accountStatus === 'error' && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Error</AlertTitle>
+                <AlertDescription>
+                  {errorMessage || 'There was an error with your Stripe Connect account. Please try again.'}
+                </AlertDescription>
+              </Alert>
+            )}
 
-              {accountStatus === 'active' && (
-                <>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Stripe Connect</CardTitle>
+                  <CardDescription>
+                    Connect your Stripe account to receive payments directly from buyers on our platform.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-4">
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <h3 className="font-medium">Benefits of Stripe Connect</h3>
+                        <ul className="list-disc pl-5 space-y-1 text-sm text-muted-foreground">
+                          <li>Receive payments directly to your bank account</li>
+                          <li>Secure payment processing</li>
+                          <li>Automatic payouts on a schedule you choose</li>
+                          <li>Detailed reporting and transaction history</li>
+                        </ul>
+                      </div>
+                      <div className="space-y-2">
+                        <h3 className="font-medium">How it works</h3>
+                        <ul className="list-disc pl-5 space-y-1 text-sm text-muted-foreground">
+                          <li>Complete the Stripe onboarding process</li>
+                          <li>Verify your identity and banking information</li>
+                          <li>Start selling cards and receiving payments</li>
+                          <li>Platform fee: 10% of each transaction</li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+                <CardFooter className="flex flex-col space-y-4 sm:flex-row sm:space-y-0 sm:space-x-4 sm:justify-between flex-wrap">
+                  {accountStatus === 'none' && (
+                    <Button
+                      onClick={handleCreateConnectAccount}
+                      disabled={loading}
+                      className="w-full sm:w-auto"
+                    >
+                      {loading ? 'Setting up...' : 'Set Up Stripe Connect'}
+                      {!loading && <ArrowRight className="ml-2 h-4 w-4" />}
+                    </Button>
+                  )}
+
+                  {accountStatus === 'pending' && (
+                    <Button
+                      onClick={handleUpdateConnectAccount}
+                      disabled={loading}
+                      className="w-full sm:w-auto"
+                    >
+                      {loading ? 'Loading...' : 'Complete Onboarding'}
+                      {!loading && <ArrowRight className="ml-2 h-4 w-4" />}
+                    </Button>
+                  )}
+
+                  {accountStatus === 'active' && (
+                    <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
+                      <Button
+                        onClick={handleUpdateConnectAccount}
+                        variant="outline"
+                        className="w-full sm:w-auto"
+                      >
+                        Update Account Details
+                        <ExternalLink className="ml-2 h-4 w-4" />
+                      </Button>
+                      <Button
+                        onClick={() => router.push('/dashboard/sales-analytics')}
+                        className="w-full sm:w-auto"
+                      >
+                        View Sales Analytics
+                        <ArrowRight className="ml-2 h-4 w-4" />
+                      </Button>
+                    </div>
+                  )}
+
                   <Button
-                    onClick={handleUpdateConnectAccount}
                     variant="outline"
+                    onClick={() => router.push('/dashboard')}
                     className="w-full sm:w-auto"
                   >
-                    Update Account Details
-                    <ExternalLink className="ml-2 h-4 w-4" />
+                    Back to Dashboard
                   </Button>
-                  <Button
-                    onClick={() => router.push('/dashboard/sales-analytics')}
-                    className="w-full sm:w-auto mt-2 sm:mt-0"
-                  >
-                    View Sales Analytics
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Button>
-                </>
-              )}
-
-              <Button
-                variant="outline"
-                onClick={() => router.push('/dashboard')}
-                className="w-full sm:w-auto"
-              >
-                Back to Dashboard
-              </Button>
-            </CardFooter>
-          </Card>
-          
-          <StripeConnectGuide accountStatus={accountStatus} />
-        </div>
+                </CardFooter>
+              </Card>
+              
+              <StripeConnectGuide accountStatus={accountStatus} />
+            </div>
+          </>
+        )}
       </div>
     </DashboardLayout>
   );

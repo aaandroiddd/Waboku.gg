@@ -19,6 +19,7 @@ import { cn } from '@/lib/utils';
 import { loadStripe } from '@stripe/stripe-js';
 import { toast } from 'sonner';
 import { parseDate, isExpired } from '@/lib/date-utils';
+import { useStripeSellerStatus } from '@/hooks/useStripeSellerStatus';
 
 const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
   const R = 3959; // Earth's radius in miles
@@ -109,6 +110,7 @@ interface BuyNowButtonProps {
 const BuyNowButton = ({ listing, className }: BuyNowButtonProps) => {
   const { user } = useAuth();
   const router = useRouter();
+  const { hasStripeAccount, isLoading } = useStripeSellerStatus(listing.userId);
 
   const handleBuyNow = async () => {
     if (!user) {
@@ -147,12 +149,24 @@ const BuyNowButton = ({ listing, className }: BuyNowButtonProps) => {
     }
   };
 
+  // If the seller doesn't have a Stripe account, disable the button
+  const isDisabled = isLoading ? true : !hasStripeAccount;
+  const buttonText = isDisabled ? "Seller Not Verified" : "Buy Now";
+
   return (
     <Button
       onClick={handleBuyNow}
-      className={cn("w-full bg-green-600 hover:bg-green-700 text-white", className)}
+      disabled={isDisabled}
+      className={cn(
+        "w-full", 
+        isDisabled 
+          ? "bg-gray-500 hover:bg-gray-500 cursor-not-allowed" 
+          : "bg-green-600 hover:bg-green-700 text-white", 
+        className
+      )}
+      title={isDisabled ? "This seller hasn't set up their payment account yet" : ""}
     >
-      Buy Now
+      {buttonText}
     </Button>
   );
 };
