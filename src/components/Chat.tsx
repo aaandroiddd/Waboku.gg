@@ -103,13 +103,19 @@ export function Chat({
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const { messages: messagesList, loading: messagesLoading, sendMessage, markAsRead, deleteChat } = useMessages(chatId);
+  const [messages, setMessages] = useState(messagesList);
+
   useEffect(() => {
     if (receiverProfile?.username) {
       setDisplayName(receiverProfile.username);
     }
   }, [receiverProfile]);
-
-  const { messages, loading: messagesLoading, sendMessage, markAsRead, deleteChat } = useMessages(chatId);
+  
+  // Update local messages state when messagesList changes
+  useEffect(() => {
+    setMessages(messagesList);
+  }, [messagesList]);
   const [loadingState, setLoadingState] = useState<'loading' | 'error' | 'success'>('loading');
   const { user } = useAuth();
   const { toast } = useToast();
@@ -496,11 +502,8 @@ export function Chat({
     if (!chatId || !user) return;
     
     try {
-      const database = getDatabase();
-      // Store deletion timestamp to help with thread restoration logic
-      const deletionTimestamp = Date.now();
-      const chatRef = dbRef(database, `chats/${chatId}/deletedBy/${user.uid}`);
-      await set(chatRef, deletionTimestamp);
+      // Use the deleteChat function from useMessages hook
+      await deleteChat(chatId);
       
       // Clear local state immediately to improve perceived performance
       setMessages([]);
