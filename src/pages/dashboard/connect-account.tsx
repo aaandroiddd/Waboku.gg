@@ -16,6 +16,7 @@ export default function ConnectAccount() {
   const [loading, setLoading] = useState(false);
   const [accountStatus, setAccountStatus] = useState<'none' | 'pending' | 'active' | 'error'>('none');
   const [errorMessage, setErrorMessage] = useState('');
+  const [apiHasListings, setApiHasListings] = useState<boolean>(false);
   const { success, error } = router.query;
   const { isEligible, isLoading: eligibilityLoading, hasActiveListings } = useSellerAccountEligibility();
 
@@ -41,6 +42,11 @@ export default function ConnectAccount() {
 
         const data = await response.json();
         setAccountStatus(data.status);
+        
+        // Store the hasListings flag from the API response
+        if (data.hasListings !== undefined) {
+          setApiHasListings(data.hasListings);
+        }
       } catch (error) {
         console.error('Error checking account status:', error);
         setAccountStatus('error');
@@ -140,28 +146,74 @@ export default function ConnectAccount() {
 
         <Separator />
 
-        {/* Show not eligible message if user is not eligible */}
-        {!eligibilityLoading && !isEligible && (
-          <Alert variant="default" className="bg-amber-500/10 border-amber-500 text-amber-500">
+        {/* Show message for users who have listings according to API but aren't eligible according to hook */}
+        {!eligibilityLoading && !isEligible && apiHasListings && (
+          <Alert variant="default" className="bg-blue-500/10 border-blue-500 text-blue-500">
             <AlertCircle className="h-4 w-4" />
-            <AlertTitle>Seller Account Not Available</AlertTitle>
+            <AlertTitle>Seller Account Setup</AlertTitle>
             <AlertDescription>
-              You need to create at least one listing before you can set up a seller account.
+              <p className="mb-2">
+                We've detected that you have listings, but there might be a synchronization issue. 
+                Please refresh the page to continue setting up your seller account.
+              </p>
               <div className="mt-4">
                 <Button 
-                  onClick={() => router.push('/dashboard/create-listing')}
-                  className="bg-amber-500 hover:bg-amber-600 text-white"
+                  onClick={() => window.location.reload()}
+                  className="bg-blue-500 hover:bg-blue-600 text-white"
                 >
-                  <ShoppingBag className="mr-2 h-4 w-4" />
-                  Create Your First Listing
+                  Refresh Page
                 </Button>
               </div>
             </AlertDescription>
           </Alert>
         )}
 
-        {/* Only show the seller account UI if user is eligible */}
-        {(!eligibilityLoading && isEligible) && (
+        {/* Show not eligible message if user is not eligible and has no listings */}
+        {!eligibilityLoading && !isEligible && !apiHasListings && (
+          <Alert variant="default" className="bg-amber-500/10 border-amber-500 text-amber-500">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Seller Account Not Available</AlertTitle>
+            <AlertDescription>
+              You need to create at least one listing before you can set up a seller account.
+              {hasActiveListings ? (
+                <div className="mt-4">
+                  <p className="mb-2">
+                    It looks like you already have listings, but our system hasn't recognized them yet. 
+                    Please try refreshing the page. If the issue persists, you can create a new listing.
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    <Button 
+                      onClick={() => window.location.reload()}
+                      className="bg-blue-500 hover:bg-blue-600 text-white"
+                    >
+                      Refresh Page
+                    </Button>
+                    <Button 
+                      onClick={() => router.push('/dashboard/create-listing')}
+                      className="bg-amber-500 hover:bg-amber-600 text-white"
+                    >
+                      <ShoppingBag className="mr-2 h-4 w-4" />
+                      Create New Listing
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="mt-4">
+                  <Button 
+                    onClick={() => router.push('/dashboard/create-listing')}
+                    className="bg-amber-500 hover:bg-amber-600 text-white"
+                  >
+                    <ShoppingBag className="mr-2 h-4 w-4" />
+                    Create Your First Listing
+                  </Button>
+                </div>
+              )}
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {/* Only show the seller account UI if user is eligible or has listings according to API */}
+        {(!eligibilityLoading && (isEligible || apiHasListings)) && (
           <>
             {accountStatus === 'active' && (
               <Alert className="bg-green-500/10 border-green-500 text-green-500">

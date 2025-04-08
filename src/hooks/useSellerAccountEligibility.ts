@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { getFirestore, doc, getDoc } from 'firebase/firestore';
+import { getFirestore, doc, getDoc, collection, query, where, getDocs, limit } from 'firebase/firestore';
 import { getFirebaseServices } from '@/lib/firebase';
 
 export function useSellerAccountEligibility() {
@@ -27,8 +27,36 @@ export function useSellerAccountEligibility() {
         const userDoc = await getDoc(userDocRef);
         const userData = userDoc.data();
         
-        // Check if user has any active listings
-        const hasListings = userData?.listingCount > 0 || userData?.hasActiveListings === true;
+        // First check if user has any active listings based on user metadata
+        let hasListings = userData?.listingCount > 0 || userData?.hasActiveListings === true;
+        
+        // If no listings found in user metadata, directly check the listings collection
+        if (!hasListings) {
+          // Query the listings collection for any listings by this user
+          const listingsQuery = query(
+            collection(firestore, 'listings'),
+            where('userId', '==', user.uid),
+            limit(1)
+          );
+          
+          const listingsSnapshot = await getDocs(listingsQuery);
+          hasListings = !listingsSnapshot.empty;
+          
+          // If we found listings but the user metadata doesn't reflect it,
+          // update the user metadata for future checks
+          if (hasListings && userData && !userData.hasActiveListings) {
+            try {
+              await doc(firestore, 'users', user.uid).update({
+                hasActiveListings: true,
+                listingCount: listingsSnapshot.size
+              });
+              console.log('Updated user metadata with listing information');
+            } catch (updateError) {
+              console.error('Error updating user listing metadata:', updateError);
+            }
+          }
+        }
+        
         setHasActiveListings(hasListings);
         
         // User is eligible if they have the seller role, have opted in, or have active listings

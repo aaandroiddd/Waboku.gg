@@ -43,9 +43,26 @@ export default async function handler(
     // Get the user's Connect account ID
     const userDoc = await db.collection('users').doc(userId).get();
     const userData = userDoc.data();
+    
+    // Check if the user has any listings (to determine eligibility)
+    const listingsSnapshot = await db.collection('listings')
+      .where('userId', '==', userId)
+      .limit(1)
+      .get();
+    
+    const hasListings = !listingsSnapshot.empty;
+    
+    // If user has listings but metadata doesn't reflect it, update the metadata
+    if (hasListings && userData && (!userData.hasActiveListings || !userData.listingCount)) {
+      await db.collection('users').doc(userId).update({
+        hasActiveListings: true,
+        listingCount: userData.listingCount ? userData.listingCount + 1 : 1
+      });
+      console.log('Updated user metadata with listing information');
+    }
 
     if (!userData?.stripeConnectAccountId) {
-      return res.status(200).json({ status: 'none' });
+      return res.status(200).json({ status: 'none', hasListings });
     }
 
     // Get the account details from Stripe
@@ -93,6 +110,7 @@ export default async function handler(
       detailsSubmitted: account.details_submitted,
       chargesEnabled: account.charges_enabled,
       payoutsEnabled: account.payouts_enabled,
+      hasListings,
     });
   } catch (error: any) {
     console.error('Error checking Connect account status:', error);
