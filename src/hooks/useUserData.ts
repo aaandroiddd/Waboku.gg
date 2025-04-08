@@ -9,8 +9,43 @@ const userCache: Record<string, {
   timestamp: number;
 }> = {};
 
-const CACHE_EXPIRATION = 5 * 60 * 1000; // 5 minutes
+// Try to load initial cache from sessionStorage
+try {
+  const storedCache = sessionStorage.getItem('userDataCache');
+  if (storedCache) {
+    const parsedCache = JSON.parse(storedCache);
+    Object.keys(parsedCache).forEach(key => {
+      userCache[key] = parsedCache[key];
+    });
+    console.log(`[useUserData] Loaded ${Object.keys(parsedCache).length} cached user profiles from sessionStorage`);
+  }
+} catch (e) {
+  // Ignore sessionStorage errors
+}
+
+const CACHE_EXPIRATION = 30 * 60 * 1000; // 30 minutes
 const BATCH_SIZE = 10; // Number of users to fetch at once
+
+// Function to save cache to sessionStorage
+const persistCache = () => {
+  try {
+    sessionStorage.setItem('userDataCache', JSON.stringify(userCache));
+  } catch (e) {
+    // Ignore sessionStorage errors
+  }
+};
+
+// Throttled version of persistCache to avoid too many writes
+let persistTimeout: NodeJS.Timeout | null = null;
+const throttledPersistCache = () => {
+  if (persistTimeout) {
+    clearTimeout(persistTimeout);
+  }
+  persistTimeout = setTimeout(() => {
+    persistCache();
+    persistTimeout = null;
+  }, 2000);
+};
 
 // Function to prefetch user data for multiple users at once
 export const prefetchUserData = async (userIds: string[]) => {
@@ -101,6 +136,9 @@ export const prefetchUserData = async (userIds: string[]) => {
             })
           );
         }
+        
+        // Persist updated cache to sessionStorage
+        throttledPersistCache();
       } catch (batchError) {
         console.error(`[prefetchUserData] Error fetching batch of users:`, batchError);
         
@@ -161,6 +199,9 @@ export const prefetchUserData = async (userIds: string[]) => {
             }
           })
         );
+        
+        // Persist updated cache to sessionStorage
+        throttledPersistCache();
       }
     }
   } catch (err) {
@@ -170,22 +211,32 @@ export const prefetchUserData = async (userIds: string[]) => {
 
 export function useUserData(userId: string, initialData?: any) {
   const [userData, setUserData] = useState<any>(initialData || null);
-  const [loading, setLoading] = useState<boolean>(!initialData);
+  const [loading, setLoading] = useState<boolean>(!initialData && !userCache[userId]);
   const [error, setError] = useState<Error | null>(null);
   const fetchAttempted = useRef<boolean>(false);
+  const isMounted = useRef<boolean>(true);
+
+  useEffect(() => {
+    isMounted.current = true;
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
 
   useEffect(() => {
     if (!userId) return;
 
     // Reset state when userId changes
     if (!fetchAttempted.current) {
-      setLoading(true);
+      setLoading(!initialData && !userCache[userId]);
       setError(null);
       
       // Check cache first
       if (userCache[userId] && Date.now() - userCache[userId].timestamp < CACHE_EXPIRATION) {
-        setUserData(userCache[userId].data);
-        setLoading(false);
+        if (isMounted.current) {
+          setUserData(userCache[userId].data);
+          setLoading(false);
+        }
         return;
       }
 
@@ -220,8 +271,13 @@ export function useUserData(userId: string, initialData?: any) {
                       timestamp: Date.now()
                     };
                     
-                    setUserData(userData);
-                    setLoading(false);
+                    // Persist to sessionStorage
+                    throttledPersistCache();
+                    
+                    if (isMounted.current) {
+                      setUserData(userData);
+                      setLoading(false);
+                    }
                     return;
                   }
                 }
@@ -247,21 +303,39 @@ export function useUserData(userId: string, initialData?: any) {
               timestamp: Date.now()
             };
             
-            setUserData(userData);
+            // Persist to sessionStorage
+            throttledPersistCache();
+            
+            if (isMounted.current) {
+              setUserData(userData);
+            }
           } else {
             // If we reach here and still have initialData, use that
+            if (initialData && isMounted.current) {
+              setUserData(initialData);
+              
+              // Cache the initialData too if it has a username
+              if (initialData.username && initialData.username !== 'Unknown User') {
+                userCache[userId] = {
+                  data: initialData,
+                  timestamp: Date.now()
+                };
+                throttledPersistCache();
+              }
+            }
+          }
+        } catch (err: any) {
+          if (isMounted.current) {
+            setError(err);
+            // Fall back to initial data if available
             if (initialData) {
               setUserData(initialData);
             }
           }
-        } catch (err: any) {
-          setError(err);
-          // Fall back to initial data if available
-          if (initialData) {
-            setUserData(initialData);
-          }
         } finally {
-          setLoading(false);
+          if (isMounted.current) {
+            setLoading(false);
+          }
         }
       };
 

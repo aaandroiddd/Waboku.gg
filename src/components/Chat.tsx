@@ -551,7 +551,7 @@ export function Chat({
   // Track user profiles for messages using the centralized useUserData hook
   const [userProfiles, setUserProfiles] = useState<Record<string, any>>({});
   
-  // Fetch user profiles for messages
+  // Fetch user profiles for messages using the prefetchUserData function
   useEffect(() => {
     if (messages.length === 0) return;
     
@@ -566,45 +566,34 @@ export function Chat({
     
     if (missingUserIds.length === 0) return;
     
-    // Fetch individual profiles to update the UI
-    const profilePromises = missingUserIds.map(async (userId) => {
-      if (!userId) return [userId, { username: 'Unknown User', avatarUrl: null }];
-      
-      try {
-        // Get the Firebase services
-        const { db } = getFirebaseServices();
-        if (!db) {
-          return [userId, { username: 'Unknown User', avatarUrl: null }];
-        }
+    // Import the prefetchUserData function dynamically to avoid circular dependencies
+    import('@/hooks/useUserData').then(({ prefetchUserData }) => {
+      // Prefetch all missing user profiles at once
+      prefetchUserData(missingUserIds).then(() => {
+        // After prefetching, get the data from the global cache
+        const newProfiles: Record<string, any> = {};
         
-        // Get user data from Firestore
-        const userRef = doc(db, 'users', userId);
-        const docSnap = await getDoc(userRef);
+        // Access the userCache directly from the module
+        const userCacheModule = require('@/hooks/useUserData');
+        const userCache = userCacheModule.default?.userCache || {};
         
-        if (docSnap.exists()) {
-          const data = docSnap.data();
-          return [userId, {
-            username: data.displayName || data.username || 'Unknown User',
-            avatarUrl: data.avatarUrl || data.photoURL || null
-          }];
-        } else {
-          return [userId, { username: 'Unknown User', avatarUrl: null }];
-        }
-      } catch (err) {
-        console.error(`Error fetching user data for ${userId}:`, err);
-        return [userId, { username: 'Unknown User', avatarUrl: null }];
-      }
-    });
-    
-    // Update profiles as they resolve
-    Promise.all(profilePromises).then(results => {
-      const newProfiles = Object.fromEntries(results);
-      setUserProfiles(prev => ({
-        ...prev,
-        ...newProfiles
-      }));
-    }).catch(err => {
-      console.error('Error fetching user data:', err);
+        missingUserIds.forEach(userId => {
+          if (userCache[userId]?.data) {
+            newProfiles[userId] = userCache[userId].data;
+          } else {
+            // Fallback if not in cache
+            newProfiles[userId] = { username: 'Unknown User', avatarUrl: null };
+          }
+        });
+        
+        // Update the local state with the new profiles
+        setUserProfiles(prev => ({
+          ...prev,
+          ...newProfiles
+        }));
+      }).catch(err => {
+        console.error('Error prefetching user data:', err);
+      });
     });
   }, [messages]);
 
