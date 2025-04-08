@@ -90,7 +90,9 @@ export default function ConnectAccount() {
       }
 
       const { url } = await response.json();
-      window.location.href = url;
+      
+      // Open in a new tab instead of redirecting the current page
+      window.open(url, '_blank', 'noopener,noreferrer');
     } catch (error: any) {
       console.error('Error creating Connect account:', error);
       setErrorMessage(error.message || 'Failed to create Connect account');
@@ -125,7 +127,9 @@ export default function ConnectAccount() {
       }
 
       const { url } = await response.json();
-      window.location.href = url;
+      
+      // Open in a new tab instead of redirecting the current page
+      window.open(url, '_blank', 'noopener,noreferrer');
     } catch (error: any) {
       console.error('Error updating Connect account:', error);
       setErrorMessage(error.message || 'Failed to update Connect account');
@@ -273,9 +277,10 @@ export default function ConnectAccount() {
                       onClick={handleCreateConnectAccount}
                       disabled={loading}
                       className="w-full sm:w-auto"
+                      title="Opens in a new tab"
                     >
                       {loading ? 'Setting up...' : 'Set Up Stripe Connect'}
-                      {!loading && <ArrowRight className="ml-2 h-4 w-4" />}
+                      {!loading && <ExternalLink className="ml-2 h-4 w-4" />}
                     </Button>
                   )}
 
@@ -284,9 +289,10 @@ export default function ConnectAccount() {
                       onClick={handleUpdateConnectAccount}
                       disabled={loading}
                       className="w-full sm:w-auto"
+                      title="Opens in a new tab"
                     >
                       {loading ? 'Loading...' : 'Complete Onboarding'}
-                      {!loading && <ArrowRight className="ml-2 h-4 w-4" />}
+                      {!loading && <ExternalLink className="ml-2 h-4 w-4" />}
                     </Button>
                   )}
 
@@ -296,6 +302,7 @@ export default function ConnectAccount() {
                         onClick={handleUpdateConnectAccount}
                         variant="outline"
                         className="w-full sm:w-auto"
+                        title="Opens in a new tab"
                       >
                         Update Account Details
                         <ExternalLink className="ml-2 h-4 w-4" />

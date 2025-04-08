@@ -51,6 +51,7 @@ export default async function handler(
         refresh_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/connect-account?error=refresh`,
         return_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/connect-account?success=true`,
         type: 'account_onboarding',
+        collect: 'eventually_due',
       });
 
       return res.status(200).json({ url: accountLink.url });
@@ -93,6 +94,7 @@ export default async function handler(
       refresh_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/connect-account?error=refresh`,
       return_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/connect-account?success=true`,
       type: 'account_onboarding',
+      collect: 'eventually_due',
     });
 
     return res.status(200).json({ url: accountLink.url });
