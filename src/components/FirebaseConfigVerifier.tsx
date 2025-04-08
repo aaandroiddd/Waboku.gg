@@ -7,6 +7,31 @@ import { Separator } from './ui/separator';
 import { Loader2, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
 import { getFirebaseServices } from '@/lib/firebase';
 
+// Function to validate the database URL format
+const validateDatabaseURL = (url: string | null | undefined): ConfigStatus => {
+  if (!url) return 'missing';
+  
+  try {
+    const parsedUrl = new URL(url);
+    
+    // Check if URL is HTTPS
+    if (parsedUrl.protocol !== 'https:') {
+      return 'invalid';
+    }
+    
+    // Check if hostname follows Firebase Realtime Database pattern
+    // Typically: project-id-[hash]-rtdb.firebaseio.com
+    if (!parsedUrl.hostname.includes('firebaseio.com')) {
+      return 'invalid';
+    }
+    
+    return 'valid';
+  } catch (error) {
+    console.error('Error validating database URL:', error);
+    return 'invalid';
+  }
+};
+
 type ConfigStatus = 'unknown' | 'valid' | 'invalid' | 'missing';
 
 interface ConfigItem {
@@ -74,7 +99,7 @@ export function FirebaseConfigVerifier() {
         {
           name: 'Database URL',
           value: process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL || null,
-          status: process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL ? 'valid' : 'missing',
+          status: validateDatabaseURL(process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL),
           description: 'URL for Realtime Database access'
         }
       ];
@@ -130,8 +155,41 @@ export function FirebaseConfigVerifier() {
         return;
       }
       
-      // All services are available
-      setVerificationResult('Firebase configuration is valid and all services are initialized correctly.');
+      // Verify database URL format
+      const databaseURL = process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL;
+      if (!databaseURL) {
+        setVerificationResult('Firebase Realtime Database URL is missing. Please add it to your environment variables.');
+        return;
+      }
+      
+      const urlStatus = validateDatabaseURL(databaseURL);
+      if (urlStatus === 'invalid') {
+        setVerificationResult(`Firebase Realtime Database URL is invalid: ${databaseURL}. It should be in the format https://[project-id]-[hash]-rtdb.firebaseio.com`);
+        return;
+      }
+      
+      // Test database connection
+      if (database) {
+        try {
+          // Test database connection by fetching server time offset
+          const { ref, get } = await import('firebase/database');
+          const infoRef = ref(database, '.info/serverTimeOffset');
+          const snapshot = await get(infoRef);
+          
+          if (snapshot.exists()) {
+            const offset = snapshot.val();
+            setVerificationResult(`Firebase configuration is valid and all services are initialized correctly. Database connection verified (server time offset: ${offset}ms).`);
+          } else {
+            setVerificationResult('Firebase configuration is valid but database connection test returned no data. This might be due to database rules.');
+          }
+        } catch (dbError) {
+          console.error('Database connection test error:', dbError);
+          setVerificationResult(`Firebase services initialized but database connection test failed: ${dbError instanceof Error ? dbError.message : 'Unknown error'}. Check your database rules and URL.`);
+        }
+      } else {
+        // This shouldn't happen since we checked database above, but just in case
+        setVerificationResult('Firebase configuration is valid but database service is not available.');
+      }
     } catch (error) {
       console.error('Error verifying Firebase connection:', error);
       setVerificationResult(`Error verifying Firebase connection: ${error instanceof Error ? error.message : 'Unknown error'}`);

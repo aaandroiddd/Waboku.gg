@@ -114,6 +114,28 @@ function initializeFirebase() {
         throw new Error('Firebase Realtime Database URL is missing. Check your environment variables.');
       }
       
+      // Validate database URL format
+      try {
+        const parsedUrl = new URL(firebaseConfig.databaseURL);
+        
+        // Check if URL is HTTPS
+        if (parsedUrl.protocol !== 'https:') {
+          console.error('CRITICAL: Firebase database URL must use HTTPS protocol');
+          throw new Error('Firebase database URL must use HTTPS protocol');
+        }
+        
+        // Check if hostname follows Firebase Realtime Database pattern
+        if (!parsedUrl.hostname.includes('firebaseio.com')) {
+          console.error('CRITICAL: Firebase database URL hostname should contain firebaseio.com');
+          throw new Error('Firebase database URL hostname should contain firebaseio.com');
+        }
+        
+        console.log('Firebase database URL format is valid');
+      } catch (urlError) {
+        console.error('CRITICAL: Firebase database URL is invalid:', urlError);
+        throw new Error('Firebase database URL is invalid. It should be in the format https://[project-id]-[hash]-rtdb.firebaseio.com');
+      }
+      
       // Explicitly pass the databaseURL to ensure it's properly configured
       firebaseDatabase = getDatabase(firebaseApp);
       
@@ -123,19 +145,33 @@ function initializeFirebase() {
       // Add a test connection to verify database is working
       if (typeof window !== 'undefined') {
         try {
-          const testRef = ref(firebaseDatabase, '.info/connected');
+          // Use .info/serverTimeOffset instead of .info/connected for initial test
+          // This is more reliable for testing actual data access
+          const testRef = ref(firebaseDatabase, '.info/serverTimeOffset');
           onValue(testRef, (snapshot) => {
+            if (snapshot.exists()) {
+              const offset = snapshot.val();
+              console.log('Realtime Database connection verified with server time offset:', offset);
+            } else {
+              console.warn('Realtime Database connection test returned no data');
+            }
+          }, { onlyOnce: true });
+          
+          // Also set up the connected listener for ongoing connection status
+          const connectedRef = ref(firebaseDatabase, '.info/connected');
+          onValue(connectedRef, (snapshot) => {
             const connected = snapshot.val();
             console.log('Realtime Database connection status:', connected ? 'connected' : 'disconnected');
           });
         } catch (connError) {
           console.error('Error testing database connection:', connError);
+          // Log more details about the error
+          console.error('Database connection error details:', {
+            message: connError instanceof Error ? connError.message : 'Unknown error',
+            name: connError instanceof Error ? connError.name : 'Unknown error type',
+            stack: connError instanceof Error ? connError.stack : 'No stack trace'
+          });
         }
-      }
-      
-      // Verify database URL is correctly formatted
-      if (firebaseConfig.databaseURL && !firebaseConfig.databaseURL.startsWith('https://')) {
-        console.error('CRITICAL: Firebase database URL is incorrectly formatted. It should start with https://');
       }
     } catch (rtdbError) {
       console.error('Failed to initialize Realtime Database:', rtdbError);

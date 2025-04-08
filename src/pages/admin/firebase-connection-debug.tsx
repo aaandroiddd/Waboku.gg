@@ -2,6 +2,7 @@ import React from 'react';
 import { FirebaseConfigVerifier } from '@/components/FirebaseConfigVerifier';
 import { FirebaseConnectionDebugger } from '@/components/FirebaseConnectionDebugger';
 import { FirebaseConnectionFixer } from '@/components/FirebaseConnectionFixer';
+import { FirebaseDatabaseTester } from '@/components/FirebaseDatabaseTester';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -152,21 +153,20 @@ export default function FirebaseConnectionDebugPage() {
         return;
       }
       
-      // Get database URL
-      const databaseRef = ref(database);
-      const url = databaseRef.toString();
+      // Get database URL from environment variable instead of ref
+      const databaseURL = process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL;
       
-      if (!url) {
+      if (!databaseURL) {
         toast({
           title: "Error",
-          description: "Could not determine database URL",
+          description: "Database URL is not configured in environment variables",
           variant: "destructive"
         });
         return;
       }
       
       // Extract hostname
-      const parsedUrl = new URL(url);
+      const parsedUrl = new URL(databaseURL);
       const hostname = parsedUrl.hostname;
       
       toast({
@@ -174,23 +174,32 @@ export default function FirebaseConnectionDebugPage() {
         description: `Checking certificate for ${hostname}...`
       });
       
-      // Use fetch to check certificate
-      const response = await fetch(`https://${hostname}/.well-known/assetlinks.json`, {
-        method: 'HEAD',
+      // Use fetch to check certificate with a proper endpoint
+      // Instead of using assetlinks.json which is for App Links and not relevant for database
+      const response = await fetch(`https://${hostname}/.json?shallow=true`, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json'
+        }
       }).catch(error => {
         throw new Error(`Certificate validation failed: ${error.message}`);
       });
       
-      if (response.ok || response.status === 404) {
-        // 404 is fine, we just want to check if the SSL handshake works
+      if (response.ok) {
         toast({
           title: "Success",
-          description: `SSL certificate for ${hostname} is valid`
+          description: `SSL certificate for ${hostname} is valid and database connection is working`
+        });
+      } else if (response.status === 401 || response.status === 403) {
+        // Authentication error is expected if database rules require auth
+        toast({
+          title: "Success",
+          description: `SSL certificate for ${hostname} is valid (authentication required for data access)`
         });
       } else {
         toast({
           title: "Error",
-          description: `Certificate validation failed with status: ${response.status}`,
+          description: `Certificate validation failed with status: ${response.status} - ${response.statusText}`,
           variant: "destructive"
         });
       }
@@ -210,8 +219,9 @@ export default function FirebaseConnectionDebugPage() {
       <h1 className="text-3xl font-bold">Firebase Connection Debugging</h1>
       
       <Tabs defaultValue="config">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="config">Configuration</TabsTrigger>
+          <TabsTrigger value="database">Database Tests</TabsTrigger>
           <TabsTrigger value="diagnostics">Automated Diagnostics</TabsTrigger>
           <TabsTrigger value="fixes">Connection Fixes</TabsTrigger>
           <TabsTrigger value="manual">Manual Tests</TabsTrigger>
@@ -219,6 +229,10 @@ export default function FirebaseConnectionDebugPage() {
         
         <TabsContent value="config" className="mt-4">
           <FirebaseConfigVerifier />
+        </TabsContent>
+        
+        <TabsContent value="database" className="mt-4">
+          <FirebaseDatabaseTester />
         </TabsContent>
         
         <TabsContent value="diagnostics" className="mt-4">
