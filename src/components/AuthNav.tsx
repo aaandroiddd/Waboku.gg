@@ -3,17 +3,30 @@ import { Button } from "./ui/button";
 import Link from "next/link";
 import { LayoutDashboard } from "lucide-react";
 import { useRouter } from "next/router";
+import { useEffect, useState } from "react";
 
 export default function AuthNav() {
-  const { user, profile } = useAuth();
+  const { user, profile, isLoading } = useAuth();
   const router = useRouter();
+  const [displayName, setDisplayName] = useState<string>('User');
+
+  // Update display name when user or profile changes
+  useEffect(() => {
+    if (user) {
+      // Priority order: profile username > user displayName > user email > 'User'
+      const name = profile?.username || user.displayName || (user.email ? user.email.split('@')[0] : 'User');
+      setDisplayName(name);
+    } else {
+      setDisplayName('User');
+    }
+  }, [user, profile]);
 
   if (user) {
     return (
       <>
         <div className="flex items-center space-x-4">
           <span className="text-sm font-medium">
-            Welcome, {profile?.username || 'User'}!
+            Welcome, {displayName}!
           </span>
           <div className="flex items-center space-x-2">
             <Link href="/dashboard">

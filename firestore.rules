@@ -15,6 +15,11 @@ service cloud.firestore {
       // This helps prevent "Missing or insufficient permissions" errors
       return true;
     }
+    
+    // Function to check if a user is in the process of signing out
+    function isSigningOut(userId) {
+      return exists(/databases/$(database)/documents/signOutState/$(userId));
+    }
 
     // Rate limiting function - only for updates
     function isNotRateLimited() {
@@ -68,9 +73,9 @@ service cloud.firestore {
       allow read: if true;
       allow create: if isAuthenticated() 
         && userId == request.auth.uid;
-      allow update: if isAuthenticated() 
+      allow update: if (isAuthenticated() 
         && userId == request.auth.uid 
-        && request.resource.data.uid == userId;
+        && request.resource.data.uid == userId) || isSigningOut(userId);
       allow delete: if isOwner(userId);
     }
     

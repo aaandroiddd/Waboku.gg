@@ -83,15 +83,19 @@ export function useProfile(userId: string | null) {
       // Create a default profile even if the document doesn't exist
       const profileData: UserProfile = {
         uid: id,
-        username: userData?.username || userData?.displayName || 'Anonymous User',
+        username: userData?.username || userData?.displayName || '',
+        displayName: userData?.displayName || userData?.username || '',
         email: userData?.email || '',
         avatarUrl: userData?.avatarUrl || userData?.photoURL || null,
+        photoURL: userData?.photoURL || userData?.avatarUrl || null,
         bio: userData?.bio || '',
         location: userData?.location || '',
         joinDate: userData?.createdAt || userData?.joinDate || new Date().toISOString(),
         totalSales: typeof userData?.totalSales === 'number' ? userData.totalSales : 0,
         rating: typeof userData?.rating === 'number' ? userData.rating : null,
         contact: userData?.contact || '',
+        isEmailVerified: userData?.isEmailVerified || false,
+        authProvider: userData?.authProvider || 'unknown',
         social: userData?.social ? {
           youtube: userData.social.youtube || null,
           twitter: userData.social.twitter || null,

@@ -245,6 +245,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             // Continue anyway - we'll retry in the profile fetch
           }
           
+          // Check if this is an email/password user and handle verification status
+          const isEmailPasswordUser = user.providerData.some(provider => provider.providerId === 'password');
+          if (isEmailPasswordUser) {
+            console.log('Email/password user detected, checking verification status');
+            
+            // Reload user to get the latest verification status
+            await user.reload();
+            const freshUser = auth.currentUser;
+            if (freshUser) {
+              safeSetUser(freshUser);
+              console.log('User reloaded, email verified:', freshUser.emailVerified);
+            }
+          }
+          
           // Attempt to fetch user profile with retries
           let profileData = null;
           let retryCount = 0;
@@ -269,22 +283,61 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               if (profileDoc.exists()) {
                 profileData = profileDoc.data() as UserProfile;
                 console.log('User profile found successfully');
+                
+                // Check if profile needs to be updated with latest auth data
+                const needsUpdate = (
+                  (user.displayName && profileData.username !== user.displayName) ||
+                  (user.photoURL && profileData.avatarUrl !== user.photoURL) ||
+                  (profileData.isEmailVerified !== user.emailVerified)
+                );
+                
+                if (needsUpdate) {
+                  console.log('Updating profile with latest auth data');
+                  const updatedProfile = {
+                    ...profileData,
+                    username: profileData.username || user.displayName || user.email!.split('@')[0],
+                    displayName: user.displayName || profileData.username || user.email!.split('@')[0],
+                    avatarUrl: profileData.avatarUrl || user.photoURL || '',
+                    photoURL: user.photoURL || profileData.avatarUrl || '',
+                    isEmailVerified: user.emailVerified,
+                    lastUpdated: new Date().toISOString()
+                  };
+                  
+                  await setDoc(doc(db, 'users', user.uid), updatedProfile, { merge: true });
+                  profileData = updatedProfile;
+                  console.log('Profile updated with latest auth data');
+                }
+                
                 break; // Success, exit retry loop
               } else if (retryCount === maxRetries - 1) {
                 // On last retry, create a basic profile if none exists
                 console.log('No profile found after retries, creating basic profile');
+                
+                // Generate a unique username if needed
+                let username = user.displayName || user.email!.split('@')[0];
+                
+                // Check if username already exists
+                const usernameDoc = await getDoc(doc(db, 'usernames', username));
+                if (usernameDoc.exists()) {
+                  // Add a random suffix to make it unique
+                  username = `${username}${Math.floor(Math.random() * 10000)}`;
+                }
+                
                 const basicProfile = {
                   uid: user.uid,
                   email: user.email!,
-                  username: user.displayName || user.email!.split('@')[0],
+                  username: username,
+                  displayName: user.displayName || username,
                   joinDate: new Date().toISOString(),
                   totalSales: 0,
                   rating: 0,
                   bio: '',
                   location: '',
                   avatarUrl: user.photoURL || '',
+                  photoURL: user.photoURL || '',
                   isEmailVerified: user.emailVerified,
                   verificationSentAt: null,
+                  authProvider: isEmailPasswordUser ? 'password' : 'google',
                   social: {
                     youtube: '',
                     twitter: '',
@@ -298,7 +351,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                   }
                 };
                 
+                // Create the profile
                 await setDoc(doc(db, 'users', user.uid), basicProfile);
+                
+                // Also create username document
+                await setDoc(doc(db, 'usernames', username), {
+                  uid: user.uid,
+                  username: username,
+                  createdAt: new Date().toISOString()
+                });
+                
+                // Update auth profile if needed
+                if (!user.displayName) {
+                  await firebaseUpdateProfile(user, {
+                    displayName: username
+                  });
+                  
+                  // Reload user to get updated displayName
+                  await user.reload();
+                  const updatedUser = auth.currentUser;
+                  if (updatedUser) {
+                    safeSetUser(updatedUser);
+                  }
+                }
+                
                 profileData = basicProfile;
                 console.log('Basic profile created successfully');
               }
@@ -577,8 +653,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const hasCurrentUser = !!currentUser;
       const userId = currentUser?.uid;
       
+      // Disable Firestore network to prevent permission errors during sign out
+      if (db) {
+        try {
+          await disableFirestoreNetwork(db);
+          console.log('Disabled Firestore network for clean sign out');
+        } catch (networkErr) {
+          console.warn('Could not disable Firestore network:', networkErr);
+        }
+      }
+      
       // Clear local storage first to prevent any cached data issues
       clearStoredAuthData();
+      
+      // Clear all profile cache data
+      if (typeof window !== 'undefined') {
+        try {
+          // Clear any profile-related cache keys
+          for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key && (key.startsWith('profile_') || key.includes('auth') || key.includes('firebase'))) {
+              localStorage.removeItem(key);
+            }
+          }
+          console.log('Cleared all profile and auth cache data');
+        } catch (cacheErr) {
+          console.warn('Error clearing cache during sign out:', cacheErr);
+        }
+      }
       
       // Clear state immediately to prevent React errors
       safeSetUser(null);
@@ -592,57 +694,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       // Only attempt Firebase sign out if we had a user
       if (hasCurrentUser) {
-        // Use a flag to track if we're still in the sign-out process
-        let signOutInProgress = true;
+        try {
+          // Simple sign out without complex retry logic
+          await firebaseSignOut(auth);
+          console.log('Firebase sign out successful');
+        } catch (signOutErr) {
+          console.error('Firebase sign out error:', signOutErr);
+          // Continue anyway - we've already cleared local state
+        }
         
-        // Set a timeout to ensure we don't hang indefinitely
-        setTimeout(() => {
-          if (signOutInProgress) {
-            console.log('Sign out taking too long, forcing completion');
-            signOutInProgress = false;
-          }
-        }, 5000); // 5 second timeout
-        
-        // Attempt to sign out with retry logic
-        let signOutSuccess = false;
-        let attempts = 0;
-        const maxAttempts = 3;
-        
-        while (!signOutSuccess && attempts < maxAttempts && signOutInProgress) {
-          try {
-            console.log(`Attempting to sign out from Firebase (attempt ${attempts + 1}/${maxAttempts})...`);
-            
-            // Use a timeout to prevent hanging
-            const signOutPromise = firebaseSignOut(auth);
-            const timeoutPromise = new Promise((_, reject) => {
-              setTimeout(() => reject(new Error('Sign out timeout')), 3000); // Reduced timeout
-            });
-            
-            await Promise.race([signOutPromise, timeoutPromise]);
-            signOutSuccess = true;
-            signOutInProgress = false;
-            console.log('Firebase sign out successful');
-          } catch (signOutErr: any) {
-            attempts++;
-            console.error(`Sign out attempt ${attempts} failed:`, signOutErr);
-            
-            // If this is a network error, wait and retry
-            const isNetworkError = signOutErr.code === 'auth/network-request-failed' || 
-                                  signOutErr.message?.includes('network') ||
-                                  signOutErr.message?.includes('timeout');
-            
-            if (isNetworkError && attempts < maxAttempts) {
-              // Exponential backoff with jitter
-              const delay = Math.min(1000 * Math.pow(2, attempts - 1), 2000) + (Math.random() * 300);
-              console.log(`Waiting ${Math.round(delay)}ms before retry...`);
-              await new Promise(resolve => setTimeout(resolve, delay));
-            } else if (attempts >= maxAttempts) {
-              // If we've exhausted all retries, continue with cleanup anyway
-              console.warn('Max sign out attempts reached, proceeding with local cleanup');
-              signOutInProgress = false;
-              break;
-            }
-          }
+        // Force page reload after sign out to ensure clean state
+        if (typeof window !== 'undefined') {
+          // Small delay to allow sign out to complete
+          setTimeout(() => {
+            console.log('Reloading page to ensure clean state after sign out');
+            window.location.href = '/';
+          }, 500);
         }
       } else {
         console.log('No current user found during sign out, skipping Firebase sign out');
@@ -673,8 +740,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Just log the error and continue
       console.log('Sign out process completed with errors');
       
-      // Don't throw the error - this prevents React errors in components
-      // that called signOut and are unmounting
+      // Force page reload to ensure clean state even if there were errors
+      if (typeof window !== 'undefined') {
+        setTimeout(() => {
+          window.location.href = '/';
+        }, 500);
+      }
     }
   };
 
