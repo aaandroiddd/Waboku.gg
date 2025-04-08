@@ -195,6 +195,13 @@ export const clearStoredAuthData = (): void => {
     
     console.log('Starting to clear stored auth data...');
     
+    // Mark sign-out in progress to prevent race conditions
+    try {
+      localStorage.setItem('waboku_signout_in_progress', 'true');
+    } catch (e) {
+      console.warn('Could not set sign-out in progress flag:', e);
+    }
+    
     // List of specific keys to remove
     const specificKeys = [
       'waboku_auth_redirect',
@@ -261,6 +268,51 @@ export const clearStoredAuthData = (): void => {
       console.warn('Error clearing session storage:', sessionError);
     }
     
+    // Clear IndexedDB Firebase storage if possible
+    try {
+      const clearFirebaseIDB = async () => {
+        // List of common Firebase IndexedDB database names
+        const possibleDBNames = [
+          'firebaseLocalStorage',
+          'firebase-auth-state',
+          'firebase-auth',
+          'firestore'
+        ];
+        
+        for (const dbName of possibleDBNames) {
+          try {
+            // Try to delete the database
+            const deleteRequest = indexedDB.deleteDatabase(dbName);
+            
+            // Set up event handlers
+            deleteRequest.onsuccess = () => {
+              console.log(`Successfully deleted IndexedDB database: ${dbName}`);
+            };
+            
+            deleteRequest.onerror = () => {
+              console.warn(`Error deleting IndexedDB database: ${dbName}`);
+            };
+          } catch (idbError) {
+            console.warn(`Error attempting to delete IndexedDB database ${dbName}:`, idbError);
+          }
+        }
+      };
+      
+      // Execute the async function
+      clearFirebaseIDB().catch(e => {
+        console.warn('Error clearing Firebase IndexedDB databases:', e);
+      });
+    } catch (idbError) {
+      console.warn('Error accessing IndexedDB:', idbError);
+    }
+    
+    // Clear the sign-out in progress flag
+    try {
+      localStorage.removeItem('waboku_signout_in_progress');
+    } catch (e) {
+      console.warn('Could not clear sign-out in progress flag:', e);
+    }
+    
     console.log('Completed clearing stored auth data');
   } catch (e) {
     console.error('Error during auth data clearing process:', e);
@@ -268,6 +320,7 @@ export const clearStoredAuthData = (): void => {
     try {
       localStorage.removeItem('waboku_auth_redirect');
       localStorage.removeItem('waboku_auth_state');
+      localStorage.removeItem('waboku_signout_in_progress');
     } catch (fallbackError) {
       console.error('Critical error clearing auth data:', fallbackError);
     }

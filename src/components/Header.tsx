@@ -59,26 +59,32 @@ export default function Header({ animate = true }: HeaderProps) {
   const handleSignOut = async () => {
     try {
       console.log('Header: Initiating sign out process');
-      await signOut();
       
-      // Always close the mobile menu regardless of success/failure
+      // First close the mobile menu before any async operations
       setIsMobileMenuOpen(false);
+      
+      // Then perform sign out
+      await signOut();
       
       // Navigate to home page
       console.log('Header: Sign out successful, navigating to home page');
-      router.push('/');
       
-      // Show success toast notification
-      toast({
-        title: "Success",
-        description: "You have been signed out successfully",
-        variant: "default",
-      });
+      // Use setTimeout to ensure navigation happens in the next event loop
+      // This helps prevent React state update errors
+      setTimeout(() => {
+        router.push('/').then(() => {
+          // Show success toast notification after navigation completes
+          toast({
+            title: "Success",
+            description: "You have been signed out successfully",
+            variant: "default",
+          });
+        }).catch(navError => {
+          console.error('Header: Navigation error after sign out:', navError);
+        });
+      }, 0);
     } catch (error) {
       console.error('Header: Error signing out:', error);
-      
-      // Close mobile menu even on error
-      setIsMobileMenuOpen(false);
       
       // Extract error message
       let errorMessage = "Failed to sign out. Please try again.";
@@ -94,11 +100,11 @@ export default function Header({ animate = true }: HeaderProps) {
       });
       
       // Still try to navigate to home page on error
-      try {
-        router.push('/');
-      } catch (navError) {
-        console.error('Header: Navigation error after failed sign out:', navError);
-      }
+      setTimeout(() => {
+        router.push('/').catch(navError => {
+          console.error('Header: Navigation error after failed sign out:', navError);
+        });
+      }, 0);
     }
   };
 

@@ -347,24 +347,33 @@ function SignOutButton({ onNavigate }: { onNavigate?: () => void }) {
   const handleSignOut = async () => {
     try {
       console.log('DashboardSidebar: Initiating sign out process');
-      await signOut();
       
-      // Call onNavigate callback if provided
+      // Call onNavigate callback before any async operations
       if (onNavigate) {
         console.log('DashboardSidebar: Calling navigation callback');
         onNavigate();
       }
       
+      // Then perform sign out
+      await signOut();
+      
       // Navigate to home page
       console.log('DashboardSidebar: Sign out successful, navigating to home page');
-      router.push('/');
       
-      // Show success toast notification
-      toast({
-        title: "Success",
-        description: "You have been signed out successfully",
-        variant: "default",
-      });
+      // Use setTimeout to ensure navigation happens in the next event loop
+      // This helps prevent React state update errors
+      setTimeout(() => {
+        router.push('/').then(() => {
+          // Show success toast notification after navigation completes
+          toast({
+            title: "Success",
+            description: "You have been signed out successfully",
+            variant: "default",
+          });
+        }).catch(navError => {
+          console.error('DashboardSidebar: Navigation error after sign out:', navError);
+        });
+      }, 0);
     } catch (error) {
       console.error('DashboardSidebar: Error signing out:', error);
       
@@ -382,14 +391,11 @@ function SignOutButton({ onNavigate }: { onNavigate?: () => void }) {
       });
       
       // Still try to navigate to home page on error
-      try {
-        // Call onNavigate callback even on error
-        if (onNavigate) onNavigate();
-        
-        router.push('/');
-      } catch (navError) {
-        console.error('DashboardSidebar: Navigation error after failed sign out:', navError);
-      }
+      setTimeout(() => {
+        router.push('/').catch(navError => {
+          console.error('DashboardSidebar: Navigation error after failed sign out:', navError);
+        });
+      }, 0);
     }
   };
   

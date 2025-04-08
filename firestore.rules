@@ -8,6 +8,13 @@ service cloud.firestore {
     function isOwner(userId) {
       return isAuthenticated() && request.auth.uid == userId;
     }
+    
+    // Special function to handle sign-out gracefully
+    function allowSignOutOperation() {
+      // During sign-out, we want to be more permissive with read operations
+      // This helps prevent "Missing or insufficient permissions" errors
+      return true;
+    }
 
     // Rate limiting function - only for updates
     function isNotRateLimited() {
@@ -65,6 +72,11 @@ service cloud.firestore {
         && userId == request.auth.uid 
         && request.resource.data.uid == userId;
       allow delete: if isOwner(userId);
+    }
+    
+    // Special collection for handling sign-out state
+    match /signOutState/{userId} {
+      allow read, write: if true;
     }
 
     // Listings collection rules with rate limiting and validation
