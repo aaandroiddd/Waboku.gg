@@ -9,9 +9,50 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
 import { getDatabase, ref, set, onValue, get, DatabaseReference } from 'firebase/database';
 import { getFirebaseServices } from '@/lib/firebase';
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/router';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { AlertCircle, Loader2 } from 'lucide-react';
 
 export default function FirebaseConnectionDebugPage() {
   const { toast } = useToast();
+  const router = useRouter();
+  const [isAdmin, setIsAdmin] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string>('');
+  
+  useEffect(() => {
+    const verifyAdmin = async () => {
+      try {
+        setIsLoading(true);
+        const adminSecret = localStorage.getItem('adminSecret') || '';
+        
+        const response = await fetch('/api/admin/verify', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${adminSecret}`,
+            'Content-Type': 'application/json',
+          },
+        });
+        
+        if (!response.ok) {
+          throw new Error('Admin access required');
+        }
+        
+        setIsAdmin(true);
+      } catch (error) {
+        console.error('Admin verification error:', error);
+        setError('You do not have permission to access this page. Admin access required.');
+        setTimeout(() => {
+          router.push('/admin/login');
+        }, 3000);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    verifyAdmin();
+  }, [router]);
   
   const testDatabaseWrite = async () => {
     try {
@@ -213,6 +254,31 @@ export default function FirebaseConnectionDebugPage() {
       });
     }
   };
+  
+  if (isLoading) {
+    return (
+      <div className="container py-8 flex flex-col items-center justify-center min-h-[50vh]">
+        <Loader2 className="h-8 w-8 animate-spin mb-4" />
+        <p>Verifying admin access...</p>
+      </div>
+    );
+  }
+  
+  if (error) {
+    return (
+      <div className="container py-8">
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Access Denied</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
+  
+  if (!isAdmin) {
+    return null;
+  }
   
   return (
     <div className="container py-8 space-y-8">
