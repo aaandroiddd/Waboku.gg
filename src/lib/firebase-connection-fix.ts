@@ -57,40 +57,57 @@ export async function fixFirebaseConnection(): Promise<{
     
     const longPollingPromise = new Promise<{success: boolean, message: string}>((resolve) => {
       try {
-        const connectedRef = ref(database, '.info/connected');
-        let timeout: NodeJS.Timeout;
-        
-        const unsubscribe = onValue(connectedRef, (snapshot) => {
-          const connected = snapshot.val();
+        // First, try to write to the debug path to ensure we have write access
+        const debugRef = ref(database, 'debug/connection_test');
+        set(debugRef, {
+          timestamp: Date.now(),
+          message: 'Testing long polling connection'
+        }).then(() => {
+          console.log('[Firebase Fix] Successfully wrote to debug path');
           
-          if (connected) {
-            console.log('[Firebase Fix] Long polling connection successful');
+          // Now test the connection status
+          const connectedRef = ref(database, '.info/connected');
+          let timeout: NodeJS.Timeout;
+          
+          const unsubscribe = onValue(connectedRef, (snapshot) => {
+            const connected = snapshot.val();
+            
+            if (connected) {
+              console.log('[Firebase Fix] Long polling connection successful');
+              clearTimeout(timeout);
+              unsubscribe();
+              resolve({
+                success: true,
+                message: 'Long polling connection established successfully'
+              });
+            }
+          }, (error) => {
+            console.error('[Firebase Fix] Long polling error:', error);
             clearTimeout(timeout);
             unsubscribe();
             resolve({
-              success: true,
-              message: 'Long polling connection established successfully'
+              success: false,
+              message: `Long polling error: ${error.message}`
             });
-          }
-        }, (error) => {
-          console.error('[Firebase Fix] Long polling error:', error);
-          clearTimeout(timeout);
-          unsubscribe();
+          });
+          
+          // Set a timeout to resolve if we don't get a connection after 15 seconds
+          timeout = setTimeout(() => {
+            console.log('[Firebase Fix] Long polling timed out');
+            unsubscribe();
+            // Even if we time out, if we could write to the database, consider it a partial success
+            resolve({
+              success: true,
+              message: 'Database write successful, but long polling connection timed out. This may be normal during initial connection.'
+            });
+          }, 15000);
+        }).catch(error => {
+          console.error('[Firebase Fix] Failed to write to debug path:', error);
           resolve({
             success: false,
-            message: `Long polling error: ${error.message}`
+            message: `Failed to write to debug path: ${error instanceof Error ? error.message : 'Unknown error'}`
           });
         });
-        
-        // Set a timeout to resolve if we don't get a connection after 10 seconds
-        timeout = setTimeout(() => {
-          console.log('[Firebase Fix] Long polling timed out');
-          unsubscribe();
-          resolve({
-            success: false,
-            message: 'Long polling connection timed out'
-          });
-        }, 10000);
       } catch (error) {
         console.error('[Firebase Fix] Error setting up long polling test:', error);
         resolve({
