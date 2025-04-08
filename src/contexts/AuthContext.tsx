@@ -70,6 +70,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isMounted, setIsMounted] = useState(true);
   
   // Check if we're running on the server
   const isServer = typeof window === 'undefined';
@@ -85,10 +86,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       db = services.db;
     } catch (error) {
       console.error('Error getting Firebase services:', error);
-      setError('Failed to initialize authentication services. Please refresh the page.');
-      setIsLoading(false);
+      if (isMounted) {
+        setError('Failed to initialize authentication services. Please refresh the page.');
+        setIsLoading(false);
+      }
     }
   }
+  
+  // Safe state update functions that check if component is still mounted
+  const safeSetUser = (newUser: User | null) => {
+    if (isMounted) setUser(newUser);
+  };
+  
+  const safeSetProfile = (newProfile: UserProfile | null) => {
+    if (isMounted) setProfile(newProfile);
+  };
+  
+  const safeSetIsLoading = (loading: boolean) => {
+    if (isMounted) setIsLoading(loading);
+  };
+  
+  const safeSetError = (newError: string | null) => {
+    if (isMounted) setError(newError);
+  };
 
   useEffect(() => {
     // Check for stored auth redirect state
@@ -126,7 +146,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
              error.message.includes('invalid key') || 
              error.message.includes('status: 400'))) {
           console.error('Firebase API key error detected. This may indicate an invalid or missing API key.');
-          setError('Authentication configuration error. Please contact support.');
+          safeSetError('Authentication configuration error. Please contact support.');
         }
       }
     };
@@ -209,7 +229,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         tokenRefreshInterval = null;
       }
       
-      setUser(user);
+      safeSetUser(user);
       
       if (user) {
         // Set up token refresh for the authenticated user
@@ -295,7 +315,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
           
           if (profileData) {
-            setProfile(profileData);
+            safeSetProfile(profileData);
           } else {
             console.error('Failed to fetch or create user profile after multiple attempts');
             // Even if we failed to get the profile, we'll still consider the user authenticated
@@ -305,13 +325,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           console.error('Error in profile fetch/creation process:', err);
         }
       } else {
-        setProfile(null);
+        safeSetProfile(null);
       }
       
-      setIsLoading(false);
+      safeSetIsLoading(false);
     });
 
+    // Set up cleanup function
     return () => {
+      console.log('AuthContext unmounting, cleaning up resources');
+      setIsMounted(false);
       unsubscribe();
       if (tokenRefreshInterval) {
         clearInterval(tokenRefreshInterval);
@@ -544,8 +567,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.log('No current user found during sign out, cleaning up state only');
         // Still clear local data even if no current user
         clearStoredAuthData();
-        setUser(null);
-        setProfile(null);
+        safeSetUser(null);
+        safeSetProfile(null);
         return;
       }
       
@@ -585,8 +608,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Always clear local state and storage data, even if Firebase sign out failed
       console.log('Clearing stored auth data and resetting state...');
       clearStoredAuthData();
-      setUser(null);
-      setProfile(null);
+      
+      // Use safe state update functions to prevent React errors
+      safeSetUser(null);
+      safeSetProfile(null);
       
       console.log('Sign out process completed');
     } catch (err: any) {
@@ -595,14 +620,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Still attempt to clear local state even if there was an error
       try {
         clearStoredAuthData();
-        setUser(null);
-        setProfile(null);
+        safeSetUser(null);
+        safeSetProfile(null);
         console.log('Cleared local state despite error');
       } catch (cleanupErr) {
         console.error('Error during cleanup after failed sign out:', cleanupErr);
       }
       
-      setError(err.message || 'An error occurred during sign out');
+      safeSetError(err.message || 'An error occurred during sign out');
       throw err;
     }
   };
