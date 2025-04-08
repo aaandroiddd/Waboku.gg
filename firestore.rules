@@ -75,8 +75,10 @@ service cloud.firestore {
     }
     
     // Special collection for handling sign-out state
+    // This collection has public read/write access to ensure sign-out works properly
+    // even when authentication state is changing
     match /signOutState/{userId} {
-      allow read, write: if true;
+      allow read, write, delete: if true;
     }
 
     // Listings collection rules with rate limiting and validation

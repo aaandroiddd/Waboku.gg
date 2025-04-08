@@ -556,14 +556,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       console.log('Starting sign out process...');
       
-      // First, clear local state BEFORE attempting Firebase sign out
-      // This prevents React errors from state updates after component unmount
-      console.log('Clearing stored auth data and resetting state first...');
+      // First, update signOutState collection to indicate sign-out in progress
+      // This helps prevent "Missing or insufficient permissions" errors
+      if (auth?.currentUser && db) {
+        try {
+          // Create a sign-out state document that has public read/write permissions
+          await setDoc(doc(db, 'signOutState', auth.currentUser.uid), {
+            signOutStarted: true,
+            timestamp: new Date().toISOString()
+          });
+          console.log('Created signOutState document to track sign-out process');
+        } catch (stateErr) {
+          // Don't block sign-out if this fails
+          console.warn('Could not create signOutState document:', stateErr);
+        }
+      }
       
       // Create local copies of user data before clearing state
-      // This helps prevent "Missing or insufficient permissions" errors
       const currentUser = auth?.currentUser;
       const hasCurrentUser = !!currentUser;
+      const userId = currentUser?.uid;
       
       // Clear local storage first to prevent any cached data issues
       clearStoredAuthData();
@@ -580,23 +592,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       // Only attempt Firebase sign out if we had a user
       if (hasCurrentUser) {
+        // Use a flag to track if we're still in the sign-out process
+        let signOutInProgress = true;
+        
+        // Set a timeout to ensure we don't hang indefinitely
+        setTimeout(() => {
+          if (signOutInProgress) {
+            console.log('Sign out taking too long, forcing completion');
+            signOutInProgress = false;
+          }
+        }, 5000); // 5 second timeout
+        
         // Attempt to sign out with retry logic
         let signOutSuccess = false;
         let attempts = 0;
         const maxAttempts = 3;
         
-        while (!signOutSuccess && attempts < maxAttempts) {
+        while (!signOutSuccess && attempts < maxAttempts && signOutInProgress) {
           try {
             console.log(`Attempting to sign out from Firebase (attempt ${attempts + 1}/${maxAttempts})...`);
             
             // Use a timeout to prevent hanging
             const signOutPromise = firebaseSignOut(auth);
             const timeoutPromise = new Promise((_, reject) => {
-              setTimeout(() => reject(new Error('Sign out timeout')), 5000);
+              setTimeout(() => reject(new Error('Sign out timeout')), 3000); // Reduced timeout
             });
             
             await Promise.race([signOutPromise, timeoutPromise]);
             signOutSuccess = true;
+            signOutInProgress = false;
             console.log('Firebase sign out successful');
           } catch (signOutErr: any) {
             attempts++;
@@ -609,18 +633,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             
             if (isNetworkError && attempts < maxAttempts) {
               // Exponential backoff with jitter
-              const delay = Math.min(1000 * Math.pow(2, attempts - 1), 4000) + (Math.random() * 500);
+              const delay = Math.min(1000 * Math.pow(2, attempts - 1), 2000) + (Math.random() * 300);
               console.log(`Waiting ${Math.round(delay)}ms before retry...`);
               await new Promise(resolve => setTimeout(resolve, delay));
             } else if (attempts >= maxAttempts) {
               // If we've exhausted all retries, continue with cleanup anyway
               console.warn('Max sign out attempts reached, proceeding with local cleanup');
+              signOutInProgress = false;
               break;
             }
           }
         }
       } else {
         console.log('No current user found during sign out, skipping Firebase sign out');
+      }
+      
+      // Clean up the signOutState document if possible
+      if (userId && db) {
+        try {
+          // Use a timeout to ensure this happens after the component has unmounted
+          setTimeout(async () => {
+            try {
+              await deleteDoc(doc(db, 'signOutState', userId));
+              console.log('Cleaned up signOutState document');
+            } catch (cleanupErr) {
+              console.warn('Could not clean up signOutState document:', cleanupErr);
+            }
+          }, 1000);
+        } catch (e) {
+          console.warn('Error setting up signOutState cleanup:', e);
+        }
       }
       
       console.log('Sign out process completed');
