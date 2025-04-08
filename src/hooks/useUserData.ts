@@ -1,333 +1,120 @@
 import { useState, useEffect, useRef } from 'react';
-import { getFirebaseServices } from '@/lib/firebase';
-import { doc, onSnapshot, getDoc, getDocs, query, collection, where, limit } from 'firebase/firestore';
+import { getDoc, doc } from 'firebase/firestore';
+import { getDatabase, ref, get } from 'firebase/database';
+import { db, getFirebaseServices } from '@/lib/firebase';
 
-// Global cache for user data with longer expiration (15 minutes)
-const userDataCache: Record<string, {
-  data: { username: string; avatarUrl?: string };
+// Global cache to persist across renders and components
+const userCache: Record<string, {
+  data: any;
   timestamp: number;
 }> = {};
 
-// Cache expiration time (15 minutes)
-const CACHE_EXPIRATION = 15 * 60 * 1000;
+const CACHE_EXPIRATION = 5 * 60 * 1000; // 5 minutes
 
-// Maximum number of retries
-const MAX_RETRIES = 3;
+export function useUserData(userId: string, initialData?: any) {
+  const [userData, setUserData] = useState<any>(initialData || null);
+  const [loading, setLoading] = useState<boolean>(!initialData);
+  const [error, setError] = useState<Error | null>(null);
+  const fetchAttempted = useRef<boolean>(false);
 
-// Batch prefetch size
-const BATCH_SIZE = 10;
+  useEffect(() => {
+    if (!userId) return;
 
-// Fallback data for when user data can't be retrieved
-const FALLBACK_DATA = {
-  username: 'Unknown User',
-  avatarUrl: undefined
-};
-
-// Prefetch user data for multiple users at once
-export const prefetchUserData = async (userIds: string[]) => {
-  if (!userIds.length) return;
-  
-  // Filter out userIds that are already in cache and not expired
-  const uncachedUserIds = userIds.filter(id => 
-    !userDataCache[id] || Date.now() - userDataCache[id].timestamp >= CACHE_EXPIRATION
-  );
-  
-  if (!uncachedUserIds.length) return;
-  
-  console.log(`Prefetching data for ${uncachedUserIds.length} users`);
-  
-  try {
-    const { db } = getFirebaseServices();
-    if (!db) return;
-    
-    // Process in batches to avoid large queries
-    for (let i = 0; i < uncachedUserIds.length; i += BATCH_SIZE) {
-      const batchIds = uncachedUserIds.slice(i, i + BATCH_SIZE);
+    // Reset state when userId changes
+    if (!fetchAttempted.current) {
+      setLoading(true);
+      setError(null);
       
-      // Create a query to get multiple users at once
-      const usersQuery = query(
-        collection(db, 'users'),
-        where('__name__', 'in', batchIds),
-        limit(BATCH_SIZE)
-      );
-      
-      try {
-        const querySnapshot = await getDocs(usersQuery);
+      // Check cache first
+      if (userCache[userId] && Date.now() - userCache[userId].timestamp < CACHE_EXPIRATION) {
+        setUserData(userCache[userId].data);
+        setLoading(false);
+        return;
+      }
+
+      const fetchUserData = async () => {
+        fetchAttempted.current = true;
         
-        querySnapshot.forEach(doc => {
-          if (doc.exists()) {
-            const data = doc.data();
-            const userData = {
-              username: data.displayName || data.username || 'Unknown User',
-              avatarUrl: data.avatarUrl || data.photoURL
-            };
+        try {
+          // Try Realtime Database first
+          const { database } = getFirebaseServices();
+          if (database) {
+            const userProfilePaths = [
+              `userProfiles/${userId}`,
+              `users/${userId}`
+            ];
             
-            // Update cache
-            userDataCache[doc.id] = {
-              data: userData,
-              timestamp: Date.now()
-            };
-          }
-        });
-      } catch (batchError) {
-        console.error(`Error fetching batch of users:`, batchError);
-        
-        // If batch query fails, fall back to individual queries
-        await Promise.allSettled(
-          batchIds.map(async (userId) => {
-            try {
-              const docSnap = await getDoc(doc(db, 'users', userId));
-              if (docSnap.exists()) {
-                const data = docSnap.data();
-                const userData = {
-                  username: data.displayName || data.username || 'Unknown User',
-                  avatarUrl: data.avatarUrl || data.photoURL
-                };
+            for (const path of userProfilePaths) {
+              try {
+                const userRef = ref(database, path);
+                const snapshot = await get(userRef);
                 
-                // Update cache
-                userDataCache[userId] = {
-                  data: userData,
-                  timestamp: Date.now()
-                };
+                if (snapshot.exists()) {
+                  const data = snapshot.val();
+                  if (data.displayName) {
+                    const userData = {
+                      username: data.displayName,
+                      avatarUrl: data.avatarUrl || null
+                    };
+                    
+                    // Update cache
+                    userCache[userId] = {
+                      data: userData,
+                      timestamp: Date.now()
+                    };
+                    
+                    setUserData(userData);
+                    setLoading(false);
+                    return;
+                  }
+                }
+              } catch (e) {
+                // Continue to next path
               }
-            } catch (err) {
-              console.error(`Error fetching individual user ${userId}:`, err);
             }
-          })
-        );
-      }
-    }
-  } catch (err) {
-    console.error('Error prefetching user data:', err);
-  }
-};
-
-export function useUserData(userId: string | undefined) {
-  const [userData, setUserData] = useState<{
-    username: string;
-    avatarUrl?: string;
-  } | null>(userId && userDataCache[userId] ? userDataCache[userId].data : null);
-  
-  const [loading, setLoading] = useState(!userData);
-  const [error, setError] = useState<string | null>(null);
-  const retryCountRef = useRef(0);
-  const isMountedRef = useRef(true);
-  const fetchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const unsubscribeRef = useRef<(() => void) | null>(null);
-
-  // Helper to set fallback data with short cache expiration
-  const setFallbackData = () => {
-    if (!isMountedRef.current || !userId) return;
-    
-    setUserData(FALLBACK_DATA);
-    setLoading(false);
-    
-    // Cache the fallback with shorter expiration (1 minute)
-    userDataCache[userId] = {
-      data: FALLBACK_DATA,
-      timestamp: Date.now() - (CACHE_EXPIRATION - 60000) // Will expire in 1 minute
-    };
-  };
-
-  useEffect(() => {
-    isMountedRef.current = true;
-    return () => {
-      isMountedRef.current = false;
-      if (fetchTimeoutRef.current) {
-        clearTimeout(fetchTimeoutRef.current);
-      }
-      if (unsubscribeRef.current) {
-        unsubscribeRef.current();
-      }
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!userId) {
-      setLoading(false);
-      return;
-    }
-
-    // Reset retry count when userId changes
-    retryCountRef.current = 0;
-    
-    // Clear any existing timeout
-    if (fetchTimeoutRef.current) {
-      clearTimeout(fetchTimeoutRef.current);
-      fetchTimeoutRef.current = null;
-    }
-    
-    // Unsubscribe from previous listener
-    if (unsubscribeRef.current) {
-      unsubscribeRef.current();
-      unsubscribeRef.current = null;
-    }
-
-    // Check cache first
-    if (userDataCache[userId] && Date.now() - userDataCache[userId].timestamp < CACHE_EXPIRATION) {
-      setUserData(userDataCache[userId].data);
-      setLoading(false);
-      return;
-    }
-
-    const { db } = getFirebaseServices();
-    if (!db) {
-      setError('Database not initialized');
-      setLoading(false);
-      setUserData(FALLBACK_DATA);
-      return;
-    }
-
-    // Function to fetch user data with retry logic
-    const fetchUserData = async (retry = 0) => {
-      try {
-        // First try to get from cache
-        if (userDataCache[userId] && Date.now() - userDataCache[userId].timestamp < CACHE_EXPIRATION) {
-          if (isMountedRef.current) {
-            setUserData(userDataCache[userId].data);
-            setLoading(false);
           }
-          return true;
-        }
-        
-        const docSnap = await getDoc(doc(db, 'users', userId));
-        
-        if (docSnap.exists()) {
-          const data = docSnap.data();
-          const userData = {
-            username: data.displayName || data.username || 'Unknown User',
-            avatarUrl: data.avatarUrl || data.photoURL
-          };
           
-          // Update cache
-          userDataCache[userId] = {
-            data: userData,
-            timestamp: Date.now()
-          };
+          // If not found in RTDB, try Firestore
+          const userDoc = await getDoc(doc(db, 'users', userId));
           
-          if (isMountedRef.current) {
-            setUserData(userData);
-            setLoading(false);
-          }
-          return true;
-        } else if (retry < MAX_RETRIES) {
-          // Retry with exponential backoff
-          const delay = Math.pow(2, retry) * 500; // 500ms, 1s, 2s, etc.
-          
-          if (isMountedRef.current) {
-            fetchTimeoutRef.current = setTimeout(() => {
-              if (isMountedRef.current) {
-                fetchUserData(retry + 1);
-              }
-            }, delay);
-          }
-          return false;
-        } else {
-          // Max retries reached, set fallback data
-          setFallbackData();
-          return true;
-        }
-      } catch (err) {
-        console.error(`Error fetching user data for ${userId}:`, err);
-        
-        if (retry < MAX_RETRIES) {
-          // Retry with exponential backoff
-          const delay = Math.pow(2, retry) * 500;
-          
-          if (isMountedRef.current) {
-            fetchTimeoutRef.current = setTimeout(() => {
-              if (isMountedRef.current) {
-                fetchUserData(retry + 1);
-              }
-            }, delay);
-          }
-          return false;
-        } else {
-          // Max retries reached, set error
-          if (isMountedRef.current) {
-            setError(err instanceof Error ? err.message : 'Unknown error');
-            setLoading(false);
-            setFallbackData();
-          }
-          return true;
-        }
-      }
-    };
-
-    // First try to get the data immediately
-    fetchUserData();
-
-    // Then set up real-time listener for updates with error handling
-    try {
-      const userRef = doc(db, 'users', userId);
-      
-      const unsubscribe = onSnapshot(
-        userRef, 
-        (doc) => {
-          if (doc.exists()) {
-            const data = doc.data();
+          if (userDoc.exists()) {
+            const data = userDoc.data();
             const userData = {
-              username: data.displayName || data.username || 'Unknown User',
-              avatarUrl: data.avatarUrl || data.photoURL
+              username: data.displayName || data.username || initialData?.username || "Unknown User",
+              avatarUrl: data.avatarUrl || data.photoURL || null
             };
             
             // Update cache
-            userDataCache[userId] = {
+            userCache[userId] = {
               data: userData,
               timestamp: Date.now()
             };
             
-            if (isMountedRef.current) {
-              setUserData(userData);
-              setLoading(false);
-            }
-          } else if (retryCountRef.current < MAX_RETRIES) {
-            // Increment retry count
-            retryCountRef.current++;
-            
-            // Try to fetch again after a delay
-            if (isMountedRef.current) {
-              fetchTimeoutRef.current = setTimeout(() => {
-                if (isMountedRef.current) {
-                  fetchUserData(retryCountRef.current);
-                }
-              }, 1000 * retryCountRef.current);
-            }
+            setUserData(userData);
           } else {
-            // Max retries reached, set fallback data
-            if (isMountedRef.current) {
-              setFallbackData();
+            // If we reach here and still have initialData, use that
+            if (initialData) {
+              setUserData(initialData);
             }
           }
-        },
-        (error) => {
-          console.error('Error in user data snapshot:', error);
-          if (isMountedRef.current) {
-            setError(error.message);
-            setLoading(false);
-            setFallbackData();
+        } catch (err: any) {
+          setError(err);
+          // Fall back to initial data if available
+          if (initialData) {
+            setUserData(initialData);
           }
+        } finally {
+          setLoading(false);
         }
-      );
-      
-      // Store the unsubscribe function
-      unsubscribeRef.current = unsubscribe;
-    } catch (err) {
-      console.error('Error setting up snapshot listener:', err);
-      // If setting up the listener fails, rely on the one-time fetch
-    }
+      };
 
+      fetchUserData();
+    }
+    
     return () => {
-      if (unsubscribeRef.current) {
-        unsubscribeRef.current();
-        unsubscribeRef.current = null;
-      }
-      if (fetchTimeoutRef.current) {
-        clearTimeout(fetchTimeoutRef.current);
-        fetchTimeoutRef.current = null;
-      }
+      fetchAttempted.current = false;
     };
-  }, [userId]);
+  }, [userId, initialData]);
 
   return { userData, loading, error };
 }
