@@ -1,4 +1,5 @@
 import React from 'react';
+import { FirebaseConfigVerifier } from '@/components/FirebaseConfigVerifier';
 import { FirebaseConnectionDebugger } from '@/components/FirebaseConnectionDebugger';
 import { FirebaseConnectionFixer } from '@/components/FirebaseConnectionFixer';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';

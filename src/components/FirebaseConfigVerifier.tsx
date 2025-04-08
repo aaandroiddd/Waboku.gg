@@ -233,10 +233,4 @@ export function FirebaseConfigVerifier() {
       </CardFooter>
     </Card>
   );
-}</function_results>
-
-Now, let's update the Firebase connection debug page to include our new component:
-
-<function_calls>
-<invoke name="edit_file">
-<parameter name="file_path">src/pages/admin/firebase-connection-debug.tsx
+}
