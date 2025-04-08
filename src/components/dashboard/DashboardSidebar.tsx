@@ -153,7 +153,7 @@ export function DashboardSidebar({ onNavigate }: DashboardSidebarProps) {
     },
     {
       name: 'Seller Account',
-      href: '/dashboard/connect-account',
+      href: '/dashboard/seller-account',
       icon: (
         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4" />
