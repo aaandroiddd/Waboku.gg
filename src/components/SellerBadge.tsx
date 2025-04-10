@@ -18,6 +18,8 @@ interface UserData {
   subscription?: {
     status: string;
     endDate?: string;
+    stripeSubscriptionId?: string;
+    manuallyUpdated?: boolean;
   };
 }
 
@@ -55,9 +57,39 @@ export function SellerBadge({ className, userId, showOnlyOnProfile = false }: Se
 
   if (!userData || !userId) return null;
 
-  // Check if premium is active
-  const isPremiumActive = userData.accountTier === 'premium' && 
-    (!userData.subscription?.endDate || new Date(userData.subscription.endDate) > new Date());
+  // Enhanced premium status check
+  const isPremiumActive = (() => {
+    // If account tier is premium
+    if (userData.accountTier === 'premium') {
+      // Check if subscription exists
+      if (userData.subscription) {
+        // If subscription is manually updated by admin, it's premium
+        if (userData.subscription.manuallyUpdated) {
+          return true;
+        }
+        
+        // If subscription has a Stripe ID and status is active, it's premium
+        if (userData.subscription.stripeSubscriptionId && userData.subscription.status === 'active') {
+          return true;
+        }
+        
+        // If subscription is canceled but end date is in the future, it's still premium
+        if (userData.subscription.status === 'canceled' && userData.subscription.endDate) {
+          const endDate = new Date(userData.subscription.endDate);
+          if (endDate > new Date()) {
+            return true;
+          }
+        }
+        
+        // If subscription has a Stripe ID that includes 'admin_', it's an admin-assigned premium
+        if (userData.subscription.stripeSubscriptionId?.includes('admin_')) {
+          return true;
+        }
+      }
+    }
+    
+    return false;
+  })();
   
   return (
     <div className="flex flex-wrap gap-2">
