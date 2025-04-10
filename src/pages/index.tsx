@@ -210,6 +210,33 @@ export default function Home() {
     }
   }, [searchQuery, selectedState, router]);
 
+  // Handle search from SearchBar component
+  const handleSearchFromBar = useCallback((query: string) => {
+    // Create query object
+    const queryParams: Record<string, string> = {};
+    
+    // Only add parameters that have values
+    if (query.trim()) {
+      queryParams.query = query;
+    }
+    
+    // Add location filter if a specific state is selected
+    if (selectedState && selectedState !== "all") {
+      queryParams.state = selectedState;
+    }
+
+    // Navigate to listings page with search parameters
+    if (Object.keys(queryParams).length > 0) {
+      router.push({
+        pathname: '/listings',
+        query: queryParams,
+      });
+    } else {
+      // If no filters are applied, just go to the listings page
+      router.push('/listings');
+    }
+  }, [selectedState, router]);
+
   // Handle card selection
   const handleCardSelect = useCallback((cardName: string) => {
     setSearchQuery(cardName);
@@ -274,7 +301,7 @@ export default function Home() {
                     <div className="relative w-full">
                       <SearchBar
                         onSelect={handleCardSelect}
-                        onSearch={handleSearch}
+                        onSearch={handleSearchFromBar}
                         initialValue={searchQuery}
                         showSearchButton={true}
                       />
@@ -293,7 +320,7 @@ export default function Home() {
                     <div className="relative w-full">
                       <SearchBar
                         onSelect={handleCardSelect}
-                        onSearch={handleSearch}
+                        onSearch={handleSearchFromBar}
                         initialValue={searchQuery}
                         showSearchButton={true}
                       />

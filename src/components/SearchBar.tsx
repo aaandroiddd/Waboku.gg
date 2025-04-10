@@ -106,6 +106,8 @@ export default function SearchBar({
       newQuery.state = selectedState;
     }
     
+    console.log('Navigating to listings with query:', newQuery);
+    
     router.push({
       pathname: '/listings',
       query: newQuery

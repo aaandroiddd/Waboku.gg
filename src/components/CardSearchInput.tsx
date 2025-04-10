@@ -71,7 +71,8 @@ const CardSearchInput: React.FC<CardSearchInputProps> = ({
       setIsSearching(true);
       try {
         // Pass the normalized term (which might be empty) to show all listings
-        await onSearch(normalizedTerm ? normalizedTerm.trim() : "");
+        // Important: Pass the actual search term to ensure it's properly used in the URL
+        await onSearch(term.trim());
       } finally {
         setIsSearching(false);
       }
