@@ -16,6 +16,7 @@ import Head from 'next/head';
 import { LoadingProvider, useLoading } from '@/contexts/LoadingContext';
 import { FirebaseConnectionHandler } from '@/components/FirebaseConnectionHandler';
 import { FirebaseConnectionManager } from '@/components/FirebaseConnectionManager';
+import { FirestoreListenerManager } from '@/components/FirestoreListenerManager';
 import { useCallback } from 'react';
 
 const LoadingScreen = dynamic(() => import('@/components/LoadingScreen').then(mod => ({ default: mod.LoadingScreen })), {
@@ -81,8 +82,12 @@ const MainContent = memo(({ Component, pageProps, pathname }: {
       )}
       
       <Toaster />
-      {isMounted && <FirebaseConnectionHandler />}
-      {isMounted && <FirebaseConnectionManager />}
+      {isMounted && (
+        <FirestoreListenerManager>
+          <FirebaseConnectionHandler />
+          <FirebaseConnectionManager />
+        </FirestoreListenerManager>
+      )}
     </>
   );
 });
