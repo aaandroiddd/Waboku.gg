@@ -23,6 +23,7 @@ import {
   clearStoredAuthData, 
   checkAndClearStaleAuthData 
 } from '@/lib/auth-token-manager';
+import { disableNetwork as disableFirestoreNetwork } from 'firebase/firestore';
 
 interface AuthContextType {
   user: User | null;
@@ -632,6 +633,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       console.log('Starting sign out process...');
       
+      // Set loading state to true to show loading animation
+      if (typeof window !== 'undefined') {
+        // Create a global loading indicator
+        const loadingDiv = document.createElement('div');
+        loadingDiv.id = 'global-signout-loading';
+        loadingDiv.className = 'fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex flex-col items-center justify-center';
+        
+        // Add loading animation
+        const loadingContent = document.createElement('div');
+        loadingContent.innerHTML = `
+          <div class="flex flex-col items-center justify-center gap-4">
+            <div class="my-4" id="loading-animation-container"></div>
+            <p class="text-muted-foreground text-sm animate-pulse">Signing out...</p>
+          </div>
+        `;
+        loadingDiv.appendChild(loadingContent);
+        document.body.appendChild(loadingDiv);
+        
+        // Import and initialize the loading animation
+        import('ldrs').then(({ dotStream }) => {
+          dotStream.register();
+          const animationContainer = document.getElementById('loading-animation-container');
+          if (animationContainer) {
+            const animation = document.createElement('l-dot-stream');
+            animation.setAttribute('size', '40');
+            animation.setAttribute('speed', '2.5');
+            animation.setAttribute('color', 'var(--theme-primary, #000)');
+            animationContainer.appendChild(animation);
+          }
+        }).catch(err => {
+          console.error('Failed to load animation:', err);
+        });
+      }
+      
       // First, update signOutState collection to indicate sign-out in progress
       // This helps prevent "Missing or insufficient permissions" errors
       if (auth?.currentUser && db) {
@@ -703,13 +738,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           // Continue anyway - we've already cleared local state
         }
         
-        // Force page reload after sign out to ensure clean state
+        // Navigate to home page without reloading
         if (typeof window !== 'undefined') {
-          // Small delay to allow sign out to complete
-          setTimeout(() => {
-            console.log('Reloading page to ensure clean state after sign out');
-            window.location.href = '/';
-          }, 500);
+          console.log('Navigating to home page after sign out');
+          // Use a single navigation instead of reloading
+          window.location.href = '/';
         }
       } else {
         console.log('No current user found during sign out, skipping Firebase sign out');
@@ -740,11 +773,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Just log the error and continue
       console.log('Sign out process completed with errors');
       
-      // Force page reload to ensure clean state even if there were errors
+      // Navigate to home page without reloading
       if (typeof window !== 'undefined') {
-        setTimeout(() => {
-          window.location.href = '/';
-        }, 500);
+        window.location.href = '/';
       }
     }
   };
