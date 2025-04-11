@@ -99,7 +99,7 @@ const DashboardComponent = () => {
       }
       
       // Refresh listings to ensure server data is up to date
-      refreshListings();
+      enhancedRefreshListings();
       
       toast({
         title: "Listing restored",
@@ -258,12 +258,11 @@ const DashboardComponent = () => {
     handleCacheLoading();
   }, [user, listingsLoading, profileLoading, loadDashboardFromCache, saveDashboardToCache]);
   
-  // Wrap the original refreshListings with cache handling
-  const originalRefreshListings = refreshListings;
-  const refreshListings = async () => {
+  // Enhance the refreshListings function with cache handling
+  const enhancedRefreshListings = async () => {
     setLoadingMessage("Refreshing your data...");
     try {
-      await originalRefreshListings();
+      await refreshListings();
       saveDashboardToCache();
     } catch (err) {
       console.error('Error refreshing data:', err);
@@ -349,12 +348,12 @@ const DashboardComponent = () => {
       // Wait for 2 seconds and try to refresh listings
       const timer = setTimeout(() => {
         if (user) {  // Only refresh if we have a user
-          refreshListings();
+          enhancedRefreshListings();
         }
       }, 2000);
       return () => clearTimeout(timer);
     }
-  }, [listingsError, user, refreshListings]);
+  }, [listingsError, user, enhancedRefreshListings]);
   
   // Initial data loading when the component mounts
   useEffect(() => {
@@ -374,12 +373,12 @@ const DashboardComponent = () => {
         await new Promise(resolve => setTimeout(resolve, 400));
         
         // Refresh all data
-        await refreshListings();
+        await enhancedRefreshListings();
       };
       
       loadSequence();
     }
-  }, [user]);
+  }, [user, enhancedRefreshListings]);
   
   const sortedListings = [...(allListings || [])].sort((a, b) => {
     if (sortBy === 'date') {
@@ -579,9 +578,7 @@ const DashboardComponent = () => {
       }
       
       // Refresh listings after successful deletion
-      if (refreshListings) {
-        refreshListings();
-      }
+      enhancedRefreshListings();
     } catch (err: any) {
       console.error('Error with listing:', err);
       toast({
@@ -642,7 +639,7 @@ const DashboardComponent = () => {
                 variant="outline"
                 onClick={() => {
                   // Try to refresh the data
-                  refreshListings();
+                  enhancedRefreshListings();
                 }}
               >
                 Try Again
