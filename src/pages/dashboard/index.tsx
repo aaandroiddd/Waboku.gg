@@ -34,6 +34,8 @@ import { ArchivedListings } from '@/components/ArchivedListings';
 import { FirebaseConnectionHandler } from '@/components/FirebaseConnectionHandler';
 import { useLoading } from '@/hooks/useLoading';
 import { ViewCounter } from '@/components/ViewCounter';
+import { DashboardLoadingScreen } from '@/components/dashboard/DashboardLoadingScreen';
+import { useDashboardCache } from '@/hooks/useDashboardCache';
 
 const DashboardComponent = () => {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -41,6 +43,7 @@ const DashboardComponent = () => {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [gameFilter, setGameFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const [showDashboard, setShowDashboard] = useState<boolean>(false);
   const [dialogState, setDialogState] = useState<{
     isOpen: boolean;
     listingId: string;
@@ -118,19 +121,154 @@ const DashboardComponent = () => {
   const { tab = 'active', new: newListingId } = router.query;
   const { user, loading: authLoading } = useAuth();
   const [error, setError] = useState<string | null>(null);
+  const [loadingMessage, setLoadingMessage] = useState<string>("Loading dashboard...");
+  
+  // Use regular hooks for data fetching
   const { listings: allListings, setListings, loading: listingsLoading, error: listingsError, refreshListings, updateListingStatus, permanentlyDeleteListing } = useListings({ 
     userId: user?.uid,
     showOnlyActive: false
   });
   const { profile, loading: profileLoading } = useProfile(user?.uid || null);
   
+  // Create a wrapper for the dashboard cache
+  const [dashboardCache, setDashboardCache] = useState<{
+    listings: typeof allListings;
+    profile: typeof profile;
+    timestamp: number;
+  } | null>(null);
+  
+  // Cache loading states
+  const [listingsCacheLoading, setListingsCacheLoading] = useState(true);
+  const [profileCacheLoading, setProfileCacheLoading] = useState(true);
+  const [listingsCacheError, setListingsCacheError] = useState<Error | null>(null);
+  const [profileCacheError, setProfileCacheError] = useState<Error | null>(null);
+  
+  // Function to save dashboard data to cache
+  const saveDashboardToCache = useCallback(() => {
+    if (!user) return;
+    
+    try {
+      const cacheData = {
+        listings: allListings,
+        profile: profile,
+        timestamp: Date.now()
+      };
+      
+      const cacheKey = `dashboard_cache_${user.uid}`;
+      localStorage.setItem(cacheKey, JSON.stringify(cacheData));
+      console.log('Dashboard data saved to cache');
+    } catch (err) {
+      console.error('Error saving dashboard to cache:', err);
+    }
+  }, [user, allListings, profile]);
+  
+  // Function to load dashboard data from cache
+  const loadDashboardFromCache = useCallback(() => {
+    if (!user) return null;
+    
+    try {
+      const cacheKey = `dashboard_cache_${user.uid}`;
+      const cachedData = localStorage.getItem(cacheKey);
+      
+      if (!cachedData) return null;
+      
+      const parsedData = JSON.parse(cachedData);
+      
+      // Check if cache is valid (less than 5 minutes old)
+      const now = Date.now();
+      const cacheAge = now - parsedData.timestamp;
+      const cacheValidityPeriod = 5 * 60 * 1000; // 5 minutes
+      
+      if (cacheAge > cacheValidityPeriod) {
+        console.log('Dashboard cache expired');
+        return null;
+      }
+      
+      console.log('Using dashboard data from cache');
+      return parsedData;
+    } catch (err) {
+      console.error('Error loading dashboard from cache:', err);
+      return null;
+    }
+  }, [user]);
+  
+  // Function to refresh all dashboard data
+  const refreshCachedListings = async () => {
+    setLoadingMessage("Refreshing your listings...");
+    try {
+      await refreshListings();
+      saveDashboardToCache();
+    } catch (err) {
+      console.error('Error refreshing listings:', err);
+      setListingsCacheError(err instanceof Error ? err : new Error('Failed to refresh listings'));
+    }
+  };
+  
+  const refreshCachedProfile = async () => {
+    setLoadingMessage("Refreshing your profile...");
+    try {
+      // Profile is already refreshed by the useProfile hook
+      saveDashboardToCache();
+    } catch (err) {
+      console.error('Error refreshing profile:', err);
+      setProfileCacheError(err instanceof Error ? err : new Error('Failed to refresh profile'));
+    }
+  };
+  
   // Use the listing visibility hook to properly filter active listings
-  const { visibleListings: properlyFilteredActiveListings } = useListingVisibility(
+  const { visibleListings: properlyFilteredActiveListings, isLoading: visibilityLoading } = useListingVisibility(
     allListings.filter(listing => listing.status === 'active')
   );
   
   const { isLoading: loadingState } = useLoading();
-const loading = authLoading || listingsLoading || profileLoading;
+  const loading = authLoading || listingsLoading || profileLoading || visibilityLoading || listingsCacheLoading || profileCacheLoading;
+  
+  // Effect to handle cache loading and saving
+  useEffect(() => {
+    if (!user) return;
+    
+    const handleCacheLoading = async () => {
+      try {
+        setListingsCacheLoading(true);
+        setProfileCacheLoading(true);
+        
+        // Try to load from cache first
+        const cachedData = loadDashboardFromCache();
+        
+        if (cachedData) {
+          // Cache is valid, we can use it
+          setListingsCacheLoading(false);
+          setProfileCacheLoading(false);
+        } else {
+          // No valid cache, wait for data to load
+          if (!listingsLoading && !profileLoading) {
+            // Data is loaded, save to cache
+            saveDashboardToCache();
+            setListingsCacheLoading(false);
+            setProfileCacheLoading(false);
+          }
+        }
+      } catch (err) {
+        console.error('Error handling cache:', err);
+        setListingsCacheLoading(false);
+        setProfileCacheLoading(false);
+      }
+    };
+    
+    handleCacheLoading();
+  }, [user, listingsLoading, profileLoading, loadDashboardFromCache, saveDashboardToCache]);
+  
+  // Wrap the original refreshListings with cache handling
+  const originalRefreshListings = refreshListings;
+  const refreshListings = async () => {
+    setLoadingMessage("Refreshing your data...");
+    try {
+      await originalRefreshListings();
+      saveDashboardToCache();
+    } catch (err) {
+      console.error('Error refreshing data:', err);
+    }
+  };
 
   const handleShare = (listingId: string) => {
     const url = `${window.location.origin}/listings/${listingId}`;
@@ -204,7 +342,10 @@ const loading = authLoading || listingsLoading || profileLoading;
 
   // Add a retry mechanism for initial data loading
   useEffect(() => {
-    if (listingsError?.includes('permission-denied') || listingsError?.includes('insufficient permissions')) {
+    if (listingsError && (
+      listingsError.includes('permission-denied') || 
+      listingsError.includes('insufficient permissions')
+    )) {
       // Wait for 2 seconds and try to refresh listings
       const timer = setTimeout(() => {
         if (user) {  // Only refresh if we have a user
@@ -215,26 +356,28 @@ const loading = authLoading || listingsLoading || profileLoading;
     }
   }, [listingsError, user, refreshListings]);
   
-  // Force refresh listings when the component mounts or when the user returns to this page
+  // Initial data loading when the component mounts
   useEffect(() => {
-    // Clear any cached listings data to ensure fresh data
     if (user) {
-      try {
-        // Create cache keys for the user's listings
-        const userListingsCacheKey = `listings_${user.uid}_all_none`;
-        const activeListingsCacheKey = `listings_${user.uid}_active_none`;
+      // Load data from our cache system
+      console.log('Loading dashboard data for user:', user.uid);
+      
+      // Set loading messages for better UX
+      const loadSequence = async () => {
+        setLoadingMessage("Loading your dashboard...");
+        await new Promise(resolve => setTimeout(resolve, 500));
         
-        // Clear from localStorage to ensure fresh data
-        localStorage.removeItem(userListingsCacheKey);
-        localStorage.removeItem(activeListingsCacheKey);
+        setLoadingMessage("Fetching your listings...");
+        await new Promise(resolve => setTimeout(resolve, 300));
         
-        console.log('Cleared listings cache on dashboard mount');
+        setLoadingMessage("Loading premium features...");
+        await new Promise(resolve => setTimeout(resolve, 400));
         
-        // Refresh listings data
-        refreshListings();
-      } catch (cacheError) {
-        console.error('Error clearing listings cache:', cacheError);
-      }
+        // Refresh all data
+        await refreshListings();
+      };
+      
+      loadSequence();
     }
   }, [user]);
   
@@ -454,41 +597,62 @@ const loading = authLoading || listingsLoading || profileLoading;
     router.push('/dashboard/messages?listing=' + listingId);
   };
 
-  // Use ContentLoader instead of a simple loading spinner
-  if (loading) {
+  // Effect to handle loading completion
+  useEffect(() => {
+    if (!loading && !showDashboard) {
+      // Add a small delay to ensure all data is processed
+      const timer = setTimeout(() => {
+        setShowDashboard(true);
+      }, 300);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [loading, showDashboard]);
+  
+  // Handle loading with full-screen animation
+  if (loading || !showDashboard) {
     return (
       <DashboardLayout>
-        <ContentLoader 
-          isLoading={true} 
-          loadingMessage="Loading dashboard..."
-          minHeight="600px"
-          fallback={
-            <div className="space-y-4">
-              {[...Array(3)].map((_, i) => (
-                <Skeleton key={i} className="h-32 w-full" />
-              ))}
-            </div>
-          }
-        >
-          <div></div>
-        </ContentLoader>
+        <DashboardLoadingScreen 
+          isLoading={loading} 
+          onLoadComplete={() => setShowDashboard(true)}
+          message={loadingMessage}
+        />
+        <div className="opacity-0">
+          {/* Preload content in hidden div to improve perceived performance */}
+          <div className="space-y-4">
+            {[...Array(3)].map((_, i) => (
+              <Skeleton key={i} className="h-32 w-full" />
+            ))}
+          </div>
+        </div>
       </DashboardLayout>
     );
   }
 
-  if (error || listingsError) {
+  if (error || listingsCacheError || profileCacheError) {
     return (
       <DashboardLayout>
         <div className="min-h-screen flex items-center justify-center">
           <div className="text-center">
             <h2 className="text-2xl font-bold text-red-600 mb-4">Error</h2>
-            <p className="text-gray-600">{error || listingsError}</p>
-            <Button
-              className="mt-4"
-              onClick={() => router.push('/auth/sign-in')}
-            >
-              Return to Sign In
-            </Button>
+            <p className="text-gray-600">{error || listingsCacheError?.message || profileCacheError?.message}</p>
+            <div className="flex gap-4 justify-center mt-4">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  // Try to refresh the data
+                  refreshListings();
+                }}
+              >
+                Try Again
+              </Button>
+              <Button
+                onClick={() => router.push('/auth/sign-in')}
+              >
+                Return to Sign In
+              </Button>
+            </div>
           </div>
         </div>
       </DashboardLayout>
