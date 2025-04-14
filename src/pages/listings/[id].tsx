@@ -1498,7 +1498,7 @@ export default function ListingPage() {
         </Card>
 
         <Dialog open={isZoomDialogOpen} onOpenChange={setIsZoomDialogOpen}>
-          <DialogContent className="max-w-[95vw] w-full h-auto p-0 overflow-hidden max-h-[75vh] sm:max-h-[80vh] md:max-h-[85vh]">
+          <DialogContent className="max-w-[95vw] w-full h-auto p-0 overflow-hidden max-h-[70vh] sm:max-h-[75vh] md:max-h-[80vh]">
             <DialogTitle className="sr-only">Image Viewer</DialogTitle>
             <DialogDescription className="sr-only">
               Detailed view of {listing.title} image {currentImageIndex + 1} of {listing.imageUrls.length}. Use zoom controls to examine details.
@@ -1584,21 +1584,21 @@ export default function ListingPage() {
                                 wrapperClass="!w-full !h-full !flex !items-center !justify-center !overflow-hidden" 
                                 contentClass="!w-full !h-full !flex !items-center !justify-center !overflow-visible"
                               >
-                                <div className="relative w-full h-full flex items-center justify-center p-2">
+                                <div className="relative w-full h-full flex items-center justify-center p-1 sm:p-2">
                                   <img
                                     src={url}
                                     alt={`${listing.title} - Image ${index + 1}`}
-                                    className="max-w-full max-h-[55vh] sm:max-h-[60vh] md:max-h-[65vh] w-auto h-auto object-contain"
+                                    className="max-w-[90%] max-h-[50vh] sm:max-h-[55vh] md:max-h-[60vh] w-auto h-auto object-contain"
                                     loading="eager"
                                   />
                                 </div>
                               </TransformComponent>
                               {/* Zoom controls */}
-                              <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 flex items-center gap-2 z-20 bg-background/80 backdrop-blur-sm p-1 rounded-full">
+                              <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 flex items-center gap-1 sm:gap-2 z-20 bg-background/80 backdrop-blur-sm p-1 rounded-full">
                                 <Button
                                   variant="outline"
                                   size="icon"
-                                  className="h-7 w-7 rounded-full"
+                                  className="h-6 w-6 sm:h-7 sm:w-7 rounded-full"
                                   onClick={() => zoomOut()}
                                 >
                                   <Minus className="h-3 w-3" />
@@ -1606,7 +1606,7 @@ export default function ListingPage() {
                                 <Button
                                   variant="outline"
                                   size="icon"
-                                  className="h-7 w-7 rounded-full"
+                                  className="h-6 w-6 sm:h-7 sm:w-7 rounded-full"
                                   onClick={() => resetTransform()}
                                 >
                                   <RotateCw className="h-3 w-3" />
@@ -1614,7 +1614,7 @@ export default function ListingPage() {
                                 <Button
                                   variant="outline"
                                   size="icon"
-                                  className="h-7 w-7 rounded-full"
+                                  className="h-6 w-6 sm:h-7 sm:w-7 rounded-full"
                                   onClick={() => zoomIn()}
                                 >
                                   <Plus className="h-3 w-3" />
@@ -1627,8 +1627,8 @@ export default function ListingPage() {
                     </CarouselItem>
                   ))}
                 </CarouselContent>
-                <CarouselPrevious className="left-2 h-8 w-8" />
-                <CarouselNext className="right-2 h-8 w-8" />
+                <CarouselPrevious className="left-1 sm:left-2 h-6 w-6 sm:h-8 sm:w-8" />
+                <CarouselNext className="right-1 sm:right-2 h-6 w-6 sm:h-8 sm:w-8" />
               </Carousel>
             </div>
           </DialogContent>
