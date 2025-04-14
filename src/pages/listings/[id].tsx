@@ -1498,7 +1498,7 @@ export default function ListingPage() {
         </Card>
 
         <Dialog open={isZoomDialogOpen} onOpenChange={setIsZoomDialogOpen}>
-          <DialogContent className="max-w-[95vw] max-h-[95vh] w-full h-full p-0 overflow-hidden">
+          <DialogContent className="max-w-[95vw] sm:max-h-[95vh] w-full h-auto p-0 overflow-hidden">
             <DialogTitle className="sr-only">Image Viewer</DialogTitle>
             <DialogDescription className="sr-only">
               Detailed view of {listing.title} image {currentImageIndex + 1} of {listing.imageUrls.length}. Use zoom controls to examine details.
@@ -1511,7 +1511,7 @@ export default function ListingPage() {
             >
               <X className="h-4 w-4" />
             </Button>
-            <div className="relative w-full h-[90vh] flex items-center justify-center">
+            <div className="relative w-full h-auto max-h-[80vh] md:max-h-[85vh] flex items-center justify-center">
               <Carousel 
                 className="w-full h-full"
                 onSelect={handleCarouselChange}
@@ -1584,16 +1584,42 @@ export default function ListingPage() {
                                 wrapperClass="!w-full !h-full !flex !items-center !justify-center" 
                                 contentClass="!w-full !h-full !flex !items-center !justify-center"
                               >
-                                <div className="relative w-full h-full flex items-center justify-center p-4">
+                                <div className="relative w-full flex items-center justify-center p-4">
                                   <img
                                     src={url}
                                     alt={`${listing.title} - Image ${index + 1}`}
-                                    className="max-w-full max-h-[80vh] w-auto h-auto object-contain"
+                                    className="max-w-full max-h-[60vh] md:max-h-[70vh] w-auto h-auto object-contain"
                                     loading="eager"
                                   />
                                 </div>
                               </TransformComponent>
-                              {/* Zoom controls removed while maintaining zoom functionality */}
+                              {/* Zoom controls */}
+                              <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex items-center gap-2 z-20 bg-background/80 backdrop-blur-sm p-2 rounded-full">
+                                <Button
+                                  variant="outline"
+                                  size="icon"
+                                  className="h-8 w-8 rounded-full"
+                                  onClick={() => zoomOut()}
+                                >
+                                  <Minus className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="icon"
+                                  className="h-8 w-8 rounded-full"
+                                  onClick={() => resetTransform()}
+                                >
+                                  <RotateCw className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="icon"
+                                  className="h-8 w-8 rounded-full"
+                                  onClick={() => zoomIn()}
+                                >
+                                  <Plus className="h-4 w-4" />
+                                </Button>
+                              </div>
                             </>
                           );
                         }}
