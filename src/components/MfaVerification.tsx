@@ -183,7 +183,7 @@ export default function MfaVerification({ resolver, onComplete, onCancel }: MfaV
       <CardHeader>
         <CardTitle>Two-Factor Authentication</CardTitle>
         <CardDescription>
-          Enter the verification code sent to your phone to complete sign-in.
+          Complete the CAPTCHA verification below to receive a code on your phone, then enter the code to complete sign-in.
         </CardDescription>
       </CardHeader>
       
@@ -232,7 +232,15 @@ export default function MfaVerification({ resolver, onComplete, onCancel }: MfaV
             </p>
           </div>
           
-          <div id="mfa-recaptcha-container" ref={recaptchaContainerRef} className="flex justify-center"></div>
+          <div className="space-y-2">
+            <Alert className="bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800">
+              <AlertTitle className="text-blue-800 dark:text-blue-300">Important: Complete the CAPTCHA</AlertTitle>
+              <AlertDescription className="text-blue-700 dark:text-blue-400">
+                Please solve the CAPTCHA verification below before clicking "Resend Code" to receive your verification code.
+              </AlertDescription>
+            </Alert>
+            <div id="mfa-recaptcha-container" ref={recaptchaContainerRef} className="flex justify-center"></div>
+          </div>
         </CardContent>
         
         <CardFooter className="flex flex-col space-y-2">
@@ -247,7 +255,7 @@ export default function MfaVerification({ resolver, onComplete, onCancel }: MfaV
             onClick={sendVerificationCode}
             disabled={isSendingCode || isLoading}
           >
-            {isSendingCode ? "Sending..." : "Resend Code"}
+            {isSendingCode ? "Sending..." : "Solve CAPTCHA & Send Code"}
           </Button>
           
           <Button 
