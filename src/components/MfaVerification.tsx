@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { RecaptchaVerifier, MultiFactorResolver } from "firebase/auth";
 import { createRecaptchaVerifier, startMfaVerification, handleMfaSignIn } from "@/lib/mfa-utils";
 
