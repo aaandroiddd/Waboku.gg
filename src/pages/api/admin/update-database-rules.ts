@@ -39,8 +39,15 @@ export default async function handler(
   try {
     console.log('Starting database rules update process');
     
-    // Read database rules from file
-    const rulesPath = path.join(process.cwd(), 'database.rules.json');
+    // Try to read from the fixed file first, then fall back to the regular file
+    let rulesPath = path.join(process.cwd(), 'database.rules.json.fixed.new');
+    if (!fs.existsSync(rulesPath)) {
+      rulesPath = path.join(process.cwd(), 'database.rules.json.fixed');
+      if (!fs.existsSync(rulesPath)) {
+        rulesPath = path.join(process.cwd(), 'database.rules.json');
+      }
+    }
+    
     console.log('Reading rules from path:', rulesPath);
     
     if (!fs.existsSync(rulesPath)) {
@@ -69,8 +76,39 @@ export default async function handler(
 
     // Update database rules
     console.log('Updating database rules...');
-    await database.setRules(rules);
-    console.log('Database rules updated successfully');
+    
+    try {
+      await database.setRules(JSON.stringify(rules));
+      console.log('Database rules updated successfully');
+    } catch (ruleError) {
+      console.error('Error setting rules:', ruleError);
+      
+      // If there's an error with special characters, try to fix the .info section
+      if (ruleError.message && ruleError.message.includes("String can't contain")) {
+        console.log('Attempting to fix special character issue in rules...');
+        
+        // Make sure .info is properly formatted
+        if (rules.rules['.info']) {
+          const infoSection = rules.rules['.info'];
+          delete rules.rules['.info'];
+          
+          // Add .info/connected properly
+          rules.rules['.info'] = {
+            'connected': {
+              '.read': true
+            }
+          };
+          
+          console.log('Fixed .info section in rules');
+          await database.setRules(JSON.stringify(rules));
+          console.log('Database rules updated successfully after fix');
+        } else {
+          throw ruleError;
+        }
+      } else {
+        throw ruleError;
+      }
+    }
 
     return res.status(200).json({ message: 'Database rules updated successfully' });
   } catch (error) {
