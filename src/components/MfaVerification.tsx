@@ -201,14 +201,7 @@ export default function MfaVerification({ resolver, onComplete, onCancel }: MfaV
             </Alert>
           )}
           
-          {/* Add a note about preview environments */}
-          <Alert className="bg-amber-50 dark:bg-amber-950 border-amber-200 dark:border-amber-800">
-            <AlertTitle className="text-amber-800 dark:text-amber-300">Preview Environment Notice</AlertTitle>
-            <AlertDescription className="text-amber-700 dark:text-amber-400">
-              Two-factor authentication may not work correctly in preview environments due to domain verification requirements. 
-              If you encounter errors, please try again on the production domain.
-            </AlertDescription>
-          </Alert>
+
           
           <div className="space-y-2">
             <label htmlFor="mfa-code" className="text-sm font-medium">
@@ -234,9 +227,9 @@ export default function MfaVerification({ resolver, onComplete, onCancel }: MfaV
           
           <div className="space-y-2">
             <Alert className="bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800">
-              <AlertTitle className="text-blue-800 dark:text-blue-300">Important: Complete the CAPTCHA</AlertTitle>
+              <AlertTitle className="text-blue-800 dark:text-blue-300">Important: CAPTCHA Required</AlertTitle>
               <AlertDescription className="text-blue-700 dark:text-blue-400">
-                Please solve the CAPTCHA verification below before clicking "Resend Code" to receive your verification code.
+                You must solve the CAPTCHA verification below before the verification code can be sent to your phone. The code will not be sent until the CAPTCHA is successfully completed.
               </AlertDescription>
             </Alert>
             <div id="mfa-recaptcha-container" ref={recaptchaContainerRef} className="flex justify-center"></div>
