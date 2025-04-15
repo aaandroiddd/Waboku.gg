@@ -1095,12 +1095,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       const provider = new GoogleAuthProvider();
       
-      // Before signing in with popup, check if email exists
-      const result = await signInWithPopup(auth, provider);
-      const user = result.user;
-      
-      if (!user.email) {
-        throw new Error('No email provided from Google account');
+      try {
+        // Before signing in with popup, check if email exists
+        const result = await signInWithPopup(auth, provider);
+        const user = result.user;
+        
+        if (!user.email) {
+          throw new Error('No email provided from Google account');
+        }
+      } catch (err: any) {
+        // Check if this is a multi-factor auth error
+        if (err.code === 'auth/multi-factor-auth-required') {
+          console.log('Multi-factor authentication required for Google sign-in');
+          throw err; // Let the sign-in page handle this error
+        }
+        
+        // If not MFA error, rethrow
+        throw err;
       }
 
       // Check if user profile exists with this email

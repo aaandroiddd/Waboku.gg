@@ -143,6 +143,24 @@ function SignInComponent() {
         timestamp: new Date().toISOString()
       });
       
+      // Check if this is a multi-factor auth error
+      if (err.code === 'auth/multi-factor-auth-required' || err.name === 'auth/multi-factor-auth-required') {
+        try {
+          // Import the necessary function from Firebase
+          const { getMultiFactorResolver } = await import("firebase/auth");
+          const { getFirebaseServices } = await import("@/lib/firebase");
+          const { auth } = getFirebaseServices();
+          
+          // Get the resolver from the error
+          const resolver = getMultiFactorResolver(auth, err);
+          setMfaResolver(resolver);
+          return; // Exit early since we're handling MFA
+        } catch (mfaErr) {
+          console.error("Error setting up MFA resolver:", mfaErr);
+          // Fall through to the general error handling
+        }
+      }
+      
       // Ensure we have a proper Error object with both message and name
       const error = err instanceof Error ? err : new Error(err.message || "Failed to sign in");
       error.name = err.code || err.name || "auth/unknown";
@@ -309,13 +327,44 @@ function SignInComponent() {
                 try {
                   setAuthError(null);
                   setIsGoogleLoading(true);
-                  const result = await signInWithGoogle();
                   
-                  // Check if profile completion is needed
-                  if (result && result.needsProfileCompletion) {
-                    router.push('/auth/complete-profile');
+                  try {
+                    const result = await signInWithGoogle();
+                    
+                    // Check if profile completion is needed
+                    if (result && result.needsProfileCompletion) {
+                      router.push('/auth/complete-profile');
+                    }
+                  } catch (err: any) {
+                    // Check if this is a multi-factor auth error
+                    if (err.code === 'auth/multi-factor-auth-required' || err.name === 'auth/multi-factor-auth-required') {
+                      try {
+                        // Import the necessary function from Firebase
+                        const { getMultiFactorResolver } = await import("firebase/auth");
+                        const { getFirebaseServices } = await import("@/lib/firebase");
+                        const { auth } = getFirebaseServices();
+                        
+                        // Get the resolver from the error
+                        const resolver = getMultiFactorResolver(auth, err);
+                        setMfaResolver(resolver);
+                        return; // Exit early since we're handling MFA
+                      } catch (mfaErr) {
+                        console.error("Error setting up MFA resolver:", mfaErr);
+                        // Fall through to the general error handling
+                      }
+                    }
+                    
+                    // If not an MFA error, handle normally
+                    throw err;
                   }
                 } catch (err: any) {
+                  console.error("Google sign in error:", {
+                    code: err.code || err.name,
+                    message: err.message,
+                    stack: err.stack,
+                    timestamp: new Date().toISOString()
+                  });
+                  
                   const error = err instanceof Error ? err : new Error(err.message || "Failed to sign in with Google");
                   error.name = err.code || err.name || "auth/unknown";
                   setAuthError(error);
