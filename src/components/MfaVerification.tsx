@@ -30,21 +30,48 @@ export default function MfaVerification({ resolver, onComplete, onCancel }: MfaV
       // Clear any existing reCAPTCHA
       recaptchaContainerRef.current.innerHTML = "";
       
-      // Create new reCAPTCHA verifier
-      recaptchaVerifierRef.current = createRecaptchaVerifier("mfa-recaptcha-container");
+      // Create new reCAPTCHA verifier with normal size and isolated mode
+      recaptchaVerifierRef.current = createRecaptchaVerifier("mfa-recaptcha-container", "normal");
       
       // Render the reCAPTCHA
       recaptchaVerifierRef.current.render()
         .then((widgetId) => {
           (window as any).recaptchaWidgetId = widgetId;
+          console.log("reCAPTCHA rendered successfully with widget ID:", widgetId);
         })
         .catch((error) => {
           console.error("Error rendering reCAPTCHA:", error);
-          setError("Failed to initialize security verification. Please refresh the page and try again.");
+          
+          // Check if this is a domain verification error
+          if (error.message && (
+              error.message.includes("CAPTCHA_CHECK_FAILED") || 
+              error.message.includes("Hostname match not found") ||
+              error.message.includes("reCAPTCHA")
+            )) {
+            setError(
+              "Domain verification failed for reCAPTCHA. This preview environment may not be registered in Firebase. " +
+              "Please try again on the production domain or contact support to add this domain to your Firebase project."
+            );
+          } else {
+            setError("Failed to initialize security verification. Please refresh the page and try again.");
+          }
         });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error initializing reCAPTCHA:", error);
-      setError("Failed to initialize security verification. Please refresh the page and try again.");
+      
+      // Provide a more helpful error message
+      if (error.message && (
+          error.message.includes("CAPTCHA_CHECK_FAILED") || 
+          error.message.includes("Hostname match not found") ||
+          error.message.includes("reCAPTCHA")
+        )) {
+        setError(
+          "Domain verification failed for reCAPTCHA. This preview environment may not be registered in Firebase. " +
+          "Please try again on the production domain or contact support to add this domain to your Firebase project."
+        );
+      } else {
+        setError("Failed to initialize security verification. Please refresh the page and try again.");
+      }
     }
   };
 
@@ -86,7 +113,27 @@ export default function MfaVerification({ resolver, onComplete, onCancel }: MfaV
       setSuccess("Verification code sent to your phone.");
     } catch (error: any) {
       console.error("Error sending verification code:", error);
-      setError(error.message || "Failed to send verification code. Please try again.");
+      
+      // Check for specific error types
+      if (error.message && (
+          error.message.includes("CAPTCHA_CHECK_FAILED") || 
+          error.message.includes("Hostname match not found") ||
+          error.message.includes("reCAPTCHA") ||
+          error.code === "auth/captcha-check-failed"
+        )) {
+        setError(
+          "Domain verification failed for reCAPTCHA. This preview environment may not be registered in Firebase. " +
+          "Please try again on the production domain or contact support to add this domain to your Firebase project."
+        );
+      } else if (error.code === "auth/invalid-phone-number") {
+        setError("The phone number format is incorrect. Please include your country code (e.g., +1 for US/Canada).");
+      } else if (error.code === "auth/quota-exceeded") {
+        setError("SMS quota exceeded. Please try again later or contact support.");
+      } else if (error.code === "auth/too-many-requests") {
+        setError("Too many requests. Please try again later.");
+      } else {
+        setError(error.message || "Failed to send verification code. Please try again.");
+      }
       
       // Reset reCAPTCHA
       initializeRecaptcha();
@@ -153,6 +200,15 @@ export default function MfaVerification({ resolver, onComplete, onCancel }: MfaV
               <AlertDescription>{success}</AlertDescription>
             </Alert>
           )}
+          
+          {/* Add a note about preview environments */}
+          <Alert className="bg-amber-50 dark:bg-amber-950 border-amber-200 dark:border-amber-800">
+            <AlertTitle className="text-amber-800 dark:text-amber-300">Preview Environment Notice</AlertTitle>
+            <AlertDescription className="text-amber-700 dark:text-amber-400">
+              Two-factor authentication may not work correctly in preview environments due to domain verification requirements. 
+              If you encounter errors, please try again on the production domain.
+            </AlertDescription>
+          </Alert>
           
           <div className="space-y-2">
             <label htmlFor="mfa-code" className="text-sm font-medium">

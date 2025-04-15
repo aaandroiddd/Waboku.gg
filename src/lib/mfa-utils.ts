@@ -33,23 +33,33 @@ export const getEnrolledMfaMethods = (user: User): MultiFactorInfo[] => {
 // Function to create a RecaptchaVerifier instance
 export const createRecaptchaVerifier = (
   containerId: string, 
-  size: "invisible" | "normal" = "invisible",
+  size: "invisible" | "normal" = "normal",
   callback?: (response: string) => void
 ): RecaptchaVerifier => {
   const auth = getAuth();
-  return new RecaptchaVerifier(
-    auth,
-    containerId,
-    {
-      size,
-      callback: callback || (() => {
-        console.log("reCAPTCHA solved");
-      }),
-      "expired-callback": () => {
-        console.log("reCAPTCHA expired");
+  
+  try {
+    return new RecaptchaVerifier(
+      auth,
+      containerId,
+      {
+        size,
+        callback: callback || (() => {
+          console.log("reCAPTCHA solved");
+        }),
+        "expired-callback": () => {
+          console.log("reCAPTCHA expired");
+        },
+        // Force the reCAPTCHA to render in isolated mode which helps with domain verification issues
+        isolated: true
       }
-    }
-  );
+    );
+  } catch (error) {
+    console.error("Error creating reCAPTCHA verifier:", error);
+    // Return a minimal implementation that won't break the app
+    // but will show an error message in the component
+    throw new Error("Failed to initialize reCAPTCHA. This may be due to domain verification issues.");
+  }
 };
 
 // Function to start MFA enrollment process
@@ -78,8 +88,22 @@ export const startMfaEnrollment = async (
     );
     
     return verificationId;
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error starting MFA enrollment:", error);
+    
+    // Check for domain verification error
+    if (error.message && (
+        error.message.includes("CAPTCHA_CHECK_FAILED") || 
+        error.message.includes("Hostname match not found") ||
+        error.message.includes("reCAPTCHA") ||
+        error.code === "auth/captcha-check-failed"
+      )) {
+      throw new Error(
+        "Domain verification failed for reCAPTCHA. This preview environment may not be registered in Firebase. " +
+        "Please try again on the production domain or contact support to add this domain to your Firebase project."
+      );
+    }
+    
     throw error;
   }
 };
@@ -147,8 +171,22 @@ export const startMfaVerification = async (
       },
       recaptchaVerifier
     );
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error starting MFA verification:", error);
+    
+    // Check for domain verification error
+    if (error.message && (
+        error.message.includes("CAPTCHA_CHECK_FAILED") || 
+        error.message.includes("Hostname match not found") ||
+        error.message.includes("reCAPTCHA") ||
+        error.code === "auth/captcha-check-failed"
+      )) {
+      throw new Error(
+        "Domain verification failed for reCAPTCHA. This preview environment may not be registered in Firebase. " +
+        "Please try again on the production domain or contact support to add this domain to your Firebase project."
+      );
+    }
+    
     throw error;
   }
 };
