@@ -23,6 +23,7 @@ import { ClearBrowserDataButton } from '@/components/ClearBrowserDataButton';
 import { AccountLinkingButton } from '@/components/AccountLinkingButton';
 import { Toaster } from '@/components/ui/toaster';
 import { ProfileAvatar } from '@/components/ProfileAvatar';
+import MfaEnrollment from '@/components/MfaEnrollment';
 
 const DashboardLayout = dynamic(
   () => import('@/components/dashboard/DashboardLayout').then(mod => mod.DashboardLayout),
@@ -816,6 +817,29 @@ const SettingsPageContent = () => {
                 )}
               </Button>
             </form>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Security Section */}
+      <div className="container mx-auto p-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Security</CardTitle>
+            <CardDescription>
+              Enhance your account security with additional verification methods
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-6">
+              <div>
+                <h3 className="text-lg font-medium mb-2">Two-Factor Authentication</h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Add an extra layer of security to your account by enabling two-factor authentication.
+                </p>
+                <MfaEnrollment />
+              </div>
+            </div>
           </CardContent>
         </Card>
       </div>

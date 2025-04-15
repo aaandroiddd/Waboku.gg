@@ -11,7 +11,9 @@ import {
   applyActionCode,
   sendPasswordResetEmail,
   GoogleAuthProvider,
-  signInWithPopup
+  signInWithPopup,
+  MultiFactorError,
+  MultiFactorResolver
 } from 'firebase/auth';
 import { doc, setDoc, getDoc, deleteDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { ref, get, update, remove } from 'firebase/database';
@@ -30,7 +32,7 @@ interface AuthContextType {
   isLoading: boolean;
   error: string | null;
   signUp: (email: string, password: string, username: string) => Promise<void>;
-  signIn: (email: string, password: string) => Promise<void>;
+  signIn: (email: string, password: string) => Promise<{ mfaResolver?: MultiFactorResolver }>;
   signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
   updateProfile: (data: Partial<UserProfile>) => Promise<void>;
@@ -55,7 +57,9 @@ const defaultAuthContext: AuthContextType = {
   deleteAccount: async () => { throw new Error('AuthContext not initialized') },
   sendVerificationEmail: async () => { throw new Error('AuthContext not initialized') },
   isEmailVerified: () => false,
-  checkVerificationStatus: async () => { throw new Error('AuthContext not initialized') }
+  checkVerificationStatus: async () => { throw new Error('AuthContext not initialized') },
+  getIdToken: async () => { throw new Error('AuthContext not initialized') },
+  checkAndLinkAccounts: async () => { throw new Error('AuthContext not initialized') }
 };
 
 const AuthContext = createContext<AuthContextType>(defaultAuthContext);
@@ -549,46 +553,59 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       }
       
-      // Proceed with normal email/password sign-in
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      const user = userCredential.user;
-      
-      // After successful authentication, fetch the user profile
-      const profileDoc = await getDoc(doc(db, 'users', user.uid));
-      if (!profileDoc.exists()) {
-        console.warn('User authenticated but no profile found');
-        // Create a basic profile if none exists
-        const basicProfile = {
-          uid: user.uid,
-          email: user.email!,
-          username: user.email!.split('@')[0],
-          joinDate: new Date().toISOString(),
-          totalSales: 0,
-          rating: 0,
-          bio: '',
-          location: '',
-          avatarUrl: '',
-          isEmailVerified: user.emailVerified,
-          verificationSentAt: null,
-          social: {
-            youtube: '',
-            twitter: '',
-            facebook: ''
-          },
-          accountTier: 'free',
-          subscription: {
-            status: 'inactive',
-            currentPlan: 'free',
-            startDate: new Date().toISOString()
-          }
-        };
-        await setDoc(doc(db, 'users', user.uid), basicProfile);
-        setProfile(basicProfile);
-      } else {
-        setProfile(profileDoc.data() as UserProfile);
+      try {
+        // Proceed with normal email/password sign-in
+        const userCredential = await signInWithEmailAndPassword(auth, email, password);
+        const user = userCredential.user;
+        
+        // After successful authentication, fetch the user profile
+        const profileDoc = await getDoc(doc(db, 'users', user.uid));
+        if (!profileDoc.exists()) {
+          console.warn('User authenticated but no profile found');
+          // Create a basic profile if none exists
+          const basicProfile = {
+            uid: user.uid,
+            email: user.email!,
+            username: user.email!.split('@')[0],
+            joinDate: new Date().toISOString(),
+            totalSales: 0,
+            rating: 0,
+            bio: '',
+            location: '',
+            avatarUrl: '',
+            isEmailVerified: user.emailVerified,
+            verificationSentAt: null,
+            social: {
+              youtube: '',
+              twitter: '',
+              facebook: ''
+            },
+            accountTier: 'free',
+            subscription: {
+              status: 'inactive',
+              currentPlan: 'free',
+              startDate: new Date().toISOString()
+            }
+          };
+          await setDoc(doc(db, 'users', user.uid), basicProfile);
+          setProfile(basicProfile);
+        } else {
+          setProfile(profileDoc.data() as UserProfile);
+        }
+        
+        return {};
+      } catch (err: any) {
+        // Check if this is a multi-factor auth error
+        if (err.code === 'auth/multi-factor-auth-required') {
+          console.log('Multi-factor authentication required');
+          // Get the resolver from the error
+          const resolver = MultiFactorResolver.fromError(err);
+          return { mfaResolver: resolver };
+        }
+        
+        // If not MFA error, rethrow
+        throw err;
       }
-      
-      return userCredential;
     } catch (err: any) {
       console.error('Sign in error:', err);
       

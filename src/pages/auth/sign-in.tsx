@@ -9,7 +9,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Skeleton } from "@/components/ui/skeleton";
 import AuthError from "@/components/AuthError";
 import PasswordResetForm from "@/components/PasswordResetForm";
+import MfaVerification from "@/components/MfaVerification";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { MultiFactorResolver } from "firebase/auth";
 
 function LoadingState() {
   return (
@@ -49,6 +51,7 @@ function SignInComponent() {
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [mfaResolver, setMfaResolver] = useState<MultiFactorResolver | null>(null);
   const { user, signIn, signInWithGoogle } = useAuth();
 
   useEffect(() => {
@@ -125,7 +128,12 @@ function SignInComponent() {
         });
       }
 
-      await signIn(email, password);
+      const result = await signIn(email, password);
+      
+      // Check if MFA is required
+      if (result.mfaResolver) {
+        setMfaResolver(result.mfaResolver);
+      }
       // If sign in is successful, the router.replace in the useEffect will handle redirection
     } catch (err: any) {
       console.error("Sign in error:", {
@@ -146,6 +154,53 @@ function SignInComponent() {
 
   if (!mounted) {
     return <LoadingState />;
+  }
+
+  // If MFA verification is required, show the MFA verification component
+  if (mfaResolver) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background relative">
+        <div className="absolute top-0 left-0 w-full p-4 flex justify-between items-center">
+          <Button
+            variant="ghost"
+            onClick={() => setMfaResolver(null)}
+            className="flex items-center"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="mr-2"
+            >
+              <path d="m15 18-6-6 6-6"/>
+            </svg>
+            Back
+          </Button>
+          <Link href="/">
+            <Logo className="h-auto text-3xl" alwaysShowFull={true} />
+          </Link>
+          <div className="w-[72px]"></div> {/* Spacer to balance the layout */}
+        </div>
+        <div className="mt-24 mb-8"></div> {/* Additional spacing to push content down */}
+        
+        <MfaVerification 
+          resolver={mfaResolver} 
+          onComplete={() => {
+            // MFA verification completed successfully
+            // The user will be redirected by the useEffect hook that watches for user changes
+          }}
+          onCancel={() => {
+            setMfaResolver(null);
+          }}
+        />
+      </div>
+    );
   }
 
   return (
