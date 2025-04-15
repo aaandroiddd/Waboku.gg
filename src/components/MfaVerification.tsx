@@ -179,7 +179,7 @@ export default function MfaVerification({ resolver, onComplete, onCancel }: MfaV
   };
 
   return (
-    <Card>
+    <Card className="w-[400px]">
       <CardHeader>
         <CardTitle>Two-Factor Authentication</CardTitle>
         <CardDescription>
@@ -200,8 +200,6 @@ export default function MfaVerification({ resolver, onComplete, onCancel }: MfaV
               <AlertDescription>{success}</AlertDescription>
             </Alert>
           )}
-          
-
           
           <div className="space-y-2">
             <label htmlFor="mfa-code" className="text-sm font-medium">
@@ -228,8 +226,8 @@ export default function MfaVerification({ resolver, onComplete, onCancel }: MfaV
           <div className="space-y-2">
             <Alert className="bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800">
               <AlertTitle className="text-blue-800 dark:text-blue-300">Important: CAPTCHA Required</AlertTitle>
-              <AlertDescription className="text-blue-700 dark:text-blue-400">
-                You must solve the CAPTCHA verification below before the verification code can be sent to your phone. The code will not be sent until the CAPTCHA is successfully completed.
+              <AlertDescription className="text-blue-700 dark:text-blue-400 text-sm">
+                You must solve the CAPTCHA verification below before the verification code can be sent to your phone.
               </AlertDescription>
             </Alert>
             <div id="mfa-recaptcha-container" ref={recaptchaContainerRef} className="flex justify-center"></div>
