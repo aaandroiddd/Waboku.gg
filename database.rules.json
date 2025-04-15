@@ -311,56 +311,6 @@
       }
     },
 
-    "chats": {
-      ".indexOn": ["createdAt", "participants"],
-      "$chatId": {
-        ".read": "auth != null && data.child('participants').child(auth.uid).exists()",
-        ".write": "auth != null && (!data.exists() || data.child('participants').child(auth.uid).exists())",
-        ".validate": "newData.hasChildren(['participants', 'createdAt'])",
-        "participants": {
-          ".validate": "newData.hasChildren()",
-          "$uid": {
-            ".validate": "newData.isBoolean() && root.child('users').child($uid).exists()"
-          }
-        },
-        "deletedBy": {
-          "$uid": {
-            ".validate": "auth != null && $uid === auth.uid && root.child('chats').child($chatId).child('participants').child($uid).exists()"
-          }
-        },
-        "lastMessage": {
-          ".validate": "newData.hasChildren(['senderId', 'receiverId', 'content', 'timestamp', 'type'])",
-          "senderId": {
-            ".validate": "newData.isString()"
-          },
-          "receiverId": {
-            ".validate": "newData.isString()"
-          },
-          "content": {
-            ".validate": "newData.isString() && newData.val().length <= 2000"
-          },
-          "type": {
-            ".validate": "newData.isString() && (newData.val() === 'text' || newData.val() === 'image' || newData.val() === 'system')"
-          },
-          "timestamp": {
-            ".validate": "newData.isNumber() && newData.val() <= now"
-          }
-        },
-        "listingId": {
-          ".validate": "!newData.exists() || (newData.isString() && root.child('listings').child(newData.val()).exists())"
-        },
-        "listingTitle": {
-          ".validate": "!newData.exists() || (newData.isString() && newData.val().length <= 200)"
-        },
-        "createdAt": {
-          ".validate": "newData.isNumber() && (!data.exists() || data.val() === newData.val()) && newData.val() <= now"
-        },
-        "$other": {
-          ".validate": false
-        }
-      }
-    },
-
     "userStatus": {
       ".indexOn": ["lastSeen"],
       "$uid": {

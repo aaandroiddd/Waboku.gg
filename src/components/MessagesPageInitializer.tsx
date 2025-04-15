@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { database, getFirebaseServices } from '@/lib/firebase';
-import { ref, onValue, get, getDatabase, goOnline } from 'firebase/database';
+import { ref, onValue, get, getDatabase, goOnline, set } from 'firebase/database';
 
 /**
  * This component initializes the messages page by ensuring that:
@@ -77,8 +77,11 @@ export function MessagesPageInitializer() {
         const connected = snapshot.val();
         
         if (connected) {
+          console.log('[MessagesPageInitializer] Database connection verified');
           retryCountRef.current = 0;
           return;
+        } else {
+          console.log('[MessagesPageInitializer] Not connected, will retry');
         }
       } catch (error) {
         console.error('[MessagesPageInitializer] Error checking initial connection:', error);
@@ -88,15 +91,17 @@ export function MessagesPageInitializer() {
       const unsubscribe = onValue(connectedRef, (snapshot) => {
         const connected = snapshot.val();
         
-        if (!connected && retryCount < MAX_RETRIES) {
+        if (connected) {
+          console.log('[MessagesPageInitializer] Connection established via listener');
+          retryCountRef.current = 0;
+        } else if (retryCount < MAX_RETRIES) {
+          console.log('[MessagesPageInitializer] Still not connected, will retry');
           // If disconnected and we haven't tried too many times, retry
           retryCountRef.current++;
           const delay = Math.min(1000 * Math.pow(1.5, retryCount), 10000);
           timeoutRef.current = setTimeout(verifyDatabaseConnection, delay);
-        } else if (connected) {
-          retryCountRef.current = 0;
         }
-      }, { onlyOnce: true });
+      });
       
       // Store the unsubscribe function
       unsubscribeRef.current = unsubscribe;
@@ -104,6 +109,7 @@ export function MessagesPageInitializer() {
       // If we're still checking after 5 seconds, retry
       timeoutRef.current = setTimeout(() => {
         if (retryCount < MAX_RETRIES) {
+          console.log('[MessagesPageInitializer] Connection check timed out, retrying');
           retryCountRef.current++;
           verifyDatabaseConnection();
         }
@@ -120,23 +126,50 @@ export function MessagesPageInitializer() {
     }
   };
 
+  // Test database connection by writing to a test node
+  const testDatabaseWrite = async () => {
+    try {
+      const db = dbInstanceRef.current;
+      if (!db) return;
+      
+      const testRef = ref(db, 'connection_tests/last_test');
+      await set(testRef, {
+        timestamp: Date.now(),
+        client: 'web',
+        status: 'testing'
+      });
+      
+      console.log('[MessagesPageInitializer] Test write successful');
+    } catch (error) {
+      console.error('[MessagesPageInitializer] Test write failed:', error);
+    }
+  };
+
   useEffect(() => {
     // Run initialization
+    console.log('[MessagesPageInitializer] Initializing messages page');
     verifyDatabaseConnection();
 
     // Listen for online/offline events to trigger reconnection
     const handleOnline = () => {
+      console.log('[MessagesPageInitializer] Browser online event detected');
       retryCountRef.current = 0;
       verifyDatabaseConnection();
+    };
+
+    const handleOffline = () => {
+      console.log('[MessagesPageInitializer] Browser offline event detected');
     };
 
     // Listen for visibility changes to optimize connection
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
+        console.log('[MessagesPageInitializer] Page became visible');
         // Ensure we're online when the page is visible
         if (dbInstanceRef.current) {
           try {
             goOnline(dbInstanceRef.current);
+            console.log('[MessagesPageInitializer] Explicitly going online');
           } catch (error) {
             console.error('[MessagesPageInitializer] Error calling goOnline on visibility change:', error);
           }
@@ -146,10 +179,12 @@ export function MessagesPageInitializer() {
     };
 
     window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
       window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       
       // Clean up on unmount
