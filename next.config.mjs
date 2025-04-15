@@ -15,7 +15,7 @@ const nextConfig = {
             key: 'Content-Security-Policy',
             value: `
               default-src 'self';
-              script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://*.stripe.com https://apis.google.com https://*.firebaseio.com https://*.firebase.com https://*.googleapis.com https://maps.googleapis.com https://assets.co.dev;
+              script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://*.stripe.com https://apis.google.com https://*.firebaseio.com https://*.firebase.com https://*.googleapis.com https://maps.googleapis.com https://assets.co.dev https://www.google.com https://www.gstatic.com;
               style-src 'self' 'unsafe-inline';
               img-src 'self' data: https: blob:;
               font-src 'self';
@@ -23,7 +23,7 @@ const nextConfig = {
               base-uri 'self';
               form-action 'self';
               frame-ancestors 'self' https://*.co.dev https://*.vercel.app https://connect.stripe.com https://dashboard.stripe.com https://billing.stripe.com https://edge-connect.stripe.com https://edge-billing.stripe.com https://edge-dashboard.stripe.com;
-              frame-src 'self' https://*.stripe.com https://*.firebaseapp.com https://accounts.google.com https://*.firebaseio.com;
+              frame-src 'self' https://*.stripe.com https://*.firebaseapp.com https://accounts.google.com https://*.firebaseio.com https://www.google.com https://recaptcha.google.com;
               connect-src 'self' 
                 https://*.stripe.com 
                 https://api.stripe.com
@@ -35,7 +35,9 @@ const nextConfig = {
                 wss://*.firebaseio.com
                 https://identitytoolkit.googleapis.com
                 https://*.preview.co.dev
-                https://*.vercel.app;
+                https://*.vercel.app
+                https://www.google.com
+                https://recaptcha.google.com;
               media-src 'self' https: data:;
             `.replace(/\s+/g, ' ').trim()
           },
