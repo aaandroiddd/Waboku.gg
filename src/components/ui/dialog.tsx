@@ -1,7 +1,6 @@
 import * as React from "react"
 import * as DialogPrimitive from "@radix-ui/react-dialog"
-import { Cross2Icon } from "@radix-ui/react-icons"
-
+import { X } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 const Dialog = DialogPrimitive.Root
@@ -30,78 +29,25 @@ DialogOverlay.displayName = DialogPrimitive.Overlay.displayName
 const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
->(({ className, children, ...props }, ref) => {
-  // Check if DialogTitle or DialogDescription is present in children
-  const hasDialogTitle = React.Children.toArray(children).some(child => {
-    if (React.isValidElement(child)) {
-      // Check direct child
-      if (child.type === DialogTitle) return true;
-      // Check children in DialogHeader
-      if (child.type === DialogHeader) {
-        return React.Children.toArray(child.props.children).some(
-          headerChild => React.isValidElement(headerChild) && headerChild.type === DialogTitle
-        );
-      }
-    }
-    return false;
-  });
-
-  const hasDialogDescription = React.Children.toArray(children).some(child => {
-    if (React.isValidElement(child)) {
-      // Check direct child
-      if (child.type === DialogDescription) return true;
-      // Check children in DialogHeader
-      if (child.type === DialogHeader) {
-        return React.Children.toArray(child.props.children).some(
-          headerChild => React.isValidElement(headerChild) && headerChild.type === DialogDescription
-        );
-      }
-    }
-    return false;
-  });
-
-  // Generate a unique ID for aria-describedby if needed
-  const descriptionId = React.useId();
-
-  if (!hasDialogTitle) {
-    console.warn(
-      'DialogContent requires a DialogTitle component for accessibility. ' +
-      'If you want to hide the title visually, use className="sr-only".'
-    );
-  }
-
-  if (!hasDialogDescription && !props['aria-describedby']) {
-    console.warn(
-      'DialogContent should have a DialogDescription component or aria-describedby attribute for accessibility.'
-    );
-  }
-
-  return (
-    <DialogPortal>
-      <DialogOverlay />
-      <DialogPrimitive.Content
-        ref={ref}
-        className={cn(
-          "fixed left-[50%] top-[50%] z-50 grid w-[95%] max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-4 sm:p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] sm:rounded-lg max-h-[80vh] sm:max-h-[85vh] md:max-h-[90vh] overflow-auto",
-          className
-        )}
-        aria-describedby={!hasDialogDescription && !props['aria-describedby'] ? descriptionId : props['aria-describedby']}
-        {...props}
-      >
-        {children}
-        {!hasDialogDescription && !props['aria-describedby'] && (
-          <div id={descriptionId} className="sr-only">
-            Dialog content
-          </div>
-        )}
-        <DialogPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
-          <Cross2Icon className="h-4 w-4" />
-          <span className="sr-only">Close</span>
-        </DialogPrimitive.Close>
-      </DialogPrimitive.Content>
-    </DialogPortal>
-  );
-})
+>(({ className, children, ...props }, ref) => (
+  <DialogPortal>
+    <DialogOverlay />
+    <DialogPrimitive.Content
+      ref={ref}
+      className={cn(
+        "fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] sm:rounded-lg",
+        className
+      )}
+      {...props}
+    >
+      {children}
+      <DialogPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
+        <X className="h-4 w-4" />
+        <span className="sr-only">Close</span>
+      </DialogPrimitive.Close>
+    </DialogPrimitive.Content>
+  </DialogPortal>
+))
 DialogContent.displayName = DialogPrimitive.Content.displayName
 
 const DialogHeader = ({
@@ -163,8 +109,8 @@ export {
   Dialog,
   DialogPortal,
   DialogOverlay,
-  DialogTrigger,
   DialogClose,
+  DialogTrigger,
   DialogContent,
   DialogHeader,
   DialogFooter,
