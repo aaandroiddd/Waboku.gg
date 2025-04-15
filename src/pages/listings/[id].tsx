@@ -35,6 +35,7 @@ import dynamic from 'next/dynamic';
 import { DistanceIndicator } from '@/components/DistanceIndicator';
 import { useLoading } from '@/contexts/LoadingContext';
 import { SimilarListings } from '@/components/SimilarListings';
+import { useMediaQuery } from '@/hooks/useMediaQuery';
 
 const getConditionColor = (condition: string) => {
   const colors: Record<string, string> = {
@@ -690,9 +691,16 @@ export default function ListingPage() {
     }
   }, [listing, isFavorite, initialized, user]);
 
+  // Import the useMediaQuery hook
+  const isMobile = useMediaQuery('(max-width: 768px)');
+  
   const handleImageClick = (index: number) => {
-    setCurrentImageIndex(index);
-    setIsZoomDialogOpen(true);
+    // Only open the zoom dialog if not on mobile
+    if (!isMobile) {
+      setCurrentImageIndex(index);
+      setIsZoomDialogOpen(true);
+    }
+    // No action on mobile - effectively disabling the pop-up
   };
 
   // We already have the favorites functionality from above
@@ -1215,7 +1223,7 @@ export default function ListingPage() {
                       {listing.imageUrls.map((url, index) => (
                         <CarouselItem key={index} className="flex items-center justify-center h-full">
                           <div 
-                            className="relative w-full h-full group cursor-pointer flex items-center justify-center p-4" 
+                            className={`relative w-full h-full group flex items-center justify-center p-4 ${!isMobile ? "cursor-pointer" : ""}`} 
                             onClick={() => handleImageClick(index)}
                           >
                             <div className="relative w-full h-full flex items-center justify-center">
@@ -1238,9 +1246,12 @@ export default function ListingPage() {
                                   />
                                 </div>
                               </div>
-                              <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/20 rounded-lg">
-                                <ZoomIn className="w-8 h-8 text-white" />
-                              </div>
+                              {/* Only show zoom icon on desktop */}
+                              {!isMobile && (
+                                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/20 rounded-lg">
+                                  <ZoomIn className="w-8 h-8 text-white" />
+                                </div>
+                              )}
                             </div>
                           </div>
                         </CarouselItem>
