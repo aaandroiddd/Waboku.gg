@@ -623,7 +623,8 @@ const loading = authLoading || listingsLoading || profileLoading;
         </TabsList>
 
         <TabsContent value="active" className="space-y-4">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-4">
+          <div className="flex flex-col gap-4 mb-4">
+            {/* View Mode Controls - Always at the top */}
             <div className="flex items-center gap-2">
               <Button
                 variant={viewMode === 'grid' ? 'default' : 'outline'}
@@ -639,18 +640,35 @@ const loading = authLoading || listingsLoading || profileLoading;
               >
                 List
               </Button>
+              
+              {/* Refresh button moved to the right on the same row for easy access */}
+              <div className="flex-1 flex justify-end">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleRefreshListings}
+                  disabled={refreshLoading}
+                  title="Refresh listings"
+                >
+                  <RefreshCw className={`h-4 w-4 ${refreshLoading ? 'animate-spin' : ''}`} />
+                </Button>
+              </div>
             </div>
-            <div className="h-6 w-px bg-border hidden sm:block" /> {/* Separator */}
-            <div className="flex items-center gap-4 w-full sm:w-auto">
+            
+            {/* Search Bar - Full width on mobile */}
+            <div className="w-full">
               <ListingsSearchBar
                 value={searchQuery}
                 onChange={setSearchQuery}
                 onSearch={() => {}} // Empty function since we're handling search directly
                 placeholder="Search your listings..."
               />
-              <div className="h-6 w-px bg-border hidden sm:block" />
+            </div>
+            
+            {/* Filtering and Sorting Controls - Responsive layout */}
+            <div className="flex flex-wrap gap-2 items-center">
               <Select value={gameFilter} onValueChange={setGameFilter}>
-                <SelectTrigger className="w-[180px]">
+                <SelectTrigger className="w-full sm:w-[180px]">
                   <SelectValue placeholder="All Games" />
                 </SelectTrigger>
                 <SelectContent>
@@ -671,32 +689,26 @@ const loading = authLoading || listingsLoading || profileLoading;
                   <SelectItem value="other">Other</SelectItem>
                 </SelectContent>
               </Select>
-              <select
-                className="border rounded-md px-2 py-1 bg-background text-foreground"
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as 'date' | 'price' | 'title')}
-              >
-                <option value="date">Date</option>
-                <option value="price">Price</option>
-                <option value="title">Title</option>
-              </select>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-              >
-                {sortOrder === 'asc' ? '↑' : '↓'}
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleRefreshListings}
-                disabled={refreshLoading}
-                title="Refresh listings"
-                className="ml-2"
-              >
-                <RefreshCw className={`h-4 w-4 ${refreshLoading ? 'animate-spin' : ''}`} />
-              </Button>
+              
+              <div className="flex items-center gap-2">
+                <select
+                  className="border rounded-md px-2 py-1 bg-background text-foreground h-9"
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value as 'date' | 'price' | 'title')}
+                >
+                  <option value="date">Date</option>
+                  <option value="price">Price</option>
+                  <option value="title">Title</option>
+                </select>
+                
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+                >
+                  {sortOrder === 'asc' ? '↑' : '↓'}
+                </Button>
+              </div>
             </div>
           </div>
           
