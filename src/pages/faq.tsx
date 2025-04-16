@@ -258,7 +258,7 @@ export default function FAQPage() {
         </Tabs>
 
         {/* Contact Section */}
-        <div className="bg-slate-100 dark:bg-slate-800 rounded-xl p-8 text-center">
+        <div className="bg-slate-100 dark:bg-slate-950 rounded-xl p-8 text-center">
           <h2 className="text-2xl font-bold mb-4">Still Have Questions?</h2>
           <p className="text-lg mb-6">If you couldn't find the answer you were looking for, our support team is here to help.</p>
           <div className="inline-block">
