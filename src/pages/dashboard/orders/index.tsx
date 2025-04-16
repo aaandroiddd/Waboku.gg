@@ -28,6 +28,7 @@ import {
 import { format, subDays } from 'date-fns';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
+import { ReviewPrompt } from '@/components/ReviewPrompt';
 
 type OrderStatus = 'all' | 'pending' | 'paid' | 'awaiting_shipping' | 'shipped' | 'completed' | 'cancelled';
 type SortField = 'date' | 'amount' | 'status';
@@ -42,6 +43,8 @@ const OrdersComponent = () => {
   const [loading, setLoading] = useState(true);
   const [processingOrder, setProcessingOrder] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [sellerNames, setSellerNames] = useState<Record<string, string>>({});
+  const [dismissedReviewPrompts, setDismissedReviewPrompts] = useState<string[]>([]);
   
   // Filtering and sorting state
   const [searchTerm, setSearchTerm] = useState('');
@@ -312,6 +315,56 @@ const OrdersComponent = () => {
   useEffect(() => {
     fetchOrders();
   }, [user]);
+  
+  // Load dismissed review prompts from localStorage
+  useEffect(() => {
+    try {
+      const savedDismissedPrompts = localStorage.getItem('dismissedReviewPrompts');
+      if (savedDismissedPrompts) {
+        setDismissedReviewPrompts(JSON.parse(savedDismissedPrompts));
+      }
+    } catch (error) {
+      console.error('Error loading dismissed review prompts:', error);
+    }
+  }, []);
+  
+  // Fetch seller names for completed orders that need reviews
+  useEffect(() => {
+    const fetchSellerNames = async () => {
+      if (!user) return;
+      
+      const completedOrders = purchases.filter(
+        order => order.status === 'completed' && !order.reviewSubmitted
+      );
+      
+      if (completedOrders.length === 0) return;
+      
+      const sellerIds = [...new Set(completedOrders.map(order => order.sellerId))];
+      const names: Record<string, string> = {};
+      
+      try {
+        const { db } = getFirebaseServices();
+        
+        for (const sellerId of sellerIds) {
+          if (!sellerId) continue;
+          
+          const userDoc = await getDoc(doc(db, 'users', sellerId));
+          if (userDoc.exists()) {
+            const userData = userDoc.data();
+            names[sellerId] = userData.displayName || userData.username || 'Seller';
+          } else {
+            names[sellerId] = 'Seller';
+          }
+        }
+        
+        setSellerNames(names);
+      } catch (error) {
+        console.error('Error fetching seller names:', error);
+      }
+    };
+    
+    fetchSellerNames();
+  }, [purchases, user]);
   
   // Debug function to check for missing user references in orders
   const checkForMissingReferences = async () => {
@@ -598,6 +651,21 @@ const OrdersComponent = () => {
   
   // Get the active status counts based on the current tab
   const activeStatusCounts = activeTab === 'purchases' ? purchaseStatusCounts : salesStatusCounts;
+  
+  // Get orders that need reviews (completed orders without reviews)
+  const ordersNeedingReviews = useMemo(() => {
+    return purchases.filter(
+      order => 
+        order.status === 'completed' && 
+        !order.reviewSubmitted && 
+        !dismissedReviewPrompts.includes(order.id)
+    );
+  }, [purchases, dismissedReviewPrompts]);
+  
+  // Handle dismissing a review prompt
+  const handleDismissReviewPrompt = (orderId: string) => {
+    setDismissedReviewPrompts(prev => [...prev, orderId]);
+  };
 
   if (loading && !isRefreshing) {
     return (
@@ -825,6 +893,33 @@ const OrdersComponent = () => {
         </div>
         
         <TabsContent value="purchases" className="space-y-4">
+          {/* Review Prompts - Show at the top for completed orders without reviews */}
+          {activeTab === 'purchases' && ordersNeedingReviews.length > 0 && (
+            <div className="mb-6 space-y-4">
+              <h3 className="text-lg font-semibold">Pending Reviews</h3>
+              <div className="grid gap-4 md:grid-cols-2">
+                {ordersNeedingReviews.slice(0, 2).map((order) => (
+                  <ReviewPrompt 
+                    key={order.id}
+                    orderId={order.id}
+                    sellerName={sellerNames[order.sellerId] || 'Seller'}
+                    onDismiss={() => handleDismissReviewPrompt(order.id)}
+                  />
+                ))}
+              </div>
+              {ordersNeedingReviews.length > 2 && (
+                <div className="text-center">
+                  <Button 
+                    variant="link" 
+                    onClick={() => setStatusFilter('completed')}
+                  >
+                    View all {ordersNeedingReviews.length} orders needing reviews
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
+          
           {purchases.length === 0 ? (
             <div className="text-center py-12 border rounded-lg bg-background">
               <h3 className="text-lg font-medium mb-2">No purchases yet</h3>
