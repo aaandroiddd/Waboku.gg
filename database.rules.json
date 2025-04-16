@@ -3,12 +3,6 @@
     ".read": false,
     ".write": false,
     
-    ".info": {
-      "connected": {
-        ".read": true
-      }
-    },
-    
     "connection_tests": {
       ".read": true,
       ".write": true,
