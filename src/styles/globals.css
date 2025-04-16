@@ -515,6 +515,16 @@
     min-height: 2.5rem !important;
     height: 2.5rem !important;
   }
+  
+  /* Hide scrollbar but keep scrolling functionality */
+  .no-scrollbar {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+  }
+  
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;  /* Chrome, Safari and Opera */
+  }
 
   .glow-text {
     @apply dark:text-white text-foreground;

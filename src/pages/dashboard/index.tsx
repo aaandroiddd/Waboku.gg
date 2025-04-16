@@ -642,30 +642,6 @@ const loading = authLoading || listingsLoading || profileLoading;
                 List
               </Button>
               
-              {/* Game Categories Filter */}
-              <Select value={gameFilter} onValueChange={setGameFilter}>
-                <SelectTrigger className="h-9 w-auto sm:w-[180px]">
-                  <SelectValue placeholder="All Games" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Games</SelectItem>
-                  <SelectItem value="dbs">Dragon Ball Super Card Game</SelectItem>
-                  <SelectItem value="digimon">Digimon</SelectItem>
-                  <SelectItem value="lorcana">Disney Lorcana</SelectItem>
-                  <SelectItem value="flesh-and-blood">Flesh and Blood</SelectItem>
-                  <SelectItem value="mtg">Magic: The Gathering</SelectItem>
-                  <SelectItem value="onepiece">One Piece Card Game</SelectItem>
-                  <SelectItem value="pokemon">Pokemon</SelectItem>
-                  <SelectItem value="star-wars">Star Wars: Unlimited</SelectItem>
-                  <SelectItem value="union-arena">Union Arena</SelectItem>
-                  <SelectItem value="universus">Universus</SelectItem>
-                  <SelectItem value="vanguard">Vanguard</SelectItem>
-                  <SelectItem value="weiss">Weiss Schwarz</SelectItem>
-                  <SelectItem value="yugioh">Yu-Gi-Oh!</SelectItem>
-                  <SelectItem value="other">Other</SelectItem>
-                </SelectContent>
-              </Select>
-              
               {/* Date/Price/Title Sorting */}
               <select
                 className="border rounded-md px-2 py-1 bg-background text-foreground h-9"
@@ -698,6 +674,32 @@ const loading = authLoading || listingsLoading || profileLoading;
                   <RefreshCw className={`h-4 w-4 ${refreshLoading ? 'animate-spin' : ''}`} />
                 </Button>
               </div>
+            </div>
+            
+            {/* Game Categories Filter - Moved below other buttons for mobile */}
+            <div className="w-full">
+              <Select value={gameFilter} onValueChange={setGameFilter}>
+                <SelectTrigger className="h-9 w-full">
+                  <SelectValue placeholder="All Games" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Games</SelectItem>
+                  <SelectItem value="dbs">Dragon Ball Super Card Game</SelectItem>
+                  <SelectItem value="digimon">Digimon</SelectItem>
+                  <SelectItem value="lorcana">Disney Lorcana</SelectItem>
+                  <SelectItem value="flesh-and-blood">Flesh and Blood</SelectItem>
+                  <SelectItem value="mtg">Magic: The Gathering</SelectItem>
+                  <SelectItem value="onepiece">One Piece Card Game</SelectItem>
+                  <SelectItem value="pokemon">Pokemon</SelectItem>
+                  <SelectItem value="star-wars">Star Wars: Unlimited</SelectItem>
+                  <SelectItem value="union-arena">Union Arena</SelectItem>
+                  <SelectItem value="universus">Universus</SelectItem>
+                  <SelectItem value="vanguard">Vanguard</SelectItem>
+                  <SelectItem value="weiss">Weiss Schwarz</SelectItem>
+                  <SelectItem value="yugioh">Yu-Gi-Oh!</SelectItem>
+                  <SelectItem value="other">Other</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             
             {/* Search Bar - Full width on mobile */}
