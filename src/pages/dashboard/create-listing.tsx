@@ -286,9 +286,10 @@ const CreateListingPage = () => {
         {stripeConnectStatus !== 'none' && stripeConnectStatus !== 'active' && (
           <Alert variant="warning" className="bg-yellow-500/10 border-yellow-500 text-yellow-700 dark:text-yellow-500">
             <AlertCircle className="h-4 w-4" />
-            <AlertTitle>Stripe Connect Required</AlertTitle>
+            <AlertTitle>Stripe Connect Not Set Up</AlertTitle>
             <AlertDescription>
-              <p>You need to set up Stripe Connect to receive payments from buyers.</p>
+              <p className="mb-2">You can create listings without Stripe Connect, but you won't be able to receive direct payments through our platform. You'll need to communicate with buyers manually to arrange payment.</p>
+              <p className="mb-2">For a better selling experience with secure payments directly to your account, we recommend setting up Stripe Connect.</p>
               <Button 
                 variant="outline" 
                 size="sm" 
