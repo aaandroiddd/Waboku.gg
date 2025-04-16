@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { getDatabase, ref, onValue, push, set, get, update, remove } from 'firebase/database';
+import { getDatabase, ref, onValue, push, set, get, update, remove, query, limitToLast } from 'firebase/database';
 import { useAuth } from '@/contexts/AuthContext';
 import { getFirebaseServices, database as firebaseDatabase } from '@/lib/firebase';
 
@@ -130,8 +130,9 @@ export const useMessages = (chatId?: string) => {
 
     console.log(`Loading messages for chat: ${chatId}`);
     setLoading(true);
-    const messagesRef = ref(database, `messages/${chatId}`);
-    console.log('Fetching messages from:', messagesRef.toString());
+    // Create a query with limitToLast(50) to reduce data transfer
+    const messagesRef = query(ref(database, `messages/${chatId}`), limitToLast(50));
+    console.log('Fetching messages from:', ref(database, `messages/${chatId}`).toString(), 'with limitToLast(50)');
     
     // First, check if the chat is deleted for the current user
     const checkChatDeletion = async () => {
@@ -206,6 +207,7 @@ export const useMessages = (chatId?: string) => {
     });
 
     // Then set up the real-time listener for both messages and chat deletion status
+    // Use the messagesRef query that already has limitToLast(50) applied
     const messagesUnsubscribe = onValue(messagesRef, (snapshot) => {
       try {
         // First check if the chat is deleted
