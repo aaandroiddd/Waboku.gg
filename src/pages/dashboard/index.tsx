@@ -1,6 +1,6 @@
 import dynamic from 'next/dynamic';
 import type { NextPage } from 'next';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/router';
 import { useAuth } from '@/contexts/AuthContext';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
@@ -16,7 +16,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { ListingVisibilityFixer } from "@/components/ListingVisibilityFixer";
 import { ProfileAvatar } from "@/components/ProfileAvatar";
 import { ProfileName } from "@/components/ProfileName";
-import { Star, Edit2, Trash2, MessageCircle, Share2, ExternalLink, AlertCircle } from "lucide-react";
+import { Star, Edit2, Trash2, MessageCircle, Share2, ExternalLink, AlertCircle, RefreshCw } from "lucide-react";
 import { ListingTimer } from "@/components/ListingTimer";
 import { ListingList } from "@/components/ListingList";
 import { DeleteListingDialog } from "@/components/DeleteListingDialog";
@@ -28,6 +28,7 @@ import { useProfile } from '@/hooks/useProfile';
 import { useListingVisibility } from '@/hooks/useListingVisibility';
 import { Listing } from '@/types/database';
 import { ContentLoader } from '@/components/ContentLoader';
+import { LoadingAnimation } from '@/components/LoadingAnimation';
 import { Skeleton } from '@/components/ui/skeleton';
 import { EmptyStateCard } from '@/components/EmptyStateCard';
 import { ArchivedListings } from '@/components/ArchivedListings';
@@ -41,6 +42,7 @@ const DashboardComponent = () => {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [gameFilter, setGameFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const [refreshLoading, setRefreshLoading] = useState<boolean>(false);
   const [dialogState, setDialogState] = useState<{
     isOpen: boolean;
     listingId: string;
@@ -453,6 +455,50 @@ const loading = authLoading || listingsLoading || profileLoading;
   const handleMessage = (listingId: string) => {
     router.push('/dashboard/messages?listing=' + listingId);
   };
+  
+  // Function to handle manual refresh of listings
+  const handleRefreshListings = useCallback(async () => {
+    try {
+      setRefreshLoading(true);
+      toast({
+        title: "Refreshing listings...",
+        description: "Getting the latest data from Firebase",
+        duration: 2000,
+      });
+      
+      await refreshListings();
+      
+      toast({
+        title: "Listings refreshed",
+        description: "Your listings have been updated with the latest data",
+        duration: 3000,
+      });
+    } catch (err: any) {
+      console.error('Error refreshing listings:', err);
+      toast({
+        title: "Error",
+        description: err.message || "Failed to refresh listings",
+        variant: "destructive",
+        duration: 3000,
+      });
+    } finally {
+      setRefreshLoading(false);
+    }
+  }, [refreshListings, toast]);
+  
+  // Auto-refresh listings every 5 minutes
+  useEffect(() => {
+    if (!user) return;
+    
+    const autoRefreshInterval = setInterval(() => {
+      console.log('Auto-refreshing listings...');
+      refreshListings().catch(err => {
+        console.error('Error during auto-refresh:', err);
+      });
+    }, 5 * 60 * 1000); // 5 minutes
+    
+    return () => clearInterval(autoRefreshInterval);
+  }, [user, refreshListings]);
 
   // Use ContentLoader instead of a simple loading spinner
   if (loading) {
@@ -641,10 +687,25 @@ const loading = authLoading || listingsLoading || profileLoading;
               >
                 {sortOrder === 'asc' ? '↑' : '↓'}
               </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleRefreshListings}
+                disabled={refreshLoading}
+                title="Refresh listings"
+                className="ml-2"
+              >
+                <RefreshCw className={`h-4 w-4 ${refreshLoading ? 'animate-spin' : ''}`} />
+              </Button>
             </div>
           </div>
           
-          {viewMode === 'list' ? (
+          {refreshLoading ? (
+            <div className="flex flex-col items-center justify-center py-12">
+              <LoadingAnimation size="80" color="currentColor" className="text-primary" />
+              <p className="mt-4 text-muted-foreground">Refreshing your listings...</p>
+            </div>
+          ) : viewMode === 'list' ? (
             <ListingList
               listings={activeListings}
               onEdit={handleEditListing}
@@ -759,19 +820,26 @@ const loading = authLoading || listingsLoading || profileLoading;
         </TabsContent>
 
         <TabsContent value="previous" className="space-y-6">
-          <ArchivedListings
-            listings={previousListings}
-            accountTier={profile?.tier || 'free'}
-            onRestore={handleRestoreListing}
-            onDelete={(listingId) => {
-              setDialogState({
-                isOpen: true,
-                listingId,
-                mode: 'permanent'
-              });
-            }}
-            onView={handleViewListing}
-          />
+          {refreshLoading ? (
+            <div className="flex flex-col items-center justify-center py-12">
+              <LoadingAnimation size="80" color="currentColor" className="text-primary" />
+              <p className="mt-4 text-muted-foreground">Refreshing your archived listings...</p>
+            </div>
+          ) : (
+            <ArchivedListings
+              listings={previousListings}
+              accountTier={profile?.tier || 'free'}
+              onRestore={handleRestoreListing}
+              onDelete={(listingId) => {
+                setDialogState({
+                  isOpen: true,
+                  listingId,
+                  mode: 'permanent'
+                });
+              }}
+              onView={handleViewListing}
+            />
+          )}
         </TabsContent>
       </Tabs>
       </FirebaseConnectionHandler>
