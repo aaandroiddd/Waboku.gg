@@ -666,12 +666,12 @@ const loading = authLoading || listingsLoading || profileLoading;
               </Button>
               
               {/* Game Categories Filter - On same line for desktop, below for mobile */}
-              <div className="hidden md:block md:w-[200px]">
+              <div className="hidden md:block md:w-[300px]">
                 <Select value={gameFilter} onValueChange={setGameFilter}>
                   <SelectTrigger className="h-9">
                     <SelectValue placeholder="All Games" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="min-w-[300px]">
                     <SelectItem value="all">All Games</SelectItem>
                     <SelectItem value="dbs">Dragon Ball Super Card Game</SelectItem>
                     <SelectItem value="digimon">Digimon</SelectItem>
@@ -712,7 +712,7 @@ const loading = authLoading || listingsLoading || profileLoading;
                 <SelectTrigger className="h-9 w-full">
                   <SelectValue placeholder="All Games" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="min-w-[300px]">
                   <SelectItem value="all">All Games</SelectItem>
                   <SelectItem value="dbs">Dragon Ball Super Card Game</SelectItem>
                   <SelectItem value="digimon">Digimon</SelectItem>
