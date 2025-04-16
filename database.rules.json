@@ -1,279 +1,112 @@
 {
   "rules": {
-    ".info": {
-      "connected": {
-        ".read": true
-      }
-    },
-    "connection_tests": {
-      ".read": true,
-      ".write": true
-    },
-    "debug": {
-      ".read": true,
-      ".write": true
-    },
-    "chats": {
-      ".indexOn": ["createdAt", "participants"],
-      "$chatId": {
-        ".read": "auth != null && (data.child('participants').child(auth.uid).exists() || !data.exists())",
-        ".write": "auth != null && (data.child('participants').child(auth.uid).exists() || !data.exists())",
-        ".validate": "newData.hasChildren(['participants', 'createdAt'])",
-        "participants": {
-          ".validate": "newData.hasChildren()",
-          "$uid": {
-            ".validate": "newData.isBoolean() && root.child('users').child($uid).exists()"
-          }
+    ".read": false,
+    ".write": false,
+
+    "users": {
+      "$userId": {
+        ".read": "$userId === auth.uid",
+        ".write": "$userId === auth.uid",
+
+        "username": {
+          ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 20"
         },
-        "deletedBy": {
-          "$uid": {
-            ".validate": "auth != null && $uid === auth.uid && root.child('chats').child($chatId).child('participants').child($uid).exists()"
-          }
+        "displayName": {
+          ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 30"
         },
-        "lastMessage": {
-          ".validate": "newData.hasChildren(['senderId', 'receiverId', 'content', 'timestamp', 'type'])",
-          "senderId": {
-            ".validate": "newData.isString()"
-          },
-          "receiverId": {
-            ".validate": "newData.isString()"
-          },
-          "content": {
-            ".validate": "newData.isString() && newData.val().length <= 2000"
-          },
-          "type": {
-            ".validate": "newData.isString() && (newData.val() === 'text' || newData.val() === 'image' || newData.val() === 'system')"
-          },
-          "timestamp": {
-            ".validate": "newData.isNumber() && newData.val() <= now"
-          }
+        "userAvatar": {
+          ".validate": "!newData.exists() || (newData.isString() && newData.val().length <= 300)"
         },
-        "listingId": {
-          ".validate": "!newData.exists() || (newData.isString() && root.child('listings').child(newData.val()).exists())"
+        "bio": {
+          ".validate": "newData.isString() && newData.val().length <= 150"
         },
-        "listingTitle": {
-          ".validate": "!newData.exists() || (newData.isString() && newData.val().length <= 200)"
+        "location": {
+          ".validate": "newData.isString() && newData.val().length <= 100"
         },
         "createdAt": {
-          ".validate": "newData.isNumber() && (!data.exists() || data.val() === newData.val()) && newData.val() <= now"
+          ".validate": "newData.isNumber() && !data.exists()"
         },
+        "stripeCustomerId": {
+          ".validate": "newData.isString() && newData.val().length > 0"
+        },
+        "subscriptionId": {
+          ".validate": "newData.isString() && newData.val().length > 0"
+        },
+
         "$other": {
           ".validate": false
         }
       }
     },
-    
-    "users": {
-      "$uid": {
-        ".read": "auth != null && (auth.uid === $uid || root.child('users').child(auth.uid).child('account').child('tier').val() === 'admin')",
-        ".write": "auth != null && (auth.uid === $uid || auth.token.admin === true)",
-        "email": {
-          ".validate": "newData.isString() && newData.val().matches(/^[A-Za-z0-9_%+-]+@[A-Za-z0-9-]+[A-Za-z]{2,}$/)"
-        },
-        "displayName": {
-          ".validate": "newData.isString() && newData.val().length >= 3 && newData.val().length <= 50"
-        },
-        "account": {
-          ".validate": "newData.hasChildren(['tier'])",
-          "tier": {
-            ".validate": "newData.isString() && (newData.val() === 'free' || newData.val() === 'premium' || newData.val() === 'admin')"
-          },
-          "status": {
-            ".validate": "newData.isString() && newData.val().length <= 100"
-          },
-          "stripeCustomerId": {
-            ".validate": "!newData.exists() || newData.isString()"
-          },
-          "subscriptionId": {
-            ".validate": "!newData.exists() || newData.isString()"
-          },
-          "lastUpdated": {
-            ".validate": "newData.isNumber() && newData.val() <= now"
-          },
-          "$other": {
-            ".validate": false
-          }
-        }
-      }
-    },
-
-    "favorites": {
-      "$uid": {
-        ".read": "auth != null && auth.uid === $uid",
-        ".write": "auth != null && auth.uid === $uid",
-        "$listingId": {
-          ".validate": "newData.hasChildren(['createdAt'])",
-          "createdAt": {
-            ".validate": "newData.isNumber() && newData.val() <= now"
-          }
-        }
-      }
-    },
-
-    "searchTerms": {
-      ".read": true,
-      ".write": true,
-      ".indexOn": ["count", "lastUpdated"],
-      "$termId": {
-        ".validate": "newData.hasChildren(['term', 'count'])",
-        "term": {
-          ".validate": "newData.isString() && newData.val().length >= 2 && newData.val().length <= 50"
-        },
-        "count": {
-          ".validate": "newData.isNumber() && newData.val() >= 0"
-        }
-      }
-    },
-
-    "searches": {
-      ".read": true,
-      ".write": "auth != null",
-      ".indexOn": ["timestamp"],
-      "$searchId": {
-        ".validate": "newData.hasChildren(['term', 'timestamp'])",
-        "term": {
-          ".validate": "newData.isString() && newData.val().length >= 2 && newData.val().length <= 50"
-        },
-        "timestamp": {
-          ".validate": "newData.isNumber() && newData.val() <= now"
-        }
-      }
-    },
-
-    "wanted": {
-      ".read": true,
-      ".write": "auth != null",
-      "posts": {
-        ".indexOn": ["createdAt", "userId", "game"],
-        ".read": true,
-        ".write": "auth != null",
-        "$postId": {
-          ".read": true,
-          ".write": "auth != null && (!data.exists() || data.child('userId').val() === auth.uid || data.child('userId').val() === 'system')",
-          ".validate": "newData.hasChildren(['userId', 'title', 'game', 'location', 'createdAt'])",
-          "userId": {
-            ".validate": "newData.val() === auth.uid || newData.val() === 'system'"
-          },
-          "title": {
-            ".validate": "newData.isString() && newData.val().length >= 3 && newData.val().length <= 200"
-          },
-          "description": {
-            ".validate": "newData.isString() && newData.val().length <= 500"
-          },
-          "game": {
-            ".validate": "newData.isString() && newData.val().length > 0"
-          },
-          "cardName": {
-            ".validate": "!newData.exists() || newData.isString()"
-          },
-          "condition": {
-            ".validate": "newData.isString() && (newData.val() === 'any' || newData.val() === 'near_mint' || newData.val() === 'lightly_played' || newData.val() === 'moderately_played' || newData.val() === 'heavily_played' || newData.val() === 'damaged')"
-          },
-          "isPriceNegotiable": {
-            ".validate": "newData.isBoolean()"
-          },
-          "priceRange": {
-            "min": {
-              ".validate": "newData.isNumber() && newData.val() >= 0"
-            },
-            "max": {
-              ".validate": "newData.isNumber() && newData.val() >= newData.parent().child('min').val()"
-            }
-          },
-          "location": {
-            ".validate": "newData.isString() && newData.val().length > 0"
-          },
-          "detailedDescription": {
-            ".validate": "!newData.exists() || newData.isString()"
-          },
-          "createdAt": {
-            ".validate": "newData.isNumber() && (!data.exists() || data.val() === newData.val()) && newData.val() <= now"
-          },
-          "userName": {
-            ".validate": "newData.isString()"
-          },
-          "userAvatar": {
-            ".validate": "!newData.exists() || newData.isString()"
-          }
-        }
-      }
-    },
-    
-    "wantedPosts": {
-      ".indexOn": ["createdAt", "userId", "game"],
-      ".read": true,
-      ".write": "auth != null",
-      "$postId": {
-        ".read": true,
-        ".write": "auth != null && (!data.exists() || data.child('userId').val() === auth.uid || data.child('userId').val() === 'system')",
-        ".validate": "newData.hasChildren(['userId', 'title', 'game', 'location', 'createdAt'])",
-        "userId": {
-          ".validate": "newData.val() === auth.uid || newData.val() === 'system'"
-        },
-        "title": {
-          ".validate": "newData.isString() && newData.val().length >= 3 && newData.val().length <= 200"
-        },
-        "description": {
-          ".validate": "newData.isString() && newData.val().length <= 500"
-        },
-        "game": {
-          ".validate": "newData.isString() && newData.val().length > 0"
-        },
-        "cardName": {
-          ".validate": "!newData.exists() || newData.isString()"
-        },
-        "condition": {
-          ".validate": "newData.isString() && (newData.val() === 'any' || newData.val() === 'near_mint' || newData.val() === 'lightly_played' || newData.val() === 'moderately_played' || newData.val() === 'heavily_played' || newData.val() === 'damaged')"
-        },
-        "isPriceNegotiable": {
-          ".validate": "newData.isBoolean()"
-        },
-        "priceRange": {
-          "min": {
-            ".validate": "newData.isNumber() && newData.val() >= 0"
-          },
-          "max": {
-            ".validate": "newData.isNumber() && newData.val() >= newData.parent().child('min').val()"
-          }
-        },
-        "location": {
-          ".validate": "newData.isString() && newData.val().length > 0"
-        },
-        "detailedDescription": {
-          ".validate": "!newData.exists() || newData.isString()"
-        },
-        "createdAt": {
-          ".validate": "newData.isNumber() && (!data.exists() || data.val() === newData.val()) && newData.val() <= now"
-        },
-        "userName": {
-          ".validate": "newData.isString()"
-        },
-        "userAvatar": {
-          ".validate": "!newData.exists() || newData.isString()"
-        }
-      }
-    },
 
     "listings": {
-      ".indexOn": ["createdAt", "userId", "status"],
       "$listingId": {
-        ".read": "auth != null",
-        ".write": "auth != null && (!data.exists() || data.child('userId').val() === auth.uid)",
-        ".validate": "newData.hasChildren(['userId', 'title', 'price', 'status', 'createdAt'])",
-        "userId": {
+        ".read": true,
+        ".write": "auth != null && (newData.exists() ? newData.child('sellerId').val() === auth.uid : data.child('sellerId').val() === auth.uid)",
+
+        "sellerId": {
           ".validate": "newData.val() === auth.uid"
         },
         "title": {
-          ".validate": "newData.isString() && newData.val().length >= 3 && newData.val().length <= 200"
+          ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 100"
+        },
+        "description": {
+          ".validate": "newData.isString() && newData.val().length <= 1000"
         },
         "price": {
           ".validate": "newData.isNumber() && newData.val() >= 0"
         },
-        "status": {
-          ".validate": "newData.isString() && (newData.val() === 'active' || newData.val() === 'sold' || newData.val() === 'deleted')"
+        "condition": {
+          ".validate": "newData.isString() && (newData.val() === 'mint' || newData.val() === 'near mint' || newData.val() === 'excellent' || newData.val() === 'good' || newData.val() === 'lightly played' || newData.val() === 'played' || newData.val() === 'poor')"
+        },
+        "game": {
+          ".validate": "newData.isString() && newData.val().length > 0"
+        },
+        "cardSet": {
+          ".validate": "newData.isString()"
+        },
+        "cardRarity": {
+          ".validate": "newData.isString()"
+        },
+        "cardNumber": {
+          ".validate": "newData.isString()"
+        },
+        "quantity": {
+          ".validate": "newData.isNumber() && newData.val() > 0"
+        },
+        "location": {
+          ".validate": "newData.isString() && newData.val().length <= 100"
         },
         "createdAt": {
-          ".validate": "newData.isNumber() && (!data.exists() || data.val() === newData.val()) && newData.val() <= now"
+          ".validate": "newData.isNumber() && !data.exists()"
+        },
+        "updatedAt": {
+          ".validate": "newData.isNumber()"
+        },
+
+        "$other": {
+          ".validate": false
+        }
+      }
+    },
+
+    "chats": {
+      "$chatId": {
+        ".read": "auth != null && (!data.exists() || data.child('participants').child(auth.uid).exists())",
+        ".write": "auth != null && (!data.exists() || data.child('participants').child(auth.uid).exists())",
+
+        "participants": {
+          ".validate": "newData.hasChildren() && newData.child(auth.uid).exists()"
+        },
+        "lastMessage": {
+          ".validate": "newData.isString() && newData.val().length <= 1000"
+        },
+        "lastUpdated": {
+          ".validate": "newData.isNumber()"
+        },
+
+        "$other": {
+          ".validate": false
         }
       }
     },
@@ -282,11 +115,13 @@
       ".indexOn": ["timestamp", "chatId"],
       "$chatId": {
         ".read": "auth != null && (root.child('chats').child($chatId).child('participants').child(auth.uid).exists() || !root.child('chats').child($chatId).exists())",
-        ".write": "auth != null && (root.child('chats').child($chatId).child('participants').child(auth.uid).exists() || !root.child('chats').child($chatId).exists())",
+        ".write": "auth != null && root.child('chats').child($chatId).child('participants').child(auth.uid).exists()",
+
         "$messageId": {
           ".validate": "newData.hasChildren(['senderId', 'receiverId', 'content', 'timestamp', 'type'])",
+
           "senderId": {
-            ".validate": "newData.val() === auth.uid || (data.exists() && data.child('senderId').val() === newData.child('senderId').val())"
+            ".validate": "newData.val() === auth.uid"
           },
           "receiverId": {
             ".validate": "newData.isString() && root.child('chats').child($chatId).child('participants').child(newData.val()).exists()"
@@ -306,6 +141,7 @@
           "read": {
             ".validate": "newData.isBoolean()"
           },
+
           "$other": {
             ".validate": false
           }
@@ -313,45 +149,99 @@
       }
     },
 
-    "userStatus": {
-      ".indexOn": ["lastSeen"],
-      "$uid": {
-        ".read": "auth != null",
-        ".write": "auth != null && auth.uid == $uid",
-        ".validate": "newData.hasChildren(['status', 'lastSeen'])",
-        "status": {
-          ".validate": "newData.isString() && newData.val().length <= 100 && (newData.val() === 'online' || newData.val() === 'away' || newData.val() === 'offline' || newData.val() === 'busy')"
+    "searchTerms": {
+      ".read": true,
+      ".write": "auth != null"
+    },
+
+    "wanted": {
+      "$postId": {
+        ".read": true,
+        ".write": "auth != null && (newData.exists() ? newData.child('userId').val() === auth.uid : data.child('userId').val() === auth.uid)",
+
+        "userId": {
+          ".validate": "newData.val() === auth.uid"
         },
-        "lastSeen": {
-          ".validate": "newData.isNumber() && newData.val() <= now"
+        "title": {
+          ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 100"
         },
+        "description": {
+          ".validate": "newData.isString() && newData.val().length <= 1000"
+        },
+        "game": {
+          ".validate": "newData.isString() && newData.val().length > 0"
+        },
+        "cardSet": {
+          ".validate": "newData.isString()"
+        },
+        "cardRarity": {
+          ".validate": "newData.isString()"
+        },
+        "cardNumber": {
+          ".validate": "newData.isString()"
+        },
+        "quantity": {
+          ".validate": "newData.isNumber() && newData.val() > 0"
+        },
+        "location": {
+          ".validate": "newData.isString() && newData.val().length <= 100"
+        },
+        "createdAt": {
+          ".validate": "newData.isNumber() && !data.exists()"
+        },
+        "updatedAt": {
+          ".validate": "newData.isNumber()"
+        },
+
         "$other": {
           ".validate": false
         }
       }
     },
 
-    "typing": {
-      "$chatId": {
-        "$uid": {
-          ".read": "auth != null && root.child('chats').child($chatId).child('participants').child(auth.uid).exists()",
-          ".write": "auth != null && auth.uid == $uid && root.child('chats').child($chatId).child('participants').child(auth.uid).exists()",
-          ".validate": "newData.isBoolean()"
+    "wantedPosts": {
+      "$postId": {
+        ".read": true,
+        ".write": "auth != null && (newData.exists() ? newData.child('userId').val() === auth.uid : data.child('userId').val() === auth.uid)",
+
+        "userId": {
+          ".validate": "newData.val() === auth.uid"
+        },
+        "title": {
+          ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 100"
+        },
+        "description": {
+          ".validate": "newData.isString() && newData.val().length <= 1000"
+        },
+        "game": {
+          ".validate": "newData.isString() && newData.val().length > 0"
+        },
+        "cardSet": {
+          ".validate": "newData.isString()"
+        },
+        "cardRarity": {
+          ".validate": "newData.isString()"
+        },
+        "cardNumber": {
+          ".validate": "newData.isString()"
+        },
+        "quantity": {
+          ".validate": "newData.isNumber() && newData.val() > 0"
+        },
+        "location": {
+          ".validate": "newData.isString() && newData.val().length <= 100"
+        },
+        "createdAt": {
+          ".validate": "newData.isNumber() && !data.exists()"
+        },
+        "updatedAt": {
+          ".validate": "newData.isNumber()"
+        },
+
+        "$other": {
+          ".validate": false
         }
       }
-    },
-
-    "lastActive": {
-      ".indexOn": [".value"],
-      "$uid": {
-        ".read": "auth != null",
-        ".write": "auth != null && auth.uid == $uid",
-        ".validate": "newData.isNumber() && newData.val() <= now"
-      }
-    },
-
-    "$other": {
-      ".validate": false
     }
   }
 }
