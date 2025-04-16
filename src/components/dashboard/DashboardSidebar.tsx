@@ -310,29 +310,34 @@ export function DashboardSidebar({ onNavigate }: DashboardSidebarProps) {
           </div>
         ) : (
           // Show actual navigation items once loaded
-          <nav className="px-4 space-y-1 pb-20 md:pb-6">
-            {navigation.map((item) => (
-              <button
-                key={item.name}
-                onClick={() => handleNavigate(item.href)}
-                className={cn(
-                  'flex items-center w-full gap-3 text-sm font-medium rounded-md px-3 py-2.5 hover:bg-accent hover:text-accent-foreground transition-colors',
-                  router.pathname === item.href
-                    ? 'bg-accent text-accent-foreground'
-                    : 'text-muted-foreground'
-                )}
-              >
-                {item.icon}
-                {item.name}
-                {item.badge !== undefined && renderUnreadBadge(item.badge)}
-              </button>
-            ))}
+          <nav className="px-4 space-y-1 flex flex-col h-full">
+            <div className="space-y-1">
+              {navigation.map((item) => (
+                <button
+                  key={item.name}
+                  onClick={() => handleNavigate(item.href)}
+                  className={cn(
+                    'flex items-center w-full gap-3 text-sm font-medium rounded-md px-3 py-2.5 hover:bg-accent hover:text-accent-foreground transition-colors',
+                    router.pathname === item.href
+                      ? 'bg-accent text-accent-foreground'
+                      : 'text-muted-foreground'
+                  )}
+                >
+                  {item.icon}
+                  {item.name}
+                  {item.badge !== undefined && renderUnreadBadge(item.badge)}
+                </button>
+              ))}
+            </div>
+            
+            {/* Sign out button at the bottom of the navigation */}
+            {user && (
+              <div className="mt-auto pt-4 border-t">
+                <SignOutButton onNavigate={onNavigate} />
+              </div>
+            )}
           </nav>
         )}
-      </div>
-      {/* Fixed sign out button container at the bottom */}
-      <div className="p-4 border-t sticky bottom-0 bg-card mt-auto">
-        {user && <SignOutButton onNavigate={onNavigate} />}
       </div>
     </div>
   );
@@ -415,13 +420,12 @@ function SignOutButton({ onNavigate }: { onNavigate?: () => void }) {
   };
   
   return (
-    <Button
-      variant="destructive"
-      className="w-full flex items-center justify-center gap-2 bg-[#b71c1c] hover:bg-[#b71c1c]/90"
+    <button
       onClick={handleSignOut}
+      className="flex items-center w-full gap-3 text-sm font-medium rounded-md px-3 py-2.5 hover:bg-accent hover:text-accent-foreground transition-colors text-red-500 hover:text-red-600"
     >
-      <LogOut className="h-4 w-4" />
+      <LogOut className="h-5 w-5" />
       Sign Out
-    </Button>
+    </button>
   );
 }
