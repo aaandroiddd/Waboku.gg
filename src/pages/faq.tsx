@@ -9,6 +9,7 @@ import { Footer } from "@/components/Footer";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Alert } from "@/components/ui/alert";
 
 export default function FAQPage() {
   return (
@@ -258,12 +259,14 @@ export default function FAQPage() {
         </Tabs>
 
         {/* Contact Section */}
-        <div className="bg-slate-100 dark:bg-slate-950 rounded-xl p-8 text-center">
-          <h2 className="text-2xl font-bold mb-4">Still Have Questions?</h2>
-          <p className="text-lg mb-6">If you couldn't find the answer you were looking for, our support team is here to help.</p>
-          <div className="inline-block">
-            <Badge variant="outline" className="text-lg px-4 py-2">Contact Support</Badge>
-          </div>
+        <div className="rounded-xl">
+          <Alert variant="primary" className="p-8 text-center">
+            <h2 className="text-2xl font-bold mb-4">Still Have Questions?</h2>
+            <p className="text-lg mb-6">If you couldn't find the answer you were looking for, our support team is here to help.</p>
+            <div className="inline-block">
+              <Badge variant="outline" className="text-lg px-4 py-2">Contact Support</Badge>
+            </div>
+          </Alert>
         </div>
       </div>
       <Footer />

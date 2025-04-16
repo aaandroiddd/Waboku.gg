@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Footer } from "@/components/Footer";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Alert } from "@/components/ui/alert";
 
 export default function AboutPage() {
   return (
@@ -180,18 +181,20 @@ export default function AboutPage() {
         <Separator />
 
         {/* Ownership Section */}
-        <div className="bg-slate-100 dark:bg-slate-950 rounded-xl p-8">
-          <div className="flex flex-col md:flex-row items-center gap-6">
-            <div className="w-24 h-24 rounded-full bg-primary/10 flex items-center justify-center">
-              <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-primary"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+        <div className="rounded-xl">
+          <Alert variant="primary" className="p-8">
+            <div className="flex flex-col md:flex-row items-center gap-6">
+              <div className="w-24 h-24 rounded-full bg-primary/10 flex items-center justify-center">
+                <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-primary"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+              </div>
+              <div>
+                <h2 className="text-2xl font-bold mb-2">Ownership</h2>
+                <p className="text-lg">
+                  Waboku.gg is owned and operated by <span className="font-semibold">Brian Brown</span>, also known as <span className="font-semibold">&apos;aandroidd&apos;</span>. As a passionate collector and developer, Brian created this platform to address the needs of the TCG community and provide a modern, user-friendly marketplace experience.
+                </p>
+              </div>
             </div>
-            <div>
-              <h2 className="text-2xl font-bold mb-2">Ownership</h2>
-              <p className="text-lg">
-                Waboku.gg is owned and operated by <span className="font-semibold">Brian Brown</span>, also known as <span className="font-semibold">&apos;aandroidd&apos;</span>. As a passionate collector and developer, Brian created this platform to address the needs of the TCG community and provide a modern, user-friendly marketplace experience.
-              </p>
-            </div>
-          </div>
+          </Alert>
         </div>
       </div>
       <Footer />
