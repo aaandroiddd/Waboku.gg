@@ -309,9 +309,22 @@ export const useMessages = (chatId?: string) => {
     });
 
     try {
+      // Try to update using the root reference first (for batch efficiency)
       await update(ref(database), updates);
     } catch (error) {
-      console.error('Error marking messages as read:', error);
+      console.error('Error marking messages as read with root update:', error);
+      
+      // Fallback: update each message individually if batch update fails
+      try {
+        console.log('Falling back to individual message updates');
+        for (const messageId of messageIds) {
+          const messageRef = ref(database, `messages/${chatId}/${messageId}`);
+          await update(messageRef, { read: true });
+        }
+        console.log('Individual updates completed successfully');
+      } catch (fallbackError) {
+        console.error('Error in fallback individual updates:', fallbackError);
+      }
     }
   };
 
@@ -416,7 +429,30 @@ export const useMessages = (chatId?: string) => {
       chatUpdates[`chats/${chatReference}/listingTitle`] = listingTitle;
     }
 
-    await update(ref(database), chatUpdates);
+    try {
+      // Try to update using the root reference first
+      await update(ref(database), chatUpdates);
+    } catch (error) {
+      console.error('Error updating chat with root update:', error);
+      
+      // Fallback: update chat directly if root update fails
+      try {
+        console.log('Falling back to direct chat update');
+        const chatRef = ref(database, `chats/${chatReference}`);
+        
+        // Extract just the chat updates (removing the path prefix)
+        const directChatUpdates = {};
+        Object.entries(chatUpdates).forEach(([path, value]) => {
+          const relativePath = path.replace(`chats/${chatReference}/`, '');
+          directChatUpdates[relativePath] = value;
+        });
+        
+        await update(chatRef, directChatUpdates);
+        console.log('Direct chat update completed successfully');
+      } catch (fallbackError) {
+        console.error('Error in fallback chat update:', fallbackError);
+      }
+    }
 
     return chatReference;
   };
