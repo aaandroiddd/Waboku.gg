@@ -427,6 +427,22 @@ export default function AdminDashboard() {
             </div>
           </Card>
           
+          {/* Database Usage Monitoring Section */}
+          <Card className="p-6 mb-8">
+            <h2 className="text-xl font-semibold mb-4">Database Usage Monitoring</h2>
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Monitor and optimize Firebase Realtime Database usage to reduce quota issues.
+              </p>
+              <Button 
+                onClick={() => router.push(`/admin/database-usage`)}
+                className="w-full bg-yellow-600 hover:bg-yellow-700"
+              >
+                Database Usage Monitor
+              </Button>
+            </div>
+          </Card>
+          
           {/* Listing Visibility Diagnostics Section */}
           <Card className="p-6 mb-8">
             <h2 className="text-xl font-semibold mb-4">Listing Visibility Diagnostics</h2>
