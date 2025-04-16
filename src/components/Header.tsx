@@ -207,22 +207,13 @@ export default function Header({ animate = true }: HeaderProps) {
             >
               <SheetHeader className="mb-4">
                 <SheetTitle>Menu</SheetTitle>
-                {user && (
-                  <Button
-                    variant="destructive"
-                    className="flex items-center justify-start gap-2 h-auto py-2 mt-2 bg-[#b71c1c] hover:bg-[#b71c1c]/90"
-                    onClick={handleSignOut}
-                  >
-                    <LogOut className="h-4 w-4" />
-                    Sign Out
-                  </Button>
-                )}
               </SheetHeader>
               <nav 
-                className="flex flex-col space-y-3 overflow-y-auto overscroll-contain"
+                className="flex flex-col space-y-3 overflow-y-auto overscroll-contain h-[calc(100vh-4rem)] flex-1"
                 style={{ 
                   WebkitOverflowScrolling: 'touch', // Smooth scrolling on iOS
-                  maxHeight: 'calc(100vh - 6rem)' // Prevent overflow issues
+                  display: 'flex',
+                  flexDirection: 'column'
                 }}
               >
                 <Link 
@@ -306,6 +297,20 @@ export default function Header({ animate = true }: HeaderProps) {
                     <Link href="/auth/sign-up" prefetch={false}>
                       <Button className="w-full bg-sky-400 hover:bg-sky-500">Get Started</Button>
                     </Link>
+                  </div>
+                )}
+                
+                {/* Sign out button at the bottom of the menu */}
+                {user && (
+                  <div className="mt-auto pt-4 border-t">
+                    <Button
+                      variant="destructive"
+                      className="flex items-center justify-start gap-2 h-auto py-2 w-full bg-[#b71c1c] hover:bg-[#b71c1c]/90"
+                      onClick={handleSignOut}
+                    >
+                      <LogOut className="h-4 w-4" />
+                      Sign Out
+                    </Button>
                   </div>
                 )}
               </nav>
