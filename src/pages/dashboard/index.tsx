@@ -630,6 +630,7 @@ const loading = authLoading || listingsLoading || profileLoading;
               <Button
                 variant={viewMode === 'grid' ? 'default' : 'outline'}
                 size="sm"
+                className="h-9 w-[60px]"
                 onClick={() => setViewMode('grid')}
               >
                 Grid
@@ -637,6 +638,7 @@ const loading = authLoading || listingsLoading || profileLoading;
               <Button
                 variant={viewMode === 'list' ? 'default' : 'outline'}
                 size="sm"
+                className="h-9 w-[60px]"
                 onClick={() => setViewMode('list')}
               >
                 List
@@ -644,7 +646,7 @@ const loading = authLoading || listingsLoading || profileLoading;
               
               {/* Date/Price/Title Sorting */}
               <select
-                className="border rounded-md px-2 py-1 bg-background text-foreground h-9"
+                className="border rounded-md px-2 py-1 bg-background text-foreground h-9 w-[80px]"
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value as 'date' | 'price' | 'title')}
               >
@@ -657,16 +659,44 @@ const loading = authLoading || listingsLoading || profileLoading;
               <Button
                 variant="outline"
                 size="sm"
+                className="h-9 w-9"
                 onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
               >
                 {sortOrder === 'asc' ? '↑' : '↓'}
               </Button>
+              
+              {/* Game Categories Filter - On same line for desktop, below for mobile */}
+              <div className="hidden md:block md:w-[200px]">
+                <Select value={gameFilter} onValueChange={setGameFilter}>
+                  <SelectTrigger className="h-9">
+                    <SelectValue placeholder="All Games" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Games</SelectItem>
+                    <SelectItem value="dbs">Dragon Ball Super Card Game</SelectItem>
+                    <SelectItem value="digimon">Digimon</SelectItem>
+                    <SelectItem value="lorcana">Disney Lorcana</SelectItem>
+                    <SelectItem value="flesh-and-blood">Flesh and Blood</SelectItem>
+                    <SelectItem value="mtg">Magic: The Gathering</SelectItem>
+                    <SelectItem value="onepiece">One Piece Card Game</SelectItem>
+                    <SelectItem value="pokemon">Pokemon</SelectItem>
+                    <SelectItem value="star-wars">Star Wars: Unlimited</SelectItem>
+                    <SelectItem value="union-arena">Union Arena</SelectItem>
+                    <SelectItem value="universus">Universus</SelectItem>
+                    <SelectItem value="vanguard">Vanguard</SelectItem>
+                    <SelectItem value="weiss">Weiss Schwarz</SelectItem>
+                    <SelectItem value="yugioh">Yu-Gi-Oh!</SelectItem>
+                    <SelectItem value="other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
               
               {/* Refresh button moved to the right on the same row */}
               <div className="flex-1 flex justify-end">
                 <Button
                   variant="outline"
                   size="sm"
+                  className="h-9 w-9"
                   onClick={handleRefreshListings}
                   disabled={refreshLoading}
                   title="Refresh listings"
@@ -676,8 +706,8 @@ const loading = authLoading || listingsLoading || profileLoading;
               </div>
             </div>
             
-            {/* Game Categories Filter - Moved below other buttons for mobile */}
-            <div className="w-full">
+            {/* Game Categories Filter - Only visible on mobile */}
+            <div className="md:hidden w-full">
               <Select value={gameFilter} onValueChange={setGameFilter}>
                 <SelectTrigger className="h-9 w-full">
                   <SelectValue placeholder="All Games" />
