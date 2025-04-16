@@ -624,8 +624,9 @@ const loading = authLoading || listingsLoading || profileLoading;
 
         <TabsContent value="active" className="space-y-4">
           <div className="flex flex-col gap-4 mb-4">
-            {/* View Mode Controls - Always at the top */}
-            <div className="flex items-center gap-2">
+            {/* View Mode Controls and Filtering/Sorting Controls - All aligned in one row */}
+            <div className="flex flex-wrap items-center gap-2">
+              {/* View Mode Controls */}
               <Button
                 variant={viewMode === 'grid' ? 'default' : 'outline'}
                 size="sm"
@@ -641,34 +642,9 @@ const loading = authLoading || listingsLoading || profileLoading;
                 List
               </Button>
               
-              {/* Refresh button moved to the right on the same row for easy access */}
-              <div className="flex-1 flex justify-end">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleRefreshListings}
-                  disabled={refreshLoading}
-                  title="Refresh listings"
-                >
-                  <RefreshCw className={`h-4 w-4 ${refreshLoading ? 'animate-spin' : ''}`} />
-                </Button>
-              </div>
-            </div>
-            
-            {/* Search Bar - Full width on mobile */}
-            <div className="w-full">
-              <ListingsSearchBar
-                value={searchQuery}
-                onChange={setSearchQuery}
-                onSearch={() => {}} // Empty function since we're handling search directly
-                placeholder="Search your listings..."
-              />
-            </div>
-            
-            {/* Filtering and Sorting Controls - Responsive layout */}
-            <div className="flex flex-wrap gap-2 items-center">
+              {/* Game Categories Filter */}
               <Select value={gameFilter} onValueChange={setGameFilter}>
-                <SelectTrigger className="w-full sm:w-[180px]">
+                <SelectTrigger className="h-9 w-auto sm:w-[180px]">
                   <SelectValue placeholder="All Games" />
                 </SelectTrigger>
                 <SelectContent>
@@ -690,25 +666,48 @@ const loading = authLoading || listingsLoading || profileLoading;
                 </SelectContent>
               </Select>
               
-              <div className="flex items-center gap-2">
-                <select
-                  className="border rounded-md px-2 py-1 bg-background text-foreground h-9"
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value as 'date' | 'price' | 'title')}
-                >
-                  <option value="date">Date</option>
-                  <option value="price">Price</option>
-                  <option value="title">Title</option>
-                </select>
-                
+              {/* Date/Price/Title Sorting */}
+              <select
+                className="border rounded-md px-2 py-1 bg-background text-foreground h-9"
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as 'date' | 'price' | 'title')}
+              >
+                <option value="date">Date</option>
+                <option value="price">Price</option>
+                <option value="title">Title</option>
+              </select>
+              
+              {/* Ascending/Descending Button */}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+              >
+                {sortOrder === 'asc' ? '↑' : '↓'}
+              </Button>
+              
+              {/* Refresh button moved to the right on the same row */}
+              <div className="flex-1 flex justify-end">
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+                  onClick={handleRefreshListings}
+                  disabled={refreshLoading}
+                  title="Refresh listings"
                 >
-                  {sortOrder === 'asc' ? '↑' : '↓'}
+                  <RefreshCw className={`h-4 w-4 ${refreshLoading ? 'animate-spin' : ''}`} />
                 </Button>
               </div>
+            </div>
+            
+            {/* Search Bar - Full width on mobile */}
+            <div className="w-full">
+              <ListingsSearchBar
+                value={searchQuery}
+                onChange={setSearchQuery}
+                onSearch={() => {}} // Empty function since we're handling search directly
+                placeholder="Search your listings..."
+              />
             </div>
           </div>
           
