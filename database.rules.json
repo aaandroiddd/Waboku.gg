@@ -2,6 +2,11 @@
   "rules": {
     ".read": false,
     ".write": false,
+    
+    "connection_tests": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
 
     "users": {
       "$userId": {
