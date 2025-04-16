@@ -11,7 +11,11 @@
     
     "connection_tests": {
       ".read": true,
-      ".write": true
+      ".write": true,
+      "$test_id": {
+        ".read": true,
+        ".write": true
+      }
     },
     
     "debug": {
