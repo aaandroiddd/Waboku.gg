@@ -20,7 +20,7 @@ interface ReviewCardProps {
 
 export function ReviewCard({ review, showSellerResponse = true, allowHelpful = true }: ReviewCardProps) {
   const { user } = useAuth();
-  const { markReviewAsHelpful } = useReviews();
+  const { toggleReviewHelpful } = useReviews();
   const [helpfulCount, setHelpfulCount] = useState<number>(review.helpfulCount || 0);
   const [isMarkingHelpful, setIsMarkingHelpful] = useState<boolean>(false);
   const [hasMarkedHelpful, setHasMarkedHelpful] = useState<boolean>(false);
@@ -48,8 +48,8 @@ export function ReviewCard({ review, showSellerResponse = true, allowHelpful = t
     checkHelpfulStatus();
   }, [user, review.id]);
   
-  const handleMarkHelpful = async () => {
-    if (!user || isMarkingHelpful || hasMarkedHelpful) return;
+  const handleToggleHelpful = async () => {
+    if (!user || isMarkingHelpful) return;
     
     // Don't allow marking your own review as helpful
     if (user.uid === review.reviewerId || user.uid === review.sellerId) {
@@ -58,13 +58,13 @@ export function ReviewCard({ review, showSellerResponse = true, allowHelpful = t
     
     setIsMarkingHelpful(true);
     try {
-      const newCount = await markReviewAsHelpful(review.id);
-      if (newCount !== null) {
-        setHelpfulCount(newCount);
-        setHasMarkedHelpful(true);
+      const result = await toggleReviewHelpful(review.id);
+      if (result !== null) {
+        setHelpfulCount(result.helpfulCount);
+        setHasMarkedHelpful(result.isMarked);
       }
     } catch (error) {
-      console.error('Error marking review as helpful:', error);
+      console.error('Error toggling helpful status:', error);
     } finally {
       setIsMarkingHelpful(false);
     }
@@ -130,8 +130,8 @@ export function ReviewCard({ review, showSellerResponse = true, allowHelpful = t
                   variant="ghost" 
                   size="sm" 
                   className="text-muted-foreground hover:text-foreground flex-shrink-0"
-                  onClick={handleMarkHelpful}
-                  disabled={isMarkingHelpful || !user || (user && (user.uid === review.reviewerId || user.uid === review.sellerId)) || hasMarkedHelpful}
+                  onClick={handleToggleHelpful}
+                  disabled={isMarkingHelpful || !user || (user && (user.uid === review.reviewerId || user.uid === review.sellerId))}
                 >
                   <ThumbsUp className={`h-4 w-4 mr-1 ${hasMarkedHelpful ? 'fill-current' : ''}`} />
                   Helpful ({helpfulCount})

@@ -238,11 +238,11 @@ export const submitReview = async (reviewData) => {
 };
 
 /**
- * Mark a review as helpful
+ * Toggle a review's helpful status
  * @param {string} reviewId - The review ID
- * @returns {Promise<number>} - The updated helpful count
+ * @returns {Promise<Object>} - Object containing the updated helpful count and marked status
  */
-export const markReviewAsHelpful = async (reviewId) => {
+export const toggleReviewHelpful = async (reviewId) => {
   try {
     // Get the current user
     const auth = getAuth();
@@ -270,20 +270,30 @@ export const markReviewAsHelpful = async (reviewId) => {
     // Check if user has already marked this review as helpful
     const helpfulRef = doc(db, 'reviews', reviewId, 'helpfulUsers', userId);
     const helpfulDoc = await getDoc(helpfulRef);
+    const hasMarked = helpfulDoc.exists();
     
-    if (helpfulDoc.exists()) {
-      // User has already marked this review as helpful
-      return review.helpfulCount || 0;
+    let currentCount = review.helpfulCount || 0;
+    let newCount = currentCount;
+    let isMarked = hasMarked;
+    
+    if (!hasMarked) {
+      // Mark as helpful
+      newCount = currentCount + 1;
+      isMarked = true;
+      
+      // Record that this user has marked the review as helpful
+      await setDoc(helpfulRef, {
+        userId,
+        timestamp: serverTimestamp()
+      });
+    } else {
+      // Unmark as helpful
+      newCount = Math.max(0, currentCount - 1);
+      isMarked = false;
+      
+      // Remove the record that this user has marked the review as helpful
+      await deleteDoc(helpfulRef);
     }
-    
-    const currentCount = review.helpfulCount || 0;
-    const newCount = currentCount + 1;
-    
-    // Record that this user has marked the review as helpful
-    await setDoc(helpfulRef, {
-      userId,
-      timestamp: serverTimestamp()
-    });
     
     // Update the review's helpful count
     await updateDoc(reviewRef, {
@@ -307,7 +317,22 @@ export const markReviewAsHelpful = async (reviewId) => {
       console.error('Error updating seller subcollection:', subcollectionError);
     }
     
-    return newCount;
+    return { helpfulCount: newCount, isMarked };
+  } catch (error) {
+    console.error('Error toggling review helpful status:', error);
+    throw error;
+  }
+};
+
+/**
+ * Mark a review as helpful (legacy function, now uses toggle)
+ * @param {string} reviewId - The review ID
+ * @returns {Promise<number>} - The updated helpful count
+ */
+export const markReviewAsHelpful = async (reviewId) => {
+  try {
+    const result = await toggleReviewHelpful(reviewId);
+    return result.helpfulCount;
   } catch (error) {
     console.error('Error marking review as helpful:', error);
     throw error;

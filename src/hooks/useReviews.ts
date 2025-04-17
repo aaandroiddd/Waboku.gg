@@ -272,8 +272,8 @@ export function useReviews() {
     }
   }, [user]);
 
-  // Function to mark a review as helpful
-  const markReviewAsHelpful = useCallback(async (
+  // Function to toggle a review's helpful status
+  const toggleReviewHelpful = useCallback(async (
     reviewId: string
   ) => {
     if (!user) {
@@ -290,15 +290,8 @@ export function useReviews() {
     setError(null);
     
     try {
-      // Use the client-side service to mark a review as helpful
+      // Try the API endpoint first
       try {
-        const newCount = await markReviewAsHelpfulService(reviewId);
-        toast.success('Review marked as helpful');
-        return newCount;
-      } catch (serviceError) {
-        console.error('Error with client-side service, trying API endpoint:', serviceError);
-        
-        // If client-side service fails, try the API endpoint
         const response = await fetch('/api/reviews/mark-helpful', {
           method: 'POST',
           headers: {
@@ -306,22 +299,29 @@ export function useReviews() {
           },
           body: JSON.stringify({
             reviewId,
-            userId: user.uid
+            userId: user.uid,
+            action: 'toggle'
           }),
         });
         
         const data = await response.json();
         
         if (!response.ok) {
-          throw new Error(data.message || 'Failed to mark review as helpful');
+          throw new Error(data.message || 'Failed to update helpful status');
         }
         
-        toast.success('Review marked as helpful');
-        return data.helpfulCount;
+        toast.success(data.isMarked ? 'Review marked as helpful' : 'Review unmarked as helpful');
+        return {
+          helpfulCount: data.helpfulCount,
+          isMarked: data.isMarked
+        };
+      } catch (apiError) {
+        console.error('Error with API endpoint:', apiError);
+        throw apiError;
       }
     } catch (error) {
-      console.error('Error marking review as helpful:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Failed to mark review as helpful';
+      console.error('Error toggling review helpful status:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to update helpful status';
       setError(errorMessage);
       toast.error(errorMessage);
       return null;
@@ -329,6 +329,14 @@ export function useReviews() {
       setLoading(false);
     }
   }, [user]);
+  
+  // Legacy function to mark a review as helpful (now uses toggle)
+  const markReviewAsHelpful = useCallback(async (
+    reviewId: string
+  ) => {
+    const result = await toggleReviewHelpful(reviewId);
+    return result ? result.helpfulCount : null;
+  }, [toggleReviewHelpful]);
 
   // Function to fetch reviews written by a user
   const fetchUserReviews = useCallback(async (
@@ -399,6 +407,7 @@ export function useReviews() {
     fetchUserReviews,
     submitReview,
     respondToReview,
-    markReviewAsHelpful
+    markReviewAsHelpful,
+    toggleReviewHelpful
   };
 }

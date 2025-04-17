@@ -1,11 +1,12 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getFirebaseServices } from '@/lib/firebase';
-import { doc, getDoc, updateDoc, increment, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, increment, setDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
 
 type ResponseData = {
   success: boolean;
   message: string;
   helpfulCount?: number;
+  isMarked?: boolean;
 };
 
 export default async function handler(
@@ -18,14 +19,14 @@ export default async function handler(
   }
 
   try {
-    const { reviewId, userId } = req.body;
+    const { reviewId, userId, action = 'toggle' } = req.body;
 
     if (!reviewId || !userId) {
       console.log('[mark-review-helpful] Missing required fields:', { reviewId, userId });
       return res.status(400).json({ success: false, message: 'Missing required fields' });
     }
 
-    console.log('[mark-review-helpful] Processing request:', { reviewId, userId });
+    console.log('[mark-review-helpful] Processing request:', { reviewId, userId, action });
     const { db } = getFirebaseServices();
     
     // Get the review document
@@ -47,44 +48,69 @@ export default async function handler(
     // Check if user has already marked this review as helpful
     const helpfulRef = doc(db, 'reviews', reviewId, 'helpfulUsers', userId);
     const helpfulDoc = await getDoc(helpfulRef);
-    
-    if (helpfulDoc.exists()) {
-      console.log('[mark-review-helpful] User has already marked this review as helpful:', { userId, reviewId });
-      return res.status(400).json({ 
-        success: false, 
-        message: 'You have already marked this review as helpful',
-        helpfulCount: reviewData.helpfulCount || 0
-      });
-    }
+    const hasMarked = helpfulDoc.exists();
     
     try {
-      // Record that this user has marked the review as helpful
-      await setDoc(helpfulRef, {
-        userId,
-        timestamp: serverTimestamp()
-      });
+      let newCount = reviewData.helpfulCount || 0;
+      let isMarked = hasMarked;
       
-      // Update the review's helpful count
-      await updateDoc(reviewRef, {
-        helpfulCount: increment(1)
-      });
+      // Toggle or explicit action
+      if ((action === 'toggle' && !hasMarked) || action === 'mark') {
+        // Mark as helpful
+        await setDoc(helpfulRef, {
+          userId,
+          timestamp: serverTimestamp()
+        });
+        
+        // Update the review's helpful count
+        await updateDoc(reviewRef, {
+          helpfulCount: increment(1)
+        });
+        
+        newCount += 1;
+        isMarked = true;
+        console.log('[mark-review-helpful] Review marked as helpful:', reviewId);
+      } else if ((action === 'toggle' && hasMarked) || action === 'unmark') {
+        // Unmark as helpful
+        await deleteDoc(helpfulRef);
+        
+        // Update the review's helpful count (ensure it doesn't go below 0)
+        newCount = Math.max(0, newCount - 1);
+        await updateDoc(reviewRef, {
+          helpfulCount: newCount
+        });
+        
+        isMarked = false;
+        console.log('[mark-review-helpful] Review unmarked as helpful:', reviewId);
+      }
       
-      // Get the updated document to return the new count
-      const updatedReviewDoc = await getDoc(reviewRef);
-      const updatedReviewData = updatedReviewDoc.data();
-      
-      console.log('[mark-review-helpful] Review marked as helpful:', reviewId);
+      // Also update in seller's subcollection if it exists
+      try {
+        const sellerReviewRef = doc(db, 'users', reviewData.sellerId, 'reviews', reviewId);
+        const sellerReviewDoc = await getDoc(sellerReviewRef);
+        
+        if (sellerReviewDoc.exists()) {
+          await updateDoc(sellerReviewRef, {
+            helpfulCount: newCount,
+            updatedAt: serverTimestamp()
+          });
+        }
+      } catch (subcollectionError) {
+        // Log but don't fail if the subcollection update fails
+        console.error('[mark-review-helpful] Error updating seller subcollection:', subcollectionError);
+      }
       
       return res.status(200).json({ 
         success: true, 
-        message: 'Review marked as helpful',
-        helpfulCount: updatedReviewData.helpfulCount
+        message: isMarked ? 'Review marked as helpful' : 'Review unmarked as helpful',
+        helpfulCount: newCount,
+        isMarked
       });
     } catch (error) {
-      console.error('[mark-review-helpful] Error marking review as helpful:', error);
+      console.error('[mark-review-helpful] Error updating helpful status:', error);
       return res.status(500).json({ 
         success: false, 
-        message: 'Failed to mark review as helpful. Please try again.' 
+        message: 'Failed to update helpful status. Please try again.' 
       });
     }
   } catch (error) {
