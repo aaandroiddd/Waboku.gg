@@ -31,9 +31,10 @@ export default function ReviewsDashboardPage() {
   const [selectedReview, setSelectedReview] = useState<string | null>(null);
   const [showResponseDialog, setShowResponseDialog] = useState(false);
   
-  // Fetch reviews when component mounts
+  // Fetch reviews when component mounts - only get reviews where the user is the seller
   useEffect(() => {
     if (user) {
+      console.log('[ReviewsDashboard] Fetching seller reviews for user:', user.uid);
       fetchSellerReviews(user.uid);
     }
   }, [user, fetchSellerReviews]);

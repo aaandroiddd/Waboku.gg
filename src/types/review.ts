@@ -42,4 +42,5 @@ export interface ReviewFilterOptions {
   hasComment?: boolean;
   verifiedOnly?: boolean;
   searchTerm?: string;
+  role?: 'reviewer' | 'seller'; // Added role parameter to distinguish between reviews written vs received
 }

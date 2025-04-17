@@ -20,23 +20,36 @@ export default async function handler(
   }
 
   try {
-    const { userId, page = '1', limit: limitParam = '10', sortBy = 'newest' } = req.query;
+    const { userId, page = '1', limit: limitParam = '10', sortBy = 'newest', role = 'reviewer' } = req.query;
 
     if (!userId) {
       console.log('[get-user-reviews] Missing userId');
       return res.status(400).json({ success: false, message: 'User ID is required' });
     }
 
-    console.log('[get-user-reviews] Processing request:', { userId, page, limit: limitParam, sortBy });
+    console.log('[get-user-reviews] Processing request:', { userId, page, limit: limitParam, sortBy, role });
     
     // Initialize Firebase Admin SDK
     const { db } = initializeFirebaseAdmin();
     
-    // Build the query with constraints
-    let reviewsQuery = db.collection('reviews')
-      .where('reviewerId', '==', userId)
-      .where('isPublic', '==', true)
-      .where('status', '==', 'published');
+    // Build the query with constraints based on the user's role
+    let reviewsQuery;
+    
+    if (role === 'seller') {
+      // Get reviews where the user is the seller (reviews received)
+      console.log('[get-user-reviews] Fetching reviews where user is the seller');
+      reviewsQuery = db.collection('reviews')
+        .where('sellerId', '==', userId)
+        .where('isPublic', '==', true)
+        .where('status', '==', 'published');
+    } else {
+      // Get reviews where the user is the reviewer (reviews written)
+      console.log('[get-user-reviews] Fetching reviews where user is the reviewer');
+      reviewsQuery = db.collection('reviews')
+        .where('reviewerId', '==', userId)
+        .where('isPublic', '==', true)
+        .where('status', '==', 'published');
+    }
     
     // Add sorting
     let sortField = 'createdAt';

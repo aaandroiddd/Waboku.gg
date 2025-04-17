@@ -71,7 +71,8 @@ export function ReviewsList({
           result = await fetchProductReviews(listingId, 1, 10, filterOptions);
         } else if (reviewerId) {
           console.log('ReviewsList: Fetching reviewer reviews for:', reviewerId);
-          result = await fetchUserReviews(reviewerId, 1, 10, filterOptions);
+          // Pass role parameter to indicate we want reviews written by this user
+          result = await fetchUserReviews(reviewerId, 1, 10, { ...filterOptions, role: 'reviewer' });
         }
         
         if (result) {
@@ -125,7 +126,8 @@ export function ReviewsList({
       } else if (listingId) {
         result = await fetchProductReviews(listingId, nextPage, 10, filterOptions);
       } else if (reviewerId) {
-        result = await fetchUserReviews(reviewerId, nextPage, 10, filterOptions);
+        // Pass role parameter to indicate we want reviews written by this user
+        result = await fetchUserReviews(reviewerId, nextPage, 10, { ...filterOptions, role: 'reviewer' });
       }
       
       if (result) {

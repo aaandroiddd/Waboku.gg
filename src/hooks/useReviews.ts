@@ -375,6 +375,11 @@ export function useReviews() {
         params.append('sortBy', filterOptions.sortBy);
       }
       
+      // Add role parameter if provided (reviewer or seller)
+      if (filterOptions.role) {
+        params.append('role', filterOptions.role);
+      }
+      
       const response = await fetch(`/api/reviews/get-user-reviews?${params.toString()}`);
       const data = await response.json();
       
