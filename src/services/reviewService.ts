@@ -12,6 +12,7 @@ import {
   limit,
   Timestamp
 } from 'firebase/firestore';
+import { getAuth } from 'firebase/auth';
 import { db } from '../lib/firebase';
 
 // Utility function to safely convert Firestore timestamps to JavaScript Date objects
@@ -239,10 +240,19 @@ export const submitReview = async (reviewData) => {
 /**
  * Mark a review as helpful
  * @param {string} reviewId - The review ID
- * @returns {Promise<void>}
+ * @returns {Promise<number>} - The updated helpful count
  */
 export const markReviewAsHelpful = async (reviewId) => {
   try {
+    // Get the current user
+    const auth = getAuth();
+    const currentUser = auth.currentUser;
+    
+    if (!currentUser) {
+      throw new Error('User must be logged in to mark a review as helpful');
+    }
+    
+    const userId = currentUser.uid;
     const reviewRef = doc(db, 'reviews', reviewId);
     const reviewDoc = await getDoc(reviewRef);
     
@@ -250,21 +260,54 @@ export const markReviewAsHelpful = async (reviewId) => {
       throw new Error('Review not found');
     }
     
-    const currentCount = reviewDoc.data().helpfulCount || 0;
-    
-    await updateDoc(reviewRef, {
-      helpfulCount: currentCount + 1,
-      updatedAt: serverTimestamp()
-    });
-    
-    // Also update in seller's subcollection
     const review = reviewDoc.data();
-    const sellerReviewRef = doc(db, 'users', review.sellerId, 'reviews', reviewId);
     
-    await updateDoc(sellerReviewRef, {
-      helpfulCount: currentCount + 1,
+    // Don't allow marking your own review as helpful
+    if (userId === review.reviewerId || userId === review.sellerId) {
+      throw new Error('You cannot mark your own review as helpful');
+    }
+    
+    // Check if user has already marked this review as helpful
+    const helpfulRef = doc(db, 'reviews', reviewId, 'helpfulUsers', userId);
+    const helpfulDoc = await getDoc(helpfulRef);
+    
+    if (helpfulDoc.exists()) {
+      // User has already marked this review as helpful
+      return review.helpfulCount || 0;
+    }
+    
+    const currentCount = review.helpfulCount || 0;
+    const newCount = currentCount + 1;
+    
+    // Record that this user has marked the review as helpful
+    await setDoc(helpfulRef, {
+      userId,
+      timestamp: serverTimestamp()
+    });
+    
+    // Update the review's helpful count
+    await updateDoc(reviewRef, {
+      helpfulCount: newCount,
       updatedAt: serverTimestamp()
     });
+    
+    // Also update in seller's subcollection if it exists
+    try {
+      const sellerReviewRef = doc(db, 'users', review.sellerId, 'reviews', reviewId);
+      const sellerReviewDoc = await getDoc(sellerReviewRef);
+      
+      if (sellerReviewDoc.exists()) {
+        await updateDoc(sellerReviewRef, {
+          helpfulCount: newCount,
+          updatedAt: serverTimestamp()
+        });
+      }
+    } catch (subcollectionError) {
+      // Log but don't fail if the subcollection update fails
+      console.error('Error updating seller subcollection:', subcollectionError);
+    }
+    
+    return newCount;
   } catch (error) {
     console.error('Error marking review as helpful:', error);
     throw error;

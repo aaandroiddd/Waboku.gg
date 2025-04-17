@@ -291,9 +291,34 @@ export function useReviews() {
     
     try {
       // Use the client-side service to mark a review as helpful
-      await markReviewAsHelpfulService(reviewId);
-      toast.success('Review marked as helpful');
-      return true;
+      try {
+        const newCount = await markReviewAsHelpfulService(reviewId);
+        toast.success('Review marked as helpful');
+        return newCount;
+      } catch (serviceError) {
+        console.error('Error with client-side service, trying API endpoint:', serviceError);
+        
+        // If client-side service fails, try the API endpoint
+        const response = await fetch('/api/reviews/mark-helpful', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            reviewId,
+            userId: user.uid
+          }),
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+          throw new Error(data.message || 'Failed to mark review as helpful');
+        }
+        
+        toast.success('Review marked as helpful');
+        return data.helpfulCount;
+      }
     } catch (error) {
       console.error('Error marking review as helpful:', error);
       const errorMessage = error instanceof Error ? error.message : 'Failed to mark review as helpful';

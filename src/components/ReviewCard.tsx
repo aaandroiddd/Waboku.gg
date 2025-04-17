@@ -23,23 +23,33 @@ export function ReviewCard({ review, showSellerResponse = true, allowHelpful = t
   const { markReviewAsHelpful } = useReviews();
   const [helpfulCount, setHelpfulCount] = useState<number>(review.helpfulCount || 0);
   const [isMarkingHelpful, setIsMarkingHelpful] = useState<boolean>(false);
+  const [hasMarkedHelpful, setHasMarkedHelpful] = useState<boolean>(false);
   
   // Use the useUserData hook instead of manual fetching
   const { userData, loading: isLoadingUser } = useUserData(review.reviewerId);
   const reviewerName = userData?.username || 'Anonymous User';
   const reviewerAvatar = userData?.avatarUrl || null;
   
-  console.log('ReviewCard rendering for review:', review.id, 'with reviewer:', review.reviewerId);
-  console.log('Reviewer data:', { name: reviewerName, avatar: reviewerAvatar, loading: isLoadingUser });
-  console.log('Review content:', { 
-    rating: review.rating,
-    comment: review.comment?.substring(0, 50) + (review.comment?.length > 50 ? '...' : '') || 'No comment',
-    hasComment: !!review.comment,
-    commentLength: review.comment?.length || 0
-  });
+  // Check if the current user has already marked this review as helpful
+  useEffect(() => {
+    if (!user) return;
+    
+    const checkHelpfulStatus = async () => {
+      try {
+        const { db } = getFirebaseServices();
+        const helpfulRef = doc(db, 'reviews', review.id, 'helpfulUsers', user.uid);
+        const helpfulDoc = await getDoc(helpfulRef);
+        setHasMarkedHelpful(helpfulDoc.exists());
+      } catch (error) {
+        console.error('Error checking helpful status:', error);
+      }
+    };
+    
+    checkHelpfulStatus();
+  }, [user, review.id]);
   
   const handleMarkHelpful = async () => {
-    if (!user || isMarkingHelpful) return;
+    if (!user || isMarkingHelpful || hasMarkedHelpful) return;
     
     // Don't allow marking your own review as helpful
     if (user.uid === review.reviewerId || user.uid === review.sellerId) {
@@ -51,6 +61,7 @@ export function ReviewCard({ review, showSellerResponse = true, allowHelpful = t
       const newCount = await markReviewAsHelpful(review.id);
       if (newCount !== null) {
         setHelpfulCount(newCount);
+        setHasMarkedHelpful(true);
       }
     } finally {
       setIsMarkingHelpful(false);
@@ -89,7 +100,7 @@ export function ReviewCard({ review, showSellerResponse = true, allowHelpful = t
           </Avatar>
           
           <div className="flex-1">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 w-full">
               <div>
                 <div className="font-medium">
                   <UserNameLink 
@@ -111,6 +122,19 @@ export function ReviewCard({ review, showSellerResponse = true, allowHelpful = t
                   </span>
                 </div>
               </div>
+              
+              {allowHelpful && user && (
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="text-muted-foreground hover:text-foreground flex-shrink-0"
+                  onClick={handleMarkHelpful}
+                  disabled={isMarkingHelpful || !user || user.uid === review.reviewerId || user.uid === review.sellerId || hasMarkedHelpful}
+                >
+                  <ThumbsUp className={`h-4 w-4 mr-1 ${hasMarkedHelpful ? 'fill-current' : ''}`} />
+                  Helpful {helpfulCount > 0 && `(${helpfulCount})`}
+                </Button>
+              )}
             </div>
             
             {review.title && (
@@ -155,20 +179,7 @@ export function ReviewCard({ review, showSellerResponse = true, allowHelpful = t
         </div>
       </CardContent>
       
-      {allowHelpful && (
-        <CardFooter className="pt-0 pb-4">
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            className="text-muted-foreground hover:text-foreground"
-            onClick={handleMarkHelpful}
-            disabled={isMarkingHelpful || !user || user.uid === review.reviewerId || user.uid === review.sellerId}
-          >
-            <ThumbsUp className="h-4 w-4 mr-1" />
-            Helpful {helpfulCount > 0 && `(${helpfulCount})`}
-          </Button>
-        </CardFooter>
-      )}
+
     </Card>
   );
 }

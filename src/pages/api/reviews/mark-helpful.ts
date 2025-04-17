@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getFirebaseServices } from '@/lib/firebase';
-import { doc, getDoc, updateDoc, increment } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, increment, setDoc, serverTimestamp } from 'firebase/firestore';
 
 type ResponseData = {
   success: boolean;
@@ -44,7 +44,26 @@ export default async function handler(
       return res.status(400).json({ success: false, message: 'You cannot mark your own review as helpful' });
     }
     
+    // Check if user has already marked this review as helpful
+    const helpfulRef = doc(db, 'reviews', reviewId, 'helpfulUsers', userId);
+    const helpfulDoc = await getDoc(helpfulRef);
+    
+    if (helpfulDoc.exists()) {
+      console.log('[mark-review-helpful] User has already marked this review as helpful:', { userId, reviewId });
+      return res.status(400).json({ 
+        success: false, 
+        message: 'You have already marked this review as helpful',
+        helpfulCount: reviewData.helpfulCount || 0
+      });
+    }
+    
     try {
+      // Record that this user has marked the review as helpful
+      await setDoc(helpfulRef, {
+        userId,
+        timestamp: serverTimestamp()
+      });
+      
       // Update the review's helpful count
       await updateDoc(reviewRef, {
         helpfulCount: increment(1)
