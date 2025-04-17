@@ -245,6 +245,27 @@ let services: ReturnType<typeof initializeFirebase>;
 
 // Initialize Firebase services with retry mechanism
 if (typeof window !== 'undefined') {
+  // Add a global error handler for unhandled Firebase errors
+  window.addEventListener('unhandledrejection', (event) => {
+    if (event.reason && event.reason.name === 'FirebaseError') {
+      console.error('[Firebase] Unhandled Firebase promise rejection:', event.reason);
+      
+      // If it's a network error, try to reconnect
+      if (event.reason.code === 'failed-precondition' || 
+          event.reason.code === 'unavailable' || 
+          event.reason.code === 'resource-exhausted') {
+        console.log('[Firebase] Network-related error detected, attempting reconnection...');
+        
+        // If we have a connection manager, trigger reconnection
+        if (connectionManager) {
+          setTimeout(() => {
+            connectionManager.reconnectFirebase();
+          }, 2000);
+        }
+      }
+    }
+  });
+  
   const initializeWithRetry = async (maxRetries = 3, delay = 1500) => {
     let lastError = null;
     
@@ -404,6 +425,9 @@ class FirebaseConnectionManager {
   private connectionErrors: Set<string> = new Set();
   private consecutiveErrors: number = 0;
   private reconnectInProgress: boolean = false;
+  
+  // Make this property public to allow external access
+  public reconnectFirebase: () => Promise<void>;
 
   constructor() {
     if (typeof window !== 'undefined') {
@@ -556,7 +580,7 @@ class FirebaseConnectionManager {
     }, delay);
   }
 
-  private reconnectFirebase = async () => {
+  reconnectFirebase = async () => {
     if (!this.isOnline) {
       console.log('[Firebase] Cannot reconnect while offline');
       return;

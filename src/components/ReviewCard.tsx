@@ -105,7 +105,9 @@ export function ReviewCard({ review, showSellerResponse = true, allowHelpful = t
                 <div className="flex items-center gap-2 mt-1">
                   {renderStars(review.rating)}
                   <span className="text-sm text-muted-foreground ml-2">
-                    {format(new Date(review.createdAt), 'MMM d, yyyy')}
+                    {review.createdAt && typeof review.createdAt !== 'undefined' 
+                      ? format(new Date(review.createdAt instanceof Date ? review.createdAt : review.createdAt.toDate ? review.createdAt.toDate() : review.createdAt), 'MMM d, yyyy')
+                      : 'Unknown date'}
                   </span>
                 </div>
               </div>
@@ -139,7 +141,9 @@ export function ReviewCard({ review, showSellerResponse = true, allowHelpful = t
                   <MessageSquare className="h-4 w-4 text-primary" />
                   <span className="font-medium">Seller Response</span>
                   <span className="text-xs text-muted-foreground">
-                    {format(new Date(review.sellerResponse.createdAt), 'MMM d, yyyy')}
+                    {review.sellerResponse.createdAt && typeof review.sellerResponse.createdAt !== 'undefined' 
+                      ? format(new Date(review.sellerResponse.createdAt instanceof Date ? review.sellerResponse.createdAt : review.sellerResponse.createdAt.toDate ? review.sellerResponse.createdAt.toDate() : review.sellerResponse.createdAt), 'MMM d, yyyy')
+                      : 'Unknown date'}
                   </span>
                 </div>
                 <p className="mt-2 text-sm whitespace-pre-line">{review.sellerResponse.comment}</p>

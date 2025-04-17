@@ -9,9 +9,36 @@ import {
   orderBy, 
   updateDoc,
   serverTimestamp,
-  limit 
+  limit,
+  Timestamp
 } from 'firebase/firestore';
 import { db } from '../lib/firebase';
+
+// Utility function to safely convert Firestore timestamps to JavaScript Date objects
+const convertTimestamps = (data) => {
+  if (!data) return data;
+  
+  // Create a copy of the data to avoid modifying the original
+  const result = { ...data };
+  
+  // Convert createdAt and updatedAt if they exist
+  if (result.createdAt && typeof result.createdAt.toDate === 'function') {
+    result.createdAt = result.createdAt.toDate();
+  }
+  
+  if (result.updatedAt && typeof result.updatedAt.toDate === 'function') {
+    result.updatedAt = result.updatedAt.toDate();
+  }
+  
+  // Convert sellerResponse timestamps if they exist
+  if (result.sellerResponse && result.sellerResponse.createdAt) {
+    if (typeof result.sellerResponse.createdAt.toDate === 'function') {
+      result.sellerResponse.createdAt = result.sellerResponse.createdAt.toDate();
+    }
+  }
+  
+  return result;
+};
 
 /**
  * Fetch reviews received by a seller
@@ -33,10 +60,13 @@ export const fetchReviewsForSeller = async (sellerId, limitCount = 50) => {
     
     const reviewsSnapshot = await getDocs(q);
     
-    return reviewsSnapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    }));
+    return reviewsSnapshot.docs.map(doc => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        ...convertTimestamps(data)
+      };
+    });
   } catch (error) {
     console.error('Error fetching reviews for seller:', error);
     throw error;
@@ -62,10 +92,13 @@ export const fetchReviewsByBuyer = async (buyerId, limitCount = 50) => {
     
     const reviewsSnapshot = await getDocs(q);
     
-    return reviewsSnapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    }));
+    return reviewsSnapshot.docs.map(doc => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        ...convertTimestamps(data)
+      };
+    });
   } catch (error) {
     console.error('Error fetching reviews by buyer:', error);
     throw error;
@@ -83,7 +116,8 @@ export const getSellerReviewStats = async (sellerId) => {
     const statsDoc = await getDoc(statsRef);
     
     if (statsDoc.exists()) {
-      return statsDoc.data();
+      const data = statsDoc.data();
+      return convertTimestamps(data);
     } else {
       // Return default values if no stats exist yet
       return {
