@@ -51,7 +51,7 @@ export function getFirebaseAdmin() {
       // Get project ID from environment variables with fallback
       const projectId = process.env.FIREBASE_PROJECT_ID || process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
       const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
-      const privateKey = process.env.FIREBASE_PRIVATE_KEY;
+      let privateKey = process.env.FIREBASE_PRIVATE_KEY;
       const storageBucket = process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET;
       const databaseURL = process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL;
       
@@ -88,124 +88,50 @@ export function getFirebaseAdmin() {
       });
 
       // Handle private key properly - it might be encoded with escaped newlines
-      let processedPrivateKey = privateKey;
-      if (!processedPrivateKey) {
+      if (!privateKey) {
         throw new Error('[Firebase Admin] Invalid FIREBASE_PRIVATE_KEY - value is empty or undefined');
       }
       
       // Log the private key format (safely)
       console.log('[Firebase Admin] Private key format check:', {
-        length: processedPrivateKey.length,
-        hasEscapedNewlines: processedPrivateKey.includes('\\n'),
-        hasQuotes: processedPrivateKey.startsWith('"') && processedPrivateKey.endsWith('"'),
-        hasSingleQuotes: processedPrivateKey.startsWith("'") && processedPrivateKey.endsWith("'"),
+        length: privateKey.length,
+        hasEscapedNewlines: privateKey.includes('\\n'),
+        hasQuotes: privateKey.startsWith('"') && privateKey.endsWith('"'),
+        hasSingleQuotes: privateKey.startsWith("'") && privateKey.endsWith("'"),
       });
       
-      // Remove surrounding quotes if present (sometimes environment variables get quoted)
-      if ((processedPrivateKey.startsWith('"') && processedPrivateKey.endsWith('"')) ||
-          (processedPrivateKey.startsWith("'") && processedPrivateKey.endsWith("'"))) {
-        processedPrivateKey = processedPrivateKey.substring(1, processedPrivateKey.length - 1);
+      // SIMPLIFIED PRIVATE KEY HANDLING
+      // Step 1: Remove surrounding quotes if present
+      if ((privateKey.startsWith('"') && privateKey.endsWith('"')) ||
+          (privateKey.startsWith("'") && privateKey.endsWith("'"))) {
+        privateKey = privateKey.substring(1, privateKey.length - 1);
         console.log('[Firebase Admin] Removed surrounding quotes from private key');
       }
       
-      // Replace escaped newlines with actual newlines if needed
-      if (processedPrivateKey.includes('\\n')) {
-        processedPrivateKey = processedPrivateKey.replace(/\\n/g, '\n');
-        console.log('[Firebase Admin] Processed private key with escaped newlines');
+      // Step 2: Replace escaped newlines with actual newlines
+      if (privateKey.includes('\\n')) {
+        privateKey = privateKey.replace(/\\n/g, '\n');
+        console.log('[Firebase Admin] Replaced escaped newlines in private key');
       }
       
-      // Check if the private key has the correct format and fix if needed
+      // Step 3: Basic validation of key format
       const keyStartMarker = '-----BEGIN PRIVATE KEY-----';
       const keyEndMarker = '-----END PRIVATE KEY-----';
       
-      if (!processedPrivateKey.includes(keyStartMarker) || !processedPrivateKey.includes(keyEndMarker)) {
+      if (!privateKey.includes(keyStartMarker) || !privateKey.includes(keyEndMarker)) {
         console.error('[Firebase Admin] Private key is missing required markers');
-        
-        // Try to request a new environmental variable to be set
-        console.error('[Firebase Admin] Requesting new FIREBASE_PRIVATE_KEY to be set');
-        
-        // Provide a more helpful error message
-        throw new Error('Invalid private key format: missing BEGIN/END markers. Please check that your FIREBASE_PRIVATE_KEY environment variable contains a valid private key in PEM format.');
+        throw new Error('Invalid private key format: missing BEGIN/END markers. Please check your FIREBASE_PRIVATE_KEY environment variable.');
       }
       
-      try {
-        // Try a more robust approach to fix the private key format
-        // First, check if the key is already properly formatted
-        if (processedPrivateKey.startsWith(keyStartMarker) && 
-            processedPrivateKey.endsWith(keyEndMarker + '\n')) {
-          // Key might be properly formatted already, let's verify the structure
-          const lines = processedPrivateKey.split('\n');
-          const isProperlyFormatted = 
-            lines.length > 3 && // At least header, content, and footer
-            lines[0] === keyStartMarker && 
-            lines[lines.length - 2] === keyEndMarker;
-          
-          if (isProperlyFormatted) {
-            console.log('[Firebase Admin] Private key appears to be properly formatted already');
-          } else {
-            // Key needs reformatting
-            console.log('[Firebase Admin] Private key needs reformatting');
-            throw new Error('Key needs reformatting');
-          }
-        } else {
-          // Key definitely needs reformatting
-          console.log('[Firebase Admin] Private key definitely needs reformatting');
-          throw new Error('Key needs reformatting');
-        }
-      } catch (error) {
-        // Reformat the key to ensure proper PEM format
-        console.log('[Firebase Admin] Reformatting private key to proper PEM format');
-        
-        // Extract just the base64 content between the markers
-        const startIndex = processedPrivateKey.indexOf(keyStartMarker) + keyStartMarker.length;
-        const endIndex = processedPrivateKey.lastIndexOf(keyEndMarker);
-        
-        if (startIndex <= 0 || endIndex <= 0 || startIndex >= endIndex) {
-          throw new Error('Invalid private key format: cannot extract content between markers');
-        }
-        
-        let keyContent = processedPrivateKey.substring(startIndex, endIndex).trim();
-        
-        // Remove any existing line breaks and whitespace in the content
-        keyContent = keyContent.replace(/\s/g, '');
-        
-        // Format the key properly with header, content (in 64-character lines), and footer
-        processedPrivateKey = keyStartMarker + '\n';
-        
-        // Add content in 64-character chunks
-        for (let i = 0; i < keyContent.length; i += 64) {
-          processedPrivateKey += keyContent.substring(i, Math.min(i + 64, keyContent.length)) + '\n';
-        }
-        
-        // Add the footer
-        processedPrivateKey += keyEndMarker + '\n';
-        
-        console.log('[Firebase Admin] Successfully reformatted private key to proper PEM format');
-      }
+      console.log('[Firebase Admin] Private key format appears valid');
 
       try {
-        // Create the credential object
-        // As a last resort, try to use the original private key if processing failed
-        let finalPrivateKey = processedPrivateKey;
-        
         // Create the credential
-        let credential;
-        try {
-          credential = admin.credential.cert({
-            projectId,
-            clientEmail,
-            privateKey: finalPrivateKey,
-          });
-        } catch (certError) {
-          console.error('[Firebase Admin] Failed with processed key, trying original key');
-          // If the processed key fails, try the original key as a fallback
-          finalPrivateKey = privateKey;
-          credential = admin.credential.cert({
-            projectId,
-            clientEmail,
-            privateKey: finalPrivateKey,
-          });
-        }
+        const credential = admin.credential.cert({
+          projectId,
+          clientEmail,
+          privateKey,
+        });
 
         // Prepare the initialization options
         const options: admin.AppOptions = {
@@ -228,6 +154,19 @@ export function getFirebaseAdmin() {
           code: certError.code,
           stack: certError.stack?.split('\n').slice(0, 3).join('\n')
         });
+        
+        // Provide more detailed error information
+        if (certError.message.includes('Failed to parse private key')) {
+          console.error('[Firebase Admin] Private key parsing failed. Key format may be incorrect.');
+          console.log('[Firebase Admin] Key format details:', {
+            startsWithMarker: privateKey.trim().startsWith(keyStartMarker),
+            endsWithMarker: privateKey.trim().endsWith(keyEndMarker),
+            lineCount: privateKey.split('\n').length,
+            firstLine: privateKey.split('\n')[0],
+            lastLine: privateKey.split('\n')[privateKey.split('\n').length - 2] // -2 to account for potential trailing newline
+          });
+        }
+        
         throw new Error(`Failed to create Firebase Admin credential: ${certError.message}`);
       }
     } catch (error: any) {
