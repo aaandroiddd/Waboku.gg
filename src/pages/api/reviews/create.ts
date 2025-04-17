@@ -20,10 +20,7 @@ export default async function handler(
   try {
     console.log('[create-review] Request body:', JSON.stringify(req.body));
     
-    // Use server-side Firebase Admin SDK instead of client-side Firebase
-    const { db: adminDb } = initializeFirebaseAdmin();
-    console.log('[create-review] Firebase Admin initialized successfully');
-    
+    // Extract required fields first to validate
     const { 
       orderId, 
       rating, 
@@ -54,14 +51,17 @@ export default async function handler(
 
     console.log('[create-review] Processing request:', { orderId, userId });
     
+    // Initialize Firebase Admin SDK
     try {
-      console.log('[create-review] Using Firebase Admin for database operations');
+      console.log('[create-review] Initializing Firebase Admin SDK');
+      const { db: adminDb } = initializeFirebaseAdmin();
+      console.log('[create-review] Firebase Admin initialized successfully');
       
       // Get the order document to verify the user is the buyer
       console.log('[create-review] Getting order document:', orderId);
       const orderDoc = await adminDb.collection('orders').doc(orderId).get();
       
-      if (!orderDoc.exists()) {
+      if (!orderDoc.exists) {
         console.log('[create-review] Order not found:', orderId);
         return res.status(404).json({ success: false, message: 'Order not found' });
       }
@@ -142,8 +142,8 @@ export default async function handler(
         // Update the seller's review stats
         console.log('[create-review] Updating seller review stats for:', orderData.sellerId);
         try {
-          const statsUpdateResult = await updateSellerReviewStats(orderData.sellerId, rating);
-          console.log('[create-review] Stats update result:', statsUpdateResult);
+          await updateSellerReviewStats(adminDb, orderData.sellerId, rating);
+          console.log('[create-review] Stats updated successfully');
         } catch (statsError) {
           // Log the error but don't fail the review creation
           console.error('[create-review] Error updating seller stats, but continuing:', statsError);
@@ -180,7 +180,7 @@ export default async function handler(
 }
 
 // Helper function to update seller's review statistics
-async function updateSellerReviewStats(sellerId: string, newRating: number) {
+async function updateSellerReviewStats(adminDb, sellerId: string, newRating: number) {
   try {
     console.log('[update-review-stats] Updating stats for seller:', sellerId, 'with rating:', newRating);
     
@@ -188,9 +188,6 @@ async function updateSellerReviewStats(sellerId: string, newRating: number) {
       console.error('[update-review-stats] Missing sellerId');
       return;
     }
-    
-    // Use Firebase Admin SDK
-    const { db: adminDb } = initializeFirebaseAdmin();
     
     // Validate rating is a number between 1-5
     if (typeof newRating !== 'number' || newRating < 1 || newRating > 5) {

@@ -161,6 +161,19 @@ export function useReviews() {
       console.log('Request body:', JSON.stringify(requestBody));
       
       try {
+        // First, check if Firebase Admin is working properly
+        console.log('Testing Firebase Admin connection before submitting review');
+        const testResponse = await fetch('/api/debug/test-firebase-admin-enhanced');
+        const testData = await testResponse.json();
+        
+        if (!testResponse.ok || !testData.success) {
+          console.error('Firebase Admin test failed:', testData);
+          throw new Error('Database connection issue. Please try again later.');
+        }
+        
+        console.log('Firebase Admin test successful, proceeding with review submission');
+        
+        // Now submit the review
         const response = await fetch('/api/reviews/create', {
           method: 'POST',
           headers: {
