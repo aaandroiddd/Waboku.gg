@@ -2,6 +2,14 @@ import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Review, ReviewStats, ReviewFilterOptions } from '@/types/review';
 import { toast } from 'sonner';
+import { 
+  fetchReviewsForSeller, 
+  fetchReviewsByBuyer, 
+  getSellerReviewStats, 
+  submitReview as submitReviewService,
+  markReviewAsHelpful as markReviewAsHelpfulService,
+  addSellerResponse as addSellerResponseService
+} from '@/services/reviewService';
 
 export function useReviews() {
   const { user } = useAuth();
@@ -31,87 +39,49 @@ export function useReviews() {
     setError(null);
     
     try {
-      // Build query parameters
-      const params = new URLSearchParams({
-        sellerId,
-        page: page.toString(),
-        limit: pageSize.toString(),
-      });
+      // Use the client-side service to fetch reviews directly from Firestore
+      const reviews = await fetchReviewsForSeller(sellerId, pageSize);
+      console.log('useReviews: Fetched reviews from Firestore:', reviews.length);
       
-      // Add filter options if provided
-      if (filterOptions.rating) {
-        params.append('rating', filterOptions.rating.toString());
-      }
-      
-      if (filterOptions.sortBy) {
-        params.append('sortBy', filterOptions.sortBy);
-      }
-      
-      // Explicitly set role to 'seller' to get reviews received by this seller
-      params.append('role', 'seller');
-      
-      const url = `/api/reviews/get-seller-reviews?${params.toString()}`;
-      console.log('useReviews: Fetching from URL:', url);
-      
-      const response = await fetch(url);
-      const data = await response.json();
-      
-      console.log('useReviews: API response status:', response.status);
-      console.log('useReviews: API response data:', {
-        success: data.success,
-        message: data.message,
-        reviewsCount: data.reviews?.length || 0,
-        total: data.total || 0,
-        hasStats: !!data.stats,
-        averageRating: data.stats?.averageRating
-      });
+      // Get seller stats
+      const stats = await getSellerReviewStats(sellerId);
+      console.log('useReviews: Fetched seller stats:', stats);
       
       // Log the first review if available for debugging
-      if (data.reviews && data.reviews.length > 0) {
+      if (reviews && reviews.length > 0) {
         console.log('useReviews: First review sample:', {
-          id: data.reviews[0].id,
-          sellerId: data.reviews[0].sellerId,
-          reviewerId: data.reviews[0].reviewerId,
-          rating: data.reviews[0].rating,
-          status: data.reviews[0].status,
-          isPublic: data.reviews[0].isPublic,
-          comment: data.reviews[0].comment?.substring(0, 50) + (data.reviews[0].comment?.length > 50 ? '...' : '') || 'No comment',
-          hasComment: !!data.reviews[0].comment,
-          commentLength: data.reviews[0].comment?.length || 0
+          id: reviews[0].id,
+          sellerId: reviews[0].sellerId,
+          reviewerId: reviews[0].reviewerId,
+          rating: reviews[0].rating,
+          status: reviews[0].status,
+          isPublic: reviews[0].isPublic,
+          comment: reviews[0].comment?.substring(0, 50) + (reviews[0].comment?.length > 50 ? '...' : '') || 'No comment',
+          hasComment: !!reviews[0].comment,
+          commentLength: reviews[0].comment?.length || 0
         });
         
         // Ensure all reviews have at least an empty string for comment
-        data.reviews = data.reviews.map(review => ({
+        const processedReviews = reviews.map(review => ({
           ...review,
           comment: review.comment || ''
         }));
-      } else {
-        console.log('useReviews: No reviews returned from API');
         
-        // If we're in development, log debug info from the API if available
-        if (process.env.NEXT_PUBLIC_CO_DEV_ENV && data.debug) {
-          console.log('useReviews: Debug info from API:', data.debug);
-        }
+        setSellerReviews(processedReviews);
+      } else {
+        console.log('useReviews: No reviews returned from Firestore');
+        setSellerReviews([]);
       }
       
-      if (!response.ok) {
-        throw new Error(data.message || 'Failed to fetch reviews');
-      }
-      
-      setSellerReviews(data.reviews || []);
-      setReviewStats(data.stats || null);
-      setTotalReviews(data.total || 0);
-      
-      // If we have stats, set the average rating
-      if (data.stats) {
-        setAverageRating(data.stats.averageRating || 0);
-      }
+      setReviewStats(stats || null);
+      setTotalReviews(stats?.totalReviews || 0);
+      setAverageRating(stats?.averageRating || 0);
       
       return {
-        reviews: data.reviews || [],
-        stats: data.stats,
-        total: data.total || 0,
-        averageRating: data.stats?.averageRating || 0
+        reviews: reviews || [],
+        stats: stats,
+        total: stats?.totalReviews || 0,
+        averageRating: stats?.averageRating || 0
       };
     } catch (error) {
       console.error('useReviews: Error fetching seller reviews:', error);
@@ -204,53 +174,28 @@ export function useReviews() {
     try {
       console.log('Submitting review:', { orderId, rating, title, userId: user.uid });
       
-      const requestBody = {
-        orderId,
-        rating,
-        comment,
-        title,
-        images: [], // Removed image upload functionality
-        userId: user.uid,
-      };
-      
-      console.log('Request body:', JSON.stringify(requestBody));
-      
+      // First, we need to get the order details to get the sellerId and listingId
       try {
-        // First, check if Firebase Admin is working properly
-        console.log('Testing Firebase Admin connection before submitting review');
-        const testResponse = await fetch('/api/debug/test-firebase-admin-enhanced');
-        const testData = await testResponse.json();
+        // Use the client-side service to submit the review
+        const reviewData = {
+          orderId,
+          reviewerId: user.uid,
+          sellerId: '', // This will be populated from the order in the service
+          listingId: '', // This will be populated from the order in the service
+          rating,
+          comment,
+          title: title || '',
+          images: images || []
+        };
         
-        if (!testResponse.ok || !testData.success) {
-          console.error('Firebase Admin test failed:', testData);
-          throw new Error('Database connection issue. Please try again later.');
-        }
-        
-        console.log('Firebase Admin test successful, proceeding with review submission');
-        
-        // Now submit the review
-        const response = await fetch('/api/reviews/create', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(requestBody),
-        });
-        
-        console.log('Response status:', response.status);
-        
-        const data = await response.json();
-        console.log('Review submission response:', data);
-        
-        if (!response.ok) {
-          throw new Error(data.message || 'Failed to submit review');
-        }
+        const reviewId = await submitReviewService(reviewData);
+        console.log('Review submitted successfully with ID:', reviewId);
         
         toast.success('Review submitted successfully');
-        return data.reviewId;
-      } catch (fetchError) {
-        console.error('Fetch error during review submission:', fetchError);
-        throw new Error(fetchError instanceof Error ? fetchError.message : 'Network error during review submission');
+        return reviewId;
+      } catch (submitError) {
+        console.error('Error during review submission:', submitError);
+        throw new Error(submitError instanceof Error ? submitError.message : 'Error submitting review');
       }
     } catch (error) {
       console.error('Error submitting review:', error);
@@ -282,24 +227,8 @@ export function useReviews() {
     setError(null);
     
     try {
-      const response = await fetch('/api/reviews/respond', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          reviewId,
-          comment,
-          userId: user.uid,
-        }),
-      });
-      
-      const data = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(data.message || 'Failed to respond to review');
-      }
-      
+      // Use the client-side service to add a seller response
+      await addSellerResponseService(reviewId, comment);
       toast.success('Response added successfully');
       return true;
     } catch (error) {
@@ -331,25 +260,10 @@ export function useReviews() {
     setError(null);
     
     try {
-      const response = await fetch('/api/reviews/mark-helpful', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          reviewId,
-          userId: user.uid,
-        }),
-      });
-      
-      const data = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(data.message || 'Failed to mark review as helpful');
-      }
-      
+      // Use the client-side service to mark a review as helpful
+      await markReviewAsHelpfulService(reviewId);
       toast.success('Review marked as helpful');
-      return data.helpfulCount;
+      return true;
     } catch (error) {
       console.error('Error marking review as helpful:', error);
       const errorMessage = error instanceof Error ? error.message : 'Failed to mark review as helpful';
@@ -374,23 +288,6 @@ export function useReviews() {
     setError(null);
     
     try {
-      // Build query parameters
-      const params = new URLSearchParams({
-        userId,
-        page: page.toString(),
-        limit: pageSize.toString(),
-      });
-      
-      // Add filter options if provided
-      if (filterOptions.sortBy) {
-        params.append('sortBy', filterOptions.sortBy);
-      }
-      
-      // Add role parameter if provided (reviewer or seller)
-      if (filterOptions.role) {
-        params.append('role', filterOptions.role);
-      }
-      
       console.log('useReviews: Fetching user reviews with params:', { 
         userId, 
         page, 
@@ -398,27 +295,31 @@ export function useReviews() {
         role: filterOptions.role 
       });
       
-      const response = await fetch(`/api/reviews/get-user-reviews?${params.toString()}`);
-      const data = await response.json();
+      let reviews = [];
       
-      // Log the response for debugging
-      console.log('useReviews: User reviews API response:', {
-        success: data.success,
-        message: data.message,
-        reviewsCount: data.reviews?.length || 0,
-        total: data.total || 0
-      });
-      
-      if (!response.ok) {
-        throw new Error(data.message || 'Failed to fetch reviews');
+      // Determine which reviews to fetch based on role
+      if (filterOptions.role === 'seller') {
+        // Get reviews received by this seller
+        reviews = await fetchReviewsForSeller(userId, pageSize);
+        console.log('useReviews: Fetched seller reviews from Firestore:', reviews.length);
+      } else {
+        // Default to reviewer role - get reviews written by this buyer
+        reviews = await fetchReviewsByBuyer(userId, pageSize);
+        console.log('useReviews: Fetched buyer reviews from Firestore:', reviews.length);
       }
       
-      setUserReviews(data.reviews || []);
-      setTotalReviews(data.total || 0);
+      // Ensure all reviews have at least an empty string for comment
+      const processedReviews = reviews.map(review => ({
+        ...review,
+        comment: review.comment || ''
+      }));
+      
+      setUserReviews(processedReviews);
+      setTotalReviews(reviews.length);
       
       return {
-        reviews: data.reviews || [],
-        total: data.total || 0
+        reviews: processedReviews,
+        total: reviews.length
       };
     } catch (error) {
       console.error('Error fetching user reviews:', error);
