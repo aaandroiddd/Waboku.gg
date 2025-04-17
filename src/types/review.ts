@@ -2,8 +2,8 @@ export interface Review {
   id: string;
   orderId: string;
   listingId: string;
-  reviewerId: string; // The user who wrote the review (buyer)
-  sellerId: string;   // The user who received the review (seller)
+  reviewerId: string; // The user who wrote the review (buyer/customer)
+  sellerId: string;   // The user who owned the listing (seller/merchant)
   rating: number;     // 1-5 star rating
   comment: string;    // Review text
   title?: string;     // Optional review title
@@ -42,5 +42,5 @@ export interface ReviewFilterOptions {
   hasComment?: boolean;
   verifiedOnly?: boolean;
   searchTerm?: string;
-  role?: 'reviewer' | 'seller'; // Added role parameter to distinguish between reviews written vs received
+  role?: 'reviewer' | 'seller'; // 'reviewer' = reviews written by buyer, 'seller' = reviews received by seller
 }

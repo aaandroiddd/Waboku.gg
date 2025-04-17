@@ -36,15 +36,17 @@ export default async function handler(
     let reviewsQuery;
     
     if (role === 'seller') {
-      // Get reviews where the user is the seller (reviews received)
+      // Get reviews where the user is the seller (reviews received by the seller)
+      // The sellerId field represents the owner of the listing who should see reviews on their dashboard
       console.log('[get-user-reviews] Fetching reviews where user is the seller (reviews received)');
       reviewsQuery = db.collection('reviews')
         .where('sellerId', '==', userId)
         .where('isPublic', '==', true)
         .where('status', '==', 'published');
     } else if (role === 'reviewer') {
-      // Get reviews where the user is the reviewer (reviews written)
-      console.log('[get-user-reviews] Fetching reviews where user is the reviewer (reviews written)');
+      // Get reviews where the user is the reviewer/buyer (reviews written by the buyer)
+      // The reviewerId field represents the buyer who wrote the review
+      console.log('[get-user-reviews] Fetching reviews where user is the reviewer/buyer (reviews written)');
       reviewsQuery = db.collection('reviews')
         .where('reviewerId', '==', userId)
         .where('isPublic', '==', true)
