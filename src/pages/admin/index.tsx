@@ -463,6 +463,22 @@ export default function AdminDashboard() {
             </div>
           </Card>
           
+          {/* Review System Debug Section */}
+          <Card className="p-6 mb-8">
+            <h2 className="text-xl font-semibold mb-4">Review System Debug</h2>
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Diagnose and fix issues with the review system.
+              </p>
+              <Button 
+                onClick={() => router.push(`/admin/review-system`)}
+                className="w-full bg-green-600 hover:bg-green-700"
+              >
+                Review System Debug
+              </Button>
+            </div>
+          </Card>
+          
           {/* Wanted Posts Debugger Section */}
           <div className="mt-8">
             <h2 className="text-xl font-semibold mb-4">Wanted Posts Debugging Tools</h2>

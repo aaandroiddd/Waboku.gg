@@ -227,23 +227,9 @@ export function ReviewsList({
       ) : reviews.length === 0 ? (
         <div className="text-center py-8 text-muted-foreground">
           <p>No reviews yet</p>
-          {process.env.NEXT_PUBLIC_CO_DEV_ENV && (
-            <div className="mt-4 text-xs text-muted-foreground">
-              <p>Debug info: Attempted to fetch reviews for:</p>
-              {sellerId && <p>Seller ID: {sellerId}</p>}
-              {listingId && <p>Listing ID: {listingId}</p>}
-              {reviewerId && <p>Reviewer ID: {reviewerId}</p>}
-            </div>
-          )}
         </div>
       ) : (
         <div className="space-y-4">
-          {process.env.NEXT_PUBLIC_CO_DEV_ENV && (
-            <div className="text-xs text-muted-foreground bg-muted p-2 rounded mb-4">
-              <p>Debug info: Found {reviews.length} reviews</p>
-              <p>First review: {reviews[0]?.id} - Rating: {reviews[0]?.rating} - Comment: {reviews[0]?.comment?.substring(0, 50)}{reviews[0]?.comment?.length > 50 ? '...' : ''}</p>
-            </div>
-          )}
           {reviews.map((review) => (
             <ReviewCard key={review.id} review={review} />
           ))}

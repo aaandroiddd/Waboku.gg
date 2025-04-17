@@ -4,7 +4,6 @@ import { Card, CardContent } from '@/components/ui/card';
 import { ReviewsList } from '@/components/ReviewsList';
 import { useReviews } from '@/hooks/useReviews';
 import { useProfile } from '@/hooks/useProfile';
-import { ReviewDebugInfo } from '@/components/ReviewDebugInfo';
 
 interface UserReviewsTabsProps {
   userId: string;
@@ -33,29 +32,16 @@ export function UserReviewsTabs({ userId }: UserReviewsTabsProps) {
           
           <TabsContent value="received">
             <h3 className="text-xl font-semibold mb-4">Reviews Received</h3>
-            {process.env.NEXT_PUBLIC_CO_DEV_ENV && (
-              <div className="text-xs text-muted-foreground bg-muted p-2 rounded mb-4">
-                <p>Debug info: Fetching reviews received by seller ID: {userId}</p>
-              </div>
-            )}
             <ReviewsList sellerId={userId} showFilters={true} />
           </TabsContent>
           
           <TabsContent value="written">
             <h3 className="text-xl font-semibold mb-4">Reviews Written</h3>
-            {process.env.NEXT_PUBLIC_CO_DEV_ENV && (
-              <div className="text-xs text-muted-foreground bg-muted p-2 rounded mb-4">
-                <p>Debug info: Fetching reviews written by reviewer ID: {userId}</p>
-              </div>
-            )}
             <ReviewsList reviewerId={userId} showFilters={true} />
           </TabsContent>
         </Tabs>
         
-        {/* Add debug component in development environment */}
-        {process.env.NEXT_PUBLIC_CO_DEV_ENV && (
-          <ReviewDebugInfo userId={userId} />
-        )}
+
       </CardContent>
     </Card>
   );
