@@ -21,8 +21,12 @@ export function useReviews() {
     pageSize: number = 10,
     filterOptions: ReviewFilterOptions = {}
   ) => {
-    if (!sellerId) return;
+    if (!sellerId) {
+      console.log('useReviews: No sellerId provided to fetchSellerReviews');
+      return;
+    }
     
+    console.log('useReviews: Fetching seller reviews for:', sellerId, 'with options:', filterOptions);
     setLoading(true);
     setError(null);
     
@@ -43,8 +47,19 @@ export function useReviews() {
         params.append('sortBy', filterOptions.sortBy);
       }
       
-      const response = await fetch(`/api/reviews/get-seller-reviews?${params.toString()}`);
+      const url = `/api/reviews/get-seller-reviews?${params.toString()}`;
+      console.log('useReviews: Fetching from URL:', url);
+      
+      const response = await fetch(url);
       const data = await response.json();
+      
+      console.log('useReviews: API response status:', response.status);
+      console.log('useReviews: API response data:', {
+        success: data.success,
+        message: data.message,
+        reviewsCount: data.reviews?.length || 0,
+        total: data.total || 0
+      });
       
       if (!response.ok) {
         throw new Error(data.message || 'Failed to fetch reviews');
@@ -60,7 +75,7 @@ export function useReviews() {
         total: data.total || 0
       };
     } catch (error) {
-      console.error('Error fetching seller reviews:', error);
+      console.error('useReviews: Error fetching seller reviews:', error);
       setError(error instanceof Error ? error.message : 'Failed to fetch reviews');
       return null;
     } finally {

@@ -116,13 +116,18 @@ export default async function handler(
           title: title || '',
           images: images || [],
           isVerifiedPurchase: true,
-          isPublic: true,
-          status: 'published',
+          isPublic: true, // Ensure this is explicitly set to true
+          status: 'published', // Ensure this is explicitly set to 'published'
           helpfulCount: 0,
           reportCount: 0,
           createdAt: now,
           updatedAt: now
         };
+        
+        console.log('[create-review] Review data being saved:', JSON.stringify({
+          ...reviewData,
+          comment: reviewData.comment.substring(0, 50) + (reviewData.comment.length > 50 ? '...' : '')
+        }));
         
         console.log('[create-review] Creating review document with data:', JSON.stringify(reviewData));
         await adminDb.collection('reviews').doc(reviewId).set(reviewData);

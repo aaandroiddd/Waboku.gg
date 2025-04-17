@@ -94,9 +94,16 @@ export default async function handler(
     
     // Build the query with constraints
     let reviewsQuery = db.collection('reviews')
-      .where('sellerId', '==', sellerId)
-      .where('isPublic', '==', true)
-      .where('status', '==', 'published');
+      .where('sellerId', '==', sellerId);
+      
+    // Only add these filters if we're not in a testing environment
+    if (process.env.NODE_ENV !== 'development' && !process.env.NEXT_PUBLIC_CO_DEV_ENV) {
+      reviewsQuery = reviewsQuery
+        .where('isPublic', '==', true)
+        .where('status', '==', 'published');
+    }
+    
+    console.log('[get-seller-reviews] Query built for sellerId:', sellerId);
     
     // Add rating filter if provided
     if (rating) {
@@ -150,6 +157,40 @@ export default async function handler(
       const countSnapshot = await reviewsQuery.get();
       totalCount = countSnapshot.size;
       console.log('[get-seller-reviews] Total reviews count:', totalCount);
+      
+      // Log the first few documents for debugging
+      if (totalCount > 0) {
+        console.log('[get-seller-reviews] First review document sample:');
+        const sampleDoc = countSnapshot.docs[0].data();
+        console.log(JSON.stringify({
+          id: countSnapshot.docs[0].id,
+          sellerId: sampleDoc.sellerId,
+          reviewerId: sampleDoc.reviewerId,
+          rating: sampleDoc.rating,
+          isPublic: sampleDoc.isPublic,
+          status: sampleDoc.status
+        }));
+      } else {
+        console.log('[get-seller-reviews] No reviews found for seller:', sellerId);
+        
+        // Check if there are any reviews at all for this seller without filters
+        const allReviewsQuery = db.collection('reviews').where('sellerId', '==', sellerId);
+        const allReviewsSnapshot = await allReviewsQuery.get();
+        console.log('[get-seller-reviews] Total unfiltered reviews for seller:', allReviewsSnapshot.size);
+        
+        if (allReviewsSnapshot.size > 0) {
+          console.log('[get-seller-reviews] Sample unfiltered review:');
+          const sampleDoc = allReviewsSnapshot.docs[0].data();
+          console.log(JSON.stringify({
+            id: allReviewsSnapshot.docs[0].id,
+            sellerId: sampleDoc.sellerId,
+            reviewerId: sampleDoc.reviewerId,
+            rating: sampleDoc.rating,
+            isPublic: sampleDoc.isPublic,
+            status: sampleDoc.status
+          }));
+        }
+      }
     } catch (countError) {
       console.error('[get-seller-reviews] Error getting total count:', countError);
       // Continue with totalCount = 0

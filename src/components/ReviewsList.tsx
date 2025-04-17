@@ -50,19 +50,32 @@ export function ReviewsList({
         filterOptions.rating = parseInt(activeTab);
       }
       
+      console.log('ReviewsList: Fetching reviews with params:', { 
+        sellerId, 
+        listingId, 
+        reviewerId, 
+        filterOptions 
+      });
+      
       let result;
       if (sellerId) {
+        console.log('ReviewsList: Fetching seller reviews for:', sellerId);
         result = await fetchSellerReviews(sellerId, 1, 10, filterOptions);
       } else if (listingId) {
+        console.log('ReviewsList: Fetching product reviews for:', listingId);
         result = await fetchProductReviews(listingId, 1, 10, filterOptions);
       } else if (reviewerId) {
+        console.log('ReviewsList: Fetching reviewer reviews for:', reviewerId);
         result = await fetchUserReviews(reviewerId, 1, 10, filterOptions);
       }
       
       if (result) {
+        console.log('ReviewsList: Received reviews:', result.reviews.length, 'of', result.total);
         setReviews(result.reviews);
         setPage(1);
         setHasMore(result.reviews.length < (result.total || 0));
+      } else {
+        console.log('ReviewsList: No result returned from fetch');
       }
     };
     
