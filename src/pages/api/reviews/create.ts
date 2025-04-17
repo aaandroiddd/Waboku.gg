@@ -1,6 +1,4 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { getFirebaseServices } from '@/lib/firebase';
-import { collection, doc, getDoc, setDoc, Timestamp, updateDoc } from 'firebase/firestore';
 import { initializeFirebaseAdmin } from '@/lib/firebase-admin';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -144,7 +142,7 @@ export default async function handler(
         // Update the seller's review stats
         console.log('[create-review] Updating seller review stats for:', orderData.sellerId);
         try {
-          const statsUpdateResult = await updateSellerReviewStats(db, orderData.sellerId, rating);
+          const statsUpdateResult = await updateSellerReviewStats(orderData.sellerId, rating);
           console.log('[create-review] Stats update result:', statsUpdateResult);
         } catch (statsError) {
           // Log the error but don't fail the review creation
@@ -182,7 +180,7 @@ export default async function handler(
 }
 
 // Helper function to update seller's review statistics
-async function updateSellerReviewStats(db: any, sellerId: string, newRating: number) {
+async function updateSellerReviewStats(sellerId: string, newRating: number) {
   try {
     console.log('[update-review-stats] Updating stats for seller:', sellerId, 'with rating:', newRating);
     
@@ -191,7 +189,7 @@ async function updateSellerReviewStats(db: any, sellerId: string, newRating: num
       return;
     }
     
-    // Use Firebase Admin SDK instead
+    // Use Firebase Admin SDK
     const { db: adminDb } = initializeFirebaseAdmin();
     
     // Validate rating is a number between 1-5
