@@ -80,6 +80,21 @@ export function useProfile(userId: string | null) {
       const userDoc = await getDoc(doc(firebaseDb, 'users', id));
       const userData = userDoc.data();
       
+      // Try to get the review stats for this user
+      let userRating = null;
+      try {
+        const reviewStatsDoc = await getDoc(doc(firebaseDb, 'reviewStats', id));
+        if (reviewStatsDoc.exists()) {
+          const statsData = reviewStatsDoc.data();
+          if (statsData && typeof statsData.averageRating === 'number') {
+            userRating = statsData.averageRating;
+            console.log('Found review stats with rating:', userRating);
+          }
+        }
+      } catch (statsError) {
+        console.error('Error fetching review stats:', statsError);
+      }
+      
       // Create a default profile even if the document doesn't exist
       const profileData: UserProfile = {
         uid: id,
@@ -92,7 +107,8 @@ export function useProfile(userId: string | null) {
         location: userData?.location || '',
         joinDate: userData?.createdAt || userData?.joinDate || new Date().toISOString(),
         totalSales: typeof userData?.totalSales === 'number' ? userData.totalSales : 0,
-        rating: typeof userData?.rating === 'number' ? userData.rating : null,
+        // Use the rating from reviewStats if available, otherwise fall back to user document
+        rating: userRating !== null ? userRating : (typeof userData?.rating === 'number' ? userData.rating : null),
         contact: userData?.contact || '',
         isEmailVerified: userData?.isEmailVerified || false,
         authProvider: userData?.authProvider || 'unknown',

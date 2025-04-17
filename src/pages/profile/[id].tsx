@@ -217,7 +217,7 @@ const ProfileContent = ({ userId }: { userId: string | null }) => {
                     <div className="text-sm text-muted-foreground">Total Sales</div>
                   </div>
                   <div className="text-center p-4 bg-secondary rounded-lg">
-                    <div className="text-2xl font-bold">{profile.rating || 'N/A'}</div>
+                    <div className="text-2xl font-bold">{profile.rating !== undefined && profile.rating !== null ? Number(profile.rating).toFixed(1) : 'N/A'}</div>
                     <div className="text-sm text-muted-foreground">Rating</div>
                   </div>
                   <div className="text-center p-4 bg-secondary rounded-lg">

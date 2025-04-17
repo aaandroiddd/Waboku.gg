@@ -65,6 +65,8 @@ export function ReviewsList({
         let result;
         if (sellerId) {
           console.log('ReviewsList: Fetching seller reviews for:', sellerId);
+          // Explicitly set role to 'seller' to get reviews received by this seller
+          filterOptions.role = 'seller';
           result = await fetchSellerReviews(sellerId, 1, 10, filterOptions);
         } else if (listingId) {
           console.log('ReviewsList: Fetching product reviews for:', listingId);
@@ -72,7 +74,8 @@ export function ReviewsList({
         } else if (reviewerId) {
           console.log('ReviewsList: Fetching reviewer reviews for:', reviewerId);
           // Pass role parameter to indicate we want reviews written by this user
-          result = await fetchUserReviews(reviewerId, 1, 10, { ...filterOptions, role: 'reviewer' });
+          filterOptions.role = 'reviewer';
+          result = await fetchUserReviews(reviewerId, 1, 10, filterOptions);
         }
         
         if (result) {
@@ -122,12 +125,15 @@ export function ReviewsList({
     try {
       let result;
       if (sellerId) {
+        // Explicitly set role to 'seller' to get reviews received by this seller
+        filterOptions.role = 'seller';
         result = await fetchSellerReviews(sellerId, nextPage, 10, filterOptions);
       } else if (listingId) {
         result = await fetchProductReviews(listingId, nextPage, 10, filterOptions);
       } else if (reviewerId) {
         // Pass role parameter to indicate we want reviews written by this user
-        result = await fetchUserReviews(reviewerId, nextPage, 10, { ...filterOptions, role: 'reviewer' });
+        filterOptions.role = 'reviewer';
+        result = await fetchUserReviews(reviewerId, nextPage, 10, filterOptions);
       }
       
       if (result) {

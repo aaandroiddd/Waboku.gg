@@ -47,6 +47,9 @@ export function useReviews() {
         params.append('sortBy', filterOptions.sortBy);
       }
       
+      // Explicitly set role to 'seller' to get reviews received by this seller
+      params.append('role', 'seller');
+      
       const url = `/api/reviews/get-seller-reviews?${params.toString()}`;
       console.log('useReviews: Fetching from URL:', url);
       
@@ -58,7 +61,9 @@ export function useReviews() {
         success: data.success,
         message: data.message,
         reviewsCount: data.reviews?.length || 0,
-        total: data.total || 0
+        total: data.total || 0,
+        hasStats: !!data.stats,
+        averageRating: data.stats?.averageRating
       });
       
       // Log the first review if available for debugging
@@ -97,10 +102,16 @@ export function useReviews() {
       setReviewStats(data.stats || null);
       setTotalReviews(data.total || 0);
       
+      // If we have stats, set the average rating
+      if (data.stats) {
+        setAverageRating(data.stats.averageRating || 0);
+      }
+      
       return {
         reviews: data.reviews || [],
         stats: data.stats,
-        total: data.total || 0
+        total: data.total || 0,
+        averageRating: data.stats?.averageRating || 0
       };
     } catch (error) {
       console.error('useReviews: Error fetching seller reviews:', error);
