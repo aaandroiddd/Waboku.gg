@@ -22,6 +22,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { TrackingStatusComponent } from '@/components/TrackingStatus';
 import { UserNameLink } from '@/components/UserNameLink';
 import { ReviewForm } from '@/components/ReviewForm';
+import { OrderShippingInfoDialog } from '@/components/OrderShippingInfoDialog';
 
 export default function OrderDetailsPage() {
   const router = useRouter();
@@ -44,6 +45,7 @@ export default function OrderDetailsPage() {
   const [showConfirmDeliveryDialog, setShowConfirmDeliveryDialog] = useState(false);
   const [showCompletePickupDialog, setShowCompletePickupDialog] = useState(false);
   const [showReviewDialog, setShowReviewDialog] = useState(false);
+  const [showShippingInfoDialog, setShowShippingInfoDialog] = useState(false);
 
   // Check if we should show the review dialog based on URL query param
   useEffect(() => {
@@ -535,7 +537,7 @@ export default function OrderDetailsPage() {
                   </CardContent>
                 </Card>
               </div>
-            ) : order.shippingAddress && (
+            ) : order.shippingAddress ? (
               <div>
                 <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
                   <MapPin className="h-5 w-5" />
@@ -552,6 +554,57 @@ export default function OrderDetailsPage() {
                         {order.shippingAddress.postal_code}
                       </p>
                       <p>{order.shippingAddress.country}</p>
+                    </div>
+                    {isUserBuyer && (
+                      <div className="mt-4">
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => setShowShippingInfoDialog(true)}
+                        >
+                          <MapPin className="mr-2 h-4 w-4" /> Update Shipping Information
+                        </Button>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+            ) : (
+              <div>
+                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                  <MapPin className="h-5 w-5" />
+                  Shipping Information
+                </h3>
+                <Card>
+                  <CardContent className="pt-6">
+                    <div className="flex flex-col items-center gap-4 p-6 text-center">
+                      <div className="flex items-center justify-center w-12 h-12 rounded-full bg-blue-100 dark:bg-blue-900/30">
+                        <MapPin className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+                      </div>
+                      <div>
+                        <h4 className="text-lg font-medium mb-2">Shipping Information Required</h4>
+                        <p className="text-muted-foreground mb-4">
+                          To be provided by buyer
+                        </p>
+                        <p className="text-sm text-muted-foreground mb-4">
+                          Address pending
+                        </p>
+                      </div>
+                      {isUserBuyer && (
+                        <Button 
+                          variant="default" 
+                          onClick={() => setShowShippingInfoDialog(true)}
+                          className="w-full sm:w-auto"
+                        >
+                          <MapPin className="mr-2 h-4 w-4" /> Provide Shipping Information
+                        </Button>
+                      )}
+                      {!isUserBuyer && (
+                        <div className="flex items-center gap-2 p-3 rounded-md bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 w-full">
+                          <AlertTriangle className="h-4 w-4 flex-shrink-0" />
+                          <p>Waiting for buyer to provide shipping information.</p>
+                        </div>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
@@ -1107,6 +1160,23 @@ export default function OrderDetailsPage() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Shipping Info Dialog */}
+      {order && (
+        <OrderShippingInfoDialog
+          open={showShippingInfoDialog}
+          onOpenChange={setShowShippingInfoDialog}
+          orderId={order.id}
+          onComplete={(shippingAddress) => {
+            // Update local state with the new shipping address
+            setOrder({
+              ...order,
+              shippingAddress
+            });
+            toast.success('Shipping information updated successfully');
+          }}
+        />
+      )}
     </DashboardLayout>
   );
 }
