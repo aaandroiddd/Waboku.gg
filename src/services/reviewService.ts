@@ -279,31 +279,53 @@ export const markReviewAsHelpful = async (reviewId) => {
  */
 export const addSellerResponse = async (reviewId, responseText) => {
   try {
+    console.log('Adding seller response to review:', reviewId);
+    
     const reviewRef = doc(db, 'reviews', reviewId);
     const reviewDoc = await getDoc(reviewRef);
     
     if (!reviewDoc.exists()) {
+      console.error('Review not found:', reviewId);
       throw new Error('Review not found');
     }
     
     const sellerResponse = {
-      content: responseText,
+      comment: responseText,
       createdAt: serverTimestamp()
     };
     
+    console.log('Updating review with seller response:', sellerResponse);
+    
+    // Update in main reviews collection
     await updateDoc(reviewRef, {
       sellerResponse,
       updatedAt: serverTimestamp()
     });
     
-    // Also update in seller's subcollection
-    const review = reviewDoc.data();
-    const sellerReviewRef = doc(db, 'users', review.sellerId, 'reviews', reviewId);
+    // Also update in seller's subcollection if it exists
+    try {
+      const review = reviewDoc.data();
+      if (review && review.sellerId) {
+        const sellerReviewRef = doc(db, 'users', review.sellerId, 'reviews', reviewId);
+        const sellerReviewDoc = await getDoc(sellerReviewRef);
+        
+        if (sellerReviewDoc.exists()) {
+          await updateDoc(sellerReviewRef, {
+            sellerResponse,
+            updatedAt: serverTimestamp()
+          });
+          console.log('Updated seller subcollection review');
+        } else {
+          console.log('Seller subcollection review does not exist, skipping update');
+        }
+      }
+    } catch (subcollectionError) {
+      // Log but don't fail if the subcollection update fails
+      console.error('Error updating seller subcollection:', subcollectionError);
+    }
     
-    await updateDoc(sellerReviewRef, {
-      sellerResponse,
-      updatedAt: serverTimestamp()
-    });
+    console.log('Seller response added successfully');
+    return true;
   } catch (error) {
     console.error('Error adding seller response:', error);
     throw error;

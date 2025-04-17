@@ -1,10 +1,11 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getFirebaseServices } from '@/lib/firebase';
-import { doc, getDoc, updateDoc, Timestamp } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 
 type ResponseData = {
   success: boolean;
   message: string;
+  data?: any;
 };
 
 export default async function handler(
@@ -46,15 +47,36 @@ export default async function handler(
     
     try {
       // Update the review with the seller's response
-      const now = Timestamp.now();
+      const sellerResponse = {
+        comment,
+        createdAt: serverTimestamp()
+      };
+      
+      console.log('[respond-to-review] Adding response to review:', { reviewId, sellerResponse });
       
       await updateDoc(reviewRef, {
-        sellerResponse: {
-          comment,
-          createdAt: now
-        },
-        updatedAt: now
+        sellerResponse,
+        updatedAt: serverTimestamp()
       });
+      
+      // Also update in seller's subcollection if it exists
+      try {
+        const sellerReviewRef = doc(db, 'users', reviewData.sellerId, 'reviews', reviewId);
+        const sellerReviewDoc = await getDoc(sellerReviewRef);
+        
+        if (sellerReviewDoc.exists()) {
+          await updateDoc(sellerReviewRef, {
+            sellerResponse,
+            updatedAt: serverTimestamp()
+          });
+          console.log('[respond-to-review] Updated seller subcollection review');
+        } else {
+          console.log('[respond-to-review] Seller subcollection review does not exist, skipping update');
+        }
+      } catch (subcollectionError) {
+        // Log but don't fail if the subcollection update fails
+        console.error('[respond-to-review] Error updating seller subcollection:', subcollectionError);
+      }
       
       console.log('[respond-to-review] Response added successfully to review:', reviewId);
       

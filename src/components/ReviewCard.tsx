@@ -146,7 +146,9 @@ export function ReviewCard({ review, showSellerResponse = true, allowHelpful = t
                       : 'Unknown date'}
                   </span>
                 </div>
-                <p className="mt-2 text-sm whitespace-pre-line">{review.sellerResponse.comment}</p>
+                <p className="mt-2 text-sm whitespace-pre-line">
+                  {review.sellerResponse.comment || review.sellerResponse.content || 'No response content'}
+                </p>
               </div>
             )}
           </div>

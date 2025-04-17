@@ -227,10 +227,40 @@ export function useReviews() {
     setError(null);
     
     try {
-      // Use the client-side service to add a seller response
-      await addSellerResponseService(reviewId, comment);
-      toast.success('Response added successfully');
-      return true;
+      console.log('Responding to review:', reviewId);
+      
+      // First try using the client-side service
+      try {
+        await addSellerResponseService(reviewId, comment);
+        console.log('Response added successfully via client-side service');
+        toast.success('Response added successfully');
+        return true;
+      } catch (clientError) {
+        console.error('Error with client-side service, trying API endpoint:', clientError);
+        
+        // If client-side service fails, try the API endpoint
+        const response = await fetch('/api/reviews/respond', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            reviewId,
+            comment,
+            userId: user.uid
+          }),
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+          throw new Error(data.message || 'Failed to respond to review');
+        }
+        
+        console.log('Response added successfully via API endpoint');
+        toast.success('Response added successfully');
+        return true;
+      }
     } catch (error) {
       console.error('Error responding to review:', error);
       const errorMessage = error instanceof Error ? error.message : 'Failed to respond to review';
