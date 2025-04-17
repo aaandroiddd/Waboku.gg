@@ -391,8 +391,23 @@ export function useReviews() {
         params.append('role', filterOptions.role);
       }
       
+      console.log('useReviews: Fetching user reviews with params:', { 
+        userId, 
+        page, 
+        pageSize, 
+        role: filterOptions.role 
+      });
+      
       const response = await fetch(`/api/reviews/get-user-reviews?${params.toString()}`);
       const data = await response.json();
+      
+      // Log the response for debugging
+      console.log('useReviews: User reviews API response:', {
+        success: data.success,
+        message: data.message,
+        reviewsCount: data.reviews?.length || 0,
+        total: data.total || 0
+      });
       
       if (!response.ok) {
         throw new Error(data.message || 'Failed to fetch reviews');

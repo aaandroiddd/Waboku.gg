@@ -20,6 +20,7 @@ export default async function handler(
   }
 
   try {
+    // Fix: Use userId instead of separate reviewerId/sellerId parameters
     const { userId, page = '1', limit: limitParam = '10', sortBy = 'newest', role = 'reviewer' } = req.query;
 
     if (!userId) {

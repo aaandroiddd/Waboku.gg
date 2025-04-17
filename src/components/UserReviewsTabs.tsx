@@ -4,6 +4,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { ReviewsList } from '@/components/ReviewsList';
 import { useReviews } from '@/hooks/useReviews';
 import { useProfile } from '@/hooks/useProfile';
+import { ReviewDebugInfo } from '@/components/ReviewDebugInfo';
 
 interface UserReviewsTabsProps {
   userId: string;
@@ -50,6 +51,11 @@ export function UserReviewsTabs({ userId }: UserReviewsTabsProps) {
             <ReviewsList reviewerId={userId} showFilters={true} />
           </TabsContent>
         </Tabs>
+        
+        {/* Add debug component in development environment */}
+        {process.env.NEXT_PUBLIC_CO_DEV_ENV && (
+          <ReviewDebugInfo userId={userId} />
+        )}
       </CardContent>
     </Card>
   );

@@ -4,7 +4,10 @@ import { initializeFirebaseAdmin } from '@/lib/firebase-admin';
 type ResponseData = {
   success: boolean;
   message: string;
+  reviews?: any[];
+  total?: number;
   data?: any;
+  debug?: any;
 };
 
 export default async function handler(
@@ -28,18 +31,29 @@ export default async function handler(
     // Initialize Firebase Admin SDK
     const { db } = initializeFirebaseAdmin();
     
-    // Get reviews where user is the reviewer (reviews written)
-    const reviewsWrittenQuery = db.collection('reviews').where('reviewerId', '==', userId);
-    const reviewsWrittenSnapshot = await reviewsWrittenQuery.get();
+    // Get all reviews where the user is either the reviewer or the seller
+    const reviewerQuery = db.collection('reviews')
+      .where('reviewerId', '==', userId);
+      
+    const sellerQuery = db.collection('reviews')
+      .where('sellerId', '==', userId);
     
-    // Get reviews where user is the seller (reviews received)
-    const reviewsReceivedQuery = db.collection('reviews').where('sellerId', '==', userId);
-    const reviewsReceivedSnapshot = await reviewsReceivedQuery.get();
+    // Execute both queries
+    const [reviewerSnapshot, sellerSnapshot] = await Promise.all([
+      reviewerQuery.get(),
+      sellerQuery.get()
+    ]);
     
-    // Format the results
-    const reviewsWritten = reviewsWrittenSnapshot.docs.map(doc => {
+    console.log(`[inspect-user-reviews] Found ${reviewerSnapshot.size} reviews where user is reviewer`);
+    console.log(`[inspect-user-reviews] Found ${sellerSnapshot.size} reviews where user is seller`);
+    
+    // Combine the results
+    const reviewsMap = new Map();
+    
+    // Add reviewer reviews
+    reviewerSnapshot.forEach(doc => {
       const data = doc.data();
-      return {
+      reviewsMap.set(doc.id, {
         id: doc.id,
         reviewerId: data.reviewerId,
         sellerId: data.sellerId,
@@ -47,27 +61,47 @@ export default async function handler(
         comment: data.comment,
         isPublic: data.isPublic,
         status: data.status,
-        createdAt: data.createdAt?.toDate?.() || null
-      };
+        createdAt: data.createdAt?.toDate?.() || null,
+        role: 'reviewer'
+      });
     });
     
-    const reviewsReceived = reviewsReceivedSnapshot.docs.map(doc => {
+    // Add seller reviews
+    sellerSnapshot.forEach(doc => {
       const data = doc.data();
-      return {
-        id: doc.id,
-        reviewerId: data.reviewerId,
-        sellerId: data.sellerId,
-        rating: data.rating,
-        comment: data.comment,
-        isPublic: data.isPublic,
-        status: data.status,
-        createdAt: data.createdAt?.toDate?.() || null
-      };
+      if (!reviewsMap.has(doc.id)) {
+        reviewsMap.set(doc.id, {
+          id: doc.id,
+          reviewerId: data.reviewerId,
+          sellerId: data.sellerId,
+          rating: data.rating,
+          comment: data.comment,
+          isPublic: data.isPublic,
+          status: data.status,
+          createdAt: data.createdAt?.toDate?.() || null,
+          role: 'seller'
+        });
+      } else {
+        // If the review is already in the map, add the seller role
+        const existingReview = reviewsMap.get(doc.id);
+        existingReview.role = 'both';
+        reviewsMap.set(doc.id, existingReview);
+      }
     });
     
+    // Convert the map to an array
+    const reviews = Array.from(reviewsMap.values());
+    
+    // Format the results for the old response format for backward compatibility
+    const reviewsWritten = reviews.filter(review => review.role === 'reviewer' || review.role === 'both');
+    const reviewsReceived = reviews.filter(review => review.role === 'seller' || review.role === 'both');
+    
+    // Return the results
     return res.status(200).json({
       success: true,
       message: 'Reviews retrieved successfully',
+      reviews,
+      total: reviews.length,
       data: {
         reviewsWritten,
         reviewsReceived,
@@ -75,6 +109,11 @@ export default async function handler(
           written: reviewsWritten.length,
           received: reviewsReceived.length
         }
+      },
+      debug: {
+        reviewerQuerySize: reviewerSnapshot.size,
+        sellerQuerySize: sellerSnapshot.size,
+        combinedUniqueReviews: reviews.length
       }
     });
   } catch (error) {
