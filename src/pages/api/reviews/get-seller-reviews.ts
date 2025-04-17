@@ -93,9 +93,58 @@ export default async function handler(
     }
     
     // Build the query with constraints
-    let reviewsQuery = db.collection('reviews')
-      .where('sellerId', '==', sellerId);
-      
+    console.log('[get-seller-reviews] Building query for sellerId:', sellerId, 'in collection: reviews');
+    
+    // First, check if any reviews exist for this seller in any collection
+    const checkCollections = ['reviews', '/reviews', 'users/' + sellerId + '/reviews'];
+    let reviewsFound = false;
+    let correctCollection = 'reviews';
+    
+    for (const collection of checkCollections) {
+      try {
+        console.log('[get-seller-reviews] Checking collection:', collection);
+        let checkQuery;
+        
+        if (collection.includes('/')) {
+          // This is a subcollection path
+          checkQuery = db.collection(collection);
+        } else {
+          // This is a top-level collection
+          checkQuery = db.collection(collection).where('sellerId', '==', sellerId);
+        }
+        
+        const checkSnapshot = await checkQuery.limit(1).get();
+        console.log('[get-seller-reviews] Collection', collection, 'has', checkSnapshot.size, 'documents');
+        
+        if (checkSnapshot.size > 0) {
+          reviewsFound = true;
+          correctCollection = collection;
+          console.log('[get-seller-reviews] Found reviews in collection:', collection);
+          console.log('[get-seller-reviews] Sample document:', JSON.stringify(checkSnapshot.docs[0].data()));
+          break;
+        }
+      } catch (error) {
+        console.error('[get-seller-reviews] Error checking collection:', collection, error);
+      }
+    }
+    
+    if (!reviewsFound) {
+      console.log('[get-seller-reviews] No reviews found in any checked collection for seller:', sellerId);
+    } else {
+      console.log('[get-seller-reviews] Using collection:', correctCollection, 'for seller:', sellerId);
+    }
+    
+    // Use the correct collection path
+    let reviewsQuery;
+    
+    if (correctCollection.includes('/')) {
+      // This is a subcollection path
+      reviewsQuery = db.collection(correctCollection);
+    } else {
+      // This is a top-level collection
+      reviewsQuery = db.collection(correctCollection).where('sellerId', '==', sellerId);
+    }
+    
     // Only add these filters if we're not in a testing environment
     if (process.env.NODE_ENV !== 'development' && !process.env.NEXT_PUBLIC_CO_DEV_ENV) {
       reviewsQuery = reviewsQuery
@@ -103,7 +152,7 @@ export default async function handler(
         .where('status', '==', 'published');
     }
     
-    console.log('[get-seller-reviews] Query built for sellerId:', sellerId);
+    console.log('[get-seller-reviews] Query built for sellerId:', sellerId, 'using collection:', correctCollection);
     
     // Add rating filter if provided
     if (rating) {
@@ -350,13 +399,31 @@ export default async function handler(
     
     console.log('[get-seller-reviews] Successfully processed reviews:', reviews.length, 'of total:', totalCount);
     
-    return res.status(200).json({ 
+    // Include debug information in development environment
+    const responseData: ResponseData = { 
       success: true, 
       message: 'Reviews retrieved successfully',
       reviews,
       stats,
       total: totalCount
-    });
+    };
+    
+    // Add debug info in development
+    if (process.env.NODE_ENV === 'development' || process.env.NEXT_PUBLIC_CO_DEV_ENV) {
+      responseData.debug = {
+        checkedCollections: checkCollections,
+        usedCollection: correctCollection,
+        reviewsFound,
+        filters: {
+          sellerId,
+          rating,
+          sortBy,
+          isPublicFilter: process.env.NODE_ENV !== 'development' && !process.env.NEXT_PUBLIC_CO_DEV_ENV
+        }
+      };
+    }
+    
+    return res.status(200).json(responseData);
   } catch (error) {
     console.error('[get-seller-reviews] Unhandled error:', error);
     

@@ -61,6 +61,24 @@ export function useReviews() {
         total: data.total || 0
       });
       
+      // Log the first review if available for debugging
+      if (data.reviews && data.reviews.length > 0) {
+        console.log('useReviews: First review sample:', {
+          id: data.reviews[0].id,
+          sellerId: data.reviews[0].sellerId,
+          rating: data.reviews[0].rating,
+          status: data.reviews[0].status,
+          isPublic: data.reviews[0].isPublic
+        });
+      } else {
+        console.log('useReviews: No reviews returned from API');
+        
+        // If we're in development, log debug info from the API if available
+        if (process.env.NEXT_PUBLIC_CO_DEV_ENV && data.debug) {
+          console.log('useReviews: Debug info from API:', data.debug);
+        }
+      }
+      
       if (!response.ok) {
         throw new Error(data.message || 'Failed to fetch reviews');
       }

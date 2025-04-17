@@ -129,8 +129,20 @@ export default async function handler(
           comment: reviewData.comment.substring(0, 50) + (reviewData.comment.length > 50 ? '...' : '')
         }));
         
-        console.log('[create-review] Creating review document with data:', JSON.stringify(reviewData));
+        // Save to both the main reviews collection and the user's subcollection for redundancy
+        console.log('[create-review] Creating review document in main reviews collection');
         await adminDb.collection('reviews').doc(reviewId).set(reviewData);
+        
+        // Also save to the seller's reviews subcollection
+        try {
+          console.log('[create-review] Also saving to seller subcollection: users/' + orderData.sellerId + '/reviews/' + reviewId);
+          await adminDb.collection('users').doc(orderData.sellerId).collection('reviews').doc(reviewId).set(reviewData);
+          console.log('[create-review] Successfully saved to seller subcollection');
+        } catch (subcollectionError) {
+          console.error('[create-review] Error saving to seller subcollection:', subcollectionError);
+          // Continue even if this fails, as we already saved to the main collection
+        }
+        
         console.log('[create-review] Review document created successfully');
         
         // Update the order to mark that a review has been submitted
