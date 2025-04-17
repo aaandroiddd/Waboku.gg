@@ -37,14 +37,21 @@ export default async function handler(
     
     if (role === 'seller') {
       // Get reviews where the user is the seller (reviews received)
-      console.log('[get-user-reviews] Fetching reviews where user is the seller');
+      console.log('[get-user-reviews] Fetching reviews where user is the seller (reviews received)');
       reviewsQuery = db.collection('reviews')
         .where('sellerId', '==', userId)
         .where('isPublic', '==', true)
         .where('status', '==', 'published');
-    } else {
+    } else if (role === 'reviewer') {
       // Get reviews where the user is the reviewer (reviews written)
-      console.log('[get-user-reviews] Fetching reviews where user is the reviewer');
+      console.log('[get-user-reviews] Fetching reviews where user is the reviewer (reviews written)');
+      reviewsQuery = db.collection('reviews')
+        .where('reviewerId', '==', userId)
+        .where('isPublic', '==', true)
+        .where('status', '==', 'published');
+    } else {
+      // Default to reviewer role if an invalid role is provided
+      console.log('[get-user-reviews] Invalid role provided, defaulting to reviewer role');
       reviewsQuery = db.collection('reviews')
         .where('reviewerId', '==', userId)
         .where('isPublic', '==', true)
@@ -248,11 +255,30 @@ export default async function handler(
     
     console.log('[get-user-reviews] Successfully processed reviews:', reviews.length, 'of total:', totalCount);
     
+    // Add debug information in development environment
+    let debugInfo = null;
+    if (process.env.NODE_ENV === 'development' || process.env.NEXT_PUBLIC_CO_DEV_ENV) {
+      debugInfo = {
+        role,
+        userId,
+        queryType: role === 'seller' ? 'reviews_received' : 'reviews_written',
+        firstReviewSample: reviews.length > 0 ? {
+          id: reviews[0].id,
+          reviewerId: reviews[0].reviewerId,
+          sellerId: reviews[0].sellerId,
+          rating: reviews[0].rating,
+          isReviewerTheSameAsRequestedUser: reviews[0].reviewerId === userId,
+          isSellerTheSameAsRequestedUser: reviews[0].sellerId === userId
+        } : null
+      };
+    }
+    
     return res.status(200).json({ 
       success: true, 
       message: 'Reviews retrieved successfully',
       reviews,
-      total: totalCount
+      total: totalCount,
+      debug: debugInfo
     });
   } catch (error) {
     console.error('[get-user-reviews] Unhandled error:', error);
