@@ -290,35 +290,36 @@ export function useReviews() {
     setError(null);
     
     try {
-      // Try the API endpoint first
-      try {
-        const response = await fetch('/api/reviews/mark-helpful', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            reviewId,
-            userId: user.uid,
-            action: 'toggle'
-          }),
-        });
-        
-        const data = await response.json();
-        
-        if (!response.ok) {
-          throw new Error(data.message || 'Failed to update helpful status');
-        }
-        
-        toast.success(data.isMarked ? 'Review marked as helpful' : 'Review unmarked as helpful');
-        return {
-          helpfulCount: data.helpfulCount,
-          isMarked: data.isMarked
-        };
-      } catch (apiError) {
-        console.error('Error with API endpoint:', apiError);
-        throw apiError;
+      console.log('Toggling review helpful status:', { reviewId, userId: user.uid });
+      
+      // Try the API endpoint
+      const response = await fetch('/api/reviews/mark-helpful', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          reviewId,
+          userId: user.uid,
+          action: 'toggle'
+        }),
+      });
+      
+      // Log the raw response for debugging
+      console.log('API response status:', response.status);
+      
+      const data = await response.json();
+      console.log('API response data:', data);
+      
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to update helpful status');
       }
+      
+      toast.success(data.isMarked ? 'Review marked as helpful' : 'Review unmarked as helpful');
+      return {
+        helpfulCount: data.helpfulCount,
+        isMarked: data.isMarked
+      };
     } catch (error) {
       console.error('Error toggling review helpful status:', error);
       const errorMessage = error instanceof Error ? error.message : 'Failed to update helpful status';

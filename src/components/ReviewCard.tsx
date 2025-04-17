@@ -58,13 +58,22 @@ export function ReviewCard({ review, showSellerResponse = true, allowHelpful = t
     
     setIsMarkingHelpful(true);
     try {
+      console.log('ReviewCard: Toggling helpful status for review:', review.id);
       const result = await toggleReviewHelpful(review.id);
+      console.log('ReviewCard: Toggle result:', result);
+      
       if (result !== null) {
         setHelpfulCount(result.helpfulCount);
         setHasMarkedHelpful(result.isMarked);
+        console.log('ReviewCard: Updated state:', { 
+          helpfulCount: result.helpfulCount, 
+          isMarked: result.isMarked 
+        });
+      } else {
+        console.error('ReviewCard: Received null result from toggleReviewHelpful');
       }
     } catch (error) {
-      console.error('Error toggling helpful status:', error);
+      console.error('ReviewCard: Error toggling helpful status:', error);
     } finally {
       setIsMarkingHelpful(false);
     }

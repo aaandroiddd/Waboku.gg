@@ -27,15 +27,39 @@ export default async function handler(
     }
 
     console.log('[mark-review-helpful] Processing request:', { reviewId, userId, action });
-    const { db } = getFirebaseServices();
+    
+    // Get Firebase services
+    let db;
+    try {
+      const services = getFirebaseServices();
+      db = services.db;
+      if (!db) {
+        throw new Error('Firebase database not initialized');
+      }
+    } catch (firebaseError) {
+      console.error('[mark-review-helpful] Firebase initialization error:', firebaseError);
+      return res.status(500).json({ 
+        success: false, 
+        message: 'Firebase service initialization failed' 
+      });
+    }
     
     // Get the review document
-    const reviewRef = doc(db, 'reviews', reviewId);
-    const reviewDoc = await getDoc(reviewRef);
-    
-    if (!reviewDoc.exists()) {
-      console.log('[mark-review-helpful] Review not found:', reviewId);
-      return res.status(404).json({ success: false, message: 'Review not found' });
+    let reviewDoc;
+    try {
+      const reviewRef = doc(db, 'reviews', reviewId);
+      reviewDoc = await getDoc(reviewRef);
+      
+      if (!reviewDoc.exists()) {
+        console.log('[mark-review-helpful] Review not found:', reviewId);
+        return res.status(404).json({ success: false, message: 'Review not found' });
+      }
+    } catch (reviewError) {
+      console.error('[mark-review-helpful] Error fetching review:', reviewError);
+      return res.status(500).json({ 
+        success: false, 
+        message: 'Failed to fetch review data' 
+      });
     }
     
     // Check if the user is the reviewer or seller (they shouldn't mark their own reviews as helpful)
@@ -46,8 +70,18 @@ export default async function handler(
     }
     
     // Check if user has already marked this review as helpful
-    const helpfulRef = doc(db, 'reviews', reviewId, 'helpfulUsers', userId);
-    const helpfulDoc = await getDoc(helpfulRef);
+    let helpfulDoc;
+    try {
+      const helpfulRef = doc(db, 'reviews', reviewId, 'helpfulUsers', userId);
+      helpfulDoc = await getDoc(helpfulRef);
+    } catch (helpfulError) {
+      console.error('[mark-review-helpful] Error checking helpful status:', helpfulError);
+      return res.status(500).json({ 
+        success: false, 
+        message: 'Failed to check helpful status' 
+      });
+    }
+    
     const hasMarked = helpfulDoc.exists();
     
     try {
@@ -57,28 +91,64 @@ export default async function handler(
       // Toggle or explicit action
       if ((action === 'toggle' && !hasMarked) || action === 'mark') {
         // Mark as helpful
-        await setDoc(helpfulRef, {
-          userId,
-          timestamp: serverTimestamp()
-        });
+        try {
+          const helpfulRef = doc(db, 'reviews', reviewId, 'helpfulUsers', userId);
+          await setDoc(helpfulRef, {
+            userId,
+            timestamp: serverTimestamp()
+          });
+        } catch (markError) {
+          console.error('[mark-review-helpful] Error marking as helpful:', markError);
+          return res.status(500).json({ 
+            success: false, 
+            message: 'Failed to mark review as helpful' 
+          });
+        }
         
         // Update the review's helpful count
-        await updateDoc(reviewRef, {
-          helpfulCount: increment(1)
-        });
+        try {
+          const reviewRef = doc(db, 'reviews', reviewId);
+          await updateDoc(reviewRef, {
+            helpfulCount: increment(1)
+          });
+        } catch (updateError) {
+          console.error('[mark-review-helpful] Error updating helpful count:', updateError);
+          return res.status(500).json({ 
+            success: false, 
+            message: 'Failed to update helpful count' 
+          });
+        }
         
         newCount += 1;
         isMarked = true;
         console.log('[mark-review-helpful] Review marked as helpful:', reviewId);
       } else if ((action === 'toggle' && hasMarked) || action === 'unmark') {
         // Unmark as helpful
-        await deleteDoc(helpfulRef);
+        try {
+          const helpfulRef = doc(db, 'reviews', reviewId, 'helpfulUsers', userId);
+          await deleteDoc(helpfulRef);
+        } catch (unmarkError) {
+          console.error('[mark-review-helpful] Error unmarking as helpful:', unmarkError);
+          return res.status(500).json({ 
+            success: false, 
+            message: 'Failed to unmark review as helpful' 
+          });
+        }
         
         // Update the review's helpful count (ensure it doesn't go below 0)
         newCount = Math.max(0, newCount - 1);
-        await updateDoc(reviewRef, {
-          helpfulCount: newCount
-        });
+        try {
+          const reviewRef = doc(db, 'reviews', reviewId);
+          await updateDoc(reviewRef, {
+            helpfulCount: newCount
+          });
+        } catch (updateError) {
+          console.error('[mark-review-helpful] Error updating helpful count:', updateError);
+          return res.status(500).json({ 
+            success: false, 
+            message: 'Failed to update helpful count' 
+          });
+        }
         
         isMarked = false;
         console.log('[mark-review-helpful] Review unmarked as helpful:', reviewId);
