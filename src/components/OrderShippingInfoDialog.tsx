@@ -10,7 +10,7 @@ import { AlertCircle, Loader2 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { StateSelect } from '@/components/StateSelect';
 import { getFirebaseServices } from '@/lib/firebase';
-import { doc, updateDoc } from 'firebase/firestore';
+import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 
 interface OrderShippingInfoDialogProps {
   open: boolean;

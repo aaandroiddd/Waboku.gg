@@ -1,7 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getFirebaseAdmin } from '@/lib/firebase-admin';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '../auth/[...nextauth]';
 
 export default async function handler(
   req: NextApiRequest,
@@ -13,14 +11,13 @@ export default async function handler(
   }
 
   try {
-    // Get the authenticated user
-    const session = await getServerSession(req, res, authOptions);
-    if (!session || !session.user) {
+    // Get the authenticated user from the request
+    const { userId } = req.body;
+    
+    if (!userId) {
       console.log('[update-shipping-info] No authenticated user');
       return res.status(401).json({ message: 'Unauthorized' });
     }
-
-    const userId = session.user.id;
     console.log(`[update-shipping-info] Processing request for user: ${userId}`);
 
     // Get request body
