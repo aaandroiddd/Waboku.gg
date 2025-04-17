@@ -68,7 +68,7 @@ export function ReviewsList({
           // Explicitly set role to 'seller' to get reviews received by this seller
           // The sellerId field represents the owner of the listing who should see reviews on their dashboard
           filterOptions.role = 'seller';
-          result = await fetchSellerReviews(sellerId, 1, 10, filterOptions);
+          result = await fetchUserReviews(sellerId, 1, 10, filterOptions);
         } else if (listingId) {
           console.log('ReviewsList: Fetching product reviews for:', listingId);
           result = await fetchProductReviews(listingId, 1, 10, filterOptions);
@@ -130,7 +130,7 @@ export function ReviewsList({
         // Explicitly set role to 'seller' to get reviews received by this seller
         // The sellerId field represents the owner of the listing who should see reviews on their dashboard
         filterOptions.role = 'seller';
-        result = await fetchSellerReviews(sellerId, nextPage, 10, filterOptions);
+        result = await fetchUserReviews(sellerId, nextPage, 10, filterOptions);
       } else if (listingId) {
         result = await fetchProductReviews(listingId, nextPage, 10, filterOptions);
       } else if (reviewerId) {
