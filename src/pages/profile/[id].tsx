@@ -17,7 +17,7 @@ import { MessageDialog } from '@/components/MessageDialog';
 import { StripeSellerBadge } from '@/components/StripeSellerBadge';
 import { ProfileAvatar } from '@/components/ProfileAvatar';
 import { ProfileName } from '@/components/ProfileName';
-import { ReviewsList } from '@/components/ReviewsList';
+import { UserReviewsTabs } from '@/components/UserReviewsTabs';
 
 const LoadingProfile = () => (
   <div className="container mx-auto p-6">
@@ -309,12 +309,7 @@ const ProfileContent = ({ userId }: { userId: string | null }) => {
           </TabsContent>
           
           <TabsContent value="reviews">
-            <Card className="mt-6">
-              <CardContent className="p-6">
-                <h3 className="text-xl font-semibold mb-4">User Reviews</h3>
-                {userId && <ReviewsList sellerId={userId} showFilters={true} />}
-              </CardContent>
-            </Card>
+            {userId && <UserReviewsTabs userId={userId} />}
           </TabsContent>
         </Tabs>
       </div>

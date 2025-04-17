@@ -10,13 +10,15 @@ import { useReviews } from '@/hooks/useReviews';
 interface ReviewsListProps {
   sellerId?: string;
   listingId?: string;
+  reviewerId?: string;
   initialReviews?: Review[];
   showFilters?: boolean;
 }
 
 export function ReviewsList({ 
   sellerId, 
-  listingId, 
+  listingId,
+  reviewerId,
   initialReviews = [], 
   showFilters = true 
 }: ReviewsListProps) {
@@ -25,6 +27,7 @@ export function ReviewsList({
     error, 
     fetchSellerReviews, 
     fetchProductReviews,
+    fetchUserReviews,
     totalReviews,
     reviewStats
   } = useReviews();
@@ -52,6 +55,8 @@ export function ReviewsList({
         result = await fetchSellerReviews(sellerId, 1, 10, filterOptions);
       } else if (listingId) {
         result = await fetchProductReviews(listingId, 1, 10, filterOptions);
+      } else if (reviewerId) {
+        result = await fetchUserReviews(reviewerId, 1, 10, filterOptions);
       }
       
       if (result) {
@@ -62,7 +67,7 @@ export function ReviewsList({
     };
     
     fetchReviews();
-  }, [sellerId, listingId, activeTab, sortBy, fetchSellerReviews, fetchProductReviews]);
+  }, [sellerId, listingId, reviewerId, activeTab, sortBy, fetchSellerReviews, fetchProductReviews, fetchUserReviews]);
   
   // Load more reviews
   const loadMore = async () => {
@@ -83,6 +88,8 @@ export function ReviewsList({
       result = await fetchSellerReviews(sellerId, nextPage, 10, filterOptions);
     } else if (listingId) {
       result = await fetchProductReviews(listingId, nextPage, 10, filterOptions);
+    } else if (reviewerId) {
+      result = await fetchUserReviews(reviewerId, nextPage, 10, filterOptions);
     }
     
     if (result) {

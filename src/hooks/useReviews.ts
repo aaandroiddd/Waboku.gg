@@ -9,6 +9,7 @@ export function useReviews() {
   const [error, setError] = useState<string | null>(null);
   const [sellerReviews, setSellerReviews] = useState<Review[]>([]);
   const [productReviews, setProductReviews] = useState<Review[]>([]);
+  const [userReviews, setUserReviews] = useState<Review[]>([]);
   const [reviewStats, setReviewStats] = useState<ReviewStats | null>(null);
   const [totalReviews, setTotalReviews] = useState(0);
   const [averageRating, setAverageRating] = useState(0);
@@ -306,16 +307,66 @@ export function useReviews() {
     }
   }, [user]);
 
+  // Function to fetch reviews written by a user
+  const fetchUserReviews = useCallback(async (
+    userId: string, 
+    page: number = 1, 
+    pageSize: number = 10,
+    filterOptions: ReviewFilterOptions = {}
+  ) => {
+    if (!userId) return;
+    
+    setLoading(true);
+    setError(null);
+    
+    try {
+      // Build query parameters
+      const params = new URLSearchParams({
+        userId,
+        page: page.toString(),
+        limit: pageSize.toString(),
+      });
+      
+      // Add filter options if provided
+      if (filterOptions.sortBy) {
+        params.append('sortBy', filterOptions.sortBy);
+      }
+      
+      const response = await fetch(`/api/reviews/get-user-reviews?${params.toString()}`);
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to fetch reviews');
+      }
+      
+      setUserReviews(data.reviews || []);
+      setTotalReviews(data.total || 0);
+      
+      return {
+        reviews: data.reviews || [],
+        total: data.total || 0
+      };
+    } catch (error) {
+      console.error('Error fetching user reviews:', error);
+      setError(error instanceof Error ? error.message : 'Failed to fetch reviews');
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   return {
     loading,
     error,
     sellerReviews,
     productReviews,
+    userReviews,
     reviewStats,
     totalReviews,
     averageRating,
     fetchSellerReviews,
     fetchProductReviews,
+    fetchUserReviews,
     submitReview,
     respondToReview,
     markReviewAsHelpful
