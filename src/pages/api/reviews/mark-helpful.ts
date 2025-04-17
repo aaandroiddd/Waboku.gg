@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { getFirebaseServices } from '@/lib/firebase';
-import { doc, getDoc, updateDoc, increment, setDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
+import { getFirebaseAdmin } from '@/lib/firebase-admin';
+import { FieldValue } from 'firebase-admin/firestore';
 
 type ResponseData = {
   success: boolean;
@@ -28,16 +28,17 @@ export default async function handler(
 
     console.log('[mark-review-helpful] Processing request:', { reviewId, userId, action });
     
-    // Get Firebase services
+    // Get Firebase Admin services
     let db;
     try {
-      const services = getFirebaseServices();
-      db = services.db;
+      const { db: adminDb } = getFirebaseAdmin();
+      db = adminDb;
       if (!db) {
-        throw new Error('Firebase database not initialized');
+        throw new Error('Firebase Admin database not initialized');
       }
+      console.log('[mark-review-helpful] Firebase Admin initialized successfully');
     } catch (firebaseError) {
-      console.error('[mark-review-helpful] Firebase initialization error:', firebaseError);
+      console.error('[mark-review-helpful] Firebase Admin initialization error:', firebaseError);
       return res.status(500).json({ 
         success: false, 
         message: 'Firebase service initialization failed' 
@@ -47,10 +48,10 @@ export default async function handler(
     // Get the review document
     let reviewDoc;
     try {
-      const reviewRef = doc(db, 'reviews', reviewId);
-      reviewDoc = await getDoc(reviewRef);
+      const reviewRef = db.collection('reviews').doc(reviewId);
+      reviewDoc = await reviewRef.get();
       
-      if (!reviewDoc.exists()) {
+      if (!reviewDoc.exists) {
         console.log('[mark-review-helpful] Review not found:', reviewId);
         return res.status(404).json({ success: false, message: 'Review not found' });
       }
@@ -72,8 +73,8 @@ export default async function handler(
     // Check if user has already marked this review as helpful
     let helpfulDoc;
     try {
-      const helpfulRef = doc(db, 'reviews', reviewId, 'helpfulUsers', userId);
-      helpfulDoc = await getDoc(helpfulRef);
+      const helpfulRef = db.collection('reviews').doc(reviewId).collection('helpfulUsers').doc(userId);
+      helpfulDoc = await helpfulRef.get();
     } catch (helpfulError) {
       console.error('[mark-review-helpful] Error checking helpful status:', helpfulError);
       return res.status(500).json({ 
@@ -82,7 +83,7 @@ export default async function handler(
       });
     }
     
-    const hasMarked = helpfulDoc.exists();
+    const hasMarked = helpfulDoc.exists;
     
     try {
       let newCount = reviewData.helpfulCount || 0;
@@ -92,10 +93,10 @@ export default async function handler(
       if ((action === 'toggle' && !hasMarked) || action === 'mark') {
         // Mark as helpful
         try {
-          const helpfulRef = doc(db, 'reviews', reviewId, 'helpfulUsers', userId);
-          await setDoc(helpfulRef, {
+          const helpfulRef = db.collection('reviews').doc(reviewId).collection('helpfulUsers').doc(userId);
+          await helpfulRef.set({
             userId,
-            timestamp: serverTimestamp()
+            timestamp: FieldValue.serverTimestamp()
           });
         } catch (markError) {
           console.error('[mark-review-helpful] Error marking as helpful:', markError);
@@ -107,9 +108,9 @@ export default async function handler(
         
         // Update the review's helpful count
         try {
-          const reviewRef = doc(db, 'reviews', reviewId);
-          await updateDoc(reviewRef, {
-            helpfulCount: increment(1)
+          const reviewRef = db.collection('reviews').doc(reviewId);
+          await reviewRef.update({
+            helpfulCount: FieldValue.increment(1)
           });
         } catch (updateError) {
           console.error('[mark-review-helpful] Error updating helpful count:', updateError);
@@ -125,8 +126,8 @@ export default async function handler(
       } else if ((action === 'toggle' && hasMarked) || action === 'unmark') {
         // Unmark as helpful
         try {
-          const helpfulRef = doc(db, 'reviews', reviewId, 'helpfulUsers', userId);
-          await deleteDoc(helpfulRef);
+          const helpfulRef = db.collection('reviews').doc(reviewId).collection('helpfulUsers').doc(userId);
+          await helpfulRef.delete();
         } catch (unmarkError) {
           console.error('[mark-review-helpful] Error unmarking as helpful:', unmarkError);
           return res.status(500).json({ 
@@ -138,8 +139,8 @@ export default async function handler(
         // Update the review's helpful count (ensure it doesn't go below 0)
         newCount = Math.max(0, newCount - 1);
         try {
-          const reviewRef = doc(db, 'reviews', reviewId);
-          await updateDoc(reviewRef, {
+          const reviewRef = db.collection('reviews').doc(reviewId);
+          await reviewRef.update({
             helpfulCount: newCount
           });
         } catch (updateError) {
@@ -156,13 +157,13 @@ export default async function handler(
       
       // Also update in seller's subcollection if it exists
       try {
-        const sellerReviewRef = doc(db, 'users', reviewData.sellerId, 'reviews', reviewId);
-        const sellerReviewDoc = await getDoc(sellerReviewRef);
+        const sellerReviewRef = db.collection('users').doc(reviewData.sellerId).collection('reviews').doc(reviewId);
+        const sellerReviewDoc = await sellerReviewRef.get();
         
-        if (sellerReviewDoc.exists()) {
-          await updateDoc(sellerReviewRef, {
+        if (sellerReviewDoc.exists) {
+          await sellerReviewRef.update({
             helpfulCount: newCount,
-            updatedAt: serverTimestamp()
+            updatedAt: FieldValue.serverTimestamp()
           });
         }
       } catch (subcollectionError) {
@@ -185,6 +186,9 @@ export default async function handler(
     }
   } catch (error) {
     console.error('[mark-review-helpful] Error processing request:', error);
-    return res.status(500).json({ success: false, message: 'Internal server error' });
+    return res.status(500).json({ 
+      success: false, 
+      message: error instanceof Error ? error.message : 'Internal server error' 
+    });
   }
 }
