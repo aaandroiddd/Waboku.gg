@@ -183,6 +183,22 @@ service cloud.firestore {
       allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
     }
     
+    // Reviews collection rules
+    match /reviews/{reviewId} {
+      allow read: if true; // Anyone can read reviews
+      allow create: if isAuthenticated(); // Authenticated users can create reviews
+      allow update: if isAuthenticated() && 
+        (resource.data.reviewerId == request.auth.uid || resource.data.sellerId == request.auth.uid);
+      allow delete: if isAuthenticated() && resource.data.reviewerId == request.auth.uid;
+    }
+    
+    // Review stats collection rules
+    match /reviewStats/{sellerId} {
+      allow read: if true; // Anyone can read review stats
+      allow create, update: if isAuthenticated(); // API will handle validation
+      allow delete: if false; // Don't allow deletion of review stats
+    }
+
     // Default rule - deny everything else
     match /{document=**} {
       allow read, write: if false;
