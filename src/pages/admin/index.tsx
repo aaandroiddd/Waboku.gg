@@ -23,6 +23,7 @@ import {
 import { Footer } from '@/components/Footer';
 import { WantedPostsDebugger } from '@/components/dashboard/WantedPostsDebugger';
 import { WebhookFixTrigger } from '@/components/WebhookFixTrigger';
+import { ApiTestPanel } from '@/components/ApiTestPanel';
 
 interface ApiResponse {
   success?: boolean;
@@ -402,6 +403,9 @@ export default function AdminDashboard() {
           
           {/* Stripe Webhook Fix Section */}
           <WebhookFixTrigger adminSecret={adminSecret} />
+          
+          {/* API Test Panel */}
+          <ApiTestPanel adminSecret={adminSecret} />
           
           {/* Firebase Diagnostics Section */}
           <Card className="p-6 mb-8">
