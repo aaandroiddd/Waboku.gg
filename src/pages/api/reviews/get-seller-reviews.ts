@@ -318,16 +318,32 @@ export default async function handler(
           let updatedAt = new Date();
           
           try {
-            if (data.createdAt && typeof data.createdAt.toDate === 'function') {
-              createdAt = data.createdAt.toDate();
+            if (data.createdAt) {
+              if (typeof data.createdAt.toDate === 'function') {
+                createdAt = data.createdAt.toDate();
+              } else if (data.createdAt._seconds) {
+                // Handle Firestore timestamp in serialized form
+                createdAt = new Date(data.createdAt._seconds * 1000);
+              } else if (typeof data.createdAt === 'string') {
+                // Handle ISO string date
+                createdAt = new Date(data.createdAt);
+              }
             }
           } catch (dateError) {
             console.error('[get-seller-reviews] Error converting createdAt:', dateError);
           }
           
           try {
-            if (data.updatedAt && typeof data.updatedAt.toDate === 'function') {
-              updatedAt = data.updatedAt.toDate();
+            if (data.updatedAt) {
+              if (typeof data.updatedAt.toDate === 'function') {
+                updatedAt = data.updatedAt.toDate();
+              } else if (data.updatedAt._seconds) {
+                // Handle Firestore timestamp in serialized form
+                updatedAt = new Date(data.updatedAt._seconds * 1000);
+              } else if (typeof data.updatedAt === 'string') {
+                // Handle ISO string date
+                updatedAt = new Date(data.updatedAt);
+              }
             }
           } catch (dateError) {
             console.error('[get-seller-reviews] Error converting updatedAt:', dateError);
@@ -358,8 +374,16 @@ export default async function handler(
             let responseCreatedAt = new Date();
             
             try {
-              if (data.sellerResponse.createdAt && typeof data.sellerResponse.createdAt.toDate === 'function') {
-                responseCreatedAt = data.sellerResponse.createdAt.toDate();
+              if (data.sellerResponse.createdAt) {
+                if (typeof data.sellerResponse.createdAt.toDate === 'function') {
+                  responseCreatedAt = data.sellerResponse.createdAt.toDate();
+                } else if (data.sellerResponse.createdAt._seconds) {
+                  // Handle Firestore timestamp in serialized form
+                  responseCreatedAt = new Date(data.sellerResponse.createdAt._seconds * 1000);
+                } else if (typeof data.sellerResponse.createdAt === 'string') {
+                  // Handle ISO string date
+                  responseCreatedAt = new Date(data.sellerResponse.createdAt);
+                }
               }
             } catch (responseError) {
               console.error('[get-seller-reviews] Error converting response date:', responseError);
@@ -408,18 +432,40 @@ export default async function handler(
       total: totalCount
     };
     
-    // Add debug info in development
+    // Add debug info in development or when CO_DEV_ENV is set
     if (process.env.NODE_ENV === 'development' || process.env.NEXT_PUBLIC_CO_DEV_ENV) {
+      // Log the first review in detail for debugging
+      if (reviews.length > 0) {
+        console.log('[get-seller-reviews] First review details:', JSON.stringify({
+          id: reviews[0].id,
+          sellerId: reviews[0].sellerId,
+          reviewerId: reviews[0].reviewerId,
+          rating: reviews[0].rating,
+          comment: reviews[0].comment?.substring(0, 50) + (reviews[0].comment?.length > 50 ? '...' : ''),
+          createdAt: reviews[0].createdAt,
+          hasSellerResponse: !!reviews[0].sellerResponse
+        }));
+      }
+      
       responseData.debug = {
         checkedCollections: checkCollections,
         usedCollection: correctCollection,
         reviewsFound,
+        reviewsCount: reviews.length,
         filters: {
           sellerId,
           rating,
           sortBy,
           isPublicFilter: process.env.NODE_ENV !== 'development' && !process.env.NEXT_PUBLIC_CO_DEV_ENV
-        }
+        },
+        reviewSample: reviews.length > 0 ? {
+          id: reviews[0].id,
+          sellerId: reviews[0].sellerId,
+          reviewerId: reviews[0].reviewerId,
+          rating: reviews[0].rating,
+          hasComment: !!reviews[0].comment,
+          hasSellerResponse: !!reviews[0].sellerResponse
+        } : null
       };
     }
     

@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Loader2, Star } from 'lucide-react';
 import { useReviews } from '@/hooks/useReviews';
+import { prefetchUserData } from '@/hooks/useUserData';
 
 interface ReviewsListProps {
   sellerId?: string;
@@ -37,10 +38,13 @@ export function ReviewsList({
   const [hasMore, setHasMore] = useState(true);
   const [activeTab, setActiveTab] = useState('all');
   const [sortBy, setSortBy] = useState<string>('newest');
+  const [fetchError, setFetchError] = useState<string | null>(null);
   
   // Fetch reviews on component mount and when filters change
   useEffect(() => {
     const fetchReviews = async () => {
+      setFetchError(null);
+      
       let filterOptions: ReviewFilterOptions = {
         sortBy: sortBy as any
       };
@@ -57,25 +61,43 @@ export function ReviewsList({
         filterOptions 
       });
       
-      let result;
-      if (sellerId) {
-        console.log('ReviewsList: Fetching seller reviews for:', sellerId);
-        result = await fetchSellerReviews(sellerId, 1, 10, filterOptions);
-      } else if (listingId) {
-        console.log('ReviewsList: Fetching product reviews for:', listingId);
-        result = await fetchProductReviews(listingId, 1, 10, filterOptions);
-      } else if (reviewerId) {
-        console.log('ReviewsList: Fetching reviewer reviews for:', reviewerId);
-        result = await fetchUserReviews(reviewerId, 1, 10, filterOptions);
-      }
-      
-      if (result) {
-        console.log('ReviewsList: Received reviews:', result.reviews.length, 'of', result.total);
-        setReviews(result.reviews);
-        setPage(1);
-        setHasMore(result.reviews.length < (result.total || 0));
-      } else {
-        console.log('ReviewsList: No result returned from fetch');
+      try {
+        let result;
+        if (sellerId) {
+          console.log('ReviewsList: Fetching seller reviews for:', sellerId);
+          result = await fetchSellerReviews(sellerId, 1, 10, filterOptions);
+        } else if (listingId) {
+          console.log('ReviewsList: Fetching product reviews for:', listingId);
+          result = await fetchProductReviews(listingId, 1, 10, filterOptions);
+        } else if (reviewerId) {
+          console.log('ReviewsList: Fetching reviewer reviews for:', reviewerId);
+          result = await fetchUserReviews(reviewerId, 1, 10, filterOptions);
+        }
+        
+        if (result) {
+          console.log('ReviewsList: Received reviews:', result.reviews.length, 'of', result.total);
+          
+          // Prefetch user data for all reviewers
+          if (result.reviews.length > 0) {
+            const reviewerIds = result.reviews.map(review => review.reviewerId).filter(Boolean);
+            if (reviewerIds.length > 0) {
+              prefetchUserData(reviewerIds);
+            }
+          }
+          
+          setReviews(result.reviews);
+          setPage(1);
+          setHasMore(result.reviews.length < (result.total || 0));
+        } else {
+          console.log('ReviewsList: No result returned from fetch');
+          setReviews([]);
+          setHasMore(false);
+        }
+      } catch (err) {
+        console.error('ReviewsList: Error fetching reviews:', err);
+        setFetchError(err instanceof Error ? err.message : 'Failed to fetch reviews');
+        setReviews([]);
+        setHasMore(false);
       }
     };
     
@@ -96,19 +118,32 @@ export function ReviewsList({
       filterOptions.rating = parseInt(activeTab);
     }
     
-    let result;
-    if (sellerId) {
-      result = await fetchSellerReviews(sellerId, nextPage, 10, filterOptions);
-    } else if (listingId) {
-      result = await fetchProductReviews(listingId, nextPage, 10, filterOptions);
-    } else if (reviewerId) {
-      result = await fetchUserReviews(reviewerId, nextPage, 10, filterOptions);
-    }
-    
-    if (result) {
-      setReviews([...reviews, ...result.reviews]);
-      setPage(nextPage);
-      setHasMore(reviews.length + result.reviews.length < (result.total || 0));
+    try {
+      let result;
+      if (sellerId) {
+        result = await fetchSellerReviews(sellerId, nextPage, 10, filterOptions);
+      } else if (listingId) {
+        result = await fetchProductReviews(listingId, nextPage, 10, filterOptions);
+      } else if (reviewerId) {
+        result = await fetchUserReviews(reviewerId, nextPage, 10, filterOptions);
+      }
+      
+      if (result) {
+        // Prefetch user data for all new reviewers
+        if (result.reviews.length > 0) {
+          const reviewerIds = result.reviews.map(review => review.reviewerId).filter(Boolean);
+          if (reviewerIds.length > 0) {
+            prefetchUserData(reviewerIds);
+          }
+        }
+        
+        setReviews([...reviews, ...result.reviews]);
+        setPage(nextPage);
+        setHasMore(reviews.length + result.reviews.length < (result.total || 0));
+      }
+    } catch (err) {
+      console.error('ReviewsList: Error loading more reviews:', err);
+      setFetchError(err instanceof Error ? err.message : 'Failed to load more reviews');
     }
   };
   
@@ -128,8 +163,12 @@ export function ReviewsList({
     return reviewStats.ratingCounts[rating] || 0;
   };
   
-  if (error) {
-    return <div className="text-center text-red-500 my-4">{error}</div>;
+  if (error || fetchError) {
+    return (
+      <div className="text-center text-red-500 my-4 p-4 border border-red-200 rounded-md bg-red-50 dark:bg-red-900/20 dark:border-red-800">
+        {error || fetchError}
+      </div>
+    );
   }
   
   return (

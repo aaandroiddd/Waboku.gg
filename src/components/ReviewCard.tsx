@@ -10,6 +10,7 @@ import { doc, getDoc } from 'firebase/firestore';
 import { UserNameLink } from '@/components/UserNameLink';
 import { useReviews } from '@/hooks/useReviews';
 import { useAuth } from '@/contexts/AuthContext';
+import { useUserData } from '@/hooks/useUserData';
 
 interface ReviewCardProps {
   review: Review;
@@ -20,46 +21,16 @@ interface ReviewCardProps {
 export function ReviewCard({ review, showSellerResponse = true, allowHelpful = true }: ReviewCardProps) {
   const { user } = useAuth();
   const { markReviewAsHelpful } = useReviews();
-  const [reviewerName, setReviewerName] = useState<string | null>(null);
-  const [reviewerAvatar, setReviewerAvatar] = useState<string | null>(null);
-  const [isLoadingUser, setIsLoadingUser] = useState<boolean>(false);
   const [helpfulCount, setHelpfulCount] = useState<number>(review.helpfulCount || 0);
   const [isMarkingHelpful, setIsMarkingHelpful] = useState<boolean>(false);
   
-  // Fetch reviewer information when component mounts
-  useEffect(() => {
-    let isMounted = true;
-    
-    const fetchReviewerInfo = async () => {
-      if (!review.reviewerId || isLoadingUser) return;
-      
-      setIsLoadingUser(true);
-      try {
-        const { db } = getFirebaseServices();
-        
-        const userDoc = await getDoc(doc(db, 'users', review.reviewerId));
-        if (userDoc.exists() && isMounted) {
-          const userData = userDoc.data();
-          const name = userData.displayName || userData.username || 'Anonymous User';
-          setReviewerName(name);
-          setReviewerAvatar(userData.photoURL || null);
-        }
-      } catch (error) {
-        console.error('Error fetching reviewer information:', error);
-      } finally {
-        if (isMounted) {
-          setIsLoadingUser(false);
-        }
-      }
-    };
-    
-    fetchReviewerInfo();
-    
-    // Cleanup function to prevent state updates after unmount
-    return () => {
-      isMounted = false;
-    };
-  }, [review.reviewerId, isLoadingUser]);
+  // Use the useUserData hook instead of manual fetching
+  const { userData, loading: isLoadingUser } = useUserData(review.reviewerId);
+  const reviewerName = userData?.username || 'Anonymous User';
+  const reviewerAvatar = userData?.avatarUrl || null;
+  
+  console.log('ReviewCard rendering for review:', review.id, 'with reviewer:', review.reviewerId);
+  console.log('Reviewer data:', { name: reviewerName, avatar: reviewerAvatar, loading: isLoadingUser });
   
   const handleMarkHelpful = async () => {
     if (!user || isMarkingHelpful) return;
@@ -92,6 +63,7 @@ export function ReviewCard({ review, showSellerResponse = true, allowHelpful = t
             }`}
           />
         ))}
+        <span className="ml-1 text-sm font-medium">{rating.toFixed(1)}</span>
       </div>
     );
   };
@@ -102,7 +74,7 @@ export function ReviewCard({ review, showSellerResponse = true, allowHelpful = t
         <div className="flex items-start gap-4">
           <Avatar className="h-10 w-10">
             {reviewerAvatar ? (
-              <AvatarImage src={reviewerAvatar} alt={reviewerName || 'Reviewer'} />
+              <AvatarImage src={reviewerAvatar} alt={reviewerName} />
             ) : (
               <AvatarFallback>
                 {reviewerName ? reviewerName.charAt(0).toUpperCase() : 'U'}
@@ -116,7 +88,7 @@ export function ReviewCard({ review, showSellerResponse = true, allowHelpful = t
                 <div className="font-medium">
                   <UserNameLink 
                     userId={review.reviewerId} 
-                    fallbackName={reviewerName || 'Anonymous User'} 
+                    initialUsername={reviewerName}
                   />
                   {review.isVerifiedPurchase && (
                     <span className="ml-2 text-xs bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 px-2 py-0.5 rounded-full">
@@ -126,8 +98,8 @@ export function ReviewCard({ review, showSellerResponse = true, allowHelpful = t
                 </div>
                 <div className="flex items-center gap-2 mt-1">
                   {renderStars(review.rating)}
-                  <span className="text-sm text-muted-foreground">
-                    {format(review.createdAt, 'MMM d, yyyy')}
+                  <span className="text-sm text-muted-foreground ml-2">
+                    {format(new Date(review.createdAt), 'MMM d, yyyy')}
                   </span>
                 </div>
               </div>
@@ -137,7 +109,7 @@ export function ReviewCard({ review, showSellerResponse = true, allowHelpful = t
               <h4 className="font-semibold mt-3">{review.title}</h4>
             )}
             
-            <p className="mt-2 text-sm">{review.comment}</p>
+            <p className="mt-2 text-sm whitespace-pre-line">{review.comment}</p>
             
             {/* Review Images */}
             {review.images && review.images.length > 0 && (
@@ -161,10 +133,10 @@ export function ReviewCard({ review, showSellerResponse = true, allowHelpful = t
                   <MessageSquare className="h-4 w-4 text-primary" />
                   <span className="font-medium">Seller Response</span>
                   <span className="text-xs text-muted-foreground">
-                    {format(review.sellerResponse.createdAt, 'MMM d, yyyy')}
+                    {format(new Date(review.sellerResponse.createdAt), 'MMM d, yyyy')}
                   </span>
                 </div>
-                <p className="mt-2 text-sm">{review.sellerResponse.comment}</p>
+                <p className="mt-2 text-sm whitespace-pre-line">{review.sellerResponse.comment}</p>
               </div>
             )}
           </div>
