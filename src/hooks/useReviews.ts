@@ -66,10 +66,20 @@ export function useReviews() {
         console.log('useReviews: First review sample:', {
           id: data.reviews[0].id,
           sellerId: data.reviews[0].sellerId,
+          reviewerId: data.reviews[0].reviewerId,
           rating: data.reviews[0].rating,
           status: data.reviews[0].status,
-          isPublic: data.reviews[0].isPublic
+          isPublic: data.reviews[0].isPublic,
+          comment: data.reviews[0].comment?.substring(0, 50) + (data.reviews[0].comment?.length > 50 ? '...' : '') || 'No comment',
+          hasComment: !!data.reviews[0].comment,
+          commentLength: data.reviews[0].comment?.length || 0
         });
+        
+        // Ensure all reviews have at least an empty string for comment
+        data.reviews = data.reviews.map(review => ({
+          ...review,
+          comment: review.comment || ''
+        }));
       } else {
         console.log('useReviews: No reviews returned from API');
         

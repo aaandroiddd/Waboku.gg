@@ -226,6 +226,12 @@ export function ReviewsList({
         </div>
       ) : (
         <div className="space-y-4">
+          {process.env.NEXT_PUBLIC_CO_DEV_ENV && (
+            <div className="text-xs text-muted-foreground bg-muted p-2 rounded mb-4">
+              <p>Debug info: Found {reviews.length} reviews</p>
+              <p>First review: {reviews[0]?.id} - Rating: {reviews[0]?.rating} - Comment: {reviews[0]?.comment?.substring(0, 50)}{reviews[0]?.comment?.length > 50 ? '...' : ''}</p>
+            </div>
+          )}
           {reviews.map((review) => (
             <ReviewCard key={review.id} review={review} />
           ))}

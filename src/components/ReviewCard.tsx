@@ -31,6 +31,12 @@ export function ReviewCard({ review, showSellerResponse = true, allowHelpful = t
   
   console.log('ReviewCard rendering for review:', review.id, 'with reviewer:', review.reviewerId);
   console.log('Reviewer data:', { name: reviewerName, avatar: reviewerAvatar, loading: isLoadingUser });
+  console.log('Review content:', { 
+    rating: review.rating,
+    comment: review.comment?.substring(0, 50) + (review.comment?.length > 50 ? '...' : '') || 'No comment',
+    hasComment: !!review.comment,
+    commentLength: review.comment?.length || 0
+  });
   
   const handleMarkHelpful = async () => {
     if (!user || isMarkingHelpful) return;
@@ -109,7 +115,7 @@ export function ReviewCard({ review, showSellerResponse = true, allowHelpful = t
               <h4 className="font-semibold mt-3">{review.title}</h4>
             )}
             
-            <p className="mt-2 text-sm whitespace-pre-line">{review.comment}</p>
+            <p className="mt-2 text-sm whitespace-pre-line">{review.comment || 'No comment provided'}</p>
             
             {/* Review Images */}
             {review.images && review.images.length > 0 && (

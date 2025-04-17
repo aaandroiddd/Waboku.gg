@@ -1,8 +1,10 @@
 import { ReviewDebugger } from '@/components/ReviewDebugger';
+import { ReviewInspector } from '@/components/ReviewInspector';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/router';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 export default function ReviewDebugPage() {
   const { user, loading } = useAuth();
@@ -29,7 +31,20 @@ export default function ReviewDebugPage() {
           </p>
         </div>
 
-        <ReviewDebugger />
+        <Tabs defaultValue="create" className="w-full">
+          <TabsList>
+            <TabsTrigger value="create">Create Test Reviews</TabsTrigger>
+            <TabsTrigger value="inspect">Inspect Reviews</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="create">
+            <ReviewDebugger />
+          </TabsContent>
+          
+          <TabsContent value="inspect">
+            <ReviewInspector />
+          </TabsContent>
+        </Tabs>
       </div>
     </DashboardLayout>
   );

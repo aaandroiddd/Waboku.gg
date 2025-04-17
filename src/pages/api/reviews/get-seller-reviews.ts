@@ -357,7 +357,7 @@ export default async function handler(
             reviewerId: data.reviewerId || '',
             sellerId: data.sellerId || '',
             rating: typeof data.rating === 'number' ? data.rating : 0,
-            comment: data.comment || '',
+            comment: data.comment || '',  // Ensure comment is at least an empty string
             title: data.title || undefined,
             images: Array.isArray(data.images) ? data.images : [],
             isVerifiedPurchase: !!data.isVerifiedPurchase,
@@ -368,6 +368,14 @@ export default async function handler(
             createdAt,
             updatedAt
           };
+          
+          // Log the comment for debugging
+          console.log(`[get-seller-reviews] Review ${reviewId} comment:`, {
+            hasComment: !!data.comment,
+            commentType: typeof data.comment,
+            commentLength: data.comment?.length || 0,
+            commentSample: data.comment?.substring(0, 50) + (data.comment?.length > 50 ? '...' : '') || 'No comment'
+          });
           
           // Add seller response if it exists
           if (data.sellerResponse && typeof data.sellerResponse === 'object') {
