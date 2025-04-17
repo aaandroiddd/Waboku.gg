@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getFirebaseServices } from '@/lib/firebase';
 import { collection, doc, getDoc, setDoc, Timestamp, updateDoc } from 'firebase/firestore';
+import { initializeFirebaseAdmin } from '@/lib/firebase-admin';
 import { v4 as uuidv4 } from 'uuid';
 
 type ResponseData = {
@@ -20,6 +21,10 @@ export default async function handler(
 
   try {
     console.log('[create-review] Request body:', JSON.stringify(req.body));
+    
+    // Use server-side Firebase Admin SDK instead of client-side Firebase
+    const { db: adminDb } = initializeFirebaseAdmin();
+    console.log('[create-review] Firebase Admin initialized successfully');
     
     const { 
       orderId, 
@@ -52,13 +57,11 @@ export default async function handler(
     console.log('[create-review] Processing request:', { orderId, userId });
     
     try {
-      const { db } = getFirebaseServices();
-      console.log('[create-review] Firebase services initialized');
+      console.log('[create-review] Using Firebase Admin for database operations');
       
       // Get the order document to verify the user is the buyer
-      const orderRef = doc(db, 'orders', orderId);
       console.log('[create-review] Getting order document:', orderId);
-      const orderDoc = await getDoc(orderRef);
+      const orderDoc = await adminDb.collection('orders').doc(orderId).get();
       
       if (!orderDoc.exists()) {
         console.log('[create-review] Order not found:', orderId);
@@ -102,8 +105,7 @@ export default async function handler(
         const reviewId = uuidv4();
         console.log('[create-review] Generated review ID:', reviewId);
         
-        const reviewRef = doc(db, 'reviews', reviewId);
-        const now = Timestamp.now();
+        const now = new Date();
         
         const reviewData = {
           id: reviewId,
@@ -125,7 +127,7 @@ export default async function handler(
         };
         
         console.log('[create-review] Creating review document with data:', JSON.stringify(reviewData));
-        await setDoc(reviewRef, reviewData);
+        await adminDb.collection('reviews').doc(reviewId).set(reviewData);
         console.log('[create-review] Review document created successfully');
         
         // Update the order to mark that a review has been submitted
@@ -136,7 +138,7 @@ export default async function handler(
         };
         
         console.log('[create-review] Updating order with data:', orderUpdateData);
-        await updateDoc(orderRef, orderUpdateData);
+        await adminDb.collection('orders').doc(orderId).update(orderUpdateData);
         console.log('[create-review] Order updated successfully');
         
         // Update the seller's review stats
@@ -189,10 +191,8 @@ async function updateSellerReviewStats(db: any, sellerId: string, newRating: num
       return;
     }
     
-    if (!db) {
-      console.error('[update-review-stats] Database reference is undefined');
-      return;
-    }
+    // Use Firebase Admin SDK instead
+    const { db: adminDb } = initializeFirebaseAdmin();
     
     // Validate rating is a number between 1-5
     if (typeof newRating !== 'number' || newRating < 1 || newRating > 5) {
@@ -205,12 +205,11 @@ async function updateSellerReviewStats(db: any, sellerId: string, newRating: num
     
     try {
       console.log('[update-review-stats] Creating document reference for:', sellerId);
-      const statsRef = doc(db, 'reviewStats', sellerId);
       
       console.log('[update-review-stats] Getting document data');
-      const statsDoc = await getDoc(statsRef);
+      const statsDoc = await adminDb.collection('reviewStats').doc(sellerId).get();
       
-      if (statsDoc.exists()) {
+      if (statsDoc.exists) {
         // Update existing stats
         const stats = statsDoc.data();
         console.log('[update-review-stats] Existing stats:', JSON.stringify(stats));
@@ -238,11 +237,11 @@ async function updateSellerReviewStats(db: any, sellerId: string, newRating: num
           totalReviews,
           averageRating: newAverage,
           ratingCounts,
-          lastUpdated: Timestamp.now()
+          lastUpdated: new Date()
         };
         
         console.log('[update-review-stats] Updating with data:', JSON.stringify(updateData));
-        await updateDoc(statsRef, updateData);
+        await adminDb.collection('reviewStats').doc(sellerId).update(updateData);
         console.log('[update-review-stats] Document updated successfully');
       } else {
         // Create new stats document
@@ -255,11 +254,11 @@ async function updateSellerReviewStats(db: any, sellerId: string, newRating: num
           totalReviews: 1,
           averageRating: rating,
           ratingCounts,
-          lastUpdated: Timestamp.now()
+          lastUpdated: new Date()
         };
         
         console.log('[update-review-stats] Creating new stats:', JSON.stringify(newStats));
-        await setDoc(statsRef, newStats);
+        await adminDb.collection('reviewStats').doc(sellerId).set(newStats);
         console.log('[update-review-stats] New document created successfully');
       }
       
