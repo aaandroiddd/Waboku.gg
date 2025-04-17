@@ -63,6 +63,8 @@ export function ReviewCard({ review, showSellerResponse = true, allowHelpful = t
         setHelpfulCount(newCount);
         setHasMarkedHelpful(true);
       }
+    } catch (error) {
+      console.error('Error marking review as helpful:', error);
     } finally {
       setIsMarkingHelpful(false);
     }
@@ -123,16 +125,16 @@ export function ReviewCard({ review, showSellerResponse = true, allowHelpful = t
                 </div>
               </div>
               
-              {allowHelpful && user && (
+              {allowHelpful && (
                 <Button 
                   variant="ghost" 
                   size="sm" 
                   className="text-muted-foreground hover:text-foreground flex-shrink-0"
                   onClick={handleMarkHelpful}
-                  disabled={isMarkingHelpful || !user || user.uid === review.reviewerId || user.uid === review.sellerId || hasMarkedHelpful}
+                  disabled={isMarkingHelpful || !user || (user && (user.uid === review.reviewerId || user.uid === review.sellerId)) || hasMarkedHelpful}
                 >
                   <ThumbsUp className={`h-4 w-4 mr-1 ${hasMarkedHelpful ? 'fill-current' : ''}`} />
-                  Helpful {helpfulCount > 0 && `(${helpfulCount})`}
+                  Helpful ({helpfulCount})
                 </Button>
               )}
             </div>
