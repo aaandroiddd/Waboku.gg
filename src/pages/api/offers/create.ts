@@ -112,7 +112,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     console.log(`Authenticated user: ${userId}`);
 
     // Get the request body
-    const { listingId, sellerId, amount, listingSnapshot, shippingAddress, isPickup } = req.body;
+    const { listingId, sellerId, amount, listingSnapshot, shippingAddress, isPickup, requiresShippingInfo } = req.body;
     console.log('Request body:', { 
       listingId, 
       sellerId, 
@@ -123,7 +123,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         hasImage: !!listingSnapshot.imageUrl
       } : null,
       hasShippingAddress: !!shippingAddress,
-      isPickup: !!isPickup
+      isPickup: !!isPickup,
+      requiresShippingInfo: !!requiresShippingInfo
     });
 
     // Validate the request body
@@ -134,12 +135,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         amount: amount 
       });
       return res.status(400).json({ error: 'Missing required fields' });
-    }
-    
-    // Validate shipping information if not pickup
-    if (!isPickup && !shippingAddress) {
-      console.error('Missing shipping address for non-pickup offer');
-      return res.status(400).json({ error: 'Shipping address is required for shipping offers' });
     }
 
     if (!listingSnapshot) {
@@ -202,7 +197,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         imageUrl: listingSnapshot.imageUrl || '',
       },
       shippingAddress: shippingAddress || null,
-      isPickup: isPickup || false
+      isPickup: isPickup || false,
+      requiresShippingInfo: requiresShippingInfo || false,
+      shippingInfoProvided: false
     };
     
     try {

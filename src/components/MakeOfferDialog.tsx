@@ -8,7 +8,7 @@ import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/router';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, InfoIcon } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -40,14 +40,9 @@ export function MakeOfferDialog({
   const router = useRouter();
   const [deliveryMethod, setDeliveryMethod] = useState<'shipping' | 'pickup'>('shipping');
   
-  // Shipping address state
-  const [name, setName] = useState('');
-  const [line1, setLine1] = useState('');
-  const [line2, setLine2] = useState('');
-  const [city, setCity] = useState('');
-  const [state, setState] = useState('');
-  const [postalCode, setPostalCode] = useState('');
-  const [country, setCountry] = useState('US');
+  // Acknowledgment checkboxes
+  const [shippingAcknowledged, setShippingAcknowledged] = useState(false);
+  const [pickupAcknowledged, setPickupAcknowledged] = useState(false);
 
   // Reset error and form when dialog opens/closes
   const handleOpenChange = (open: boolean) => {
@@ -81,12 +76,15 @@ export function MakeOfferDialog({
       return;
     }
     
-    // Validate shipping information if shipping is selected
-    if (deliveryMethod === 'shipping') {
-      if (!name || !line1 || !city || !state || !postalCode) {
-        setError('Please complete all required shipping information');
-        return;
-      }
+    // Validate acknowledgment based on delivery method
+    if (deliveryMethod === 'shipping' && !shippingAcknowledged) {
+      setError('Please acknowledge that you will provide shipping information if your offer is accepted');
+      return;
+    }
+    
+    if (deliveryMethod === 'pickup' && !pickupAcknowledged) {
+      setError('Please acknowledge that you will need to arrange pickup with the seller if your offer is accepted');
+      return;
     }
 
     setIsSubmitting(true);
@@ -94,20 +92,6 @@ export function MakeOfferDialog({
     try {
       // Get the auth token
       const token = await user.getIdToken();
-      
-      // Prepare shipping address if applicable
-      let shippingAddress = null;
-      if (deliveryMethod === 'shipping') {
-        shippingAddress = {
-          name,
-          line1,
-          line2: line2 || undefined,
-          city,
-          state,
-          postal_code: postalCode,
-          country
-        };
-      }
       
       // Prepare the request payload
       const payload = {
@@ -119,8 +103,9 @@ export function MakeOfferDialog({
           price: listingPrice || 0,
           imageUrl: listingImageUrl || ''
         },
-        shippingAddress,
-        isPickup: deliveryMethod === 'pickup'
+        shippingAddress: null, // No shipping address at this stage
+        isPickup: deliveryMethod === 'pickup',
+        requiresShippingInfo: deliveryMethod === 'shipping'
       };
       
       console.log('Sending offer request with data:', {
@@ -279,105 +264,52 @@ export function MakeOfferDialog({
                 </TabsList>
                 <TabsContent value="shipping" className="mt-4">
                   <div className="space-y-3">
-                    <div className="grid gap-2">
-                      <Label htmlFor="name">Full Name</Label>
-                      <Input
-                        id="name"
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        placeholder="John Doe"
-                        required={deliveryMethod === 'shipping'}
+                    <Alert className="bg-blue-500/10 border-blue-500/50">
+                      <InfoIcon className="h-4 w-4 text-blue-500" />
+                      <AlertDescription className="ml-2">
+                        If your offer is accepted, you will need to provide a shipping address.
+                      </AlertDescription>
+                    </Alert>
+                    
+                    <div className="flex items-start space-x-2 pt-2">
+                      <Checkbox 
+                        id="shipping-acknowledge" 
+                        checked={shippingAcknowledged}
+                        onCheckedChange={(checked) => setShippingAcknowledged(checked as boolean)}
                         disabled={isSubmitting}
                       />
-                    </div>
-                    
-                    <div className="grid gap-2">
-                      <Label htmlFor="line1">Address Line 1</Label>
-                      <Input
-                        id="line1"
-                        value={line1}
-                        onChange={(e) => setLine1(e.target.value)}
-                        placeholder="123 Main St"
-                        required={deliveryMethod === 'shipping'}
-                        disabled={isSubmitting}
-                      />
-                    </div>
-                    
-                    <div className="grid gap-2">
-                      <Label htmlFor="line2">Address Line 2 (Optional)</Label>
-                      <Input
-                        id="line2"
-                        value={line2}
-                        onChange={(e) => setLine2(e.target.value)}
-                        placeholder="Apt 4B"
-                        disabled={isSubmitting}
-                      />
-                    </div>
-                    
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="grid gap-2">
-                        <Label htmlFor="city">City</Label>
-                        <Input
-                          id="city"
-                          value={city}
-                          onChange={(e) => setCity(e.target.value)}
-                          placeholder="New York"
-                          required={deliveryMethod === 'shipping'}
-                          disabled={isSubmitting}
-                        />
-                      </div>
-                      
-                      <div className="grid gap-2">
-                        <Label htmlFor="state">State</Label>
-                        <StateSelect
-                          value={state}
-                          onValueChange={setState}
-                          disabled={isSubmitting}
-                          required={deliveryMethod === 'shipping'}
-                        />
-                      </div>
-                    </div>
-                    
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="grid gap-2">
-                        <Label htmlFor="postalCode">ZIP Code</Label>
-                        <Input
-                          id="postalCode"
-                          value={postalCode}
-                          onChange={(e) => setPostalCode(e.target.value)}
-                          placeholder="10001"
-                          required={deliveryMethod === 'shipping'}
-                          disabled={isSubmitting}
-                        />
-                      </div>
-                      
-                      <div className="grid gap-2">
-                        <Label htmlFor="country">Country</Label>
-                        <Select
-                          value={country}
-                          onValueChange={setCountry}
-                          disabled={isSubmitting}
-                        >
-                          <SelectTrigger id="country">
-                            <SelectValue placeholder="Select country" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="US">United States</SelectItem>
-                            <SelectItem value="CA">Canada</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
+                      <Label 
+                        htmlFor="shipping-acknowledge" 
+                        className="text-sm font-normal leading-tight cursor-pointer"
+                      >
+                        I understand that I will need to provide my shipping address after the seller accepts my offer.
+                      </Label>
                     </div>
                   </div>
                 </TabsContent>
                 <TabsContent value="pickup" className="mt-4">
                   <div className="space-y-3">
-                    <Alert>
-                      <AlertCircle className="h-4 w-4" />
+                    <Alert className="bg-amber-500/10 border-amber-500/50">
+                      <AlertCircle className="h-4 w-4 text-amber-500" />
                       <AlertDescription className="ml-2">
-                        You'll arrange pickup details with the seller if your offer is accepted.
+                        You'll need to arrange pickup details with the seller if your offer is accepted.
                       </AlertDescription>
                     </Alert>
+                    
+                    <div className="flex items-start space-x-2 pt-2">
+                      <Checkbox 
+                        id="pickup-acknowledge" 
+                        checked={pickupAcknowledged}
+                        onCheckedChange={(checked) => setPickupAcknowledged(checked as boolean)}
+                        disabled={isSubmitting}
+                      />
+                      <Label 
+                        htmlFor="pickup-acknowledge" 
+                        className="text-sm font-normal leading-tight cursor-pointer"
+                      >
+                        I understand that I will need to arrange pickup with the seller after my offer is accepted.
+                      </Label>
+                    </div>
                   </div>
                 </TabsContent>
               </Tabs>

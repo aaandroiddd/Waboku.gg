@@ -24,4 +24,6 @@ export interface Offer {
     country: string;
   };
   isPickup?: boolean; // Flag to indicate if this is a pickup instead of shipping
+  requiresShippingInfo?: boolean; // Flag to indicate if shipping info needs to be collected after acceptance
+  shippingInfoProvided?: boolean; // Flag to indicate if shipping info has been provided after acceptance
 }

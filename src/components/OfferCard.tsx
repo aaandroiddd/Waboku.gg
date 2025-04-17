@@ -6,13 +6,14 @@ import { formatPrice } from '@/lib/price';
 import { format } from 'date-fns';
 import Image from 'next/image';
 import { UserNameLink } from '@/components/UserNameLink';
-import { Check, X, RefreshCw, Send, Trash2, XCircle } from 'lucide-react';
+import { Check, X, RefreshCw, Send, Trash2, XCircle, MapPin, Truck } from 'lucide-react';
 import { useOffers } from '@/hooks/useOffers';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { CancelOfferDialog } from '@/components/CancelOfferDialog';
 import { ClearOfferDialog } from '@/components/ClearOfferDialog';
 import { MarkAsSoldDialog } from '@/components/MarkAsSoldDialog';
+import { ShippingInfoDialog } from '@/components/ShippingInfoDialog';
 import { toast } from 'sonner';
 import { getFirebaseServices } from '@/lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
@@ -30,6 +31,7 @@ export function OfferCard({ offer, type, onCounterOffer }: OfferCardProps) {
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [clearDialogOpen, setClearDialogOpen] = useState(false);
   const [markAsSoldDialogOpen, setMarkAsSoldDialogOpen] = useState(false);
+  const [shippingInfoDialogOpen, setShippingInfoDialogOpen] = useState(false);
   const [hasStripeAccount, setHasStripeAccount] = useState(false);
 
   // Check if the seller has a Stripe account when the component mounts
@@ -62,7 +64,16 @@ export function OfferCard({ offer, type, onCounterOffer }: OfferCardProps) {
     };
 
     checkStripeAccount();
-  }, [offer.sellerId, type]);
+    
+    // Check if we need to show the shipping info dialog for newly accepted offers
+    if (type === 'sent' && 
+        offer.status === 'accepted' && 
+        offer.requiresShippingInfo && 
+        !offer.shippingInfoProvided) {
+      // Show shipping info dialog for accepted offers that need shipping info
+      setShippingInfoDialogOpen(true);
+    }
+  }, [offer.sellerId, type, offer.status, offer.requiresShippingInfo, offer.shippingInfoProvided]);
 
   const handleAccept = async () => {
     setIsUpdating(true);
@@ -156,11 +167,32 @@ export function OfferCard({ offer, type, onCounterOffer }: OfferCardProps) {
                   <span className="font-semibold dark:text-yellow-300 text-yellow-600">{formatPrice(safeOffer.amount)}</span>
                 </div>
               </div>
-              <Badge
-                variant={getStatusBadgeVariant(safeOffer.status)}
-              >
-                {safeOffer.status.charAt(0).toUpperCase() + safeOffer.status.slice(1)}
-              </Badge>
+              <div className="flex flex-wrap gap-2 items-center">
+                <Badge
+                  variant={getStatusBadgeVariant(safeOffer.status)}
+                >
+                  {safeOffer.status.charAt(0).toUpperCase() + safeOffer.status.slice(1)}
+                </Badge>
+                
+                {/* Show shipping info needed badge */}
+                {type === 'sent' && 
+                 safeOffer.status === 'accepted' && 
+                 safeOffer.requiresShippingInfo && 
+                 !safeOffer.shippingInfoProvided && (
+                  <Badge variant="outline" className="border-blue-500 text-blue-500">
+                    <Truck className="mr-1 h-3 w-3" />
+                    Shipping Info Needed
+                  </Badge>
+                )}
+                
+                {/* Show pickup badge */}
+                {safeOffer.isPickup && (
+                  <Badge variant="outline" className="border-amber-500 text-amber-500">
+                    <MapPin className="mr-1 h-3 w-3" />
+                    Local Pickup
+                  </Badge>
+                )}
+              </div>
               
               {safeOffer.counterOffer && (
                 <div className="mt-2 p-2 bg-muted rounded-md">
@@ -259,6 +291,35 @@ export function OfferCard({ offer, type, onCounterOffer }: OfferCardProps) {
               >
                 View Listing
               </Button>
+              
+              {/* For sent offers that are accepted and require shipping info */}
+              {type === 'sent' && 
+               offer.status === 'accepted' && 
+               offer.requiresShippingInfo && 
+               !offer.shippingInfoProvided && (
+                <Button 
+                  variant="default"
+                  className="bg-blue-600 hover:bg-blue-700"
+                  onClick={() => setShippingInfoDialogOpen(true)}
+                >
+                  <Truck className="mr-2 h-4 w-4" />
+                  Provide Shipping Info
+                </Button>
+              )}
+              
+              {/* For sent offers that are accepted with pickup */}
+              {type === 'sent' && 
+               offer.status === 'accepted' && 
+               offer.isPickup && (
+                <Button 
+                  variant="outline"
+                  className="border-amber-500 text-amber-500 hover:bg-amber-500/10"
+                >
+                  <MapPin className="mr-2 h-4 w-4" />
+                  Arrange Pickup
+                </Button>
+              )}
+              
               {type === 'sent' && offer.status === 'declined' && (
                 <Button 
                   variant="outline"
@@ -379,6 +440,21 @@ export function OfferCard({ offer, type, onCounterOffer }: OfferCardProps) {
                 } finally {
                   setIsUpdating(false);
                 }
+              }}
+            />
+          )}
+          
+          {/* Shipping Info Dialog */}
+          {type === 'sent' && (
+            <ShippingInfoDialog
+              open={shippingInfoDialogOpen}
+              onOpenChange={setShippingInfoDialogOpen}
+              offerId={offer.id}
+              listingTitle={safeOffer.listingSnapshot.title}
+              onComplete={() => {
+                toast.success('Shipping information provided', {
+                  description: 'The seller has been notified and will process your order'
+                });
               }}
             />
           )}

@@ -100,10 +100,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // Update the offer status
     console.log(`Updating offer ${offerId} status to ${status}`);
-    await updateDoc(offerRef, {
+    
+    // If the offer is being accepted, check if it requires shipping info
+    const updateData: any = {
       status,
       updatedAt: serverTimestamp()
-    });
+    };
+    
+    await updateDoc(offerRef, updateData);
 
     console.log(`Successfully updated offer ${offerId} status to ${status}`);
     
