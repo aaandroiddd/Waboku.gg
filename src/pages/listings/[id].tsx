@@ -1330,20 +1330,18 @@ export default function ListingPage() {
                               <DialogDescription className="sr-only">
                                 Detailed view of {listing.title} image {index + 1} of {listing.imageUrls.length}. Use zoom controls to examine details.
                               </DialogDescription>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="absolute top-2 right-2 z-20 bg-background/80 backdrop-blur-sm hover:bg-background/90"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  const closeButton = e.currentTarget.closest('[data-radix-dialog-content]')?.querySelector('[data-radix-dialog-close]');
-                                  if (closeButton) {
-                                    (closeButton as HTMLElement).click();
-                                  }
-                                }}
-                              >
-                                <X className={`${isMobile ? 'h-5 w-5' : 'h-4 w-4'}`} />
-                              </Button>
+                              <DialogClose asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="absolute top-2 right-2 z-20 bg-background/80 backdrop-blur-sm hover:bg-background/90"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                  }}
+                                >
+                                  <X className={`${isMobile ? 'h-5 w-5' : 'h-4 w-4'}`} />
+                                </Button>
+                              </DialogClose>
                               <div className="relative w-full h-full flex items-center justify-center overflow-auto">
                                 <div className="absolute top-2 left-2 z-20">
                                   <Badge variant="secondary" className="bg-background/80 backdrop-blur-sm">
