@@ -17,6 +17,8 @@ export interface Order {
   pickupCompleted?: boolean; // Flag to indicate if pickup has been completed
   pickupCompletedAt?: Date; // When the pickup was completed
   reviewSubmitted?: boolean; // Flag to indicate if a review has been submitted
+  sellerHasStripeAccount?: boolean; // Flag to indicate if the seller has a Stripe Connect account
+  paymentRequired?: boolean; // Flag to indicate if payment is required for this order
   shippingAddress?: {
     name: string;
     line1: string;

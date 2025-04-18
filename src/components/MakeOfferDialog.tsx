@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,11 +8,12 @@ import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/router';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AlertCircle, InfoIcon } from 'lucide-react';
+import { AlertCircle, InfoIcon, CreditCard } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { StateSelect } from '@/components/StateSelect';
+import { useStripeSellerStatus } from '@/hooks/useStripeSellerStatus';
 
 interface MakeOfferDialogProps {
   open: boolean;
@@ -39,10 +40,12 @@ export function MakeOfferDialog({
   const { user } = useAuth();
   const router = useRouter();
   const [deliveryMethod, setDeliveryMethod] = useState<'shipping' | 'pickup'>('shipping');
+  const { hasStripeAccount, isLoading: isLoadingStripeStatus } = useStripeSellerStatus(sellerId);
   
   // Acknowledgment checkboxes
   const [shippingAcknowledged, setShippingAcknowledged] = useState(false);
   const [pickupAcknowledged, setPickupAcknowledged] = useState(false);
+  const [paymentAcknowledged, setPaymentAcknowledged] = useState(false);
 
   // Reset error and form when dialog opens/closes
   const handleOpenChange = (open: boolean) => {
@@ -50,6 +53,9 @@ export function MakeOfferDialog({
       setError(null);
       // Reset offer amount to listing price when dialog closes
       setOfferAmount(listingPrice.toString());
+      setShippingAcknowledged(false);
+      setPickupAcknowledged(false);
+      setPaymentAcknowledged(false);
     }
     onOpenChange(open);
   };
@@ -87,6 +93,12 @@ export function MakeOfferDialog({
       return;
     }
 
+    // Validate payment acknowledgment if seller has Stripe account
+    if (hasStripeAccount && deliveryMethod === 'shipping' && !paymentAcknowledged) {
+      setError('Please acknowledge that payment will be required if your offer is accepted');
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
@@ -105,14 +117,17 @@ export function MakeOfferDialog({
         },
         shippingAddress: null, // No shipping address at this stage
         isPickup: deliveryMethod === 'pickup',
-        requiresShippingInfo: deliveryMethod === 'shipping'
+        requiresShippingInfo: deliveryMethod === 'shipping',
+        sellerHasStripeAccount: hasStripeAccount
       };
       
       console.log('Sending offer request with data:', {
         listingId,
         sellerId,
         amount,
-        hasListingSnapshot: !!listingTitle && !!listingImageUrl
+        hasListingSnapshot: !!listingTitle && !!listingImageUrl,
+        isPickup: deliveryMethod === 'pickup',
+        sellerHasStripeAccount: hasStripeAccount
       });
       
       // Make the API request with retry logic
@@ -259,9 +274,23 @@ export function MakeOfferDialog({
                 className="w-full"
               >
                 <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="shipping">Shipping</TabsTrigger>
+                  <TabsTrigger value="shipping" disabled={!hasStripeAccount && !isLoadingStripeStatus}>
+                    Shipping
+                  </TabsTrigger>
                   <TabsTrigger value="pickup">Local Pickup</TabsTrigger>
                 </TabsList>
+                
+                {!hasStripeAccount && !isLoadingStripeStatus && deliveryMethod === 'shipping' && (
+                  <div className="mt-2">
+                    <Alert variant="destructive">
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertDescription className="ml-2">
+                        This seller doesn't support shipping. You can only make a local pickup offer.
+                      </AlertDescription>
+                    </Alert>
+                  </div>
+                )}
+                
                 <TabsContent value="shipping" className="mt-4">
                   <div className="space-y-3">
                     <Alert className="bg-blue-500/10 border-blue-500/50">
@@ -270,6 +299,15 @@ export function MakeOfferDialog({
                         If your offer is accepted, you will need to provide a shipping address.
                       </AlertDescription>
                     </Alert>
+                    
+                    {hasStripeAccount && (
+                      <Alert className="bg-green-500/10 border-green-500/50">
+                        <CreditCard className="h-4 w-4 text-green-500" />
+                        <AlertDescription className="ml-2">
+                          This seller accepts online payments. You'll be asked to pay after providing shipping information.
+                        </AlertDescription>
+                      </Alert>
+                    )}
                     
                     <div className="flex items-start space-x-2 pt-2">
                       <Checkbox 
@@ -285,6 +323,23 @@ export function MakeOfferDialog({
                         I understand that I will need to provide my shipping address after the seller accepts my offer.
                       </Label>
                     </div>
+                    
+                    {hasStripeAccount && (
+                      <div className="flex items-start space-x-2 pt-2">
+                        <Checkbox 
+                          id="payment-acknowledge" 
+                          checked={paymentAcknowledged}
+                          onCheckedChange={(checked) => setPaymentAcknowledged(checked as boolean)}
+                          disabled={isSubmitting}
+                        />
+                        <Label 
+                          htmlFor="payment-acknowledge" 
+                          className="text-sm font-normal leading-tight cursor-pointer"
+                        >
+                          I understand that I will need to make payment after providing shipping information if my offer is accepted.
+                        </Label>
+                      </div>
+                    )}
                   </div>
                 </TabsContent>
                 <TabsContent value="pickup" className="mt-4">
@@ -333,7 +388,7 @@ export function MakeOfferDialog({
             </Button>
             <Button 
               type="submit" 
-              disabled={isSubmitting}
+              disabled={isSubmitting || (deliveryMethod === 'shipping' && !hasStripeAccount && !isLoadingStripeStatus)}
             >
               {isSubmitting ? 'Sending...' : 'Send Offer'}
             </Button>

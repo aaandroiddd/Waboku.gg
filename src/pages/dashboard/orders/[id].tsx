@@ -591,13 +591,22 @@ export default function OrderDetailsPage() {
                         </p>
                       </div>
                       {isUserBuyer && (
-                        <Button 
-                          variant="default" 
-                          onClick={() => setShowShippingInfoDialog(true)}
-                          className="w-full sm:w-auto"
-                        >
-                          <MapPin className="mr-2 h-4 w-4" /> Provide Shipping Information
-                        </Button>
+                        <div className="w-full flex flex-col gap-2">
+                          <Button 
+                            variant="default" 
+                            onClick={() => setShowShippingInfoDialog(true)}
+                            className="w-full sm:w-auto"
+                          >
+                            <MapPin className="mr-2 h-4 w-4" /> Provide Shipping Information
+                          </Button>
+                          
+                          {order.sellerHasStripeAccount && (
+                            <div className="flex items-center gap-2 p-3 rounded-md bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 w-full text-left">
+                              <Info className="h-4 w-4 flex-shrink-0" />
+                              <p>After providing shipping information, you'll be redirected to complete payment.</p>
+                            </div>
+                          )}
+                        </div>
                       )}
                       {!isUserBuyer && (
                         <div className="flex items-center gap-2 p-3 rounded-md bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 w-full">
@@ -625,6 +634,35 @@ export default function OrderDetailsPage() {
                       <p>For local pickup orders, payment details are handled directly between buyer and seller at the time of pickup.</p>
                     </div>
                   )}
+                  
+                  {!order.isPickup && order.sellerHasStripeAccount && !order.paymentSessionId && !order.paymentIntentId && isUserBuyer && order.shippingAddress && (
+                    <div className="flex flex-col gap-3 p-3 rounded-md bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 mb-4">
+                      <div className="flex items-center gap-2">
+                        <AlertTriangle className="h-4 w-4 flex-shrink-0" />
+                        <p className="font-medium">Payment Required</p>
+                      </div>
+                      <p>
+                        This seller requires payment before shipping. Please complete your payment to proceed with the order.
+                      </p>
+                      <div className="mt-1">
+                        <Button 
+                          variant="default" 
+                          className="w-full sm:w-auto bg-yellow-600 hover:bg-yellow-700 text-white"
+                          onClick={() => setShowShippingInfoDialog(true)}
+                        >
+                          <CreditCard className="mr-2 h-4 w-4" /> Proceed to Payment
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {!order.isPickup && !order.sellerHasStripeAccount && !order.paymentSessionId && !order.paymentIntentId && (
+                    <div className="flex items-center gap-2 p-3 rounded-md bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 mb-4">
+                      <Info className="h-4 w-4 flex-shrink-0" />
+                      <p>Payment will be arranged directly with the seller for this order.</p>
+                    </div>
+                  )}
+                  
                   <div className="space-y-2">
                     {order.paymentSessionId && (
                       <div className="flex justify-between">
@@ -648,6 +686,14 @@ export default function OrderDetailsPage() {
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Transfer Amount:</span>
                         <span>{formatPrice(order.transferAmount)}</span>
+                      </div>
+                    )}
+                    {order.paymentStatus && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Payment Status:</span>
+                        <Badge variant={order.paymentStatus === 'paid' ? 'success' : 'warning'}>
+                          {order.paymentStatus.charAt(0).toUpperCase() + order.paymentStatus.slice(1)}
+                        </Badge>
                       </div>
                     )}
                     {order.isPickup && !order.paymentSessionId && !order.paymentIntentId && (

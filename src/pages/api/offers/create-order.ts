@@ -62,6 +62,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ message: 'Only accepted offers can be converted to orders' });
     }
     
+    // Check if the seller has a Stripe Connect account
+    const sellerDoc = await db.collection('users').doc(userId).get();
+    const sellerData = sellerDoc.data();
+    
+    const hasStripeAccount = sellerData?.stripeConnectStatus === 'active' && 
+                            sellerData?.stripeConnectAccountId ? true : false;
+    
     // Generate a unique ID for the order (similar to Stripe format)
     const generateOrderId = () => {
       const prefix = 'pi_';
@@ -120,7 +127,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       },
       offerPrice: offerData.amount, // Store the accepted offer price
       originalListingPrice: offerData.listingSnapshot?.price || offerData.amount, // Store the original listing price
-      offerId: offerId // Reference to the original offer
+      offerId: offerId, // Reference to the original offer
+      sellerHasStripeAccount: hasStripeAccount, // Flag to indicate if the seller has a Stripe Connect account
+      paymentRequired: !isPickup && hasStripeAccount, // Payment is required for shipping orders if seller has Stripe
+      requiresShippingInfo: offerData.requiresShippingInfo || (!isPickup) // Flag to indicate if shipping info is required
     };
     
     // Create the order document with the custom ID
