@@ -3,6 +3,7 @@ import { useRouter } from 'next/router';
 import { useAuth } from '@/contexts/AuthContext';
 import { getFirebaseServices } from '@/lib/firebase';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { loadStripe } from '@stripe/stripe-js';
 import { Order } from '@/types/order';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
@@ -46,6 +47,7 @@ export default function OrderDetailsPage() {
   const [showCompletePickupDialog, setShowCompletePickupDialog] = useState(false);
   const [showReviewDialog, setShowReviewDialog] = useState(false);
   const [showShippingInfoDialog, setShowShippingInfoDialog] = useState(false);
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
 
   // Check if we should show the review dialog based on URL query param
   useEffect(() => {
@@ -317,6 +319,65 @@ export default function OrderDetailsPage() {
       toast.error(error instanceof Error ? error.message : 'Failed to complete pickup');
     } finally {
       setIsCompletingPickup(false);
+    }
+  };
+  
+  // Function for buyer to pay for a pending order
+  const handlePayForPendingOrder = async () => {
+    if (!order || !id || !user) return;
+    
+    try {
+      setIsProcessingPayment(true);
+      console.log('Processing payment for pending order:', id, 'by user:', user.uid);
+      
+      // Get user email
+      const { db } = getFirebaseServices();
+      const userDoc = await getDoc(doc(db, 'users', user.uid));
+      const email = userDoc.exists() ? userDoc.data().email : user.email;
+      
+      if (!email) {
+        throw new Error('User email not found');
+      }
+      
+      // Call the API to create a payment session
+      const response = await fetch('/api/stripe/connect/create-pending-order-session', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          orderId: id,
+          userId: user.uid,
+          email,
+        }),
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to create payment session');
+      }
+      
+      // Redirect to Stripe Checkout
+      const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || '');
+      const stripe = await stripePromise;
+      
+      if (!stripe) {
+        throw new Error('Failed to load Stripe');
+      }
+      
+      const { error } = await stripe.redirectToCheckout({
+        sessionId: data.sessionId,
+      });
+      
+      if (error) {
+        throw new Error(error.message || 'Failed to redirect to checkout');
+      }
+      
+    } catch (error) {
+      console.error('Error processing payment for pending order:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to process payment');
+      setIsProcessingPayment(false);
     }
   };
 
@@ -635,7 +696,8 @@ export default function OrderDetailsPage() {
                     </div>
                   )}
                   
-                  {!order.isPickup && order.sellerHasStripeAccount && !order.paymentSessionId && !order.paymentIntentId && isUserBuyer && order.shippingAddress && (
+                  {/* Payment button for pending orders with Stripe Connect sellers */}
+                  {!order.isPickup && order.sellerHasStripeAccount && !order.paymentSessionId && !order.paymentIntentId && isUserBuyer && order.shippingAddress && order.status === 'pending' && (
                     <div className="flex flex-col gap-3 p-3 rounded-md bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 mb-4">
                       <div className="flex items-center gap-2">
                         <AlertTriangle className="h-4 w-4 flex-shrink-0" />
@@ -648,9 +710,40 @@ export default function OrderDetailsPage() {
                         <Button 
                           variant="default" 
                           className="w-full sm:w-auto bg-yellow-600 hover:bg-yellow-700 text-white"
+                          onClick={handlePayForPendingOrder}
+                          disabled={isProcessingPayment}
+                        >
+                          {isProcessingPayment ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Processing...
+                            </>
+                          ) : (
+                            <>
+                              <CreditCard className="mr-2 h-4 w-4" /> Pay Now
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Payment button for orders that need shipping info first */}
+                  {!order.isPickup && order.sellerHasStripeAccount && !order.paymentSessionId && !order.paymentIntentId && isUserBuyer && !order.shippingAddress && (
+                    <div className="flex flex-col gap-3 p-3 rounded-md bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 mb-4">
+                      <div className="flex items-center gap-2">
+                        <AlertTriangle className="h-4 w-4 flex-shrink-0" />
+                        <p className="font-medium">Payment Required</p>
+                      </div>
+                      <p>
+                        This seller requires payment before shipping. Please provide shipping information to proceed with payment.
+                      </p>
+                      <div className="mt-1">
+                        <Button 
+                          variant="default" 
+                          className="w-full sm:w-auto bg-yellow-600 hover:bg-yellow-700 text-white"
                           onClick={() => setShowShippingInfoDialog(true)}
                         >
-                          <CreditCard className="mr-2 h-4 w-4" /> Proceed to Payment
+                          <CreditCard className="mr-2 h-4 w-4" /> Provide Shipping Info
                         </Button>
                       </div>
                     </div>

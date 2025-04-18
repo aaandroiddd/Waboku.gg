@@ -189,6 +189,39 @@ export default async function handler(
                 console.error('[Stripe Webhook] Error fetching offer data:', err);
               }
             }
+            
+            // Check if this is a payment for an existing pending order
+            if (session.metadata?.isPendingOrderPayment === 'true' && session.metadata?.orderId) {
+              console.log('[Stripe Webhook] Processing payment for existing pending order:', {
+                orderId: session.metadata.orderId,
+                sessionId: session.id
+              });
+              
+              try {
+                // Update the existing order with payment information
+                const orderRef = firestoreDb.collection('orders').doc(session.metadata.orderId);
+                await orderRef.update({
+                  status: 'awaiting_shipping',
+                  paymentStatus: 'paid',
+                  paymentSessionId: session.id,
+                  paymentIntentId: paymentIntentId,
+                  platformFee: session.metadata.platformFee ? parseInt(session.metadata.platformFee) / 100 : 0,
+                  updatedAt: new Date()
+                });
+                
+                console.log('[Stripe Webhook] Updated pending order with payment information:', {
+                  orderId: session.metadata.orderId,
+                  status: 'awaiting_shipping',
+                  paymentStatus: 'paid'
+                });
+                
+                // No need to create a new order since we're updating an existing one
+                break;
+              } catch (err) {
+                console.error('[Stripe Webhook] Error updating pending order:', err);
+                throw err;
+              }
+            }
 
             // Create an order record
             const orderData = {
