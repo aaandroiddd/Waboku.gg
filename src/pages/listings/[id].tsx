@@ -1504,7 +1504,20 @@ export default function ListingPage() {
         </Card>
 
         <Dialog open={isZoomDialogOpen} onOpenChange={setIsZoomDialogOpen}>
-          <DialogContent className="max-w-[95vw] w-full h-auto p-0 overflow-hidden max-h-[70vh] sm:max-h-[75vh] md:max-h-[80vh]">
+          <DialogContent 
+            className="max-w-[95vw] w-full h-auto p-0 overflow-hidden max-h-[70vh] sm:max-h-[75vh] md:max-h-[80vh]"
+            style={{
+              transform: "translate(-50%, -50%) translateZ(0)",
+              backfaceVisibility: "hidden",
+              WebkitBackfaceVisibility: "hidden",
+              perspective: "1000px",
+              WebkitPerspective: "1000px",
+              willChange: "transform",
+              display: "block",
+              visibility: "visible",
+              opacity: 1
+            }}
+          >
             <DialogTitle className="sr-only">Image Viewer</DialogTitle>
             <DialogDescription className="sr-only">
               Detailed view of {listing.title} image {currentImageIndex + 1} of {listing.imageUrls.length}. Use zoom controls to examine details.
@@ -1600,7 +1613,7 @@ export default function ListingPage() {
                                 </div>
                               </TransformComponent>
                               {/* Zoom controls - larger on mobile */}
-                              <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 flex items-center gap-1 sm:gap-2 z-20 bg-background/80 backdrop-blur-sm p-1 rounded-full">
+                              <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 flex items-center gap-1 sm:gap-2 z-20 bg-background/80 backdrop-blur-sm p-1 rounded-full zoom-controls">
                                 <Button
                                   variant="outline"
                                   size="icon"
@@ -1660,7 +1673,20 @@ export default function ListingPage() {
       <Footer />
 
       <Dialog open={isChatOpen} onOpenChange={setIsChatOpen}>
-        <DialogContent className="max-w-md p-0">
+        <DialogContent 
+          className="max-w-md p-0"
+          style={{
+            transform: "translate(-50%, -50%) translateZ(0)",
+            backfaceVisibility: "hidden",
+            WebkitBackfaceVisibility: "hidden",
+            perspective: "1000px",
+            WebkitPerspective: "1000px",
+            willChange: "transform",
+            display: "block",
+            visibility: "visible",
+            opacity: 1
+          }}
+        >
           <DialogTitle className="sr-only">Chat with {listing?.username}</DialogTitle>
           <DialogDescription className="sr-only">
             Conversation with {listing?.username} about {listing?.title}

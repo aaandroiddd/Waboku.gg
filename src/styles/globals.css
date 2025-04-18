@@ -62,6 +62,49 @@
     background-color: var(--background);
   }
   
+  /* Fix for dialog content on mobile devices */
+  [data-radix-dialog-content] {
+    transform: translate(-50%, -50%) translateZ(0) !important;
+    backface-visibility: hidden !important;
+    -webkit-backface-visibility: hidden !important;
+    perspective: 1000px !important;
+    -webkit-perspective: 1000px !important;
+    will-change: transform !important;
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+  }
+  
+  /* Ensure dialog overlay is visible and properly positioned */
+  [data-radix-dialog-overlay] {
+    position: fixed !important;
+    inset: 0 !important;
+    z-index: 50 !important;
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+  }
+  
+  /* Fix for image zoom dialog on mobile */
+  .react-transform-wrapper {
+    transform: translateZ(0) !important;
+    backface-visibility: hidden !important;
+    -webkit-backface-visibility: hidden !important;
+    will-change: transform !important;
+  }
+  
+  /* Ensure zoom controls are visible and properly positioned on mobile */
+  .zoom-controls {
+    position: fixed !important;
+    bottom: 16px !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    z-index: 60 !important;
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+  }
+  
   /* Optimize keyframe animations */
   @keyframes gradientMove {
     0% {
