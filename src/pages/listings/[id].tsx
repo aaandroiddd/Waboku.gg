@@ -1219,7 +1219,13 @@ export default function ListingPage() {
                             <DialogTrigger asChild>
                               <div 
                                 className="relative w-full h-full group flex items-center justify-center p-4 cursor-pointer" 
-                                onClick={(e) => isMobile && e.preventDefault()} // Prevent dialog from opening on mobile
+                                onClick={(e) => {
+                                  if (isMobile) {
+                                    e.preventDefault(); // Prevent dialog from opening on mobile
+                                    // Open the full resolution image in a new tab for mobile users
+                                    window.open(url, '_blank');
+                                  }
+                                }}
                               >
                                 <div className="relative w-full h-full flex items-center justify-center">
                                   <div className="relative w-full h-full">
@@ -1245,6 +1251,12 @@ export default function ListingPage() {
                                   {!isMobile && (
                                     <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/20 rounded-lg">
                                       <ZoomIn className="w-8 h-8 text-white" />
+                                    </div>
+                                  )}
+                                  {/* Show a visual indicator for mobile users */}
+                                  {isMobile && (
+                                    <div className="absolute bottom-2 right-2 bg-black/60 text-white rounded-full p-1.5">
+                                      <ZoomIn className="w-4 h-4" />
                                     </div>
                                   )}
                                 </div>
