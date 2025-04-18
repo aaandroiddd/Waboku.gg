@@ -1334,7 +1334,13 @@ export default function ListingPage() {
                                 variant="ghost"
                                 size="icon"
                                 className="absolute top-2 right-2 z-20 bg-background/80 backdrop-blur-sm hover:bg-background/90"
-                                onClick={() => {}}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  const closeButton = e.currentTarget.closest('[data-radix-dialog-content]')?.querySelector('[data-radix-dialog-close]');
+                                  if (closeButton) {
+                                    (closeButton as HTMLElement).click();
+                                  }
+                                }}
                               >
                                 <X className={`${isMobile ? 'h-5 w-5' : 'h-4 w-4'}`} />
                               </Button>
