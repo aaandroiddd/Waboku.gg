@@ -1505,7 +1505,7 @@ export default function ListingPage() {
 
         <Dialog open={isZoomDialogOpen} onOpenChange={setIsZoomDialogOpen}>
           <DialogContent 
-            className="max-w-[95vw] w-full h-auto p-0 overflow-hidden max-h-[70vh] sm:max-h-[75vh] md:max-h-[80vh]"
+            className="max-w-[95vw] w-full h-auto p-0 overflow-hidden max-h-[70vh] sm:max-h-[75vh] md:max-h-[80vh] mobile-image-dialog"
             style={{
               transform: "translate(-50%, -50%) translateZ(0)",
               backfaceVisibility: "hidden",
