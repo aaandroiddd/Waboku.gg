@@ -20,7 +20,7 @@ import { GameCategoryBadge } from '@/components/GameCategoryBadge';
 import { Button } from '@/components/ui/button';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
 import { Separator } from '@/components/ui/separator';
-import { Dialog, DialogContent, DialogTitle, DialogDescription, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle, DialogDescription, DialogTrigger, DialogClose } from '@/components/ui/dialog';
 import { Chat } from '@/components/Chat';
 import { MakeOfferDialog } from '@/components/MakeOfferDialog';
 import { ReportListingDialog } from '@/components/ReportListingDialog';
