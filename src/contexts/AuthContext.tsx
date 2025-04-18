@@ -868,7 +868,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (user.providerData[0]?.providerId === 'google.com') {
         const provider = new GoogleAuthProvider();
         try {
-          // Add select_account to force account selection
+          // Always show account selection dialog
           provider.setCustomParameters({
             prompt: 'select_account'
           });
@@ -1094,6 +1094,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       
       const provider = new GoogleAuthProvider();
+      
+      // Set custom parameters to always show account selection dialog
+      provider.setCustomParameters({
+        prompt: 'select_account'
+      });
       
       try {
         // Before signing in with popup, check if email exists
