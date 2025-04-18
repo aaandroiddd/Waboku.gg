@@ -59,7 +59,7 @@ export default function ListingPage() {
   const [listing, setListing] = useState<Listing | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isZoomDialogOpen, setIsZoomDialogOpen] = useState(false);
+  // Dialog state is now handled by Radix UI
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [sellerHasActiveStripeAccount, setSellerHasActiveStripeAccount] = useState(false);
 
@@ -694,11 +694,7 @@ export default function ListingPage() {
   // Import the useMediaQuery hook
   const isMobile = useMediaQuery('(max-width: 768px)');
   
-  const handleImageClick = (index: number) => {
-    // Open the zoom dialog on both mobile and desktop
-    setCurrentImageIndex(index);
-    setIsZoomDialogOpen(true);
-  };
+  // Dialog is now handled directly in each carousel item
 
   // We already have the favorites functionality from above
   
@@ -1219,36 +1215,177 @@ export default function ListingPage() {
                     <CarouselContent>
                       {listing.imageUrls.map((url, index) => (
                         <CarouselItem key={index} className="flex items-center justify-center h-full">
-                          <div 
-                            className="relative w-full h-full group flex items-center justify-center p-4 cursor-pointer" 
-                            onClick={() => handleImageClick(index)}
-                          >
-                            <div className="relative w-full h-full flex items-center justify-center">
-                              <div className="relative w-full h-full">
-                                <div className="relative w-full h-full">
-                                  <div className="absolute inset-0 rounded-lg animate-pulse bg-gradient-to-r from-gray-200/20 via-gray-100/20 to-gray-200/20 dark:from-gray-800/20 dark:via-gray-700/20 dark:to-gray-800/20 bg-[length:200%_100%]" />
-                                  <Image
-                                    src={url}
-                                    alt={`${listing.title} - Image ${index + 1}`}
-                                    fill
-                                    className="object-contain rounded-lg"
-                                    sizes="(max-width: 640px) 90vw, (max-width: 768px) 70vw, (max-width: 1024px) 50vw, 600px"
-                                    priority={index === 0}
-                                    loading={index === 0 ? "eager" : "lazy"}
-                                    quality={85}
-                                    onError={(e) => {
-                                      const target = e.target as HTMLImageElement;
-                                      target.src = '/images/rect.png';
-                                    }}
-                                  />
+                          <Dialog>
+                            <DialogTrigger asChild>
+                              <div 
+                                className="relative w-full h-full group flex items-center justify-center p-4 cursor-pointer" 
+                              >
+                                <div className="relative w-full h-full flex items-center justify-center">
+                                  <div className="relative w-full h-full">
+                                    <div className="relative w-full h-full">
+                                      <div className="absolute inset-0 rounded-lg animate-pulse bg-gradient-to-r from-gray-200/20 via-gray-100/20 to-gray-200/20 dark:from-gray-800/20 dark:via-gray-700/20 dark:to-gray-800/20 bg-[length:200%_100%]" />
+                                      <Image
+                                        src={url}
+                                        alt={`${listing.title} - Image ${index + 1}`}
+                                        fill
+                                        className="object-contain rounded-lg"
+                                        sizes="(max-width: 640px) 90vw, (max-width: 768px) 70vw, (max-width: 1024px) 50vw, 600px"
+                                        priority={index === 0}
+                                        loading={index === 0 ? "eager" : "lazy"}
+                                        quality={85}
+                                        onError={(e) => {
+                                          const target = e.target as HTMLImageElement;
+                                          target.src = '/images/rect.png';
+                                        }}
+                                      />
+                                    </div>
+                                  </div>
+                                  {/* Show zoom icon on both desktop and mobile */}
+                                  <div className={`absolute inset-0 flex items-center justify-center ${!isMobile ? 'opacity-0 group-hover:opacity-100' : 'opacity-70'} transition-opacity bg-black/20 rounded-lg`}>
+                                    <ZoomIn className="w-8 h-8 text-white" />
+                                  </div>
                                 </div>
                               </div>
-                              {/* Show zoom icon on both desktop and mobile */}
-                              <div className={`absolute inset-0 flex items-center justify-center ${!isMobile ? 'opacity-0 group-hover:opacity-100' : 'opacity-70'} transition-opacity bg-black/20 rounded-lg`}>
-                                <ZoomIn className="w-8 h-8 text-white" />
+                            </DialogTrigger>
+                            <DialogContent 
+                              className="max-w-[95vw] w-full h-auto p-0 overflow-hidden max-h-[70vh] sm:max-h-[75vh] md:max-h-[80vh] mobile-image-dialog"
+                              style={{
+                                transform: "translate(-50%, -50%) translateZ(0)",
+                                backfaceVisibility: "hidden",
+                                WebkitBackfaceVisibility: "hidden",
+                                perspective: "1000px",
+                                WebkitPerspective: "1000px",
+                                willChange: "transform"
+                              }}
+                              onOpenAutoFocus={(e) => {
+                                e.preventDefault();
+                                setCurrentImageIndex(index);
+                              }}
+                            >
+                              <DialogTitle className="sr-only">Image Viewer</DialogTitle>
+                              <DialogDescription className="sr-only">
+                                Detailed view of {listing.title} image {index + 1} of {listing.imageUrls.length}. Use zoom controls to examine details.
+                              </DialogDescription>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="absolute top-2 right-2 z-20 bg-background/80 backdrop-blur-sm hover:bg-background/90"
+                                onClick={() => {}}
+                              >
+                                <X className={`${isMobile ? 'h-5 w-5' : 'h-4 w-4'}`} />
+                              </Button>
+                              <div className="relative w-full h-full flex items-center justify-center overflow-auto">
+                                <div className="absolute top-2 left-2 z-20">
+                                  <Badge variant="secondary" className="bg-background/80 backdrop-blur-sm">
+                                    {index + 1} of {listing.imageUrls.length}
+                                  </Badge>
+                                </div>
+                                <TransformWrapper
+                                  initialScale={1}
+                                  minScale={0.5}
+                                  maxScale={4}
+                                  centerOnInit={true}
+                                  alignmentAnimation={{ sizeX: 0, sizeY: 0 }}
+                                  limitToBounds={true}
+                                  centerZoomedOut={true}
+                                  doubleClick={{ mode: "reset" }}
+                                  initialPositionX={0}
+                                  initialPositionY={0}
+                                  panning={{ disabled: false }}
+                                >
+                                  {({ zoomIn, zoomOut, resetTransform }) => {
+                                    // Store zoom controls in ref when component mounts
+                                    React.useEffect(() => {
+                                      if (zoomControlsRef.current) {
+                                        zoomControlsRef.current[index] = {
+                                          zoomIn,
+                                          zoomOut,
+                                          resetTransform
+                                        };
+                                        
+                                        // Also store in window for debugging
+                                        if (typeof window !== 'undefined') {
+                                          window.__transformInstances = window.__transformInstances || {};
+                                          window.__transformInstances[`image-${index}`] = {
+                                            zoomIn,
+                                            zoomOut,
+                                            resetTransform
+                                          };
+                                        }
+                                      }
+                                      
+                                      return () => {
+                                        // Clean up when unmounting
+                                        if (zoomControlsRef.current && zoomControlsRef.current[index]) {
+                                          delete zoomControlsRef.current[index];
+                                        }
+                                        
+                                        if (typeof window !== 'undefined' && 
+                                            window.__transformInstances && 
+                                            window.__transformInstances[`image-${index}`]) {
+                                          delete window.__transformInstances[`image-${index}`];
+                                        }
+                                      };
+                                    }, []);
+                                    
+                                    return (
+                                      <>
+                                        <TransformComponent 
+                                          wrapperClass="!w-full !h-full !flex !items-center !justify-center !overflow-hidden" 
+                                          contentClass="!w-full !h-full !flex !items-center !justify-center !overflow-visible"
+                                        >
+                                          <div className="relative w-full h-full flex items-center justify-center p-1 sm:p-2">
+                                            <img
+                                              src={url}
+                                              alt={`${listing.title} - Image ${index + 1}`}
+                                              className="max-w-[90%] max-h-[50vh] sm:max-h-[55vh] md:max-h-[60vh] w-auto h-auto object-contain"
+                                              loading="eager"
+                                            />
+                                          </div>
+                                        </TransformComponent>
+                                        {/* Zoom controls - larger on mobile */}
+                                        <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 flex items-center gap-1 sm:gap-2 z-20 bg-background/80 backdrop-blur-sm p-1 rounded-full zoom-controls">
+                                          <Button
+                                            variant="outline"
+                                            size="icon"
+                                            className={`${isMobile ? 'h-8 w-8' : 'h-6 w-6 sm:h-7 sm:w-7'} rounded-full`}
+                                            onClick={() => zoomOut()}
+                                          >
+                                            <Minus className={`${isMobile ? 'h-4 w-4' : 'h-3 w-3'}`} />
+                                          </Button>
+                                          <Button
+                                            variant="outline"
+                                            size="icon"
+                                            className={`${isMobile ? 'h-8 w-8' : 'h-6 w-6 sm:h-7 sm:w-7'} rounded-full`}
+                                            onClick={() => resetTransform()}
+                                          >
+                                            <RotateCw className={`${isMobile ? 'h-4 w-4' : 'h-3 w-3'}`} />
+                                          </Button>
+                                          <Button
+                                            variant="outline"
+                                            size="icon"
+                                            className={`${isMobile ? 'h-8 w-8' : 'h-6 w-6 sm:h-7 sm:w-7'} rounded-full`}
+                                            onClick={() => zoomIn()}
+                                          >
+                                            <Plus className={`${isMobile ? 'h-4 w-4' : 'h-3 w-3'}`} />
+                                          </Button>
+                                        </div>
+                                        
+                                        {/* Mobile instructions */}
+                                        {isMobile && (
+                                          <div className="absolute top-12 left-0 right-0 text-center">
+                                            <Badge variant="secondary" className="bg-background/60 backdrop-blur-sm px-3 py-1">
+                                              Pinch to zoom • Swipe to navigate
+                                            </Badge>
+                                          </div>
+                                        )}
+                                      </>
+                                    );
+                                  }}
+                                </TransformWrapper>
                               </div>
-                            </div>
-                          </div>
+                            </DialogContent>
+                          </Dialog>
                         </CarouselItem>
                       ))}
                     </CarouselContent>
@@ -1503,162 +1640,7 @@ export default function ListingPage() {
           </CardContent>
         </Card>
 
-        <Dialog open={isZoomDialogOpen} onOpenChange={setIsZoomDialogOpen}>
-          <DialogContent 
-            className="max-w-[95vw] w-full h-auto p-0 overflow-hidden max-h-[70vh] sm:max-h-[75vh] md:max-h-[80vh] mobile-image-dialog"
-            style={{
-              transform: "translate(-50%, -50%) translateZ(0)",
-              backfaceVisibility: "hidden",
-              WebkitBackfaceVisibility: "hidden",
-              perspective: "1000px",
-              WebkitPerspective: "1000px",
-              willChange: "transform"
-              // Removed manual visibility and opacity styles to let Radix handle them
-            }}
-          >
-            <DialogTitle className="sr-only">Image Viewer</DialogTitle>
-            <DialogDescription className="sr-only">
-              Detailed view of {listing.title} image {currentImageIndex + 1} of {listing.imageUrls.length}. Use zoom controls to examine details.
-            </DialogDescription>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="absolute top-2 right-2 z-20 bg-background/80 backdrop-blur-sm hover:bg-background/90"
-              onClick={() => setIsZoomDialogOpen(false)}
-            >
-              <X className={`${isMobile ? 'h-5 w-5' : 'h-4 w-4'}`} />
-            </Button>
-            <div className="relative w-full h-full flex items-center justify-center overflow-auto">
-              <Carousel 
-                className="w-full h-full"
-                onSelect={handleCarouselChange}
-                defaultIndex={listing.coverImageIndex || 0}
-                index={currentImageIndex}
-              >
-                <div className="absolute top-2 left-2 z-20">
-                  <Badge variant="secondary" className="bg-background/80 backdrop-blur-sm">
-                    {currentImageIndex + 1} of {listing.imageUrls.length}
-                  </Badge>
-                </div>
-                <CarouselContent className="h-full">
-                  {listing.imageUrls.map((url, index) => (
-                    <CarouselItem 
-                      key={`carousel-item-${index}`} 
-                      className="h-full flex items-center justify-center"
-                      data-slide-index={index}
-                    >
-                      <TransformWrapper
-                        initialScale={1}
-                        minScale={0.5}
-                        maxScale={4}
-                        centerOnInit={true}
-                        alignmentAnimation={{ sizeX: 0, sizeY: 0 }}
-                        limitToBounds={true}
-                        centerZoomedOut={true}
-                        doubleClick={{ mode: "reset" }}
-                        initialPositionX={0}
-                        initialPositionY={0}
-                        panning={{ disabled: false }}
-                      >
-                        {({ zoomIn, zoomOut, resetTransform }) => {
-                          // Store zoom controls in ref when component mounts
-                          React.useEffect(() => {
-                            if (zoomControlsRef.current) {
-                              zoomControlsRef.current[index] = {
-                                zoomIn,
-                                zoomOut,
-                                resetTransform
-                              };
-                              
-                              // Also store in window for debugging
-                              if (typeof window !== 'undefined') {
-                                window.__transformInstances = window.__transformInstances || {};
-                                window.__transformInstances[`image-${index}`] = {
-                                  zoomIn,
-                                  zoomOut,
-                                  resetTransform
-                                };
-                              }
-                            }
-                            
-                            return () => {
-                              // Clean up when unmounting
-                              if (zoomControlsRef.current && zoomControlsRef.current[index]) {
-                                delete zoomControlsRef.current[index];
-                              }
-                              
-                              if (typeof window !== 'undefined' && 
-                                  window.__transformInstances && 
-                                  window.__transformInstances[`image-${index}`]) {
-                                delete window.__transformInstances[`image-${index}`];
-                              }
-                            };
-                          }, []);
-                          
-                          return (
-                            <>
-                              <TransformComponent 
-                                wrapperClass="!w-full !h-full !flex !items-center !justify-center !overflow-hidden" 
-                                contentClass="!w-full !h-full !flex !items-center !justify-center !overflow-visible"
-                              >
-                                <div className="relative w-full h-full flex items-center justify-center p-1 sm:p-2">
-                                  <img
-                                    src={url}
-                                    alt={`${listing.title} - Image ${index + 1}`}
-                                    className="max-w-[90%] max-h-[50vh] sm:max-h-[55vh] md:max-h-[60vh] w-auto h-auto object-contain"
-                                    loading="eager"
-                                  />
-                                </div>
-                              </TransformComponent>
-                              {/* Zoom controls - larger on mobile */}
-                              <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 flex items-center gap-1 sm:gap-2 z-20 bg-background/80 backdrop-blur-sm p-1 rounded-full zoom-controls">
-                                <Button
-                                  variant="outline"
-                                  size="icon"
-                                  className={`${isMobile ? 'h-8 w-8' : 'h-6 w-6 sm:h-7 sm:w-7'} rounded-full`}
-                                  onClick={() => zoomOut()}
-                                >
-                                  <Minus className={`${isMobile ? 'h-4 w-4' : 'h-3 w-3'}`} />
-                                </Button>
-                                <Button
-                                  variant="outline"
-                                  size="icon"
-                                  className={`${isMobile ? 'h-8 w-8' : 'h-6 w-6 sm:h-7 sm:w-7'} rounded-full`}
-                                  onClick={() => resetTransform()}
-                                >
-                                  <RotateCw className={`${isMobile ? 'h-4 w-4' : 'h-3 w-3'}`} />
-                                </Button>
-                                <Button
-                                  variant="outline"
-                                  size="icon"
-                                  className={`${isMobile ? 'h-8 w-8' : 'h-6 w-6 sm:h-7 sm:w-7'} rounded-full`}
-                                  onClick={() => zoomIn()}
-                                >
-                                  <Plus className={`${isMobile ? 'h-4 w-4' : 'h-3 w-3'}`} />
-                                </Button>
-                              </div>
-                              
-                              {/* Mobile instructions */}
-                              {isMobile && (
-                                <div className="absolute top-12 left-0 right-0 text-center">
-                                  <Badge variant="secondary" className="bg-background/60 backdrop-blur-sm px-3 py-1">
-                                    Pinch to zoom • Swipe to navigate
-                                  </Badge>
-                                </div>
-                              )}
-                            </>
-                          );
-                        }}
-                      </TransformWrapper>
-                    </CarouselItem>
-                  ))}
-                </CarouselContent>
-                <CarouselPrevious className={`${isMobile ? 'h-8 w-8' : 'left-1 sm:left-2 h-6 w-6 sm:h-8 sm:w-8'}`} />
-                <CarouselNext className={`${isMobile ? 'h-8 w-8' : 'right-1 sm:right-2 h-6 w-6 sm:h-8 sm:w-8'}`} />
-              </Carousel>
-            </div>
-          </DialogContent>
-        </Dialog>
+
       </div>
       
       {/* Similar Listings Section - Always shown */}

@@ -4,6 +4,11 @@ const config = {
     './src/**/*.{js,ts,jsx,tsx,mdx}',
   ],
   darkMode: ["selector", 'class'],
+  variants: {
+    extend: {
+      animation: ['data-state-open', 'data-state-closed'],
+    },
+  },
   theme: {
   	extend: {
       fontFamily: {
