@@ -695,12 +695,9 @@ export default function ListingPage() {
   const isMobile = useMediaQuery('(max-width: 768px)');
   
   const handleImageClick = (index: number) => {
-    // Only open the zoom dialog if not on mobile
-    if (!isMobile) {
-      setCurrentImageIndex(index);
-      setIsZoomDialogOpen(true);
-    }
-    // No action on mobile - effectively disabling the pop-up
+    // Open the zoom dialog on both mobile and desktop
+    setCurrentImageIndex(index);
+    setIsZoomDialogOpen(true);
   };
 
   // We already have the favorites functionality from above
@@ -1223,7 +1220,7 @@ export default function ListingPage() {
                       {listing.imageUrls.map((url, index) => (
                         <CarouselItem key={index} className="flex items-center justify-center h-full">
                           <div 
-                            className={`relative w-full h-full group flex items-center justify-center p-4 ${!isMobile ? "cursor-pointer" : ""}`} 
+                            className="relative w-full h-full group flex items-center justify-center p-4 cursor-pointer" 
                             onClick={() => handleImageClick(index)}
                           >
                             <div className="relative w-full h-full flex items-center justify-center">
@@ -1246,12 +1243,10 @@ export default function ListingPage() {
                                   />
                                 </div>
                               </div>
-                              {/* Only show zoom icon on desktop */}
-                              {!isMobile && (
-                                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/20 rounded-lg">
-                                  <ZoomIn className="w-8 h-8 text-white" />
-                                </div>
-                              )}
+                              {/* Show zoom icon on both desktop and mobile */}
+                              <div className={`absolute inset-0 flex items-center justify-center ${!isMobile ? 'opacity-0 group-hover:opacity-100' : 'opacity-70'} transition-opacity bg-black/20 rounded-lg`}>
+                                <ZoomIn className="w-8 h-8 text-white" />
+                              </div>
                             </div>
                           </div>
                         </CarouselItem>
@@ -1520,7 +1515,7 @@ export default function ListingPage() {
               className="absolute top-2 right-2 z-20 bg-background/80 backdrop-blur-sm hover:bg-background/90"
               onClick={() => setIsZoomDialogOpen(false)}
             >
-              <X className="h-4 w-4" />
+              <X className={`${isMobile ? 'h-5 w-5' : 'h-4 w-4'}`} />
             </Button>
             <div className="relative w-full h-full flex items-center justify-center overflow-auto">
               <Carousel 
@@ -1604,33 +1599,42 @@ export default function ListingPage() {
                                   />
                                 </div>
                               </TransformComponent>
-                              {/* Zoom controls */}
+                              {/* Zoom controls - larger on mobile */}
                               <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 flex items-center gap-1 sm:gap-2 z-20 bg-background/80 backdrop-blur-sm p-1 rounded-full">
                                 <Button
                                   variant="outline"
                                   size="icon"
-                                  className="h-6 w-6 sm:h-7 sm:w-7 rounded-full"
+                                  className={`${isMobile ? 'h-8 w-8' : 'h-6 w-6 sm:h-7 sm:w-7'} rounded-full`}
                                   onClick={() => zoomOut()}
                                 >
-                                  <Minus className="h-3 w-3" />
+                                  <Minus className={`${isMobile ? 'h-4 w-4' : 'h-3 w-3'}`} />
                                 </Button>
                                 <Button
                                   variant="outline"
                                   size="icon"
-                                  className="h-6 w-6 sm:h-7 sm:w-7 rounded-full"
+                                  className={`${isMobile ? 'h-8 w-8' : 'h-6 w-6 sm:h-7 sm:w-7'} rounded-full`}
                                   onClick={() => resetTransform()}
                                 >
-                                  <RotateCw className="h-3 w-3" />
+                                  <RotateCw className={`${isMobile ? 'h-4 w-4' : 'h-3 w-3'}`} />
                                 </Button>
                                 <Button
                                   variant="outline"
                                   size="icon"
-                                  className="h-6 w-6 sm:h-7 sm:w-7 rounded-full"
+                                  className={`${isMobile ? 'h-8 w-8' : 'h-6 w-6 sm:h-7 sm:w-7'} rounded-full`}
                                   onClick={() => zoomIn()}
                                 >
-                                  <Plus className="h-3 w-3" />
+                                  <Plus className={`${isMobile ? 'h-4 w-4' : 'h-3 w-3'}`} />
                                 </Button>
                               </div>
+                              
+                              {/* Mobile instructions */}
+                              {isMobile && (
+                                <div className="absolute top-12 left-0 right-0 text-center">
+                                  <Badge variant="secondary" className="bg-background/60 backdrop-blur-sm px-3 py-1">
+                                    Pinch to zoom • Swipe to navigate
+                                  </Badge>
+                                </div>
+                              )}
                             </>
                           );
                         }}
@@ -1638,8 +1642,8 @@ export default function ListingPage() {
                     </CarouselItem>
                   ))}
                 </CarouselContent>
-                <CarouselPrevious className="left-1 sm:left-2 h-6 w-6 sm:h-8 sm:w-8" />
-                <CarouselNext className="right-1 sm:right-2 h-6 w-6 sm:h-8 sm:w-8" />
+                <CarouselPrevious className={`${isMobile ? 'h-8 w-8' : 'left-1 sm:left-2 h-6 w-6 sm:h-8 sm:w-8'}`} />
+                <CarouselNext className={`${isMobile ? 'h-8 w-8' : 'right-1 sm:right-2 h-6 w-6 sm:h-8 sm:w-8'}`} />
               </Carousel>
             </div>
           </DialogContent>
