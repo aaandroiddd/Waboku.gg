@@ -171,6 +171,14 @@ export default function ListingPage() {
     if (!api) return;
     const index = api.selectedScrollSnap();
     setCurrentImageIndex(index);
+    
+    // Store the API reference in a DOM element for mobile navigation
+    if (typeof document !== 'undefined') {
+      const carouselElement = document.querySelector('.embla');
+      if (carouselElement && !carouselElement['emblaApi']) {
+        carouselElement['emblaApi'] = api;
+      }
+    }
   };
   const [isFavorited, setIsFavorited] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
@@ -1202,7 +1210,7 @@ export default function ListingPage() {
               <div className="space-y-4 md:space-y-6 order-1 md:order-2">
                 <div className="relative">
                   <Carousel 
-                    className="w-full h-[300px] md:h-[400px] touch-pan-y"
+                    className="w-full h-[300px] md:h-[400px] touch-pan-y embla"
                     onSelect={handleCarouselChange}
                     defaultIndex={listing.coverImageIndex || 0}
                     index={currentImageIndex}
@@ -1212,6 +1220,47 @@ export default function ListingPage() {
                         {currentImageIndex + 1} of {listing.imageUrls.length}
                       </Badge>
                     </div>
+                    {/* Mobile swipe hint - only shown if there are multiple images */}
+                    {isMobile && listing.imageUrls.length > 1 && (
+                      <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 z-10 animate-fade-in-out">
+                        <Badge variant="secondary" className="bg-background/80 backdrop-blur-sm px-3 py-1.5">
+                          Swipe to view more images
+                        </Badge>
+                      </div>
+                    )}
+                    {/* Mobile navigation controls - only visible on mobile */}
+                    {isMobile && listing.imageUrls.length > 1 && (
+                      <>
+                        <Button 
+                          variant="outline" 
+                          size="icon" 
+                          className="absolute left-2 top-1/2 -translate-y-1/2 z-10 h-10 w-10 rounded-full bg-background/80 backdrop-blur-sm shadow-md border-white/10"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            e.preventDefault();
+                            const api = document.querySelector('.embla')?.['emblaApi'];
+                            if (api) api.scrollPrev();
+                          }}
+                        >
+                          <ArrowLeft className="h-5 w-5" />
+                          <span className="sr-only">Previous image</span>
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          size="icon" 
+                          className="absolute right-2 top-1/2 -translate-y-1/2 z-10 h-10 w-10 rounded-full bg-background/80 backdrop-blur-sm shadow-md border-white/10"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            e.preventDefault();
+                            const api = document.querySelector('.embla')?.['emblaApi'];
+                            if (api) api.scrollNext();
+                          }}
+                        >
+                          <ArrowLeft className="h-5 w-5 rotate-180" />
+                          <span className="sr-only">Next image</span>
+                        </Button>
+                      </>
+                    )}
                     <CarouselContent>
                       {listing.imageUrls.map((url, index) => (
                         <CarouselItem key={index} className="flex items-center justify-center h-full">

@@ -2,6 +2,18 @@
 @tailwind components;
 @tailwind utilities;
 
+@keyframes fadeInOut {
+  0% { opacity: 0; }
+  20% { opacity: 1; }
+  80% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+.animate-fade-in-out {
+  animation: fadeInOut 3s ease-in-out;
+  animation-fill-mode: forwards;
+}
+
 /* Disable image zoom dialog on mobile devices */
 @media (max-width: 768px) {
   .mobile-image-dialog {
