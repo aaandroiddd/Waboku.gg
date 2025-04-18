@@ -2,6 +2,13 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Disable image zoom dialog on mobile devices */
+@media (max-width: 768px) {
+  .mobile-image-dialog {
+    display: none !important;
+  }
+}
+
 /* Mobile performance optimizations */
 @media (max-width: 768px) {
   html, body {

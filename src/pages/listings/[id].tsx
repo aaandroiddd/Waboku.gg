@@ -1219,6 +1219,7 @@ export default function ListingPage() {
                             <DialogTrigger asChild>
                               <div 
                                 className="relative w-full h-full group flex items-center justify-center p-4 cursor-pointer" 
+                                onClick={(e) => isMobile && e.preventDefault()} // Prevent dialog from opening on mobile
                               >
                                 <div className="relative w-full h-full flex items-center justify-center">
                                   <div className="relative w-full h-full">
@@ -1240,10 +1241,12 @@ export default function ListingPage() {
                                       />
                                     </div>
                                   </div>
-                                  {/* Show zoom icon on both desktop and mobile */}
-                                  <div className={`absolute inset-0 flex items-center justify-center ${!isMobile ? 'opacity-0 group-hover:opacity-100' : 'opacity-70'} transition-opacity bg-black/20 rounded-lg`}>
-                                    <ZoomIn className="w-8 h-8 text-white" />
-                                  </div>
+                                  {/* Show zoom icon only on desktop */}
+                                  {!isMobile && (
+                                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/20 rounded-lg">
+                                      <ZoomIn className="w-8 h-8 text-white" />
+                                    </div>
+                                  )}
                                 </div>
                               </div>
                             </DialogTrigger>
