@@ -62,7 +62,7 @@
     background-color: var(--background);
   }
   
-  /* Fix for dialog content on mobile devices */
+  /* Fix for dialog content on mobile devices - without overriding visibility/opacity */
   [data-radix-dialog-content] {
     transform: translate(-50%, -50%) translateZ(0) !important;
     backface-visibility: hidden !important;
@@ -70,25 +70,21 @@
     perspective: 1000px !important;
     -webkit-perspective: 1000px !important;
     will-change: transform !important;
-    display: block !important;
-    visibility: visible !important;
-    opacity: 1 !important;
     position: fixed !important;
     top: 50% !important;
     left: 50% !important;
     z-index: 51 !important; /* Higher than overlay */
     max-height: 90vh !important; /* Prevent content from extending beyond viewport */
     overflow: auto !important;
+    /* Removed display, visibility and opacity to let Radix handle them */
   }
   
-  /* Ensure dialog overlay is visible and properly positioned */
+  /* Ensure dialog overlay is properly positioned without overriding visibility/opacity */
   [data-radix-dialog-overlay] {
     position: fixed !important;
     inset: 0 !important;
     z-index: 50 !important;
-    display: block !important;
-    visibility: visible !important;
-    opacity: 1 !important;
+    /* Removed display, visibility and opacity to let Radix handle them */
   }
   
   /* Fix for image zoom dialog on mobile */
@@ -131,7 +127,7 @@
       max-width: 95vw !important;
     }
     
-    /* Specific styling for mobile dialog content */
+    /* Specific styling for mobile dialog content - without overriding visibility/display */
     .mobile-dialog-content {
       position: fixed !important;
       top: 50% !important;
@@ -141,15 +137,16 @@
       border-radius: 8px !important;
       box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5) !important;
       z-index: 9999 !important;
+      /* Removed display, visibility and opacity properties */
     }
     
     /* Ensure image zoom dialog works properly on mobile */
     .mobile-dialog-content .react-transform-wrapper {
       width: 100% !important;
       height: 100% !important;
-      display: flex !important;
       align-items: center !important;
       justify-content: center !important;
+      /* Removed display property to avoid conflicts */
     }
     
     /* Make close button more tappable on mobile */
@@ -158,14 +155,14 @@
       height: 32px !important;
       background-color: rgba(0, 0, 0, 0.5) !important;
       border-radius: 50% !important;
-      display: flex !important;
       align-items: center !important;
       justify-content: center !important;
       top: 8px !important;
       right: 8px !important;
+      /* Removed display property to avoid conflicts */
     }
     
-    /* Specific styling for image dialog on mobile */
+    /* Specific styling for image dialog on mobile - without overriding visibility/display */
     .mobile-image-dialog {
       position: fixed !important;
       top: 50% !important;
@@ -177,9 +174,9 @@
       border-radius: 8px !important;
       background-color: rgba(0, 0, 0, 0.9) !important;
       z-index: 9999 !important;
-      display: flex !important;
       align-items: center !important;
       justify-content: center !important;
+      /* Removed display, visibility and opacity properties */
     }
   }
   

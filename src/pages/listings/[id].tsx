@@ -1512,10 +1512,8 @@ export default function ListingPage() {
               WebkitBackfaceVisibility: "hidden",
               perspective: "1000px",
               WebkitPerspective: "1000px",
-              willChange: "transform",
-              display: "block",
-              visibility: "visible",
-              opacity: 1
+              willChange: "transform"
+              // Removed manual visibility and opacity styles to let Radix handle them
             }}
           >
             <DialogTitle className="sr-only">Image Viewer</DialogTitle>
@@ -1681,10 +1679,8 @@ export default function ListingPage() {
             WebkitBackfaceVisibility: "hidden",
             perspective: "1000px",
             WebkitPerspective: "1000px",
-            willChange: "transform",
-            display: "block",
-            visibility: "visible",
-            opacity: 1
+            willChange: "transform"
+            // Removed manual visibility and opacity styles to let Radix handle them
           }}
         >
           <DialogTitle className="sr-only">Chat with {listing?.username}</DialogTitle>

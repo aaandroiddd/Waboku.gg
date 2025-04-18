@@ -30,8 +30,21 @@ const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
 >(({ className, children, ...props }, ref) => {
-  // Check if we're on a mobile device
-  const isMobile = typeof window !== 'undefined' ? window.innerWidth <= 768 : false;
+  // Check if we're on a mobile device using useEffect to avoid hydration mismatch
+  const [isMobile, setIsMobile] = React.useState(false);
+  
+  React.useEffect(() => {
+    // Set mobile state based on window width
+    setIsMobile(window.innerWidth <= 768);
+    
+    // Add resize listener to update mobile state
+    const handleResize = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+    
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
   
   return (
     <DialogPortal>
@@ -49,10 +62,8 @@ const DialogContent = React.forwardRef<
           WebkitBackfaceVisibility: "hidden",
           perspective: "1000px",
           WebkitPerspective: "1000px",
-          willChange: "transform",
-          display: "block",
-          visibility: "visible",
-          opacity: 1
+          willChange: "transform"
+          // Removed manual visibility and opacity styles to let Radix handle them
         }}
         {...props}
       >
