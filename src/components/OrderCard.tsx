@@ -226,7 +226,7 @@ export function OrderCard({ order, isSale = false }: OrderCardProps) {
                     }
                   >
                     {safeOrder.status === 'awaiting_shipping' 
-                      ? 'Awaiting Shipping' 
+                      ? (!safeOrder.shippingAddress ? 'Requires Shipping Details' : 'Awaiting Shipping')
                       : safeOrder.status.charAt(0).toUpperCase() + safeOrder.status.slice(1).replace('_', ' ')}
                   </Badge>
                 )}
@@ -293,6 +293,21 @@ export function OrderCard({ order, isSale = false }: OrderCardProps) {
                 Complete Pickup
               </Button>
             )}
+            {/* Shipping Details Button - Only visible for buyers with orders requiring shipping details */}
+            {!isSale && safeOrder.status === 'awaiting_shipping' && !safeOrder.shippingAddress && (
+              <Button 
+                variant="default" 
+                className="bg-blue-600 hover:bg-blue-700 text-white font-medium"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  router.push(`/dashboard/orders/${safeOrder.id}?shipping=true`);
+                }}
+              >
+                <MapPin className="mr-2 h-4 w-4" />
+                Provide Shipping Details
+              </Button>
+            )}
+            
             {/* Payment Button - Only visible for buyers with pending orders */}
             {!isSale && safeOrder.status === 'pending' && safeOrder.shippingAddress && (
               <AcceptedOfferCheckout

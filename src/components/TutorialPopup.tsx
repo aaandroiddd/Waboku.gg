@@ -23,7 +23,9 @@ export const TutorialPopup: React.FC<TutorialPopupProps> = ({
   const [dontShowAgain, setDontShowAgain] = useState(false);
 
   const handleClose = () => {
+    // First complete the tutorial with the user's preference
     completeTutorial(type, dontShowAgain);
+    // Then close the dialog and continue with the flow
     onClose();
   };
 

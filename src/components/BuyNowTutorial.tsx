@@ -4,7 +4,7 @@ import { useTutorial } from '@/contexts/TutorialContext';
 
 interface BuyNowTutorialProps {
   isActive: boolean;
-  onComplete: () => void;
+  onComplete: (skipTutorial?: boolean) => void;
 }
 
 export const BuyNowTutorial: React.FC<BuyNowTutorialProps> = ({ isActive, onComplete }) => {
@@ -13,12 +13,18 @@ export const BuyNowTutorial: React.FC<BuyNowTutorialProps> = ({ isActive, onComp
   const [isOpen, setIsOpen] = useState(false);
 
   useEffect(() => {
-    if (isActive && shouldShowTutorial('buyNow')) {
-      setIsOpen(true);
+    if (isActive) {
+      if (shouldShowTutorial('buyNow')) {
+        setIsOpen(true);
+      } else {
+        // If the tutorial should not be shown (user opted out before), skip it
+        setIsOpen(false);
+        onComplete(true); // Pass true to indicate we're skipping tutorials
+      }
     } else {
       setIsOpen(false);
     }
-  }, [isActive, shouldShowTutorial]);
+  }, [isActive, shouldShowTutorial, onComplete]);
 
   const steps = [
     {

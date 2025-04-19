@@ -102,13 +102,19 @@ export function BuyNowButton({
     }
   };
 
-  const handleBuyNowTutorialComplete = () => {
+  const handleBuyNowTutorialComplete = (skipTutorial = false) => {
     setShowBuyNowTutorial(false);
     setTutorialCompleted(true);
-    proceedToCheckout();
+    
+    // If the user chose to skip tutorials, go directly to Stripe checkout
+    if (skipTutorial) {
+      proceedToStripeCheckout();
+    } else {
+      proceedToCheckout();
+    }
   };
 
-  const handleCheckoutTutorialComplete = () => {
+  const handleCheckoutTutorialComplete = (skipTutorial = false) => {
     setShowCheckoutTutorial(false);
     proceedToStripeCheckout();
   };

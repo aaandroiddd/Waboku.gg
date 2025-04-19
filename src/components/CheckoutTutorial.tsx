@@ -4,7 +4,7 @@ import { useTutorial } from '@/contexts/TutorialContext';
 
 interface CheckoutTutorialProps {
   isActive: boolean;
-  onComplete: () => void;
+  onComplete: (skipTutorial?: boolean) => void;
 }
 
 export const CheckoutTutorial: React.FC<CheckoutTutorialProps> = ({ isActive, onComplete }) => {
@@ -12,12 +12,18 @@ export const CheckoutTutorial: React.FC<CheckoutTutorialProps> = ({ isActive, on
   const [isOpen, setIsOpen] = useState(false);
 
   useEffect(() => {
-    if (isActive && shouldShowTutorial('checkoutProcess')) {
-      setIsOpen(true);
+    if (isActive) {
+      if (shouldShowTutorial('checkoutProcess')) {
+        setIsOpen(true);
+      } else {
+        // If the tutorial should not be shown (user opted out before), skip it
+        setIsOpen(false);
+        onComplete(true); // Pass true to indicate we're skipping tutorials
+      }
     } else {
       setIsOpen(false);
     }
-  }, [isActive, shouldShowTutorial]);
+  }, [isActive, shouldShowTutorial, onComplete]);
 
   const handleClose = () => {
     setIsOpen(false);

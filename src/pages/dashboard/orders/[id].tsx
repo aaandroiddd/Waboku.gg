@@ -54,6 +54,11 @@ export default function OrderDetailsPage() {
     if (router.query.review === 'true' && order?.status === 'completed' && !order?.reviewSubmitted) {
       setShowReviewDialog(true);
     }
+    
+    // Check if we should show the shipping info dialog based on URL query param
+    if (router.query.shipping === 'true' && order?.status === 'awaiting_shipping' && !order?.shippingAddress) {
+      setShowShippingInfoDialog(true);
+    }
   }, [router.query, order]);
 
   useEffect(() => {
@@ -448,7 +453,7 @@ export default function OrderDetailsPage() {
             className="text-sm"
           >
             {order.status === 'awaiting_shipping' 
-              ? 'Awaiting Shipping' 
+              ? (!order.shippingAddress ? 'Requires Shipping Details' : 'Awaiting Shipping')
               : order.status.charAt(0).toUpperCase() + order.status.slice(1).replace('_', ' ')}
           </Badge>
         </div>
