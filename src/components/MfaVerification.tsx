@@ -183,7 +183,7 @@ export default function MfaVerification({ resolver, onComplete, onCancel }: MfaV
       <CardHeader>
         <CardTitle>Two-Factor Authentication</CardTitle>
         <CardDescription>
-          Complete the CAPTCHA verification below to receive a code on your phone, then enter the code to complete sign-in.
+          A verification code is being sent automatically to your phone. Complete the CAPTCHA verification below if prompted, then enter the code to complete sign-in.
         </CardDescription>
       </CardHeader>
       
@@ -198,6 +198,17 @@ export default function MfaVerification({ resolver, onComplete, onCancel }: MfaV
           {success && (
             <Alert>
               <AlertDescription>{success}</AlertDescription>
+            </Alert>
+          )}
+          
+          {isSendingCode && !error && !success && (
+            <Alert className="bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800">
+              <div className="flex items-center">
+                <div className="w-4 h-4 mr-2 border-2 border-green-600 dark:border-green-400 border-t-transparent rounded-full animate-spin"></div>
+                <AlertDescription className="text-green-700 dark:text-green-400">
+                  Sending verification code to your phone...
+                </AlertDescription>
+              </div>
             </Alert>
           )}
           
@@ -217,6 +228,7 @@ export default function MfaVerification({ resolver, onComplete, onCancel }: MfaV
               pattern="[0-9]*"
               inputMode="numeric"
               autoComplete="one-time-code"
+              autoFocus={!!verificationId} // Auto-focus when code has been sent
             />
             <p className="text-xs text-muted-foreground">
               Enter the 6-digit code sent to your phone
@@ -225,9 +237,9 @@ export default function MfaVerification({ resolver, onComplete, onCancel }: MfaV
           
           <div className="space-y-2">
             <Alert className="bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800">
-              <AlertTitle className="text-blue-800 dark:text-blue-300">Important: CAPTCHA Required</AlertTitle>
+              <AlertTitle className="text-blue-800 dark:text-blue-300">CAPTCHA Verification</AlertTitle>
               <AlertDescription className="text-blue-700 dark:text-blue-400 text-sm">
-                You must solve the CAPTCHA verification below before the verification code can be sent to your phone.
+                If prompted, please solve the CAPTCHA verification below to receive your verification code.
               </AlertDescription>
             </Alert>
             <div id="mfa-recaptcha-container" ref={recaptchaContainerRef} className="flex justify-center"></div>
@@ -246,7 +258,7 @@ export default function MfaVerification({ resolver, onComplete, onCancel }: MfaV
             onClick={sendVerificationCode}
             disabled={isSendingCode || isLoading}
           >
-            {isSendingCode ? "Sending..." : "Solve CAPTCHA & Send Code"}
+            {isSendingCode ? "Sending..." : "Resend Code"}
           </Button>
           
           <Button 

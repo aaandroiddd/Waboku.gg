@@ -157,20 +157,36 @@ export const startMfaVerification = async (
   recaptchaVerifier: RecaptchaVerifier
 ): Promise<string> => {
   try {
+    console.log("Starting automatic MFA verification process");
+    
     // Get the first hint (we'll use the first enrolled factor)
     const hint = resolver.hints[0];
+    
+    if (!hint) {
+      console.error("No MFA hints found in resolver");
+      throw new Error("No two-factor authentication methods found for this account");
+    }
+    
+    // Log the phone number (masked for privacy) to help with debugging
+    if (hint.phoneNumber) {
+      const maskedPhone = maskPhoneNumber(hint.phoneNumber);
+      console.log(`Sending verification code to ${maskedPhone}`);
+    }
     
     // Create phone auth provider
     const phoneAuthProvider = new PhoneAuthProvider(getAuth());
     
     // Send verification code
-    return await phoneAuthProvider.verifyPhoneNumber(
+    const verificationId = await phoneAuthProvider.verifyPhoneNumber(
       {
         multiFactorHint: hint,
         session: resolver.session
       },
       recaptchaVerifier
     );
+    
+    console.log("Verification code sent successfully");
+    return verificationId;
   } catch (error: any) {
     console.error("Error starting MFA verification:", error);
     
@@ -185,10 +201,31 @@ export const startMfaVerification = async (
         "Domain verification failed for reCAPTCHA. This preview environment may not be registered in Firebase. " +
         "Please try again on the production domain or contact support to add this domain to your Firebase project."
       );
+    } else if (error.code === "auth/quota-exceeded") {
+      throw new Error("SMS quota exceeded. Please try again later or contact support.");
+    } else if (error.code === "auth/too-many-requests") {
+      throw new Error("Too many verification attempts. Please try again later.");
+    } else if (error.code === "auth/invalid-phone-number") {
+      throw new Error("The phone number associated with your account is invalid. Please update your profile.");
     }
     
     throw error;
   }
+};
+
+// Helper function to mask phone number for privacy in logs
+const maskPhoneNumber = (phoneNumber: string): string => {
+  if (!phoneNumber || phoneNumber.length < 8) return "***-***-****";
+  
+  // Keep country code and last 4 digits, mask the rest
+  const countryCodeEnd = phoneNumber.length > 4 ? 4 : 2;
+  const lastFourStart = phoneNumber.length - 4;
+  
+  const countryCode = phoneNumber.substring(0, countryCodeEnd);
+  const lastFour = phoneNumber.substring(lastFourStart);
+  const maskedPart = "•".repeat(phoneNumber.length - countryCodeEnd - 4);
+  
+  return `${countryCode}${maskedPart}${lastFour}`;
 };
 
 // Function to unenroll a second factor

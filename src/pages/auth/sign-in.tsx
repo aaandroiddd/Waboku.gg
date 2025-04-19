@@ -207,6 +207,13 @@ function SignInComponent() {
         </div>
         <div className="mt-24 mb-8"></div> {/* Additional spacing to push content down */}
         
+        <div className="text-center mb-4">
+          <h2 className="text-xl font-semibold">Two-Factor Authentication Required</h2>
+          <p className="text-muted-foreground">
+            A verification code is being sent to your phone automatically
+          </p>
+        </div>
+        
         <MfaVerification 
           resolver={mfaResolver} 
           onComplete={() => {
