@@ -293,15 +293,17 @@ export function useListings({ userId, searchQuery, showOnlyActive = false }: Use
         updateData.createdAt = now;
         updateData.updatedAt = now;
         updateData.expiresAt = expirationTime;
+        
+        // IMPORTANT: Explicitly set all archive-related fields to null to ensure proper visibility
         updateData.archivedAt = null; // Remove archived timestamp
         updateData.originalCreatedAt = null; // Remove original creation date
-        updateData.accountTier = accountTier; // Store the account tier with the listing
         updateData.expirationReason = null; // Remove expiration reason if it exists
-        
-        // Make sure to remove any fields that might affect visibility
         updateData.soldTo = null; // Ensure the listing isn't marked as sold
         updateData.previousStatus = null; // Clear previous status
         updateData.previousExpiresAt = null; // Clear previous expiration date
+        
+        // Store the account tier with the listing
+        updateData.accountTier = accountTier;
       } else {
         // For inactive status, keep current expiration but remove archive-related fields
         updateData.archivedAt = null;

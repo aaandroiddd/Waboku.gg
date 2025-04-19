@@ -9,6 +9,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { getFirebaseServices } from '@/lib/firebase';
 import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
 import { useLoading } from '@/hooks/useLoading';
+import { RestoredListingFixer } from '@/components/RestoredListingFixer';
 
 interface ListingVisibilityFixerProps {
   onRefresh: () => Promise<void>;
@@ -332,6 +333,16 @@ export function ListingVisibilityFixer({ onRefresh, isLoading }: ListingVisibili
             "Refresh Listings"
           )}
         </Button>
+      </div>
+      
+      {/* Add the RestoredListingFixer component */}
+      <div className="mt-6">
+        <h3 className="text-lg font-medium mb-4">Fix Restored Listings</h3>
+        <p className="text-muted-foreground mb-4">
+          If you've restored listings from archived status and they're not appearing on the front page or in search results,
+          use this tool to fix them.
+        </p>
+        <RestoredListingFixer />
       </div>
     </div>
   );
