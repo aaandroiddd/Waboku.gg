@@ -1628,80 +1628,83 @@ export default function ListingPage() {
                   )}
                 </div>
                 
-                {/* Action buttons section - reorganized for better layout */}
+                {/* Action buttons section - consistent layout and sizing */}
                 <div className="flex flex-col gap-3">
-                  {/* We've removed the duplicate amber banner here */}
-
-                  {/* Save and Message buttons - always on top */}
-                  <div className="flex gap-2 w-full">
+                  {/* Top row: Save and Message buttons */}
+                  <div className="grid grid-cols-2 gap-3">
                     <Button
                       variant="outline"
-                      size="sm"
+                      size="lg"
                       onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
                         handleFavoriteToggle(e);
                       }}
-                      className={`flex-1 ${isFavorited ? "text-red-500" : ""}`}
+                      className={`w-full ${isFavorited ? "text-red-500" : ""}`}
                       type="button"
                       disabled={listing.soldTo || listing.archivedAt || listing.status === 'sold'}
                     >
-                      <Heart className={`h-4 w-4 mr-2 ${isFavorited ? "fill-current" : ""}`} />
-                      {isFavorited ? "Saved" : "Save"}
+                      <Heart className={`h-5 w-5 mr-2 ${isFavorited ? "fill-current" : ""}`} />
+                      {isFavorited ? "Save" : "Save"}
                     </Button>
                     <Button
                       variant="default"
-                      size="sm"
+                      size="lg"
                       onClick={handleMessage}
-                      className="flex-1"
+                      className="w-full"
                       disabled={listing.soldTo || listing.archivedAt || listing.status === 'sold'}
                     >
-                      <MessageCircle className="h-4 w-4 mr-2" />
+                      <MessageCircle className="h-5 w-5 mr-2" />
                       Message
                     </Button>
                   </div>
                   
-                  {/* Buy Now and Make Offer buttons */}
-                  <div className="flex flex-col sm:flex-row gap-2">
+                  {/* Bottom row: Buy Now and Make Offer buttons */}
+                  <div className="grid grid-cols-2 gap-3">
                     {listing.soldTo || listing.archivedAt || listing.status === 'sold' ? (
                       <Button
                         variant="outline"
                         size="lg"
-                        className="flex-1 bg-gray-200 text-gray-500 hover:bg-gray-200 cursor-not-allowed"
+                        className="col-span-2 bg-gray-200 text-gray-500 hover:bg-gray-200 cursor-not-allowed"
                         disabled={true}
                       >
                         {listing.status === 'sold' ? 'Item Sold' : 'No Longer Available'}
                       </Button>
-                    ) : sellerHasActiveStripeAccount ? (
-                      <BuyNowButton
-                        listingId={listing.id}
-                        sellerId={listing.userId}
-                        className="flex-1 bg-green-600 hover:bg-green-700 text-white"
-                        disabled={user?.uid === listing.userId}
-                        variant="default"
-                      >
-                        Buy Now - {formatPrice(listing.price)}
-                      </BuyNowButton>
                     ) : (
-                      <Button
-                        variant="outline"
-                        size="lg"
-                        className="flex-1 bg-gray-200 text-gray-500 hover:bg-gray-200 cursor-not-allowed"
-                        disabled={true}
-                        title="Seller has not set up payment processing yet"
-                      >
-                        Buy Now Unavailable
-                      </Button>
+                      <>
+                        {sellerHasActiveStripeAccount ? (
+                          <BuyNowButton
+                            listingId={listing.id}
+                            sellerId={listing.userId}
+                            className="w-full bg-green-600 hover:bg-green-700 text-white"
+                            disabled={user?.uid === listing.userId}
+                            variant="default"
+                            size="lg"
+                          >
+                            Buy Now
+                          </BuyNowButton>
+                        ) : (
+                          <Button
+                            variant="outline"
+                            size="lg"
+                            className="w-full bg-gray-200 text-gray-500 hover:bg-gray-200 cursor-not-allowed"
+                            disabled={true}
+                            title="Seller has not set up payment processing yet"
+                          >
+                            Buy Now Unavailable
+                          </Button>
+                        )}
+                        <Button
+                          variant="outline"
+                          size="lg"
+                          onClick={handleMakeOffer}
+                          className="w-full border-blue-500 text-blue-500 hover:bg-blue-500/10"
+                          disabled={user?.uid === listing.userId || listing.soldTo || listing.archivedAt || listing.status === 'sold'}
+                        >
+                          Make Offer
+                        </Button>
+                      </>
                     )}
-                    <Button
-                      variant="outline"
-                      size="lg"
-                      onClick={handleMakeOffer}
-                      className="flex-1 border-blue-500 text-blue-500 hover:bg-blue-500/10"
-                      disabled={user?.uid === listing.userId || listing.soldTo || listing.archivedAt || listing.status === 'sold'}
-                    >
-                      Make Offer
-                    </Button>
                   </div>
                 </div>
               </div>

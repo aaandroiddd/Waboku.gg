@@ -13,6 +13,8 @@ interface BuyNowButtonProps {
   disabled?: boolean;
   className?: string;
   variant?: 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link';
+  size?: 'default' | 'sm' | 'lg' | 'icon';
+  children?: React.ReactNode;
 }
 
 // Initialize Stripe outside of the component
@@ -23,7 +25,9 @@ export function BuyNowButton({
   sellerId,
   disabled = false,
   className = '',
-  variant = 'default'
+  variant = 'default',
+  size = 'default',
+  children
 }: BuyNowButtonProps) {
   const { user } = useAuth();
   const router = useRouter();
@@ -134,8 +138,9 @@ export function BuyNowButton({
         disabled={disabled || isLoading}
         className={className}
         variant={variant}
+        size={size}
       >
-        {isLoading ? 'Processing...' : 'Buy Now'}
+        {isLoading ? 'Processing...' : children || 'Buy Now'}
       </Button>
     </>
   );
