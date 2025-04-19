@@ -789,9 +789,20 @@ export default function OrderDetailsPage() {
                     {order.paymentStatus && (
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Payment Status:</span>
-                        <Badge variant={order.paymentStatus === 'paid' ? 'success' : 'warning'}>
-                          {order.paymentStatus.charAt(0).toUpperCase() + order.paymentStatus.slice(1)}
+                        <Badge variant={order.paymentStatus === 'paid' || order.paymentStatus === 'succeeded' ? 'success' : 'warning'}>
+                          {order.paymentStatus === 'paid' || order.paymentStatus === 'succeeded' ? 'Payment Successful' : 
+                           order.paymentStatus.charAt(0).toUpperCase() + order.paymentStatus.slice(1)}
                         </Badge>
+                      </div>
+                    )}
+                    {/* Display payment method details for buyers only */}
+                    {isUserBuyer && order.paymentMethod && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Payment Method:</span>
+                        <span>
+                          {order.paymentMethod.brand && order.paymentMethod.last4 && 
+                            `${order.paymentMethod.brand.charAt(0).toUpperCase() + order.paymentMethod.brand.slice(1)} •••• ${order.paymentMethod.last4}`}
+                        </span>
                       </div>
                     )}
                     {order.isPickup && !order.paymentSessionId && !order.paymentIntentId && (

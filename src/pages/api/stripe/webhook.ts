@@ -198,6 +198,35 @@ export default async function handler(
               });
               
               try {
+                // Get payment method details if available
+                let paymentMethod = null;
+                if (paymentIntentId) {
+                  try {
+                    const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+                    if (paymentIntent.payment_method) {
+                      const paymentMethodDetails = await stripe.paymentMethods.retrieve(
+                        paymentIntent.payment_method as string
+                      );
+                      
+                      if (paymentMethodDetails.card) {
+                        paymentMethod = {
+                          brand: paymentMethodDetails.card.brand,
+                          last4: paymentMethodDetails.card.last4,
+                          exp_month: paymentMethodDetails.card.exp_month,
+                          exp_year: paymentMethodDetails.card.exp_year
+                        };
+                        
+                        console.log('[Stripe Webhook] Retrieved payment method details for pending order:', {
+                          brand: paymentMethodDetails.card.brand,
+                          last4: paymentMethodDetails.card.last4
+                        });
+                      }
+                    }
+                  } catch (error) {
+                    console.error('[Stripe Webhook] Error retrieving payment method for pending order:', error);
+                  }
+                }
+                
                 // Update the existing order with payment information
                 const orderRef = firestoreDb.collection('orders').doc(session.metadata.orderId);
                 await orderRef.update({
@@ -206,6 +235,7 @@ export default async function handler(
                   paymentSessionId: session.id,
                   paymentIntentId: paymentIntentId,
                   platformFee: session.metadata.platformFee ? parseInt(session.metadata.platformFee) / 100 : 0,
+                  ...(paymentMethod && { paymentMethod }),
                   updatedAt: new Date()
                 });
                 
@@ -223,6 +253,35 @@ export default async function handler(
               }
             }
 
+            // Get payment method details if available
+            let paymentMethod = null;
+            if (paymentIntentId) {
+              try {
+                const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+                if (paymentIntent.payment_method) {
+                  const paymentMethodDetails = await stripe.paymentMethods.retrieve(
+                    paymentIntent.payment_method as string
+                  );
+                  
+                  if (paymentMethodDetails.card) {
+                    paymentMethod = {
+                      brand: paymentMethodDetails.card.brand,
+                      last4: paymentMethodDetails.card.last4,
+                      exp_month: paymentMethodDetails.card.exp_month,
+                      exp_year: paymentMethodDetails.card.exp_year
+                    };
+                    
+                    console.log('[Stripe Webhook] Retrieved payment method details for new order:', {
+                      brand: paymentMethodDetails.card.brand,
+                      last4: paymentMethodDetails.card.last4
+                    });
+                  }
+                }
+              } catch (error) {
+                console.error('[Stripe Webhook] Error retrieving payment method for new order:', error);
+              }
+            }
+            
             // Create an order record
             const orderData = {
               listingId,
@@ -233,6 +292,8 @@ export default async function handler(
               platformFee: session.metadata.platformFee ? parseInt(session.metadata.platformFee) / 100 : 0, // Convert from cents
               paymentSessionId: session.id,
               paymentIntentId: paymentIntentId,
+              paymentStatus: 'paid',
+              ...(paymentMethod && { paymentMethod }),
               createdAt: new Date(),
               updatedAt: new Date(),
               // Include offer price if available
@@ -381,16 +442,45 @@ export default async function handler(
           
           if (!ordersSnapshot.empty) {
             const orderDoc = ordersSnapshot.docs[0];
+            
+            // Get payment method details if available
+            let paymentMethod = null;
+            if (paymentIntent.payment_method) {
+              try {
+                const paymentMethodDetails = await stripe.paymentMethods.retrieve(
+                  paymentIntent.payment_method as string
+                );
+                
+                if (paymentMethodDetails.card) {
+                  paymentMethod = {
+                    brand: paymentMethodDetails.card.brand,
+                    last4: paymentMethodDetails.card.last4,
+                    exp_month: paymentMethodDetails.card.exp_month,
+                    exp_year: paymentMethodDetails.card.exp_year
+                  };
+                  
+                  console.log('[Stripe Webhook] Retrieved payment method details:', {
+                    brand: paymentMethodDetails.card.brand,
+                    last4: paymentMethodDetails.card.last4
+                  });
+                }
+              } catch (error) {
+                console.error('[Stripe Webhook] Error retrieving payment method:', error);
+              }
+            }
+            
             await orderDoc.ref.update({
               transferId: paymentIntent.transfer_data.destination,
               transferAmount: paymentIntent.amount - (paymentIntent.application_fee_amount || 0),
               paymentStatus: 'succeeded',
+              ...(paymentMethod && { paymentMethod }),
               updatedAt: new Date()
             });
             
             console.log('[Stripe Webhook] Order updated with transfer information:', {
               orderId: orderDoc.id,
-              transferId: paymentIntent.transfer_data.destination
+              transferId: paymentIntent.transfer_data.destination,
+              hasPaymentMethod: !!paymentMethod
             });
           }
         }

@@ -120,6 +120,11 @@ export function OrderShippingInfoDialog({
       const { db } = getFirebaseServices();
       const orderRef = doc(db, 'orders', orderId);
       
+      // Get the current order to check if it's a new order or an update
+      const orderDoc = await getDoc(orderRef);
+      const orderData = orderDoc.exists() ? orderDoc.data() : null;
+      const isUpdatingExistingShippingInfo = orderData && orderData.shippingAddress;
+      
       await updateDoc(orderRef, {
         shippingAddress,
         updatedAt: new Date()
@@ -129,8 +134,9 @@ export function OrderShippingInfoDialog({
       
       onComplete(shippingAddress);
       
-      // If seller has a Stripe account, proceed to payment
-      if (hasStripeAccount && !isLoadingStripeStatus) {
+      // Only proceed to payment if this is a new order (not updating shipping info)
+      // and the seller has a Stripe account
+      if (!isUpdatingExistingShippingInfo && hasStripeAccount && !isLoadingStripeStatus) {
         handleProceedToPayment(shippingAddress);
       } else {
         onOpenChange(false);

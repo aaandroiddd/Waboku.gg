@@ -11,6 +11,12 @@ export interface Order {
   transferAmount?: number;
   platformFee?: number;
   paymentStatus?: string;
+  paymentMethod?: {
+    brand: string;
+    last4: string;
+    exp_month?: number;
+    exp_year?: number;
+  };
   offerPrice?: number; // Price from an accepted offer
   originalListingPrice?: number; // Original listing price before offer
   isPickup?: boolean; // Flag to indicate if this is a local pickup
