@@ -13,7 +13,19 @@ import { toast } from 'sonner';
  */
 export function isSignOutInProgress(): boolean {
   if (typeof window === 'undefined') return false;
-  return localStorage.getItem('waboku_signout_in_progress') === 'true';
+  
+  try {
+    // Check for the sign-out flag
+    const signOutFlag = localStorage.getItem('waboku_signout_in_progress') === 'true';
+    
+    // Also check if the user is already signed out by checking for auth data
+    const noAuthUser = !localStorage.getItem('firebase:authUser');
+    
+    return signOutFlag || noAuthUser;
+  } catch (error) {
+    console.warn('Error checking sign-out status:', error);
+    return false;
+  }
 }
 
 /**

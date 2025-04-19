@@ -213,7 +213,8 @@ export const clearStoredAuthData = (): void => {
       'waboku_auth_state',
       'needs_profile_completion',
       'firebase:authUser',
-      'firebase:previousAuthUser'
+      'firebase:previousAuthUser',
+      'auth_redirect_state'
     ];
     
     // Remove specific keys
@@ -230,18 +231,28 @@ export const clearStoredAuthData = (): void => {
       'waboku_last_token_refresh_',
       'waboku_token_access_',
       'firebase:',
-      'profile_'
+      'profile_',
+      'auth_'
     ];
     
     // Collect keys to remove
     const keysToRemove: string[] = [];
     try {
+      // Create a copy of all keys to avoid issues with removing during iteration
+      const allKeys = [];
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
-        if (key && prefixesToRemove.some(prefix => key.startsWith(prefix))) {
-          keysToRemove.push(key);
+        if (key) {
+          allKeys.push(key);
         }
       }
+      
+      // Now check each key against our prefixes
+      allKeys.forEach(key => {
+        if (prefixesToRemove.some(prefix => key.startsWith(prefix))) {
+          keysToRemove.push(key);
+        }
+      });
     } catch (iterationError) {
       console.warn('Error iterating through localStorage keys:', iterationError);
     }
@@ -261,13 +272,23 @@ export const clearStoredAuthData = (): void => {
     // Try to clear session storage as well
     try {
       if (window.sessionStorage) {
-        // Clear Firebase-related session storage items
+        // Create a copy of all keys to avoid issues with removing during iteration
+        const sessionKeys = [];
         for (let i = 0; i < sessionStorage.length; i++) {
           const key = sessionStorage.key(i);
-          if (key && key.startsWith('firebase:')) {
-            sessionStorage.removeItem(key);
+          if (key && (key.startsWith('firebase:') || key.includes('auth'))) {
+            sessionKeys.push(key);
           }
         }
+        
+        // Remove the collected keys
+        sessionKeys.forEach(key => {
+          try {
+            sessionStorage.removeItem(key);
+          } catch (error) {
+            console.warn(`Failed to remove ${key} from sessionStorage:`, error);
+          }
+        });
       }
     } catch (sessionError) {
       console.warn('Error clearing session storage:', sessionError);
@@ -311,12 +332,8 @@ export const clearStoredAuthData = (): void => {
       console.warn('Error accessing IndexedDB:', idbError);
     }
     
-    // Clear the sign-out in progress flag
-    try {
-      localStorage.removeItem('waboku_signout_in_progress');
-    } catch (e) {
-      console.warn('Could not clear sign-out in progress flag:', e);
-    }
+    // Don't clear the sign-out in progress flag here
+    // It will be cleared after the page reload in the signOut function
     
     console.log('Completed clearing stored auth data');
   } catch (e) {
@@ -325,7 +342,9 @@ export const clearStoredAuthData = (): void => {
     try {
       localStorage.removeItem('waboku_auth_redirect');
       localStorage.removeItem('waboku_auth_state');
-      localStorage.removeItem('waboku_signout_in_progress');
+      localStorage.removeItem('firebase:authUser');
+      localStorage.removeItem('firebase:previousAuthUser');
+      // Don't remove the sign-out in progress flag here
     } catch (fallbackError) {
       console.error('Critical error clearing auth data:', fallbackError);
     }

@@ -680,55 +680,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         localStorage.setItem('waboku_signout_in_progress', 'true');
       }
       
-      // First, update signOutState collection to indicate sign-out in progress
-      // This helps prevent "Missing or insufficient permissions" errors
-      if (auth?.currentUser && db) {
-        try {
-          // Create a sign-out state document that has public read/write permissions
-          await setDoc(doc(db, 'signOutState', auth.currentUser.uid), {
-            signOutStarted: true,
-            timestamp: new Date().toISOString()
-          });
-          console.log('Created signOutState document to track sign-out process');
-        } catch (stateErr) {
-          // Don't block sign-out if this fails
-          console.warn('Could not create signOutState document:', stateErr);
-        }
-      }
-      
       // Create local copies of user data before clearing state
       const currentUser = auth?.currentUser;
       const hasCurrentUser = !!currentUser;
       const userId = currentUser?.uid;
       
-      // Disable Firestore network to prevent permission errors during sign out
-      if (db) {
-        try {
-          await disableFirestoreNetwork(db);
-          console.log('Disabled Firestore network for clean sign out');
-        } catch (networkErr) {
-          console.warn('Could not disable Firestore network:', networkErr);
-        }
-      }
-      
       // Clear local storage first to prevent any cached data issues
       clearStoredAuthData();
-      
-      // Clear all profile cache data
-      if (typeof window !== 'undefined') {
-        try {
-          // Clear any profile-related cache keys
-          for (let i = 0; i < localStorage.length; i++) {
-            const key = localStorage.key(i);
-            if (key && (key.startsWith('profile_') || key.includes('auth') || key.includes('firebase'))) {
-              localStorage.removeItem(key);
-            }
-          }
-          console.log('Cleared all profile and auth cache data');
-        } catch (cacheErr) {
-          console.warn('Error clearing cache during sign out:', cacheErr);
-        }
-      }
       
       // Clear state immediately to prevent React errors
       safeSetUser(null);
@@ -741,7 +699,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (typeof window !== 'undefined') {
           localStorage.removeItem('waboku_signout_in_progress');
         }
-        return; // Return early instead of throwing - we've already cleared state
+        throw new Error('Authentication service not initialized');
       }
       
       // Only attempt Firebase sign out if we had a user
@@ -755,18 +713,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           // Continue anyway - we've already cleared local state
         }
         
-        // Use Next.js router for navigation instead of forcing page reload
+        // Force page reload to ensure clean state
         if (typeof window !== 'undefined') {
-          // Clean up the signOutState document if possible
-          if (userId && db) {
-            try {
-              await deleteDoc(doc(db, 'signOutState', userId));
-              console.log('Cleaned up signOutState document');
-            } catch (cleanupErr) {
-              console.warn('Could not clean up signOutState document:', cleanupErr);
-            }
-          }
-          
           // Clear sign-out in progress flag
           localStorage.removeItem('waboku_signout_in_progress');
           
@@ -780,6 +728,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Clear sign-out in progress flag
         if (typeof window !== 'undefined') {
           localStorage.removeItem('waboku_signout_in_progress');
+          
+          // Still force a page reload to ensure clean state
+          window.location.replace('/');
         }
       }
       
@@ -792,9 +743,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         localStorage.removeItem('waboku_signout_in_progress');
       }
       
-      // We've already cleared state at the beginning, so no need to do it again
-      // Just log the error and continue
-      console.log('Sign out process completed with errors');
+      // Rethrow the error so it can be handled by the caller
+      throw err;
     }
   };
 

@@ -63,66 +63,42 @@ export default function Header({ animate = true }: HeaderProps) {
       // First close the mobile menu before any async operations
       setIsMobileMenuOpen(false);
       
-      // Store a flag in memory to track sign-out state
-      // This helps prevent state updates after component unmount
-      const signOutStarted = true;
-      
-      // Navigate to home page immediately before the async sign-out
-      // This helps prevent React state update errors
-      console.log('Header: Navigating to home page before sign-out');
-      router.push('/').then(() => {
-        // Only show toast if we're still on the page
-        if (document.visibilityState === 'visible') {
-          toast({
-            title: "Signing out...",
-            description: "Please wait while we sign you out",
-            variant: "default",
-          });
-        }
-      }).catch(navError => {
-        console.error('Header: Navigation error before sign out:', navError);
+      // Show toast immediately
+      toast({
+        title: "Signing out...",
+        description: "Please wait while we sign you out",
+        variant: "default",
       });
       
-      // Use a small delay to ensure navigation has started
-      setTimeout(async () => {
-        try {
-          // Then perform sign out
-          await signOut();
-          console.log('Header: Sign out successful');
-          
-          // Only show success toast if we're still on the page
-          if (document.visibilityState === 'visible') {
-            toast({
-              title: "Success",
-              description: "You have been signed out successfully",
-              variant: "default",
-            });
-          }
-        } catch (signOutError) {
-          console.error('Header: Error during sign out:', signOutError);
-          
-          // Extract error message
-          let errorMessage = "Failed to sign out. Please try again.";
-          if (signOutError instanceof Error) {
-            errorMessage = signOutError.message || errorMessage;
-          }
-          
-          // Only show error toast if we're still on the page
-          if (document.visibilityState === 'visible') {
-            toast({
-              title: "Sign Out Error",
-              description: errorMessage,
-              variant: "destructive",
-            });
-          }
+      // Directly call signOut without navigation or delays
+      try {
+        await signOut();
+        console.log('Header: Sign out successful');
+        
+        // The signOut function already handles navigation to home page
+        // No need to show success toast as the page will reload
+      } catch (signOutError) {
+        console.error('Header: Error during sign out:', signOutError);
+        
+        // Extract error message
+        let errorMessage = "Failed to sign out. Please try again.";
+        if (signOutError instanceof Error) {
+          errorMessage = signOutError.message || errorMessage;
         }
-      }, 100);
+        
+        toast({
+          title: "Sign Out Error",
+          description: errorMessage,
+          variant: "destructive",
+        });
+      }
     } catch (error) {
       console.error('Header: Unexpected error in sign out handler:', error);
       
-      // Navigate to home page on error
-      router.push('/').catch(navError => {
-        console.error('Header: Navigation error after sign out error:', navError);
+      toast({
+        title: "Sign Out Error",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "destructive",
       });
     }
   };
