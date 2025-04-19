@@ -154,7 +154,8 @@ export const handleMfaSignIn = async (
 // Function to start MFA verification during sign-in
 export const startMfaVerification = async (
   resolver: MultiFactorResolver,
-  recaptchaVerifier: RecaptchaVerifier
+  recaptchaVerifier: RecaptchaVerifier,
+  skipRecaptcha: boolean = false
 ): Promise<string> => {
   try {
     console.log("Starting automatic MFA verification process");
@@ -177,13 +178,57 @@ export const startMfaVerification = async (
     const phoneAuthProvider = new PhoneAuthProvider(getAuth());
     
     // Send verification code
-    const verificationId = await phoneAuthProvider.verifyPhoneNumber(
-      {
-        multiFactorHint: hint,
-        session: resolver.session
-      },
-      recaptchaVerifier
-    );
+    // If skipRecaptcha is true, we'll use an invisible recaptcha that auto-verifies
+    const verificationOptions = {
+      multiFactorHint: hint,
+      session: resolver.session
+    };
+    
+    let verificationId;
+    
+    if (skipRecaptcha) {
+      // Create a temporary invisible recaptcha verifier for automatic verification
+      const invisibleVerifier = new RecaptchaVerifier(
+        getAuth(),
+        'invisible-recaptcha-container',
+        {
+          size: 'invisible',
+          callback: () => {
+            console.log("Invisible reCAPTCHA solved automatically");
+          },
+          'expired-callback': () => {
+            console.log("Invisible reCAPTCHA expired");
+          }
+        }
+      );
+      
+      try {
+        // Render the invisible recaptcha
+        await invisibleVerifier.render();
+        
+        // Send verification code with invisible recaptcha
+        verificationId = await phoneAuthProvider.verifyPhoneNumber(
+          verificationOptions,
+          invisibleVerifier
+        );
+        
+        // Clean up the invisible recaptcha
+        invisibleVerifier.clear();
+      } catch (err) {
+        // If invisible recaptcha fails, fall back to the provided verifier
+        console.warn("Invisible reCAPTCHA failed, falling back to visible verification:", err);
+        verificationId = await phoneAuthProvider.verifyPhoneNumber(
+          verificationOptions,
+          recaptchaVerifier
+        );
+      }
+    } else {
+      // Use the provided recaptcha verifier (for resending)
+      verificationId = await phoneAuthProvider.verifyPhoneNumber(
+        verificationOptions,
+        recaptchaVerifier
+      );
+    }
     
     console.log("Verification code sent successfully");
     return verificationId;

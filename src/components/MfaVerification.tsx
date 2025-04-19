@@ -2,7 +2,6 @@ import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { RecaptchaVerifier, MultiFactorResolver } from "firebase/auth";
 import { createRecaptchaVerifier, startMfaVerification, handleMfaSignIn } from "@/lib/mfa-utils";
 
@@ -78,8 +77,8 @@ export default function MfaVerification({ resolver, onComplete, onCancel }: MfaV
   useEffect(() => {
     initializeRecaptcha();
     
-    // Send verification code automatically on component mount
-    sendVerificationCode();
+    // Send verification code automatically on component mount without requiring CAPTCHA
+    sendVerificationCodeAutomatically();
     
     return () => {
       // Clean up reCAPTCHA when component unmounts
@@ -93,6 +92,61 @@ export default function MfaVerification({ resolver, onComplete, onCancel }: MfaV
     };
   }, []);
 
+  // Function to automatically send verification code without requiring CAPTCHA
+  const sendVerificationCodeAutomatically = async () => {
+    setError(null);
+    setSuccess(null);
+    setIsSendingCode(true);
+    
+    try {
+      // Create a temporary invisible recaptcha container if needed
+      if (!document.getElementById('invisible-recaptcha-container')) {
+        const container = document.createElement('div');
+        container.id = 'invisible-recaptcha-container';
+        container.style.display = 'none';
+        document.body.appendChild(container);
+      }
+      
+      // Start MFA verification with skipRecaptcha=true
+      const verId = await startMfaVerification(
+        resolver,
+        recaptchaVerifierRef.current || createRecaptchaVerifier('invisible-recaptcha-container', 'invisible'),
+        true // Skip recaptcha for initial code sending
+      );
+      
+      setVerificationId(verId);
+      setSuccess("Verification code sent to your phone.");
+    } catch (error: any) {
+      console.error("Error sending verification code automatically:", error);
+      
+      // Check for specific error types
+      if (error.message && (
+          error.message.includes("CAPTCHA_CHECK_FAILED") || 
+          error.message.includes("Hostname match not found") ||
+          error.message.includes("reCAPTCHA") ||
+          error.code === "auth/captcha-check-failed"
+        )) {
+        setError(
+          "Domain verification failed. Please try again or use the manual verification option below."
+        );
+      } else if (error.code === "auth/invalid-phone-number") {
+        setError("The phone number format is incorrect. Please include your country code (e.g., +1 for US/Canada).");
+      } else if (error.code === "auth/quota-exceeded") {
+        setError("SMS quota exceeded. Please try again later or contact support.");
+      } else if (error.code === "auth/too-many-requests") {
+        setError("Too many requests. Please try again later.");
+      } else {
+        setError(error.message || "Failed to send verification code. Please try again.");
+      }
+      
+      // Initialize recaptcha for manual verification
+      initializeRecaptcha();
+    } finally {
+      setIsSendingCode(false);
+    }
+  };
+
+  // Function to manually send verification code with CAPTCHA (for resending)
   const sendVerificationCode = async () => {
     setError(null);
     setSuccess(null);
@@ -103,10 +157,11 @@ export default function MfaVerification({ resolver, onComplete, onCancel }: MfaV
         throw new Error("Security verification not initialized. Please refresh the page.");
       }
       
-      // Start MFA verification
+      // Start MFA verification with the visible recaptcha
       const verId = await startMfaVerification(
         resolver,
-        recaptchaVerifierRef.current
+        recaptchaVerifierRef.current,
+        false // Don't skip recaptcha for manual resending
       );
       
       setVerificationId(verId);
@@ -183,35 +238,33 @@ export default function MfaVerification({ resolver, onComplete, onCancel }: MfaV
       <CardHeader>
         <CardTitle>Two-Factor Authentication</CardTitle>
         <CardDescription>
-          A verification code is being sent automatically to your phone. Complete the CAPTCHA verification below if prompted, then enter the code to complete sign-in.
+          A verification code has been sent automatically to your phone. Enter the code to complete sign-in.
         </CardDescription>
       </CardHeader>
       
       <form onSubmit={handleVerifyCode}>
         <CardContent className="space-y-4">
+          {/* Status messages */}
           {error && (
-            <Alert variant="destructive">
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
+            <div className="p-3 text-sm rounded-md bg-destructive/10 text-destructive">
+              {error}
+            </div>
           )}
           
           {success && (
-            <Alert>
-              <AlertDescription>{success}</AlertDescription>
-            </Alert>
+            <div className="p-3 text-sm rounded-md bg-green-500/10 text-green-600 dark:text-green-400">
+              {success}
+            </div>
           )}
           
           {isSendingCode && !error && !success && (
-            <Alert className="bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800">
-              <div className="flex items-center">
-                <div className="w-4 h-4 mr-2 border-2 border-green-600 dark:border-green-400 border-t-transparent rounded-full animate-spin"></div>
-                <AlertDescription className="text-green-700 dark:text-green-400">
-                  Sending verification code to your phone...
-                </AlertDescription>
-              </div>
-            </Alert>
+            <div className="p-3 text-sm rounded-md bg-green-500/10 text-green-600 dark:text-green-400 flex items-center">
+              <div className="w-4 h-4 mr-2 border-2 border-green-600 dark:border-green-400 border-t-transparent rounded-full animate-spin"></div>
+              Sending verification code to your phone...
+            </div>
           )}
           
+          {/* Verification code input */}
           <div className="space-y-2">
             <label htmlFor="mfa-code" className="text-sm font-medium">
               Verification Code
@@ -235,13 +288,11 @@ export default function MfaVerification({ resolver, onComplete, onCancel }: MfaV
             </p>
           </div>
           
+          {/* CAPTCHA for resending code */}
           <div className="space-y-2">
-            <Alert className="bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800">
-              <AlertTitle className="text-blue-800 dark:text-blue-300">CAPTCHA Verification</AlertTitle>
-              <AlertDescription className="text-blue-700 dark:text-blue-400 text-sm">
-                If prompted, please solve the CAPTCHA verification below to receive your verification code.
-              </AlertDescription>
-            </Alert>
+            <p className="text-sm text-muted-foreground">
+              Need to resend the code? Complete the CAPTCHA verification below.
+            </p>
             <div id="mfa-recaptcha-container" ref={recaptchaContainerRef} className="flex justify-center"></div>
           </div>
         </CardContent>
