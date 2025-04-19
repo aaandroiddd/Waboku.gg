@@ -998,7 +998,12 @@ export default function OrderDetailsPage() {
                                             const trackingNumber = order.trackingInfo?.trackingNumber || '';
                                             navigator.clipboard.writeText(trackingNumber)
                                               .then(() => {
-                                                toast.success('Tracking number copied to clipboard');
+                                                // Show a toast notification to confirm the copy action
+                                                toast.success('Tracking number copied to clipboard', {
+                                                  duration: 3000,
+                                                  position: 'bottom-center',
+                                                  icon: <Copy className="h-4 w-4" />
+                                                });
                                               })
                                               .catch((err) => {
                                                 console.error('Failed to copy tracking number:', err);
