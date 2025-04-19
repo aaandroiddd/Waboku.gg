@@ -14,6 +14,7 @@ import { formatPrice } from '@/lib/price';
 import Image from 'next/image';
 import { format } from 'date-fns';
 import { Loader2, ArrowLeft, Package, CreditCard, User, MapPin, Calendar, Clock, Truck, AlertTriangle, Copy, ExternalLink, Info, RefreshCw, CheckCircle, Star } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { toast } from 'sonner';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -972,34 +973,7 @@ export default function OrderDetailsPage() {
                                     </Button>
                                   )}
                                   
-                                  {/* Track Package Button - Links to carrier tracking page */}
-                                  <Button 
-                                    variant="outline" 
-                                    size="sm"
-                                    onClick={() => {
-                                      let trackingUrl = '';
-                                      const carrier = order.trackingInfo?.carrier.toLowerCase();
-                                      const trackingNumber = order.trackingInfo?.trackingNumber;
-                                      
-                                      if (carrier?.includes('usps')) {
-                                        trackingUrl = `https://tools.usps.com/go/TrackConfirmAction?tLabels=${trackingNumber}`;
-                                      } else if (carrier?.includes('ups')) {
-                                        trackingUrl = `https://www.ups.com/track?tracknum=${trackingNumber}`;
-                                      } else if (carrier?.includes('fedex')) {
-                                        trackingUrl = `https://www.fedex.com/fedextrack/?trknbr=${trackingNumber}`;
-                                      } else if (carrier?.includes('dhl')) {
-                                        trackingUrl = `https://www.dhl.com/us-en/home/tracking.html?tracking-id=${trackingNumber}`;
-                                      } else {
-                                        // Generic tracking search
-                                        trackingUrl = `https://www.google.com/search?q=${encodeURIComponent(`${order.trackingInfo?.carrier} tracking ${trackingNumber}`)}`;
-                                      }
-                                      
-                                      window.open(trackingUrl, '_blank');
-                                    }}
-                                  >
-                                    <ExternalLink className="mr-2 h-4 w-4" />
-                                    Track Package
-                                  </Button>
+                                  {/* Removed redundant 'track package' button as requested */}
                                 </div>
                               </div>
                               
@@ -1011,31 +985,40 @@ export default function OrderDetailsPage() {
                                   </code>
                                 </div>
                                 
-                                {/* Copy Tracking Button */}
-                                <Button 
-                                  variant="ghost" 
-                                  size="sm"
-                                  className="mt-1 sm:mt-0 self-start sm:self-auto"
-                                  onClick={() => {
-                                    try {
-                                      const trackingNumber = order.trackingInfo?.trackingNumber || '';
-                                      navigator.clipboard.writeText(trackingNumber)
-                                        .then(() => {
-                                          toast.success('Tracking number copied to clipboard');
-                                        })
-                                        .catch((err) => {
-                                          console.error('Failed to copy tracking number:', err);
-                                          toast.error('Failed to copy tracking number');
-                                        });
-                                    } catch (error) {
-                                      console.error('Error copying tracking number:', error);
-                                      toast.error('Failed to copy tracking number');
-                                    }
-                                  }}
-                                >
-                                  <Copy className="mr-2 h-4 w-4" />
-                                  Copy
-                                </Button>
+                                {/* Copy Tracking Button with Tooltip */}
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button 
+                                        variant="ghost" 
+                                        size="sm"
+                                        className="mt-1 sm:mt-0 self-start sm:self-auto"
+                                        onClick={() => {
+                                          try {
+                                            const trackingNumber = order.trackingInfo?.trackingNumber || '';
+                                            navigator.clipboard.writeText(trackingNumber)
+                                              .then(() => {
+                                                toast.success('Tracking number copied to clipboard');
+                                              })
+                                              .catch((err) => {
+                                                console.error('Failed to copy tracking number:', err);
+                                                toast.error('Failed to copy tracking number');
+                                              });
+                                          } catch (error) {
+                                            console.error('Error copying tracking number:', error);
+                                            toast.error('Failed to copy tracking number');
+                                          }
+                                        }}
+                                      >
+                                        <Copy className="mr-2 h-4 w-4" />
+                                        Copy
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p>Copy tracking number to clipboard</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
                               </div>
                               
                               {order.trackingInfo.notes && (
