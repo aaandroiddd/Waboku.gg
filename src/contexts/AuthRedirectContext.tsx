@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { useAuth } from './AuthContext';
-import { handlePostLoginAction } from '@/lib/auth-redirect-utils';
+import { handlePostLoginAction, isSignOutInProgress } from '@/lib/auth-redirect-utils';
 import { useFavorites } from '@/hooks/useFavorites';
 
 interface AuthRedirectState {
@@ -84,6 +84,12 @@ export function AuthRedirectProvider({ children }: { children: React.ReactNode }
   };
 
   const handlePostLoginRedirect = async () => {
+    // Don't perform redirects if sign-out is in progress
+    if (isSignOutInProgress()) {
+      console.log('Sign-out in progress, skipping post-login redirect');
+      return;
+    }
+    
     const state = getRedirectState();
     if (state && user) {
       // First try to handle any specific actions

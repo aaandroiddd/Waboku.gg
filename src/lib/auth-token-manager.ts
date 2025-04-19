@@ -195,11 +195,16 @@ export const clearStoredAuthData = (): void => {
     
     console.log('Starting to clear stored auth data...');
     
-    // Mark sign-out in progress to prevent race conditions
-    try {
-      localStorage.setItem('waboku_signout_in_progress', 'true');
-    } catch (e) {
-      console.warn('Could not set sign-out in progress flag:', e);
+    // Check if sign-out is already in progress
+    if (localStorage.getItem('waboku_signout_in_progress') === 'true') {
+      console.log('Sign-out already in progress, continuing with auth data clearing');
+    } else {
+      // Mark sign-out in progress to prevent race conditions
+      try {
+        localStorage.setItem('waboku_signout_in_progress', 'true');
+      } catch (e) {
+        console.warn('Could not set sign-out in progress flag:', e);
+      }
     }
     
     // List of specific keys to remove

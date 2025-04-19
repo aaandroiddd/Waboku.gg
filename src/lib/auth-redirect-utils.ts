@@ -7,6 +7,21 @@ import { toast } from 'sonner';
  * @param params Parameters for the action
  * @param user The authenticated user
  */
+/**
+ * Checks if a sign-out operation is in progress
+ * @returns true if sign-out is in progress, false otherwise
+ */
+export function isSignOutInProgress(): boolean {
+  if (typeof window === 'undefined') return false;
+  return localStorage.getItem('waboku_signout_in_progress') === 'true';
+}
+
+/**
+ * Handles post-login actions based on the saved redirect state
+ * @param action The action to perform
+ * @param params Parameters for the action
+ * @param user The authenticated user
+ */
 export async function handlePostLoginAction(
   action: string,
   params: Record<string, any>,
