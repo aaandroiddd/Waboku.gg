@@ -88,6 +88,7 @@ export interface UserProfile {
   theme?: 'light' | 'dark' | 'system';
   profileCompleted?: boolean;
   lastSignIn?: string;
+  tutorialPreferences?: Record<string, boolean>;
   subscription: {
     status: 'active' | 'inactive';
     stripeSubscriptionId?: string;

@@ -11,10 +11,11 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { getFirebaseServices } from '@/lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
-import { CheckCircle, Loader2, Star } from 'lucide-react';
+import { CheckCircle, Loader2, Star, CreditCard } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { AcceptedOfferCheckout } from '@/components/AcceptedOfferCheckout';
 
 interface OrderCardProps {
   order: Order;
@@ -292,6 +293,22 @@ export function OrderCard({ order, isSale = false }: OrderCardProps) {
                 Complete Pickup
               </Button>
             )}
+            {/* Payment Button - Only visible for buyers with pending orders */}
+            {!isSale && safeOrder.status === 'pending' && safeOrder.shippingAddress && (
+              <AcceptedOfferCheckout
+                orderId={safeOrder.id}
+                sellerId={safeOrder.sellerId}
+                variant="default"
+                className="bg-green-600 hover:bg-green-700 text-white font-medium"
+                onClick={(e) => {
+                  e.stopPropagation();
+                }}
+              >
+                <CreditCard className="mr-2 h-4 w-4" />
+                Complete Payment
+              </AcceptedOfferCheckout>
+            )}
+            
             {/* Leave Review Button - Only visible for buyers with completed orders that don't have a review yet */}
             {!isSale && safeOrder.status === 'completed' && !safeOrder.reviewSubmitted && (
               <Button 

@@ -14,6 +14,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { StateSelect } from '@/components/StateSelect';
 import { useStripeSellerStatus } from '@/hooks/useStripeSellerStatus';
+import MakeOfferTutorial from './MakeOfferTutorial';
 
 interface MakeOfferDialogProps {
   open: boolean;
@@ -34,6 +35,8 @@ export function MakeOfferDialog({
   listingPrice,
   listingImageUrl
 }: MakeOfferDialogProps) {
+  // State to track if tutorial has been completed
+  const [tutorialCompleted, setTutorialCompleted] = useState(false);
   const [offerAmount, setOfferAmount] = useState<string>(listingPrice.toString());
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -225,14 +228,19 @@ export function MakeOfferDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle>Make an Offer</DialogTitle>
-          <DialogDescription>
-            Enter your offer amount for this listing. The seller will be notified and can accept or decline.
-          </DialogDescription>
-        </DialogHeader>
+    <>
+      <MakeOfferTutorial 
+        isActive={open && !tutorialCompleted} 
+        onComplete={() => setTutorialCompleted(true)} 
+      />
+      <Dialog open={open} onOpenChange={handleOpenChange}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Make an Offer</DialogTitle>
+            <DialogDescription>
+              Enter your offer amount for this listing. The seller will be notified and can accept or decline.
+            </DialogDescription>
+          </DialogHeader>
         <form onSubmit={handleSubmit}>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
@@ -396,5 +404,6 @@ export function MakeOfferDialog({
         </form>
       </DialogContent>
     </Dialog>
+    </>
   );
 }

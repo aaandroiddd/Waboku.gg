@@ -8,6 +8,7 @@ declare global {
 }
 import { doc, getDoc, deleteDoc, setDoc, onSnapshot } from 'firebase/firestore';
 import { loadStripe } from '@stripe/stripe-js';
+import { BuyNowButton } from '@/components/BuyNowButton';
 import { UserNameLink } from '@/components/UserNameLink';
 import { StripeSellerBadge } from '@/components/StripeSellerBadge';
 import { useRouter } from 'next/router';
@@ -1672,15 +1673,15 @@ export default function ListingPage() {
                         {listing.status === 'sold' ? 'Item Sold' : 'No Longer Available'}
                       </Button>
                     ) : sellerHasActiveStripeAccount ? (
-                      <Button
-                        variant="default"
-                        size="lg"
-                        onClick={handleBuyNow}
+                      <BuyNowButton
+                        listingId={listing.id}
+                        sellerId={listing.userId}
                         className="flex-1 bg-green-600 hover:bg-green-700 text-white"
                         disabled={user?.uid === listing.userId}
+                        variant="default"
                       >
                         Buy Now - {formatPrice(listing.price)}
-                      </Button>
+                      </BuyNowButton>
                     ) : (
                       <Button
                         variant="outline"
