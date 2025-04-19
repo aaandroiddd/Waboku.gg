@@ -14,6 +14,8 @@ import { useState, useEffect } from "react"
 import { getAuth } from "firebase/auth"
 import { useToast } from "./ui/use-toast"
 import { getFirebaseServices } from "@/lib/firebase"
+import { useAuthRedirect } from "@/contexts/AuthRedirectContext"
+import { useRouter } from "next/router"
 
 interface MessageDialogProps {
   recipientId: string
@@ -27,6 +29,8 @@ export function MessageDialog({ recipientId, recipientName }: MessageDialogProps
   const [isSending, setIsSending] = useState(false)
   const [isSelfMessage, setIsSelfMessage] = useState(false)
   const { toast } = useToast()
+  const { saveRedirectState } = useAuthRedirect()
+  const router = useRouter()
 
   // Check if user is trying to message themselves
   useEffect(() => {
@@ -130,10 +134,29 @@ export function MessageDialog({ recipientId, recipientName }: MessageDialogProps
     }
   }
 
+  const handleMessageButtonClick = () => {
+    const { auth } = getFirebaseServices();
+    const currentUser = auth.currentUser;
+    
+    if (!currentUser) {
+      // User is not authenticated, save the action and redirect
+      saveRedirectState('send_message', { 
+        recipientId, 
+        recipientName,
+        returnPath: router.asPath
+      });
+      router.push('/auth/sign-in');
+      return;
+    }
+    
+    // User is authenticated, open the dialog
+    setIsOpen(true);
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button variant="secondary">Send Message</Button>
+        <Button variant="secondary" onClick={handleMessageButtonClick}>Send Message</Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>

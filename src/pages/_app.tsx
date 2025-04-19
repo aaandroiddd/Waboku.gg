@@ -2,6 +2,7 @@ import '@/styles/globals.css';
 import type { AppProps } from 'next/app';
 import { ThemeProvider } from '@/components/ThemeProvider';
 import { AuthProvider } from '@/contexts/AuthContext';
+import { AuthRedirectProvider } from '@/contexts/AuthRedirectContext';
 import { AccountProvider } from '@/contexts/AccountContext';
 import { UnreadProvider } from '@/contexts/UnreadContext';
 import { TutorialProvider } from '@/contexts/TutorialContext';
@@ -122,19 +123,21 @@ export default function App({ Component, pageProps }: AppProps) {
       >
         <LoadingProvider>
           <AuthProvider>
-            <AccountProvider>
-              <UnreadProvider>
-                <TutorialProvider>
-                  <RouteGuard requireAuth={requireAuth}>
-                    <MainContent 
-                      Component={Component}
-                      pageProps={pageProps}
-                      pathname={router.pathname}
-                    />
-                  </RouteGuard>
-                </TutorialProvider>
-              </UnreadProvider>
-            </AccountProvider>
+            <AuthRedirectProvider>
+              <AccountProvider>
+                <UnreadProvider>
+                  <TutorialProvider>
+                    <RouteGuard requireAuth={requireAuth}>
+                      <MainContent 
+                        Component={Component}
+                        pageProps={pageProps}
+                        pathname={router.pathname}
+                      />
+                    </RouteGuard>
+                  </TutorialProvider>
+                </UnreadProvider>
+              </AccountProvider>
+            </AuthRedirectProvider>
           </AuthProvider>
         </LoadingProvider>
       </ThemeProvider>

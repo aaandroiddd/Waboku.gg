@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import { Logo } from "@/components/Logo";
 import { useAuth } from "@/contexts/AuthContext";
+import { useAuthRedirect } from "@/contexts/AuthRedirectContext";
 import { Skeleton } from "@/components/ui/skeleton";
 import AuthError from "@/components/AuthError";
 import PasswordResetForm from "@/components/PasswordResetForm";
@@ -53,6 +54,7 @@ function SignInComponent() {
   const [mounted, setMounted] = useState(false);
   const [mfaResolver, setMfaResolver] = useState<MultiFactorResolver | null>(null);
   const { user, signIn, signInWithGoogle } = useAuth();
+  const { handlePostLoginRedirect, getRedirectState } = useAuthRedirect();
 
   useEffect(() => {
     setMounted(true);
@@ -60,9 +62,15 @@ function SignInComponent() {
 
   useEffect(() => {
     if (user) {
-      router.replace("/dashboard");
+      // Check if there's a redirect state to handle
+      const redirectState = getRedirectState();
+      if (redirectState) {
+        handlePostLoginRedirect();
+      } else {
+        router.replace("/dashboard");
+      }
     }
-  }, [user, router]);
+  }, [user, router, handlePostLoginRedirect, getRedirectState]);
 
   const checkGoogleAuth = async (email: string) => {
     try {

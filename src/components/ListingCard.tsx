@@ -14,6 +14,7 @@ import { StripeSellerBadge } from './StripeSellerBadge';
 import { memo, useEffect, useState } from 'react';
 import { useLocation } from '@/hooks/useLocation';
 import { useAuth } from '@/contexts/AuthContext';
+import { useAuthRedirect } from '@/contexts/AuthRedirectContext';
 import { useRouter } from 'next/router';
 import { cn } from '@/lib/utils';
 import { loadStripe } from '@stripe/stripe-js';
@@ -111,10 +112,13 @@ const BuyNowButton = ({ listing, className }: BuyNowButtonProps) => {
   const { user } = useAuth();
   const router = useRouter();
   const { hasStripeAccount, isLoading } = useStripeSellerStatus(listing.userId);
+  const { saveRedirectState } = useAuthRedirect();
 
   const handleBuyNow = async () => {
     if (!user) {
       toast.error('Please sign in to make a purchase');
+      // Save the current action before redirecting
+      saveRedirectState('buy_now', { listingId: listing.id });
       router.push('/auth/sign-in');
       return;
     }

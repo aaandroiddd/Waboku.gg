@@ -1,12 +1,16 @@
 import { firebaseDb as db } from '@/lib/firebase';
 import { Listing } from '@/types/database';
 import { useAuth } from '@/contexts/AuthContext';
+import { useAuthRedirect } from '@/contexts/AuthRedirectContext';
 import { collection, doc, getDoc, getDocs, query, where, setDoc, deleteDoc } from 'firebase/firestore';
 import { useEffect, useState, useCallback } from 'react';
 import { toast } from 'sonner';
+import { useRouter } from 'next/router';
 
 export function useFavorites() {
   const { user } = useAuth();
+  const { saveRedirectState } = useAuthRedirect();
+  const router = useRouter();
   const [favorites, setFavorites] = useState<Listing[]>([]);
   const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(true);
@@ -79,6 +83,9 @@ export function useFavorites() {
     
     if (!user) {
       toast.error('Please sign in to save favorites');
+      // Save the current action before redirecting
+      saveRedirectState('toggle_favorite', { listingId: listing.id });
+      router.push('/auth/sign-in');
       return;
     }
 

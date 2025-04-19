@@ -3,6 +3,7 @@ import { useRouter } from 'next/router';
 import { useEffect, useState } from 'react';
 import { Skeleton } from './ui/skeleton';
 import LoadingScreen from './LoadingScreen';
+import { useAuthRedirect } from '@/contexts/AuthRedirectContext';
 
 interface RouteGuardProps {
   children: React.ReactNode;
@@ -12,6 +13,7 @@ interface RouteGuardProps {
 export function RouteGuard({ children, requireAuth = false }: RouteGuardProps) {
   const { user, isLoading } = useAuth();
   const router = useRouter();
+  const { saveRedirectState } = useAuthRedirect();
   const [authorized, setAuthorized] = useState(false);
 
   useEffect(() => {
@@ -27,6 +29,8 @@ export function RouteGuard({ children, requireAuth = false }: RouteGuardProps) {
         // If auth is required and user is not logged in
         if (requireAuth && !user) {
           setAuthorized(false);
+          // Save the current path before redirecting to sign-in
+          saveRedirectState('route_guard_redirect');
           router.push('/auth/sign-in');
           return;
         }
@@ -65,7 +69,7 @@ export function RouteGuard({ children, requireAuth = false }: RouteGuardProps) {
         router.events.off('routeChangeStart', preventAccess);
       };
     }
-  }, [isLoading, user, router, requireAuth]);
+  }, [isLoading, user, router, requireAuth, saveRedirectState]);
 
   if (isLoading) {
     return (
