@@ -92,11 +92,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       })
     };
 
+    // Determine order status based on tracking status
+    // If tracking shows delivered, mark as completed
+    // Otherwise, mark as shipped
+    const orderStatus = initialTrackingStatus && initialTrackingStatus.status === 'delivered' ? 'completed' : 'shipped';
+    
     // Update the order with tracking information
     await updateDoc(doc(db, 'orders', orderId), {
-      status: 'shipped',
+      status: orderStatus,
       trackingInfo,
       trackingRequired: true,
+      // If delivered, also set deliveryConfirmed to true
+      ...(orderStatus === 'completed' && { deliveryConfirmed: true }),
       updatedAt: new Date()
     });
 

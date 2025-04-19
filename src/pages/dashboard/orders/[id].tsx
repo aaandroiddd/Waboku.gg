@@ -219,27 +219,30 @@ export default function OrderDetailsPage() {
       setIsUpdatingShipping(true);
       const { db } = getFirebaseServices();
       
-      // Update the order status to shipped without tracking info
+      // Update the order status to completed without tracking info
+      // As per requirements, when marked as shipped without tracking, change status to completed
       await updateDoc(doc(db, 'orders', id as string), {
-        status: 'shipped',
+        status: 'completed',
         noTrackingConfirmed: true,
         trackingRequired: false, // Explicitly mark that tracking is not required for this order
+        deliveryConfirmed: true, // Mark as delivered since we're completing the order
         updatedAt: new Date()
       });
       
       // Update local state
       setOrder({
         ...order,
-        status: 'shipped',
+        status: 'completed',
         noTrackingConfirmed: true,
         trackingRequired: false,
+        deliveryConfirmed: true,
         updatedAt: new Date()
       });
       
-      toast.success('Order marked as shipped');
+      toast.success('Order marked as completed');
       setShowNoTrackingDialog(false);
     } catch (error) {
-      console.error('Error marking order as shipped:', error);
+      console.error('Error marking order as completed:', error);
       toast.error('Failed to update order status');
     } finally {
       setIsUpdatingShipping(false);
@@ -1105,7 +1108,7 @@ export default function OrderDetailsPage() {
                   variant="secondary" 
                   onClick={() => setShowNoTrackingDialog(true)}
                 >
-                  <Package className="mr-2 h-4 w-4" /> Mark as Shipped
+                  <Package className="mr-2 h-4 w-4" /> Complete Without Tracking
                 </Button>
               </div>
             )}
@@ -1121,12 +1124,7 @@ export default function OrderDetailsPage() {
               </Button>
             )}
             
-            {/* Buyer actions */}
-            {isUserBuyer && order.status === 'shipped' && (
-              <Button variant="primary" onClick={() => setShowConfirmDeliveryDialog(true)}>
-                <Package className="mr-2 h-4 w-4" /> Confirm Delivery
-              </Button>
-            )}
+            {/* Buyer actions - 'confirm delivery' button removed as requested */}
             {isUserBuyer && order.status === 'completed' && !order.reviewSubmitted && (
               <Button 
                 variant="primary" 
@@ -1210,10 +1208,11 @@ export default function OrderDetailsPage() {
       <AlertDialog open={showNoTrackingDialog} onOpenChange={setShowNoTrackingDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Ship Without Tracking?</AlertDialogTitle>
+            <AlertDialogTitle>Complete Order Without Tracking?</AlertDialogTitle>
             <AlertDialogDescription>
-              You are about to mark this order as shipped without providing tracking information. 
+              You are about to mark this order as completed without providing tracking information. 
               This means you will have no proof of delivery in case of disputes.
+              The order status will be changed to "Completed" immediately.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -1224,35 +1223,13 @@ export default function OrderDetailsPage() {
               className="bg-yellow-600 hover:bg-yellow-700"
             >
               {isUpdatingShipping && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              I Understand the Risk
+              Complete Order
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
       
-      {/* Confirm Delivery Dialog */}
-      <AlertDialog open={showConfirmDeliveryDialog} onOpenChange={setShowConfirmDeliveryDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Confirm Delivery</AlertDialogTitle>
-            <AlertDialogDescription>
-              By confirming delivery, you acknowledge that you have received the item in the condition described.
-              This will mark the order as completed.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={handleConfirmDelivery}
-              disabled={isConfirmingDelivery}
-              className="bg-green-600 hover:bg-green-700"
-            >
-              {isConfirmingDelivery && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Confirm Delivery
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {/* Confirm Delivery Dialog removed as it's no longer needed */}
       
       {/* Complete Pickup Dialog */}
       <AlertDialog open={showCompletePickupDialog} onOpenChange={setShowCompletePickupDialog}>

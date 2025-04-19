@@ -80,10 +80,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           updateData['trackingInfo.events'] = trackingStatus.events;
         }
         
-        // If the package is delivered, update the order status
+        // If the package is delivered or has any other status, update accordingly
         if (trackingStatus.status === 'delivered') {
           updateData['status'] = 'completed';
           updateData['deliveryConfirmed'] = true;
+          updateData['updatedAt'] = new Date();
+        } else {
+          // For any other status, ensure we're updating the status badge information
+          // but keep the order status as 'shipped'
           updateData['updatedAt'] = new Date();
         }
         
