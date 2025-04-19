@@ -6,7 +6,7 @@ import { formatPrice } from '@/lib/price';
 import { format } from 'date-fns';
 import Image from 'next/image';
 import { UserNameLink } from '@/components/UserNameLink';
-import { Package, ExternalLink } from 'lucide-react';
+import { Package, ExternalLink, MapPin } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { getFirebaseServices } from '@/lib/firebase';
