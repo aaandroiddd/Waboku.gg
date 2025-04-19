@@ -1,5 +1,3 @@
-import { doc, getDoc } from 'firebase/firestore';
-import { firebaseDb } from './firebase';
 import { Listing } from '@/types/database';
 import { toast } from 'sonner';
 
@@ -12,25 +10,16 @@ import { toast } from 'sonner';
 export async function handlePostLoginAction(
   action: string,
   params: Record<string, any>,
-  user: any,
-  toggleFavorite?: (listing: Listing, event?: React.MouseEvent) => Promise<void>
+  user: any
 ): Promise<boolean> {
   try {
     switch (action) {
       case 'toggle_favorite':
-        if (params.listingId && toggleFavorite) {
-          // Fetch the listing
-          const listingDoc = await getDoc(doc(firebaseDb, 'listings', params.listingId));
-          if (listingDoc.exists()) {
-            const listing = {
-              id: listingDoc.id,
-              ...listingDoc.data()
-            } as Listing;
-            
-            // Toggle the favorite
-            await toggleFavorite(listing);
-            return true;
-          }
+        if (params.listingId) {
+          // Redirect to the listing page
+          window.location.href = `/listings/${params.listingId}`;
+          toast.success('You can now add this listing to your favorites');
+          return true;
         }
         return false;
         

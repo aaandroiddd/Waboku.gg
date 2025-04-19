@@ -23,7 +23,6 @@ export function AuthRedirectProvider({ children }: { children: React.ReactNode }
   const router = useRouter();
   const { user } = useAuth();
   const [redirectState, setRedirectState] = useState<AuthRedirectState | null>(null);
-  const favorites = useFavorites();
 
   // Load saved redirect state from localStorage on mount
   useEffect(() => {
@@ -92,8 +91,7 @@ export function AuthRedirectProvider({ children }: { children: React.ReactNode }
         const actionHandled = await handlePostLoginAction(
           state.action, 
           state.params, 
-          user,
-          favorites.toggleFavorite
+          user
         );
         
         // If the action was handled successfully, clear the redirect state
