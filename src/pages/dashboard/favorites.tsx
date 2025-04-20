@@ -77,7 +77,9 @@ export default function FavoritesPage() {
                     transition={{ duration: 0.3 }}
                   >
                     <h3 className="text-lg font-semibold mb-2">No favorites yet</h3>
-                    <p className="text-muted-foreground mb-4">Start browsing listings to add some favorites!</p>
+                    <p className="text-muted-foreground mb-4">
+                      When viewing a listing, click the favorites button to add it to this page.
+                    </p>
                     <Button asChild>
                       <Link href="/listings">Browse Listings</Link>
                     </Button>
