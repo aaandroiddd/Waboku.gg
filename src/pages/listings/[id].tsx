@@ -29,6 +29,8 @@ import Image from 'next/image';
 import { ArrowLeft, Calendar, Heart, MapPin, MessageCircle, User, ZoomIn, Minus, Plus, RotateCw, X, Flag } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useFavorites } from '@/hooks/useFavorites';
+import { useFavoriteGroups } from '@/hooks/useFavoriteGroups';
+import { AddToGroupDialog } from '@/components/AddToGroupDialog';
 import { toast } from 'sonner';
 import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
 import { Footer } from '@/components/Footer';
@@ -707,6 +709,9 @@ export default function ListingPage() {
 
   // We already have the favorites functionality from above
   
+  const [showGroupDialog, setShowGroupDialog] = useState(false);
+  const { groups, addToGroup, createAndAddToGroup } = useFavoriteGroups();
+
   const handleFavoriteToggle = (e: React.MouseEvent) => {
     // Prevent any default form submission or event propagation
     e.preventDefault();
@@ -721,16 +726,51 @@ export default function ListingPage() {
     if (!listing) return;
     
     try {
-      // Use the improved toggleFavorite function from our hook
-      toggleFavorite(listing, e);
-      
-      // Update local state based on the result - this will be updated by the optimistic UI update
-      setIsFavorited(!isFavorited);
+      if (isFavorited) {
+        // If already a favorite, remove it
+        toggleFavorite(listing, e);
+        
+        // Update local state based on the result - this will be updated by the optimistic UI update
+        setIsFavorited(false);
+      } else {
+        // If not a favorite, show group selection dialog
+        setShowGroupDialog(true);
+      }
       
       // Toast messages are handled inside the toggleFavorite function
     } catch (error) {
       console.error('Error toggling favorite:', error);
       toast.error('Failed to update favorites');
+    }
+  };
+  
+  // Handle adding to a group
+  const handleAddToGroup = async (listingId: string, groupId: string) => {
+    if (!listing) return;
+    
+    try {
+      await addFavoriteToGroup(listing, groupId);
+      setIsFavorited(true);
+      return Promise.resolve();
+    } catch (error) {
+      console.error('Error adding to group:', error);
+      toast.error('Failed to add to group');
+      return Promise.reject(error);
+    }
+  };
+
+  // Handle creating and adding to a new group
+  const handleCreateAndAddToGroup = async (listingId: string, groupName: string) => {
+    if (!listing) return Promise.reject(new Error('No listing available'));
+    
+    try {
+      await createAndAddToGroup(listingId, groupName);
+      setIsFavorited(true);
+      return Promise.resolve();
+    } catch (error) {
+      console.error('Error creating group:', error);
+      toast.error('Failed to create group');
+      return Promise.reject(error);
     }
   };
 
@@ -1723,6 +1763,16 @@ export default function ListingPage() {
       )}
       
       <Footer />
+      
+      {/* Add to Group Dialog */}
+      <AddToGroupDialog
+        isOpen={showGroupDialog}
+        onClose={() => setShowGroupDialog(false)}
+        listing={listing}
+        groups={groups}
+        onAddToGroup={handleAddToGroup}
+        onCreateAndAddToGroup={handleCreateAndAddToGroup}
+      />
 
       <Dialog open={isChatOpen} onOpenChange={setIsChatOpen}>
         <DialogContent 
