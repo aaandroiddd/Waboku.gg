@@ -776,6 +776,11 @@ export default function ListingPage() {
       if (result) {
         setIsFavorited(true);
         console.log(`Successfully added listing to new group with ID: ${result}`);
+        
+        // Refresh favorites to ensure UI is updated
+        const { refresh } = useFavorites();
+        await refresh();
+        
         return Promise.resolve(result);
       } else {
         console.log('No group ID returned, but operation did not throw an error');

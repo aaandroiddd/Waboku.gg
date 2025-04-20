@@ -155,8 +155,22 @@ export function useFavorites() {
         });
       }
       
-      // Show success toast
-      toast.success(isFav ? 'Removed from favorites' : 'Added to favorites');
+      // Show success toast with action to view favorites
+      if (isFav) {
+        toast.success('Removed from favorites');
+      } else {
+        toast.success('Added to favorites', {
+          action: {
+            label: "View Favorites",
+            onClick: () => {
+              if (typeof window !== 'undefined') {
+                window.location.href = '/dashboard/favorites';
+              }
+            }
+          },
+          duration: 5000
+        });
+      }
       
     } catch (err) {
       console.error('Error toggling favorite:', err);
@@ -218,7 +232,18 @@ export function useFavorites() {
           )
         );
         
-        toast.success('Updated favorite group');
+        // Show success toast with action to view favorites
+        toast.success('Updated favorite group', {
+          action: {
+            label: "View Favorites",
+            onClick: () => {
+              if (typeof window !== 'undefined') {
+                window.location.href = '/dashboard/favorites';
+              }
+            }
+          },
+          duration: 5000
+        });
       } else {
         // Optimistically add to favorites
         setFavoriteIds(prev => new Set([...prev, listing.id]));
@@ -237,7 +262,18 @@ export function useFavorites() {
           groupId
         });
         
-        toast.success('Added to favorites');
+        // Show success toast with action to view favorites
+        toast.success('Added to favorites', {
+          action: {
+            label: "View Favorites",
+            onClick: () => {
+              if (typeof window !== 'undefined') {
+                window.location.href = '/dashboard/favorites';
+              }
+            }
+          },
+          duration: 5000
+        });
       }
     } catch (err) {
       console.error('Error adding favorite to group:', err);

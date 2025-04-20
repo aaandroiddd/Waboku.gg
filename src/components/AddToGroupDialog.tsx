@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/select";
 import { Listing } from "@/types/database";
 import { toast } from "sonner";
+import { useRouter } from "next/router";
 
 export interface FavoriteGroup {
   id: string;
@@ -40,6 +41,7 @@ export function AddToGroupDialog({
   onAddToGroup,
   onCreateAndAddToGroup,
 }: AddToGroupDialogProps) {
+  const router = useRouter();
   const [selectedGroupId, setSelectedGroupId] = useState<string>("");
   const [newGroupName, setNewGroupName] = useState<string>("");
   const [isCreatingNewGroup, setIsCreatingNewGroup] = useState(false);
@@ -88,7 +90,14 @@ export function AddToGroupDialog({
             console.log(`Result from createAndAddToGroup:`, result);
             
             if (result) {
-              toast.success(`Added to new group "${newGroupName}"`);
+              // Show success toast with action to view favorites
+              toast.success(`Added to new group "${newGroupName}"`, {
+                action: {
+                  label: "View Favorites",
+                  onClick: () => router.push("/dashboard/favorites")
+                },
+                duration: 5000
+              });
               
               // Reset state and close dialog
               setSelectedGroupId("");
@@ -115,7 +124,15 @@ export function AddToGroupDialog({
         }
         await onAddToGroup(listing.id, selectedGroupId);
         const groupName = groups.find(g => g.id === selectedGroupId)?.name || "selected group";
-        toast.success(`Added to ${groupName}`);
+        
+        // Show success toast with action to view favorites
+        toast.success(`Added to ${groupName}`, {
+          action: {
+            label: "View Favorites",
+            onClick: () => router.push("/dashboard/favorites")
+          },
+          duration: 5000
+        });
         
         // Reset state and close dialog
         setSelectedGroupId("");

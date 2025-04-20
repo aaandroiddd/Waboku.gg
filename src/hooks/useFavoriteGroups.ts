@@ -414,7 +414,25 @@ export function useFavoriteGroups() {
       // Add the listing to the group
       try {
         console.log(`Adding listing ${listingId} to group ${groupId}`);
-        await addToGroup(listingId, groupId);
+        
+        // First check if the listing is already a favorite
+        const favoriteRef = doc(db, 'users', user.uid, 'favorites', listingId);
+        const favoriteDoc = await getDoc(favoriteRef);
+        
+        if (favoriteDoc.exists()) {
+          // If it's already a favorite, just update the group ID
+          await updateDoc(favoriteRef, { groupId });
+          console.log('Updated existing favorite with new group ID');
+        } else {
+          // If it's not a favorite yet, create it with the group ID
+          await setDoc(favoriteRef, {
+            listingId,
+            createdAt: new Date(),
+            groupId
+          });
+          console.log('Created new favorite with group ID');
+        }
+        
         console.log('Successfully added listing to group');
       } catch (addError) {
         console.error('Error adding listing to group:', addError);
