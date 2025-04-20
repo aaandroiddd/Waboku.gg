@@ -22,6 +22,7 @@ interface ListingGridProps {
   hasMore?: boolean;
   onLoadMore?: () => void;
   loading?: boolean;
+  isFavoritesPage?: boolean;
 }
 
 // Memoize the condition color mapping
@@ -103,7 +104,7 @@ const LoadingSkeleton = memo(function LoadingSkeleton() {
 });
 
 // Memoize the empty state
-const EmptyState = memo(function EmptyState() {
+const EmptyState = memo(function EmptyState({ isFavoritesPage }: { isFavoritesPage?: boolean }) {
   return (
     <motion.div
       initial={{ opacity: 0, y: isMobile ? 0 : 20 }}
@@ -114,9 +115,15 @@ const EmptyState = memo(function EmptyState() {
       <Card>
         <CardContent className="p-8">
           <h3 className="text-lg font-semibold mb-2">No Listings Available</h3>
-          <p className="text-muted-foreground">
-            There are currently no active listings. Check back later or try adjusting your search filters.
-          </p>
+          {isFavoritesPage ? (
+            <p className="text-muted-foreground">
+              When viewing a listing, click the favorites button to add it to this page.
+            </p>
+          ) : (
+            <p className="text-muted-foreground">
+              There are currently no active listings. Check back later or try adjusting your search filters.
+            </p>
+          )}
         </CardContent>
       </Card>
     </motion.div>
@@ -130,7 +137,8 @@ export function ListingGrid({
   displayCount,
   hasMore,
   onLoadMore,
-  loading: propLoading = false
+  loading: propLoading = false,
+  isFavoritesPage = false
 }: ListingGridProps) {
   // Don't automatically request location
   const location = { latitude: null, longitude: null };
@@ -309,7 +317,7 @@ export function ListingGrid({
           title={selectedListing?.title || ''}
         />
         {!hasListings ? (
-          <EmptyState />
+          <EmptyState isFavoritesPage={isFavoritesPage} />
         ) : (
           <>
             <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 auto-rows-fr">

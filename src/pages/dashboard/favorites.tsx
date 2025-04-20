@@ -66,6 +66,7 @@ export default function FavoritesPage() {
                       displayCount={8}
                       hasMore={favorites.length > 8}
                       onLoadMore={() => {}}
+                      isFavoritesPage={true}
                     />
                   </motion.div>
                 ) : (
