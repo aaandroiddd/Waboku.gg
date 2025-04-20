@@ -2,20 +2,45 @@ import { firebaseDb as db } from '@/lib/firebase';
 import { Listing } from '@/types/database';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAuthRedirect } from '@/contexts/AuthRedirectContext';
-import { collection, doc, getDoc, getDocs, query, where, setDoc, deleteDoc } from 'firebase/firestore';
-import { useEffect, useState, useCallback } from 'react';
+import { 
+  collection, 
+  doc, 
+  getDoc, 
+  getDocs, 
+  query, 
+  where, 
+  setDoc, 
+  deleteDoc, 
+  updateDoc 
+} from 'firebase/firestore';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { toast } from 'sonner';
 import { useRouter } from 'next/router';
+
+export interface FavoriteFilters {
+  search?: string;
+  game?: string;
+  priceRange?: {
+    min?: number;
+    max?: number;
+  };
+  groupId?: string | null;
+}
+
+export interface FavoriteListing extends Listing {
+  groupId?: string | null;
+}
 
 export function useFavorites() {
   const { user } = useAuth();
   const { saveRedirectState } = useAuthRedirect();
   const router = useRouter();
-  const [favorites, setFavorites] = useState<Listing[]>([]);
+  const [favorites, setFavorites] = useState<FavoriteListing[]>([]);
   const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [pendingOperations, setPendingOperations] = useState<Set<string>>(new Set());
+  const [filters, setFilters] = useState<FavoriteFilters>({});
   
   // Add a state to track if the hook has been initialized
   const [initialized, setInitialized] = useState(false);
@@ -46,12 +71,15 @@ export function useFavorites() {
           
           if (listingDoc.exists()) {
             const data = listingDoc.data();
+            const favoriteData = favoriteDoc.data();
+            
             return {
               id: listingDoc.id,
               ...data,
               createdAt: data.createdAt?.toDate(),
-              archivedAt: data.archivedAt?.toDate()
-            } as Listing;
+              archivedAt: data.archivedAt?.toDate(),
+              groupId: favoriteData.groupId || null
+            } as FavoriteListing;
           }
         } catch (err) {
           console.error(`Error fetching listing ${listingId}:`, err);
@@ -61,7 +89,7 @@ export function useFavorites() {
 
       // Filter out null values and archived listings
       const resolvedFavorites = (await Promise.all(favoritePromises))
-        .filter((f): f is Listing => f !== null)
+        .filter((f): f is FavoriteListing => f !== null)
         .filter(listing => listing.status !== 'archived');
       
       setFavorites(resolvedFavorites);
@@ -122,7 +150,8 @@ export function useFavorites() {
         // Then perform the actual operation
         await setDoc(favoriteRef, {
           listingId: listing.id,  // Store the listing ID directly
-          createdAt: new Date()
+          createdAt: new Date(),
+          groupId: null // No group by default
         });
       }
       
@@ -156,6 +185,32 @@ export function useFavorites() {
     }
   };
 
+  const updateFavoriteGroup = async (listingId: string, groupId: string | null) => {
+    if (!user) {
+      toast.error('Please sign in to update favorites');
+      return;
+    }
+
+    try {
+      const favoriteRef = doc(db, 'users', user.uid, 'favorites', listingId);
+      
+      // Update in Firestore
+      await updateDoc(favoriteRef, { groupId });
+      
+      // Update local state
+      setFavorites(prev => 
+        prev.map(fav => 
+          fav.id === listingId ? { ...fav, groupId } : fav
+        )
+      );
+      
+      return true;
+    } catch (err) {
+      console.error('Error updating favorite group:', err);
+      throw err;
+    }
+  };
+
   const isFavorite = useCallback((listingId: string) => {
     return favoriteIds.has(listingId);
   }, [favoriteIds]);
@@ -164,6 +219,47 @@ export function useFavorites() {
     return pendingOperations.has(listingId);
   }, [pendingOperations]);
 
+  // Apply filters to favorites
+  const filteredFavorites = useMemo(() => {
+    let result = [...favorites];
+    
+    // Filter by search term
+    if (filters.search) {
+      const searchTerm = filters.search.toLowerCase();
+      result = result.filter(listing => 
+        listing.title.toLowerCase().includes(searchTerm) ||
+        (listing.description && listing.description.toLowerCase().includes(searchTerm))
+      );
+    }
+    
+    // Filter by game
+    if (filters.game) {
+      result = result.filter(listing => listing.game === filters.game);
+    }
+    
+    // Filter by price range
+    if (filters.priceRange) {
+      if (filters.priceRange.min !== undefined) {
+        result = result.filter(listing => 
+          (listing.price !== undefined && listing.price >= filters.priceRange!.min!)
+        );
+      }
+      
+      if (filters.priceRange.max !== undefined) {
+        result = result.filter(listing => 
+          (listing.price !== undefined && listing.price <= filters.priceRange!.max!)
+        );
+      }
+    }
+    
+    // Filter by group
+    if (filters.groupId !== undefined) {
+      result = result.filter(listing => listing.groupId === filters.groupId);
+    }
+    
+    return result;
+  }, [favorites, filters]);
+
   useEffect(() => {
     fetchFavorites().then(() => {
       setInitialized(true);
@@ -171,12 +267,16 @@ export function useFavorites() {
   }, [user, fetchFavorites]);
 
   return {
-    favorites,
+    favorites: filteredFavorites,
+    allFavorites: favorites,
     isLoading,
     error,
     toggleFavorite,
+    updateFavoriteGroup,
     isFavorite,
     isPending,
+    setFilters,
+    filters,
     refresh: fetchFavorites,
     initialized
   };
