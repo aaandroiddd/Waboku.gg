@@ -728,10 +728,11 @@ export default function ListingPage() {
     try {
       if (isFavorited) {
         // If already a favorite, remove it
-        toggleFavorite(listing, e);
-        
-        // Update local state based on the result - this will be updated by the optimistic UI update
+        // Use a local state update to prevent full page refresh
         setIsFavorited(false);
+        
+        // Then update the backend without triggering a refresh
+        toggleFavorite(listing, e);
       } else {
         // If not a favorite, show group selection dialog
         setShowGroupDialog(true);
@@ -777,10 +778,8 @@ export default function ListingPage() {
         setIsFavorited(true);
         console.log(`Successfully added listing to new group with ID: ${result}`);
         
-        // Refresh favorites to ensure UI is updated
-        const { refresh } = useFavorites();
-        await refresh();
-        
+        // Update favorite status without triggering a full refresh
+        // This prevents the similar listings section from reloading
         return Promise.resolve(result);
       } else {
         console.log('No group ID returned, but operation did not throw an error');

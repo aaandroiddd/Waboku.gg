@@ -46,6 +46,7 @@ export const SimilarListings: React.FC<SimilarListingsProps> = ({
   useEffect(() => {
     // Skip if we've already fetched for this listing ID
     if (fetchedForListingRef.current === currentListing?.id) {
+      console.log('Similar listings already fetched for this listing, skipping refetch');
       return;
     }
     
