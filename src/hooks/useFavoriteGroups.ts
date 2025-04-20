@@ -84,6 +84,16 @@ export function useFavoriteGroups() {
       // Ensure the favoriteGroups collection exists
       const groupsCollectionRef = collection(db, 'users', user.uid, 'favoriteGroups');
       
+      // Check if a group with this name already exists
+      const existingGroupsQuery = query(groupsCollectionRef, where('name', '==', name));
+      const existingGroupsSnapshot = await getDocs(existingGroupsQuery);
+      
+      if (!existingGroupsSnapshot.empty) {
+        console.log('Group with this name already exists');
+        toast.error('A group with this name already exists');
+        return null;
+      }
+      
       // Generate a new document reference
       const groupRef = doc(groupsCollectionRef);
       console.log('Group document path:', groupRef.path);
@@ -377,20 +387,35 @@ export function useFavoriteGroups() {
     try {
       console.log(`Creating new group "${groupName}" and adding listing ${listingId}`);
       
-      // Create the group
-      const groupId = await createGroup(groupName);
+      // Check if a group with this name already exists
+      const groupsCollectionRef = collection(db, 'users', user.uid, 'favoriteGroups');
+      const existingGroupsQuery = query(groupsCollectionRef, where('name', '==', groupName));
+      const existingGroupsSnapshot = await getDocs(existingGroupsQuery);
       
-      if (!groupId) {
-        console.error('Failed to create group - no group ID returned');
-        throw new Error('Failed to create group');
+      let groupId;
+      
+      if (!existingGroupsSnapshot.empty) {
+        // If group already exists, use that group instead of creating a new one
+        console.log('Group with this name already exists, using existing group');
+        groupId = existingGroupsSnapshot.docs[0].id;
+        toast.info('Added to existing group with the same name');
+      } else {
+        // Create the group
+        groupId = await createGroup(groupName);
+        
+        if (!groupId) {
+          console.error('Failed to create group - no group ID returned');
+          return; // Return early instead of throwing error since createGroup already shows an error toast
+        }
+        
+        console.log(`Group created with ID: ${groupId}, now adding listing`);
       }
-      
-      console.log(`Group created with ID: ${groupId}, now adding listing`);
       
       // Add the listing to the group
       await addToGroup(listingId, groupId);
       
-      console.log('Successfully created group and added listing');
+      console.log('Successfully added listing to group');
+      return groupId;
     } catch (err) {
       console.error('Error creating and adding to group:', err);
       
@@ -408,10 +433,10 @@ export function useFavoriteGroups() {
         } else if (err.message.includes('network')) {
           toast.error('Network error. Please check your internet connection.');
         } else {
-          toast.error(`Failed to create group and add listing: ${err.message}`);
+          toast.error(`Failed to add listing to group: ${err.message}`);
         }
       } else {
-        toast.error('An unknown error occurred while creating group and adding listing');
+        toast.error('An unknown error occurred while adding to group');
       }
       
       throw err;

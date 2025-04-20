@@ -54,13 +54,35 @@ export function AddToGroupDialog({
       if (isCreatingNewGroup) {
         if (!newGroupName.trim()) {
           toast.error("Please enter a group name");
+          setIsLoading(false);
           return;
         }
-        await onCreateAndAddToGroup(listing.id, newGroupName.trim());
-        toast.success(`Added to new group "${newGroupName}"`);
+        
+        // Check if a group with this name already exists
+        const existingGroup = groups.find(g => g.name.toLowerCase() === newGroupName.trim().toLowerCase());
+        
+        if (existingGroup) {
+          // If group exists, ask user if they want to add to existing group
+          const confirmed = window.confirm(`A group named "${newGroupName}" already exists. Add to this group instead?`);
+          
+          if (confirmed) {
+            // Add to existing group
+            await onAddToGroup(listing.id, existingGroup.id);
+            toast.success(`Added to existing group "${existingGroup.name}"`);
+          } else {
+            // User canceled, don't proceed
+            setIsLoading(false);
+            return;
+          }
+        } else {
+          // Create new group and add listing
+          await onCreateAndAddToGroup(listing.id, newGroupName.trim());
+          toast.success(`Added to new group "${newGroupName}"`);
+        }
       } else {
         if (!selectedGroupId) {
           toast.error("Please select a group");
+          setIsLoading(false);
           return;
         }
         await onAddToGroup(listing.id, selectedGroupId);

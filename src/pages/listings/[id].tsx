@@ -766,10 +766,17 @@ export default function ListingPage() {
     if (!listing) return Promise.reject(new Error('No listing available'));
     
     try {
-      // Use the createAndAddToGroup function from the useFavoriteGroups hook
-      const { createAndAddToGroup } = useFavoriteGroups();
-      await createAndAddToGroup(listingId, groupName);
-      setIsFavorited(true);
+      // Dynamically import the hook to avoid SSR issues
+      const { createAndAddToGroup } = await import('@/hooks/useFavoriteGroups').then(mod => mod.useFavoriteGroups());
+      
+      // Create the group and add the listing to it
+      const result = await createAndAddToGroup(listingId, groupName);
+      
+      // Only update favorite status if the operation was successful
+      if (result) {
+        setIsFavorited(true);
+      }
+      
       return Promise.resolve();
     } catch (error) {
       console.error('Error creating group:', error);
