@@ -766,15 +766,18 @@ export default function ListingPage() {
     if (!listing) return Promise.reject(new Error('No listing available'));
     
     try {
-      // Dynamically import the hook to avoid SSR issues
-      const { createAndAddToGroup } = await import('@/hooks/useFavoriteGroups').then(mod => mod.useFavoriteGroups());
+      console.log(`Creating new group "${groupName}" and adding listing ${listingId}`);
       
-      // Create the group and add the listing to it
+      // Use the hook directly instead of dynamically importing it
+      // This ensures we're using the same instance with the proper state
       const result = await createAndAddToGroup(listingId, groupName);
       
       // Only update favorite status if the operation was successful
       if (result) {
         setIsFavorited(true);
+        console.log(`Successfully added listing to new group with ID: ${result}`);
+      } else {
+        console.log('No group ID returned, but operation did not throw an error');
       }
       
       return Promise.resolve();

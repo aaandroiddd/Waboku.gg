@@ -381,7 +381,7 @@ export function useFavoriteGroups() {
   const createAndAddToGroup = useCallback(async (listingId: string, groupName: string) => {
     if (!user) {
       toast.error('Please sign in to create a group');
-      return;
+      return null;
     }
 
     try {
@@ -405,7 +405,7 @@ export function useFavoriteGroups() {
         
         if (!groupId) {
           console.error('Failed to create group - no group ID returned');
-          return; // Return early instead of throwing error since createGroup already shows an error toast
+          return null; // Return early instead of throwing error since createGroup already shows an error toast
         }
         
         console.log(`Group created with ID: ${groupId}, now adding listing`);
@@ -413,6 +413,9 @@ export function useFavoriteGroups() {
       
       // Add the listing to the group
       await addToGroup(listingId, groupId);
+      
+      // Refresh groups to update counts
+      await fetchGroups();
       
       console.log('Successfully added listing to group');
       return groupId;
@@ -441,7 +444,7 @@ export function useFavoriteGroups() {
       
       throw err;
     }
-  }, [user, createGroup, addToGroup]);
+  }, [user, createGroup, addToGroup, fetchGroups]);
 
   useEffect(() => {
     fetchGroups();

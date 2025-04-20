@@ -76,8 +76,17 @@ export function AddToGroupDialog({
           }
         } else {
           // Create new group and add listing
-          await onCreateAndAddToGroup(listing.id, newGroupName.trim());
-          toast.success(`Added to new group "${newGroupName}"`);
+          console.log(`Creating new group "${newGroupName}" and adding listing ${listing.id}`);
+          try {
+            const result = await onCreateAndAddToGroup(listing.id, newGroupName.trim());
+            console.log(`Result from createAndAddToGroup:`, result);
+            toast.success(`Added to new group "${newGroupName}"`);
+          } catch (createError) {
+            console.error("Error in createAndAddToGroup:", createError);
+            toast.error("Failed to create group and add listing");
+            setIsLoading(false);
+            return;
+          }
         }
       } else {
         if (!selectedGroupId) {
