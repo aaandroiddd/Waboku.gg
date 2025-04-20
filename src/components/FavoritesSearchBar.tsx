@@ -58,7 +58,7 @@ export function FavoritesSearchBar({
     const filters: FavoriteFilters = {};
     const newActiveFilters: string[] = [];
     
-    if (selectedGame) {
+    if (selectedGame && selectedGame !== "all-games") {
       filters.game = selectedGame;
       
       // Find the display name for the game
@@ -94,7 +94,7 @@ export function FavoritesSearchBar({
 
   const clearFilter = (filter: string) => {
     if (filter.startsWith("Game:")) {
-      setSelectedGame(undefined);
+      setSelectedGame("all-games");
     } else if (filter.startsWith("Min:")) {
       setMinPrice("");
     } else if (filter.startsWith("Max:")) {
@@ -103,7 +103,7 @@ export function FavoritesSearchBar({
   };
 
   const clearAllFilters = () => {
-    setSelectedGame(undefined);
+    setSelectedGame("all-games");
     setMinPrice("");
     setMaxPrice("");
   };
@@ -156,7 +156,7 @@ export function FavoritesSearchBar({
                     <SelectValue placeholder="Select game" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All Games</SelectItem>
+                    <SelectItem value="all-games">All Games</SelectItem>
                     {MAIN_GAME_CATEGORIES.map((game) => (
                       <SelectItem key={game} value={GAME_MAPPING[game]}>
                         {game}
@@ -215,14 +215,14 @@ export function FavoritesSearchBar({
         {/* Group selector */}
         {onGroupChange && groups.length > 0 && (
           <Select 
-            value={selectedGroup || ""} 
-            onValueChange={(value) => onGroupChange(value || null)}
+            value={selectedGroup || "all-groups"} 
+            onValueChange={(value) => onGroupChange(value === "all-groups" ? null : value)}
           >
             <SelectTrigger className="w-full sm:w-[200px]">
               <SelectValue placeholder="All Groups" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All Groups</SelectItem>
+              <SelectItem value="all-groups">All Groups</SelectItem>
               {groups.map((group) => (
                 <SelectItem key={group.id} value={group.id}>
                   {group.name} {group.count !== undefined && `(${group.count})`}
