@@ -412,12 +412,20 @@ export function useFavoriteGroups() {
       }
       
       // Add the listing to the group
-      await addToGroup(listingId, groupId);
+      try {
+        console.log(`Adding listing ${listingId} to group ${groupId}`);
+        await addToGroup(listingId, groupId);
+        console.log('Successfully added listing to group');
+      } catch (addError) {
+        console.error('Error adding listing to group:', addError);
+        // If adding to group fails, we still want to return the groupId
+        // so the dialog knows the group was created successfully
+        toast.error('Group created but failed to add listing. Please try adding it manually.');
+      }
       
-      // Refresh groups to update counts
+      // Refresh groups to update counts - this is important to ensure UI is updated
       await fetchGroups();
       
-      console.log('Successfully added listing to group');
       return groupId;
     } catch (err) {
       console.error('Error creating and adding to group:', err);

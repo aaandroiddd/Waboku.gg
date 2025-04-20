@@ -776,11 +776,11 @@ export default function ListingPage() {
       if (result) {
         setIsFavorited(true);
         console.log(`Successfully added listing to new group with ID: ${result}`);
+        return Promise.resolve(result);
       } else {
         console.log('No group ID returned, but operation did not throw an error');
+        return Promise.reject(new Error('Failed to create group or add listing'));
       }
-      
-      return Promise.resolve();
     } catch (error) {
       console.error('Error creating group:', error);
       toast.error('Failed to create group');
