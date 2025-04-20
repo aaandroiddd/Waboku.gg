@@ -184,6 +184,84 @@ export function useFavorites() {
       });
     }
   };
+  
+  // Add a favorite directly to a specific group
+  const addFavoriteToGroup = async (listing: Listing, groupId: string | null) => {
+    if (!user) {
+      toast.error('Please sign in to save favorites');
+      saveRedirectState('add_favorite_to_group', { listingId: listing.id, groupId });
+      router.push('/auth/sign-in');
+      return;
+    }
+
+    // Prevent duplicate operations on the same listing
+    if (pendingOperations.has(listing.id)) {
+      console.log('Operation already in progress for listing:', listing.id);
+      return;
+    }
+
+    const favoriteRef = doc(db, 'users', user.uid, 'favorites', listing.id);
+    const isFav = favoriteIds.has(listing.id);
+
+    try {
+      // Mark operation as pending
+      setPendingOperations(prev => new Set([...prev, listing.id]));
+      
+      if (isFav) {
+        // If already a favorite, just update the group
+        await updateDoc(favoriteRef, { groupId });
+        
+        // Update local state
+        setFavorites(prev => 
+          prev.map(fav => 
+            fav.id === listing.id ? { ...fav, groupId } : fav
+          )
+        );
+        
+        toast.success('Updated favorite group');
+      } else {
+        // Optimistically add to favorites
+        setFavoriteIds(prev => new Set([...prev, listing.id]));
+        
+        const newFavorite = {
+          ...listing,
+          groupId
+        } as FavoriteListing;
+        
+        setFavorites(prev => [...prev, newFavorite]);
+        
+        // Then perform the actual operation
+        await setDoc(favoriteRef, {
+          listingId: listing.id,
+          createdAt: new Date(),
+          groupId
+        });
+        
+        toast.success('Added to favorites');
+      }
+    } catch (err) {
+      console.error('Error adding favorite to group:', err);
+      setError(err instanceof Error ? err.message : 'Failed to update favorite');
+      toast.error('Failed to add to favorites');
+      
+      // Revert optimistic updates if not already a favorite
+      if (!isFav) {
+        setFavoriteIds(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(listing.id);
+          return newSet;
+        });
+        setFavorites(prev => prev.filter(f => f.id !== listing.id));
+      }
+    } finally {
+      // Remove from pending operations
+      setPendingOperations(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(listing.id);
+        return newSet;
+      });
+    }
+  };
 
   const updateFavoriteGroup = async (listingId: string, groupId: string | null) => {
     if (!user) {
@@ -272,6 +350,7 @@ export function useFavorites() {
     isLoading,
     error,
     toggleFavorite,
+    addFavoriteToGroup,
     updateFavoriteGroup,
     isFavorite,
     isPending,
