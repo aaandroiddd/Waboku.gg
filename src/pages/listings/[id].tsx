@@ -749,6 +749,8 @@ export default function ListingPage() {
     if (!listing) return;
     
     try {
+      // Use the addFavoriteToGroup function from the useFavorites hook
+      const { addFavoriteToGroup } = useFavorites();
       await addFavoriteToGroup(listing, groupId);
       setIsFavorited(true);
       return Promise.resolve();
@@ -764,6 +766,8 @@ export default function ListingPage() {
     if (!listing) return Promise.reject(new Error('No listing available'));
     
     try {
+      // Use the createAndAddToGroup function from the useFavoriteGroups hook
+      const { createAndAddToGroup } = useFavoriteGroups();
       await createAndAddToGroup(listingId, groupName);
       setIsFavorited(true);
       return Promise.resolve();
