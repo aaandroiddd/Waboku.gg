@@ -155,21 +155,10 @@ export function useFavorites() {
         });
       }
       
-      // Show success toast with action to view favorites
+      // Show success toast only for removal
+      // The add toast is now handled in the component to avoid duplicates
       if (isFav) {
         toast.success('Removed from favorites');
-      } else {
-        toast.success('Added to favorites', {
-          action: {
-            label: "View Favorites",
-            onClick: () => {
-              if (typeof window !== 'undefined') {
-                window.location.href = '/dashboard/favorites';
-              }
-            }
-          },
-          duration: 5000
-        });
       }
       
     } catch (err) {
@@ -262,18 +251,7 @@ export function useFavorites() {
           groupId
         });
         
-        // Show success toast with action to view favorites
-        toast.success('Added to favorites', {
-          action: {
-            label: "View Favorites",
-            onClick: () => {
-              if (typeof window !== 'undefined') {
-                window.location.href = '/dashboard/favorites';
-              }
-            }
-          },
-          duration: 5000
-        });
+        // Toast notification is now handled in the component to avoid duplicates
       }
     } catch (err) {
       console.error('Error adding favorite to group:', err);

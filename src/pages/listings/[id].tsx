@@ -734,11 +734,21 @@ export default function ListingPage() {
         // Then update the backend without triggering a refresh
         toggleFavorite(listing, e);
       } else {
-        // If not a favorite, show group selection dialog
-        setShowGroupDialog(true);
+        // If not a favorite, add it directly and show confirmation
+        setIsFavorited(true);
+        
+        // Update the backend
+        toggleFavorite(listing, e);
+        
+        // Show success toast with action to view favorites
+        toast.success('Added to favorites', {
+          action: {
+            label: "View Favorites",
+            onClick: () => router.push('/dashboard/favorites')
+          },
+          duration: 5000
+        });
       }
-      
-      // Toast messages are handled inside the toggleFavorite function
     } catch (error) {
       console.error('Error toggling favorite:', error);
       toast.error('Failed to update favorites');
