@@ -79,11 +79,22 @@ export function useFavoriteGroups() {
     }
 
     try {
-      const groupRef = doc(collection(db, 'users', user.uid, 'favoriteGroups'));
+      console.log('Creating favorite group with name:', name);
+      
+      // Ensure the favoriteGroups collection exists
+      const groupsCollectionRef = collection(db, 'users', user.uid, 'favoriteGroups');
+      
+      // Generate a new document reference
+      const groupRef = doc(groupsCollectionRef);
+      console.log('Group document path:', groupRef.path);
+      
+      // Create the document with the group data
       await setDoc(groupRef, {
         name,
         createdAt: new Date()
       });
+      
+      console.log('Group created successfully with ID:', groupRef.id);
       
       // Refresh groups
       await fetchGroups();
@@ -91,6 +102,27 @@ export function useFavoriteGroups() {
       return groupRef.id;
     } catch (err) {
       console.error('Error creating favorite group:', err);
+      
+      // Log more detailed error information
+      if (err instanceof Error) {
+        console.error('Error details:', {
+          message: err.message,
+          name: err.name,
+          stack: err.stack
+        });
+        
+        // Show a more specific error message to the user
+        if (err.message.includes('permission-denied')) {
+          toast.error('Permission denied. Please check your account permissions.');
+        } else if (err.message.includes('network')) {
+          toast.error('Network error. Please check your internet connection.');
+        } else {
+          toast.error(`Failed to create group: ${err.message}`);
+        }
+      } else {
+        toast.error('An unknown error occurred while creating the group');
+      }
+      
       throw err;
     }
   }, [user, fetchGroups]);
@@ -102,10 +134,14 @@ export function useFavoriteGroups() {
     }
 
     try {
+      console.log('Renaming group with ID:', groupId, 'to:', newName);
+      
       const groupRef = doc(db, 'users', user.uid, 'favoriteGroups', groupId);
       await updateDoc(groupRef, {
         name: newName
       });
+      
+      console.log('Group renamed successfully');
       
       // Update local state
       setGroups(prevGroups => 
@@ -115,6 +151,29 @@ export function useFavoriteGroups() {
       );
     } catch (err) {
       console.error('Error renaming favorite group:', err);
+      
+      // Log more detailed error information
+      if (err instanceof Error) {
+        console.error('Error details:', {
+          message: err.message,
+          name: err.name,
+          stack: err.stack
+        });
+        
+        // Show a more specific error message to the user
+        if (err.message.includes('permission-denied')) {
+          toast.error('Permission denied. Please check your account permissions.');
+        } else if (err.message.includes('network')) {
+          toast.error('Network error. Please check your internet connection.');
+        } else if (err.message.includes('not-found')) {
+          toast.error('Group not found. It may have been deleted.');
+        } else {
+          toast.error(`Failed to rename group: ${err.message}`);
+        }
+      } else {
+        toast.error('An unknown error occurred while renaming the group');
+      }
+      
       throw err;
     }
   }, [user]);
@@ -126,28 +185,59 @@ export function useFavoriteGroups() {
     }
 
     try {
+      console.log('Deleting group with ID:', groupId);
+      
       // First, update all favorites in this group to have no group
       const favoritesRef = collection(db, 'users', user.uid, 'favorites');
       const favoritesQuery = query(favoritesRef, where('groupId', '==', groupId));
       const favoritesSnapshot = await getDocs(favoritesQuery);
       
-      const batch = writeBatch(db);
+      console.log(`Found ${favoritesSnapshot.size} favorites to update`);
       
-      favoritesSnapshot.docs.forEach(favoriteDoc => {
-        const favoriteRef = doc(db, 'users', user.uid, 'favorites', favoriteDoc.id);
-        batch.update(favoriteRef, { groupId: null });
-      });
-      
-      await batch.commit();
+      if (favoritesSnapshot.size > 0) {
+        const batch = writeBatch(db);
+        
+        favoritesSnapshot.docs.forEach(favoriteDoc => {
+          const favoriteRef = doc(db, 'users', user.uid, 'favorites', favoriteDoc.id);
+          batch.update(favoriteRef, { groupId: null });
+        });
+        
+        await batch.commit();
+        console.log('Updated all favorites to remove group reference');
+      }
       
       // Then delete the group
       const groupRef = doc(db, 'users', user.uid, 'favoriteGroups', groupId);
       await deleteDoc(groupRef);
+      console.log('Group deleted successfully');
       
       // Update local state
       setGroups(prevGroups => prevGroups.filter(group => group.id !== groupId));
     } catch (err) {
       console.error('Error deleting favorite group:', err);
+      
+      // Log more detailed error information
+      if (err instanceof Error) {
+        console.error('Error details:', {
+          message: err.message,
+          name: err.name,
+          stack: err.stack
+        });
+        
+        // Show a more specific error message to the user
+        if (err.message.includes('permission-denied')) {
+          toast.error('Permission denied. Please check your account permissions.');
+        } else if (err.message.includes('network')) {
+          toast.error('Network error. Please check your internet connection.');
+        } else if (err.message.includes('not-found')) {
+          toast.error('Group not found. It may have been deleted already.');
+        } else {
+          toast.error(`Failed to delete group: ${err.message}`);
+        }
+      } else {
+        toast.error('An unknown error occurred while deleting the group');
+      }
+      
       throw err;
     }
   }, [user]);
@@ -159,21 +249,60 @@ export function useFavoriteGroups() {
     }
 
     try {
+      console.log(`Adding listing ${listingId} to group ${groupId}`);
+      
+      // First check if the group exists
+      const groupRef = doc(db, 'users', user.uid, 'favoriteGroups', groupId);
+      const groupDoc = await getDoc(groupRef);
+      
+      if (!groupDoc.exists()) {
+        console.error('Group not found:', groupId);
+        toast.error('The selected group no longer exists');
+        throw new Error('Group not found');
+      }
+      
+      // Then check if the favorite exists
       const favoriteRef = doc(db, 'users', user.uid, 'favorites', listingId);
       const favoriteDoc = await getDoc(favoriteRef);
       
       if (!favoriteDoc.exists()) {
+        console.error('Favorite not found:', listingId);
+        toast.error('The favorite listing no longer exists');
         throw new Error('Favorite not found');
       }
       
+      // Update the favorite with the group ID
       await updateDoc(favoriteRef, {
         groupId
       });
+      
+      console.log('Successfully added listing to group');
       
       // Update group counts
       await fetchGroups();
     } catch (err) {
       console.error('Error adding to group:', err);
+      
+      // Log more detailed error information
+      if (err instanceof Error) {
+        console.error('Error details:', {
+          message: err.message,
+          name: err.name,
+          stack: err.stack
+        });
+        
+        // Show a more specific error message to the user
+        if (err.message.includes('permission-denied')) {
+          toast.error('Permission denied. Please check your account permissions.');
+        } else if (err.message.includes('network')) {
+          toast.error('Network error. Please check your internet connection.');
+        } else if (!err.message.includes('Group not found') && !err.message.includes('Favorite not found')) {
+          toast.error(`Failed to add to group: ${err.message}`);
+        }
+      } else {
+        toast.error('An unknown error occurred while adding to group');
+      }
+      
       throw err;
     }
   }, [user, fetchGroups]);
@@ -185,21 +314,56 @@ export function useFavoriteGroups() {
     }
 
     try {
+      console.log(`Removing listing ${listingId} from group`);
+      
       const favoriteRef = doc(db, 'users', user.uid, 'favorites', listingId);
       const favoriteDoc = await getDoc(favoriteRef);
       
       if (!favoriteDoc.exists()) {
+        console.error('Favorite not found:', listingId);
+        toast.error('The favorite listing no longer exists');
         throw new Error('Favorite not found');
       }
       
+      // Check if the favorite is actually in a group
+      const favoriteData = favoriteDoc.data();
+      if (!favoriteData.groupId) {
+        console.log('Listing is not in any group, no need to remove');
+        return;
+      }
+      
+      // Update the favorite to remove the group ID
       await updateDoc(favoriteRef, {
         groupId: null
       });
+      
+      console.log('Successfully removed listing from group');
       
       // Update group counts
       await fetchGroups();
     } catch (err) {
       console.error('Error removing from group:', err);
+      
+      // Log more detailed error information
+      if (err instanceof Error) {
+        console.error('Error details:', {
+          message: err.message,
+          name: err.name,
+          stack: err.stack
+        });
+        
+        // Show a more specific error message to the user
+        if (err.message.includes('permission-denied')) {
+          toast.error('Permission denied. Please check your account permissions.');
+        } else if (err.message.includes('network')) {
+          toast.error('Network error. Please check your internet connection.');
+        } else if (!err.message.includes('Favorite not found')) {
+          toast.error(`Failed to remove from group: ${err.message}`);
+        }
+      } else {
+        toast.error('An unknown error occurred while removing from group');
+      }
+      
       throw err;
     }
   }, [user, fetchGroups]);
@@ -211,17 +375,45 @@ export function useFavoriteGroups() {
     }
 
     try {
+      console.log(`Creating new group "${groupName}" and adding listing ${listingId}`);
+      
       // Create the group
       const groupId = await createGroup(groupName);
       
       if (!groupId) {
+        console.error('Failed to create group - no group ID returned');
         throw new Error('Failed to create group');
       }
       
+      console.log(`Group created with ID: ${groupId}, now adding listing`);
+      
       // Add the listing to the group
       await addToGroup(listingId, groupId);
+      
+      console.log('Successfully created group and added listing');
     } catch (err) {
       console.error('Error creating and adding to group:', err);
+      
+      // Log more detailed error information
+      if (err instanceof Error) {
+        console.error('Error details:', {
+          message: err.message,
+          name: err.name,
+          stack: err.stack
+        });
+        
+        // Show a more specific error message to the user
+        if (err.message.includes('permission-denied')) {
+          toast.error('Permission denied. Please check your account permissions.');
+        } else if (err.message.includes('network')) {
+          toast.error('Network error. Please check your internet connection.');
+        } else {
+          toast.error(`Failed to create group and add listing: ${err.message}`);
+        }
+      } else {
+        toast.error('An unknown error occurred while creating group and adding listing');
+      }
+      
       throw err;
     }
   }, [user, createGroup, addToGroup]);
