@@ -3,13 +3,13 @@ import { getDoc, doc, getDocs, query, collection, where, limit } from 'firebase/
 import { getDatabase, ref, get } from 'firebase/database';
 import { db, getFirebaseServices } from '@/lib/firebase';
 
-// Global flag to track if we're in messages page (where Firestore is disabled)
+// Global flag to track if we're in messages page (where Realtime Database is prioritized)
 let isInMessagesPage = false;
 
-// Set this flag when in messages page
+// Set this flag when in messages page to prioritize Realtime Database
 export const setMessagesPageMode = (value: boolean) => {
   isInMessagesPage = value;
-  console.log(`[useUserData] Messages page mode ${value ? 'enabled' : 'disabled'}`);
+  console.log(`[useUserData] Messages page mode ${value ? 'enabled' : 'disabled'} (Realtime Database prioritized)`);
 };
 
 // Global cache to persist across renders and components
@@ -157,23 +157,67 @@ export const prefetchUserData = async (userIds: string[]) => {
       
       if (notFoundIds.length > 0) {
         if (isInMessagesPage) {
-          // In messages page, we already tried RTDB, so we're done
-          // We don't try Firestore because it's disabled in messages page
-          
-          // Add fallback data for users not found
-          notFoundIds.forEach(userId => {
-            if (!userCache[userId]) {
-              const fallbackData = {
-                username: `Unknown User`,
-                avatarUrl: null
-              };
-              
-              userCache[userId] = {
-                data: fallbackData,
-                timestamp: Date.now() - (CACHE_EXPIRATION / 2) // Expire sooner
-              };
-            }
-          });
+          // In messages page, we prioritize RTDB but still try Firestore as a fallback
+          // for user profiles that might only exist in Firestore
+          try {
+            const usersQuery = query(
+              collection(db, 'users'),
+              where('__name__', 'in', notFoundIds),
+              limit(BATCH_SIZE)
+            );
+            
+            const querySnapshot = await getDocs(usersQuery);
+            
+            querySnapshot.forEach(doc => {
+              if (doc.exists()) {
+                const data = doc.data();
+                const userData = {
+                  username: data.displayName || data.username || 'Unknown User',
+                  avatarUrl: data.avatarUrl || data.photoURL || null
+                };
+                
+                // Update cache
+                userCache[doc.id] = {
+                  data: userData,
+                  timestamp: Date.now()
+                };
+                
+                fetchedIds.add(doc.id);
+              }
+            });
+            
+            // Add fallback data for any remaining users not found in either database
+            notFoundIds.filter(id => !fetchedIds.has(id)).forEach(userId => {
+              if (!userCache[userId]) {
+                const fallbackData = {
+                  username: `Unknown User`,
+                  avatarUrl: null
+                };
+                
+                userCache[userId] = {
+                  data: fallbackData,
+                  timestamp: Date.now() - (CACHE_EXPIRATION / 2) // Expire sooner
+                };
+              }
+            });
+          } catch (firestoreError) {
+            console.error('[prefetchUserData] Error fetching from Firestore in messages page:', firestoreError);
+            
+            // Add fallback data for users not found if Firestore query fails
+            notFoundIds.forEach(userId => {
+              if (!userCache[userId]) {
+                const fallbackData = {
+                  username: `Unknown User`,
+                  avatarUrl: null
+                };
+                
+                userCache[userId] = {
+                  data: fallbackData,
+                  timestamp: Date.now() - (CACHE_EXPIRATION / 2) // Expire sooner
+                };
+              }
+            });
+          }
         } else {
           // Not in messages page, we tried Firestore first, now try RTDB
           if (getFirebaseServices().database) {
@@ -307,9 +351,8 @@ export function useUserData(userId: string, initialData?: any) {
             }
           }
           
-          // If not found in RTDB and not in messages page, try Firestore
-          // Skip Firestore if we're in messages page where it's disabled
-          if (!isInMessagesPage) {
+          // Try Firestore for both regular and messages page mode
+          try {
             const userDoc = await getDoc(doc(db, 'users', userId));
             
             if (userDoc.exists()) {
@@ -331,48 +374,38 @@ export function useUserData(userId: string, initialData?: any) {
               if (isMounted.current) {
                 setUserData(userData);
               }
-            } else {
-              // If we reach here and still have initialData, use that
-              if (initialData && isMounted.current) {
-                setUserData(initialData);
-                
-                // Cache the initialData too if it has a username
-                if (initialData.username && initialData.username !== 'Unknown User') {
-                  userCache[userId] = {
-                    data: initialData,
-                    timestamp: Date.now()
-                  };
-                  throttledPersistCache();
-                }
-              }
+              return; // Exit early since we found the user
             }
-          } else {
-            // In messages page mode, if we couldn't find in RTDB, use initialData or fallback
-            if (initialData && isMounted.current) {
-              setUserData(initialData);
-              
-              // Cache the initialData too if it has a username
-              if (initialData.username && initialData.username !== 'Unknown User') {
-                userCache[userId] = {
-                  data: initialData,
-                  timestamp: Date.now()
-                };
-                throttledPersistCache();
-              }
-            } else if (isMounted.current) {
-              // Last resort fallback for messages page
-              const fallbackData = {
-                username: `Unknown User`,
-                avatarUrl: null
-              };
-              setUserData(fallbackData);
-              
-              // Cache this fallback with a shorter expiration
+          } catch (firestoreError) {
+            console.error('[useUserData] Error fetching from Firestore:', firestoreError);
+            // Continue to fallbacks
+          }
+          
+          // If we reach here and still have initialData, use that
+          if (initialData && isMounted.current) {
+            setUserData(initialData);
+            
+            // Cache the initialData too if it has a username
+            if (initialData.username && initialData.username !== 'Unknown User') {
               userCache[userId] = {
-                data: fallbackData,
-                timestamp: Date.now() - (CACHE_EXPIRATION / 2) // Expire sooner
+                data: initialData,
+                timestamp: Date.now()
               };
+              throttledPersistCache();
             }
+          } else if (isMounted.current) {
+            // Last resort fallback
+            const fallbackData = {
+              username: `Unknown User`,
+              avatarUrl: null
+            };
+            setUserData(fallbackData);
+            
+            // Cache this fallback with a shorter expiration
+            userCache[userId] = {
+              data: fallbackData,
+              timestamp: Date.now() - (CACHE_EXPIRATION / 2) // Expire sooner
+            };
           }
         } catch (err: any) {
           if (isMounted.current) {
