@@ -8,6 +8,7 @@ import { SellerBadge } from '../SellerBadge';
 import { AdminBadge } from '../AdminBadge';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { GlobalLoading } from '@/components/GlobalLoading';
+import { DashboardLoadingScreen } from '@/components/DashboardLoadingScreen';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/router';
 import { Card, CardContent } from '@/components/ui/card';
@@ -55,11 +56,7 @@ export const DashboardLayout = ({ children }: { children: ReactNode }) => {
 
   // Show loading state
   if (isLoading) {
-    return (
-      <div className="min-h-screen">
-        <GlobalLoading fullScreen={true} message="Loading dashboard..." />
-      </div>
-    );
+    return <DashboardLoadingScreen />;
   }
   
   // Show error state

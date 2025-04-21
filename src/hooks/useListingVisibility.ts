@@ -96,12 +96,26 @@ export function useListingVisibility(listings: Listing[]) {
           expiresAt = parseDate(listing.expiresAt, null);
         }
         
-        // If we couldn't parse the date, skip this listing
+        // If we couldn't parse the date, calculate it from createdAt and accountTier
         if (!expiresAt) {
-          console.error(`Failed to parse expiresAt date for listing ${listing.id}:`, listing.expiresAt);
-          filteredOutReasons.current[listing.id] = 'Invalid expiration date';
-          problematicListingIds.current.add(listing.id);
-          return false;
+          console.log(`No valid expiresAt for listing ${listing.id}, calculating from createdAt and accountTier`);
+          
+          try {
+            // Parse createdAt date
+            const createdAt = parseDate(listing.createdAt);
+            
+            // Calculate expiration based on account tier
+            // Free tier: 48 hours, Premium tier: 720 hours (30 days)
+            const tierDuration = (listing.accountTier === 'premium' ? 720 : 48) * 60 * 60 * 1000;
+            expiresAt = new Date(createdAt.getTime() + tierDuration);
+            
+            console.log(`Calculated expiration for listing ${listing.id}: ${expiresAt.toISOString()}`);
+          } catch (e) {
+            console.error(`Failed to calculate expiration date for listing ${listing.id}:`, e);
+            filteredOutReasons.current[listing.id] = 'Could not calculate expiration date';
+            problematicListingIds.current.add(listing.id);
+            return false;
+          }
         }
         
         // Check if the listing has expired

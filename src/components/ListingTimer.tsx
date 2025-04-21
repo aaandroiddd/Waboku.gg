@@ -84,7 +84,22 @@ export function ListingTimer({ createdAt, archivedAt, accountTier, status, listi
     }
   }, [router, toast, isProcessing, status, listingId]);
 
+  // Add a state to track if we've initialized the timer
+  const [isInitialized, setIsInitialized] = useState(false);
+
   useEffect(() => {
+    // Set a small delay before initializing the timer to prevent showing expired state on initial load
+    const initTimer = setTimeout(() => {
+      setIsInitialized(true);
+    }, 500);
+    
+    return () => clearTimeout(initTimer);
+  }, []);
+
+  useEffect(() => {
+    // Skip calculation until initialized
+    if (!isInitialized) return;
+    
     const calculateTimeLeft = () => {
       const now = Date.now();
       let startTime: number;
@@ -221,7 +236,7 @@ export function ListingTimer({ createdAt, archivedAt, accountTier, status, listi
     const timer = setInterval(calculateTimeLeft, 1000);
 
     return () => clearInterval(timer);
-  }, [createdAt, archivedAt, accountTier, status]);
+  }, [createdAt, archivedAt, accountTier, status, isInitialized]);
 
   const formatTimeLeft = () => {
     const days = Math.floor(timeLeft / (1000 * 60 * 60 * 24));
@@ -236,6 +251,23 @@ export function ListingTimer({ createdAt, archivedAt, accountTier, status, listi
       return `${minutes}m`;
     }
   };
+
+  // Show a loading state while initializing
+  if (!isInitialized) {
+    return (
+      <div className="flex flex-col gap-2">
+        <Alert>
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            Loading listing status...
+          </AlertDescription>
+        </Alert>
+        <div className="h-2 w-full bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+          <div className="h-full bg-blue-500 animate-pulse rounded-full" style={{ width: '30%' }} />
+        </div>
+      </div>
+    );
+  }
 
   if (isExpired && status === 'active') {
     return (
