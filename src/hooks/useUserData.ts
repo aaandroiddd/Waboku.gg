@@ -164,7 +164,7 @@ export const prefetchUserData = async (userIds: string[]) => {
           notFoundIds.forEach(userId => {
             if (!userCache[userId]) {
               const fallbackData = {
-                username: `User ${userId.substring(0, 4)}`,
+                username: `Unknown User`,
                 avatarUrl: null
               };
               
@@ -362,7 +362,7 @@ export function useUserData(userId: string, initialData?: any) {
             } else if (isMounted.current) {
               // Last resort fallback for messages page
               const fallbackData = {
-                username: `User ${userId.substring(0, 4)}`,
+                username: `Unknown User`,
                 avatarUrl: null
               };
               setUserData(fallbackData);
