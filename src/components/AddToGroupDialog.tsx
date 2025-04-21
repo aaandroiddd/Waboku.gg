@@ -1,3 +1,4 @@
+// components/AddToGroupDialog.tsx
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -29,8 +30,8 @@ interface AddToGroupDialogProps {
   onClose: () => void;
   listing: Listing | null;
   groups: FavoriteGroup[];
-  onAddToGroup: (listingId: string, groupId: string) => Promise<void>;
-  onCreateAndAddToGroup: (listingId: string, groupName: string) => Promise<void>;
+  onAddToGroup: (listingId: string, groupId: string) => Promise<boolean>;
+  onCreateAndAddToGroup: (listingId: string, groupName: string) => Promise<string | undefined>;
 }
 
 export function AddToGroupDialog({
@@ -69,22 +70,26 @@ export function AddToGroupDialog({
           
           if (confirmed) {
             // Add to existing group
-            await onAddToGroup(listing.id, existingGroup.id);
+            const success = await onAddToGroup(listing.id, existingGroup.id);
             
-            // Close dialog first
-            setSelectedGroupId("");
-            setNewGroupName("");
-            setIsCreatingNewGroup(false);
-            onClose();
-            
-            // Then show success toast with action to view favorites
-            toast.success(`Added to existing group "${existingGroup.name}"`, {
-              action: {
-                label: "View Favorites",
-                onClick: () => router.push("/dashboard/favorites")
-              },
-              duration: 5000
-            });
+            if (success) {
+              // Close dialog first
+              setSelectedGroupId("");
+              setNewGroupName("");
+              setIsCreatingNewGroup(false);
+              onClose();
+              
+              // Then show success toast with action to view favorites
+              toast.success(`Added to existing group "${existingGroup.name}"`, {
+                action: {
+                  label: "View Favorites",
+                  onClick: () => router.push("/dashboard/favorites")
+                },
+                duration: 5000
+              });
+            } else {
+              toast.error("Failed to add to group");
+            }
           } else {
             // User canceled, don't proceed
             setIsLoading(false);
@@ -92,12 +97,10 @@ export function AddToGroupDialog({
           }
         } else {
           // Create new group and add listing
-          console.log(`Creating new group "${newGroupName}" and adding listing ${listing.id}`);
           try {
-            const result = await onCreateAndAddToGroup(listing.id, newGroupName.trim());
-            console.log(`Result from createAndAddToGroup:`, result);
+            const newGroupId = await onCreateAndAddToGroup(listing.id, newGroupName.trim());
             
-            if (result) {
+            if (newGroupId) {
               // Close dialog first
               setSelectedGroupId("");
               setNewGroupName("");
@@ -115,13 +118,10 @@ export function AddToGroupDialog({
             } else {
               console.error("Failed to create group and add listing: No group ID returned");
               toast.error("Failed to create group and add listing");
-              setIsLoading(false);
             }
           } catch (createError) {
             console.error("Error in createAndAddToGroup:", createError);
             toast.error("Failed to create group and add listing");
-            setIsLoading(false);
-            return;
           }
         }
       } else {
@@ -130,28 +130,33 @@ export function AddToGroupDialog({
           setIsLoading(false);
           return;
         }
-        await onAddToGroup(listing.id, selectedGroupId);
-        const groupName = groups.find(g => g.id === selectedGroupId)?.name || "selected group";
         
-        // Close dialog first
-        setSelectedGroupId("");
-        setNewGroupName("");
-        setIsCreatingNewGroup(false);
-        onClose();
+        const success = await onAddToGroup(listing.id, selectedGroupId);
         
-        // Then show success toast with action to view favorites
-        toast.success(`Added to ${groupName}`, {
-          action: {
-            label: "View Favorites",
-            onClick: () => router.push("/dashboard/favorites")
-          },
-          duration: 5000
-        });
+        if (success) {
+          const groupName = groups.find(g => g.id === selectedGroupId)?.name || "selected group";
+          
+          // Close dialog first
+          setSelectedGroupId("");
+          setNewGroupName("");
+          setIsCreatingNewGroup(false);
+          onClose();
+          
+          // Then show success toast with action to view favorites
+          toast.success(`Added to ${groupName}`, {
+            action: {
+              label: "View Favorites",
+              onClick: () => router.push("/dashboard/favorites")
+            },
+            duration: 5000
+          });
+        } else {
+          toast.error("Failed to add to group");
+        }
       }
     } catch (error) {
       console.error("Error adding to group:", error);
       toast.error("Failed to add to group");
-      setIsLoading(false);
     } finally {
       setIsLoading(false);
     }
