@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { database, getFirebaseServices } from '@/lib/firebase';
 import { ref, onValue, get, getDatabase, goOnline, set } from 'firebase/database';
 import { toast } from '@/components/ui/use-toast';
+import { setMessagesPageMode } from '@/hooks/useUserData';
 
 /**
  * This component initializes the messages page by ensuring that:
@@ -206,6 +207,10 @@ export function MessagesPageInitializer() {
   useEffect(() => {
     // Run initialization on component mount
     console.log('[MessagesPageInitializer] Initializing messages page');
+    
+    // Set messages page mode to true to prioritize RTDB over Firestore
+    setMessagesPageMode(true);
+    
     verifyDatabaseConnection();
 
     // Event listeners for online/offline events
@@ -262,6 +267,9 @@ export function MessagesPageInitializer() {
       window.removeEventListener('offline', handleOffline);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       cleanup();
+      
+      // Reset messages page mode when component unmounts
+      setMessagesPageMode(false);
     };
   }, []);
 
