@@ -225,6 +225,12 @@ export default function FavoritesPage() {
                     onCreateGroup={createGroup}
                     onRenameGroup={renameGroup}
                     onDeleteGroup={deleteGroup}
+                    onGroupClick={(groupId) => {
+                      // Set the filter to show this group's favorites
+                      setFilters(prev => ({ ...prev, groupId }));
+                      // Switch to the "All Favorites" tab to show the filtered results
+                      setSelectedTab('all');
+                    }}
                   />
                 </CardContent>
               </Card>
@@ -240,6 +246,7 @@ export default function FavoritesPage() {
           groups={groups}
           onAddToGroup={addToGroup}
           onCreateAndAddToGroup={createAndAddToGroup}
+          defaultGroupId={groups.find(g => g.name === 'Default')?.id}
         />
       </DashboardLayout>
     </RouteGuard>

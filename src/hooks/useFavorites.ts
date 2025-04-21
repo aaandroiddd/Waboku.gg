@@ -104,7 +104,7 @@ export function useFavorites() {
   }, [user]);
 
   // UPDATED: Modified toggleFavorite function to show dialog when adding a new favorite
-  const toggleFavorite = async (listing: Listing, event?: React.MouseEvent) => {
+  const toggleFavorite = async (listing: Listing, event?: React.MouseEvent, defaultGroupId?: string | null) => {
     // Prevent event propagation if event is provided
     if (event) {
       event.preventDefault();

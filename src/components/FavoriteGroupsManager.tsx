@@ -30,6 +30,7 @@ interface FavoriteGroupsManagerProps {
   onCreateGroup: (name: string) => Promise<void>;
   onRenameGroup: (id: string, name: string) => Promise<void>;
   onDeleteGroup: (id: string) => Promise<void>;
+  onGroupClick?: (groupId: string) => void;
 }
 
 export function FavoriteGroupsManager({
@@ -37,6 +38,7 @@ export function FavoriteGroupsManager({
   onCreateGroup,
   onRenameGroup,
   onDeleteGroup,
+  onGroupClick
 }: FavoriteGroupsManagerProps) {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -169,7 +171,8 @@ export function FavoriteGroupsManager({
           groups.map((group) => (
             <div
               key={group.id}
-              className="flex items-center justify-between p-3 rounded-md border"
+              className="flex items-center justify-between p-3 rounded-md border hover:bg-accent/50 cursor-pointer"
+              onClick={() => onGroupClick && onGroupClick(group.id)}
             >
               <div className="flex items-center gap-2">
                 <Folder className="h-5 w-5 text-muted-foreground" />
@@ -182,18 +185,31 @@ export function FavoriteGroupsManager({
               </div>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-8 w-8">
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-8 w-8"
+                    onClick={(e) => e.stopPropagation()} // Prevent triggering group click
+                  >
                     <MoreVertical className="h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => openEditDialog(group)}>
+                  <DropdownMenuItem 
+                    onClick={(e) => {
+                      e.stopPropagation(); // Prevent triggering group click
+                      openEditDialog(group);
+                    }}
+                  >
                     <Edit className="h-4 w-4 mr-2" />
                     Rename
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     className="text-destructive"
-                    onClick={() => openDeleteDialog(group)}
+                    onClick={(e) => {
+                      e.stopPropagation(); // Prevent triggering group click
+                      openDeleteDialog(group);
+                    }}
                   >
                     <Trash className="h-4 w-4 mr-2" />
                     Delete

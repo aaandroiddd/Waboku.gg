@@ -32,6 +32,7 @@ interface AddToGroupDialogProps {
   groups: FavoriteGroup[];
   onAddToGroup: (listingId: string, groupId: string) => Promise<boolean>;
   onCreateAndAddToGroup: (listingId: string, groupName: string) => Promise<string | undefined>;
+  defaultGroupId?: string | null;
 }
 
 export function AddToGroupDialog({
@@ -41,12 +42,20 @@ export function AddToGroupDialog({
   groups,
   onAddToGroup,
   onCreateAndAddToGroup,
+  defaultGroupId
 }: AddToGroupDialogProps) {
   const router = useRouter();
   const [selectedGroupId, setSelectedGroupId] = useState<string>("");
   const [newGroupName, setNewGroupName] = useState<string>("");
   const [isCreatingNewGroup, setIsCreatingNewGroup] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  
+  // Set default group when dialog opens
+  useEffect(() => {
+    if (isOpen && defaultGroupId && !selectedGroupId) {
+      setSelectedGroupId(defaultGroupId);
+    }
+  }, [isOpen, defaultGroupId, selectedGroupId]);
 
   const handleAddToGroup = async () => {
     if (!listing) return;

@@ -27,6 +27,7 @@ export function useFavoriteGroups() {
   const [groups, setGroups] = useState<FavoriteGroup[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [defaultGroupId, setDefaultGroupId] = useState<string | null>(null);
 
   const fetchGroups = useCallback(async () => {
     if (!user) {
@@ -43,6 +44,7 @@ export function useFavoriteGroups() {
       const groupsSnapshot = await getDocs(groupsRef);
       
       const groupsData: FavoriteGroup[] = [];
+      let defaultGroup: FavoriteGroup | null = null;
       
       for (const groupDoc of groupsSnapshot.docs) {
         const groupData = groupDoc.data();
@@ -52,16 +54,60 @@ export function useFavoriteGroups() {
         const favoritesQuery = query(favoritesRef, where('groupId', '==', groupDoc.id));
         const favoritesSnapshot = await getDocs(favoritesQuery);
         
-        groupsData.push({
+        const group = {
           id: groupDoc.id,
           name: groupData.name,
           createdAt: groupData.createdAt?.toDate() || new Date(),
           count: favoritesSnapshot.size
-        });
+        };
+        
+        // Check if this is the default group
+        if (groupData.name === 'Default') {
+          defaultGroup = group;
+          setDefaultGroupId(groupDoc.id);
+        }
+        
+        groupsData.push(group);
       }
       
-      // Sort groups by name
-      groupsData.sort((a, b) => a.name.localeCompare(b.name));
+      // Create default group if it doesn't exist
+      if (!defaultGroup && user) {
+        try {
+          console.log('Creating default favorite group');
+          
+          // Generate a new document reference
+          const defaultGroupRef = doc(groupsRef);
+          
+          // Create the document with the group data
+          await setDoc(defaultGroupRef, {
+            name: 'Default',
+            createdAt: new Date(),
+            isDefault: true
+          });
+          
+          console.log('Default group created successfully with ID:', defaultGroupRef.id);
+          
+          // Add to groups data
+          const newDefaultGroup = {
+            id: defaultGroupRef.id,
+            name: 'Default',
+            createdAt: new Date(),
+            count: 0
+          };
+          
+          groupsData.push(newDefaultGroup);
+          setDefaultGroupId(defaultGroupRef.id);
+        } catch (err) {
+          console.error('Error creating default group:', err);
+        }
+      }
+      
+      // Sort groups by name, but put Default first
+      groupsData.sort((a, b) => {
+        if (a.name === 'Default') return -1;
+        if (b.name === 'Default') return 1;
+        return a.name.localeCompare(b.name);
+      });
       
       setGroups(groupsData);
     } catch (err) {
@@ -486,6 +532,7 @@ export function useFavoriteGroups() {
     addToGroup,
     removeFromGroup,
     createAndAddToGroup,
-    refresh: fetchGroups
+    refresh: fetchGroups,
+    defaultGroupId
   };
 }
