@@ -1,361 +1,283 @@
-import React, { useEffect, useState } from 'react';
-import { getDatabase, ref, get, set, onValue } from 'firebase/database';
+import React, { useState, useEffect } from 'react';
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { useToast } from '@/components/ui/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
-import { getFirebaseServices } from '@/lib/firebase';
-import { Button } from './ui/button';
-import { Card } from './ui/card';
-import { Alert, AlertDescription, AlertTitle } from './ui/alert';
-import { useToast } from './ui/use-toast';
+import { getDatabase, ref, push, set, get, onValue } from 'firebase/database';
+import { database } from '@/lib/firebase';
 
-/**
- * This component tests the behavior of message threads when deleted
- * It allows us to:
- * 1. Check if a deleted thread is recreated when a new message is sent
- * 2. Modify the behavior if needed
- */
 export function MessageThreadTest() {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [testResults, setTestResults] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [testChat, setTestChat] = useState<any>(null);
+  const [receiverId, setReceiverId] = useState('');
+  const [messageText, setMessageText] = useState('');
+  const [chatId, setChatId] = useState('');
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+  const [debugInfo, setDebugInfo] = useState<any>({});
+  const [messages, setMessages] = useState<any[]>([]);
 
-  // Function to create a test chat
-  const createTestChat = async () => {
-    if (!user) {
-      toast({
-        title: "Error",
-        description: "You must be signed in to run this test",
-        variant: "destructive"
-      });
+  // Load messages when chatId changes
+  useEffect(() => {
+    if (!chatId || !database) return;
+    
+    const messagesRef = ref(database, `messages/${chatId}`);
+    const unsubscribe = onValue(messagesRef, (snapshot) => {
+      if (snapshot.exists()) {
+        const messagesData = snapshot.val();
+        const messagesList = Object.entries(messagesData).map(([id, data]: [string, any]) => ({
+          id,
+          ...data
+        }));
+        setMessages(messagesList);
+      } else {
+        setMessages([]);
+      }
+    });
+    
+    return () => unsubscribe();
+  }, [chatId]);
+
+  const createChat = async () => {
+    if (!user || !receiverId) {
+      setError('User ID and receiver ID are required');
       return;
     }
 
-    setIsLoading(true);
     try {
-      const { database } = getFirebaseServices();
-      if (!database) {
-        throw new Error("Database not initialized");
-      }
-
-      // Create a test chat with the current user as both participants (for testing purposes)
-      const chatId = `test_${Date.now()}`;
-      const chatRef = ref(database, `chats/${chatId}`);
+      setError('');
+      setSuccess('');
+      setDebugInfo({});
       
-      // Create chat data
-      const chatData = {
-        participants: {
-          [user.uid]: true,
-          "test_receiver_id": true
-        },
-        createdAt: Date.now(),
-        lastMessage: {
-          content: "This is a test message",
-          senderId: user.uid,
-          receiverId: "test_receiver_id",
-          timestamp: Date.now(),
-          read: false,
-          type: "text"
+      // Check if chat already exists
+      const db = getDatabase();
+      const chatsRef = ref(db, 'chats');
+      const chatsSnapshot = await get(chatsRef);
+      
+      let existingChatId = null;
+      
+      if (chatsSnapshot.exists()) {
+        const chats = chatsSnapshot.val();
+        
+        // Find a chat where both users are participants
+        for (const [id, chat] of Object.entries(chats)) {
+          const chatData = chat as any;
+          if (
+            chatData.participants && 
+            chatData.participants[user.uid] && 
+            chatData.participants[receiverId]
+          ) {
+            existingChatId = id;
+            break;
+          }
         }
+      }
+      
+      if (existingChatId) {
+        setChatId(existingChatId);
+        setSuccess(`Using existing chat: ${existingChatId}`);
+        setDebugInfo({ chatId: existingChatId, action: 'using_existing' });
+        return existingChatId;
+      }
+      
+      // Create a new chat
+      const newChatRef = push(ref(db, 'chats'));
+      const newChatId = newChatRef.key;
+      
+      // Create participants object with both users
+      const participants: Record<string, boolean> = {
+        [user.uid]: true,
+        [receiverId]: true
       };
       
-      // Set the chat in the database
-      await set(chatRef, chatData);
+      const chatData = {
+        participants,
+        createdAt: Date.now()
+      };
       
-      // Create a test message
-      const messageRef = ref(database, `messages/${chatId}/msg1`);
-      const messageData = {
-        content: "This is a test message",
+      await set(newChatRef, chatData);
+      
+      setChatId(newChatId || '');
+      setSuccess(`Chat created successfully: ${newChatId}`);
+      setDebugInfo({ chatId: newChatId, action: 'created_new', data: chatData });
+      
+      return newChatId;
+    } catch (error) {
+      console.error('Error creating chat:', error);
+      setError(`Error creating chat: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      setDebugInfo({ error: error instanceof Error ? error.message : 'Unknown error' });
+      return null;
+    }
+  };
+
+  const sendMessage = async () => {
+    if (!user || !receiverId || !messageText.trim()) {
+      setError('User ID, receiver ID, and message text are required');
+      return;
+    }
+
+    try {
+      setError('');
+      setSuccess('');
+      
+      // Ensure we have a chat ID
+      const activeChatId = chatId || await createChat();
+      if (!activeChatId) {
+        setError('Failed to create or get chat ID');
+        return;
+      }
+      
+      // Create the message object
+      const message = {
         senderId: user.uid,
-        receiverId: "test_receiver_id",
+        receiverId: receiverId,
+        content: messageText.trim(),
+        type: 'text',
         timestamp: Date.now(),
-        read: false,
-        type: "text"
+        read: false
       };
       
-      await set(messageRef, messageData);
-      
-      setTestChat({ id: chatId, ...chatData });
-      setTestResults("Test chat created successfully. You can now mark it as deleted and test if new messages recreate it.");
-      
-      toast({
-        title: "Success",
-        description: "Test chat created successfully",
-      });
-    } catch (error) {
-      console.error("Error creating test chat:", error);
-      setTestResults(`Error creating test chat: ${error instanceof Error ? error.message : String(error)}`);
-      
-      toast({
-        title: "Error",
-        description: `Failed to create test chat: ${error instanceof Error ? error.message : String(error)}`,
-        variant: "destructive"
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Function to mark the test chat as deleted
-  const markChatAsDeleted = async () => {
-    if (!user || !testChat) {
-      toast({
-        title: "Error",
-        description: "No test chat available or user not signed in",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      const { database } = getFirebaseServices();
-      if (!database) {
-        throw new Error("Database not initialized");
-      }
-
-      // Mark the chat as deleted for the current user
-      const chatRef = ref(database, `chats/${testChat.id}/deletedBy/${user.uid}`);
-      await set(chatRef, true);
-      
-      setTestResults("Chat marked as deleted. Now send a test message to see if it recreates the thread.");
-      
-      toast({
-        title: "Success",
-        description: "Chat marked as deleted",
-      });
-    } catch (error) {
-      console.error("Error marking chat as deleted:", error);
-      setTestResults(`Error marking chat as deleted: ${error instanceof Error ? error.message : String(error)}`);
-      
-      toast({
-        title: "Error",
-        description: `Failed to mark chat as deleted: ${error instanceof Error ? error.message : String(error)}`,
-        variant: "destructive"
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Function to send a new message to the deleted chat
-  const sendNewMessage = async () => {
-    if (!user || !testChat) {
-      toast({
-        title: "Error",
-        description: "No test chat available or user not signed in",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      const { database } = getFirebaseServices();
-      if (!database) {
-        throw new Error("Database not initialized");
-      }
-
-      // First, check if the chat is marked as deleted
-      const chatRef = ref(database, `chats/${testChat.id}`);
-      const chatSnapshot = await get(chatRef);
-      const chatData = chatSnapshot.val();
-      
-      if (!chatData) {
-        throw new Error("Test chat not found");
-      }
-      
-      const isDeleted = chatData.deletedBy && chatData.deletedBy[user.uid];
-      
-      if (!isDeleted) {
-        throw new Error("Chat is not marked as deleted. Please mark it as deleted first.");
-      }
-      
-      // Send a new message
-      const messageRef = ref(database, `messages/${testChat.id}/msg2`);
-      const messageData = {
-        content: "This is a new message after deletion",
-        senderId: "test_receiver_id", // Simulate message from the other user
-        receiverId: user.uid,
-        timestamp: Date.now(),
-        read: false,
-        type: "text"
-      };
-      
-      await set(messageRef, messageData);
+      // Add the message to the messages collection
+      const db = getDatabase();
+      const messageRef = push(ref(db, `messages/${activeChatId}`));
+      await set(messageRef, message);
       
       // Update the last message in the chat
-      const lastMessageRef = ref(database, `chats/${testChat.id}/lastMessage`);
-      await set(lastMessageRef, {
-        ...messageData,
-        id: "msg2"
+      await set(ref(db, `chats/${activeChatId}/lastMessage`), {
+        ...message,
+        id: messageRef.key
       });
       
-      // Check if the chat is still marked as deleted
-      const updatedChatRef = ref(database, `chats/${testChat.id}`);
-      const updatedChatSnapshot = await get(updatedChatRef);
-      const updatedChatData = updatedChatSnapshot.val();
-      
-      const isStillDeleted = updatedChatData.deletedBy && updatedChatData.deletedBy[user.uid];
-      
-      if (isStillDeleted) {
-        setTestResults("RESULT: The chat remains deleted for the user even after receiving a new message. The current implementation does NOT recreate deleted threads when new messages are received.");
-      } else {
-        setTestResults("RESULT: The chat was automatically undeleted when a new message was received. The current implementation DOES recreate deleted threads when new messages are received.");
-      }
+      setSuccess('Message sent successfully');
+      setMessageText('');
       
       toast({
         title: "Success",
-        description: "Test message sent",
+        description: "Message sent successfully",
       });
     } catch (error) {
-      console.error("Error sending new message:", error);
-      setTestResults(`Error sending new message: ${error instanceof Error ? error.message : String(error)}`);
+      console.error('Error sending message:', error);
+      setError(`Error sending message: ${error instanceof Error ? error.message : 'Unknown error'}`);
       
       toast({
         title: "Error",
-        description: `Failed to send test message: ${error instanceof Error ? error.message : String(error)}`,
+        description: `Failed to send message: ${error instanceof Error ? error.message : 'Unknown error'}`,
         variant: "destructive"
       });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Function to implement the fix to recreate deleted threads
-  const implementFix = async () => {
-    if (!user) {
-      toast({
-        title: "Error",
-        description: "You must be signed in to implement the fix",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      const { database } = getFirebaseServices();
-      if (!database) {
-        throw new Error("Database not initialized");
-      }
-
-      // Test the fix by:
-      // 1. Creating a new test chat
-      const chatId = `test_fix_${Date.now()}`;
-      const chatRef = ref(database, `chats/${chatId}`);
-      
-      // Create chat data
-      const chatData = {
-        participants: {
-          [user.uid]: true,
-          "test_receiver_id": true
-        },
-        createdAt: Date.now(),
-        lastMessage: {
-          content: "This is a test message for the fix",
-          senderId: user.uid,
-          receiverId: "test_receiver_id",
-          timestamp: Date.now(),
-          read: false,
-          type: "text"
-        }
-      };
-      
-      // Set the chat in the database
-      await set(chatRef, chatData);
-      
-      // Create a test message
-      const messageRef = ref(database, `messages/${chatId}/msg1`);
-      const messageData = {
-        content: "This is a test message for the fix",
-        senderId: user.uid,
-        receiverId: "test_receiver_id",
-        timestamp: Date.now(),
-        read: false,
-        type: "text"
-      };
-      
-      await set(messageRef, messageData);
-      
-      // 2. Mark it as deleted
-      const deletedByRef = ref(database, `chats/${chatId}/deletedBy/${user.uid}`);
-      await set(deletedByRef, true);
-      
-      // 3. Send a new message that should undelete it
-      const newMessageRef = ref(database, `messages/${chatId}/msg2`);
-      const newMessageData = {
-        content: "This message should undelete the thread",
-        senderId: "test_receiver_id", // Simulate message from the other user
-        receiverId: user.uid,
-        timestamp: Date.now(),
-        read: false,
-        type: "text"
-      };
-      
-      await set(newMessageRef, newMessageData);
-      
-      // 4. Update the last message and remove the deletedBy flag
-      const lastMessageRef = ref(database, `chats/${chatId}/lastMessage`);
-      await set(lastMessageRef, {
-        ...newMessageData,
-        id: "msg2"
-      });
-      
-      // Remove the deletedBy flag for the current user
-      const removeDeletedByRef = ref(database, `chats/${chatId}/deletedBy/${user.uid}`);
-      await set(removeDeletedByRef, null);
-      
-      setTestResults("Fix implemented and tested successfully. Now when a user receives a new message in a thread they previously deleted, the thread will be restored and visible to them again.");
-      
-      toast({
-        title: "Success",
-        description: "Fix implemented and tested successfully",
-      });
-    } catch (error) {
-      console.error("Error implementing fix:", error);
-      setTestResults(`Error implementing fix: ${error instanceof Error ? error.message : String(error)}`);
-      
-      toast({
-        title: "Error",
-        description: `Failed to implement fix: ${error instanceof Error ? error.message : String(error)}`,
-        variant: "destructive"
-      });
-    } finally {
-      setIsLoading(false);
     }
   };
 
   return (
-    <Card className="p-6 space-y-4">
-      <h2 className="text-xl font-semibold">Message Thread Deletion Test</h2>
-      <p className="text-muted-foreground">
-        This tool tests whether deleted message threads are recreated when a new message is received.
-      </p>
-      
-      {testResults && (
-        <Alert className={testResults.includes("RESULT") ? "bg-green-500/10 border-green-500" : ""}>
-          <AlertTitle>{testResults.includes("Error") ? "Error" : "Test Results"}</AlertTitle>
-          <AlertDescription className="whitespace-pre-line">
-            {testResults}
-          </AlertDescription>
-        </Alert>
-      )}
-      
-      <div className="flex flex-wrap gap-3">
-        <Button onClick={createTestChat} disabled={isLoading}>
-          1. Create Test Chat
-        </Button>
-        <Button onClick={markChatAsDeleted} disabled={isLoading || !testChat}>
-          2. Mark Chat as Deleted
-        </Button>
-        <Button onClick={sendNewMessage} disabled={isLoading || !testChat}>
-          3. Send New Message
-        </Button>
-        <Button onClick={implementFix} disabled={isLoading} variant="secondary">
-          Implement Thread Recreation Fix
-        </Button>
-      </div>
+    <Card className="w-full max-w-3xl mx-auto">
+      <CardHeader>
+        <CardTitle>Message Thread Test</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {!user && (
+          <div className="bg-destructive/10 text-destructive p-3 rounded">
+            You must be signed in to use this tool.
+          </div>
+        )}
+        
+        {error && (
+          <div className="bg-destructive/10 text-destructive p-3 rounded">
+            {error}
+          </div>
+        )}
+        
+        {success && (
+          <div className="bg-green-100 text-green-800 p-3 rounded">
+            {success}
+          </div>
+        )}
+        
+        <div className="space-y-2">
+          <div className="font-medium">Your User ID:</div>
+          <div className="bg-muted p-2 rounded text-sm font-mono break-all">
+            {user?.uid || 'Not signed in'}
+          </div>
+        </div>
+        
+        <div className="space-y-2">
+          <div className="font-medium">Receiver User ID:</div>
+          <Input 
+            value={receiverId} 
+            onChange={(e) => setReceiverId(e.target.value)} 
+            placeholder="Enter receiver's user ID"
+          />
+        </div>
+        
+        {chatId && (
+          <div className="space-y-2">
+            <div className="font-medium">Active Chat ID:</div>
+            <div className="bg-muted p-2 rounded text-sm font-mono break-all">
+              {chatId}
+            </div>
+          </div>
+        )}
+        
+        <div className="space-y-2">
+          <Button onClick={createChat} disabled={!user || !receiverId}>
+            Create/Find Chat
+          </Button>
+        </div>
+        
+        {chatId && (
+          <>
+            <div className="space-y-2">
+              <div className="font-medium">Message:</div>
+              <Input 
+                value={messageText} 
+                onChange={(e) => setMessageText(e.target.value)} 
+                placeholder="Type your message"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Button onClick={sendMessage} disabled={!messageText.trim()}>
+                Send Message
+              </Button>
+            </div>
+            
+            <div className="space-y-2">
+              <div className="font-medium">Messages:</div>
+              <div className="border rounded p-3 max-h-60 overflow-y-auto">
+                {messages.length === 0 ? (
+                  <div className="text-muted-foreground text-center py-4">
+                    No messages yet
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {messages.map((message) => (
+                      <div 
+                        key={message.id} 
+                        className={`p-2 rounded ${
+                          message.senderId === user?.uid 
+                            ? 'bg-primary text-primary-foreground ml-auto max-w-[80%]' 
+                            : 'bg-muted mr-auto max-w-[80%]'
+                        }`}
+                      >
+                        <div className="text-sm">{message.content}</div>
+                        <div className="text-xs opacity-70 mt-1">
+                          {new Date(message.timestamp).toLocaleString()}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </>
+        )}
+        
+        <div className="space-y-2">
+          <div className="font-medium">Debug Info:</div>
+          <pre className="bg-muted p-3 rounded text-xs overflow-x-auto">
+            {JSON.stringify(debugInfo, null, 2)}
+          </pre>
+        </div>
+      </CardContent>
     </Card>
   );
 }
