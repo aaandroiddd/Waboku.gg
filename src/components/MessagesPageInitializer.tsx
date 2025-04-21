@@ -2,13 +2,16 @@ import { useEffect, useRef, useState } from 'react';
 import { database, getFirebaseServices } from '@/lib/firebase';
 import { ref, onValue, get, getDatabase, goOnline, set } from 'firebase/database';
 import { toast } from '@/components/ui/use-toast';
-import { setMessagesPageMode } from '@/hooks/useUserData';
+import { setMessagesPageMode, prefetchUserData } from '@/hooks/useUserData';
+import { collection, getDocs, limit, query } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
 /**
  * This component initializes the messages page by ensuring that:
  * 1. Realtime Database connection is verified and established
  * 2. Optimizes database connection for better performance
  * 3. Provides reliable connection recovery mechanisms
+ * 4. Prefetches user data for active conversations
  */
 export function MessagesPageInitializer() {
   const dbInstanceRef = useRef<any>(null);
@@ -79,6 +82,9 @@ export function MessagesPageInitializer() {
           
           // Test write operation
           testDatabaseWrite(db);
+
+          // Once connected, prefetch user data
+          prefetchVisibleUserData();
           return;
         }
       } catch (error) {
@@ -96,6 +102,9 @@ export function MessagesPageInitializer() {
           
           // Test write operation once connected
           testDatabaseWrite(db);
+
+          // Once connected, prefetch user data
+          prefetchVisibleUserData();
         } else {
           console.log('[MessagesPageInitializer] Disconnected from database');
           setIsConnected(false);
@@ -190,89 +199,113 @@ export function MessagesPageInitializer() {
   };
 
   /**
-   * Cleanup function to clear timeouts and unsubscribe from listeners
+   * Prefetch user data for all visible conversations
+   * This improves the user experience by loading usernames in advance
    */
-  const cleanup = () => {
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-      timeoutRef.current = null;
-    }
-    
-    if (unsubscribeRef.current) {
-      unsubscribeRef.current();
-      unsubscribeRef.current = null;
-    }
-  };
-
-  useEffect(() => {
-    // Run initialization on component mount
-    console.log('[MessagesPageInitializer] Initializing messages page');
-    
-    // Set messages page mode to true to prioritize RTDB over Firestore
-    setMessagesPageMode(true);
-    
-    verifyDatabaseConnection();
-
-    // Event listeners for online/offline events
-    const handleOnline = () => {
-      console.log('[MessagesPageInitializer] Browser online event detected');
-      toast({
-        title: "You're back online",
-        description: "Reconnecting to message server...",
-        duration: 3000,
-      });
-      retryCountRef.current = 0;
-      verifyDatabaseConnection();
-    };
-
-    const handleOffline = () => {
-      console.log('[MessagesPageInitializer] Browser offline event detected');
-      setIsConnected(false);
-      toast({
-        title: "You're offline",
-        description: "Messages will reconnect when your internet connection returns.",
-        variant: "destructive",
-        duration: 5000,
-      });
-    };
-
-    // Visibility change handler to optimize connection
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        console.log('[MessagesPageInitializer] Page became visible');
-        
-        // Re-establish connection when page becomes visible again
-        if (dbInstanceRef.current) {
+  const prefetchVisibleUserData = async () => {
+    try {
+      // Find all user IDs that are visible in the UI
+      const userIdsToFetch = new Set<string>();
+      
+      // Try to get recent conversations from Realtime Database
+      const { database } = getFirebaseServices();
+      if (database) {
+        try {
+          // Try to get current user ID from session
+          let currentUserId = null;
           try {
-            goOnline(dbInstanceRef.current);
-            console.log('[MessagesPageInitializer] Explicitly going online on visibility change');
-            
-            // Verify connection status
-            verifyDatabaseConnection();
-          } catch (error) {
-            console.error('[MessagesPageInitializer] Error going online on visibility change:', error);
+            const userData = sessionStorage.getItem('userData');
+            if (userData) {
+              const parsedUserData = JSON.parse(userData);
+              currentUserId = parsedUserData.uid;
+            }
+          } catch (e) {
+            console.warn('[MessagesPageInitializer] Error retrieving current user from session:', e);
           }
+
+          if (currentUserId) {
+            // Try to fetch conversations
+            const conversationsRef = ref(database, `conversations/${currentUserId}`);
+            const conversationsSnapshot = await get(conversationsRef);
+            
+            if (conversationsSnapshot.exists()) {
+              const conversations = conversationsSnapshot.val();
+              // Extract user IDs from conversations
+              Object.keys(conversations).forEach(convoId => {
+                const participants = conversations[convoId].participants;
+                if (participants) {
+                  Object.keys(participants).forEach(userId => {
+                    if (userId !== currentUserId) {
+                      userIdsToFetch.add(userId);
+                    }
+                  });
+                }
+              });
+            }
+            
+            // Also try to fetch from the messages path which might have additional user IDs
+            const messagesRef = ref(database, `messages/${currentUserId}`);
+            try {
+              const messagesSnapshot = await get(messagesRef);
+              if (messagesSnapshot.exists()) {
+                const messages = messagesSnapshot.val();
+                Object.keys(messages).forEach(otherUserId => {
+                  if (otherUserId !== currentUserId) {
+                    userIdsToFetch.add(otherUserId);
+                  }
+                });
+              }
+            } catch (e) {
+              console.warn('[MessagesPageInitializer] Error fetching messages:', e);
+            }
+          } else {
+            console.warn('[MessagesPageInitializer] Current user ID not found');
+          }
+        } catch (error) {
+          console.warn('[MessagesPageInitializer] Error fetching conversations from RTDB:', error);
         }
       }
-    };
-
-    // Add event listeners
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-
-    // Cleanup on component unmount
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      cleanup();
       
-      // Reset messages page mode when component unmounts
-      setMessagesPageMode(false);
-    };
-  }, []);
+      // Also try Firestore as a fallback for getting user IDs
+      try {
+        const firestoreConversations = query(
+          collection(db, 'conversations'),
+          limit(20)
+        );
+        
+        const querySnapshot = await getDocs(firestoreConversations);
+        querySnapshot.forEach(doc => {
+          if (doc.exists()) {
+            const data = doc.data();
+            if (data.participants) {
+              Object.keys(data.participants).forEach(userId => {
+                userIdsToFetch.add(userId);
+              });
+            }
+          }
+        });
+      } catch (error) {
+        console.warn('[MessagesPageInitializer] Error fetching conversations from Firestore:', error);
+      }
 
-  // This component doesn't render anything visible
-  return null;
-}
+      // Also check if we have any user IDs visible in the DOM
+      // This is a fallback to ensure we load data for any users currently displayed
+      if (typeof document !== 'undefined') {
+        const userElements = document.querySelectorAll('[data-user-id]');
+        userElements.forEach(el => {
+          const userId = el.getAttribute('data-user-id');
+          if (userId) {
+            userIdsToFetch.add(userId);
+          }
+        });
+      }
+      
+      // Prefetch data for all the user IDs we found
+      if (userIdsToFetch.size > 0) {
+        console.log(`[MessagesPageInitializer] Prefetching data for ${userIdsToFetch.size} users visible in conversations`);
+        prefetchUserData(Array.from(userIdsToFetch));
+      }
+    } catch (error) {
+      console.error('[MessagesPageInitializer] Error prefetching user data:', error);
+    }
+  };
