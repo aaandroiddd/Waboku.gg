@@ -13,13 +13,41 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/router';
 import { Card, CardContent } from '@/components/ui/card';
 import { getAuthToken } from '@/lib/auth-token-manager';
+import { useListings } from '@/hooks/useListings';
+import { useProfile } from '@/hooks/useProfile';
+import { useDashboardListingsCache } from '@/hooks/useDashboardCache';
 
 export const DashboardLayout = ({ children }: { children: ReactNode }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [isPreloading, setIsPreloading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { user, profile } = useAuth();
   const router = useRouter();
+  
+  // Initialize dashboard data caching
+  const { 
+    cachedListings, 
+    saveListingsToCache, 
+    isInitialized: cacheInitialized 
+  } = useDashboardListingsCache({ 
+    userId: user?.uid,
+    expirationMinutes: 60 // Cache for 1 hour
+  });
+  
+  // Preload listings data while showing loading screen
+  const { 
+    listings: preloadedListings, 
+    loading: listingsLoading, 
+    error: listingsError,
+    refreshListings
+  } = useListings({ 
+    userId: user?.uid,
+    showOnlyActive: false
+  });
+  
+  // Preload user profile data
+  const { profile: preloadedProfile, loading: profileLoading } = useProfile(user?.uid || null);
   
   // Check authentication and token validity
   useEffect(() => {
@@ -43,11 +71,20 @@ export const DashboardLayout = ({ children }: { children: ReactNode }) => {
           return;
         }
         
-        // Add a small delay to ensure the loading screen is visible
-        // This gives time for child components to initialize
-        setTimeout(() => {
-          setIsLoading(false);
-        }, 1000);
+        // Start preloading data while showing loading screen
+        setIsPreloading(true);
+        
+        // Check if we have valid cached data
+        if (cachedListings && cacheInitialized) {
+          console.log('Using cached dashboard data');
+          // We have cached data, so we can hide the loading screen sooner
+          setTimeout(() => {
+            setIsLoading(false);
+          }, 500);
+        } else {
+          // No cached data, wait for preloading to complete
+          // The loading screen will remain visible during preloading
+        }
       } catch (err) {
         console.error('Error in dashboard auth check:', err);
         setError('An error occurred while checking your authentication. Please try again.');
@@ -56,11 +93,59 @@ export const DashboardLayout = ({ children }: { children: ReactNode }) => {
     };
     
     checkAuth();
-  }, [user, router]);
+  }, [user, router, cachedListings, cacheInitialized]);
+  
+  // Handle preloading completion
+  useEffect(() => {
+    if (!isPreloading || !user) return;
+    
+    // If we're preloading and have listings data and profile data
+    if (!listingsLoading && !profileLoading) {
+      // Cache the preloaded listings
+      if (preloadedListings && preloadedListings.length > 0) {
+        saveListingsToCache(preloadedListings);
+      }
+      
+      // Preloading complete, hide loading screen after a short delay
+      setTimeout(() => {
+        setIsPreloading(false);
+        setIsLoading(false);
+      }, 500);
+    }
+  }, [
+    isPreloading, 
+    listingsLoading, 
+    profileLoading, 
+    preloadedListings, 
+    saveListingsToCache,
+    user
+  ]);
 
-  // Show loading state
+  // Show loading state with appropriate step
   if (isLoading) {
-    return <DashboardLoadingScreen message="Preparing your dashboard..." />;
+    // Calculate loading step based on preloading status
+    let currentStep = 1; // Start with authentication step
+    let totalSteps = 7; // Total number of steps
+    
+    if (!listingsLoading && preloadedListings) {
+      currentStep = 4; // Listings loaded, processing data
+    }
+    
+    if (!profileLoading && preloadedProfile) {
+      currentStep = 6; // Profile loaded, preparing view
+    }
+    
+    if (!isPreloading && cachedListings) {
+      currentStep = 7; // Almost done
+    }
+    
+    return (
+      <DashboardLoadingScreen 
+        message="Preparing your dashboard..." 
+        currentStep={currentStep}
+        totalSteps={totalSteps}
+      />
+    );
   }
   
   // Show error state

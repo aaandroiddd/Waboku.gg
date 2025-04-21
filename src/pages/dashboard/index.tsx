@@ -35,6 +35,7 @@ import { ArchivedListings } from '@/components/ArchivedListings';
 import { FirebaseConnectionHandler } from '@/components/FirebaseConnectionHandler';
 import { useLoading } from '@/hooks/useLoading';
 import { ViewCounter } from '@/components/ViewCounter';
+import { useDashboardListingsCache } from '@/hooks/useDashboardCache';
 
 const DashboardComponent = () => {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -51,6 +52,16 @@ const DashboardComponent = () => {
     isOpen: false,
     listingId: '',
     mode: 'deactivate'
+  });
+  
+  // Get cached dashboard data
+  const { user, loading: authLoading } = useAuth();
+  const { 
+    cachedListings,
+    saveListingsToCache,
+    clearListingsCache
+  } = useDashboardListingsCache({ 
+    userId: user?.uid 
   });
 
   const handleRestoreListing = async (listingId: string) => {
@@ -118,12 +129,25 @@ const DashboardComponent = () => {
   const { toast } = useToast();
   const router = useRouter();
   const { tab = 'active', new: newListingId } = router.query;
-  const { user, loading: authLoading } = useAuth();
   const [error, setError] = useState<string | null>(null);
-  const { listings: allListings, setListings, loading: listingsLoading, error: listingsError, refreshListings, updateListingStatus, permanentlyDeleteListing } = useListings({ 
+  
+  // Use cached listings if available, otherwise fetch from API
+  const { listings: fetchedListings, setListings, loading: listingsLoading, error: listingsError, refreshListings, updateListingStatus, permanentlyDeleteListing } = useListings({ 
     userId: user?.uid,
-    showOnlyActive: false
+    showOnlyActive: false,
+    skipInitialFetch: !!cachedListings // Skip initial fetch if we have cached data
   });
+  
+  // Combine cached and fetched listings
+  const allListings = cachedListings || fetchedListings;
+  
+  // Update cache when new listings are fetched
+  useEffect(() => {
+    if (fetchedListings && fetchedListings.length > 0 && user) {
+      saveListingsToCache(fetchedListings);
+    }
+  }, [fetchedListings, user, saveListingsToCache]);
+  
   const { profile, loading: profileLoading } = useProfile(user?.uid || null);
   
   // Use the listing visibility hook to properly filter active listings

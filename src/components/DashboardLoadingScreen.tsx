@@ -5,21 +5,35 @@ import { Logo } from './Logo';
 
 interface DashboardLoadingScreenProps {
   message?: string;
+  currentStep?: number;
+  totalSteps?: number;
 }
 
-export function DashboardLoadingScreen({ message = "Loading your dashboard..." }: DashboardLoadingScreenProps) {
+export function DashboardLoadingScreen({ 
+  message = "Loading your dashboard...",
+  currentStep,
+  totalSteps
+}: DashboardLoadingScreenProps) {
   const [loadingStep, setLoadingStep] = useState(0);
   const loadingMessages = [
     message,
+    "Checking authentication...",
     "Fetching your listings...",
     "Processing listing data...",
     "Checking listing expiration status...",
+    "Loading profile information...",
     "Preparing dashboard view...",
     "Almost there..."
   ];
 
   useEffect(() => {
-    // Simulate loading steps with a slightly faster pace
+    // If currentStep is provided, use it instead of auto-incrementing
+    if (currentStep !== undefined) {
+      setLoadingStep(currentStep);
+      return;
+    }
+    
+    // Otherwise simulate loading steps with a slightly faster pace
     const interval = setInterval(() => {
       setLoadingStep(prev => {
         if (prev < loadingMessages.length - 1) {
@@ -30,7 +44,7 @@ export function DashboardLoadingScreen({ message = "Loading your dashboard..." }
     }, 800);
 
     return () => clearInterval(interval);
-  }, [loadingMessages]);
+  }, [loadingMessages, currentStep]);
 
   return (
     <motion.div
@@ -67,7 +81,9 @@ export function DashboardLoadingScreen({ message = "Loading your dashboard..." }
               className="h-full bg-primary"
               initial={{ width: "5%" }}
               animate={{ 
-                width: `${(loadingStep + 1) / loadingMessages.length * 100}%` 
+                width: totalSteps 
+                  ? `${(currentStep || 0) / totalSteps * 100}%`
+                  : `${(loadingStep + 1) / loadingMessages.length * 100}%` 
               }}
               transition={{ duration: 0.5 }}
             />

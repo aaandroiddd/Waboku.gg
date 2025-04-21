@@ -29,9 +29,10 @@ interface UseListingsProps {
   userId?: string;
   searchQuery?: string;
   showOnlyActive?: boolean;
+  skipInitialFetch?: boolean;
 }
 
-export function useListings({ userId, searchQuery, showOnlyActive = false }: UseListingsProps = {}) {
+export function useListings({ userId, searchQuery, showOnlyActive = false, skipInitialFetch = false }: UseListingsProps = {}) {
   const [listings, setListings] = useState<Listing[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -878,7 +879,7 @@ export function useListings({ userId, searchQuery, showOnlyActive = false }: Use
     };
 
     // Only fetch on initial load or when userId changes
-    if (!searchQuery) {
+    if (!searchQuery && !skipInitialFetch) {
       fetchListings();
     }
   }, [userId, showOnlyActive, searchQuery]);
