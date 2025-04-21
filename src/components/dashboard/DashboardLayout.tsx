@@ -43,7 +43,11 @@ export const DashboardLayout = ({ children }: { children: ReactNode }) => {
           return;
         }
         
-        setIsLoading(false);
+        // Add a small delay to ensure the loading screen is visible
+        // This gives time for child components to initialize
+        setTimeout(() => {
+          setIsLoading(false);
+        }, 1000);
       } catch (err) {
         console.error('Error in dashboard auth check:', err);
         setError('An error occurred while checking your authentication. Please try again.');
@@ -56,7 +60,7 @@ export const DashboardLayout = ({ children }: { children: ReactNode }) => {
 
   // Show loading state
   if (isLoading) {
-    return <DashboardLoadingScreen />;
+    return <DashboardLoadingScreen message="Preparing your dashboard..." />;
   }
   
   // Show error state

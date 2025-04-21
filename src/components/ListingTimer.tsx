@@ -88,10 +88,11 @@ export function ListingTimer({ createdAt, archivedAt, accountTier, status, listi
   const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
-    // Set a small delay before initializing the timer to prevent showing expired state on initial load
+    // Set a longer delay before initializing the timer to prevent showing expired state on initial load
+    // This gives more time for data to be properly loaded and processed
     const initTimer = setTimeout(() => {
       setIsInitialized(true);
-    }, 500);
+    }, 1500);
     
     return () => clearTimeout(initTimer);
   }, []);

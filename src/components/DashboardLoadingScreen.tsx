@@ -10,14 +10,16 @@ interface DashboardLoadingScreenProps {
 export function DashboardLoadingScreen({ message = "Loading your dashboard..." }: DashboardLoadingScreenProps) {
   const [loadingStep, setLoadingStep] = useState(0);
   const loadingMessages = [
-    "Loading your dashboard...",
+    message,
     "Fetching your listings...",
-    "Checking premium features...",
+    "Processing listing data...",
+    "Checking listing expiration status...",
+    "Preparing dashboard view...",
     "Almost there..."
   ];
 
   useEffect(() => {
-    // Simulate loading steps
+    // Simulate loading steps with a slightly faster pace
     const interval = setInterval(() => {
       setLoadingStep(prev => {
         if (prev < loadingMessages.length - 1) {
@@ -25,10 +27,10 @@ export function DashboardLoadingScreen({ message = "Loading your dashboard..." }
         }
         return prev;
       });
-    }, 1000);
+    }, 800);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [loadingMessages]);
 
   return (
     <motion.div

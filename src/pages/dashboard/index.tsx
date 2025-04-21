@@ -132,7 +132,8 @@ const DashboardComponent = () => {
   );
   
   const { isLoading: loadingState } = useLoading();
-const loading = authLoading || listingsLoading || profileLoading;
+// Ensure loading state is true until all data is properly loaded
+const loading = authLoading || listingsLoading || profileLoading || loadingState;
 
   const handleShare = (listingId: string) => {
     const url = `${window.location.origin}/listings/${listingId}`;
@@ -500,24 +501,11 @@ const loading = authLoading || listingsLoading || profileLoading;
     return () => clearInterval(autoRefreshInterval);
   }, [user, refreshListings]);
 
-  // Use ContentLoader instead of a simple loading spinner
+  // Use DashboardLoadingScreen for a better loading experience
   if (loading) {
     return (
       <DashboardLayout>
-        <ContentLoader 
-          isLoading={true} 
-          loadingMessage="Loading dashboard..."
-          minHeight="600px"
-          fallback={
-            <div className="space-y-4">
-              {[...Array(3)].map((_, i) => (
-                <Skeleton key={i} className="h-32 w-full" />
-              ))}
-            </div>
-          }
-        >
-          <div></div>
-        </ContentLoader>
+        <DashboardLoadingScreen message="Loading your dashboard data..." />
       </DashboardLayout>
     );
   }

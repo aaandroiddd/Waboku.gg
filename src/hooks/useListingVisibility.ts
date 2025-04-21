@@ -119,7 +119,10 @@ export function useListingVisibility(listings: Listing[]) {
         }
         
         // Check if the listing has expired
-        if (now > expiresAt) {
+        // Add a small buffer time (5 minutes) to prevent edge cases where listings
+        // might appear expired due to slight time differences between client and server
+        const bufferTime = 5 * 60 * 1000; // 5 minutes in milliseconds
+        if (now > new Date(expiresAt.getTime() + bufferTime)) {
           filteredOutReasons.current[listing.id] = `Expired on ${expiresAt.toISOString()}`;
           return false;
         }
