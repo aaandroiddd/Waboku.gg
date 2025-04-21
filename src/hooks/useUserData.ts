@@ -30,6 +30,7 @@ try {
   }
 } catch (e) {
   // Ignore sessionStorage errors
+  console.warn("[useUserData] Could not load from sessionStorage:", e);
 }
 
 const CACHE_EXPIRATION = 30 * 60 * 1000; // 30 minutes
@@ -41,6 +42,7 @@ const persistCache = () => {
     sessionStorage.setItem('userDataCache', JSON.stringify(userCache));
   } catch (e) {
     // Ignore sessionStorage errors
+    console.warn("[useUserData] Could not persist to sessionStorage:", e);
   }
 };
 
@@ -114,17 +116,22 @@ export const prefetchUserData = async (userIds: string[]) => {
                   }
                 } catch (e) {
                   // Continue to next path
+                  console.warn(`[prefetchUserData] Error accessing path ${path} for user ${userId}:`, e);
                 }
               }
             })
           );
         }
-      } else {
-        // Not in messages page mode, try Firestore first
+      }
+      
+      // For users not found in RTDB, try Firestore
+      const notFoundIds = batchIds.filter(id => !fetchedIds.has(id));
+      
+      if (notFoundIds.length > 0) {
         try {
           const usersQuery = query(
             collection(db, 'users'),
-            where('__name__', 'in', batchIds),
+            where('__name__', 'in', notFoundIds),
             limit(BATCH_SIZE)
           );
           
@@ -152,79 +159,20 @@ export const prefetchUserData = async (userIds: string[]) => {
         }
       }
       
-      // For any users not found yet, try the other database
-      const notFoundIds = batchIds.filter(id => !fetchedIds.has(id));
+      // For any users not found in either database, try the other database based on the mode
+      const stillNotFoundIds = batchIds.filter(id => !fetchedIds.has(id));
       
-      if (notFoundIds.length > 0) {
+      if (stillNotFoundIds.length > 0) {
         if (isInMessagesPage) {
-          // In messages page, we prioritize RTDB but still try Firestore as a fallback
-          // for user profiles that might only exist in Firestore
-          try {
-            const usersQuery = query(
-              collection(db, 'users'),
-              where('__name__', 'in', notFoundIds),
-              limit(BATCH_SIZE)
-            );
-            
-            const querySnapshot = await getDocs(usersQuery);
-            
-            querySnapshot.forEach(doc => {
-              if (doc.exists()) {
-                const data = doc.data();
-                const userData = {
-                  username: data.displayName || data.username || 'Unknown User',
-                  avatarUrl: data.avatarUrl || data.photoURL || null
-                };
-                
-                // Update cache
-                userCache[doc.id] = {
-                  data: userData,
-                  timestamp: Date.now()
-                };
-                
-                fetchedIds.add(doc.id);
-              }
-            });
-            
-            // Add fallback data for any remaining users not found in either database
-            notFoundIds.filter(id => !fetchedIds.has(id)).forEach(userId => {
-              if (!userCache[userId]) {
-                const fallbackData = {
-                  username: `Unknown User`,
-                  avatarUrl: null
-                };
-                
-                userCache[userId] = {
-                  data: fallbackData,
-                  timestamp: Date.now() - (CACHE_EXPIRATION / 2) // Expire sooner
-                };
-              }
-            });
-          } catch (firestoreError) {
-            console.error('[prefetchUserData] Error fetching from Firestore in messages page:', firestoreError);
-            
-            // Add fallback data for users not found if Firestore query fails
-            notFoundIds.forEach(userId => {
-              if (!userCache[userId]) {
-                const fallbackData = {
-                  username: `Unknown User`,
-                  avatarUrl: null
-                };
-                
-                userCache[userId] = {
-                  data: fallbackData,
-                  timestamp: Date.now() - (CACHE_EXPIRATION / 2) // Expire sooner
-                };
-              }
-            });
-          }
+          // In messages page, we already tried RTDB, now try Firestore
+          // Code is already implemented above, so no need to duplicate
         } else {
           // Not in messages page, we tried Firestore first, now try RTDB
           if (getFirebaseServices().database) {
             const database = getFirebaseServices().database;
             
             await Promise.allSettled(
-              notFoundIds.map(async (userId) => {
+              stillNotFoundIds.map(async (userId) => {
                 const userProfilePaths = [
                   `userProfiles/${userId}`,
                   `users/${userId}`,
@@ -256,6 +204,7 @@ export const prefetchUserData = async (userIds: string[]) => {
                     }
                   } catch (e) {
                     // Continue to next path
+                    console.warn(`[prefetchUserData] Error accessing path ${path} for user ${userId}:`, e);
                   }
                 }
               })
@@ -276,8 +225,8 @@ export function useUserData(userId: string, initialData?: any) {
   const [userData, setUserData] = useState<any>(initialData || null);
   const [loading, setLoading] = useState<boolean>(!initialData && !userCache[userId]);
   const [error, setError] = useState<Error | null>(null);
-  const fetchAttempted = useRef<boolean>(false);
   const isMounted = useRef<boolean>(true);
+  const fetchAttemptedRef = useRef<boolean>(false);
 
   useEffect(() => {
     isMounted.current = true;
@@ -290,145 +239,189 @@ export function useUserData(userId: string, initialData?: any) {
     if (!userId) return;
 
     // Reset state when userId changes
-    if (!fetchAttempted.current) {
-      setLoading(!initialData && !userCache[userId]);
-      setError(null);
-      
-      // Check cache first
-      if (userCache[userId] && Date.now() - userCache[userId].timestamp < CACHE_EXPIRATION) {
-        if (isMounted.current) {
-          setUserData(userCache[userId].data);
-          setLoading(false);
-        }
-        return;
+    setLoading(!initialData && !userCache[userId]);
+    setError(null);
+    fetchAttemptedRef.current = false;
+    
+    // Check cache first
+    if (userCache[userId] && Date.now() - userCache[userId].timestamp < CACHE_EXPIRATION) {
+      if (isMounted.current) {
+        setUserData(userCache[userId].data);
+        setLoading(false);
       }
+      return;
+    }
 
-      const fetchUserData = async () => {
-        fetchAttempted.current = true;
+    const fetchUserData = async () => {
+      // Mark that we've attempted to fetch data for this userId
+      fetchAttemptedRef.current = true;
+      
+      try {
+        let foundUser = false;
+        let userData = null;
         
-        try {
-          // Try Realtime Database first (always)
-          const { database } = getFirebaseServices();
-          if (database) {
-            const userProfilePaths = [
-              `userProfiles/${userId}`,
-              `users/${userId}`,
-              `usernames/${userId}`
-            ];
-            
-            for (const path of userProfilePaths) {
-              try {
-                const userRef = ref(database, path);
-                const snapshot = await get(userRef);
-                
-                if (snapshot.exists()) {
-                  const data = snapshot.val();
-                  if (data.displayName || data.username) {
-                    const userData = {
-                      username: data.displayName || data.username,
-                      avatarUrl: data.avatarUrl || data.photoURL || null
-                    };
-                    
-                    // Update cache
-                    userCache[userId] = {
-                      data: userData,
-                      timestamp: Date.now()
-                    };
-                    
-                    // Persist to sessionStorage
-                    throttledPersistCache();
-                    
-                    if (isMounted.current) {
-                      setUserData(userData);
-                      setLoading(false);
-                    }
-                    return;
-                  }
-                }
-              } catch (e) {
-                // Continue to next path
-              }
+        // Determine which database to try first based on messages page mode
+        if (isInMessagesPage) {
+          // Try Realtime Database first
+          userData = await fetchFromRealtimeDatabase(userId);
+          if (userData) {
+            foundUser = true;
+          } else {
+            // Fall back to Firestore
+            userData = await fetchFromFirestore(userId);
+            if (userData) {
+              foundUser = true;
             }
           }
-          
-          // Try Firestore for both regular and messages page mode
-          try {
-            const userDoc = await getDoc(doc(db, 'users', userId));
-            
-            if (userDoc.exists()) {
-              const data = userDoc.data();
-              const userData = {
-                username: data.displayName || data.username || initialData?.username || "Unknown User",
-                avatarUrl: data.avatarUrl || data.photoURL || null
-              };
-              
-              // Update cache
-              userCache[userId] = {
-                data: userData,
-                timestamp: Date.now()
-              };
-              
-              // Persist to sessionStorage
-              throttledPersistCache();
-              
-              if (isMounted.current) {
-                setUserData(userData);
-              }
-              return; // Exit early since we found the user
+        } else {
+          // Try Firestore first
+          userData = await fetchFromFirestore(userId);
+          if (userData) {
+            foundUser = true;
+          } else {
+            // Fall back to Realtime Database
+            userData = await fetchFromRealtimeDatabase(userId);
+            if (userData) {
+              foundUser = true;
             }
-          } catch (firestoreError) {
-            console.error('[useUserData] Error fetching from Firestore:', firestoreError);
-            // Continue to fallbacks
           }
-          
-          // If we reach here and still have initialData, use that
-          if (initialData && isMounted.current) {
-            setUserData(initialData);
-            
-            // Cache the initialData too if it has a username
-            if (initialData.username && initialData.username !== 'Unknown User') {
-              userCache[userId] = {
-                data: initialData,
-                timestamp: Date.now()
-              };
-              throttledPersistCache();
-            }
-          } else if (isMounted.current) {
-            // Last resort fallback
-            const fallbackData = {
-              username: `Unknown User`,
-              avatarUrl: null
-            };
-            setUserData(fallbackData);
-            
-            // Cache this fallback with a shorter expiration
-            userCache[userId] = {
-              data: fallbackData,
-              timestamp: Date.now() - (CACHE_EXPIRATION / 2) // Expire sooner
-            };
-          }
-        } catch (err: any) {
+        }
+        
+        // If we found user data in either database
+        if (foundUser && userData) {
           if (isMounted.current) {
-            setError(err);
-            // Fall back to initial data if available
-            if (initialData) {
-              setUserData(initialData);
-            }
-          }
-        } finally {
-          if (isMounted.current) {
+            setUserData(userData);
             setLoading(false);
           }
+          return;
         }
-      };
+        
+        // If we reach here and still have initialData, use that
+        if (initialData && isMounted.current) {
+          setUserData(initialData);
+          
+          // Cache the initialData too if it has a username
+          if (initialData.username && initialData.username !== 'Unknown User') {
+            userCache[userId] = {
+              data: initialData,
+              timestamp: Date.now()
+            };
+            throttledPersistCache();
+          }
+        } else if (isMounted.current) {
+          // Last resort fallback - but with a clear indication it's a fallback
+          console.warn(`[useUserData] User ${userId} not found in either database`);
+          const fallbackData = {
+            username: `User ${userId.substring(0, 6)}...`,
+            avatarUrl: null
+          };
+          setUserData(fallbackData);
+          
+          // Cache this fallback with a shorter expiration
+          userCache[userId] = {
+            data: fallbackData,
+            timestamp: Date.now() - (CACHE_EXPIRATION / 2) // Expire sooner
+          };
+        }
+      } catch (err: any) {
+        console.error(`[useUserData] Error fetching user data for ${userId}:`, err);
+        if (isMounted.current) {
+          setError(err);
+          // Fall back to initial data if available
+          if (initialData) {
+            setUserData(initialData);
+          }
+        }
+      } finally {
+        if (isMounted.current) {
+          setLoading(false);
+        }
+      }
+    };
 
-      fetchUserData();
+    fetchUserData();
+  }, [userId, initialData]);
+
+  // Helper function to fetch from Realtime Database
+  const fetchFromRealtimeDatabase = async (userId: string): Promise<any | null> => {
+    const { database } = getFirebaseServices();
+    if (!database) return null;
+    
+    const userProfilePaths = [
+      `userProfiles/${userId}`,
+      `users/${userId}`,
+      `usernames/${userId}`
+    ];
+    
+    for (const path of userProfilePaths) {
+      try {
+        const userRef = ref(database, path);
+        const snapshot = await get(userRef);
+        
+        if (snapshot.exists()) {
+          const data = snapshot.val();
+          if (data.displayName || data.username) {
+            const userData = {
+              username: data.displayName || data.username,
+              avatarUrl: data.avatarUrl || data.photoURL || null
+            };
+            
+            // Update cache
+            userCache[userId] = {
+              data: userData,
+              timestamp: Date.now()
+            };
+            
+            // Persist to sessionStorage
+            throttledPersistCache();
+            
+            return userData;
+          }
+        }
+      } catch (e) {
+        console.warn(`[useUserData] Error accessing RTDB path ${path} for user ${userId}:`, e);
+        // Continue to next path
+      }
     }
     
-    return () => {
-      fetchAttempted.current = false;
-    };
-  }, [userId, initialData]);
+    return null;
+  };
+
+  // Helper function to fetch from Firestore
+  const fetchFromFirestore = async (userId: string): Promise<any | null> => {
+    try {
+      const userDoc = await getDoc(doc(db, 'users', userId));
+      
+      if (userDoc.exists()) {
+        const data = userDoc.data();
+        const userData = {
+          username: data.displayName || data.username || (initialData?.username ? initialData.username : null),
+          avatarUrl: data.avatarUrl || data.photoURL || null
+        };
+        
+        // If we found user data but no username, log a warning
+        if (!userData.username) {
+          console.warn(`[useUserData] User ${userId} found in Firestore but has no displayName or username`);
+          return null;
+        }
+        
+        // Update cache
+        userCache[userId] = {
+          data: userData,
+          timestamp: Date.now()
+        };
+        
+        // Persist to sessionStorage
+        throttledPersistCache();
+        
+        return userData;
+      }
+    } catch (firestoreError) {
+      console.error('[useUserData] Error fetching from Firestore:', firestoreError);
+    }
+    
+    return null;
+  };
 
   return { userData, loading, error };
 }
