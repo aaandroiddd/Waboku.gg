@@ -156,8 +156,8 @@ const DashboardComponent = () => {
   );
   
   const { isLoading: loadingState } = useLoading();
-// Ensure loading state is true until all data is properly loaded
-const loading = authLoading || listingsLoading || profileLoading || loadingState;
+  // Ensure loading state is true until all data is properly loaded
+  const loading = authLoading || listingsLoading || profileLoading || loadingState;
 
   const handleShare = (listingId: string) => {
     const url = `${window.location.origin}/listings/${listingId}`;
@@ -525,11 +525,13 @@ const loading = authLoading || listingsLoading || profileLoading || loadingState
     return () => clearInterval(autoRefreshInterval);
   }, [user, refreshListings]);
 
-  // Use DashboardLoadingScreen for a better loading experience
+  // No need to show DashboardLoadingScreen here as it's already handled in DashboardLayout for the main dashboard page
   if (loading) {
     return (
       <DashboardLayout>
-        <DashboardLoadingScreen message="Loading your dashboard data..." />
+        <div className="flex items-center justify-center h-[calc(100vh-200px)]">
+          <LoadingAnimation size="60" color="var(--theme-primary, #000)" />
+        </div>
       </DashboardLayout>
     );
   }

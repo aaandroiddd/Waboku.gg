@@ -25,6 +25,9 @@ export const DashboardLayout = ({ children }: { children: ReactNode }) => {
   const { user, profile } = useAuth();
   const router = useRouter();
   
+  // Check if current page is the main dashboard page
+  const isMainDashboardPage = router.pathname === '/dashboard' || router.pathname === '/dashboard/index';
+  
   // Initialize dashboard data caching
   const { 
     cachedListings, 
@@ -43,7 +46,9 @@ export const DashboardLayout = ({ children }: { children: ReactNode }) => {
     refreshListings
   } = useListings({ 
     userId: user?.uid,
-    showOnlyActive: false
+    showOnlyActive: false,
+    // Skip initial fetch if we have cached data and we're not on the main dashboard page
+    skipInitialFetch: !!cachedListings && !isMainDashboardPage
   });
   
   // Preload user profile data
@@ -81,8 +86,12 @@ export const DashboardLayout = ({ children }: { children: ReactNode }) => {
           setTimeout(() => {
             setIsLoading(false);
           }, 500);
+        } else if (!isMainDashboardPage) {
+          // If we're not on the main dashboard page, don't show the loading screen
+          // but still preload data in the background
+          setIsLoading(false);
         } else {
-          // No cached data, wait for preloading to complete
+          // No cached data and on main dashboard page, wait for preloading to complete
           // The loading screen will remain visible during preloading
         }
       } catch (err) {
@@ -93,7 +102,7 @@ export const DashboardLayout = ({ children }: { children: ReactNode }) => {
     };
     
     checkAuth();
-  }, [user, router, cachedListings, cacheInitialized]);
+  }, [user, router, cachedListings, cacheInitialized, isMainDashboardPage]);
   
   // Handle preloading completion
   useEffect(() => {
@@ -121,8 +130,8 @@ export const DashboardLayout = ({ children }: { children: ReactNode }) => {
     user
   ]);
 
-  // Show loading state with appropriate step
-  if (isLoading) {
+  // Show loading state with appropriate step, but only on the main dashboard page
+  if (isLoading && isMainDashboardPage) {
     // Calculate loading step based on preloading status
     let currentStep = 1; // Start with authentication step
     let totalSteps = 7; // Total number of steps
