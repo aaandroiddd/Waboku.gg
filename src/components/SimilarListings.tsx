@@ -31,6 +31,15 @@ const getConditionColor = (condition: string) => {
   return colors[condition?.toLowerCase()] || { base: 'bg-gray-500/10 text-gray-500', hover: 'hover:bg-gray-500/20' };
 };
 
+// Create a cache for similar listings to prevent repeated fetches
+const similarListingsCache: Record<string, {
+  listings: Listing[],
+  timestamp: number
+}> = {};
+
+// Cache expiration time (30 minutes)
+const CACHE_EXPIRATION = 30 * 60 * 1000;
+
 export const SimilarListings: React.FC<SimilarListingsProps> = ({ 
   currentListing, 
   maxListings = 3 
@@ -42,10 +51,29 @@ export const SimilarListings: React.FC<SimilarListingsProps> = ({
 
   // Use a ref to track if we've already fetched listings for this listing ID
   const fetchedForListingRef = React.useRef<string | null>(null);
+  
+  // Check cache on component mount
+  useEffect(() => {
+    if (!currentListing?.id) return;
+    
+    const cacheKey = `similar_${currentListing.id}`;
+    const cachedData = similarListingsCache[cacheKey];
+    
+    if (cachedData && (Date.now() - cachedData.timestamp < CACHE_EXPIRATION)) {
+      console.log('Using cached similar listings data');
+      setSimilarListings(cachedData.listings);
+      setIsLoading(false);
+      fetchedForListingRef.current = currentListing.id;
+      setHasFetched(true);
+    }
+  }, [currentListing?.id]);
+
+  // Use a state variable to track if we've already fetched data
+  const [hasFetched, setHasFetched] = useState(false);
 
   useEffect(() => {
     // Skip if we've already fetched for this listing ID
-    if (fetchedForListingRef.current === currentListing?.id) {
+    if (fetchedForListingRef.current === currentListing?.id || hasFetched) {
       console.log('Similar listings already fetched for this listing, skipping refetch');
       return;
     }
@@ -57,7 +85,11 @@ export const SimilarListings: React.FC<SimilarListingsProps> = ({
       fetchedForListingRef.current = currentListing.id;
       
       try {
-        setIsLoading(true);
+        // Only set loading state if we haven't loaded data yet
+        if (similarListings.length === 0) {
+          setIsLoading(true);
+        }
+        
         const { db } = await getFirebaseServices();
         
         // Create a query to find similar listings based on:
@@ -342,6 +374,13 @@ export const SimilarListings: React.FC<SimilarListingsProps> = ({
             if (fallbackListings.length > 0) {
               console.log(`Using ${fallbackListings.length} fallback listings`);
               setSimilarListings(fallbackListings);
+              
+              // Store in cache
+              const cacheKey = `similar_${currentListing.id}`;
+              similarListingsCache[cacheKey] = {
+                listings: fallbackListings,
+                timestamp: Date.now()
+              };
             } else {
               console.log('No fallback listings available either');
               setSimilarListings([]);
@@ -352,17 +391,25 @@ export const SimilarListings: React.FC<SimilarListingsProps> = ({
           }
         } else {
           setSimilarListings(topSimilarListings);
+          
+          // Store in cache
+          const cacheKey = `similar_${currentListing.id}`;
+          similarListingsCache[cacheKey] = {
+            listings: topSimilarListings,
+            timestamp: Date.now()
+          };
         }
       } catch (error) {
         console.error('Error fetching similar listings:', error);
         setSimilarListings([]);
       } finally {
         setIsLoading(false);
+        setHasFetched(true);
       }
     };
 
     fetchSimilarListings();
-  }, [currentListing?.id, maxListings]);
+  }, [currentListing?.id, maxListings, hasFetched, similarListings.length]);
 
   // Always render the component, even when no similar listings are found
 
@@ -371,77 +418,83 @@ export const SimilarListings: React.FC<SimilarListingsProps> = ({
     router.push(`/listings?game=${currentListing.game}`);
   };
 
+  // Calculate a fixed height for the container to prevent layout shifts
+  const containerHeight = 450; // Height of card + padding + header
+  const cardHeight = 300; // Fixed height for listing cards
+
   return (
     <Card className="bg-black/[0.2] dark:bg-black/40 backdrop-blur-md border-muted mt-8">
       <CardHeader>
         <CardTitle className="text-xl">Similar Listings</CardTitle>
       </CardHeader>
       <CardContent>
-        {isLoading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-            {[...Array(maxListings)].map((_, i) => (
-              <div key={i} className="h-[300px] bg-muted/50 rounded-lg animate-pulse"></div>
-            ))}
-          </div>
-        ) : similarListings.length > 0 ? (
-          <>
+        <div className="min-h-[350px]"> {/* Fixed minimum height container to prevent layout shifts */}
+          {isLoading ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-              {similarListings.map(listing => (
-                <ListingCard
-                  key={listing.id}
-                  listing={listing}
-                  isFavorite={isFavorite(listing.id)}
-                  onFavoriteClick={(e, listing) => toggleFavorite(listing, e)}
-                  getConditionColor={getConditionColor}
-                />
+              {[...Array(maxListings)].map((_, i) => (
+                <div key={i} className="h-[300px] bg-muted/50 rounded-lg animate-pulse"></div>
               ))}
             </div>
-            <div className="mt-6 text-center">
+          ) : similarListings.length > 0 ? (
+            <>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                {similarListings.map(listing => (
+                  <ListingCard
+                    key={listing.id}
+                    listing={listing}
+                    isFavorite={isFavorite(listing.id)}
+                    onFavoriteClick={(e, listing) => toggleFavorite(listing, e)}
+                    getConditionColor={getConditionColor}
+                  />
+                ))}
+              </div>
+              <div className="mt-6 text-center">
+                <Button 
+                  variant="outline" 
+                  onClick={handleViewAll}
+                  className="group"
+                >
+                  View All Similar Listings
+                  <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                </Button>
+              </div>
+            </>
+          ) : (
+            <div className="text-center py-8">
+              <div className="mb-6">
+                <div className="mx-auto w-16 h-16 rounded-full bg-muted/30 flex items-center justify-center mb-4">
+                  <svg 
+                    xmlns="http://www.w3.org/2000/svg" 
+                    className="h-8 w-8 text-muted-foreground" 
+                    fill="none" 
+                    viewBox="0 0 24 24" 
+                    stroke="currentColor"
+                  >
+                    <path 
+                      strokeLinecap="round" 
+                      strokeLinejoin="round" 
+                      strokeWidth={1.5} 
+                      d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" 
+                    />
+                  </svg>
+                </div>
+                <h3 className="text-lg font-medium mb-2">Looking for similar items?</h3>
+                <p className="text-muted-foreground mb-4">
+                  We're still building our collection of {currentListing.game} listings.
+                  <br />Check back soon or browse all available listings.
+                </p>
+              </div>
               <Button 
                 variant="outline" 
                 onClick={handleViewAll}
                 className="group"
               >
-                View All Similar Listings
+                Browse All {currentListing.game} Listings
                 <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
               </Button>
             </div>
-          </>
-        ) : (
-          <div className="text-center py-8">
-            <div className="mb-6">
-              <div className="mx-auto w-16 h-16 rounded-full bg-muted/30 flex items-center justify-center mb-4">
-                <svg 
-                  xmlns="http://www.w3.org/2000/svg" 
-                  className="h-8 w-8 text-muted-foreground" 
-                  fill="none" 
-                  viewBox="0 0 24 24" 
-                  stroke="currentColor"
-                >
-                  <path 
-                    strokeLinecap="round" 
-                    strokeLinejoin="round" 
-                    strokeWidth={1.5} 
-                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" 
-                  />
-                </svg>
-              </div>
-              <h3 className="text-lg font-medium mb-2">Looking for similar items?</h3>
-              <p className="text-muted-foreground mb-4">
-                We're still building our collection of {currentListing.game} listings.
-                <br />Check back soon or browse all available listings.
-              </p>
-            </div>
-            <Button 
-              variant="outline" 
-              onClick={handleViewAll}
-              className="group"
-            >
-              Browse All {currentListing.game} Listings
-              <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
-            </Button>
-          </div>
-        )}
+          )}
+        </div>
       </CardContent>
     </Card>
   );
