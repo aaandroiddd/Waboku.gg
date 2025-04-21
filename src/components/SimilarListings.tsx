@@ -64,16 +64,16 @@ export const SimilarListings: React.FC<SimilarListingsProps> = ({
       setSimilarListings(cachedData.listings);
       setIsLoading(false);
       fetchedForListingRef.current = currentListing.id;
-      setHasFetched(true);
+      hasFetchedRef.current = true;
     }
   }, [currentListing?.id]);
 
-  // Use a state variable to track if we've already fetched data
-  const [hasFetched, setHasFetched] = useState(false);
+  // Use a ref to track if we've already fetched data to prevent multiple fetches
+  const hasFetchedRef = useRef(false);
 
   useEffect(() => {
     // Skip if we've already fetched for this listing ID
-    if (fetchedForListingRef.current === currentListing?.id || hasFetched) {
+    if (fetchedForListingRef.current === currentListing?.id || hasFetchedRef.current) {
       console.log('Similar listings already fetched for this listing, skipping refetch');
       return;
     }
@@ -81,8 +81,9 @@ export const SimilarListings: React.FC<SimilarListingsProps> = ({
     const fetchSimilarListings = async () => {
       if (!currentListing || !currentListing.id) return;
       
-      // Set the ref to the current listing ID to prevent duplicate fetches
+      // Set both refs to prevent duplicate fetches
       fetchedForListingRef.current = currentListing.id;
+      hasFetchedRef.current = true;
       
       try {
         // Only set loading state if we haven't loaded data yet
@@ -404,12 +405,17 @@ export const SimilarListings: React.FC<SimilarListingsProps> = ({
         setSimilarListings([]);
       } finally {
         setIsLoading(false);
-        setHasFetched(true);
       }
     };
 
     fetchSimilarListings();
-  }, [currentListing?.id, maxListings, hasFetched, similarListings.length]);
+    
+    // Clean up function to reset the fetch state when component unmounts
+    return () => {
+      hasFetchedRef.current = false;
+      fetchedForListingRef.current = null;
+    };
+  }, [currentListing?.id, maxListings]);
 
   // Always render the component, even when no similar listings are found
 
