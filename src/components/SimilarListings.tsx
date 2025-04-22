@@ -60,17 +60,25 @@ export const SimilarListings: React.FC<SimilarListingsProps> = ({
   
   // Single effect for data fetching with proper dependency tracking
   useEffect(() => {
-    // Skip if no listing or already fetched
-    if (!currentListing?.id || !cacheKey || dataFetchedRef.current) {
+    // Skip if no listing
+    if (!currentListing?.id || !cacheKey) {
       return;
     }
+    
+    // Skip if already fetched in this component instance
+    if (dataFetchedRef.current) {
+      return;
+    }
+    
+    // Mark as fetched immediately to prevent duplicate requests
+    dataFetchedRef.current = true;
     
     // Check cache first
     const cachedData = similarListingsCache[cacheKey];
     if (cachedData && (Date.now() - cachedData.timestamp < CACHE_EXPIRATION)) {
+      console.log(`[SimilarListings] Using cached data for ${cacheKey}`);
       setSimilarListings(cachedData.listings);
       setIsLoading(false);
-      dataFetchedRef.current = true;
       return;
     }
     
@@ -80,6 +88,7 @@ export const SimilarListings: React.FC<SimilarListingsProps> = ({
     // Define the fetch function
     const fetchSimilarListings = async () => {
       try {
+        console.log(`[SimilarListings] Fetching similar listings for ${currentListing.id}`);
         const { db } = await getFirebaseServices();
         const listingsRef = collection(db, 'listings');
         
@@ -90,6 +99,8 @@ export const SimilarListings: React.FC<SimilarListingsProps> = ({
         ];
         
         const q = query(listingsRef, ...baseConstraints);
+        
+        // Use a direct one-time fetch instead of a listener
         const querySnapshot = await getDocs(q);
         
         // Process results
@@ -271,11 +282,9 @@ export const SimilarListings: React.FC<SimilarListingsProps> = ({
     // Execute fetch
     fetchSimilarListings();
     
-    // Cleanup function
-    return () => {
-      dataFetchedRef.current = false;
-    };
-  }, [currentListing?.id, cacheKey, maxListings]);
+    // No need to reset dataFetchedRef on cleanup as we want to prevent refetching
+    // even if the component re-renders without being fully unmounted/remounted
+  }, [currentListing?.id, cacheKey]);
 
   // Always render the component, even when no similar listings are found
 

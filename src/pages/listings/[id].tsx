@@ -1771,12 +1771,11 @@ export default function ListingPage() {
 
       </div>
       
-      {/* Similar Listings Section - Always shown with a key to prevent re-renders */}
+      {/* Similar Listings Section */}
       {listing && (
         <div className="container mx-auto p-4">
           <div className="min-h-[450px]"> {/* Fixed height container to prevent layout shifts */}
             <SimilarListings 
-              key={`similar-${listing.id}`} 
               currentListing={listing} 
               maxListings={3} 
             />
