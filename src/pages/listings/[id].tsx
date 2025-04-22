@@ -888,6 +888,13 @@ export default function ListingPage() {
       return;
     }
 
+    // For mobile users, redirect to the dedicated message page
+    if (isMobile) {
+      router.push(`/messages/send?recipientId=${listing?.userId}&listingId=${listing?.id}&listingTitle=${encodeURIComponent(listing?.title || '')}&returnTo=${encodeURIComponent(`/listings/${listing?.id}`)}`);
+      return;
+    }
+
+    // For desktop users, show the chat dialog
     setIsChatOpen(true);
   };
 
