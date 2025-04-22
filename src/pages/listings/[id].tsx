@@ -37,7 +37,6 @@ import { Footer } from '@/components/Footer';
 import dynamic from 'next/dynamic';
 import { DistanceIndicator } from '@/components/DistanceIndicator';
 import { useLoading } from '@/contexts/LoadingContext';
-import { SimilarListings } from '@/components/SimilarListings';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 
 const getConditionColor = (condition: string) => {
