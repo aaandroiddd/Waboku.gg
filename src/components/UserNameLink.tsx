@@ -1,7 +1,10 @@
 import Link from 'next/link';
-import { useUserData } from '@/hooks/useUserData';
+import { useUserData, prefetchUserData } from '@/hooks/useUserData';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useEffect, useState } from 'react';
+import { getFirebaseServices, db } from '@/lib/firebase';
+import { doc, getDoc } from 'firebase/firestore';
+import { ref, get } from 'firebase/database';
 
 // Local cache for usernames to prevent "unknown user" flashes
 const localUsernameCache: Record<string, { 
@@ -89,25 +92,62 @@ export function UserNameLink({
   // Fallback handling - never show "Unknown User" if we have any alternative
   useEffect(() => {
     if (!loading) {
-      if (!userData) {
-        // No user data available, but we might have initialUsername
-        if (initialUsername && displayName !== initialUsername) {
-          setDisplayName(initialUsername);
-        } else if (displayName === 'Loading user...' || displayName === 'Unknown User') {
-          // Use a more user-friendly fallback that doesn't say "Unknown User"
-          setDisplayName(`User ${userId.substring(0, 6)}...`);
-        }
-      } else if (userData.username === 'Unknown User') {
-        // If useUserData returned "Unknown User", try to use a better fallback
-        if (initialUsername) {
-          setDisplayName(initialUsername);
+      if (userData?.username && userData.username !== 'Unknown User') {
+        // We have valid username data, use it
+        setDisplayName(userData.username);
+      } else if (initialUsername) {
+        // If we have initialUsername, always prefer that over anything else
+        setDisplayName(initialUsername);
+      } else if (displayName === 'Loading user...' || displayName === 'Unknown User') {
+        // Only set to fallback if we don't have anything better
+        if (localStorage.getItem(`username_${userId}`)) {
+          // Try local storage as a last resort
+          setDisplayName(localStorage.getItem(`username_${userId}`)!);
         } else {
-          // Use a more user-friendly fallback
-          setDisplayName(`User ${userId.substring(0, 6)}...`);
+          // Look for email in Firebase and use it as a fallback
+          fetchEmailAsUsername(userId);
         }
       }
     }
   }, [loading, userData, initialUsername, displayName, userId]);
+  
+  // Function to try to get a username from email
+  const fetchEmailAsUsername = async (userId: string) => {
+    try {
+      // Try Firestore first
+      const userDoc = await getDoc(doc(db, 'users', userId));
+      
+      if (userDoc.exists()) {
+        const data = userDoc.data();
+        
+        if (data.email) {
+          // Get username part from email (before the @)
+          const emailMatch = data.email.match(/^([^@]+)@/);
+          if (emailMatch && emailMatch[1]) {
+            const usernameFromEmail = emailMatch[1];
+            setDisplayName(usernameFromEmail);
+            
+            // Save to localStorage for future reference
+            localStorage.setItem(`username_${userId}`, usernameFromEmail);
+            return;
+          }
+        }
+        
+        // If no email or couldn't extract username, fall back to truncated ID
+        const truncatedId = userId.length > 10 ? `${userId.substring(0, 6)}...` : userId;
+        setDisplayName(`User ${truncatedId}`);
+      } else {
+        // User not found in Firestore, use truncated ID
+        const truncatedId = userId.length > 10 ? `${userId.substring(0, 6)}...` : userId;
+        setDisplayName(`User ${truncatedId}`);
+      }
+    } catch (e) {
+      console.warn('[UserNameLink] Error fetching email as username:', e);
+      // Fall back to user ID
+      const truncatedId = userId.length > 10 ? `${userId.substring(0, 6)}...` : userId;
+      setDisplayName(`User ${truncatedId}`);
+    }
+  };
   
   // Show skeleton while loading, but only for a short time
   // to avoid flickering between "Loading..." and actual data
