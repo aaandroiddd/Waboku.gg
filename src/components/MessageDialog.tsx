@@ -31,6 +31,10 @@ export function MessageDialog({ recipientId, recipientName }: MessageDialogProps
   const { toast } = useToast()
   const { saveRedirectState } = useAuthRedirect()
   const router = useRouter()
+  // Get listingId and listingTitle from the URL if available
+  const { query } = router
+  const listingId = query.listingId as string
+  const listingTitle = query.listingTitle as string
 
   // Check if user is trying to message themselves
   useEffect(() => {
@@ -95,24 +99,84 @@ export function MessageDialog({ recipientId, recipientName }: MessageDialogProps
         messageLength: message.trim().length
       });
 
-      const token = await currentUser.getIdToken()
+      // Import the token manager for better refresh handling
+      const { refreshAuthToken } = await import('@/lib/auth-token-manager');
       
-      const response = await fetch('/api/messages/send', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          recipientId,
-          subject: subject.trim(),
-          message: message.trim()
-        })
-      })
-
-      if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || 'Failed to send message')
+      // Use the more robust token refresh mechanism
+      let token = await refreshAuthToken(currentUser);
+      
+      if (!token) {
+        throw new Error("Failed to get authentication token. Please try signing in again.");
+      }
+      
+      // Add retry logic for the API call
+      let retryCount = 0;
+      const maxRetries = 3;
+      let response;
+      
+      while (retryCount < maxRetries) {
+        try {
+          console.log(`Attempting to send message (attempt ${retryCount + 1}/${maxRetries})...`);
+          
+          response = await fetch('/api/messages/send', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+              recipientId,
+              subject: subject.trim(),
+              message: message.trim(),
+              ...(listingId ? { listingId, listingTitle } : {})
+            })
+          });
+          
+          // If successful, break out of the retry loop
+          if (response.ok) {
+            console.log('Message sent successfully');
+            break;
+          }
+          
+          // If we get a 401, try to refresh the token and retry
+          if (response.status === 401) {
+            console.log('Authentication error (401), attempting to refresh token...');
+            
+            // Force a new token refresh
+            const newToken = await currentUser.getIdToken(true);
+            
+            if (newToken) {
+              console.log('Token refreshed, retrying with new token');
+              token = newToken;
+            } else {
+              throw new Error("Failed to refresh authentication token");
+            }
+          } else {
+            // For other errors, parse the response and throw
+            const error = await response.json();
+            throw new Error(error.error || 'Failed to send message');
+          }
+        } catch (fetchError) {
+          console.error(`Error during message send attempt ${retryCount + 1}:`, fetchError);
+          
+          // If this is the last retry, rethrow the error
+          if (retryCount === maxRetries - 1) {
+            throw fetchError;
+          }
+          
+          // Wait before retrying
+          const delay = Math.pow(2, retryCount) * 1000; // Exponential backoff: 1s, 2s, 4s
+          console.log(`Waiting ${delay}ms before retry...`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
+        
+        retryCount++;
+      }
+      
+      // Final check if response is not ok
+      if (response && !response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to send message');
       }
 
       toast({

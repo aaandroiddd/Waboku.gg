@@ -19,8 +19,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const token = authHeader.split('Bearer ')[1]
     
     try {
+      // Log token verification attempt (without exposing the token)
+      console.log(`Verifying token for message send request: ${token.substring(0, 10)}...`);
+      
       const decodedToken = await admin.auth.verifyIdToken(token)
       const senderId = decodedToken.uid
+      
+      console.log(`Token verified successfully for user: ${senderId}`);
 
       const { recipientId, subject, message, listingId, listingTitle } = req.body
 
@@ -146,7 +151,32 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(200).json({ success: true, chatId, messageId: newMessageRef.key })
     } catch (error) {
       console.error('Token verification error:', error)
-      return res.status(401).json({ error: 'Invalid token' })
+      
+      // Provide more detailed error information
+      let errorMessage = 'Invalid token';
+      let errorDetails = {};
+      
+      if (error instanceof Error) {
+        errorMessage = error.message;
+        errorDetails = {
+          name: error.name,
+          // Don't include stack trace in production response
+          code: error.code || 'unknown_error_code'
+        };
+        
+        // Log the full error details for debugging
+        console.error('Detailed token verification error:', {
+          message: error.message,
+          name: error.name,
+          code: error.code,
+          stack: error.stack
+        });
+      }
+      
+      return res.status(401).json({ 
+        error: errorMessage,
+        details: errorDetails
+      });
     }
   } catch (error) {
     console.error('Error sending message:', error)
