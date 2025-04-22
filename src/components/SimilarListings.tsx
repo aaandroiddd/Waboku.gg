@@ -50,27 +50,27 @@ const extractKeywords = (text: string): string[] => {
     .slice(0, 10); // Limit to 10 keywords
 };
 
-// Calculate price range for similar listings
+// Calculate price range for similar listings - more lenient to show more results
 const calculatePriceRange = (price: number): { min: number, max: number } => {
-  // For lower priced items, use a smaller range
+  // For lower priced items, use a wider range
   if (price < 50) {
     return {
-      min: Math.max(0, price * 0.6),
-      max: price * 1.5
+      min: Math.max(0, price * 0.4),  // More lenient minimum
+      max: price * 2.0                // More lenient maximum
     };
   }
   // For medium priced items
   else if (price < 200) {
     return {
-      min: price * 0.7,
-      max: price * 1.4
+      min: price * 0.5,               // More lenient minimum
+      max: price * 1.8                // More lenient maximum
     };
   }
   // For higher priced items, use a wider range
   else {
     return {
-      min: price * 0.75,
-      max: price * 1.3
+      min: price * 0.6,               // More lenient minimum
+      max: price * 1.6                // More lenient maximum
     };
   }
 };
@@ -144,7 +144,7 @@ export const SimilarListings = ({ currentListing, maxListings = 9 }: SimilarList
             listingsRef,
             where('status', '==', 'active'),
             where('game', '==', currentListing.game),
-            where('condition', '==', currentListing.condition),
+            // Removed condition constraint to be more lenient
             where('price', '>=', priceRange.min),
             where('price', '<=', priceRange.max),
             where(documentId(), '!=', currentListing.id),
@@ -193,7 +193,35 @@ export const SimilarListings = ({ currentListing, maxListings = 9 }: SimilarList
           results = [...results, ...newMatches];
         }
         
-        // Tier 4: Fallback to same game category if we still don't have enough
+        // Tier 4: Try related game categories if we still don't have enough
+        if (results.length < maxListings && relatedGames.length > 0) {
+          // Create an array of OR conditions for related games
+          const gameQueries = relatedGames
+            .filter(game => game !== currentListing.game) // Exclude the current game which we already queried
+            .map(game => where('game', '==', game));
+          
+          if (gameQueries.length > 0) {
+            const relatedGamesQuery = query(
+              listingsRef,
+              where('status', '==', 'active'),
+              or(...gameQueries),
+              where(documentId(), '!=', currentListing.id),
+              orderBy('createdAt', 'desc'),
+              limit(maxListings - results.length)
+            );
+            
+            const relatedGamesSnapshot = await getDocs(relatedGamesQuery);
+            const relatedGamesMatches = processQueryResults(relatedGamesSnapshot);
+            
+            // Add only new listings
+            const newMatches = relatedGamesMatches.filter(
+              match => !results.some(existing => existing.id === match.id)
+            );
+            results = [...results, ...newMatches];
+          }
+        }
+        
+        // Tier 5: Fallback to same game category if we still don't have enough
         if (results.length < maxListings) {
           const fallbackQuery = query(
             listingsRef,
@@ -214,14 +242,15 @@ export const SimilarListings = ({ currentListing, maxListings = 9 }: SimilarList
           results = [...results, ...newMatches];
         }
         
-        // Tier 5: Last resort - get any active listings from any game if we still don't have enough
-        if (results.length < 3) {
+        // Tier 6: Last resort - get any active listings from any game if we still don't have enough
+        // More aggressive with minimum count (6 instead of 3) and higher limit
+        if (results.length < 6) {
           const lastResortQuery = query(
             listingsRef,
             where('status', '==', 'active'),
             where(documentId(), '!=', currentListing.id),
             orderBy('createdAt', 'desc'),
-            limit(maxListings - results.length)
+            limit(Math.max(maxListings, 12) - results.length) // Ensure we get at least some results
           );
           
           const lastResortSnapshot = await getDocs(lastResortQuery);
@@ -277,47 +306,60 @@ export const SimilarListings = ({ currentListing, maxListings = 9 }: SimilarList
     });
   };
   
-  // Sort listings by relevance to the current listing
+  // Sort listings by relevance to the current listing - with more lenient scoring
   const sortByRelevance = (listings: Listing[], currentListing: Listing): Listing[] => {
     return listings.sort((a, b) => {
       let scoreA = 0;
       let scoreB = 0;
       
-      // Same game is highest priority
-      if (a.game === currentListing.game) scoreA += 100;
-      if (b.game === currentListing.game) scoreB += 100;
+      // Same game is high priority but not as dominant
+      if (a.game === currentListing.game) scoreA += 80;
+      if (b.game === currentListing.game) scoreB += 80;
+      
+      // Related game categories get some points too
+      const relatedGames = getRelatedGameCategories(currentListing.game);
+      if (relatedGames.includes(a.game)) scoreA += 40;
+      if (relatedGames.includes(b.game)) scoreB += 40;
       
       // Same card name is very important
       if (a.cardName && currentListing.cardName && 
-          a.cardName.toLowerCase() === currentListing.cardName.toLowerCase()) scoreA += 80;
+          a.cardName.toLowerCase() === currentListing.cardName.toLowerCase()) scoreA += 70;
       if (b.cardName && currentListing.cardName && 
-          b.cardName.toLowerCase() === currentListing.cardName.toLowerCase()) scoreB += 80;
+          b.cardName.toLowerCase() === currentListing.cardName.toLowerCase()) scoreB += 70;
+      
+      // Partial card name match
+      if (a.cardName && currentListing.cardName && 
+          (a.cardName.toLowerCase().includes(currentListing.cardName.toLowerCase()) || 
+           currentListing.cardName.toLowerCase().includes(a.cardName.toLowerCase()))) scoreA += 30;
+      if (b.cardName && currentListing.cardName && 
+          (b.cardName.toLowerCase().includes(currentListing.cardName.toLowerCase()) || 
+           currentListing.cardName.toLowerCase().includes(b.cardName.toLowerCase()))) scoreB += 30;
       
       // Similar condition
-      if (a.condition === currentListing.condition) scoreA += 40;
-      if (b.condition === currentListing.condition) scoreB += 40;
+      if (a.condition === currentListing.condition) scoreA += 30;
+      if (b.condition === currentListing.condition) scoreB += 30;
       
       // Similar grading status
-      if (a.isGraded === currentListing.isGraded) scoreA += 30;
-      if (b.isGraded === currentListing.isGraded) scoreB += 30;
+      if (a.isGraded === currentListing.isGraded) scoreA += 20;
+      if (b.isGraded === currentListing.isGraded) scoreB += 20;
       
       // Same grading company
       if (a.gradingCompany && currentListing.gradingCompany && 
-          a.gradingCompany === currentListing.gradingCompany) scoreA += 20;
+          a.gradingCompany === currentListing.gradingCompany) scoreA += 15;
       if (b.gradingCompany && currentListing.gradingCompany && 
-          b.gradingCompany === currentListing.gradingCompany) scoreB += 20;
+          b.gradingCompany === currentListing.gradingCompany) scoreB += 15;
       
-      // Similar price (within 20%)
+      // Similar price (more lenient - within 40%)
       const priceRangeA = Math.abs(a.price - currentListing.price) / currentListing.price;
       const priceRangeB = Math.abs(b.price - currentListing.price) / currentListing.price;
-      if (priceRangeA <= 0.2) scoreA += 20;
-      if (priceRangeB <= 0.2) scoreB += 20;
+      if (priceRangeA <= 0.4) scoreA += 15;
+      if (priceRangeB <= 0.4) scoreB += 15;
       
       // Newer listings get a small boost
       const ageA = new Date().getTime() - a.createdAt.getTime();
       const ageB = new Date().getTime() - b.createdAt.getTime();
-      if (ageA < ageB) scoreA += 5;
-      if (ageB < ageA) scoreB += 5;
+      if (ageA < ageB) scoreA += 10;
+      if (ageB < ageA) scoreB += 10;
       
       return scoreB - scoreA;
     });
