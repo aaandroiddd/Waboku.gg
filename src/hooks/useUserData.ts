@@ -347,10 +347,16 @@ export function useUserData(userId: string, initialData?: any) {
     const { database } = getFirebaseServices();
     if (!database) return null;
     
+    console.log(`[useUserData] Trying to fetch user ${userId} from Realtime Database`);
+    
+    // Expanded list of potential paths to check for user data
     const userProfilePaths = [
       `userProfiles/${userId}`,
       `users/${userId}`,
-      `usernames/${userId}`
+      `usernames/${userId}`,
+      `profiles/${userId}`,
+      `user_profiles/${userId}`,
+      `userData/${userId}`
     ];
     
     for (const path of userProfilePaths) {
@@ -360,11 +366,16 @@ export function useUserData(userId: string, initialData?: any) {
         
         if (snapshot.exists()) {
           const data = snapshot.val();
-          if (data.displayName || data.username) {
+          console.log(`[useUserData] Found user data for ${userId} at path ${path}:`, data);
+          
+          // Check for displayName or username in various formats
+          if (data.displayName || data.username || data.name || data.userName || data.display_name) {
             const userData = {
-              username: data.displayName || data.username,
-              avatarUrl: data.avatarUrl || data.photoURL || null
+              username: data.displayName || data.username || data.name || data.userName || data.display_name,
+              avatarUrl: data.avatarUrl || data.photoURL || data.avatar || data.avatarURL || data.photo || null
             };
+            
+            console.log(`[useUserData] Successfully extracted username: ${userData.username}`);
             
             // Update cache
             userCache[userId] = {
@@ -376,6 +387,10 @@ export function useUserData(userId: string, initialData?: any) {
             throttledPersistCache();
             
             return userData;
+          } else {
+            // If we found the user but they don't have a username field,
+            // log the data so we can see what fields are available
+            console.log(`[useUserData] User ${userId} found at ${path} but has no username field. Available fields:`, Object.keys(data));
           }
         }
       } catch (e) {
@@ -390,31 +405,47 @@ export function useUserData(userId: string, initialData?: any) {
   // Helper function to fetch from Firestore
   const fetchFromFirestore = async (userId: string): Promise<any | null> => {
     try {
-      const userDoc = await getDoc(doc(db, 'users', userId));
+      console.log(`[useUserData] Trying to fetch user ${userId} from Firestore`);
       
-      if (userDoc.exists()) {
-        const data = userDoc.data();
-        const userData = {
-          username: data.displayName || data.username || (initialData?.username ? initialData.username : null),
-          avatarUrl: data.avatarUrl || data.photoURL || null
-        };
-        
-        // If we found user data but no username, log a warning
-        if (!userData.username) {
-          console.warn(`[useUserData] User ${userId} found in Firestore but has no displayName or username`);
-          return null;
+      // Try multiple collection names
+      const collectionNames = ['users', 'profiles', 'userProfiles', 'user_profiles'];
+      
+      for (const collectionName of collectionNames) {
+        try {
+          const userDoc = await getDoc(doc(db, collectionName, userId));
+          
+          if (userDoc.exists()) {
+            const data = userDoc.data();
+            console.log(`[useUserData] Found user data for ${userId} in collection ${collectionName}:`, data);
+            
+            // Check for displayName or username in various formats
+            if (data.displayName || data.username || data.name || data.userName || data.display_name) {
+              const userData = {
+                username: data.displayName || data.username || data.name || data.userName || data.display_name,
+                avatarUrl: data.avatarUrl || data.photoURL || data.avatar || data.avatarURL || data.photo || null
+              };
+              
+              console.log(`[useUserData] Successfully extracted username: ${userData.username}`);
+              
+              // Update cache
+              userCache[userId] = {
+                data: userData,
+                timestamp: Date.now()
+              };
+              
+              // Persist to sessionStorage
+              throttledPersistCache();
+              
+              return userData;
+            } else {
+              // If we found the user but they don't have a username field,
+              // log the data so we can see what fields are available
+              console.log(`[useUserData] User ${userId} found in ${collectionName} but has no username field. Available fields:`, Object.keys(data));
+            }
+          }
+        } catch (error) {
+          console.warn(`[useUserData] Error fetching from Firestore collection ${collectionName}:`, error);
         }
-        
-        // Update cache
-        userCache[userId] = {
-          data: userData,
-          timestamp: Date.now()
-        };
-        
-        // Persist to sessionStorage
-        throttledPersistCache();
-        
-        return userData;
       }
     } catch (firestoreError) {
       console.error('[useUserData] Error fetching from Firestore:', firestoreError);
