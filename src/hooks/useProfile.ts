@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { doc, getDoc } from 'firebase/firestore';
-import { firebaseDb } from '@/lib/firebase';
+import { ref, get } from 'firebase/database';
+import { firebaseDb, getFirebaseServices } from '@/lib/firebase';
 import { UserProfile } from '@/types/database';
 
 // Cache to store profiles across component instances
@@ -78,7 +79,7 @@ export function useProfile(userId: string | null) {
       
       // First try to get the user document
       const userDoc = await getDoc(doc(firebaseDb, 'users', id));
-      const userData = userDoc.data();
+      let userData = userDoc.data();
       
       // Try to get the review stats for this user
       let userRating = null;

@@ -68,23 +68,28 @@ export interface UserFavorite {
 export interface UserProfile {
   uid: string;
   username: string;
+  displayName?: string;
   email: string;
-  avatarUrl?: string;
+  avatarUrl?: string | null;
+  photoURL?: string | null;
   bio?: string;
   location?: string;
   joinDate: string;
   totalSales: number;
-  rating: number;
+  rating: number | null;
   contact?: string;
   social?: {
-    youtube?: string;
-    twitter?: string;
-    facebook?: string;
-  };
+    youtube?: string | null;
+    twitter?: string | null;
+    facebook?: string | null;
+  } | null;
   lastUpdated?: string;
   isEmailVerified: boolean;
   verificationSentAt?: string;
-  accountTier: 'free' | 'premium';
+  authProvider?: string;
+  isAdmin?: boolean;
+  accountTier?: 'free' | 'premium';
+  tier?: 'free' | 'premium';
   theme?: 'light' | 'dark' | 'system';
   profileCompleted?: boolean;
   lastSignIn?: string;
