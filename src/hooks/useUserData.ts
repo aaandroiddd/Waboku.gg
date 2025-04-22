@@ -407,45 +407,52 @@ export function useUserData(userId: string, initialData?: any) {
     try {
       console.log(`[useUserData] Trying to fetch user ${userId} from Firestore`);
       
-      // Try multiple collection names
-      const collectionNames = ['users', 'profiles', 'userProfiles', 'user_profiles'];
+      const userDoc = await getDoc(doc(db, 'users', userId));
       
-      for (const collectionName of collectionNames) {
-        try {
-          const userDoc = await getDoc(doc(db, collectionName, userId));
-          
-          if (userDoc.exists()) {
-            const data = userDoc.data();
-            console.log(`[useUserData] Found user data for ${userId} in collection ${collectionName}:`, data);
-            
-            // Check for displayName or username in various formats
-            if (data.displayName || data.username || data.name || data.userName || data.display_name) {
-              const userData = {
-                username: data.displayName || data.username || data.name || data.userName || data.display_name,
-                avatarUrl: data.avatarUrl || data.photoURL || data.avatar || data.avatarURL || data.photo || null
-              };
-              
-              console.log(`[useUserData] Successfully extracted username: ${userData.username}`);
-              
-              // Update cache
-              userCache[userId] = {
-                data: userData,
-                timestamp: Date.now()
-              };
-              
-              // Persist to sessionStorage
-              throttledPersistCache();
-              
-              return userData;
-            } else {
-              // If we found the user but they don't have a username field,
-              // log the data so we can see what fields are available
-              console.log(`[useUserData] User ${userId} found in ${collectionName} but has no username field. Available fields:`, Object.keys(data));
-            }
+      if (userDoc.exists()) {
+        const data = userDoc.data();
+        console.log(`[useUserData] Found user data for ${userId} in Firestore:`, data);
+        
+        // Check for any field that might contain a username
+        // If displayName doesn't exist, try to use email or other fields
+        let username;
+        
+        if (data.displayName) {
+          username = data.displayName;
+        } else if (data.email) {
+          // If no display name but email exists, use the part before @
+          const emailMatch = data.email.match(/^([^@]+)@/);
+          if (emailMatch && emailMatch[1]) {
+            username = emailMatch[1]; // Use the part before @ as username
           }
-        } catch (error) {
-          console.warn(`[useUserData] Error fetching from Firestore collection ${collectionName}:`, error);
         }
+        
+        // If we still don't have a username, use any other identifier
+        if (!username) {
+          username = data.name || data.userName || data.username || 
+                    data.email || `User ${userId.substring(0, 6)}...`;
+        }
+        
+        const userData = {
+          username: username,
+          avatarUrl: data.avatarUrl || data.photoURL || data.avatar || data.avatarURL || data.photo || null,
+          email: data.email || null // Store email for reference
+        };
+        
+        console.log(`[useUserData] Successfully extracted username: ${userData.username}`);
+        
+        // Update cache
+        userCache[userId] = {
+          data: userData,
+          timestamp: Date.now()
+        };
+        
+        // Persist to sessionStorage
+        throttledPersistCache();
+        
+        return userData;
+      } else {
+        console.log(`[useUserData] No user document found for ${userId} in Firestore`);
       }
     } catch (firestoreError) {
       console.error('[useUserData] Error fetching from Firestore:', firestoreError);
