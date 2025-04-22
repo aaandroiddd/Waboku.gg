@@ -4,6 +4,7 @@ import { BlockUserDialog } from './BlockUserDialog';
 import { UserNameLink } from './UserNameLink';
 import { useAuth } from '@/contexts/AuthContext';
 import { useMessages } from '@/hooks/useMessages';
+import { TypingIndicator, useTypingStatus } from './TypingIndicator';
 import { Card } from './ui/card';
 import { ScrollArea } from './ui/scroll-area';
 import { Button } from './ui/button';
@@ -123,6 +124,25 @@ export function Chat({
   const [newMessage, setNewMessage] = useState('');
   const [error, setError] = useState('');
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
+  
+  // Initialize typing status hook
+  const { setTypingStatus } = useTypingStatus(chatId || '');
+  
+  // Handle typing status updates
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setNewMessage(value);
+    
+    // Only update typing status if we have a chatId
+    if (chatId) {
+      // Set typing status to true when user starts typing
+      if (value.trim().length > 0) {
+        setTypingStatus(true);
+      } else {
+        setTypingStatus(false);
+      }
+    }
+  };
   
   // Handle loading state changes
   useEffect(() => {
@@ -466,7 +486,11 @@ export function Chat({
         throw new Error('Failed to create or update chat');
       }
       
+      // Clear message and typing status
       setNewMessage('');
+      if (chatId) {
+        setTypingStatus(false);
+      }
       setIsAtBottom(true);
       scrollToBottom();
       
@@ -759,6 +783,14 @@ export function Chat({
                   </React.Fragment>
                 );
               })}
+              {/* Typing indicator */}
+              {chatId && receiverId && (
+                <TypingIndicator 
+                  chatId={chatId} 
+                  receiverId={receiverId} 
+                  className="ml-2 mb-2" 
+                />
+              )}
               <div ref={bottomRef} className="h-px" />
             </div>
           </ScrollArea>
@@ -800,7 +832,7 @@ export function Chat({
               <div className="flex-1 flex gap-2">
                 <Input
                   value={newMessage}
-                  onChange={(e) => setNewMessage(e.target.value)}
+                  onChange={handleInputChange}
                   placeholder="Type your message..."
                   className="text-sm"
                   disabled={isUploading}
@@ -842,8 +874,14 @@ export function Chat({
                     <Picker
                       data={data}
                       onEmojiSelect={(emoji: any) => {
-                        setNewMessage((prev) => prev + emoji.native);
+                        const updatedMessage = newMessage + emoji.native;
+                        setNewMessage(updatedMessage);
                         setShowEmojiPicker(false);
+                        
+                        // Update typing status when adding emoji
+                        if (chatId && updatedMessage.trim().length > 0) {
+                          setTypingStatus(true);
+                        }
                       }}
                     />
                   </PopoverContent>
