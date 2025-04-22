@@ -45,8 +45,19 @@ function TrendingSearchesContent() {
     }
   }, [trendingSearches]);
   
-  // The trending searches to display - use local cache if API fails
-  const displayTrending = trendingSearches.length > 0 ? trendingSearches : localTrending;
+  // Provide some default trending searches as fallback
+  const defaultTrending = [
+    { term: "Pokemon", count: 10 },
+    { term: "Magic", count: 8 },
+    { term: "Yu-Gi-Oh", count: 6 }
+  ];
+  
+  // The trending searches to display - use local cache if API fails, or default if nothing available
+  const displayTrending = trendingSearches.length > 0 
+    ? trendingSearches 
+    : localTrending.length > 0 
+      ? localTrending 
+      : error ? defaultTrending : [];
 
   const handleSearchClick = useCallback((term: string) => {
     router.push({

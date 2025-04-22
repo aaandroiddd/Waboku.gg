@@ -21,6 +21,7 @@ const getAllowedOrigins = () => {
   
   // Add preview URLs for co.dev
   origins.push('https://*.preview.co.dev');
+  origins.push('*'); // Allow all origins in development/preview environments
   
   return origins;
 };

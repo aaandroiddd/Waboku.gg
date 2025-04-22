@@ -9,6 +9,13 @@ interface MessageContentProps {
 export function MessageContent({ content, className = '' }: MessageContentProps) {
   const [imageError, setImageError] = useState(false);
   
+  // Handle undefined or null content
+  if (!content) {
+    return <div className={`whitespace-pre-wrap break-words max-w-full ${className}`}>
+      <span className="text-muted-foreground italic">No message content</span>
+    </div>;
+  }
+  
   // URL regex pattern
   const urlPattern = /(https?:\/\/[^\s]+)/g;
   

@@ -47,6 +47,8 @@ export function useTrendingSearches() {
       return FALLBACK_TRENDING;
     }
     
+    // Return empty array as fallback data
+    const emptyTrending: TrendingSearch[] = [];
     let timeoutId: NodeJS.Timeout | null = null;
     
     try {
