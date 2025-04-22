@@ -95,23 +95,70 @@ export function useProfile(userId: string | null) {
         console.error('Error fetching review stats:', statsError);
       }
       
-      // Create a default profile even if the document doesn't exist
+      // Check if we have valid user data from Firestore
+      if (!userDoc.exists() && !userData) {
+        // Try to get user data from Realtime Database as a fallback
+        try {
+          if (getFirebaseServices().database) {
+            const database = getFirebaseServices().database;
+            let rtdbUserData = null;
+            
+            const userProfilePaths = [
+              `userProfiles/${id}`,
+              `users/${id}`,
+              `usernames/${id}`,
+              `profiles/${id}`,
+              `user_profiles/${id}`,
+              `userData/${id}`
+            ];
+            
+            for (const path of userProfilePaths) {
+              try {
+                const userRef = ref(database!, path);
+                const snapshot = await get(userRef);
+                
+                if (snapshot.exists()) {
+                  rtdbUserData = snapshot.val();
+                  console.log(`Found user data in RTDB at path ${path}:`, rtdbUserData);
+                  break;
+                }
+              } catch (e) {
+                console.warn(`Error accessing RTDB path ${path}:`, e);
+              }
+            }
+            
+            if (!rtdbUserData) {
+              throw new Error('User profile not found in either Firestore or Realtime Database');
+            }
+            
+            // Use RTDB data
+            userData = rtdbUserData;
+          } else {
+            throw new Error('User profile not found and Realtime Database is not available');
+          }
+        } catch (rtdbError) {
+          console.error('Error fetching from Realtime Database:', rtdbError);
+          throw new Error('User profile not found');
+        }
+      }
+      
+      // Create a profile from the data we found
       const profileData: UserProfile = {
         uid: id,
-        username: userData?.username || userData?.displayName || '',
-        displayName: userData?.displayName || userData?.username || '',
+        username: userData?.username || userData?.displayName || userData?.name || '',
+        displayName: userData?.displayName || userData?.username || userData?.name || '',
         email: userData?.email || '',
-        avatarUrl: userData?.avatarUrl || userData?.photoURL || null,
-        photoURL: userData?.photoURL || userData?.avatarUrl || null,
-        bio: userData?.bio || '',
+        avatarUrl: userData?.avatarUrl || userData?.photoURL || userData?.avatar || null,
+        photoURL: userData?.photoURL || userData?.avatarUrl || userData?.avatar || null,
+        bio: userData?.bio || userData?.about || '',
         location: userData?.location || '',
-        joinDate: userData?.createdAt || userData?.joinDate || new Date().toISOString(),
+        joinDate: userData?.createdAt || userData?.joinDate || userData?.created || new Date().toISOString(),
         totalSales: typeof userData?.totalSales === 'number' ? userData.totalSales : 0,
         // Use the rating from reviewStats if available, otherwise fall back to user document
         rating: userRating !== null ? userRating : (typeof userData?.rating === 'number' ? userData.rating : null),
-        contact: userData?.contact || '',
+        contact: userData?.contact || userData?.contactInfo || '',
         isEmailVerified: userData?.isEmailVerified || false,
-        authProvider: userData?.authProvider || 'unknown',
+        authProvider: userData?.authProvider || userData?.provider || 'unknown',
         social: userData?.social ? {
           youtube: userData.social.youtube || null,
           twitter: userData.social.twitter || null,

@@ -359,6 +359,10 @@ export function useUserData(userId: string, initialData?: any) {
         
         if (data.displayName) {
           username = data.displayName;
+        } else if (data.username) {
+          username = data.username;
+        } else if (data.name) {
+          username = data.name;
         } else if (data.email) {
           // If no display name but email exists, use the part before @
           const emailMatch = data.email.match(/^([^@]+)@/);
@@ -369,14 +373,27 @@ export function useUserData(userId: string, initialData?: any) {
         
         // If we still don't have a username, use any other identifier
         if (!username) {
-          username = data.name || data.userName || data.username || 
-                    data.email || `User ${userId.substring(0, 6)}...`;
+          username = data.userName || data.email || null;
+        }
+        
+        // Only use User ID as fallback if we couldn't find any other identifier
+        if (!username) {
+          // Check if this is a valid user before using ID as fallback
+          // If the document exists but has no usable name fields, it's likely a placeholder or corrupted record
+          if (Object.keys(data).length > 2) {
+            username = `User ${userId.substring(0, 6)}...`;
+          } else {
+            // This appears to be an empty or nearly empty document, don't use it
+            console.warn(`[useUserData] User document for ${userId} exists but has insufficient data`);
+            return null;
+          }
         }
         
         const userData = {
           username: username,
           avatarUrl: data.avatarUrl || data.photoURL || data.avatar || data.avatarURL || data.photo || null,
-          email: data.email || null // Store email for reference
+          email: data.email || null, // Store email for reference
+          isValidUser: true // Flag to indicate this is a valid user with sufficient data
         };
         
         console.log(`[useUserData] Successfully extracted username: ${userData.username}`);

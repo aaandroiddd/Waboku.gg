@@ -125,7 +125,38 @@ const ProfileContent = ({ userId }: { userId: string | null }) => {
   if (error || !profile) {
     return <ErrorCard 
       message={error || 'Profile not found'} 
-      onRetry={() => window.location.reload()}
+      onRetry={() => {
+        // Clear any cached data for this user ID before retrying
+        if (typeof window !== 'undefined' && userId) {
+          try {
+            localStorage.removeItem(`profile_${userId}`);
+            localStorage.removeItem(`username_${userId}`);
+            
+            // Also clear from sessionStorage if possible
+            const usernameCache = sessionStorage.getItem('usernameCache');
+            if (usernameCache) {
+              const cacheObj = JSON.parse(usernameCache);
+              if (cacheObj[userId]) {
+                delete cacheObj[userId];
+                sessionStorage.setItem('usernameCache', JSON.stringify(cacheObj));
+              }
+            }
+            
+            const userDataCache = sessionStorage.getItem('userDataCache');
+            if (userDataCache) {
+              const cacheObj = JSON.parse(userDataCache);
+              if (cacheObj[userId]) {
+                delete cacheObj[userId];
+                sessionStorage.setItem('userDataCache', JSON.stringify(cacheObj));
+              }
+            }
+          } catch (e) {
+            console.warn('Error clearing cache:', e);
+          }
+        }
+        
+        window.location.reload();
+      }}
     />;
   }
 

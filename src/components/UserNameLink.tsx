@@ -144,7 +144,47 @@ export function UserNameLink({
         const truncatedId = userId.length > 10 ? `${userId.substring(0, 6)}...` : userId;
         setDisplayName(`User ${truncatedId}`);
       } else {
-        // User not found in Firestore, use truncated ID
+        // User not found in Firestore, try Realtime Database as a last resort
+        try {
+          if (getFirebaseServices().database) {
+            const database = getFirebaseServices().database;
+            const userProfilePaths = [
+              `userProfiles/${userId}`,
+              `users/${userId}`,
+              `usernames/${userId}`,
+              `profiles/${userId}`,
+              `user_profiles/${userId}`,
+              `userData/${userId}`
+            ];
+            
+            for (const path of userProfilePaths) {
+              const userRef = ref(database!, path);
+              const snapshot = await get(userRef);
+              
+              if (snapshot.exists()) {
+                const data = snapshot.val();
+                if (data.displayName || data.username || data.name) {
+                  const username = data.displayName || data.username || data.name;
+                  setDisplayName(username);
+                  localStorage.setItem(`username_${userId}`, username);
+                  return;
+                } else if (data.email) {
+                  const emailMatch = data.email.match(/^([^@]+)@/);
+                  if (emailMatch && emailMatch[1]) {
+                    const usernameFromEmail = emailMatch[1];
+                    setDisplayName(usernameFromEmail);
+                    localStorage.setItem(`username_${userId}`, usernameFromEmail);
+                    return;
+                  }
+                }
+              }
+            }
+          }
+        } catch (rtdbError) {
+          console.warn('[UserNameLink] Error fetching from RTDB:', rtdbError);
+        }
+        
+        // If still not found, use truncated ID
         const truncatedId = userId.length > 10 ? `${userId.substring(0, 6)}...` : userId;
         setDisplayName(`User ${truncatedId}`);
       }
@@ -163,11 +203,22 @@ export function UserNameLink({
   }
   
   if (showProfileOnClick) {
+    // Only link to profile if we have a real username (not a fallback with "User" prefix)
+    const isRealUsername = !displayName.startsWith('User ') || displayName === 'User';
+    
     return (
       <Link 
-        href={`/profile/${userId}`} 
+        href={isRealUsername ? `/profile/${userId}` : '#'} 
         className={`font-medium hover:underline ${className}`}
-        onClick={(e) => e.stopPropagation()}
+        onClick={(e) => {
+          e.stopPropagation();
+          
+          // If it's not a real username, show a tooltip or message instead of navigating
+          if (!isRealUsername) {
+            e.preventDefault();
+            alert('This user\'s profile is not available');
+          }
+        }}
       >
         {displayName}
       </Link>
