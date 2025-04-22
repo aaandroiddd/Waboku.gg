@@ -47,9 +47,8 @@ export const SimilarListings: React.FC<SimilarListingsProps> = React.memo(({
   const [similarListings, setSimilarListings] = useState<Listing[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   
-  // Memoize useFavorites to prevent unnecessary re-renders
-  const favoritesMemo = useMemo(() => useFavorites(), []);
-  const { toggleFavorite, isFavorite } = favoritesMemo;
+  // Use hooks directly at the top level
+  const { toggleFavorite, isFavorite } = useFavorites();
   
   const router = useRouter();
   
