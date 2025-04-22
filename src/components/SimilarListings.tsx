@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useMemo } from 'react';
 import { Listing } from '@/types/database';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -6,7 +6,7 @@ import { ListingCard } from '@/components/ListingCard';
 import { useFavorites } from '@/hooks/useFavorites';
 import { useRouter } from 'next/router';
 import { getFirebaseServices } from '@/lib/firebase';
-import { collection, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
+import { collection, query, orderBy, limit, getDocs } from 'firebase/firestore';
 import { ArrowRight } from 'lucide-react';
 
 interface SimilarListingsProps {
@@ -31,14 +31,14 @@ const getConditionColor = (condition: string) => {
   return colors[condition?.toLowerCase()] || { base: 'bg-gray-500/10 text-gray-500', hover: 'hover:bg-gray-500/20' };
 };
 
-// Create a cache for similar listings to prevent repeated fetches
+// Global cache for similar listings to prevent repeated fetches across page views
 const similarListingsCache: Record<string, {
   listings: Listing[],
   timestamp: number
 }> = {};
 
-// Cache expiration time (30 minutes)
-const CACHE_EXPIRATION = 30 * 60 * 1000;
+// Cache expiration time (1 hour)
+const CACHE_EXPIRATION = 60 * 60 * 1000;
 
 export const SimilarListings: React.FC<SimilarListingsProps> = ({ 
   currentListing, 
@@ -48,96 +48,51 @@ export const SimilarListings: React.FC<SimilarListingsProps> = ({
   const [isLoading, setIsLoading] = useState(true);
   const { toggleFavorite, isFavorite } = useFavorites();
   const router = useRouter();
-
-  // Use a ref to track if we've already fetched listings for this listing ID
-  const fetchedForListingRef = React.useRef<string | null>(null);
   
-  // Check cache on component mount
+  // Use a single ref to track data fetching state
+  const dataFetchedRef = useRef(false);
+  
+  // Generate a stable cache key for this listing
+  const cacheKey = useMemo(() => 
+    currentListing?.id ? `similar_${currentListing.id}` : null, 
+    [currentListing?.id]
+  );
+  
+  // Single effect for data fetching with proper dependency tracking
   useEffect(() => {
-    if (!currentListing?.id) return;
-    
-    const cacheKey = `similar_${currentListing.id}`;
-    const cachedData = similarListingsCache[cacheKey];
-    
-    if (cachedData && (Date.now() - cachedData.timestamp < CACHE_EXPIRATION)) {
-      console.log('Using cached similar listings data');
-      setSimilarListings(cachedData.listings);
-      setIsLoading(false);
-      fetchedForListingRef.current = currentListing.id;
-      hasFetchedRef.current = true;
-    }
-  }, [currentListing?.id]);
-
-  // Use a ref to track if we've already fetched data to prevent multiple fetches
-  const hasFetchedRef = useRef(false);
-
-  useEffect(() => {
-    // Skip if we've already fetched for this listing ID
-    if (fetchedForListingRef.current === currentListing?.id || hasFetchedRef.current) {
-      console.log('Similar listings already fetched for this listing, skipping refetch');
+    // Skip if no listing or already fetched
+    if (!currentListing?.id || !cacheKey || dataFetchedRef.current) {
       return;
     }
     
+    // Check cache first
+    const cachedData = similarListingsCache[cacheKey];
+    if (cachedData && (Date.now() - cachedData.timestamp < CACHE_EXPIRATION)) {
+      setSimilarListings(cachedData.listings);
+      setIsLoading(false);
+      dataFetchedRef.current = true;
+      return;
+    }
+    
+    // Set loading state
+    setIsLoading(true);
+    
+    // Define the fetch function
     const fetchSimilarListings = async () => {
-      if (!currentListing || !currentListing.id) return;
-      
-      // Set both refs to prevent duplicate fetches
-      fetchedForListingRef.current = currentListing.id;
-      hasFetchedRef.current = true;
-      
       try {
-        // Only set loading state if we haven't loaded data yet
-        if (similarListings.length === 0) {
-          setIsLoading(true);
-        }
-        
         const { db } = await getFirebaseServices();
-        
-        // Create a query to find similar listings based on:
-        // 1. Active status
-        // 2. Not the current listing
-        // 3. Not from the same seller
-        // 4. Same game category if possible, but don't restrict too much
         const listingsRef = collection(db, 'listings');
         
-        // Log the current listing details for debugging
-        console.log('Current listing details:', {
-          id: currentListing.id,
-          game: currentListing.game,
-          cardName: currentListing.cardName,
-          title: currentListing.title
-        });
-        
-        // Log that we're filtering out archived and inactive listings
-        console.log('Filtering out archived and inactive listings from similar listings results');
-        
-        // First try: Query with game category filter but without status filter
-        // This is a temporary fix to ensure we get some listings
-        let baseConstraints = [
+        // Single query with reasonable limit
+        const baseConstraints = [
           orderBy('createdAt', 'desc'),
-          limit(30) // Fetch more than we need to have a good pool for filtering
+          limit(50) // Fetch enough for filtering but not too many
         ];
         
-        let q = query(listingsRef, ...baseConstraints);
-        let querySnapshot = await getDocs(q);
-        console.log(`Found ${querySnapshot.docs.length} listings with general query without status filter.`);
+        const q = query(listingsRef, ...baseConstraints);
+        const querySnapshot = await getDocs(q);
         
-        // If we still don't have enough results, try an even more general query
-        if (querySnapshot.docs.length < 5) {
-          console.log(`Found only ${querySnapshot.docs.length} listings. Trying even more general query.`);
-          
-          // Second try: Query with increased limit
-          baseConstraints = [
-            orderBy('createdAt', 'desc'),
-            limit(100) // Significantly increase limit to find any listings
-          ];
-          
-          q = query(listingsRef, ...baseConstraints);
-          querySnapshot = await getDocs(q);
-          console.log(`Found ${querySnapshot.docs.length} listings with expanded general query.`);
-        }
-        
-        // Process the results
+        // Process results
         let fetchedListings = querySnapshot.docs
           .map(doc => {
             const data = doc.data();
@@ -158,52 +113,41 @@ export const SimilarListings: React.FC<SimilarListingsProps> = ({
               gradingCompany: data.gradingCompany || undefined
             } as Listing;
           })
-          // Filter out the current listing, archived, and inactive listings
+          // Filter out current listing and non-active listings
           .filter(listing => {
             const isCurrentListing = listing.id === currentListing.id;
-            const isArchived = listing.status === 'archived';
-            const isInactive = listing.status === 'inactive';
-            const isSold = listing.status === 'sold';
-            
-            // Log filtered out listings for debugging
-            if (isArchived || isInactive || isSold) {
-              console.log(`Filtering out listing ${listing.id} with status: ${listing.status}`);
-            }
-            
-            return !isCurrentListing && !isArchived && !isInactive && !isSold;
+            const isActive = listing.status === 'active';
+            return !isCurrentListing && isActive;
           });
-          
-        console.log(`After filtering, ${fetchedListings.length} listings remain.`);
         
-        // Calculate similarity score for each listing with enhanced keyword matching
+        // Calculate similarity scores
         const listingsWithScore = fetchedListings.map(listing => {
           let score = 0;
           
           // Same game category - highest priority
           if (listing.game === currentListing.game) {
-            score += 20; // Give a significant boost to listings in the same game category
+            score += 20;
           }
           
-          // Extract keywords from titles and descriptions for better matching
+          // Extract keywords function
           const extractKeywords = (text: string): string[] => {
             if (!text) return [];
-            // Remove special characters, convert to lowercase, and split by spaces
             return text.toLowerCase()
               .replace(/[^\w\s]/g, ' ')
               .split(/\s+/)
-              .filter(word => word.length > 2); // Only keep words with 3+ characters
+              .filter(word => word.length > 2);
           };
           
           // Get keywords from both listings
           const currentKeywords = new Set([
             ...extractKeywords(currentListing.title),
-            ...extractKeywords(currentListing.description),
+            ...extractKeywords(currentListing.description || ''),
             ...(currentListing.cardName ? extractKeywords(currentListing.cardName) : [])
           ]);
           
           const listingKeywords = new Set([
             ...extractKeywords(listing.title),
-            ...extractKeywords(listing.description),
+            ...extractKeywords(listing.description || ''),
             ...(listing.cardName ? extractKeywords(listing.cardName) : [])
           ]);
           
@@ -215,24 +159,20 @@ export const SimilarListings: React.FC<SimilarListingsProps> = ({
             }
           });
           
-          // Add score based on keyword matches (higher weight)
           score += matchingKeywords * 2;
           
-          // Card name similarity (highest priority for card-specific matches)
+          // Card name similarity
           if (listing.cardName && currentListing.cardName) {
             const listingCardName = listing.cardName.toLowerCase();
             const currentCardName = currentListing.cardName.toLowerCase();
             
-            // Exact match
             if (listingCardName === currentCardName) {
               score += 15;
             } 
-            // Partial match (one contains the other)
             else if (listingCardName.includes(currentCardName) || 
                      currentCardName.includes(listingCardName)) {
               score += 10;
             }
-            // Word-level match
             else {
               const listingCardWords = listingCardName.split(/\s+/);
               const currentCardWords = currentCardName.split(/\s+/);
@@ -245,52 +185,55 @@ export const SimilarListings: React.FC<SimilarListingsProps> = ({
             }
           }
           
-          // Title similarity with improved matching
-          const currentTitleWords = currentListing.title.toLowerCase().split(/\s+/);
-          const listingTitleWords = listing.title.toLowerCase().split(/\s+/);
-          
-          // Check for exact phrases (2+ words in sequence)
-          for (let i = 0; i < currentTitleWords.length - 1; i++) {
-            const phrase = `${currentTitleWords[i]} ${currentTitleWords[i+1]}`;
-            if (listing.title.toLowerCase().includes(phrase)) {
-              score += 5; // Higher score for matching phrases
+          // Title similarity
+          if (currentListing.title && listing.title) {
+            const currentTitleWords = currentListing.title.toLowerCase().split(/\s+/);
+            const listingTitleWords = listing.title.toLowerCase().split(/\s+/);
+            
+            // Check for exact phrases
+            for (let i = 0; i < currentTitleWords.length - 1; i++) {
+              const phrase = `${currentTitleWords[i]} ${currentTitleWords[i+1]}`;
+              if (listing.title.toLowerCase().includes(phrase)) {
+                score += 5;
+              }
             }
+            
+            // Individual word matches
+            const sharedTitleWords = currentTitleWords.filter(word => 
+              word.length > 2 && listingTitleWords.includes(word)
+            );
+            score += sharedTitleWords.length * 2;
           }
-          
-          // Individual word matches
-          const sharedTitleWords = currentTitleWords.filter(word => 
-            word.length > 2 && listingTitleWords.includes(word)
-          );
-          score += sharedTitleWords.length * 2; // Increased from 1 to emphasize title matches
           
           // Similar condition
           if (listing.condition === currentListing.condition) {
             score += 3;
           }
           
-          // Similar price range (within 20% of current listing price)
-          const priceDiff = Math.abs(listing.price - currentListing.price);
-          const pricePercentDiff = (priceDiff / currentListing.price) * 100;
-          if (pricePercentDiff <= 20) {
-            score += 2; // Reduced from 3 to prioritize content matches over price
-          }
-          
-          // Both graded or both not graded
-          if (listing.isGraded === currentListing.isGraded) {
-            score += 2;
-          }
-          
-          // Similar grading if both are graded
-          if (listing.isGraded && currentListing.isGraded) {
-            if (listing.gradingCompany === currentListing.gradingCompany) {
+          // Similar price range
+          if (listing.price && currentListing.price) {
+            const priceDiff = Math.abs(listing.price - currentListing.price);
+            const pricePercentDiff = currentListing.price > 0 ? 
+              (priceDiff / currentListing.price) * 100 : 100;
+            if (pricePercentDiff <= 20) {
               score += 2;
             }
+          }
+          
+          // Grading similarity
+          if (listing.isGraded === currentListing.isGraded) {
+            score += 2;
             
-            // Similar grade level (within 1 point)
-            if (listing.gradeLevel && currentListing.gradeLevel) {
-              const gradeDiff = Math.abs(listing.gradeLevel - currentListing.gradeLevel);
-              if (gradeDiff <= 1) {
+            if (listing.isGraded && currentListing.isGraded) {
+              if (listing.gradingCompany === currentListing.gradingCompany) {
                 score += 2;
+              }
+              
+              if (listing.gradeLevel && currentListing.gradeLevel) {
+                const gradeDiff = Math.abs(listing.gradeLevel - currentListing.gradeLevel);
+                if (gradeDiff <= 1) {
+                  score += 2;
+                }
               }
             }
           }
@@ -301,100 +244,16 @@ export const SimilarListings: React.FC<SimilarListingsProps> = ({
         // Sort by similarity score (highest first)
         listingsWithScore.sort((a, b) => b.score - a.score);
         
-        // Log the top scoring listings for debugging
-        console.log('Top scoring listings:', 
-          listingsWithScore.slice(0, 5).map(item => ({
-            id: item.listing.id,
-            title: item.listing.title,
-            game: item.listing.game,
-            score: item.score
-          }))
-        );
-        
         // Take the top N listings
         const topSimilarListings = listingsWithScore
           .slice(0, maxListings)
           .map(item => item.listing);
         
-        console.log(`Final similar listings count: ${topSimilarListings.length}`);
+        // Store results
+        setSimilarListings(topSimilarListings);
         
-        // If we still don't have any similar listings, try to get any active listings as fallback
-        if (topSimilarListings.length === 0) {
-          console.log('No similar listings found, fetching fallback listings');
-          
-          try {
-            // Fallback query: Just get any listings without status filter
-            const fallbackConstraints = [
-              orderBy('createdAt', 'desc'),
-              limit(maxListings + 10) // Get extra listings to ensure we have enough after filtering
-            ];
-            
-            const fallbackQuery = query(listingsRef, ...fallbackConstraints);
-            const fallbackSnapshot = await getDocs(fallbackQuery);
-            
-            console.log(`Found ${fallbackSnapshot.docs.length} fallback listings`);
-            
-            // Process fallback results
-            const fallbackListings = fallbackSnapshot.docs
-              .map(doc => {
-                const data = doc.data();
-                return {
-                  id: doc.id,
-                  ...data,
-                  createdAt: data.createdAt?.toDate() || new Date(),
-                  expiresAt: data.expiresAt?.toDate() || new Date(),
-                  price: Number(data.price) || 0,
-                  imageUrls: Array.isArray(data.imageUrls) ? data.imageUrls : [],
-                  isGraded: Boolean(data.isGraded),
-                  gradeLevel: data.gradeLevel ? Number(data.gradeLevel) : undefined,
-                  status: data.status || 'active',
-                  condition: data.condition || 'Not specified',
-                  game: data.game || 'Not specified',
-                  city: data.city || 'Unknown',
-                  state: data.state || 'Unknown',
-                  gradingCompany: data.gradingCompany || undefined
-                } as Listing;
-              })
-              // Filter out the current listing, archived, and inactive listings for fallback too
-              .filter(listing => {
-                const isCurrentListing = listing.id === currentListing.id;
-                const isArchived = listing.status === 'archived';
-                const isInactive = listing.status === 'inactive';
-                const isSold = listing.status === 'sold';
-                
-                // Log filtered out listings for debugging
-                if (isArchived || isInactive || isSold) {
-                  console.log(`Filtering out fallback listing ${listing.id} with status: ${listing.status}`);
-                }
-                
-                return !isCurrentListing && !isArchived && !isInactive && !isSold;
-              })
-              // Take only what we need
-              .slice(0, maxListings);
-            
-            if (fallbackListings.length > 0) {
-              console.log(`Using ${fallbackListings.length} fallback listings`);
-              setSimilarListings(fallbackListings);
-              
-              // Store in cache
-              const cacheKey = `similar_${currentListing.id}`;
-              similarListingsCache[cacheKey] = {
-                listings: fallbackListings,
-                timestamp: Date.now()
-              };
-            } else {
-              console.log('No fallback listings available either');
-              setSimilarListings([]);
-            }
-          } catch (fallbackError) {
-            console.error('Error fetching fallback listings:', fallbackError);
-            setSimilarListings([]);
-          }
-        } else {
-          setSimilarListings(topSimilarListings);
-          
-          // Store in cache
-          const cacheKey = `similar_${currentListing.id}`;
+        // Cache the results
+        if (cacheKey) {
           similarListingsCache[cacheKey] = {
             listings: topSimilarListings,
             timestamp: Date.now()
@@ -405,17 +264,18 @@ export const SimilarListings: React.FC<SimilarListingsProps> = ({
         setSimilarListings([]);
       } finally {
         setIsLoading(false);
+        dataFetchedRef.current = true;
       }
     };
 
+    // Execute fetch
     fetchSimilarListings();
     
-    // Clean up function to reset the fetch state when component unmounts
+    // Cleanup function
     return () => {
-      hasFetchedRef.current = false;
-      fetchedForListingRef.current = null;
+      dataFetchedRef.current = false;
     };
-  }, [currentListing?.id, maxListings]);
+  }, [currentListing?.id, cacheKey, maxListings]);
 
   // Always render the component, even when no similar listings are found
 
