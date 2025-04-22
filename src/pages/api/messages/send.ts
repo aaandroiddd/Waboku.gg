@@ -46,7 +46,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return res.status(404).json({ error: 'Recipient not found' })
       }
 
-      const chatsRef = admin.rtdb.ref('chats')
+      const chatsRef = admin.database.ref('chats')
       let chatId = null
 
       // If there's a subject, always create a new chat thread
@@ -111,7 +111,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         ...(listingId ? { listingId } : {})
       }
 
-      const messagesRef = admin.rtdb.ref(`messages/${chatId}`)
+      const messagesRef = admin.database.ref(`messages/${chatId}`)
       const newMessageRef = await messagesRef.push(messageData)
 
       // Update chat with last message
@@ -124,7 +124,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
 
       // Update unread counts
-      const unreadCountRef = admin.rtdb.ref(`chats/${chatId}/unreadCount/${recipientId}`)
+      const unreadCountRef = admin.database.ref(`chats/${chatId}/unreadCount/${recipientId}`)
       await unreadCountRef.transaction((current) => (current || 0) + 1)
 
       // Ensure both users have the chat in their threads
@@ -146,7 +146,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         ...(listingId ? { listingId, listingTitle } : {})
       }
 
-      await admin.rtdb.ref().update(updates)
+      await admin.database.ref().update(updates)
 
       return res.status(200).json({ success: true, chatId, messageId: newMessageRef.key })
     } catch (error) {
