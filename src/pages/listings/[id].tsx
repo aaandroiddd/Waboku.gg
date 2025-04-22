@@ -1777,18 +1777,6 @@ export default function ListingPage() {
 
       </div>
       
-      {/* Similar Listings Section */}
-      {listing && (
-        <div className="container mx-auto p-4">
-          <div className="min-h-[450px]"> {/* Fixed height container to prevent layout shifts */}
-            <SimilarListings 
-              currentListing={listing} 
-              maxListings={3} 
-            />
-          </div>
-        </div>
-      )}
-      
       <Footer />
       
       {/* Add to Group Dialog */}
