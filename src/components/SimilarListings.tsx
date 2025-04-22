@@ -9,17 +9,14 @@ import { getFirebaseServices } from '@/lib/firebase';
 import { collection, query, orderBy, limit, getDocs, where } from 'firebase/firestore';
 import { ArrowRight } from 'lucide-react';
 
-// Add type declaration for window.__similarListingsFetched
-declare global {
-  interface Window {
-    __similarListingsFetched?: Record<string, boolean>;
-  }
-}
+// Global cache for similar listings to prevent repeated fetches across page views
+const similarListingsCache: Record<string, {
+  listings: Listing[],
+  timestamp: number
+}> = {};
 
-interface SimilarListingsProps {
-  currentListing: Listing;
-  maxListings?: number;
-}
+// Cache expiration time (15 minutes)
+const CACHE_EXPIRATION = 15 * 60 * 1000;
 
 // Function to get condition color for ListingCard
 const getConditionColor = (condition: string) => {
@@ -38,14 +35,10 @@ const getConditionColor = (condition: string) => {
   return colors[condition?.toLowerCase()] || { base: 'bg-gray-500/10 text-gray-500', hover: 'hover:bg-gray-500/20' };
 };
 
-// Global cache for similar listings to prevent repeated fetches across page views
-const similarListingsCache: Record<string, {
-  listings: Listing[],
-  timestamp: number
-}> = {};
-
-// Cache expiration time (15 minutes)
-const CACHE_EXPIRATION = 15 * 60 * 1000;
+interface SimilarListingsProps {
+  currentListing: Listing;
+  maxListings?: number;
+}
 
 export const SimilarListings: React.FC<SimilarListingsProps> = ({ 
   currentListing, 
@@ -56,60 +49,57 @@ export const SimilarListings: React.FC<SimilarListingsProps> = ({
   const { toggleFavorite, isFavorite } = useFavorites();
   const router = useRouter();
   
-  // Use a single ref to track data fetching state
-  const dataFetchedRef = useRef(false);
+  // Track fetch status to prevent duplicate fetches
+  const fetchInProgressRef = useRef(false);
+  const hasFetchedDataRef = useRef(false);
   
-  // Generate a stable cache key for this listing
+  // Generate a stable cache key
   const cacheKey = useMemo(() => 
-    currentListing?.id ? `similar_${currentListing.id}_${maxListings}` : null, 
+    currentListing?.id ? `similar_${currentListing.id}_${maxListings}` : '', 
     [currentListing?.id, maxListings]
   );
   
-  // Single effect for data fetching with proper dependency tracking
   useEffect(() => {
-    // Skip if no listing
+    // Only execute if we have a valid listing and cache key
     if (!currentListing?.id || !cacheKey) {
+      console.log('[SimilarListings] No current listing or cache key, skipping fetch');
       return;
     }
     
-    // Check if we already fetched data for this component instance
-    if (dataFetchedRef.current) {
-      console.log(`[SimilarListings] Data already fetched for this instance, skipping`);
+    // Skip if fetch is already in progress or we've already fetched data
+    if (fetchInProgressRef.current || hasFetchedDataRef.current) {
+      console.log(`[SimilarListings] Fetch already in progress or data already fetched, skipping`);
       return;
     }
     
-    // Check if we have valid cached data
-    if (cacheKey && similarListingsCache[cacheKey]) {
+    console.log(`[SimilarListings] Effect running with cacheKey: ${cacheKey}`);
+    
+    // Use cached data if available and not expired
+    if (similarListingsCache[cacheKey]) {
       const cachedData = similarListingsCache[cacheKey];
       const now = Date.now();
       
-      // Use cache if it's still valid (not expired)
       if (now - cachedData.timestamp < CACHE_EXPIRATION) {
         console.log(`[SimilarListings] Using cached data for ${cacheKey}`);
         setSimilarListings(cachedData.listings);
         setIsLoading(false);
-        dataFetchedRef.current = true;
+        hasFetchedDataRef.current = true;
         return;
       } else {
         console.log(`[SimilarListings] Cache expired for ${cacheKey}`);
       }
     }
     
-    console.log(`[SimilarListings] Fetching data for listing ${currentListing.id} with game ${currentListing.game}`);
-    
-    // Mark as fetched immediately to prevent duplicate requests during this component instance
-    dataFetchedRef.current = true;
-    
-    // Set loading state
+    // Mark fetch as in progress to prevent concurrent fetches
+    fetchInProgressRef.current = true;
     setIsLoading(true);
     
-    // Define the fetch function
+    // Define async fetch function
     const fetchSimilarListings = async () => {
       try {
         console.log(`[SimilarListings] Fetching similar listings for ${currentListing.id}`);
         const { db } = await getFirebaseServices();
         
-        // Skip if db is not available
         if (!db) {
           console.error('[SimilarListings] Firebase db not available');
           setIsLoading(false);
@@ -118,28 +108,9 @@ export const SimilarListings: React.FC<SimilarListingsProps> = ({
         
         const listingsRef = collection(db, 'listings');
         
-        // First try a simple query to see if we get any results at all
-        const testQuery = query(
-          listingsRef,
-          where('status', '==', 'active'),
-          limit(5)
-        );
+        // Find game-specific listings first if applicable
+        let gameSpecificResults: Listing[] = [];
         
-        const testSnapshot = await getDocs(testQuery);
-        console.log(`[SimilarListings] Test query returned ${testSnapshot.docs.length} results`);
-        
-        // Create a more targeted query to reduce data transfer
-        const baseConstraints = [
-          where('status', '==', 'active'), // Only get active listings
-          orderBy('createdAt', 'desc'),
-          limit(50) // Increased to ensure we get enough results
-        ];
-        
-        // If we know the game, filter by it to get more relevant results
-        let q;
-        let gameSpecificResults = [];
-        
-        // Try game-specific query first if applicable
         if (currentListing.game && currentListing.game !== 'other') {
           try {
             const gameQuery = query(
@@ -147,14 +118,14 @@ export const SimilarListings: React.FC<SimilarListingsProps> = ({
               where('status', '==', 'active'),
               where('game', '==', currentListing.game),
               orderBy('createdAt', 'desc'),
-              limit(50)
+              limit(30) // Reduced from 50 to limit data transfer
             );
             
             const gameSnapshot = await getDocs(gameQuery);
-            console.log(`[SimilarListings] Game-specific query returned ${gameSnapshot.docs.length} results for game ${currentListing.game}`);
+            console.log(`[SimilarListings] Game-specific query returned ${gameSnapshot.docs.length} results`);
             
             gameSpecificResults = gameSnapshot.docs
-              .filter(doc => doc.id !== currentListing.id) // Filter out current listing
+              .filter(doc => doc.id !== currentListing.id)
               .map(doc => {
                 const data = doc.data();
                 return {
@@ -174,94 +145,57 @@ export const SimilarListings: React.FC<SimilarListingsProps> = ({
                   gradingCompany: data.gradingCompany || undefined
                 } as Listing;
               });
-          } catch (gameQueryError) {
-            console.error('[SimilarListings] Error with game-specific query:', gameQueryError);
+          } catch (error) {
+            console.error('[SimilarListings] Error with game-specific query:', error);
           }
         }
         
-        // If game-specific query didn't return enough results, use the general query
+        // If we don't have enough game-specific results, get general results
+        let fetchedListings = gameSpecificResults;
+        
         if (gameSpecificResults.length < maxListings) {
-          console.log(`[SimilarListings] Game-specific query didn't return enough results, using general query`);
-          q = query(listingsRef, ...baseConstraints);
-        } else {
-          // We have enough game-specific results, no need for general query
-          console.log(`[SimilarListings] Using ${gameSpecificResults.length} game-specific results`);
+          console.log('[SimilarListings] Not enough game-specific results, fetching general listings');
           
-          // Process these results with similarity scoring
-          const listingsWithScore = gameSpecificResults.map(listing => {
-            let score = 20; // Base score for same game
-            
-            // Add other scoring logic here (same as below)
-            // ...
-            
-            return { listing, score: 20 }; // Default high score for game matches
-          });
+          const generalQuery = query(
+            listingsRef,
+            where('status', '==', 'active'),
+            orderBy('createdAt', 'desc'),
+            limit(30) // Reduced from 50
+          );
           
-          // Sort by similarity score (highest first)
-          listingsWithScore.sort((a, b) => b.score - a.score);
+          const querySnapshot = await getDocs(generalQuery);
+          console.log(`[SimilarListings] General query returned ${querySnapshot.docs.length} results`);
           
-          // Take the top N listings
-          const topSimilarListings = listingsWithScore
-            .slice(0, maxListings)
-            .map(item => item.listing);
+          const generalResults = querySnapshot.docs
+            .filter(doc => doc.id !== currentListing.id)
+            .map(doc => {
+              const data = doc.data();
+              return {
+                id: doc.id,
+                ...data,
+                createdAt: data.createdAt?.toDate() || new Date(),
+                expiresAt: data.expiresAt?.toDate() || new Date(),
+                price: Number(data.price) || 0,
+                imageUrls: Array.isArray(data.imageUrls) ? data.imageUrls : [],
+                isGraded: Boolean(data.isGraded),
+                gradeLevel: data.gradeLevel ? Number(data.gradeLevel) : undefined,
+                status: data.status || 'active',
+                condition: data.condition || 'Not specified',
+                game: data.game || 'Not specified',
+                city: data.city || 'Unknown',
+                state: data.state || 'Unknown',
+                gradingCompany: data.gradingCompany || undefined
+              } as Listing;
+            });
           
-          // Store results
-          setSimilarListings(topSimilarListings);
+          // Combine results, ensuring no duplicates
+          const existingIds = new Set(gameSpecificResults.map(l => l.id));
+          const uniqueGeneralResults = generalResults.filter(l => !existingIds.has(l.id));
           
-          // Cache the results
-          if (cacheKey) {
-            similarListingsCache[cacheKey] = {
-              listings: topSimilarListings,
-              timestamp: Date.now()
-            };
-          }
-          
-          setIsLoading(false);
-          return; // Exit early since we have enough results
+          fetchedListings = [...gameSpecificResults, ...uniqueGeneralResults];
         }
         
-        // Use a direct one-time fetch instead of a listener
-        const querySnapshot = await getDocs(q);
-        console.log(`[SimilarListings] General query returned ${querySnapshot.docs.length} results`);
-        
-        // Process results
-        let fetchedListings = querySnapshot.docs
-          .map(doc => {
-            const data = doc.data();
-            return {
-              id: doc.id,
-              ...data,
-              createdAt: data.createdAt?.toDate() || new Date(),
-              expiresAt: data.expiresAt?.toDate() || new Date(),
-              price: Number(data.price) || 0,
-              imageUrls: Array.isArray(data.imageUrls) ? data.imageUrls : [],
-              isGraded: Boolean(data.isGraded),
-              gradeLevel: data.gradeLevel ? Number(data.gradeLevel) : undefined,
-              status: data.status || 'active',
-              condition: data.condition || 'Not specified',
-              game: data.game || 'Not specified',
-              city: data.city || 'Unknown',
-              state: data.state || 'Unknown',
-              gradingCompany: data.gradingCompany || undefined
-            } as Listing;
-          })
-          // Filter out current listing and non-active listings
-          .filter(listing => {
-            const isCurrentListing = listing.id === currentListing.id;
-            const isActive = listing.status === 'active';
-            return !isCurrentListing && isActive;
-          });
-        
-        // Combine with game-specific results if we have any
-        if (gameSpecificResults.length > 0) {
-          // Add game-specific results that aren't already in fetchedListings
-          const existingIds = new Set(fetchedListings.map(l => l.id));
-          const uniqueGameResults = gameSpecificResults.filter(l => !existingIds.has(l.id));
-          fetchedListings = [...fetchedListings, ...uniqueGameResults];
-          console.log(`[SimilarListings] Combined ${fetchedListings.length} listings from both queries`);
-        }
-        
-        // Calculate similarity scores
+        // Score listings by similarity
         const listingsWithScore = fetchedListings.map(listing => {
           let score = 0;
           
@@ -326,26 +260,6 @@ export const SimilarListings: React.FC<SimilarListingsProps> = ({
             }
           }
           
-          // Title similarity
-          if (currentListing.title && listing.title) {
-            const currentTitleWords = currentListing.title.toLowerCase().split(/\s+/);
-            const listingTitleWords = listing.title.toLowerCase().split(/\s+/);
-            
-            // Check for exact phrases
-            for (let i = 0; i < currentTitleWords.length - 1; i++) {
-              const phrase = `${currentTitleWords[i]} ${currentTitleWords[i+1]}`;
-              if (listing.title.toLowerCase().includes(phrase)) {
-                score += 5;
-              }
-            }
-            
-            // Individual word matches
-            const sharedTitleWords = currentTitleWords.filter(word => 
-              word.length > 2 && listingTitleWords.includes(word)
-            );
-            score += sharedTitleWords.length * 2;
-          }
-          
           // Similar condition
           if (listing.condition === currentListing.condition) {
             score += 3;
@@ -364,19 +278,6 @@ export const SimilarListings: React.FC<SimilarListingsProps> = ({
           // Grading similarity
           if (listing.isGraded === currentListing.isGraded) {
             score += 2;
-            
-            if (listing.isGraded && currentListing.isGraded) {
-              if (listing.gradingCompany === currentListing.gradingCompany) {
-                score += 2;
-              }
-              
-              if (listing.gradeLevel && currentListing.gradeLevel) {
-                const gradeDiff = Math.abs(listing.gradeLevel - currentListing.gradeLevel);
-                if (gradeDiff <= 1) {
-                  score += 2;
-                }
-              }
-            }
           }
           
           return { listing, score };
@@ -390,47 +291,41 @@ export const SimilarListings: React.FC<SimilarListingsProps> = ({
           .slice(0, maxListings)
           .map(item => item.listing);
         
-        // Store results
+        console.log(`[SimilarListings] Found ${topSimilarListings.length} similar listings`);
+        
+        // Update state with results
         setSimilarListings(topSimilarListings);
         
         // Cache the results
-        if (cacheKey) {
-          similarListingsCache[cacheKey] = {
-            listings: topSimilarListings,
-            timestamp: Date.now()
-          };
-          console.log(`[SimilarListings] Cached ${topSimilarListings.length} listings for ${cacheKey}`);
-        }
+        similarListingsCache[cacheKey] = {
+          listings: topSimilarListings,
+          timestamp: Date.now()
+        };
+        
       } catch (error) {
-        console.error('Error fetching similar listings:', error);
+        console.error('[SimilarListings] Error fetching similar listings:', error);
         setSimilarListings([]);
       } finally {
         setIsLoading(false);
-        dataFetchedRef.current = true;
+        fetchInProgressRef.current = false;
+        hasFetchedDataRef.current = true;
       }
     };
-
+    
     // Execute fetch
     fetchSimilarListings();
     
     // Cleanup function
     return () => {
-      // Reset the fetched flag when component unmounts
-      // This allows a fresh fetch if the component is remounted
-      dataFetchedRef.current = false;
+      // Reset fetch status when component unmounts
+      hasFetchedDataRef.current = false;
+      fetchInProgressRef.current = false;
     };
-  }, [currentListing?.id, cacheKey, maxListings]);
-
-  // Always render the component, even when no similar listings are found
+  }, [cacheKey]); // Only depend on cacheKey which is already memoized
 
   const handleViewAll = () => {
-    // Navigate to listings page with game filter
     router.push(`/listings?game=${currentListing.game}`);
   };
-
-  // Calculate a fixed height for the container to prevent layout shifts
-  const containerHeight = 450; // Height of card + padding + header
-  const cardHeight = 300; // Fixed height for listing cards
 
   return (
     <Card className="bg-black/[0.2] dark:bg-black/40 backdrop-blur-md border-muted mt-8">
@@ -438,7 +333,7 @@ export const SimilarListings: React.FC<SimilarListingsProps> = ({
         <CardTitle className="text-xl">Similar Listings</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="min-h-[350px]"> {/* Fixed minimum height container to prevent layout shifts */}
+        <div className="min-h-[350px]">
           {isLoading ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
               {[...Array(maxListings)].map((_, i) => (
