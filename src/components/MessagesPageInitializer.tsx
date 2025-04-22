@@ -22,23 +22,6 @@ export function MessagesPageInitializer() {
   const [isConnected, setIsConnected] = useState<boolean | null>(null);
 
   /**
-   * Cleanup function to remove listeners and timeouts
-   */
-  const cleanup = () => {
-    // Clear any existing timeout
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-      timeoutRef.current = null;
-    }
-    
-    // Unsubscribe from any existing listener
-    if (unsubscribeRef.current) {
-      unsubscribeRef.current();
-      unsubscribeRef.current = null;
-    }
-  };
-
-  /**
    * Primary function to establish and verify database connection
    * with improved error handling and recovery
    */
@@ -326,23 +309,3 @@ export function MessagesPageInitializer() {
       console.error('[MessagesPageInitializer] Error prefetching user data:', error);
     }
   };
-
-  // Set up the database connection when the component mounts
-  useEffect(() => {
-    // Set the messages page mode to prioritize Realtime Database
-    setMessagesPageMode(true);
-    
-    // Verify database connection
-    verifyDatabaseConnection();
-    
-    // Clean up when the component unmounts
-    return () => {
-      cleanup();
-      // Reset messages page mode
-      setMessagesPageMode(false);
-    };
-  }, []);
-
-  // The component doesn't render anything visible
-  return null;
-}
