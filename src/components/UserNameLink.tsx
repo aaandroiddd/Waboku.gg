@@ -111,29 +111,36 @@ export function UserNameLink({
     }
   }, [loading, userData, initialUsername, displayName, userId]);
   
-  // Function to try to get a username from email
+  // Function to try to get a username from email or any available user data
   const fetchEmailAsUsername = async (userId: string) => {
     try {
-      // Try Firestore first
+      // Always try Firestore first for consistent user data
       const userDoc = await getDoc(doc(db, 'users', userId));
       
       if (userDoc.exists()) {
         const data = userDoc.data();
         
-        if (data.email) {
+        // Try to get username from various fields
+        if (data.username) {
+          setDisplayName(data.username);
+          localStorage.setItem(`username_${userId}`, data.username);
+          return;
+        } else if (data.displayName) {
+          setDisplayName(data.displayName);
+          localStorage.setItem(`username_${userId}`, data.displayName);
+          return;
+        } else if (data.email) {
           // Get username part from email (before the @)
           const emailMatch = data.email.match(/^([^@]+)@/);
           if (emailMatch && emailMatch[1]) {
             const usernameFromEmail = emailMatch[1];
             setDisplayName(usernameFromEmail);
-            
-            // Save to localStorage for future reference
             localStorage.setItem(`username_${userId}`, usernameFromEmail);
             return;
           }
         }
         
-        // If no email or couldn't extract username, fall back to truncated ID
+        // If no usable fields found, fall back to truncated ID
         const truncatedId = userId.length > 10 ? `${userId.substring(0, 6)}...` : userId;
         setDisplayName(`User ${truncatedId}`);
       } else {
@@ -142,7 +149,7 @@ export function UserNameLink({
         setDisplayName(`User ${truncatedId}`);
       }
     } catch (e) {
-      console.warn('[UserNameLink] Error fetching email as username:', e);
+      console.warn('[UserNameLink] Error fetching username data:', e);
       // Fall back to user ID
       const truncatedId = userId.length > 10 ? `${userId.substring(0, 6)}...` : userId;
       setDisplayName(`User ${truncatedId}`);

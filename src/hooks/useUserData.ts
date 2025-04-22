@@ -3,13 +3,13 @@ import { getDoc, doc, getDocs, query, collection, where, limit } from 'firebase/
 import { getDatabase, ref, get } from 'firebase/database';
 import { db, getFirebaseServices } from '@/lib/firebase';
 
-// Global flag to track if we're in messages page (where Realtime Database is prioritized)
+// Global flag to track if we're in messages page
 let isInMessagesPage = false;
 
-// Set this flag when in messages page to prioritize Realtime Database
+// Set this flag when in messages page, but we'll still prioritize Firestore for user data
 export const setMessagesPageMode = (value: boolean) => {
   isInMessagesPage = value;
-  console.log(`[useUserData] Messages page mode ${value ? 'enabled' : 'disabled'} (Realtime Database prioritized)`);
+  console.log(`[useUserData] Messages page mode ${value ? 'enabled' : 'disabled'} (Firestore prioritized for user data)`);
 };
 
 // Global cache to persist across renders and components
@@ -77,54 +77,8 @@ export const prefetchUserData = async (userIds: string[]) => {
       const batchIds = uncachedUserIds.slice(i, i + BATCH_SIZE);
       const fetchedIds = new Set<string>();
       
-      // If in messages page mode, prioritize Realtime Database
-      if (isInMessagesPage) {
-        // Try Realtime Database first
-        if (getFirebaseServices().database) {
-          const database = getFirebaseServices().database;
-          
-          await Promise.allSettled(
-            batchIds.map(async (userId) => {
-              const userProfilePaths = [
-                `userProfiles/${userId}`,
-                `users/${userId}`,
-                `usernames/${userId}`
-              ];
-              
-              for (const path of userProfilePaths) {
-                try {
-                  const userRef = ref(database!, path);
-                  const snapshot = await get(userRef);
-                  
-                  if (snapshot.exists()) {
-                    const data = snapshot.val();
-                    if (data.displayName || data.username) {
-                      const userData = {
-                        username: data.displayName || data.username,
-                        avatarUrl: data.avatarUrl || data.photoURL || null
-                      };
-                      
-                      // Update cache
-                      userCache[userId] = {
-                        data: userData,
-                        timestamp: Date.now()
-                      };
-                      
-                      fetchedIds.add(userId);
-                      break; // Found user data, no need to check other paths
-                    }
-                  }
-                } catch (e) {
-                  // Continue to next path
-                  console.warn(`[prefetchUserData] Error accessing path ${path} for user ${userId}:`, e);
-                }
-              }
-            })
-          );
-        }
-      }
-      
-      // For users not found in RTDB, try Firestore
+      // Always try Firestore first for user data, regardless of page mode
+      // This ensures Firestore is prioritized for user profiles
       const notFoundIds = batchIds.filter(id => !fetchedIds.has(id));
       
       if (notFoundIds.length > 0) {
@@ -260,30 +214,16 @@ export function useUserData(userId: string, initialData?: any) {
         let foundUser = false;
         let userData = null;
         
-        // Determine which database to try first based on messages page mode
-        if (isInMessagesPage) {
-          // Try Realtime Database first
+        // Always try Firestore first for user data, regardless of page mode
+        // This ensures consistent user data from Firestore
+        userData = await fetchFromFirestore(userId);
+        if (userData) {
+          foundUser = true;
+        } else {
+          // Fall back to Realtime Database only if not found in Firestore
           userData = await fetchFromRealtimeDatabase(userId);
           if (userData) {
             foundUser = true;
-          } else {
-            // Fall back to Firestore
-            userData = await fetchFromFirestore(userId);
-            if (userData) {
-              foundUser = true;
-            }
-          }
-        } else {
-          // Try Firestore first
-          userData = await fetchFromFirestore(userId);
-          if (userData) {
-            foundUser = true;
-          } else {
-            // Fall back to Realtime Database
-            userData = await fetchFromRealtimeDatabase(userId);
-            if (userData) {
-              foundUser = true;
-            }
           }
         }
         

@@ -201,72 +201,26 @@ export function MessagesPageInitializer() {
   /**
    * Prefetch user data for all visible conversations
    * This improves the user experience by loading usernames in advance
+   * Prioritizes Firestore for user data
    */
   const prefetchVisibleUserData = async () => {
     try {
       // Find all user IDs that are visible in the UI
       const userIdsToFetch = new Set<string>();
       
-      // Try to get recent conversations from Realtime Database
-      const { database } = getFirebaseServices();
-      if (database) {
-        try {
-          // Try to get current user ID from session
-          let currentUserId = null;
-          try {
-            const userData = sessionStorage.getItem('userData');
-            if (userData) {
-              const parsedUserData = JSON.parse(userData);
-              currentUserId = parsedUserData.uid;
-            }
-          } catch (e) {
-            console.warn('[MessagesPageInitializer] Error retrieving current user from session:', e);
-          }
-
-          if (currentUserId) {
-            // Try to fetch conversations
-            const conversationsRef = ref(database, `conversations/${currentUserId}`);
-            const conversationsSnapshot = await get(conversationsRef);
-            
-            if (conversationsSnapshot.exists()) {
-              const conversations = conversationsSnapshot.val();
-              // Extract user IDs from conversations
-              Object.keys(conversations).forEach(convoId => {
-                const participants = conversations[convoId].participants;
-                if (participants) {
-                  Object.keys(participants).forEach(userId => {
-                    if (userId !== currentUserId) {
-                      userIdsToFetch.add(userId);
-                    }
-                  });
-                }
-              });
-            }
-            
-            // Also try to fetch from the messages path which might have additional user IDs
-            const messagesRef = ref(database, `messages/${currentUserId}`);
-            try {
-              const messagesSnapshot = await get(messagesRef);
-              if (messagesSnapshot.exists()) {
-                const messages = messagesSnapshot.val();
-                Object.keys(messages).forEach(otherUserId => {
-                  if (otherUserId !== currentUserId) {
-                    userIdsToFetch.add(otherUserId);
-                  }
-                });
-              }
-            } catch (e) {
-              console.warn('[MessagesPageInitializer] Error fetching messages:', e);
-            }
-          } else {
-            console.warn('[MessagesPageInitializer] Current user ID not found');
-          }
-        } catch (error) {
-          console.warn('[MessagesPageInitializer] Error fetching conversations from RTDB:', error);
+      // Try to get current user ID from session
+      let currentUserId = null;
+      try {
+        const userData = sessionStorage.getItem('userData');
+        if (userData) {
+          const parsedUserData = JSON.parse(userData);
+          currentUserId = parsedUserData.uid;
         }
+      } catch (e) {
+        console.warn('[MessagesPageInitializer] Error retrieving current user from session:', e);
       }
       
-      // Also try Firestore as a fallback for getting user IDs
+      // First try Firestore to get conversation participants
       try {
         const firestoreConversations = query(
           collection(db, 'conversations'),
