@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ListingCard } from '@/components/ListingCard';
 import { useFavorites } from '@/hooks/useFavorites';
+import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/router';
 import { getFirebaseServices } from '@/lib/firebase';
 import { collection, query, orderBy, limit, getDocs, where } from 'firebase/firestore';
@@ -47,17 +48,18 @@ export const SimilarListings: React.FC<SimilarListingsProps> = ({
   const [similarListings, setSimilarListings] = useState<Listing[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { toggleFavorite, isFavorite } = useFavorites();
+  const { user } = useAuth();
   const router = useRouter();
   
   // Track fetch status to prevent duplicate fetches
   const fetchInProgressRef = useRef(false);
-  const hasFetchedDataRef = useRef(false);
+  const dataFetchedRef = useRef(false);
   
-  // Generate a stable cache key
-  const cacheKey = useMemo(() => 
-    currentListing?.id ? `similar_${currentListing.id}_${maxListings}` : '', 
-    [currentListing?.id, maxListings]
-  );
+  // Generate a stable cache key that includes user authentication state
+  const cacheKey = useMemo(() => {
+    const userPart = user ? `_user_${user.uid}` : '_anonymous';
+    return currentListing?.id ? `similar_${currentListing.id}_${maxListings}${userPart}` : '';
+  }, [currentListing?.id, maxListings, user?.uid]);
   
   useEffect(() => {
     // Only execute if we have a valid listing and cache key
@@ -67,7 +69,7 @@ export const SimilarListings: React.FC<SimilarListingsProps> = ({
     }
     
     // Skip if fetch is already in progress or we've already fetched data
-    if (fetchInProgressRef.current || hasFetchedDataRef.current) {
+    if (fetchInProgressRef.current || dataFetchedRef.current) {
       console.log(`[SimilarListings] Fetch already in progress or data already fetched, skipping`);
       return;
     }
@@ -83,7 +85,7 @@ export const SimilarListings: React.FC<SimilarListingsProps> = ({
         console.log(`[SimilarListings] Using cached data for ${cacheKey}`);
         setSimilarListings(cachedData.listings);
         setIsLoading(false);
-        hasFetchedDataRef.current = true;
+        dataFetchedRef.current = true;
         return;
       } else {
         console.log(`[SimilarListings] Cache expired for ${cacheKey}`);
@@ -308,7 +310,7 @@ export const SimilarListings: React.FC<SimilarListingsProps> = ({
       } finally {
         setIsLoading(false);
         fetchInProgressRef.current = false;
-        hasFetchedDataRef.current = true;
+        dataFetchedRef.current = true;
       }
     };
     
@@ -318,7 +320,7 @@ export const SimilarListings: React.FC<SimilarListingsProps> = ({
     // Cleanup function
     return () => {
       // Reset fetch status when component unmounts
-      hasFetchedDataRef.current = false;
+      dataFetchedRef.current = false;
       fetchInProgressRef.current = false;
     };
   }, [cacheKey]); // Only depend on cacheKey which is already memoized
