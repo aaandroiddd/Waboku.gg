@@ -1,5 +1,22 @@
 {
   "rules": {
+    ".read": "auth != null",
+    ".write": "auth != null && newData.hasChildren(['messages']) && !newData.hasChild('users') && !newData.hasChild('chats') && !newData.hasChild('listings') && !newData.hasChild('wanted') && !newData.hasChild('wantedPosts') && !newData.hasChild('favorites') && !newData.hasChild('searchTerms') && !newData.hasChild('searches') && !newData.hasChild('userStatus') && !newData.hasChild('typing') && !newData.hasChild('lastActive') && !newData.hasChild('connection_tests') && !newData.hasChild('debug')",
+    
+    "connection_tests": {
+      ".read": true,
+      ".write": true,
+      "$test_id": {
+        ".read": true,
+        ".write": true
+      }
+    },
+    
+    "debug": {
+      ".read": true,
+      ".write": true
+    },
+    
     "users": {
       "$uid": {
         ".read": "auth != null && (auth.uid === $uid || root.child('users').child(auth.uid).child('account').child('tier').val() === 'admin')",
@@ -139,7 +156,6 @@
 
     "chats": {
       ".read": "auth != null",
-      ".write": "auth != null",
       ".indexOn": ["createdAt", "participants"],
       "$chatId": {
         ".read": "auth != null && data.child('participants').child(auth.uid).exists()",
@@ -338,20 +354,6 @@
           ".validate": "!newData.exists() || newData.isString()"
         }
       }
-    },
-
-    "connection_tests": {
-      ".read": true,
-      ".write": true,
-      "$test_id": {
-        ".read": true,
-        ".write": true
-      }
-    },
-    
-    "debug": {
-      ".read": true,
-      ".write": true
     },
 
     "$other": {
