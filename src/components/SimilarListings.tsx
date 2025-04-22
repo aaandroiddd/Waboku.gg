@@ -44,8 +44,8 @@ const similarListingsCache: Record<string, {
   timestamp: number
 }> = {};
 
-// Cache expiration time (1 hour)
-const CACHE_EXPIRATION = 60 * 60 * 1000;
+// Cache expiration time (15 minutes)
+const CACHE_EXPIRATION = 15 * 60 * 1000;
 
 export const SimilarListings: React.FC<SimilarListingsProps> = ({ 
   currentListing, 
@@ -72,36 +72,23 @@ export const SimilarListings: React.FC<SimilarListingsProps> = ({
       return;
     }
     
-    // Skip if already fetched in this component instance
-    if (dataFetchedRef.current) {
-      console.log(`[SimilarListings] Skipping fetch - already fetched for ${cacheKey}`);
-      return;
-    }
+    // For debugging - always fetch data to diagnose the issue
+    console.log(`[SimilarListings] Fetching data for listing ${currentListing.id} with game ${currentListing.game}`);
     
-    // Mark as fetched immediately to prevent duplicate requests
-    dataFetchedRef.current = true;
-    
-    // Add a global tracker to prevent duplicate fetches across remounts
+    // Reset the fetched flag to force a new fetch
     if (typeof window !== 'undefined') {
       window.__similarListingsFetched = window.__similarListingsFetched || {};
-      
-      // If we've fetched this listing's similar items in this session, use the flag
-      if (window.__similarListingsFetched[cacheKey]) {
-        console.log(`[SimilarListings] Skipping fetch - already fetched in this session for ${cacheKey}`);
-      } else {
-        // Mark as fetched for this session
-        window.__similarListingsFetched[cacheKey] = true;
-      }
+      // Clear the fetched flag for this listing to force a new fetch
+      delete window.__similarListingsFetched[cacheKey];
     }
     
-    // Check cache first
-    const cachedData = similarListingsCache[cacheKey];
-    if (cachedData && (Date.now() - cachedData.timestamp < CACHE_EXPIRATION)) {
-      console.log(`[SimilarListings] Using cached data for ${cacheKey}`);
-      setSimilarListings(cachedData.listings);
-      setIsLoading(false);
-      return;
+    // Clear cache for this listing to force a new fetch
+    if (cacheKey && similarListingsCache[cacheKey]) {
+      delete similarListingsCache[cacheKey];
     }
+    
+    // Mark as fetched immediately to prevent duplicate requests during this component instance
+    dataFetchedRef.current = true;
     
     // Set loading state
     setIsLoading(true);
@@ -121,31 +108,111 @@ export const SimilarListings: React.FC<SimilarListingsProps> = ({
         
         const listingsRef = collection(db, 'listings');
         
+        // First try a simple query to see if we get any results at all
+        const testQuery = query(
+          listingsRef,
+          where('status', '==', 'active'),
+          limit(5)
+        );
+        
+        const testSnapshot = await getDocs(testQuery);
+        console.log(`[SimilarListings] Test query returned ${testSnapshot.docs.length} results`);
+        
         // Create a more targeted query to reduce data transfer
         const baseConstraints = [
           where('status', '==', 'active'), // Only get active listings
-          where('id', '!=', currentListing.id), // Exclude current listing
           orderBy('createdAt', 'desc'),
-          limit(20) // Reduced from 50 to 20 to minimize data transfer
+          limit(50) // Increased to ensure we get enough results
         ];
         
         // If we know the game, filter by it to get more relevant results
         let q;
+        let gameSpecificResults = [];
+        
+        // Try game-specific query first if applicable
         if (currentListing.game && currentListing.game !== 'other') {
-          q = query(
-            listingsRef,
-            where('status', '==', 'active'),
-            where('game', '==', currentListing.game),
-            where('id', '!=', currentListing.id),
-            orderBy('createdAt', 'desc'),
-            limit(20)
-          );
-        } else {
+          try {
+            const gameQuery = query(
+              listingsRef,
+              where('status', '==', 'active'),
+              where('game', '==', currentListing.game),
+              orderBy('createdAt', 'desc'),
+              limit(50)
+            );
+            
+            const gameSnapshot = await getDocs(gameQuery);
+            console.log(`[SimilarListings] Game-specific query returned ${gameSnapshot.docs.length} results for game ${currentListing.game}`);
+            
+            gameSpecificResults = gameSnapshot.docs
+              .filter(doc => doc.id !== currentListing.id) // Filter out current listing
+              .map(doc => {
+                const data = doc.data();
+                return {
+                  id: doc.id,
+                  ...data,
+                  createdAt: data.createdAt?.toDate() || new Date(),
+                  expiresAt: data.expiresAt?.toDate() || new Date(),
+                  price: Number(data.price) || 0,
+                  imageUrls: Array.isArray(data.imageUrls) ? data.imageUrls : [],
+                  isGraded: Boolean(data.isGraded),
+                  gradeLevel: data.gradeLevel ? Number(data.gradeLevel) : undefined,
+                  status: data.status || 'active',
+                  condition: data.condition || 'Not specified',
+                  game: data.game || 'Not specified',
+                  city: data.city || 'Unknown',
+                  state: data.state || 'Unknown',
+                  gradingCompany: data.gradingCompany || undefined
+                } as Listing;
+              });
+          } catch (gameQueryError) {
+            console.error('[SimilarListings] Error with game-specific query:', gameQueryError);
+          }
+        }
+        
+        // If game-specific query didn't return enough results, use the general query
+        if (gameSpecificResults.length < maxListings) {
+          console.log(`[SimilarListings] Game-specific query didn't return enough results, using general query`);
           q = query(listingsRef, ...baseConstraints);
+        } else {
+          // We have enough game-specific results, no need for general query
+          console.log(`[SimilarListings] Using ${gameSpecificResults.length} game-specific results`);
+          
+          // Process these results with similarity scoring
+          const listingsWithScore = gameSpecificResults.map(listing => {
+            let score = 20; // Base score for same game
+            
+            // Add other scoring logic here (same as below)
+            // ...
+            
+            return { listing, score: 20 }; // Default high score for game matches
+          });
+          
+          // Sort by similarity score (highest first)
+          listingsWithScore.sort((a, b) => b.score - a.score);
+          
+          // Take the top N listings
+          const topSimilarListings = listingsWithScore
+            .slice(0, maxListings)
+            .map(item => item.listing);
+          
+          // Store results
+          setSimilarListings(topSimilarListings);
+          
+          // Cache the results
+          if (cacheKey) {
+            similarListingsCache[cacheKey] = {
+              listings: topSimilarListings,
+              timestamp: Date.now()
+            };
+          }
+          
+          setIsLoading(false);
+          return; // Exit early since we have enough results
         }
         
         // Use a direct one-time fetch instead of a listener
         const querySnapshot = await getDocs(q);
+        console.log(`[SimilarListings] General query returned ${querySnapshot.docs.length} results`);
         
         // Process results
         let fetchedListings = querySnapshot.docs
@@ -174,6 +241,15 @@ export const SimilarListings: React.FC<SimilarListingsProps> = ({
             const isActive = listing.status === 'active';
             return !isCurrentListing && isActive;
           });
+        
+        // Combine with game-specific results if we have any
+        if (gameSpecificResults.length > 0) {
+          // Add game-specific results that aren't already in fetchedListings
+          const existingIds = new Set(fetchedListings.map(l => l.id));
+          const uniqueGameResults = gameSpecificResults.filter(l => !existingIds.has(l.id));
+          fetchedListings = [...fetchedListings, ...uniqueGameResults];
+          console.log(`[SimilarListings] Combined ${fetchedListings.length} listings from both queries`);
+        }
         
         // Calculate similarity scores
         const listingsWithScore = fetchedListings.map(listing => {
@@ -313,6 +389,7 @@ export const SimilarListings: React.FC<SimilarListingsProps> = ({
             listings: topSimilarListings,
             timestamp: Date.now()
           };
+          console.log(`[SimilarListings] Cached ${topSimilarListings.length} listings for ${cacheKey}`);
         }
       } catch (error) {
         console.error('Error fetching similar listings:', error);
