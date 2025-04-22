@@ -96,7 +96,7 @@ export default function SendMessagePage() {
       const { refreshAuthToken } = await import('@/lib/auth-token-manager');
       
       // Use the more robust token refresh mechanism
-      const token = await refreshAuthToken(currentUser);
+      let token = await refreshAuthToken(currentUser);
       
       if (!token) {
         throw new Error("Failed to get authentication token. Please try signing in again.");
