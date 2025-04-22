@@ -61,8 +61,8 @@ export const SimilarListings: React.FC<SimilarListingsProps> = ({
   
   // Generate a stable cache key for this listing
   const cacheKey = useMemo(() => 
-    currentListing?.id ? `similar_${currentListing.id}` : null, 
-    [currentListing?.id]
+    currentListing?.id ? `similar_${currentListing.id}_${maxListings}` : null, 
+    [currentListing?.id, maxListings]
   );
   
   // Single effect for data fetching with proper dependency tracking
@@ -72,20 +72,30 @@ export const SimilarListings: React.FC<SimilarListingsProps> = ({
       return;
     }
     
-    // For debugging - always fetch data to diagnose the issue
-    console.log(`[SimilarListings] Fetching data for listing ${currentListing.id} with game ${currentListing.game}`);
-    
-    // Reset the fetched flag to force a new fetch
-    if (typeof window !== 'undefined') {
-      window.__similarListingsFetched = window.__similarListingsFetched || {};
-      // Clear the fetched flag for this listing to force a new fetch
-      delete window.__similarListingsFetched[cacheKey];
+    // Check if we already fetched data for this component instance
+    if (dataFetchedRef.current) {
+      console.log(`[SimilarListings] Data already fetched for this instance, skipping`);
+      return;
     }
     
-    // Clear cache for this listing to force a new fetch
+    // Check if we have valid cached data
     if (cacheKey && similarListingsCache[cacheKey]) {
-      delete similarListingsCache[cacheKey];
+      const cachedData = similarListingsCache[cacheKey];
+      const now = Date.now();
+      
+      // Use cache if it's still valid (not expired)
+      if (now - cachedData.timestamp < CACHE_EXPIRATION) {
+        console.log(`[SimilarListings] Using cached data for ${cacheKey}`);
+        setSimilarListings(cachedData.listings);
+        setIsLoading(false);
+        dataFetchedRef.current = true;
+        return;
+      } else {
+        console.log(`[SimilarListings] Cache expired for ${cacheKey}`);
+      }
     }
+    
+    console.log(`[SimilarListings] Fetching data for listing ${currentListing.id} with game ${currentListing.game}`);
     
     // Mark as fetched immediately to prevent duplicate requests during this component instance
     dataFetchedRef.current = true;
@@ -403,9 +413,13 @@ export const SimilarListings: React.FC<SimilarListingsProps> = ({
     // Execute fetch
     fetchSimilarListings();
     
-    // No need to reset dataFetchedRef on cleanup as we want to prevent refetching
-    // even if the component re-renders without being fully unmounted/remounted
-  }, [currentListing?.id, cacheKey]);
+    // Cleanup function
+    return () => {
+      // Reset the fetched flag when component unmounts
+      // This allows a fresh fetch if the component is remounted
+      dataFetchedRef.current = false;
+    };
+  }, [currentListing?.id, cacheKey, maxListings]);
 
   // Always render the component, even when no similar listings are found
 
