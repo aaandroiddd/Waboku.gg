@@ -6,8 +6,15 @@ import { ListingCard } from '@/components/ListingCard';
 import { useFavorites } from '@/hooks/useFavorites';
 import { useRouter } from 'next/router';
 import { getFirebaseServices } from '@/lib/firebase';
-import { collection, query, orderBy, limit, getDocs } from 'firebase/firestore';
+import { collection, query, orderBy, limit, getDocs, where } from 'firebase/firestore';
 import { ArrowRight } from 'lucide-react';
+
+// Add type declaration for window.__similarListingsFetched
+declare global {
+  interface Window {
+    __similarListingsFetched?: Record<string, boolean>;
+  }
+}
 
 interface SimilarListingsProps {
   currentListing: Listing;
@@ -67,11 +74,25 @@ export const SimilarListings: React.FC<SimilarListingsProps> = ({
     
     // Skip if already fetched in this component instance
     if (dataFetchedRef.current) {
+      console.log(`[SimilarListings] Skipping fetch - already fetched for ${cacheKey}`);
       return;
     }
     
     // Mark as fetched immediately to prevent duplicate requests
     dataFetchedRef.current = true;
+    
+    // Add a global tracker to prevent duplicate fetches across remounts
+    if (typeof window !== 'undefined') {
+      window.__similarListingsFetched = window.__similarListingsFetched || {};
+      
+      // If we've fetched this listing's similar items in this session, use the flag
+      if (window.__similarListingsFetched[cacheKey]) {
+        console.log(`[SimilarListings] Skipping fetch - already fetched in this session for ${cacheKey}`);
+      } else {
+        // Mark as fetched for this session
+        window.__similarListingsFetched[cacheKey] = true;
+      }
+    }
     
     // Check cache first
     const cachedData = similarListingsCache[cacheKey];
@@ -90,15 +111,38 @@ export const SimilarListings: React.FC<SimilarListingsProps> = ({
       try {
         console.log(`[SimilarListings] Fetching similar listings for ${currentListing.id}`);
         const { db } = await getFirebaseServices();
+        
+        // Skip if db is not available
+        if (!db) {
+          console.error('[SimilarListings] Firebase db not available');
+          setIsLoading(false);
+          return;
+        }
+        
         const listingsRef = collection(db, 'listings');
         
-        // Single query with reasonable limit
+        // Create a more targeted query to reduce data transfer
         const baseConstraints = [
+          where('status', '==', 'active'), // Only get active listings
+          where('id', '!=', currentListing.id), // Exclude current listing
           orderBy('createdAt', 'desc'),
-          limit(50) // Fetch enough for filtering but not too many
+          limit(20) // Reduced from 50 to 20 to minimize data transfer
         ];
         
-        const q = query(listingsRef, ...baseConstraints);
+        // If we know the game, filter by it to get more relevant results
+        let q;
+        if (currentListing.game && currentListing.game !== 'other') {
+          q = query(
+            listingsRef,
+            where('status', '==', 'active'),
+            where('game', '==', currentListing.game),
+            where('id', '!=', currentListing.id),
+            orderBy('createdAt', 'desc'),
+            limit(20)
+          );
+        } else {
+          q = query(listingsRef, ...baseConstraints);
+        }
         
         // Use a direct one-time fetch instead of a listener
         const querySnapshot = await getDocs(q);
