@@ -309,3 +309,38 @@ export function MessagesPageInitializer() {
       console.error('[MessagesPageInitializer] Error prefetching user data:', error);
     }
   };
+
+  /**
+   * Cleanup function to remove listeners and timeouts
+   */
+  const cleanup = () => {
+    // Clear any existing timeout
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+    
+    // Unsubscribe from any existing listener
+    if (unsubscribeRef.current) {
+      unsubscribeRef.current();
+      unsubscribeRef.current = null;
+    }
+  };
+
+  // Initialize connection when component mounts
+  useEffect(() => {
+    console.log('[MessagesPageInitializer] Initializing messages page');
+    setMessagesPageMode(true);
+    verifyDatabaseConnection();
+    
+    // Cleanup when component unmounts
+    return () => {
+      console.log('[MessagesPageInitializer] Cleaning up messages page');
+      cleanup();
+      setMessagesPageMode(false);
+    };
+  }, []);
+
+  // The component doesn't render anything visible
+  return null;
+}
