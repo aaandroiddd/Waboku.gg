@@ -98,14 +98,6 @@
     /* Removed display, visibility and opacity to let Radix handle them */
   }
   
-  /* Ensure dialog overlay is properly positioned without overriding visibility/opacity */
-  [data-radix-dialog-overlay] {
-    position: fixed !important;
-    inset: 0 !important;
-    z-index: 50 !important;
-    /* Removed display, visibility and opacity to let Radix handle them */
-  }
-  
   /* Fix for image zoom dialog on mobile */
   .react-transform-wrapper {
     transform: translateZ(0) !important;
@@ -179,23 +171,6 @@
       top: 8px !important;
       right: 8px !important;
       /* Removed display property to avoid conflicts */
-    }
-    
-    /* Specific styling for image dialog on mobile - without overriding visibility/display */
-    .mobile-image-dialog {
-      position: fixed !important;
-      top: 50% !important;
-      left: 50% !important;
-      transform: translate(-50%, -50%) translateZ(0) !important;
-      max-height: 85vh !important;
-      width: 95vw !important;
-      max-width: 95vw !important;
-      border-radius: 8px !important;
-      background-color: rgba(0, 0, 0, 0.9) !important;
-      z-index: 9999 !important;
-      align-items: center !important;
-      justify-content: center !important;
-      /* Removed display, visibility and opacity properties */
     }
   }
   
