@@ -92,9 +92,10 @@ export const ListingList = ({
                 <div className="flex flex-col sm:flex-row gap-4">
                   {/* Image Section */}
                   <div className="relative h-24 sm:h-20 sm:w-20 flex-shrink-0">
-                    {listing.imageUrls?.[0] ? (
+                    {listing.imageUrls && listing.imageUrls.length > 0 ? (
                       <Image
-                        src={listing.imageUrls[0]}
+                        src={listing.imageUrls[typeof listing.coverImageIndex === 'number' ? 
+                          Math.min(listing.coverImageIndex, listing.imageUrls.length - 1) : 0]}
                         alt={listing.title}
                         fill
                         className="object-cover rounded-md"

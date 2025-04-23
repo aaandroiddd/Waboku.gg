@@ -506,18 +506,24 @@ export const ListingCard = memo(({ listing, isFavorite, onFavoriteClick, onAddTo
                   {(() => {
                     // Safely determine the image URL to use
                     const coverIndex = typeof listing.coverImageIndex === 'number' ? listing.coverImageIndex : 0;
+                    
+                    // Ensure the cover index is within bounds of the available images
+                    const safeIndex = Array.isArray(listing.imageUrls) && listing.imageUrls.length > 0 
+                      ? Math.min(coverIndex, listing.imageUrls.length - 1) 
+                      : 0;
+                    
                     const imageUrl = Array.isArray(listing.imageUrls) && 
-                                    listing.imageUrls.length > 0 && 
-                                    listing.imageUrls[coverIndex] ? 
-                                    listing.imageUrls[coverIndex] : 
+                                    listing.imageUrls.length > 0 ? 
+                                    listing.imageUrls[safeIndex] : 
                                     '/images/rect.png';
                     
                     // Log image loading issues in development
                     if (process.env.NODE_ENV === 'development') {
                       console.log(`Loading image for listing ${listing.id}:`, {
                         imageUrl,
-                        coverIndex,
-                        totalImages: listing.imageUrls.length
+                        requestedCoverIndex: coverIndex,
+                        actualIndex: safeIndex,
+                        totalImages: listing.imageUrls?.length || 0
                       });
                     }
                     
