@@ -12,7 +12,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { Menu, LayoutDashboard, Heart, MessageSquare, Settings, Store, LogOut } from "lucide-react";
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { motion, useReducedMotion } from "framer-motion";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
@@ -36,6 +36,12 @@ export default function Header({ animate = true }: HeaderProps) {
   const isMobile = useMediaQuery("(max-width: 768px)");
   const prefersReducedMotion = useReducedMotion();
   
+  // State for scroll-based header visibility
+  const [showHeader, setShowHeader] = useState(true);
+  const [lastScrollY, setLastScrollY] = useState(0);
+  const scrollThreshold = 10; // Minimum scroll difference to trigger header visibility change
+  const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  
   // Throttle menu opening/closing to prevent performance issues
   const handleMenuToggle = useCallback((open: boolean) => {
     if (isMenuAnimating) return;
@@ -49,6 +55,51 @@ export default function Header({ animate = true }: HeaderProps) {
     }, 300); // Match this with the animation duration
   }, [isMenuAnimating]);
   
+  // Control header visibility based on scroll direction
+  const controlHeader = useCallback(() => {
+    const currentScrollY = window.scrollY;
+    
+    // Only update if we've scrolled more than the threshold
+    if (Math.abs(currentScrollY - lastScrollY) > scrollThreshold) {
+      // Show header when scrolling up, hide when scrolling down
+      if (currentScrollY > lastScrollY && currentScrollY > 50) {
+        // Scrolling down & not at the top
+        setShowHeader(false);
+      } else {
+        // Scrolling up or at the top
+        setShowHeader(true);
+      }
+      
+      // Update last scroll position
+      setLastScrollY(currentScrollY);
+    }
+  }, [lastScrollY, scrollThreshold]);
+  
+  // Add scroll event listener with throttling
+  useEffect(() => {
+    // Skip for non-browser environments
+    if (typeof window === 'undefined') return;
+    
+    const handleScroll = () => {
+      // Throttle scroll events
+      if (scrollTimeoutRef.current) return;
+      
+      scrollTimeoutRef.current = setTimeout(() => {
+        controlHeader();
+        scrollTimeoutRef.current = null;
+      }, 100); // Throttle to 10 times per second
+    };
+    
+    window.addEventListener('scroll', handleScroll);
+    
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current);
+      }
+    };
+  }, [controlHeader]);
+  
   // Lock body scroll when mobile menu is open
   useEffect(() => {
     if (isMobileMenuOpen) {
@@ -57,6 +108,9 @@ export default function Header({ animate = true }: HeaderProps) {
       document.body.style.position = 'fixed';
       document.body.style.width = '100%';
       document.body.style.top = `-${window.scrollY}px`;
+      
+      // Always show header when menu is open
+      setShowHeader(true);
     } else {
       // Unlock body scroll and restore position
       const scrollY = document.body.style.top;
@@ -147,12 +201,32 @@ export default function Header({ animate = true }: HeaderProps) {
     }
   };
 
+  // Animation variants for header show/hide
+  const showHideVariants = {
+    visible: { 
+      y: 0,
+      opacity: 1,
+      transition: {
+        y: { type: "spring", stiffness: 300, damping: 30 },
+        opacity: { duration: 0.2 }
+      }
+    },
+    hidden: { 
+      y: -60,
+      opacity: 0,
+      transition: {
+        y: { type: "spring", stiffness: 300, damping: 30 },
+        opacity: { duration: 0.2 }
+      }
+    }
+  };
+
   return (
     <motion.header 
       className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60"
       initial={animate ? "hidden" : "visible"}
-      animate="visible"
-      variants={headerVariants}
+      animate={showHeader ? "visible" : "hidden"}
+      variants={showHideVariants}
       // Add layout="preserved" to maintain layout during animation
       layout="preserved"
     >
