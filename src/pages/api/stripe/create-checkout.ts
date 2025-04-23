@@ -66,13 +66,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     
     try {
       // Initialize Firebase Admin
-      const admin = getFirebaseAdmin();
+      const { admin: firebaseAdmin, auth } = getFirebaseAdmin();
       console.log(`[Create Checkout ${requestId}] Firebase Admin initialized successfully`);
       
       // Verify the token and get user data
       try {
         // Verify the token and get user data
-        const decodedToken = await admin.auth().verifyIdToken(idToken, true);
+        const decodedToken = await auth.verifyIdToken(idToken, true);
         const userId = decodedToken.uid;
         const userEmail = decodedToken.email;
 
@@ -94,7 +94,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }
 
         // Check if user already has an active subscription
-        const db = admin.database();
+        const db = firebaseAdmin.database();
         const userRef = db.ref(`users/${userId}/account/subscription`);
         const snapshot = await userRef.once('value');
         const currentSubscription = snapshot.val();
@@ -179,7 +179,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             console.log('[Create Checkout] Preview mode: Updated account data in Realtime Database');
             
             // Also update in Firestore for consistency
-            const firestore = admin.firestore();
+            const firestore = firebaseAdmin.firestore();
             await firestore.collection('users').doc(userId).set({
               accountTier: 'premium',
               updatedAt: currentDate.toISOString(),
