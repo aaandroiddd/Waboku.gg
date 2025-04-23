@@ -91,6 +91,17 @@ const getRelatedGameCategories = (game: string): string[] => {
 export const SimilarListings = ({ currentListing, maxListings = 9 }: SimilarListingsProps) => {
   const [similarListings, setSimilarListings] = useState<Listing[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [debugInfo, setDebugInfo] = useState<{
+    queriesRun: number;
+    resultsPerQuery: Record<string, number>;
+    totalListingsFetched: number;
+    error: string | null;
+  }>({
+    queriesRun: 0,
+    resultsPerQuery: {},
+    totalListingsFetched: 0,
+    error: null
+  });
   const { toggleFavorite, isFavorite, initialized } = useFavorites();
   const router = useRouter();
 
@@ -99,6 +110,17 @@ export const SimilarListings = ({ currentListing, maxListings = 9 }: SimilarList
       try {
         setIsLoading(true);
         const { db } = await getFirebaseServices();
+        if (!db) {
+          console.error('Firebase DB is not initialized');
+          setDebugInfo(prev => ({
+            ...prev,
+            error: 'Firebase DB is not initialized'
+          }));
+          setIsLoading(false);
+          return;
+        }
+        
+        console.log('Fetching similar listings for:', currentListing.id);
         const listingsRef = collection(db, 'listings');
         
         // Extract meaningful keywords from title and description
@@ -261,6 +283,62 @@ export const SimilarListings = ({ currentListing, maxListings = 9 }: SimilarList
             match => !results.some(existing => existing.id === match.id)
           );
           results = [...results, ...newMatches];
+          
+          setDebugInfo(prev => ({
+            ...prev,
+            queriesRun: prev.queriesRun + 1,
+            resultsPerQuery: {
+              ...prev.resultsPerQuery,
+              'lastResort': lastResortMatches.length
+            }
+          }));
+        }
+        
+        // Tier 7: Absolute last resort - get ANY listings regardless of status
+        // Only if we still have no results at all
+        if (results.length === 0) {
+          console.log('No results found in any tier, trying emergency fallback query');
+          try {
+            // Query without status filter to see if there are any listings at all
+            const emergencyQuery = query(
+              listingsRef,
+              limit(maxListings)
+            );
+            
+            const emergencySnapshot = await getDocs(emergencyQuery);
+            console.log(`Emergency query found ${emergencySnapshot.docs.length} listings`);
+            
+            if (emergencySnapshot.docs.length > 0) {
+              // If we found listings but they're not active, log this information
+              const emergencyResults = processQueryResults(emergencySnapshot);
+              console.log('Emergency results:', emergencyResults.map(l => ({
+                id: l.id,
+                status: l.status,
+                game: l.game
+              })));
+              
+              // Only use these as a last resort if they're not the current listing
+              const filteredEmergency = emergencyResults.filter(
+                match => match.id !== currentListing.id
+              );
+              
+              if (filteredEmergency.length > 0) {
+                results = filteredEmergency;
+                console.log('Using emergency results as fallback');
+              }
+              
+              setDebugInfo(prev => ({
+                ...prev,
+                queriesRun: prev.queriesRun + 1,
+                resultsPerQuery: {
+                  ...prev.resultsPerQuery,
+                  'emergency': emergencyResults.length
+                }
+              }));
+            }
+          } catch (emergencyError) {
+            console.error('Error in emergency query:', emergencyError);
+          }
         }
         
         // Sort results by relevance score
@@ -269,9 +347,19 @@ export const SimilarListings = ({ currentListing, maxListings = 9 }: SimilarList
         // Limit to maxListings
         results = results.slice(0, maxListings);
         
+        console.log(`Found ${results.length} similar listings after all queries`);
+        setDebugInfo(prev => ({
+          ...prev,
+          totalListingsFetched: results.length
+        }));
+        
         setSimilarListings(results);
       } catch (error) {
         console.error('Error fetching similar listings:', error);
+        setDebugInfo(prev => ({
+          ...prev,
+          error: error instanceof Error ? error.message : String(error)
+        }));
       } finally {
         setIsLoading(false);
       }
@@ -397,9 +485,25 @@ export const SimilarListings = ({ currentListing, maxListings = 9 }: SimilarList
         <Card className="bg-muted/30">
           <CardContent className="p-6 text-center">
             <p className="text-muted-foreground mb-4">No similar listings found at this time.</p>
-            <Button onClick={() => router.push('/listings')}>
-              View All Listings
-            </Button>
+            <div className="mb-4">
+              <Button onClick={() => router.push('/listings')}>
+                View All Listings
+              </Button>
+            </div>
+            
+            {/* Debug information - only shown in development */}
+            {process.env.NODE_ENV === 'development' && (
+              <div className="mt-4 text-left text-xs border-t pt-4">
+                <p className="font-semibold mb-1">Debug Info:</p>
+                <p>Queries run: {debugInfo.queriesRun}</p>
+                <p>Results per query: {
+                  Object.entries(debugInfo.resultsPerQuery).map(([key, value]) => 
+                    `${key}: ${value}`
+                  ).join(', ') || 'None'
+                }</p>
+                {debugInfo.error && <p className="text-red-500">Error: {debugInfo.error}</p>}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

@@ -1,447 +1,162 @@
-import { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { collection, query, where, getDocs, limit } from 'firebase/firestore';
 import { getFirebaseServices } from '@/lib/firebase';
-import { doc, getDoc } from 'firebase/firestore';
 import { Listing } from '@/types/database';
-import { parseDate, isExpired } from '@/lib/date-utils';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AlertCircle, CheckCircle, XCircle, RefreshCw } from 'lucide-react';
-import { useCacheClearing } from '@/hooks/useCacheClearing';
-import { useToast } from '@/components/ui/use-toast';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { AlertCircle } from 'lucide-react';
 
-interface ListingDebuggerProps {
-  listingId: string;
-}
-
-export function ListingDebugger({ listingId }: ListingDebuggerProps) {
-  const [listing, setListing] = useState<any | null>(null);
-  const [loading, setLoading] = useState(true);
+export function ListingDebugger() {
+  const [listings, setListings] = useState<Listing[]>([]);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [visibilityChecks, setVisibilityChecks] = useState<{
-    check: string;
-    passed: boolean;
-    details: string;
-  }[]>([]);
+  const [stats, setStats] = useState<{
+    total: number;
+    active: number;
+    byGame: Record<string, number>;
+  }>({
+    total: 0,
+    active: 0,
+    byGame: {}
+  });
 
-  useEffect(() => {
-    async function fetchListing() {
-      try {
-        setLoading(true);
-        setError(null);
-        
-        const { db } = await getFirebaseServices();
-        const listingRef = doc(db, 'listings', listingId);
-        const listingSnap = await getDoc(listingRef);
-        
-        if (!listingSnap.exists()) {
-          setError('Listing not found');
-          return;
-        }
-        
-        const data = listingSnap.data();
-        setListing(data);
-        
-        // Perform visibility checks
-        const checks = [];
-        
-        // Check 1: Status
-        checks.push({
-          check: 'Status Check',
-          passed: data.status === 'active',
-          details: `Status is "${data.status}" (should be "active")`
-        });
-        
-        // Check 2: Expiration
-        const now = new Date();
-        const expiresAt = data.expiresAt?.toDate ? data.expiresAt.toDate() : parseDate(data.expiresAt, null);
-        
-        if (!expiresAt) {
-          checks.push({
-            check: 'Expiration Check',
-            passed: false,
-            details: 'Could not parse expiration date'
-          });
-        } else {
-          const isExpired = now > expiresAt;
-          checks.push({
-            check: 'Expiration Check',
-            passed: !isExpired,
-            details: `Expires at ${expiresAt.toISOString()} (${isExpired ? 'expired' : 'not expired'})`
-          });
-        }
-        
-        // Check 3: Required Fields
-        const requiredFields = ['title', 'price', 'imageUrls', 'userId', 'username'];
-        const missingFields = requiredFields.filter(field => !data[field]);
-        
-        checks.push({
-          check: 'Required Fields Check',
-          passed: missingFields.length === 0,
-          details: missingFields.length === 0 
-            ? 'All required fields are present' 
-            : `Missing fields: ${missingFields.join(', ')}`
-        });
-        
-        // Check 4: Image URLs
-        const hasValidImages = Array.isArray(data.imageUrls) && data.imageUrls.length > 0;
-        
-        checks.push({
-          check: 'Images Check',
-          passed: hasValidImages,
-          details: hasValidImages 
-            ? `Has ${data.imageUrls.length} images` 
-            : 'No valid images found'
-        });
-        
-        // Check 5: Terms Accepted
-        checks.push({
-          check: 'Terms Accepted Check',
-          passed: data.termsAccepted === true,
-          details: `Terms accepted: ${data.termsAccepted === true ? 'Yes' : 'No'}`
-        });
-        
-        setVisibilityChecks(checks);
-      } catch (err: any) {
-        console.error('Error fetching listing:', err);
-        setError(err.message || 'Error fetching listing');
-      } finally {
-        setLoading(false);
-      }
-    }
+  const fetchListings = async () => {
+    setLoading(true);
+    setError(null);
     
-    if (listingId) {
-      fetchListing();
-    }
-  }, [listingId]);
-
-  const { clearAllListingCaches, clearListingCache: clearSpecificListingCache } = useCacheClearing();
-  const { toast } = useToast();
-  
-  const clearListingCache = () => {
     try {
-      // Use our enhanced cache clearing function
-      const success = clearAllListingCaches();
-      
-      if (success) {
-        toast({
-          title: "Cache Cleared",
-          description: "Listing cache cleared successfully. Please refresh the page.",
-          duration: 3000,
-        });
-      } else {
-        toast({
-          title: "Error",
-          description: "Failed to clear cache. Please try again.",
-          variant: "destructive",
-          duration: 3000,
-        });
+      const { db } = await getFirebaseServices();
+      if (!db) {
+        throw new Error('Firebase DB is not initialized');
       }
-    } catch (error) {
-      console.error('Error clearing cache:', error);
-      toast({
-        title: "Error",
-        description: "Failed to clear cache. Please try again.",
-        variant: "destructive",
-        duration: 3000,
+      
+      const listingsRef = collection(db, 'listings');
+      const q = query(listingsRef, limit(100));
+      const snapshot = await getDocs(q);
+      
+      const fetchedListings: Listing[] = [];
+      const gameStats: Record<string, number> = {};
+      let activeCount = 0;
+      
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+        const listing = {
+          id: doc.id,
+          ...data,
+          createdAt: data.createdAt?.toDate() || new Date(),
+          expiresAt: data.expiresAt?.toDate() || new Date(),
+          price: Number(data.price) || 0,
+          imageUrls: Array.isArray(data.imageUrls) ? data.imageUrls : [],
+          isGraded: Boolean(data.isGraded),
+          status: data.status || 'active',
+          condition: data.condition || 'Not specified',
+          game: data.game || 'Not specified',
+          city: data.city || 'Unknown',
+          state: data.state || 'Unknown',
+        } as Listing;
+        
+        fetchedListings.push(listing);
+        
+        // Track stats
+        if (listing.status === 'active') {
+          activeCount++;
+        }
+        
+        if (listing.game) {
+          gameStats[listing.game] = (gameStats[listing.game] || 0) + 1;
+        }
       });
+      
+      setListings(fetchedListings);
+      setStats({
+        total: fetchedListings.length,
+        active: activeCount,
+        byGame: gameStats
+      });
+    } catch (err) {
+      console.error('Error fetching listings:', err);
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setLoading(false);
     }
   };
 
-  if (loading) {
-    return (
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex items-center justify-center h-40">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  if (error) {
-    return (
-      <Card>
-        <CardContent className="pt-6">
-          <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertTitle>Error</AlertTitle>
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  if (!listing) {
-    return null;
-  }
-
-  // Calculate overall visibility status
-  const isVisible = visibilityChecks.every(check => check.passed);
-
   return (
-    <Card>
+    <Card className="w-full">
       <CardHeader>
-        <CardTitle className="flex items-center justify-between">
-          <span>Listing Visibility Debugger</span>
-          <Badge variant={isVisible ? "success" : "destructive"}>
-            {isVisible ? 'Should be visible' : 'Has visibility issues'}
-          </Badge>
-        </CardTitle>
+        <CardTitle>Listing Debugger</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          <div>
-            <h3 className="text-lg font-medium">Listing Details</h3>
-            <div className="grid grid-cols-2 gap-2 mt-2">
-              <div className="text-sm font-medium">ID:</div>
-              <div className="text-sm">{listingId}</div>
-              
-              <div className="text-sm font-medium">Title:</div>
-              <div className="text-sm">{listing.title}</div>
-              
-              <div className="text-sm font-medium">Status:</div>
-              <div className="text-sm">{listing.status}</div>
-              
-              <div className="text-sm font-medium">Game:</div>
-              <div className="text-sm">{listing.game}</div>
-              
-              <div className="text-sm font-medium">Created:</div>
-              <div className="text-sm">
-                {listing.createdAt?.toDate 
-                  ? listing.createdAt.toDate().toLocaleString() 
-                  : String(listing.createdAt)}
-              </div>
-              
-              <div className="text-sm font-medium">Expires:</div>
-              <div className="text-sm">
-                {listing.expiresAt?.toDate 
-                  ? listing.expiresAt.toDate().toLocaleString() 
-                  : String(listing.expiresAt)}
-              </div>
-            </div>
-          </div>
+          <Button onClick={fetchListings} disabled={loading}>
+            {loading ? 'Loading...' : 'Fetch Listings'}
+          </Button>
           
-          <Separator />
+          {error && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
           
-          <div>
-            <h3 className="text-lg font-medium">Visibility Checks</h3>
-            <div className="space-y-2 mt-2">
-              {visibilityChecks.map((check, index) => (
-                <div key={index} className="flex items-start gap-2 p-2 rounded-md bg-secondary/50">
-                  {check.passed 
-                    ? <CheckCircle className="h-5 w-5 text-green-500 mt-0.5" /> 
-                    : <XCircle className="h-5 w-5 text-red-500 mt-0.5" />}
-                  <div>
-                    <div className="font-medium">{check.check}</div>
-                    <div className="text-sm text-muted-foreground">{check.details}</div>
-                  </div>
+          {listings.length > 0 && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-3 gap-4">
+                <div className="p-3 bg-secondary rounded-md">
+                  <div className="font-semibold">Total Listings</div>
+                  <div className="text-2xl">{stats.total}</div>
                 </div>
-              ))}
-            </div>
-          </div>
-          
-          <Separator />
-          
-          <div className="flex flex-col gap-4">
-            <div className="flex justify-between">
-              <Button variant="outline" onClick={clearListingCache}>
-                Clear Listing Cache
-              </Button>
+                <div className="p-3 bg-secondary rounded-md">
+                  <div className="font-semibold">Active Listings</div>
+                  <div className="text-2xl">{stats.active}</div>
+                </div>
+                <div className="p-3 bg-secondary rounded-md">
+                  <div className="font-semibold">Games</div>
+                  <div className="text-2xl">{Object.keys(stats.byGame).length}</div>
+                </div>
+              </div>
               
-              <Button onClick={() => window.location.reload()}>
-                Refresh Page
-              </Button>
-            </div>
-            
-            <Separator />
-            
-            <div className="space-y-2">
-              <h3 className="text-lg font-medium">Fix Listing</h3>
-              <div className="flex flex-wrap gap-2">
-                <Button 
-                  variant="outline" 
-                  onClick={async () => {
-                    try {
-                      const response = await fetch('/api/listings/fix-specific', {
-                        method: 'POST',
-                        headers: {
-                          'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({ 
-                          listingId,
-                          action: 'debug'
-                        }),
-                      });
-                      
-                      const data = await response.json();
-                      alert(JSON.stringify(data, null, 2));
-                    } catch (error) {
-                      console.error('Error debugging listing:', error);
-                      alert('Error debugging listing. See console for details.');
-                    }
-                  }}
-                >
-                  Debug Listing
-                </Button>
-                
-                <Button 
-                  variant="default"
-                  className="bg-blue-600 hover:bg-blue-700"
-                  onClick={async () => {
-                    try {
-                      // First refresh the listing in Firestore
-                      const response = await fetch('/api/listings/fix-specific', {
-                        method: 'POST',
-                        headers: {
-                          'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({ 
-                          listingId,
-                          action: 'refresh'
-                        }),
-                      });
-                      
-                      const data = await response.json();
-                      
-                      if (response.ok) {
-                        // Then clear all caches
-                        clearAllListingCaches();
-                        
-                        toast({
-                          title: "Listing Refreshed",
-                          description: "Listing has been refreshed and caches cleared. Please refresh the page to see changes.",
-                          duration: 5000,
-                        });
-                      } else {
-                        toast({
-                          title: "Error",
-                          description: "Failed to refresh listing. Please try again.",
-                          variant: "destructive",
-                          duration: 3000,
-                        });
-                      }
-                    } catch (error) {
-                      console.error('Error refreshing listing:', error);
-                      toast({
-                        title: "Error",
-                        description: "Failed to refresh listing. Please try again.",
-                        variant: "destructive",
-                        duration: 3000,
-                      });
-                    }
-                  }}
-                >
-                  <RefreshCw className="h-4 w-4 mr-2" />
-                  Refresh Listing
-                </Button>
-                
-                <Button 
-                  variant="default" 
-                  onClick={async () => {
-                    if (confirm('Are you sure you want to reactivate this listing?')) {
-                      try {
-                        const response = await fetch('/api/listings/fix-specific', {
-                          method: 'POST',
-                          headers: {
-                            'Content-Type': 'application/json',
-                          },
-                          body: JSON.stringify({ 
-                            listingId,
-                            action: 'reactivate'
-                          }),
-                        });
-                        
-                        const data = await response.json();
-                        
-                        if (response.ok) {
-                          // Clear caches after successful reactivation
-                          clearAllListingCaches();
-                          
-                          toast({
-                            title: "Listing Reactivated",
-                            description: "Listing has been reactivated successfully. Please refresh the page.",
-                            duration: 5000,
-                          });
-                        } else {
-                          toast({
-                            title: "Error",
-                            description: "Failed to reactivate listing. Please try again.",
-                            variant: "destructive",
-                            duration: 3000,
-                          });
-                        }
-                      } catch (error) {
-                        console.error('Error reactivating listing:', error);
-                        toast({
-                          title: "Error",
-                          description: "Failed to reactivate listing. Please try again.",
-                          variant: "destructive",
-                          duration: 3000,
-                        });
-                      }
-                    }
-                  }}
-                >
-                  Reactivate Listing
-                </Button>
-                
-                <Button 
-                  variant="destructive" 
-                  onClick={async () => {
-                    if (confirm('Are you sure you want to archive this listing?')) {
-                      try {
-                        const response = await fetch('/api/listings/fix-specific', {
-                          method: 'POST',
-                          headers: {
-                            'Content-Type': 'application/json',
-                          },
-                          body: JSON.stringify({ 
-                            listingId,
-                            action: 'archive'
-                          }),
-                        });
-                        
-                        const data = await response.json();
-                        
-                        if (response.ok) {
-                          // Clear caches after successful archiving
-                          clearAllListingCaches();
-                          
-                          toast({
-                            title: "Listing Archived",
-                            description: "Listing has been archived successfully. Please refresh the page.",
-                            duration: 5000,
-                          });
-                        } else {
-                          toast({
-                            title: "Error",
-                            description: "Failed to archive listing. Please try again.",
-                            variant: "destructive",
-                            duration: 3000,
-                          });
-                        }
-                      } catch (error) {
-                        console.error('Error archiving listing:', error);
-                        toast({
-                          title: "Error",
-                          description: "Failed to archive listing. Please try again.",
-                          variant: "destructive",
-                          duration: 3000,
-                        });
-                      }
-                    }
-                  }}
-                >
-                  Archive Listing
-                </Button>
+              <Separator />
+              
+              <div>
+                <h3 className="font-semibold mb-2">Listings by Game</h3>
+                <div className="flex flex-wrap gap-2">
+                  {Object.entries(stats.byGame).map(([game, count]) => (
+                    <Badge key={game} variant="outline">
+                      {game}: {count}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+              
+              <Separator />
+              
+              <div>
+                <h3 className="font-semibold mb-2">Sample Listings</h3>
+                <div className="space-y-2 max-h-96 overflow-y-auto">
+                  {listings.slice(0, 10).map((listing) => (
+                    <div key={listing.id} className="p-2 border rounded-md">
+                      <div className="flex justify-between">
+                        <span className="font-medium">{listing.title}</span>
+                        <Badge variant={listing.status === 'active' ? 'default' : 'secondary'}>
+                          {listing.status}
+                        </Badge>
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        Game: {listing.game} | Condition: {listing.condition} | Price: ${listing.price}
+                      </div>
+                      <div className="text-xs text-muted-foreground mt-1">
+                        ID: {listing.id}
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
-          </div>
+          )}
         </div>
       </CardContent>
     </Card>
