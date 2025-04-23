@@ -8,7 +8,7 @@ import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious
 import { Card, CardContent } from '@/components/ui/card';
 import { useFavorites } from '@/hooks/useFavorites';
 import { useRouter } from 'next/router';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, RefreshCw } from 'lucide-react';
 import { GAME_NAME_MAPPING } from '@/lib/game-mappings';
 
 interface SimilarListingsProps {
@@ -105,271 +105,6 @@ export const SimilarListings = ({ currentListing, maxListings = 9 }: SimilarList
   const { toggleFavorite, isFavorite, initialized } = useFavorites();
   const router = useRouter();
 
-  useEffect(() => {
-    const fetchSimilarListings = async () => {
-      try {
-        setIsLoading(true);
-        const { db } = await getFirebaseServices();
-        if (!db) {
-          console.error('Firebase DB is not initialized');
-          setDebugInfo(prev => ({
-            ...prev,
-            error: 'Firebase DB is not initialized'
-          }));
-          setIsLoading(false);
-          return;
-        }
-        
-        console.log('Fetching similar listings for:', currentListing.id);
-        const listingsRef = collection(db, 'listings');
-        
-        // Extract meaningful keywords from title and description
-        const titleKeywords = extractKeywords(currentListing.title);
-        const descriptionKeywords = extractKeywords(currentListing.description);
-        const cardNameKeywords = currentListing.cardName ? extractKeywords(currentListing.cardName) : [];
-        
-        // Combine unique keywords with priority to title and card name
-        const allKeywords = [...new Set([
-          ...cardNameKeywords,
-          ...titleKeywords, 
-          ...descriptionKeywords
-        ])];
-        
-        // Get price range for similar listings
-        const priceRange = calculatePriceRange(currentListing.price);
-        
-        // Get related game categories
-        const relatedGames = getRelatedGameCategories(currentListing.game);
-        
-        // Create a multi-tiered approach to find similar listings
-        let results: Listing[] = [];
-        
-        // Tier 1: Exact matches (same game + card name if available)
-        if (results.length < maxListings && currentListing.cardName) {
-          const exactMatchQuery = query(
-            listingsRef,
-            where('status', '==', 'active'),
-            where('game', '==', currentListing.game),
-            where('cardName', '==', currentListing.cardName),
-            where(documentId(), '!=', currentListing.id),
-            limit(maxListings)
-          );
-          
-          const exactMatchSnapshot = await getDocs(exactMatchQuery);
-          const exactMatches = processQueryResults(exactMatchSnapshot);
-          results = [...results, ...exactMatches];
-        }
-        
-        // Tier 2: Same game + similar condition + similar price range
-        if (results.length < maxListings) {
-          const gameConditionQuery = query(
-            listingsRef,
-            where('status', '==', 'active'),
-            where('game', '==', currentListing.game),
-            // Removed condition constraint to be more lenient
-            where('price', '>=', priceRange.min),
-            where('price', '<=', priceRange.max),
-            where(documentId(), '!=', currentListing.id),
-            limit(maxListings - results.length)
-          );
-          
-          const gameConditionSnapshot = await getDocs(gameConditionQuery);
-          const gameConditionMatches = processQueryResults(gameConditionSnapshot);
-          
-          // Add only new listings that aren't already in results
-          const newMatches = gameConditionMatches.filter(
-            match => !results.some(existing => existing.id === match.id)
-          );
-          results = [...results, ...newMatches];
-        }
-        
-        // Tier 3: Same game + similar grading status
-        if (results.length < maxListings) {
-          const gradingConstraints: QueryConstraint[] = [];
-          
-          if (currentListing.isGraded) {
-            gradingConstraints.push(where('isGraded', '==', true));
-            if (currentListing.gradingCompany) {
-              gradingConstraints.push(where('gradingCompany', '==', currentListing.gradingCompany));
-            }
-          } else {
-            gradingConstraints.push(where('isGraded', '==', false));
-          }
-          
-          const gradingQuery = query(
-            listingsRef,
-            where('status', '==', 'active'),
-            where('game', '==', currentListing.game),
-            ...gradingConstraints,
-            where(documentId(), '!=', currentListing.id),
-            limit(maxListings - results.length)
-          );
-          
-          const gradingSnapshot = await getDocs(gradingQuery);
-          const gradingMatches = processQueryResults(gradingSnapshot);
-          
-          // Add only new listings
-          const newMatches = gradingMatches.filter(
-            match => !results.some(existing => existing.id === match.id)
-          );
-          results = [...results, ...newMatches];
-        }
-        
-        // Tier 4: Try related game categories if we still don't have enough
-        if (results.length < maxListings && relatedGames.length > 0) {
-          // Create an array of OR conditions for related games
-          const gameQueries = relatedGames
-            .filter(game => game !== currentListing.game) // Exclude the current game which we already queried
-            .map(game => where('game', '==', game));
-          
-          if (gameQueries.length > 0) {
-            const relatedGamesQuery = query(
-              listingsRef,
-              where('status', '==', 'active'),
-              or(...gameQueries),
-              where(documentId(), '!=', currentListing.id),
-              orderBy('createdAt', 'desc'),
-              limit(maxListings - results.length)
-            );
-            
-            const relatedGamesSnapshot = await getDocs(relatedGamesQuery);
-            const relatedGamesMatches = processQueryResults(relatedGamesSnapshot);
-            
-            // Add only new listings
-            const newMatches = relatedGamesMatches.filter(
-              match => !results.some(existing => existing.id === match.id)
-            );
-            results = [...results, ...newMatches];
-          }
-        }
-        
-        // Tier 5: Fallback to same game category if we still don't have enough
-        if (results.length < maxListings) {
-          const fallbackQuery = query(
-            listingsRef,
-            where('status', '==', 'active'),
-            where('game', '==', currentListing.game),
-            where(documentId(), '!=', currentListing.id),
-            orderBy('createdAt', 'desc'),
-            limit(maxListings - results.length)
-          );
-          
-          const fallbackSnapshot = await getDocs(fallbackQuery);
-          const fallbackMatches = processQueryResults(fallbackSnapshot);
-          
-          // Add only new listings
-          const newMatches = fallbackMatches.filter(
-            match => !results.some(existing => existing.id === match.id)
-          );
-          results = [...results, ...newMatches];
-        }
-        
-        // Tier 6: Last resort - get any active listings from any game if we still don't have enough
-        // More aggressive with minimum count (6 instead of 3) and higher limit
-        if (results.length < 6) {
-          const lastResortQuery = query(
-            listingsRef,
-            where('status', '==', 'active'),
-            where(documentId(), '!=', currentListing.id),
-            orderBy('createdAt', 'desc'),
-            limit(Math.max(maxListings, 12) - results.length) // Ensure we get at least some results
-          );
-          
-          const lastResortSnapshot = await getDocs(lastResortQuery);
-          const lastResortMatches = processQueryResults(lastResortSnapshot);
-          
-          // Add only new listings
-          const newMatches = lastResortMatches.filter(
-            match => !results.some(existing => existing.id === match.id)
-          );
-          results = [...results, ...newMatches];
-          
-          setDebugInfo(prev => ({
-            ...prev,
-            queriesRun: prev.queriesRun + 1,
-            resultsPerQuery: {
-              ...prev.resultsPerQuery,
-              'lastResort': lastResortMatches.length
-            }
-          }));
-        }
-        
-        // Tier 7: Absolute last resort - get ANY listings regardless of status
-        // Only if we still have no results at all
-        if (results.length === 0) {
-          console.log('No results found in any tier, trying emergency fallback query');
-          try {
-            // Query without status filter to see if there are any listings at all
-            const emergencyQuery = query(
-              listingsRef,
-              limit(maxListings)
-            );
-            
-            const emergencySnapshot = await getDocs(emergencyQuery);
-            console.log(`Emergency query found ${emergencySnapshot.docs.length} listings`);
-            
-            if (emergencySnapshot.docs.length > 0) {
-              // If we found listings but they're not active, log this information
-              const emergencyResults = processQueryResults(emergencySnapshot);
-              console.log('Emergency results:', emergencyResults.map(l => ({
-                id: l.id,
-                status: l.status,
-                game: l.game
-              })));
-              
-              // Only use these as a last resort if they're not the current listing
-              const filteredEmergency = emergencyResults.filter(
-                match => match.id !== currentListing.id
-              );
-              
-              if (filteredEmergency.length > 0) {
-                results = filteredEmergency;
-                console.log('Using emergency results as fallback');
-              }
-              
-              setDebugInfo(prev => ({
-                ...prev,
-                queriesRun: prev.queriesRun + 1,
-                resultsPerQuery: {
-                  ...prev.resultsPerQuery,
-                  'emergency': emergencyResults.length
-                }
-              }));
-            }
-          } catch (emergencyError) {
-            console.error('Error in emergency query:', emergencyError);
-          }
-        }
-        
-        // Sort results by relevance score
-        results = sortByRelevance(results, currentListing);
-        
-        // Limit to maxListings
-        results = results.slice(0, maxListings);
-        
-        console.log(`Found ${results.length} similar listings after all queries`);
-        setDebugInfo(prev => ({
-          ...prev,
-          totalListingsFetched: results.length
-        }));
-        
-        setSimilarListings(results);
-      } catch (error) {
-        console.error('Error fetching similar listings:', error);
-        setDebugInfo(prev => ({
-          ...prev,
-          error: error instanceof Error ? error.message : String(error)
-        }));
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    if (currentListing?.id) {
-      fetchSimilarListings();
-    }
-  }, [currentListing, maxListings]);
-  
   // Process query results into Listing objects
   const processQueryResults = (querySnapshot: any): Listing[] => {
     return querySnapshot.docs.map((doc: any) => {
@@ -453,6 +188,278 @@ export const SimilarListings = ({ currentListing, maxListings = 9 }: SimilarList
     });
   };
 
+  const fetchSimilarListings = async () => {
+    try {
+      setIsLoading(true);
+      setDebugInfo({
+        queriesRun: 0,
+        resultsPerQuery: {},
+        totalListingsFetched: 0,
+        error: null
+      });
+      
+      const { db } = await getFirebaseServices();
+      if (!db) {
+        console.error('Firebase DB is not initialized');
+        setDebugInfo(prev => ({
+          ...prev,
+          error: 'Firebase DB is not initialized'
+        }));
+        setIsLoading(false);
+        return;
+      }
+      
+      console.log('Fetching similar listings for:', currentListing.id);
+      const listingsRef = collection(db, 'listings');
+      
+      // Extract meaningful keywords from title and description
+      const titleKeywords = extractKeywords(currentListing.title);
+      const descriptionKeywords = extractKeywords(currentListing.description);
+      const cardNameKeywords = currentListing.cardName ? extractKeywords(currentListing.cardName) : [];
+      
+      // Combine unique keywords with priority to title and card name
+      const allKeywords = [...new Set([
+        ...cardNameKeywords,
+        ...titleKeywords, 
+        ...descriptionKeywords
+      ])];
+      
+      // Get price range for similar listings
+      const priceRange = calculatePriceRange(currentListing.price);
+      
+      // Get related game categories
+      const relatedGames = getRelatedGameCategories(currentListing.game);
+      
+      // Create a multi-tiered approach to find similar listings
+      let results: Listing[] = [];
+      
+      // Tier 1: Exact matches (same game + card name if available)
+      if (results.length < maxListings && currentListing.cardName) {
+        const exactMatchQuery = query(
+          listingsRef,
+          where('status', '==', 'active'),
+          where('game', '==', currentListing.game),
+          where('cardName', '==', currentListing.cardName),
+          where(documentId(), '!=', currentListing.id),
+          limit(maxListings)
+        );
+        
+        const exactMatchSnapshot = await getDocs(exactMatchQuery);
+        const exactMatches = processQueryResults(exactMatchSnapshot);
+        results = [...results, ...exactMatches];
+      }
+      
+      // Tier 2: Same game + similar condition + similar price range
+      if (results.length < maxListings) {
+        const gameConditionQuery = query(
+          listingsRef,
+          where('status', '==', 'active'),
+          where('game', '==', currentListing.game),
+          // Removed condition constraint to be more lenient
+          where('price', '>=', priceRange.min),
+          where('price', '<=', priceRange.max),
+          where(documentId(), '!=', currentListing.id),
+          limit(maxListings - results.length)
+        );
+        
+        const gameConditionSnapshot = await getDocs(gameConditionQuery);
+        const gameConditionMatches = processQueryResults(gameConditionSnapshot);
+        
+        // Add only new listings that aren't already in results
+        const newMatches = gameConditionMatches.filter(
+          match => !results.some(existing => existing.id === match.id)
+        );
+        results = [...results, ...newMatches];
+      }
+      
+      // Tier 3: Same game + similar grading status
+      if (results.length < maxListings) {
+        const gradingConstraints: QueryConstraint[] = [];
+        
+        if (currentListing.isGraded) {
+          gradingConstraints.push(where('isGraded', '==', true));
+          if (currentListing.gradingCompany) {
+            gradingConstraints.push(where('gradingCompany', '==', currentListing.gradingCompany));
+          }
+        } else {
+          gradingConstraints.push(where('isGraded', '==', false));
+        }
+        
+        const gradingQuery = query(
+          listingsRef,
+          where('status', '==', 'active'),
+          where('game', '==', currentListing.game),
+          ...gradingConstraints,
+          where(documentId(), '!=', currentListing.id),
+          limit(maxListings - results.length)
+        );
+        
+        const gradingSnapshot = await getDocs(gradingQuery);
+        const gradingMatches = processQueryResults(gradingSnapshot);
+        
+        // Add only new listings
+        const newMatches = gradingMatches.filter(
+          match => !results.some(existing => existing.id === match.id)
+        );
+        results = [...results, ...newMatches];
+      }
+      
+      // Tier 4: Try related game categories if we still don't have enough
+      if (results.length < maxListings && relatedGames.length > 0) {
+        // Create an array of OR conditions for related games
+        const gameQueries = relatedGames
+          .filter(game => game !== currentListing.game) // Exclude the current game which we already queried
+          .map(game => where('game', '==', game));
+        
+        if (gameQueries.length > 0) {
+          const relatedGamesQuery = query(
+            listingsRef,
+            where('status', '==', 'active'),
+            or(...gameQueries),
+            where(documentId(), '!=', currentListing.id),
+            orderBy('createdAt', 'desc'),
+            limit(maxListings - results.length)
+          );
+          
+          const relatedGamesSnapshot = await getDocs(relatedGamesQuery);
+          const relatedGamesMatches = processQueryResults(relatedGamesSnapshot);
+          
+          // Add only new listings
+          const newMatches = relatedGamesMatches.filter(
+            match => !results.some(existing => existing.id === match.id)
+          );
+          results = [...results, ...newMatches];
+        }
+      }
+      
+      // Tier 5: Fallback to same game category if we still don't have enough
+      if (results.length < maxListings) {
+        const fallbackQuery = query(
+          listingsRef,
+          where('status', '==', 'active'),
+          where('game', '==', currentListing.game),
+          where(documentId(), '!=', currentListing.id),
+          orderBy('createdAt', 'desc'),
+          limit(maxListings - results.length)
+        );
+        
+        const fallbackSnapshot = await getDocs(fallbackQuery);
+        const fallbackMatches = processQueryResults(fallbackSnapshot);
+        
+        // Add only new listings
+        const newMatches = fallbackMatches.filter(
+          match => !results.some(existing => existing.id === match.id)
+        );
+        results = [...results, ...newMatches];
+      }
+      
+      // Tier 6: Last resort - get any active listings from any game if we still don't have enough
+      // More aggressive with minimum count (6 instead of 3) and higher limit
+      if (results.length < 6) {
+        const lastResortQuery = query(
+          listingsRef,
+          where('status', '==', 'active'),
+          where(documentId(), '!=', currentListing.id),
+          orderBy('createdAt', 'desc'),
+          limit(Math.max(maxListings, 12) - results.length) // Ensure we get at least some results
+        );
+        
+        const lastResortSnapshot = await getDocs(lastResortQuery);
+        const lastResortMatches = processQueryResults(lastResortSnapshot);
+        
+        // Add only new listings
+        const newMatches = lastResortMatches.filter(
+          match => !results.some(existing => existing.id === match.id)
+        );
+        results = [...results, ...newMatches];
+        
+        setDebugInfo(prev => ({
+          ...prev,
+          queriesRun: prev.queriesRun + 1,
+          resultsPerQuery: {
+            ...prev.resultsPerQuery,
+            'lastResort': lastResortMatches.length
+          }
+        }));
+      }
+      
+      // Tier 7: Absolute last resort - get ANY listings regardless of status
+      // Only if we still have no results at all
+      if (results.length === 0) {
+        console.log('No results found in any tier, trying emergency fallback query');
+        try {
+          // Query without status filter to see if there are any listings at all
+          const emergencyQuery = query(
+            listingsRef,
+            limit(maxListings)
+          );
+          
+          const emergencySnapshot = await getDocs(emergencyQuery);
+          console.log(`Emergency query found ${emergencySnapshot.docs.length} listings`);
+          
+          if (emergencySnapshot.docs.length > 0) {
+            // If we found listings but they're not active, log this information
+            const emergencyResults = processQueryResults(emergencySnapshot);
+            console.log('Emergency results:', emergencyResults.map(l => ({
+              id: l.id,
+              status: l.status,
+              game: l.game
+            })));
+            
+            // Only use these as a last resort if they're not the current listing
+            const filteredEmergency = emergencyResults.filter(
+              match => match.id !== currentListing.id
+            );
+            
+            if (filteredEmergency.length > 0) {
+              results = filteredEmergency;
+              console.log('Using emergency results as fallback');
+            }
+            
+            setDebugInfo(prev => ({
+              ...prev,
+              queriesRun: prev.queriesRun + 1,
+              resultsPerQuery: {
+                ...prev.resultsPerQuery,
+                'emergency': emergencyResults.length
+              }
+            }));
+          }
+        } catch (emergencyError) {
+          console.error('Error in emergency query:', emergencyError);
+        }
+      }
+      
+      // Sort results by relevance score
+      results = sortByRelevance(results, currentListing);
+      
+      // Limit to maxListings
+      results = results.slice(0, maxListings);
+      
+      console.log(`Found ${results.length} similar listings after all queries`);
+      setDebugInfo(prev => ({
+        ...prev,
+        totalListingsFetched: results.length
+      }));
+      
+      setSimilarListings(results);
+    } catch (error) {
+      console.error('Error fetching similar listings:', error);
+      setDebugInfo(prev => ({
+        ...prev,
+        error: error instanceof Error ? error.message : String(error)
+      }));
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (currentListing?.id) {
+      fetchSimilarListings();
+    }
+  }, [currentListing, maxListings]);
+
   const handleFavoriteClick = (e: React.MouseEvent, listing: Listing) => {
     e.preventDefault();
     e.stopPropagation();
@@ -485,9 +492,18 @@ export const SimilarListings = ({ currentListing, maxListings = 9 }: SimilarList
         <Card className="bg-muted/30">
           <CardContent className="p-6 text-center">
             <p className="text-muted-foreground mb-4">No similar listings found at this time.</p>
-            <div className="mb-4">
+            <div className="flex flex-col sm:flex-row gap-2 justify-center mb-4">
               <Button onClick={() => router.push('/listings')}>
                 View All Listings
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={() => fetchSimilarListings()} 
+                disabled={isLoading}
+                className="flex items-center gap-2"
+              >
+                <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+                {isLoading ? 'Fetching...' : 'Fetch Similar Listings'}
               </Button>
             </div>
             
