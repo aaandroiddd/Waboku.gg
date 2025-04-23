@@ -12,7 +12,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { Menu, LayoutDashboard, Heart, MessageSquare, Settings, Store, LogOut } from "lucide-react";
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { motion, useReducedMotion } from "framer-motion";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
@@ -48,6 +48,35 @@ export default function Header({ animate = true }: HeaderProps) {
       setIsMenuAnimating(false);
     }, 300); // Match this with the animation duration
   }, [isMenuAnimating]);
+  
+  // Lock body scroll when mobile menu is open
+  useEffect(() => {
+    if (isMobileMenuOpen) {
+      // Lock body scroll
+      document.body.style.overflow = 'hidden';
+      document.body.style.position = 'fixed';
+      document.body.style.width = '100%';
+      document.body.style.top = `-${window.scrollY}px`;
+    } else {
+      // Unlock body scroll and restore position
+      const scrollY = document.body.style.top;
+      document.body.style.overflow = '';
+      document.body.style.position = '';
+      document.body.style.width = '';
+      document.body.style.top = '';
+      if (scrollY) {
+        window.scrollTo(0, parseInt(scrollY || '0', 10) * -1);
+      }
+    }
+    
+    return () => {
+      // Clean up in case component unmounts while menu is open
+      document.body.style.overflow = '';
+      document.body.style.position = '';
+      document.body.style.width = '';
+      document.body.style.top = '';
+    };
+  }, [isMobileMenuOpen]);
 
   const handleNavigation = (path: string) => {
     router.push(path);
@@ -175,14 +204,11 @@ export default function Header({ animate = true }: HeaderProps) {
             </SheetTrigger>
             <SheetContent 
               side="right" 
-              className="w-[280px] sm:w-[320px] will-change-transform flex flex-col p-0"
+              className="w-[280px] sm:w-[320px] p-0 flex flex-col"
               style={{ 
-                transform: 'translateZ(0)', // Force hardware acceleration
+                height: '100dvh', // Use dynamic viewport height for better mobile support
+                maxHeight: '100dvh',
                 overscrollBehavior: 'contain', // Prevent scroll chaining
-                height: '100vh', // Ensure full height
-                position: 'fixed', // Ensure fixed positioning
-                top: 0,
-                right: 0
               }}
             >
               {/* Header section */}
