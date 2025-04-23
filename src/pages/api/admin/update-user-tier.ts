@@ -1,7 +1,13 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { getFirebaseAdmin } from '@/lib/firebase-admin';
+import * as admin from 'firebase-admin';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  // Declare variables at the top level so they're available in catch block
+  let firebaseAdminInstance: typeof admin | null = null;
+  let firestoreDb: admin.firestore.Firestore | null = null;
+  let rtdb: admin.database.Database | null = null;
+
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -32,13 +38,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     // Initialize Firebase Admin and get Firestore instance
-    const admin = getFirebaseAdmin();
-    console.log('Firebase Admin initialized successfully');
+    const firebaseAdminResult = getFirebaseAdmin();
+    firebaseAdminInstance = firebaseAdminResult.admin;
+    firestoreDb = firebaseAdminResult.db;
+    
+    // Log Firebase Admin initialization details for debugging
+    console.log('Firebase Admin initialized with:', {
+      hasAdmin: !!firebaseAdminInstance,
+      hasFirestore: !!firestoreDb,
+      hasDatabase: !!firebaseAdminResult.database,
+      adminType: typeof firebaseAdminInstance,
+      firestoreType: typeof firestoreDb
+    });
+
+    if (!firebaseAdminInstance || !firestoreDb) {
+      throw new Error('Failed to initialize Firebase Admin or Firestore');
+    }
 
     // Get user document
     console.log('Fetching user document...');
-    const db = admin.firestore();
-    const userRef = db.collection('users').doc(userId);
+    const userRef = firestoreDb.collection('users').doc(userId);
     const userDoc = await userRef.get();
 
     if (!userDoc.exists) {
@@ -46,7 +65,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(404).json({ error: 'User not found' });
     }
 
-    const now = admin.firestore().FieldValue.serverTimestamp();
+    // Get server timestamp
+    const now = admin.firestore.FieldValue.serverTimestamp();
 
     // Update user's subscription and account status in Firestore
     console.log('Updating user tier in Firestore...');
@@ -70,7 +90,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     
     // Also update Realtime Database to ensure consistency
     console.log('Syncing user tier to Realtime Database...');
-    const rtdb = admin.database();
+    rtdb = firebaseAdminResult.database;
+    
+    if (!rtdb) {
+      throw new Error('Failed to initialize Realtime Database');
+    }
+    
     const rtdbUserRef = rtdb.ref(`users/${userId}/account/subscription`);
     
     const rtdbUpdateData = {
@@ -97,14 +122,41 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     });
 
   } catch (error: any) {
+    // Detailed error logging
     console.error('Error in update-user-tier:', {
       message: error.message,
       stack: error.stack,
-      code: error.code
+      code: error.code,
+      name: error.name,
+      // Add more detailed debugging information
+      errorType: typeof error,
+      hasFirebaseAdmin: !!firebaseAdminInstance,
+      hasFirestore: !!firestoreDb,
+      hasDatabase: !!rtdb,
+      firebaseAdminType: firebaseAdminInstance ? typeof firebaseAdminInstance : 'null',
+      firestoreType: firestoreDb ? typeof firestoreDb : 'null',
+      databaseType: rtdb ? typeof rtdb : 'null'
     });
+    
+    // Provide more detailed error information to the client
     return res.status(500).json({ 
       error: 'Internal server error',
-      details: error.message
+      details: error.message,
+      errorType: error.name || typeof error,
+      // Include information about what might have gone wrong
+      possibleCause: error.message.includes('firestore') 
+        ? 'Firebase Firestore initialization issue' 
+        : error.message.includes('database')
+        ? 'Firebase Realtime Database initialization issue'
+        : error.message.includes('FieldValue')
+        ? 'Firebase Admin SDK FieldValue access issue'
+        : 'Unknown Firebase Admin SDK issue',
+      // Add debugging info
+      debug: {
+        hasFirebaseAdmin: !!firebaseAdminInstance,
+        hasFirestore: !!firestoreDb,
+        hasDatabase: !!rtdb
+      }
     });
   }
 }
