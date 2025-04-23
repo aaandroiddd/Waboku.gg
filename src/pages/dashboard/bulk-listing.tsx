@@ -341,6 +341,17 @@ const BulkListingPage = () => {
       return;
     }
     
+    // Check if location has been set
+    const hasLocation = bulkListings.length > 0 && bulkListings[0].city && bulkListings[0].state;
+    if (!hasLocation) {
+      toast({
+        title: "Missing Location",
+        description: "Please set a location for your listings before submitting.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     // Check for any listings with errors
     const errorListings = bulkListings.filter(listing => listing.status === 'error');
     if (errorListings.length > 0) {
@@ -380,7 +391,7 @@ const BulkListingPage = () => {
           gradeLevel: listing.gradeLevel,
           gradingCompany: listing.gradingCompany,
           images: listing.images || [],
-          coverImageIndex: 0,
+          coverImageIndex: listing.coverImageIndex || 0,
           city: listing.city || "", // Use the city from the listing (set by LocationInput)
           state: listing.state || "", // Use the state from the listing (set by LocationInput)
           termsAccepted: true,

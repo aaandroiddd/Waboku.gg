@@ -312,6 +312,8 @@ const EditListingPage = () => {
         coverImageIndex: formData.coverImageIndex,
         cardName: formData.cardName,
       };
+      
+      console.log("Updating listing with cover image index:", formData.coverImageIndex);
 
       // Only include grading info if isGraded is true
       if (formData.isGraded) {

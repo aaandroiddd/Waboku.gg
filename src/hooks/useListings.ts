@@ -63,6 +63,12 @@ export function useListings({ userId, searchQuery, showOnlyActive = false, skipI
         updatedAt: new Date()
       };
       
+      // Ensure coverImageIndex is properly included if it exists in the update data
+      if (typeof updateData.coverImageIndex === 'number') {
+        console.log('Setting coverImageIndex in update:', updateData.coverImageIndex);
+        dataToUpdate.coverImageIndex = updateData.coverImageIndex;
+      }
+      
       // Update the listing
       await updateDoc(listingRef, dataToUpdate);
       
