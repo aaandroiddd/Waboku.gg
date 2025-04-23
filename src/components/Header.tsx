@@ -175,121 +175,125 @@ export default function Header({ animate = true }: HeaderProps) {
             </SheetTrigger>
             <SheetContent 
               side="right" 
-              className="w-[280px] sm:w-[320px] will-change-transform"
+              className="w-[280px] sm:w-[320px] will-change-transform flex flex-col p-0"
               style={{ 
                 transform: 'translateZ(0)', // Force hardware acceleration
-                overscrollBehavior: 'contain' // Prevent scroll chaining
+                overscrollBehavior: 'contain', // Prevent scroll chaining
+                height: '100vh', // Ensure full height
+                position: 'fixed', // Ensure fixed positioning
+                top: 0,
+                right: 0
               }}
             >
-              <SheetHeader className="mb-4">
-                <SheetTitle>Menu</SheetTitle>
-              </SheetHeader>
-              <nav 
-                className="flex flex-col space-y-3 overflow-y-auto overscroll-contain h-[calc(100vh-4rem)] flex-1"
-                style={{ 
-                  WebkitOverflowScrolling: 'touch', // Smooth scrolling on iOS
-                  display: 'flex',
-                  flexDirection: 'column'
-                }}
-              >
-                <Link 
-                  href="/" 
-                  className="flex items-center gap-2 px-2 py-2 hover:bg-accent rounded-md transition-colors"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  prefetch={false} // Prevent prefetching for better performance
-                >
-                  Home
-                </Link>
-                <Link 
-                  href="/listings" 
-                  className="flex items-center gap-2 px-2 py-2 hover:bg-accent rounded-md transition-colors"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  prefetch={false}
-                >
-                  Browse Listings
-                </Link>
-                <Link 
-                  href="/wanted" 
-                  className="flex items-center gap-2 px-2 py-2 hover:bg-accent rounded-md transition-colors"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  prefetch={false}
-                >
-                  Wanted Board
-                </Link>
-                
-                {user ? (
-                  <>
-                    <div className="pt-2 pb-2">
-                      <div className="text-sm font-medium text-muted-foreground px-2">
-                        Welcome, {profile?.username || 'User'}!
+              {/* Header section */}
+              <div className="p-6 pb-2 flex-shrink-0 border-b">
+                <SheetHeader className="mb-0">
+                  <SheetTitle>Menu</SheetTitle>
+                </SheetHeader>
+              </div>
+              
+              {/* Scrollable content area */}
+              <div className="flex-1 overflow-y-auto">
+                <nav className="flex flex-col space-y-3 p-6 pt-4">
+                  <Link 
+                    href="/" 
+                    className="flex items-center gap-2 px-2 py-2 hover:bg-accent rounded-md transition-colors"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    prefetch={false} // Prevent prefetching for better performance
+                  >
+                    Home
+                  </Link>
+                  <Link 
+                    href="/listings" 
+                    className="flex items-center gap-2 px-2 py-2 hover:bg-accent rounded-md transition-colors"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    prefetch={false}
+                  >
+                    Browse Listings
+                  </Link>
+                  <Link 
+                    href="/wanted" 
+                    className="flex items-center gap-2 px-2 py-2 hover:bg-accent rounded-md transition-colors"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    prefetch={false}
+                  >
+                    Wanted Board
+                  </Link>
+                  
+                  {user ? (
+                    <>
+                      <div className="pt-2 pb-2">
+                        <div className="text-sm font-medium text-muted-foreground px-2">
+                          Welcome, {profile?.username || 'User'}!
+                        </div>
                       </div>
+                      <Button
+                        variant="ghost"
+                        className="flex items-center justify-start gap-2 h-auto py-2"
+                        onClick={() => handleNavigation('/dashboard')}
+                      >
+                        <LayoutDashboard className="h-4 w-4" />
+                        Dashboard Overview
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        className="flex items-center justify-start gap-2 h-auto py-2"
+                        onClick={() => handleNavigation('/dashboard/create-listing')}
+                      >
+                        <Store className="h-4 w-4" />
+                        Create Listing
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        className="flex items-center justify-start gap-2 h-auto py-2"
+                        onClick={() => handleNavigation('/dashboard/favorites')}
+                      >
+                        <Heart className="h-4 w-4" />
+                        Favorites
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        className="flex items-center justify-start gap-2 h-auto py-2"
+                        onClick={() => handleNavigation('/dashboard/messages')}
+                      >
+                        <MessageSquare className="h-4 w-4" />
+                        Messages
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        className="flex items-center justify-start gap-2 h-auto py-2"
+                        onClick={() => handleNavigation('/dashboard/settings')}
+                      >
+                        <Settings className="h-4 w-4" />
+                        Settings
+                      </Button>
+                    </>
+                  ) : (
+                    <div className="flex flex-col gap-2 pt-2">
+                      <Link href="/auth/sign-in" prefetch={false}>
+                        <Button variant="outline" className="w-full">Sign In</Button>
+                      </Link>
+                      <Link href="/auth/sign-up" prefetch={false}>
+                        <Button className="w-full bg-sky-400 hover:bg-sky-500">Get Started</Button>
+                      </Link>
                     </div>
-                    <Button
-                      variant="ghost"
-                      className="flex items-center justify-start gap-2 h-auto py-2"
-                      onClick={() => handleNavigation('/dashboard')}
-                    >
-                      <LayoutDashboard className="h-4 w-4" />
-                      Dashboard Overview
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      className="flex items-center justify-start gap-2 h-auto py-2"
-                      onClick={() => handleNavigation('/dashboard/create-listing')}
-                    >
-                      <Store className="h-4 w-4" />
-                      Create Listing
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      className="flex items-center justify-start gap-2 h-auto py-2"
-                      onClick={() => handleNavigation('/dashboard/favorites')}
-                    >
-                      <Heart className="h-4 w-4" />
-                      Favorites
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      className="flex items-center justify-start gap-2 h-auto py-2"
-                      onClick={() => handleNavigation('/dashboard/messages')}
-                    >
-                      <MessageSquare className="h-4 w-4" />
-                      Messages
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      className="flex items-center justify-start gap-2 h-auto py-2"
-                      onClick={() => handleNavigation('/dashboard/settings')}
-                    >
-                      <Settings className="h-4 w-4" />
-                      Settings
-                    </Button>
-                  </>
-                ) : (
-                  <div className="flex flex-col gap-2 pt-2">
-                    <Link href="/auth/sign-in" prefetch={false}>
-                      <Button variant="outline" className="w-full">Sign In</Button>
-                    </Link>
-                    <Link href="/auth/sign-up" prefetch={false}>
-                      <Button className="w-full bg-sky-400 hover:bg-sky-500">Get Started</Button>
-                    </Link>
-                  </div>
-                )}
-                
-                {/* Sign out button at the bottom of the menu */}
-                {user && (
-                  <div className="mt-auto pt-4 border-t">
-                    <Button
-                      variant="destructive"
-                      className="flex items-center justify-start gap-2 h-auto py-2 w-full bg-[#b71c1c] hover:bg-[#b71c1c]/90"
-                      onClick={handleSignOut}
-                    >
-                      <LogOut className="h-4 w-4" />
-                      Sign Out
-                    </Button>
-                  </div>
-                )}
-              </nav>
+                  )}
+                </nav>
+              </div>
+              
+              {/* Fixed footer with sign out button */}
+              {user && (
+                <div className="p-6 pt-4 border-t flex-shrink-0 bg-background">
+                  <Button
+                    variant="destructive"
+                    className="flex items-center justify-start gap-2 h-auto py-2 w-full bg-[#b71c1c] hover:bg-[#b71c1c]/90"
+                    onClick={handleSignOut}
+                  >
+                    <LogOut className="h-4 w-4" />
+                    Sign Out
+                  </Button>
+                </div>
+              )}
             </SheetContent>
           </Sheet>
         </div>
