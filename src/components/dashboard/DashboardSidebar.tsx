@@ -264,6 +264,7 @@ export function DashboardSidebar({ onNavigate }: DashboardSidebarProps) {
 
   return (
     <div className="flex flex-col h-screen sticky top-0 bg-card border-r">
+      {/* Persistent header */}
       <div className="p-6 border-b">
         <Logo className="h-8" alwaysShowFull={true} />
         {user && (
@@ -298,6 +299,8 @@ export function DashboardSidebar({ onNavigate }: DashboardSidebarProps) {
           </div>
         )}
       </div>
+      
+      {/* Scrollable navigation area */}
       <div className="flex-1 flex flex-col py-6 overflow-y-auto">
         {!sidebarReady && !displayTier ? (
           // Show skeleton loader while loading
@@ -329,16 +332,16 @@ export function DashboardSidebar({ onNavigate }: DashboardSidebarProps) {
                 </button>
               ))}
             </div>
-            
-            {/* Sign out button at the bottom of the navigation */}
-            {user && (
-              <div className="mt-auto pt-4 border-t">
-                <SignOutButton onNavigate={onNavigate} />
-              </div>
-            )}
           </nav>
         )}
       </div>
+      
+      {/* Persistent footer with sign out button */}
+      {user && (
+        <div className="p-4 border-t bg-card">
+          <SignOutButton onNavigate={onNavigate} />
+        </div>
+      )}
     </div>
   );
 }
