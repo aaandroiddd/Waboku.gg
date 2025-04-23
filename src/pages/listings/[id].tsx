@@ -1781,24 +1781,39 @@ export default function ListingPage() {
       {/* Similar Listings Section */}
       {listing && (
         <div className="container mx-auto p-4 mb-8">
-          <SimilarListings currentListing={listing} maxListings={9} />
-          
-          {/* Only show debugger in development mode */}
+          <SimilarListings currentListing={listing} maxListings={9} />{/* Only show debuggers in development mode */}
           {process.env.NODE_ENV === 'development' && (
-            <div className="mt-8">
-              <h2 className="text-2xl font-bold mb-4">Listing Debugger</h2>
-              <div className="bg-black/[0.2] dark:bg-black/40 backdrop-blur-md border-muted p-4 rounded-lg">
-                <dynamic-import>
-                  {() => {
-                    const ListingDebugger = dynamic(() => import('@/components/ListingDebugger').then(mod => mod.ListingDebugger), {
-                      ssr: false,
-                      loading: () => <div>Loading debugger...</div>
-                    });
-                    return <ListingDebugger />;
-                  }}
-                </dynamic-import>
+            <>
+              <div className="mt-8">
+                <h2 className="text-2xl font-bold mb-4">Similar Listings Debugger</h2>
+                <div className="bg-black/[0.2] dark:bg-black/40 backdrop-blur-md border-muted p-4 rounded-lg">
+                  <dynamic-import>
+                    {() => {
+                      const SimilarListingsDebugger = dynamic(() => import('@/components/SimilarListingsDebugger').then(mod => mod.SimilarListingsDebugger), {
+                        ssr: false,
+                        loading: () => <div>Loading similar listings debugger...</div>
+                      });
+                      return <SimilarListingsDebugger currentListing={listing} />;
+                    }}
+                  </dynamic-import>
+                </div>
               </div>
-            </div>
+              
+              <div className="mt-8">
+                <h2 className="text-2xl font-bold mb-4">Listing Debugger</h2>
+                <div className="bg-black/[0.2] dark:bg-black/40 backdrop-blur-md border-muted p-4 rounded-lg">
+                  <dynamic-import>
+                    {() => {
+                      const ListingDebugger = dynamic(() => import('@/components/ListingDebugger').then(mod => mod.ListingDebugger), {
+                        ssr: false,
+                        loading: () => <div>Loading listing debugger...</div>
+                      });
+                      return <ListingDebugger />;
+                    }}
+                  </dynamic-import>
+                </div>
+              </div>
+            </>
           )}
         </div>
       )}

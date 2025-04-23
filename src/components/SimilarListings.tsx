@@ -235,122 +235,181 @@ export const SimilarListings = ({ currentListing, maxListings = 9 }: SimilarList
       
       // Tier 1: Exact matches (same game + card name if available)
       if (results.length < maxListings && currentListing.cardName) {
-        const exactMatchQuery = query(
-          listingsRef,
-          where('status', '==', 'active'),
-          where('game', '==', currentListing.game),
-          where('cardName', '==', currentListing.cardName),
-          where(documentId(), '!=', currentListing.id),
-          limit(maxListings)
-        );
-        
-        const exactMatchSnapshot = await getDocs(exactMatchQuery);
-        const exactMatches = processQueryResults(exactMatchSnapshot);
-        results = [...results, ...exactMatches];
-      }
-      
-      // Tier 2: Same game + similar condition + similar price range
-      if (results.length < maxListings) {
-        const gameConditionQuery = query(
-          listingsRef,
-          where('status', '==', 'active'),
-          where('game', '==', currentListing.game),
-          // Removed condition constraint to be more lenient
-          where('price', '>=', priceRange.min),
-          where('price', '<=', priceRange.max),
-          where(documentId(), '!=', currentListing.id),
-          limit(maxListings - results.length)
-        );
-        
-        const gameConditionSnapshot = await getDocs(gameConditionQuery);
-        const gameConditionMatches = processQueryResults(gameConditionSnapshot);
-        
-        // Add only new listings that aren't already in results
-        const newMatches = gameConditionMatches.filter(
-          match => !results.some(existing => existing.id === match.id)
-        );
-        results = [...results, ...newMatches];
-      }
-      
-      // Tier 3: Same game + similar grading status
-      if (results.length < maxListings) {
-        const gradingConstraints: QueryConstraint[] = [];
-        
-        if (currentListing.isGraded) {
-          gradingConstraints.push(where('isGraded', '==', true));
-          if (currentListing.gradingCompany) {
-            gradingConstraints.push(where('gradingCompany', '==', currentListing.gradingCompany));
-          }
-        } else {
-          gradingConstraints.push(where('isGraded', '==', false));
+        try {
+          console.log(`Trying exact match query with game=${currentListing.game}, cardName=${currentListing.cardName}`);
+          const exactMatchQuery = query(
+            listingsRef,
+            where('status', '==', 'active'),
+            where('game', '==', currentListing.game),
+            where('cardName', '==', currentListing.cardName),
+            where(documentId(), '!=', currentListing.id),
+            limit(maxListings)
+          );
+          
+          const exactMatchSnapshot = await getDocs(exactMatchQuery);
+          console.log(`Exact match query returned ${exactMatchSnapshot.docs.length} results`);
+          const exactMatches = processQueryResults(exactMatchSnapshot);
+          results = [...results, ...exactMatches];
+          
+          setDebugInfo(prev => ({
+            ...prev,
+            queriesRun: prev.queriesRun + 1,
+            resultsPerQuery: {
+              ...prev.resultsPerQuery,
+              'exactMatch': exactMatchSnapshot.docs.length
+            }
+          }));
+        } catch (error) {
+          console.error('Error in exact match query:', error);
         }
-        
-        const gradingQuery = query(
-          listingsRef,
-          where('status', '==', 'active'),
-          where('game', '==', currentListing.game),
-          ...gradingConstraints,
-          where(documentId(), '!=', currentListing.id),
-          limit(maxListings - results.length)
-        );
-        
-        const gradingSnapshot = await getDocs(gradingQuery);
-        const gradingMatches = processQueryResults(gradingSnapshot);
-        
-        // Add only new listings
-        const newMatches = gradingMatches.filter(
-          match => !results.some(existing => existing.id === match.id)
-        );
-        results = [...results, ...newMatches];
+      }
+      
+      // Tier 2: Same game + similar price range (removed price constraints to be more lenient)
+      if (results.length < maxListings) {
+        try {
+          console.log(`Trying same game query with game=${currentListing.game}`);
+          const gameQuery = query(
+            listingsRef,
+            where('status', '==', 'active'),
+            where('game', '==', currentListing.game),
+            where(documentId(), '!=', currentListing.id),
+            limit(maxListings - results.length)
+          );
+          
+          const gameSnapshot = await getDocs(gameQuery);
+          console.log(`Same game query returned ${gameSnapshot.docs.length} results`);
+          const gameMatches = processQueryResults(gameSnapshot);
+          
+          // Add only new listings that aren't already in results
+          const newMatches = gameMatches.filter(
+            match => !results.some(existing => existing.id === match.id)
+          );
+          results = [...results, ...newMatches];
+          
+          setDebugInfo(prev => ({
+            ...prev,
+            queriesRun: prev.queriesRun + 1,
+            resultsPerQuery: {
+              ...prev.resultsPerQuery,
+              'sameGame': gameSnapshot.docs.length
+            }
+          }));
+        } catch (error) {
+          console.error('Error in same game query:', error);
+        }
+      }
+      
+      // Tier 3: Card name only (across any game)
+      if (results.length < maxListings && currentListing.cardName) {
+        try {
+          console.log(`Trying card name query with cardName=${currentListing.cardName}`);
+          const cardNameQuery = query(
+            listingsRef,
+            where('status', '==', 'active'),
+            where('cardName', '==', currentListing.cardName),
+            where(documentId(), '!=', currentListing.id),
+            limit(maxListings - results.length)
+          );
+          
+          const cardNameSnapshot = await getDocs(cardNameQuery);
+          console.log(`Card name query returned ${cardNameSnapshot.docs.length} results`);
+          const cardNameMatches = processQueryResults(cardNameSnapshot);
+          
+          // Add only new listings
+          const newMatches = cardNameMatches.filter(
+            match => !results.some(existing => existing.id === match.id)
+          );
+          results = [...results, ...newMatches];
+          
+          setDebugInfo(prev => ({
+            ...prev,
+            queriesRun: prev.queriesRun + 1,
+            resultsPerQuery: {
+              ...prev.resultsPerQuery,
+              'cardName': cardNameSnapshot.docs.length
+            }
+          }));
+        } catch (error) {
+          console.error('Error in card name query:', error);
+        }
       }
       
       // Tier 4: Try related game categories if we still don't have enough
       if (results.length < maxListings && relatedGames.length > 0) {
-        // Create an array of OR conditions for related games
-        const gameQueries = relatedGames
-          .filter(game => game !== currentListing.game) // Exclude the current game which we already queried
-          .map(game => where('game', '==', game));
-        
-        if (gameQueries.length > 0) {
-          const relatedGamesQuery = query(
+        try {
+          console.log(`Trying related games query with games=${relatedGames.filter(game => game !== currentListing.game).join(', ')}`);
+          
+          // Instead of using OR, which can be problematic, do individual queries for each related game
+          const relatedGamesList = relatedGames.filter(game => game !== currentListing.game);
+          
+          for (const relatedGame of relatedGamesList) {
+            if (results.length >= maxListings) break;
+            
+            const relatedGameQuery = query(
+              listingsRef,
+              where('status', '==', 'active'),
+              where('game', '==', relatedGame),
+              where(documentId(), '!=', currentListing.id),
+              limit(maxListings - results.length)
+            );
+            
+            const relatedGameSnapshot = await getDocs(relatedGameQuery);
+            console.log(`Related game query for ${relatedGame} returned ${relatedGameSnapshot.docs.length} results`);
+            const relatedGameMatches = processQueryResults(relatedGameSnapshot);
+            
+            // Add only new listings
+            const newMatches = relatedGameMatches.filter(
+              match => !results.some(existing => existing.id === match.id)
+            );
+            results = [...results, ...newMatches];
+            
+            setDebugInfo(prev => ({
+              ...prev,
+              queriesRun: prev.queriesRun + 1,
+              resultsPerQuery: {
+                ...prev.resultsPerQuery,
+                [`relatedGame_${relatedGame}`]: relatedGameSnapshot.docs.length
+              }
+            }));
+          }
+        } catch (error) {
+          console.error('Error in related games query:', error);
+        }
+      }
+      
+      // Tier 5: Any active listings (no game filter)
+      if (results.length < maxListings) {
+        try {
+          console.log('Trying any active listings query');
+          const anyActiveQuery = query(
             listingsRef,
             where('status', '==', 'active'),
-            or(...gameQueries),
             where(documentId(), '!=', currentListing.id),
             orderBy('createdAt', 'desc'),
             limit(maxListings - results.length)
           );
           
-          const relatedGamesSnapshot = await getDocs(relatedGamesQuery);
-          const relatedGamesMatches = processQueryResults(relatedGamesSnapshot);
+          const anyActiveSnapshot = await getDocs(anyActiveQuery);
+          console.log(`Any active listings query returned ${anyActiveSnapshot.docs.length} results`);
+          const anyActiveMatches = processQueryResults(anyActiveSnapshot);
           
           // Add only new listings
-          const newMatches = relatedGamesMatches.filter(
+          const newMatches = anyActiveMatches.filter(
             match => !results.some(existing => existing.id === match.id)
           );
           results = [...results, ...newMatches];
+          
+          setDebugInfo(prev => ({
+            ...prev,
+            queriesRun: prev.queriesRun + 1,
+            resultsPerQuery: {
+              ...prev.resultsPerQuery,
+              'anyActive': anyActiveSnapshot.docs.length
+            }
+          }));
+        } catch (error) {
+          console.error('Error in any active listings query:', error);
         }
-      }
-      
-      // Tier 5: Fallback to same game category if we still don't have enough
-      if (results.length < maxListings) {
-        const fallbackQuery = query(
-          listingsRef,
-          where('status', '==', 'active'),
-          where('game', '==', currentListing.game),
-          where(documentId(), '!=', currentListing.id),
-          orderBy('createdAt', 'desc'),
-          limit(maxListings - results.length)
-        );
-        
-        const fallbackSnapshot = await getDocs(fallbackQuery);
-        const fallbackMatches = processQueryResults(fallbackSnapshot);
-        
-        // Add only new listings
-        const newMatches = fallbackMatches.filter(
-          match => !results.some(existing => existing.id === match.id)
-        );
-        results = [...results, ...newMatches];
       }
       
       // Tier 6: Last resort - get any active listings from any game if we still don't have enough
