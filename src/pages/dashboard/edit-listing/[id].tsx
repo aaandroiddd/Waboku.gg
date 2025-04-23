@@ -9,6 +9,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { InfoIcon } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from "@/components/ui/switch";
@@ -622,6 +624,14 @@ const EditListingPage = () => {
                       </Tooltip>
                     </TooltipProvider>
                   </div>
+                  
+                  <Alert variant="primary" className="bg-amber-100 dark:bg-amber-800/40 midnight:bg-amber-800/30 text-amber-800 dark:text-amber-100 midnight:text-amber-50 border-amber-300 dark:border-amber-700 midnight:border-amber-700">
+                    <InfoIcon className="h-4 w-4" />
+                    <AlertTitle>Cover Photo Update</AlertTitle>
+                    <AlertDescription>
+                      Please note that it will take a few moments for the system to update the cover photo if a new one is selected. The changes will be visible after processing is complete.
+                    </AlertDescription>
+                  </Alert>
 
                   {formData.imageUrls.length > 0 && (
                     <div className="grid grid-cols-4 gap-4">
