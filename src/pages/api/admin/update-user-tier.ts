@@ -46,7 +46,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(404).json({ error: 'User not found' });
     }
 
-    const now = admin.firestore.FieldValue.serverTimestamp();
+    const now = admin.firestore().FieldValue.serverTimestamp();
 
     // Update user's subscription and account status in Firestore
     console.log('Updating user tier in Firestore...');
