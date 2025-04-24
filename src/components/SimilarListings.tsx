@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { Listing } from '@/types/database';
 import { ListingCard } from './ListingCard';
 import { Button } from '@/components/ui/button';
@@ -7,8 +7,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { useFavorites } from '@/hooks/useFavorites';
 import { useRouter } from 'next/router';
 import { ArrowRight } from 'lucide-react';
-// Import the specific function properly
-import { useOptimizedSimilarListings, batchFetchUserData } from '@/hooks/useFirestoreOptimizer';
+import { useOptimizedSimilarListings } from '@/hooks/useFirestoreOptimizer';
 
 // Define the game name mapping object that was missing
 const GAME_NAME_MAPPING: Record<string, string[]> = {
@@ -39,58 +38,36 @@ const getConditionColor = (condition: string) => {
   return colors[condition?.toLowerCase()] || { base: 'bg-gray-500/10 text-gray-500', hover: 'hover:bg-gray-500/20' };
 };
 
-// Get related game categories
-const getRelatedGameCategories = (game: string): string[] => {
-  // Find the normalized game key
-  const gameKey = Object.keys(GAME_NAME_MAPPING).find(key => 
-    GAME_NAME_MAPPING[key as keyof typeof GAME_NAME_MAPPING].includes(game)
-  );
-  
-  if (!gameKey) return [];
-  
-  // Return all variations of this game name for better matching
-  return GAME_NAME_MAPPING[gameKey as keyof typeof GAME_NAME_MAPPING];
-};
-
 export const SimilarListings = ({ currentListing, maxListings = 6 }: SimilarListingsProps) => {
   const { toggleFavorite, isFavorite, initialized } = useFavorites();
   const router = useRouter();
   
-  // Clean up stale cache entries on component mount
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const cache = JSON.parse(localStorage.getItem('firestoreCache') || '{}');
-        if (cache.similarListings) {
-          // Only keep entries less than 1 hour old
-          const now = Date.now();
-          Object.keys(cache.similarListings).forEach(key => {
-            if (now - cache.similarListings[key].timestamp > 3600000) {
-              delete cache.similarListings[key];
-            }
-          });
-          localStorage.setItem('firestoreCache', JSON.stringify(cache));
-        }
-      } catch (e) {
-        console.warn('Error cleaning cache:', e);
-      }
-    }
-  }, []);
-  
-  // Use memo to prevent unnecessary re-renders
-  const listingKey = useMemo(() => ({
-    id: currentListing?.id,
-    game: currentListing?.game,
-    maxListings
-  }), [currentListing?.id, currentListing?.game, maxListings]);
+  // Create a stable key that only changes when truly necessary
+  const listingKey = useMemo(() => 
+    currentListing?.id ? `${currentListing.id}-${currentListing.game || 'unknown'}-${maxListings}` : null, 
+    [currentListing?.id, currentListing?.game, maxListings]
+  );
   
   // Use the optimized hook with the memoized key
-  const { similarListings, isLoading } = useOptimizedSimilarListings(listingKey);
+  const { similarListings, isLoading } = useOptimizedSimilarListings(listingKey ? {
+    id: currentListing.id,
+    game: currentListing.game,
+    maxCount: maxListings
+  } : null);
   
   const handleFavoriteClick = (e: React.MouseEvent, listing: Listing) => {
     e.preventDefault();
     e.stopPropagation();
     toggleFavorite(listing, e);
+  };
+  
+  // Use React Router's navigate function with options
+  const navigateToListing = (listingId: string) => {
+    // Prevent the default behavior
+    router.push(`/listings/${listingId}`, undefined, { 
+      shallow: false, // Force full page data fetch
+      scroll: true    // Scroll to top
+    });
   };
 
   return (
@@ -129,12 +106,14 @@ export const SimilarListings = ({ currentListing, maxListings = 6 }: SimilarList
           <CarouselContent className="-ml-4">
             {similarListings.map((listing) => (
               <CarouselItem key={listing.id} className="pl-4 md:basis-1/2 lg:basis-1/3" style={{ height: '100%' }}>
-                <ListingCard
-                  listing={listing}
-                  isFavorite={initialized ? isFavorite(listing.id) : false}
-                  onFavoriteClick={handleFavoriteClick}
-                  getConditionColor={getConditionColor}
-                />
+                <div onClick={() => navigateToListing(listing.id)}>
+                  <ListingCard
+                    listing={listing}
+                    isFavorite={initialized ? isFavorite(listing.id) : false}
+                    onFavoriteClick={(e) => handleFavoriteClick(e, listing)}
+                    getConditionColor={getConditionColor}
+                  />
+                </div>
               </CarouselItem>
             ))}
           </CarouselContent>
