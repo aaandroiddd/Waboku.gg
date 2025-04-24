@@ -504,6 +504,51 @@ export const useOptimizedUserData = (userId: string) => {
   return { userData, loading };
 };
 
+// Hook for optimized similar listings fetching
+export const useOptimizedSimilarListings = (currentListing: any, maxListings: number = 6) => {
+  const [similarListings, setSimilarListings] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  
+  useEffect(() => {
+    if (!currentListing || !currentListing.id || !currentListing.game) {
+      setIsLoading(false);
+      return;
+    }
+    
+    let isMounted = true;
+    
+    const fetchListings = async () => {
+      try {
+        // Use the existing prefetchSimilarListings function
+        const listings = await prefetchSimilarListings(
+          currentListing.id,
+          currentListing.game,
+          maxListings
+        );
+        
+        if (isMounted) {
+          setSimilarListings(listings || []);
+          setIsLoading(false);
+        }
+      } catch (error) {
+        console.error('[useOptimizedSimilarListings] Error fetching similar listings:', error);
+        if (isMounted) {
+          setSimilarListings([]);
+          setIsLoading(false);
+        }
+      }
+    };
+    
+    fetchListings();
+    
+    return () => {
+      isMounted = false;
+    };
+  }, [currentListing?.id, currentListing?.game, maxListings]);
+  
+  return { similarListings, isLoading };
+};
+
 // Hook to get seller status with optimized fetching
 export const useOptimizedSellerStatus = (userId: string) => {
   const [hasStripeAccount, setHasStripeAccount] = useState<boolean>(false);
