@@ -466,7 +466,7 @@ export const SimilarListings = ({ currentListing, maxListings = 9 }: SimilarList
       <Carousel className="w-full">
         <CarouselContent className="-ml-4">
           {similarListings.map((listing) => (
-            <CarouselItem key={listing.id} className="pl-4 md:basis-1/2 lg:basis-1/3">
+            <CarouselItem key={listing.id} className="pl-4 md:basis-1/2 lg:basis-1/3" style={{ height: '100%' }}>
               <ListingCard
                 listing={listing}
                 isFavorite={initialized ? isFavorite(listing.id) : false}

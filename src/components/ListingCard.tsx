@@ -342,9 +342,9 @@ export const ListingCard = memo(({ listing, isFavorite, onFavoriteClick, onAddTo
         onAddToGroup={handleAddToGroup}
         onCreateAndAddToGroup={handleCreateAndAddToGroup}
       />
-      <Card className="relative overflow-hidden group">
+      <Card className="relative overflow-hidden group h-full">
         <Link href={`/listings/${listing.id}`}>
-          <CardContent className="p-3 h-full flex flex-col">
+          <CardContent className="p-3 h-full flex flex-col" style={{ minHeight: '420px' }}>
             <div className="aspect-square bg-muted rounded-lg mb-4 relative overflow-hidden flex-shrink-0">
               {/* Price Badge */}
               <motion.div 
