@@ -600,3 +600,59 @@ export const useOptimizedSellerStatus = (userId: string) => {
             data.stripeConnectAccountId && 
             data.stripeConnectStatus === 'active'
           );
+          
+          // Update cache
+          globalCache.sellerStatus[userId] = {
+            hasStripeAccount: hasAccount,
+            timestamp: now
+          };
+          
+          // Also update user cache if we have it
+          if (globalCache.users[userId]) {
+            globalCache.users[userId].data.hasStripeAccount = hasAccount;
+          }
+          
+          persistCache();
+          
+          if (isMounted) {
+            setHasStripeAccount(hasAccount);
+          }
+        } else {
+          // User not found
+          const hasAccount = false;
+          
+          // Cache with shorter expiration
+          globalCache.sellerStatus[userId] = {
+            hasStripeAccount: hasAccount,
+            timestamp: now - (CACHE_EXPIRY.sellerStatus / 2)
+          };
+          
+          persistCache();
+          
+          if (isMounted) {
+            setHasStripeAccount(hasAccount);
+          }
+        }
+      } catch (error) {
+        console.error('[FirestoreOptimizer] Error fetching seller status:', error);
+        
+        if (isMounted) {
+          setHasStripeAccount(false);
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    };
+    
+    fetchSellerStatus();
+    
+    // Cleanup function
+    return () => {
+      isMounted = false;
+    };
+  }, [userIdKey]);
+  
+  return { hasStripeAccount, isLoading };
+};
