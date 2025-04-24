@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { Listing } from '@/types/database';
 import { ListingCard } from './ListingCard';
 import { Button } from '@/components/ui/button';
@@ -56,8 +56,36 @@ export const SimilarListings = ({ currentListing, maxListings = 6 }: SimilarList
   const { toggleFavorite, isFavorite, initialized } = useFavorites();
   const router = useRouter();
   
-  // Use the optimized hook for fetching similar listings
-  const { similarListings, isLoading } = useOptimizedSimilarListings(currentListing, maxListings);
+  // Clean up stale cache entries on component mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const cache = JSON.parse(localStorage.getItem('firestoreCache') || '{}');
+        if (cache.similarListings) {
+          // Only keep entries less than 1 hour old
+          const now = Date.now();
+          Object.keys(cache.similarListings).forEach(key => {
+            if (now - cache.similarListings[key].timestamp > 3600000) {
+              delete cache.similarListings[key];
+            }
+          });
+          localStorage.setItem('firestoreCache', JSON.stringify(cache));
+        }
+      } catch (e) {
+        console.warn('Error cleaning cache:', e);
+      }
+    }
+  }, []);
+  
+  // Use memo to prevent unnecessary re-renders
+  const listingKey = useMemo(() => ({
+    id: currentListing?.id,
+    game: currentListing?.game,
+    maxListings
+  }), [currentListing?.id, currentListing?.game, maxListings]);
+  
+  // Use the optimized hook with the memoized key
+  const { similarListings, isLoading } = useOptimizedSimilarListings(listingKey);
   
   const handleFavoriteClick = (e: React.MouseEvent, listing: Listing) => {
     e.preventDefault();

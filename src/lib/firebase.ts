@@ -378,10 +378,19 @@ export const firebaseDb = db;
 export const firebaseStorage = storage;
 export const firebaseDatabase = database;
 
+// Singleton pattern for Firebase services
+let servicesInstance = null;
+
 // Helper function to get Firebase services with better error handling
 export function getFirebaseServices() {
+  // Return cached instance if available
+  if (servicesInstance && servicesInstance.app && servicesInstance.db) {
+    return servicesInstance;
+  }
+  
   // Check if services are initialized
   if (app && auth && db) {
+    servicesInstance = services;
     return services;
   }
   
@@ -397,6 +406,7 @@ export function getFirebaseServices() {
       if (reinitialized.app && reinitialized.auth && reinitialized.db) {
         console.log('[Firebase] Reinitialization successful');
         Object.assign(services, reinitialized);
+        servicesInstance = services;
         return services;
       } else {
         console.error('[Firebase] Reinitialization failed to produce valid services');
