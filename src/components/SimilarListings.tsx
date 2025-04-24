@@ -7,7 +7,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { useFavorites } from '@/hooks/useFavorites';
 import { useRouter } from 'next/router';
 import { ArrowRight } from 'lucide-react';
-import { useOptimizedSimilarListings } from '@/hooks/useFirestoreOptimizer';
+// Import the specific function properly
+import { useOptimizedSimilarListings, batchFetchUserData } from '@/hooks/useFirestoreOptimizer';
 
 // Define the game name mapping object that was missing
 const GAME_NAME_MAPPING: Record<string, string[]> = {
@@ -56,10 +57,7 @@ export const SimilarListings = ({ currentListing, maxListings = 6 }: SimilarList
   const router = useRouter();
   
   // Use the optimized hook for fetching similar listings
-  // This will handle batching user data fetching internally
   const { similarListings, isLoading } = useOptimizedSimilarListings(currentListing, maxListings);
-  
-  // Remove the additional useEffect that was causing extra fetches
   
   const handleFavoriteClick = (e: React.MouseEvent, listing: Listing) => {
     e.preventDefault();
