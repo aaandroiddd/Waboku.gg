@@ -338,6 +338,56 @@ export const useOptimizedSellerStatus = (userId: string) => {
   return { hasStripeAccount, isLoading };
 };
 
+// Function to fetch newest listings
+export const fetchNewestListings = async (excludeListingId: string, maxListings: number = 6) => {
+  try {
+    console.log(`[FirestoreOptimizer] Fetching newest listings (excluding ${excludeListingId})`);
+    
+    const { db } = getFirebaseServices();
+    if (!db) throw new Error('Firebase DB not initialized');
+    
+    // Query for newest active listings
+    const newestQuery = query(
+      collection(db, 'listings'),
+      where('status', '==', 'active'),
+      where(documentId(), '!=', excludeListingId),
+      limit(maxListings)
+    );
+    
+    const querySnapshot = await getDocs(newestQuery);
+    
+    // Process results
+    const results = querySnapshot.docs.map(doc => {
+      const data = doc.data();
+      
+      return {
+        id: doc.id,
+        ...data,
+        createdAt: data.createdAt?.toDate() || new Date(),
+        expiresAt: data.expiresAt?.toDate() || new Date(),
+        price: Number(data.price) || 0,
+        imageUrls: Array.isArray(data.imageUrls) ? data.imageUrls : [],
+        isGraded: Boolean(data.isGraded),
+        gradeLevel: data.gradeLevel ? Number(data.gradeLevel) : undefined,
+        status: data.status || 'active',
+        condition: data.condition || 'Not specified',
+        game: data.game || 'Not specified',
+        city: data.city || 'Unknown',
+        state: data.state || 'Unknown',
+        gradingCompany: data.gradingCompany || undefined
+      };
+    });
+    
+    // Sort by creation date (newest first)
+    return results.sort((a, b) => {
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    });
+  } catch (error) {
+    console.error('[FirestoreOptimizer] Error fetching newest listings:', error);
+    return [];
+  }
+};
+
 // Function to prefetch similar listings
 export const prefetchSimilarListings = async (listingId: string, game: string, maxListings: number = 6) => {
   // Check cache first
@@ -391,6 +441,26 @@ export const prefetchSimilarListings = async (listingId: string, game: string, m
       // Newer listings get priority
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     }).slice(0, maxListings);
+    
+    // If we don't have enough similar listings, fetch newest listings as fallback
+    if (sortedResults.length < maxListings) {
+      console.log(`[FirestoreOptimizer] Not enough similar listings (${sortedResults.length}/${maxListings}), fetching newest as fallback`);
+      
+      // Get IDs of listings we already have to avoid duplicates
+      const existingIds = new Set(sortedResults.map(listing => listing.id));
+      existingIds.add(listingId); // Also exclude current listing
+      
+      // Fetch newest listings
+      const newestListings = await fetchNewestListings(listingId, maxListings * 2);
+      
+      // Filter out duplicates and add to results until we reach maxListings
+      for (const listing of newestListings) {
+        if (!existingIds.has(listing.id) && sortedResults.length < maxListings) {
+          sortedResults.push(listing);
+          existingIds.add(listing.id);
+        }
+      }
+    }
     
     // Cache the results
     globalCache.similarListings[listingId] = {

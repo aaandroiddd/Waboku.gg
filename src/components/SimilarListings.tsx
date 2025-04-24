@@ -7,7 +7,6 @@ import { Card, CardContent } from '@/components/ui/card';
 import { useFavorites } from '@/hooks/useFavorites';
 import { useRouter } from 'next/router';
 import { ArrowRight } from 'lucide-react';
-import { GameCategories } from './GameCategories';
 import { useOptimizedSimilarListings, batchFetchUserData } from '@/hooks/useFirestoreOptimizer';
 
 interface SimilarListingsProps {
@@ -67,11 +66,6 @@ export const SimilarListings = ({ currentListing, maxListings = 6 }: SimilarList
 
   return (
     <div className="mt-8">
-      {/* Game Categories Section */}
-      <div className="mb-6">
-        <GameCategories />
-      </div>
-      
       {/* Similar Listings Section */}
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-2xl font-bold">Similar Listings</h2>
