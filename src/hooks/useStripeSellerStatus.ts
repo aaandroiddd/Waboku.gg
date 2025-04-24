@@ -1,107 +1,110 @@
 import { useState, useEffect } from 'react';
-import { getFirestore, doc, onSnapshot } from 'firebase/firestore';
+import { doc, getDoc } from 'firebase/firestore';
 import { getFirebaseServices } from '@/lib/firebase';
 
-// Type for the cache entries
-interface CacheEntry {
-  hasAccount: boolean;
-  timestamp: number;
+// Cache for seller status to avoid redundant queries
+interface SellerStatusCache {
+  [userId: string]: {
+    hasStripeAccount: boolean;
+    timestamp: number;
+  };
 }
 
-// Create a cache for Stripe seller status to avoid repeated Firestore queries
-// This is outside the hook to persist between renders and component instances
-const stripeSellerCache: Record<string, CacheEntry> = {};
+// In-memory cache
+const sellerStatusCache: SellerStatusCache = {};
 
-// Cache expiration time: 1 hour (in milliseconds)
-const CACHE_EXPIRATION = 60 * 60 * 1000;
-
-// Try to load cache from sessionStorage on initial load
-if (typeof window !== 'undefined') {
-  try {
-    const savedCache = sessionStorage.getItem('stripeSellerCache');
-    if (savedCache) {
-      const parsedCache = JSON.parse(savedCache);
-      Object.assign(stripeSellerCache, parsedCache);
-    }
-  } catch (error) {
-    console.error('Error loading stripe seller cache from sessionStorage:', error);
-  }
-}
-
-// Function to save cache to sessionStorage
-const saveCache = () => {
-  if (typeof window !== 'undefined') {
-    try {
-      sessionStorage.setItem('stripeSellerCache', JSON.stringify(stripeSellerCache));
-    } catch (error) {
-      console.error('Error saving stripe seller cache to sessionStorage:', error);
-    }
-  }
-};
+// Cache expiration time (15 minutes)
+const CACHE_EXPIRY = 15 * 60 * 1000;
 
 export function useStripeSellerStatus(userId: string) {
-  const [hasStripeAccount, setHasStripeAccount] = useState<boolean | null>(null);
+  const [hasStripeAccount, setHasStripeAccount] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  
+  const [error, setError] = useState<string | null>(null);
+
   useEffect(() => {
-    if (!userId) {
-      setIsLoading(false);
-      return;
-    }
-
-    // Check if we have a valid cached result
-    const cachedResult = stripeSellerCache[userId];
-    const now = Date.now();
+    let isMounted = true;
     
-    if (cachedResult && (now - cachedResult.timestamp) < CACHE_EXPIRATION) {
-      // Use cached result if it's still valid
-      setHasStripeAccount(cachedResult.hasAccount);
-      setIsLoading(false);
-      return;
-    }
-
-    // If no valid cache, fetch from Firestore
-    const { app } = getFirebaseServices();
-    const firestore = getFirestore(app);
-    const userDocRef = doc(firestore, 'users', userId);
-
-    const unsubscribe = onSnapshot(userDocRef, (doc) => {
-      const data = doc.data();
-      let hasAccount = false;
-      
-      if (data) {
-        // Check if the user has a Stripe Connect account
-        // First check the new structure
-        if (data.stripeConnectStatus === 'active' && data.stripeConnectAccountId) {
-          hasAccount = true;
-        } 
-        // Fallback to the old structure if needed
-        else if (data.stripeConnectAccount?.accountId && data.stripeConnectAccount?.status === 'active') {
-          hasAccount = true;
-        }
+    const checkSellerStatus = async () => {
+      if (!userId) {
+        setIsLoading(false);
+        return;
       }
       
-      // Update state
-      setHasStripeAccount(hasAccount);
-      setIsLoading(false);
-      
-      // Cache the result
-      stripeSellerCache[userId] = {
-        hasAccount,
-        timestamp: Date.now()
-      };
-      
-      // Save to sessionStorage
-      saveCache();
-    }, (error) => {
-      console.error('Error fetching user Stripe data:', error);
-      setIsLoading(false);
-    });
-
+      try {
+        setIsLoading(true);
+        setError(null);
+        
+        // Check cache first
+        const cachedStatus = sellerStatusCache[userId];
+        const now = Date.now();
+        
+        if (cachedStatus && (now - cachedStatus.timestamp < CACHE_EXPIRY)) {
+          // Use cached data if it's still valid
+          if (isMounted) {
+            setHasStripeAccount(cachedStatus.hasStripeAccount);
+            setIsLoading(false);
+          }
+          return;
+        }
+        
+        // If not in cache or expired, fetch from Firestore
+        const { db } = await getFirebaseServices();
+        if (!db) {
+          throw new Error('Firebase DB is not initialized');
+        }
+        
+        // Check user document for Stripe account info
+        const userRef = doc(db, 'users', userId);
+        const userDoc = await getDoc(userRef);
+        
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+          const hasAccount = Boolean(
+            userData.stripeConnectAccountId || 
+            userData.stripeAccountVerified || 
+            userData.stripeAccountStatus === 'verified'
+          );
+          
+          // Update cache
+          sellerStatusCache[userId] = {
+            hasStripeAccount: hasAccount,
+            timestamp: now
+          };
+          
+          if (isMounted) {
+            setHasStripeAccount(hasAccount);
+          }
+        } else {
+          // User document doesn't exist
+          sellerStatusCache[userId] = {
+            hasStripeAccount: false,
+            timestamp: now
+          };
+          
+          if (isMounted) {
+            setHasStripeAccount(false);
+          }
+        }
+      } catch (err) {
+        console.error('Error checking seller status:', err);
+        if (isMounted) {
+          setError(err instanceof Error ? err.message : 'Unknown error');
+          // Default to false on error
+          setHasStripeAccount(false);
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    };
+    
+    checkSellerStatus();
+    
     return () => {
-      unsubscribe();
+      isMounted = false;
     };
   }, [userId]);
-
-  return { hasStripeAccount, isLoading };
+  
+  return { hasStripeAccount, isLoading, error };
 }

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { collection, query, where, getDocs, orderBy, limit, or, startAfter, documentId, QueryConstraint } from 'firebase/firestore';
+import { collection, query, where, getDocs, orderBy, limit, or, documentId, QueryConstraint } from 'firebase/firestore';
 import { getFirebaseServices } from '@/lib/firebase';
 import { Listing } from '@/types/database';
 import { ListingCard } from './ListingCard';
@@ -48,31 +48,6 @@ const extractKeywords = (text: string): string[] => {
       !(/^\d+$/.test(word)) // Filter out numbers-only words
     )
     .slice(0, 10); // Limit to 10 keywords
-};
-
-// Calculate price range for similar listings - more lenient to show more results
-const calculatePriceRange = (price: number): { min: number, max: number } => {
-  // For lower priced items, use a wider range
-  if (price < 50) {
-    return {
-      min: Math.max(0, price * 0.4),  // More lenient minimum
-      max: price * 2.0                // More lenient maximum
-    };
-  }
-  // For medium priced items
-  else if (price < 200) {
-    return {
-      min: price * 0.5,               // More lenient minimum
-      max: price * 1.8                // More lenient maximum
-    };
-  }
-  // For higher priced items, use a wider range
-  else {
-    return {
-      min: price * 0.6,               // More lenient minimum
-      max: price * 1.6                // More lenient maximum
-    };
-  }
 };
 
 // Get related game categories
@@ -129,7 +104,7 @@ export const SimilarListings = ({ currentListing, maxListings = 9 }: SimilarList
     });
   };
   
-  // Sort listings by relevance to the current listing - with more lenient scoring
+  // Sort listings by relevance to the current listing
   const sortByRelevance = (listings: Listing[], currentListing: Listing): Listing[] => {
     return listings.sort((a, b) => {
       let scoreA = 0;
@@ -188,6 +163,45 @@ export const SimilarListings = ({ currentListing, maxListings = 9 }: SimilarList
     });
   };
 
+  // Check cache for similar listings
+  const getSimilarListingsFromCache = (): Listing[] | null => {
+    try {
+      const cacheKey = `similarListings_${currentListing.id}`;
+      const cachedData = localStorage.getItem(cacheKey);
+      
+      if (!cachedData) return null;
+      
+      const { data, timestamp } = JSON.parse(cachedData);
+      
+      // Cache expires after 30 minutes
+      const cacheExpiry = 30 * 60 * 1000; // 30 minutes in milliseconds
+      if (Date.now() - timestamp > cacheExpiry) {
+        localStorage.removeItem(cacheKey);
+        return null;
+      }
+      
+      return data;
+    } catch (error) {
+      console.error('Error retrieving from cache:', error);
+      return null;
+    }
+  };
+
+  // Save similar listings to cache
+  const saveSimilarListingsToCache = (listings: Listing[]) => {
+    try {
+      const cacheKey = `similarListings_${currentListing.id}`;
+      const cacheData = {
+        data: listings,
+        timestamp: Date.now()
+      };
+      
+      localStorage.setItem(cacheKey, JSON.stringify(cacheData));
+    } catch (error) {
+      console.error('Error saving to cache:', error);
+    }
+  };
+
   const fetchSimilarListings = async () => {
     try {
       setIsLoading(true);
@@ -197,6 +211,15 @@ export const SimilarListings = ({ currentListing, maxListings = 9 }: SimilarList
         totalListingsFetched: 0,
         error: null
       });
+      
+      // Check cache first
+      const cachedListings = getSimilarListingsFromCache();
+      if (cachedListings && cachedListings.length > 0) {
+        console.log(`Using ${cachedListings.length} cached similar listings`);
+        setSimilarListings(cachedListings);
+        setIsLoading(false);
+        return;
+      }
       
       const { db } = await getFirebaseServices();
       if (!db) {
@@ -212,296 +235,142 @@ export const SimilarListings = ({ currentListing, maxListings = 9 }: SimilarList
       console.log('Fetching similar listings for:', currentListing.id);
       const listingsRef = collection(db, 'listings');
       
-      // Extract meaningful keywords from title and description
-      const titleKeywords = extractKeywords(currentListing.title);
-      const descriptionKeywords = extractKeywords(currentListing.description);
-      const cardNameKeywords = currentListing.cardName ? extractKeywords(currentListing.cardName) : [];
-      
-      // Combine unique keywords with priority to title and card name
-      const allKeywords = [...new Set([
-        ...cardNameKeywords,
-        ...titleKeywords, 
-        ...descriptionKeywords
-      ])];
-      
-      // Get price range for similar listings
-      const priceRange = calculatePriceRange(currentListing.price);
-      
       // Get related game categories
       const relatedGames = getRelatedGameCategories(currentListing.game);
       
-      // Create a multi-tiered approach to find similar listings
+      // OPTIMIZATION: Consolidated query approach
+      // Instead of multiple tiered queries, use a single query with OR conditions
       let results: Listing[] = [];
       
-      // Tier 1: Exact matches (same game + card name if available)
-      if (results.length < maxListings && currentListing.cardName) {
-        try {
-          console.log(`Trying exact match query with game=${currentListing.game}, cardName=${currentListing.cardName}`);
-          const exactMatchQuery = query(
-            listingsRef,
-            where('status', '==', 'active'),
+      // Create a consolidated query that covers most important cases
+      try {
+        // Build an array of OR conditions for the query
+        const orConditions = [];
+        
+        // 1. Same game + card name (if available)
+        if (currentListing.cardName) {
+          orConditions.push([
             where('game', '==', currentListing.game),
-            where('cardName', '==', currentListing.cardName),
-            where(documentId(), '!=', currentListing.id),
-            limit(maxListings)
-          );
-          
-          const exactMatchSnapshot = await getDocs(exactMatchQuery);
-          console.log(`Exact match query returned ${exactMatchSnapshot.docs.length} results`);
-          const exactMatches = processQueryResults(exactMatchSnapshot);
-          results = [...results, ...exactMatches];
-          
-          setDebugInfo(prev => ({
-            ...prev,
-            queriesRun: prev.queriesRun + 1,
-            resultsPerQuery: {
-              ...prev.resultsPerQuery,
-              'exactMatch': exactMatchSnapshot.docs.length
-            }
-          }));
-        } catch (error) {
-          console.error('Error in exact match query:', error);
+            where('cardName', '==', currentListing.cardName)
+          ]);
         }
-      }
-      
-      // Tier 2: Same game + similar price range (removed price constraints to be more lenient)
-      if (results.length < maxListings) {
-        try {
-          console.log(`Trying same game query with game=${currentListing.game}`);
-          const gameQuery = query(
-            listingsRef,
-            where('status', '==', 'active'),
-            where('game', '==', currentListing.game),
-            where(documentId(), '!=', currentListing.id),
-            limit(maxListings - results.length)
-          );
+        
+        // 2. Same game (without card name constraint)
+        orConditions.push([
+          where('game', '==', currentListing.game)
+        ]);
+        
+        // 3. Same card name (across any game)
+        if (currentListing.cardName) {
+          orConditions.push([
+            where('cardName', '==', currentListing.cardName)
+          ]);
+        }
+        
+        // 4. Related games (up to 2 to limit query complexity)
+        const limitedRelatedGames = relatedGames
+          .filter(game => game !== currentListing.game)
+          .slice(0, 2);
           
-          const gameSnapshot = await getDocs(gameQuery);
-          console.log(`Same game query returned ${gameSnapshot.docs.length} results`);
-          const gameMatches = processQueryResults(gameSnapshot);
+        for (const relatedGame of limitedRelatedGames) {
+          orConditions.push([
+            where('game', '==', relatedGame)
+          ]);
+        }
+        
+        // Create a single query with common constraints
+        const commonConstraints: QueryConstraint[] = [
+          where('status', '==', 'active'),
+          where(documentId(), '!=', currentListing.id),
+          limit(maxListings * 2) // Fetch more than needed to allow for filtering
+        ];
+        
+        // Execute the query for each OR condition and combine results
+        let allResults: Listing[] = [];
+        
+        for (let i = 0; i < orConditions.length; i++) {
+          if (allResults.length >= maxListings * 2) break;
+          
+          const conditions = orConditions[i];
+          const queryConstraints = [...commonConstraints, ...conditions];
+          
+          const q = query(listingsRef, ...queryConstraints);
+          const querySnapshot = await getDocs(q);
+          
+          console.log(`OR condition ${i+1} returned ${querySnapshot.docs.length} results`);
+          
+          const processedResults = processQueryResults(querySnapshot);
           
           // Add only new listings that aren't already in results
-          const newMatches = gameMatches.filter(
-            match => !results.some(existing => existing.id === match.id)
+          const newResults = processedResults.filter(
+            result => !allResults.some(existing => existing.id === result.id)
           );
-          results = [...results, ...newMatches];
+          
+          allResults = [...allResults, ...newResults];
           
           setDebugInfo(prev => ({
             ...prev,
             queriesRun: prev.queriesRun + 1,
             resultsPerQuery: {
               ...prev.resultsPerQuery,
-              'sameGame': gameSnapshot.docs.length
+              [`condition_${i+1}`]: querySnapshot.docs.length
             }
           }));
-        } catch (error) {
-          console.error('Error in same game query:', error);
         }
-      }
-      
-      // Tier 3: Card name only (across any game)
-      if (results.length < maxListings && currentListing.cardName) {
-        try {
-          console.log(`Trying card name query with cardName=${currentListing.cardName}`);
-          const cardNameQuery = query(
-            listingsRef,
-            where('status', '==', 'active'),
-            where('cardName', '==', currentListing.cardName),
-            where(documentId(), '!=', currentListing.id),
-            limit(maxListings - results.length)
-          );
-          
-          const cardNameSnapshot = await getDocs(cardNameQuery);
-          console.log(`Card name query returned ${cardNameSnapshot.docs.length} results`);
-          const cardNameMatches = processQueryResults(cardNameSnapshot);
-          
-          // Add only new listings
-          const newMatches = cardNameMatches.filter(
-            match => !results.some(existing => existing.id === match.id)
-          );
-          results = [...results, ...newMatches];
-          
-          setDebugInfo(prev => ({
-            ...prev,
-            queriesRun: prev.queriesRun + 1,
-            resultsPerQuery: {
-              ...prev.resultsPerQuery,
-              'cardName': cardNameSnapshot.docs.length
-            }
-          }));
-        } catch (error) {
-          console.error('Error in card name query:', error);
-        }
-      }
-      
-      // Tier 4: Try related game categories if we still don't have enough
-      if (results.length < maxListings && relatedGames.length > 0) {
-        try {
-          console.log(`Trying related games query with games=${relatedGames.filter(game => game !== currentListing.game).join(', ')}`);
-          
-          // Instead of using OR, which can be problematic, do individual queries for each related game
-          const relatedGamesList = relatedGames.filter(game => game !== currentListing.game);
-          
-          for (const relatedGame of relatedGamesList) {
-            if (results.length >= maxListings) break;
-            
-            const relatedGameQuery = query(
-              listingsRef,
-              where('status', '==', 'active'),
-              where('game', '==', relatedGame),
-              where(documentId(), '!=', currentListing.id),
-              limit(maxListings - results.length)
-            );
-            
-            const relatedGameSnapshot = await getDocs(relatedGameQuery);
-            console.log(`Related game query for ${relatedGame} returned ${relatedGameSnapshot.docs.length} results`);
-            const relatedGameMatches = processQueryResults(relatedGameSnapshot);
-            
-            // Add only new listings
-            const newMatches = relatedGameMatches.filter(
-              match => !results.some(existing => existing.id === match.id)
-            );
-            results = [...results, ...newMatches];
-            
-            setDebugInfo(prev => ({
-              ...prev,
-              queriesRun: prev.queriesRun + 1,
-              resultsPerQuery: {
-                ...prev.resultsPerQuery,
-                [`relatedGame_${relatedGame}`]: relatedGameSnapshot.docs.length
-              }
-            }));
-          }
-        } catch (error) {
-          console.error('Error in related games query:', error);
-        }
-      }
-      
-      // Tier 5: Any active listings (no game filter)
-      if (results.length < maxListings) {
-        try {
-          console.log('Trying any active listings query');
-          const anyActiveQuery = query(
+        
+        // If we still don't have enough results, try a fallback query
+        if (allResults.length < 3) {
+          const fallbackQuery = query(
             listingsRef,
             where('status', '==', 'active'),
             where(documentId(), '!=', currentListing.id),
             orderBy('createdAt', 'desc'),
-            limit(maxListings - results.length)
+            limit(maxListings)
           );
           
-          const anyActiveSnapshot = await getDocs(anyActiveQuery);
-          console.log(`Any active listings query returned ${anyActiveSnapshot.docs.length} results`);
-          const anyActiveMatches = processQueryResults(anyActiveSnapshot);
+          const fallbackSnapshot = await getDocs(fallbackQuery);
+          const fallbackResults = processQueryResults(fallbackSnapshot);
           
           // Add only new listings
-          const newMatches = anyActiveMatches.filter(
-            match => !results.some(existing => existing.id === match.id)
+          const newResults = fallbackResults.filter(
+            result => !allResults.some(existing => existing.id === result.id)
           );
-          results = [...results, ...newMatches];
+          
+          allResults = [...allResults, ...newResults];
           
           setDebugInfo(prev => ({
             ...prev,
             queriesRun: prev.queriesRun + 1,
             resultsPerQuery: {
               ...prev.resultsPerQuery,
-              'anyActive': anyActiveSnapshot.docs.length
+              'fallback': fallbackSnapshot.docs.length
             }
           }));
-        } catch (error) {
-          console.error('Error in any active listings query:', error);
         }
-      }
-      
-      // Tier 6: Last resort - get any active listings from any game if we still don't have enough
-      // More aggressive with minimum count (6 instead of 3) and higher limit
-      if (results.length < 6) {
-        const lastResortQuery = query(
-          listingsRef,
-          where('status', '==', 'active'),
-          where(documentId(), '!=', currentListing.id),
-          orderBy('createdAt', 'desc'),
-          limit(Math.max(maxListings, 12) - results.length) // Ensure we get at least some results
-        );
         
-        const lastResortSnapshot = await getDocs(lastResortQuery);
-        const lastResortMatches = processQueryResults(lastResortSnapshot);
+        // Sort results by relevance score
+        results = sortByRelevance(allResults, currentListing);
         
-        // Add only new listings
-        const newMatches = lastResortMatches.filter(
-          match => !results.some(existing => existing.id === match.id)
-        );
-        results = [...results, ...newMatches];
+        // Limit to maxListings
+        results = results.slice(0, maxListings);
         
+        console.log(`Found ${results.length} similar listings after consolidated queries`);
         setDebugInfo(prev => ({
           ...prev,
-          queriesRun: prev.queriesRun + 1,
-          resultsPerQuery: {
-            ...prev.resultsPerQuery,
-            'lastResort': lastResortMatches.length
-          }
+          totalListingsFetched: results.length
+        }));
+        
+        // Save to cache for future use
+        saveSimilarListingsToCache(results);
+        
+        setSimilarListings(results);
+      } catch (error) {
+        console.error('Error in consolidated query approach:', error);
+        setDebugInfo(prev => ({
+          ...prev,
+          error: error instanceof Error ? error.message : String(error)
         }));
       }
-      
-      // Tier 7: Absolute last resort - get ANY listings regardless of status
-      // Only if we still have no results at all
-      if (results.length === 0) {
-        console.log('No results found in any tier, trying emergency fallback query');
-        try {
-          // Query without status filter to see if there are any listings at all
-          const emergencyQuery = query(
-            listingsRef,
-            limit(maxListings)
-          );
-          
-          const emergencySnapshot = await getDocs(emergencyQuery);
-          console.log(`Emergency query found ${emergencySnapshot.docs.length} listings`);
-          
-          if (emergencySnapshot.docs.length > 0) {
-            // If we found listings but they're not active, log this information
-            const emergencyResults = processQueryResults(emergencySnapshot);
-            console.log('Emergency results:', emergencyResults.map(l => ({
-              id: l.id,
-              status: l.status,
-              game: l.game
-            })));
-            
-            // Only use these as a last resort if they're not the current listing
-            const filteredEmergency = emergencyResults.filter(
-              match => match.id !== currentListing.id
-            );
-            
-            if (filteredEmergency.length > 0) {
-              results = filteredEmergency;
-              console.log('Using emergency results as fallback');
-            }
-            
-            setDebugInfo(prev => ({
-              ...prev,
-              queriesRun: prev.queriesRun + 1,
-              resultsPerQuery: {
-                ...prev.resultsPerQuery,
-                'emergency': emergencyResults.length
-              }
-            }));
-          }
-        } catch (emergencyError) {
-          console.error('Error in emergency query:', emergencyError);
-        }
-      }
-      
-      // Sort results by relevance score
-      results = sortByRelevance(results, currentListing);
-      
-      // Limit to maxListings
-      results = results.slice(0, maxListings);
-      
-      console.log(`Found ${results.length} similar listings after all queries`);
-      setDebugInfo(prev => ({
-        ...prev,
-        totalListingsFetched: results.length
-      }));
-      
-      setSimilarListings(results);
     } catch (error) {
       console.error('Error fetching similar listings:', error);
       setDebugInfo(prev => ({
@@ -517,7 +386,7 @@ export const SimilarListings = ({ currentListing, maxListings = 9 }: SimilarList
     if (currentListing?.id) {
       fetchSimilarListings();
     }
-  }, [currentListing, maxListings]);
+  }, [currentListing?.id]); // Only depend on the ID, not the entire listing object
 
   const handleFavoriteClick = (e: React.MouseEvent, listing: Listing) => {
     e.preventDefault();

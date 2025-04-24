@@ -219,13 +219,12 @@ export const ListingCard = memo(({ listing, isFavorite, onFavoriteClick, onAddTo
     }
   }, [listing]);
 
-  // Silently check if listing is expired in the background
+  // Optimized expiration check - only run on listing detail pages and only once per session
   useEffect(() => {
     // Only check active listings
     if (listing.status !== 'active' || isCheckingExpiration) return;
     
     // Use sessionStorage to track which listings have been checked
-    // This prevents repeated API calls for the same listing during a session
     const checkedListingsKey = 'checkedListingExpirations';
     const checkedListings = sessionStorage.getItem(checkedListingsKey) || '';
     const checkedListingsArray = checkedListings.split(',').filter(Boolean);
@@ -235,60 +234,69 @@ export const ListingCard = memo(({ listing, isFavorite, onFavoriteClick, onAddTo
       return;
     }
     
-    // Skip expiration check on the front page to reduce API calls
-    // Only check expiration when viewing individual listings
+    // Only check expiration on listing detail pages to reduce API calls
     const isListingDetailPage = typeof window !== 'undefined' && 
       window.location.pathname.includes('/listings/') && 
       window.location.pathname.split('/').length > 2;
     
     if (!isListingDetailPage) {
-      // Still mark as checked to prevent future checks if user navigates to this listing
+      // Mark as checked to prevent future checks
       checkedListingsArray.push(listing.id);
       sessionStorage.setItem(checkedListingsKey, checkedListingsArray.join(','));
       return;
     }
     
-    // Prevent multiple checks for the same listing
-    let isMounted = true;
-    
-    // Trigger a background check without waiting for the response
-    const triggerBackgroundCheck = async () => {
-      if (!isMounted) return;
+    // Check if the listing is already expired based on client-side data
+    // This avoids unnecessary API calls
+    const now = new Date();
+    const expiresAt = listing.expiresAt instanceof Date 
+      ? listing.expiresAt 
+      : new Date(listing.expiresAt);
       
-      setIsCheckingExpiration(true);
-      try {
-        // Add this listing to the checked list in sessionStorage before making the request
-        // This prevents duplicate requests if the component re-renders
-        checkedListingsArray.push(listing.id);
-        sessionStorage.setItem(checkedListingsKey, checkedListingsArray.join(','));
+    if (now > expiresAt) {
+      console.log(`Listing ${listing.id} appears expired client-side, checking with server`);
+      
+      // Only make the API call if it actually appears expired
+      let isMounted = true;
+      
+      const triggerBackgroundCheck = async () => {
+        if (!isMounted) return;
         
-        // Fire and forget - we don't need to wait for the response
-        fetch('/api/listings/check-expiration', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ listingId: listing.id }),
-        })
-        .catch(err => {
-          // Silently log any errors without affecting the user experience
-          console.error('Background expiration check failed:', err);
-        });
-      } catch (error) {
-        // Ignore any errors in the background check
-        console.error('Error triggering background expiration check:', error);
-      } finally {
-        if (isMounted) {
-          setIsCheckingExpiration(false);
+        setIsCheckingExpiration(true);
+        try {
+          // Mark as checked before making the request
+          checkedListingsArray.push(listing.id);
+          sessionStorage.setItem(checkedListingsKey, checkedListingsArray.join(','));
+          
+          // Fire and forget - we don't need to wait for the response
+          fetch('/api/listings/check-expiration', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ listingId: listing.id }),
+          })
+          .catch(err => {
+            console.error('Background expiration check failed:', err);
+          });
+        } catch (error) {
+          console.error('Error triggering background expiration check:', error);
+        } finally {
+          if (isMounted) {
+            setIsCheckingExpiration(false);
+          }
         }
-      }
-    };
-    
-    // Only run the check once per component mount
-    triggerBackgroundCheck();
-    
-    return () => {
-      isMounted = false;
-    };
-  }, [listing.id]); // Only depend on listing.id, not the entire listing object
+      };
+      
+      triggerBackgroundCheck();
+      
+      return () => {
+        isMounted = false;
+      };
+    } else {
+      // Not expired, just mark as checked
+      checkedListingsArray.push(listing.id);
+      sessionStorage.setItem(checkedListingsKey, checkedListingsArray.join(','));
+    }
+  }, [listing.id, listing.expiresAt, listing.status]);
 
   useEffect(() => {
     if (location?.latitude && location?.longitude && listing?.location?.latitude && listing?.location?.longitude) {
