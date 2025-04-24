@@ -1,6 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
-import { collection, query, where, getDocs, orderBy, limit, documentId } from 'firebase/firestore';
-import { getFirebaseServices } from '@/lib/firebase';
+import React, { useEffect } from 'react';
 import { Listing } from '@/types/database';
 import { ListingCard } from './ListingCard';
 import { Button } from '@/components/ui/button';
@@ -8,9 +6,9 @@ import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious
 import { Card, CardContent } from '@/components/ui/card';
 import { useFavorites } from '@/hooks/useFavorites';
 import { useRouter } from 'next/router';
-import { ArrowRight, RefreshCw } from 'lucide-react';
-import { GAME_NAME_MAPPING } from '@/lib/game-mappings';
+import { ArrowRight } from 'lucide-react';
 import { GameCategories } from './GameCategories';
+import { useOptimizedSimilarListings, batchFetchUserData } from '@/hooks/useFirestoreOptimizer';
 
 interface SimilarListingsProps {
   currentListing: Listing;
@@ -46,195 +44,20 @@ const getRelatedGameCategories = (game: string): string[] => {
   return GAME_NAME_MAPPING[gameKey as keyof typeof GAME_NAME_MAPPING];
 };
 
-export const SimilarListings = ({ currentListing, maxListings = 9 }: SimilarListingsProps) => {
-  const [similarListings, setSimilarListings] = useState<Listing[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+export const SimilarListings = ({ currentListing, maxListings = 6 }: SimilarListingsProps) => {
   const { toggleFavorite, isFavorite, initialized } = useFavorites();
   const router = useRouter();
-  const fetchedRef = useRef(false);
-
-  // Process query results into Listing objects
-  const processQueryResults = (querySnapshot: any): Listing[] => {
-    return querySnapshot.docs.map((doc: any) => {
-      const data = doc.data();
-      
-      return {
-        id: doc.id,
-        ...data,
-        createdAt: data.createdAt?.toDate() || new Date(),
-        expiresAt: data.expiresAt?.toDate() || new Date(),
-        price: Number(data.price) || 0,
-        imageUrls: Array.isArray(data.imageUrls) ? data.imageUrls : [],
-        isGraded: Boolean(data.isGraded),
-        gradeLevel: data.gradeLevel ? Number(data.gradeLevel) : undefined,
-        status: data.status || 'active',
-        condition: data.condition || 'Not specified',
-        game: data.game || 'Not specified',
-        city: data.city || 'Unknown',
-        state: data.state || 'Unknown',
-        gradingCompany: data.gradingCompany || undefined
-      } as Listing;
-    });
-  };
+  const { similarListings, isLoading } = useOptimizedSimilarListings(currentListing, maxListings);
   
-  // Sort listings by relevance to the current listing
-  const sortByRelevance = (listings: Listing[], currentListing: Listing): Listing[] => {
-    return listings.sort((a, b) => {
-      let scoreA = 0;
-      let scoreB = 0;
-      
-      // Same game is high priority
-      if (a.game === currentListing.game) scoreA += 80;
-      if (b.game === currentListing.game) scoreB += 80;
-      
-      // Same card name is very important
-      if (a.cardName && currentListing.cardName && 
-          a.cardName.toLowerCase() === currentListing.cardName.toLowerCase()) scoreA += 70;
-      if (b.cardName && currentListing.cardName && 
-          b.cardName.toLowerCase() === currentListing.cardName.toLowerCase()) scoreB += 70;
-      
-      // Similar condition
-      if (a.condition === currentListing.condition) scoreA += 30;
-      if (b.condition === currentListing.condition) scoreB += 30;
-      
-      // Newer listings get a small boost
-      const ageA = new Date().getTime() - a.createdAt.getTime();
-      const ageB = new Date().getTime() - b.createdAt.getTime();
-      if (ageA < ageB) scoreA += 10;
-      if (ageB < ageA) scoreB += 10;
-      
-      return scoreB - scoreA;
-    });
-  };
-
-  // Check cache for similar listings
-  const getSimilarListingsFromCache = (): Listing[] | null => {
-    try {
-      const cacheKey = `similarListings_${currentListing.id}`;
-      const cachedData = localStorage.getItem(cacheKey);
-      
-      if (!cachedData) return null;
-      
-      const { data, timestamp } = JSON.parse(cachedData);
-      
-      // Cache expires after 2 hours
-      const cacheExpiry = 2 * 60 * 60 * 1000; // 2 hours in milliseconds
-      if (Date.now() - timestamp > cacheExpiry) {
-        localStorage.removeItem(cacheKey);
-        return null;
-      }
-      
-      return data;
-    } catch (error) {
-      console.error('Error retrieving from cache:', error);
-      return null;
-    }
-  };
-
-  // Save similar listings to cache
-  const saveSimilarListingsToCache = (listings: Listing[]) => {
-    try {
-      const cacheKey = `similarListings_${currentListing.id}`;
-      const cacheData = {
-        data: listings,
-        timestamp: Date.now()
-      };
-      
-      localStorage.setItem(cacheKey, JSON.stringify(cacheData));
-    } catch (error) {
-      console.error('Error saving to cache:', error);
-    }
-  };
-
-  const fetchSimilarListings = async () => {
-    // Prevent multiple fetches
-    if (fetchedRef.current) return;
-    fetchedRef.current = true;
-    
-    try {
-      setIsLoading(true);
-      
-      // Check cache first
-      const cachedListings = getSimilarListingsFromCache();
-      if (cachedListings && cachedListings.length > 0) {
-        console.log(`Using ${cachedListings.length} cached similar listings`);
-        setSimilarListings(cachedListings);
-        setIsLoading(false);
-        return;
-      }
-      
-      const { db } = await getFirebaseServices();
-      if (!db) {
-        console.error('Firebase DB is not initialized');
-        setIsLoading(false);
-        return;
-      }
-      
-      console.log('Fetching similar listings for:', currentListing.id);
-      const listingsRef = collection(db, 'listings');
-      
-      // Simple query approach - just get listings with the same game
-      const gameQuery = query(
-        listingsRef,
-        where('status', '==', 'active'),
-        where('game', '==', currentListing.game),
-        where(documentId(), '!=', currentListing.id),
-        limit(maxListings * 2)
-      );
-      
-      const querySnapshot = await getDocs(gameQuery);
-      let results = processQueryResults(querySnapshot);
-      
-      // If we don't have enough results, try a fallback query
-      if (results.length < 3) {
-        const fallbackQuery = query(
-          listingsRef,
-          where('status', '==', 'active'),
-          where(documentId(), '!=', currentListing.id),
-          orderBy('createdAt', 'desc'),
-          limit(maxListings)
-        );
-        
-        const fallbackSnapshot = await getDocs(fallbackQuery);
-        const fallbackResults = processQueryResults(fallbackSnapshot);
-        
-        // Add only new listings
-        const newResults = fallbackResults.filter(
-          result => !results.some(existing => existing.id === result.id)
-        );
-        
-        results = [...results, ...newResults];
-      }
-      
-      // Sort results by relevance score
-      results = sortByRelevance(results, currentListing);
-      
-      // Limit to maxListings
-      results = results.slice(0, maxListings);
-      
-      console.log(`Found ${results.length} similar listings`);
-      
-      // Save to cache for future use
-      saveSimilarListingsToCache(results);
-      
-      setSimilarListings(results);
-    } catch (error) {
-      console.error('Error fetching similar listings:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
+  // Prefetch user data for all listings when component mounts
   useEffect(() => {
-    if (currentListing?.id) {
-      fetchSimilarListings();
+    if (similarListings.length > 0) {
+      const userIds = similarListings.map(listing => listing.userId).filter(Boolean);
+      if (userIds.length > 0) {
+        batchFetchUserData(userIds);
+      }
     }
-    
-    // Cleanup function
-    return () => {
-      fetchedRef.current = false;
-    };
-  }, [currentListing?.id]); // Only depend on the ID, not the entire listing object
+  }, [similarListings]);
 
   const handleFavoriteClick = (e: React.MouseEvent, listing: Listing) => {
     e.preventDefault();

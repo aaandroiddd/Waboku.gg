@@ -6,7 +6,8 @@ declare global {
     __transformInstances?: Record<string, any>;
   }
 }
-import { doc, getDoc, deleteDoc, setDoc, onSnapshot } from 'firebase/firestore';
+import { doc, getDoc, onSnapshot } from 'firebase/firestore';
+import { batchFetchUserData } from '@/hooks/useFirestoreOptimizer';
 import { loadStripe } from '@stripe/stripe-js';
 import { BuyNowButton } from '@/components/BuyNowButton';
 import { UserNameLink } from '@/components/UserNameLink';
@@ -39,6 +40,7 @@ import dynamic from 'next/dynamic';
 import { DistanceIndicator } from '@/components/DistanceIndicator';
 import { useLoading } from '@/contexts/LoadingContext';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
+import { FirestoreRequestCounter } from '@/components/FirestoreRequestCounter';
 
 const getConditionColor = (condition: string) => {
   const colors: Record<string, string> = {
@@ -192,53 +194,22 @@ export default function ListingPage() {
   // Get favorites functionality from the hook
   const { toggleFavorite, isFavorite, initialized } = useFavorites();
   
-  // Effect to check if the seller has an active Stripe Connect account
+  // Effect to prefetch user data when listing is loaded
   useEffect(() => {
-    if (!listing || !listing.userId) return;
-    
-    // Import the hook dynamically to avoid SSR issues
-    import('@/hooks/useStripeSellerStatus').then(({ useStripeSellerStatus }) => {
-      // Preload the seller's Stripe status into the cache
-      // This will help make the badge appear more smoothly
-      const { app, db } = getFirebaseServices();
-      const userDocRef = doc(db, 'users', listing.userId);
+    if (listing) {
+      // Prefetch seller data
+      if (listing.userId) {
+        batchFetchUserData([listing.userId]);
+      }
       
-      getDoc(userDocRef).then(sellerDoc => {
-        if (!sellerDoc.exists()) {
-          setSellerHasActiveStripeAccount(false);
-          return;
-        }
-        
-        const sellerData = sellerDoc.data();
-        // Check if seller has completed Stripe Connect onboarding
-        const hasActiveAccount = (
-          !!sellerData.stripeConnectAccountId && 
-          sellerData.stripeConnectStatus === 'active'
-        ) || (
-          !!sellerData.stripeConnectAccount?.accountId && 
-          sellerData.stripeConnectAccount?.status === 'active'
-        );
-        
-        setSellerHasActiveStripeAccount(hasActiveAccount);
-        
-        // Store in the cache for the badge component to use
-        if (typeof window !== 'undefined') {
-          try {
-            const stripeSellerCache = JSON.parse(sessionStorage.getItem('stripeSellerCache') || '{}');
-            stripeSellerCache[listing.userId] = {
-              hasAccount: hasActiveAccount,
-              timestamp: Date.now()
-            };
-            sessionStorage.setItem('stripeSellerCache', JSON.stringify(stripeSellerCache));
-          } catch (error) {
-            console.error('Error updating stripe seller cache:', error);
-          }
-        }
-      }).catch(error => {
-        console.error('Error checking seller Stripe status:', error);
-        setSellerHasActiveStripeAccount(false);
-      });
-    });
+      // Check if seller has active Stripe account
+      if (listing.userId) {
+        import('@/hooks/useFirestoreOptimizer').then(({ useOptimizedSellerStatus }) => {
+          const { hasStripeAccount } = useOptimizedSellerStatus(listing.userId);
+          setSellerHasActiveStripeAccount(hasStripeAccount);
+        });
+      }
+    }
   }, [listing]);
 
   const { startLoading, stopLoading } = useLoading();
@@ -1786,6 +1757,9 @@ export default function ListingPage() {
       )}
       
       <Footer />
+      
+      {/* Firestore Request Counter */}
+      {process.env.NODE_ENV === 'development' && <FirestoreRequestCounter />}
       
       {/* Add to Group Dialog */}
       <AddToGroupDialog

@@ -1,7 +1,7 @@
 import { Badge } from '@/components/ui/badge';
 import { CreditCard } from 'lucide-react';
 import { BadgeTooltip } from '@/components/BadgeTooltip';
-import { useStripeSellerStatus } from '@/hooks/useStripeSellerStatus';
+import { useOptimizedSellerStatus } from '@/hooks/useFirestoreOptimizer';
 
 interface StripeSellerBadgeProps {
   className?: string;
@@ -9,7 +9,7 @@ interface StripeSellerBadgeProps {
 }
 
 export function StripeSellerBadge({ className, userId }: StripeSellerBadgeProps) {
-  const { hasStripeAccount, isLoading } = useStripeSellerStatus(userId);
+  const { hasStripeAccount, isLoading } = useOptimizedSellerStatus(userId);
   
   // Show skeleton loader while loading
   if (isLoading) {
