@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { Listing } from '@/types/database';
 import { ListingCard } from './ListingCard';
 import { Button } from '@/components/ui/button';
@@ -7,7 +7,15 @@ import { Card, CardContent } from '@/components/ui/card';
 import { useFavorites } from '@/hooks/useFavorites';
 import { useRouter } from 'next/router';
 import { ArrowRight } from 'lucide-react';
-import { useOptimizedSimilarListings, batchFetchUserData } from '@/hooks/useFirestoreOptimizer';
+import { useOptimizedSimilarListings } from '@/hooks/useFirestoreOptimizer';
+
+// Define the game name mapping object that was missing
+const GAME_NAME_MAPPING: Record<string, string[]> = {
+  pokemon: ['Pokemon', 'Pokemon TCG', 'Pokemon Trading Card Game'],
+  yugioh: ['Yu-Gi-Oh!', 'Yu-Gi-Oh', 'Yugioh', 'Yu Gi Oh'],
+  magic: ['Magic: The Gathering', 'Magic The Gathering', 'MTG'],
+  // Add other game mappings as needed
+};
 
 interface SimilarListingsProps {
   currentListing: Listing;
@@ -46,18 +54,13 @@ const getRelatedGameCategories = (game: string): string[] => {
 export const SimilarListings = ({ currentListing, maxListings = 6 }: SimilarListingsProps) => {
   const { toggleFavorite, isFavorite, initialized } = useFavorites();
   const router = useRouter();
+  
+  // Use the optimized hook for fetching similar listings
+  // This will handle batching user data fetching internally
   const { similarListings, isLoading } = useOptimizedSimilarListings(currentListing, maxListings);
   
-  // Prefetch user data for all listings when component mounts
-  useEffect(() => {
-    if (similarListings.length > 0) {
-      const userIds = similarListings.map(listing => listing.userId).filter(Boolean);
-      if (userIds.length > 0) {
-        batchFetchUserData(userIds);
-      }
-    }
-  }, [similarListings]);
-
+  // Remove the additional useEffect that was causing extra fetches
+  
   const handleFavoriteClick = (e: React.MouseEvent, listing: Listing) => {
     e.preventDefault();
     e.stopPropagation();
