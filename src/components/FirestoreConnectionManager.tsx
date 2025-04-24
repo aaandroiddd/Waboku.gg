@@ -70,6 +70,27 @@ export function FirestoreConnectionManager() {
     });
   };
 
+  // Track if a network operation is in progress to prevent overlapping calls
+  const [isNetworkOperationInProgress, setIsNetworkOperationInProgress] = useState(false);
+  // Track the last operation time to prevent too frequent changes
+  const [lastOperationTime, setLastOperationTime] = useState(0);
+  
+  // Clear any Firestore-related localStorage items that might be causing listeners
+  const clearFirestoreCache = useCallback(() => {
+    try {
+      Object.keys(localStorage).forEach(key => {
+        if (key.startsWith('firestore') || 
+            key.includes('firestore') || 
+            key.includes('firebase') || 
+            key.includes('fs_')) {
+          localStorage.removeItem(key);
+        }
+      });
+    } catch (error) {
+      console.error('Error clearing Firestore cache:', error);
+    }
+  }, []);
+  
   useEffect(() => {
     // Only run in browser
     if (typeof window === 'undefined') return;
@@ -77,24 +98,26 @@ export function FirestoreConnectionManager() {
     // Skip if Firestore is not initialized
     if (!db) return;
     
-    // Clear any Firestore-related localStorage items that might be causing listeners
-    const clearFirestoreCache = () => {
-      try {
-        Object.keys(localStorage).forEach(key => {
-          if (key.startsWith('firestore') || 
-              key.includes('firestore') || 
-              key.includes('firebase') || 
-              key.includes('fs_')) {
-            localStorage.removeItem(key);
-          }
-        });
-      } catch (error) {
-        console.error('Error clearing Firestore cache:', error);
-      }
-    };
-    
     const manageFirestoreConnection = async () => {
+      // Prevent rapid toggling of network state
+      const now = Date.now();
+      const timeSinceLastOperation = now - lastOperationTime;
+      
+      // Don't allow operations more frequently than every 5 seconds
+      if (timeSinceLastOperation < 5000) {
+        console.log('Skipping Firestore connection change - too soon since last operation');
+        return;
+      }
+      
+      // Don't allow overlapping operations
+      if (isNetworkOperationInProgress) {
+        console.log('Skipping Firestore connection change - operation already in progress');
+        return;
+      }
+      
       try {
+        setIsNetworkOperationInProgress(true);
+        
         // Get cached connection state
         const cacheKey = 'firestore_connection_state';
         let connectionCache: FirestoreConnectionCache | null = null;
@@ -112,61 +135,44 @@ export function FirestoreConnectionManager() {
         const needsFirestore = doesCurrentPageNeedFirestore();
         const currentPath = router.pathname;
         
-        // If user is not logged in, disable Firestore except for specific pages
-        if (!user && !needsFirestore) {
-          // Only disable if we haven't recently disabled
-          if (!connectionCache || 
-              connectionCache.lastAction !== 'disable' || 
-              connectionCache.path !== currentPath) {
-            
-            console.log('Disabling Firestore - User not logged in and page does not need it');
-            await disableNetwork(db);
-            setIsFirestoreEnabled(false);
-            
-            // Clear Firestore cache to prevent lingering listeners
-            clearFirestoreCache();
-            
-            // Update cache
-            const newCache: FirestoreConnectionCache = {
-              lastAction: 'disable',
-              timestamp: Date.now(),
-              path: currentPath
-            };
-            
-            try {
-              sessionStorage.setItem(cacheKey, JSON.stringify(newCache));
-            } catch (error) {
-              console.error('Error saving Firestore connection cache:', error);
-            }
-          }
-          return;
-        }
-        
-        // If user is logged in but current page doesn't need Firestore
-        if (user && !needsFirestore) {
+        // If we don't need Firestore (either user not logged in or page doesn't need it)
+        if ((!user && !needsFirestore) || (user && !needsFirestore)) {
           // Only disable if we haven't recently disabled for this path
+          // and if the last action wasn't already 'disable'
           if (!connectionCache || 
               connectionCache.lastAction !== 'disable' || 
               connectionCache.path !== currentPath) {
             
-            console.log('Disabling Firestore - User logged in but page does not need it');
-            await disableNetwork(db);
-            setIsFirestoreEnabled(false);
+            console.log(`Disabling Firestore - ${!user ? 'User not logged in' : 'Page does not need it'}`);
             
-            // Clear Firestore cache to prevent lingering listeners
-            clearFirestoreCache();
-            
-            // Update cache
-            const newCache: FirestoreConnectionCache = {
-              lastAction: 'disable',
-              timestamp: Date.now(),
-              path: currentPath
-            };
+            // Add a small delay before disabling to allow any pending operations to complete
+            await new Promise(resolve => setTimeout(resolve, 500));
             
             try {
-              sessionStorage.setItem(cacheKey, JSON.stringify(newCache));
+              await disableNetwork(db);
+              setIsFirestoreEnabled(false);
+              setLastOperationTime(Date.now());
+              
+              // Clear Firestore cache to prevent lingering listeners
+              // but only after a small delay to allow disableNetwork to complete
+              setTimeout(() => {
+                clearFirestoreCache();
+              }, 1000);
+              
+              // Update cache
+              const newCache: FirestoreConnectionCache = {
+                lastAction: 'disable',
+                timestamp: Date.now(),
+                path: currentPath
+              };
+              
+              try {
+                sessionStorage.setItem(cacheKey, JSON.stringify(newCache));
+              } catch (error) {
+                console.error('Error saving Firestore connection cache:', error);
+              }
             } catch (error) {
-              console.error('Error saving Firestore connection cache:', error);
+              console.error('Error disabling Firestore network:', error);
             }
           }
           return;
@@ -179,35 +185,46 @@ export function FirestoreConnectionManager() {
              connectionCache.path !== currentPath)) {
           
           console.log('Enabling Firestore - User logged in and/or page needs it');
-          await enableNetwork(db);
-          setIsFirestoreEnabled(true);
-          
-          // Update cache
-          const newCache: FirestoreConnectionCache = {
-            lastAction: 'enable',
-            timestamp: Date.now(),
-            path: currentPath
-          };
           
           try {
-            sessionStorage.setItem(cacheKey, JSON.stringify(newCache));
+            await enableNetwork(db);
+            setIsFirestoreEnabled(true);
+            setLastOperationTime(Date.now());
+            
+            // Update cache
+            const newCache: FirestoreConnectionCache = {
+              lastAction: 'enable',
+              timestamp: Date.now(),
+              path: currentPath
+            };
+            
+            try {
+              sessionStorage.setItem(cacheKey, JSON.stringify(newCache));
+            } catch (error) {
+              console.error('Error saving Firestore connection cache:', error);
+            }
           } catch (error) {
-            console.error('Error saving Firestore connection cache:', error);
+            console.error('Error enabling Firestore network:', error);
           }
         }
       } catch (error) {
         console.error('Error managing Firestore connection:', error);
+      } finally {
+        // Ensure we always reset the in-progress flag
+        setIsNetworkOperationInProgress(false);
       }
     };
 
-    // Run immediately on mount and when route changes
-    manageFirestoreConnection();
+    // Run with a small delay to prevent race conditions on initial load
+    const timeoutId = setTimeout(() => {
+      manageFirestoreConnection();
+    }, 1000);
     
-    // Also run when user auth state changes
+    // Clean up timeout on unmount
     return () => {
-      // Clean up if needed
+      clearTimeout(timeoutId);
     };
-  }, [user, router.pathname]);
+  }, [user, router.pathname, isNetworkOperationInProgress, lastOperationTime, clearFirestoreCache]);
 
   // This component doesn't render anything
   return null;

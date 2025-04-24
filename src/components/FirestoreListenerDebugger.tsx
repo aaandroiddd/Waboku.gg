@@ -27,20 +27,42 @@ export function FirestoreListenerDebugger() {
     return () => clearInterval(interval);
   }, [showDetails]);
 
-  // Toggle network status
+  // Track if a network operation is in progress
+  const [isOperationInProgress, setIsOperationInProgress] = useState(false);
+  
+  // Toggle network status with debounce
   const toggleNetwork = async () => {
-    if (!db) return;
+    if (!db || isOperationInProgress) return;
     
     try {
+      setIsOperationInProgress(true);
+      
       if (isNetworkEnabled) {
+        console.log('[FirestoreListenerDebugger] Manually disabling Firestore network');
         await disableNetwork(db);
         setIsNetworkEnabled(false);
       } else {
+        console.log('[FirestoreListenerDebugger] Manually enabling Firestore network');
         await enableNetwork(db);
         setIsNetworkEnabled(true);
       }
+      
+      // Store the manual override in sessionStorage to inform other components
+      try {
+        sessionStorage.setItem('firestore_manual_network_override', JSON.stringify({
+          state: !isNetworkEnabled ? 'enabled' : 'disabled',
+          timestamp: Date.now()
+        }));
+      } catch (error) {
+        console.error('Error saving manual network override state:', error);
+      }
     } catch (error) {
       console.error('Error toggling Firestore network:', error);
+    } finally {
+      // Add a delay before allowing another operation
+      setTimeout(() => {
+        setIsOperationInProgress(false);
+      }, 5000);
     }
   };
 

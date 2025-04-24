@@ -85,8 +85,7 @@ const MainContent = memo(({ Component, pageProps, pathname }: {
       )}
       
       <Toaster />
-      {isMounted && <FirebaseConnectionHandler />}
-      {isMounted && <FirebaseConnectionManager />}
+      {/* Only use FirestoreConnectionManager for Firestore connection management */}
       {isMounted && <FirestoreConnectionManager />}
       {isMounted && process.env.NODE_ENV === 'development' && <FirestoreListenerDebugger />}
     </>
