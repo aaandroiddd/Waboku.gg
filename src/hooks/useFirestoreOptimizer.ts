@@ -60,19 +60,27 @@ const persistCache = () => {
   }, 2000);
 };
 
-// Batch user data fetching
+// Create a flag to track if we're already fetching user data for specific IDs
+const fetchingUserIds = new Set<string>();
+
+// Batch user data fetching with request deduplication
 export const batchFetchUserData = async (userIds: string[]): Promise<void> => {
   if (!userIds.length) return;
   
   // Filter out users that are already in cache and not expired
+  // Also filter out users that are currently being fetched
   const now = Date.now();
-  const uncachedUserIds = userIds.filter(id => 
-    !globalCache.users[id] || now - globalCache.users[id].timestamp >= CACHE_EXPIRY.users
-  );
+  const uncachedUserIds = userIds.filter(id => {
+    if (fetchingUserIds.has(id)) return false;
+    return !globalCache.users[id] || now - globalCache.users[id].timestamp >= CACHE_EXPIRY.users;
+  });
   
   if (!uncachedUserIds.length) return;
   
   console.log(`[FirestoreOptimizer] Batch fetching data for ${uncachedUserIds.length} users`);
+  
+  // Mark these users as being fetched
+  uncachedUserIds.forEach(id => fetchingUserIds.add(id));
   
   try {
     const { db } = getFirebaseServices();
@@ -143,199 +151,143 @@ export const batchFetchUserData = async (userIds: string[]): Promise<void> => {
     persistCache();
   } catch (error) {
     console.error('[FirestoreOptimizer] Error batch fetching user data:', error);
+  } finally {
+    // Clear the fetching flag for these users
+    uncachedUserIds.forEach(id => fetchingUserIds.delete(id));
   }
 };
 
-// Hook to get user data with optimized fetching
-export const useOptimizedUserData = (userId: string) => {
-  const [userData, setUserData] = useState<any>(null);
-  const [loading, setLoading] = useState<boolean>(true);
-  
-  useEffect(() => {
-    if (!userId) {
-      setLoading(false);
-      return;
-    }
-    
-    // Check cache first
-    const now = Date.now();
-    if (globalCache.users[userId] && now - globalCache.users[userId].timestamp < CACHE_EXPIRY.users) {
-      setUserData(globalCache.users[userId].data);
-      setLoading(false);
-      return;
-    }
-    
-    // Fetch user data
-    const fetchUserData = async () => {
-      try {
-        const { db } = getFirebaseServices();
-        if (!db) throw new Error('Firebase DB not initialized');
-        
-        const userDoc = await getDoc(doc(db, 'users', userId));
-        
-        if (userDoc.exists()) {
-          const data = userDoc.data();
-          
-          // Extract user data
-          const userData = {
-            username: data.displayName || data.username || `User ${userId.substring(0, 6)}...`,
-            avatarUrl: data.avatarUrl || data.photoURL || null,
-            email: data.email || null,
-            // Also store Stripe seller status
-            stripeConnectAccountId: data.stripeConnectAccountId || null,
-            stripeConnectStatus: data.stripeConnectStatus || null,
-            hasStripeAccount: !!(data.stripeConnectAccountId && data.stripeConnectStatus === 'active')
-          };
-          
-          // Update cache
-          globalCache.users[userId] = {
-            data: userData,
-            timestamp: now
-          };
-          
-          // Also update seller status cache
-          globalCache.sellerStatus[userId] = {
-            hasStripeAccount: userData.hasStripeAccount,
-            timestamp: now
-          };
-          
-          // Persist cache
-          persistCache();
-          
-          setUserData(userData);
-        } else {
-          // User not found
-          const fallbackData = {
-            username: `User ${userId.substring(0, 6)}...`,
-            avatarUrl: null,
-            hasStripeAccount: false
-          };
-          
-          // Cache with shorter expiration
-          globalCache.users[userId] = {
-            data: fallbackData,
-            timestamp: now - (CACHE_EXPIRY.users / 2)
-          };
-          
-          globalCache.sellerStatus[userId] = {
-            hasStripeAccount: false,
-            timestamp: now - (CACHE_EXPIRY.sellerStatus / 2)
-          };
-          
-          persistCache();
-          
-          setUserData(fallbackData);
-        }
-      } catch (error) {
-        console.error('[FirestoreOptimizer] Error fetching user data:', error);
-        
-        // Fallback data on error
-        const fallbackData = {
-          username: `User ${userId.substring(0, 6)}...`,
-          avatarUrl: null,
-          hasStripeAccount: false
-        };
-        
-        setUserData(fallbackData);
-      } finally {
-        setLoading(false);
-      }
-    };
-    
-    fetchUserData();
-  }, [userId]);
-  
-  return { userData, loading };
-};
+// Also track similar listings fetches
+const fetchingSimilarListingsIds = new Set<string>();
 
-// Hook to get seller status with optimized fetching
-export const useOptimizedSellerStatus = (userId: string) => {
-  const [hasStripeAccount, setHasStripeAccount] = useState<boolean>(false);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
+// Function to prefetch similar listings with deduplication
+export const prefetchSimilarListings = async (listingId: string, game: string, maxListings: number = 6) => {
+  // Check if already fetching
+  if (fetchingSimilarListingsIds.has(listingId)) {
+    // If it's already being fetched, wait for it in cache
+    let attempts = 0;
+    const maxAttempts = 50; // Maximum wait time: 5 seconds
+    
+    while (attempts < maxAttempts) {
+      await new Promise(resolve => setTimeout(resolve, 100)); // Wait 100ms
+      attempts++;
+      
+      // If it appeared in cache, return it
+      const now = Date.now();
+      if (globalCache.similarListings[listingId] && 
+          now - globalCache.similarListings[listingId].timestamp < CACHE_EXPIRY.similarListings) {
+        return globalCache.similarListings[listingId].data;
+      }
+      
+      // If it's no longer being fetched (but not in cache), break and fetch it
+      if (!fetchingSimilarListingsIds.has(listingId)) {
+        break;
+      }
+    }
+  }
   
-  useEffect(() => {
-    if (!userId) {
-      setIsLoading(false);
-      return;
-    }
+  // Check cache first (again, in case we just waited)
+  const now = Date.now();
+  if (globalCache.similarListings[listingId] && 
+      now - globalCache.similarListings[listingId].timestamp < CACHE_EXPIRY.similarListings) {
+    console.log(`[FirestoreOptimizer] Using cached similar listings for ${listingId}`);
+    return globalCache.similarListings[listingId].data;
+  }
+  
+  // Mark as being fetched
+  fetchingSimilarListingsIds.add(listingId);
+  
+  try {
+    console.log(`[FirestoreOptimizer] Fetching similar listings for ${listingId}`);
     
-    // Check cache first
-    const now = Date.now();
-    if (globalCache.sellerStatus[userId] && now - globalCache.sellerStatus[userId].timestamp < CACHE_EXPIRY.sellerStatus) {
-      setHasStripeAccount(globalCache.sellerStatus[userId].hasStripeAccount);
-      setIsLoading(false);
-      return;
-    }
+    const { db } = getFirebaseServices();
+    if (!db) throw new Error('Firebase DB not initialized');
     
-    // Check if we already have user data with seller status
-    if (globalCache.users[userId] && now - globalCache.users[userId].timestamp < CACHE_EXPIRY.users) {
-      const userData = globalCache.users[userId].data;
-      if (userData.hasStripeAccount !== undefined) {
-        setHasStripeAccount(userData.hasStripeAccount);
-        
-        // Update seller status cache
-        globalCache.sellerStatus[userId] = {
-          hasStripeAccount: userData.hasStripeAccount,
-          timestamp: now
-        };
-        
-        setIsLoading(false);
-        return;
-      }
-    }
+    // Simple query for listings with the same game
+    const gameQuery = query(
+      collection(db, 'listings'),
+      where('status', '==', 'active'),
+      where('game', '==', game),
+      where(documentId(), '!=', listingId),
+      limit(maxListings * 2)
+    );
     
-    // Fetch seller status
-    const fetchSellerStatus = async () => {
-      try {
-        const { db } = getFirebaseServices();
-        if (!db) throw new Error('Firebase DB not initialized');
-        
-        const userDoc = await getDoc(doc(db, 'users', userId));
-        
-        if (userDoc.exists()) {
-          const data = userDoc.data();
-          const hasAccount = !!(
-            data.stripeConnectAccountId && 
-            data.stripeConnectStatus === 'active'
-          );
-          
-          // Update cache
-          globalCache.sellerStatus[userId] = {
-            hasStripeAccount: hasAccount,
-            timestamp: now
-          };
-          
-          // Also update user data if we have it
-          if (globalCache.users[userId]) {
-            globalCache.users[userId].data.hasStripeAccount = hasAccount;
-          }
-          
-          persistCache();
-          
-          setHasStripeAccount(hasAccount);
-        } else {
-          // User not found
-          globalCache.sellerStatus[userId] = {
-            hasStripeAccount: false,
-            timestamp: now - (CACHE_EXPIRY.sellerStatus / 2)
-          };
-          
-          persistCache();
-          
-          setHasStripeAccount(false);
+    const querySnapshot = await getDocs(gameQuery);
+    
+    // Process results
+    const results = querySnapshot.docs.map(doc => {
+      const data = doc.data();
+      
+      return {
+        id: doc.id,
+        ...data,
+        createdAt: data.createdAt?.toDate() || new Date(),
+        expiresAt: data.expiresAt?.toDate() || new Date(),
+        price: Number(data.price) || 0,
+        imageUrls: Array.isArray(data.imageUrls) ? data.imageUrls : [],
+        isGraded: Boolean(data.isGraded),
+        gradeLevel: data.gradeLevel ? Number(data.gradeLevel) : undefined,
+        status: data.status || 'active',
+        condition: data.condition || 'Not specified',
+        game: data.game || 'Not specified',
+        city: data.city || 'Unknown',
+        state: data.state || 'Unknown',
+        gradingCompany: data.gradingCompany || undefined
+      };
+    });
+    
+    // Sort by relevance (simplified)
+    const sortedResults = results.sort((a, b) => {
+      // Newer listings get priority
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    }).slice(0, maxListings);
+    
+    // If we don't have enough similar listings, fetch newest listings as fallback
+    let finalResults = [...sortedResults];
+    if (sortedResults.length < maxListings) {
+      console.log(`[FirestoreOptimizer] Not enough similar listings (${sortedResults.length}/${maxListings}), fetching newest as fallback`);
+      
+      // Get IDs of listings we already have to avoid duplicates
+      const existingIds = new Set(sortedResults.map(listing => listing.id));
+      existingIds.add(listingId); // Also exclude current listing
+      
+      // Fetch newest listings
+      const newestListings = await fetchNewestListings(listingId, maxListings * 2);
+      
+      // Filter out duplicates and add to results until we reach maxListings
+      for (const listing of newestListings) {
+        if (!existingIds.has(listing.id) && finalResults.length < maxListings) {
+          finalResults.push(listing);
+          existingIds.add(listing.id);
         }
-      } catch (error) {
-        console.error('[FirestoreOptimizer] Error fetching seller status:', error);
-        setHasStripeAccount(false);
-      } finally {
-        setIsLoading(false);
       }
+    }
+    
+    // Cache the results
+    globalCache.similarListings[listingId] = {
+      data: finalResults,
+      timestamp: now
     };
     
-    fetchSellerStatus();
-  }, [userId]);
-  
-  return { hasStripeAccount, isLoading };
+    persistCache();
+    
+    // Also prefetch user data for these listings
+    const userIds = finalResults.map(listing => listing.userId).filter(Boolean);
+    if (userIds.length) {
+      // Use setTimeout to make this non-blocking
+      setTimeout(() => {
+        batchFetchUserData(userIds);
+      }, 0);
+    }
+    
+    return finalResults;
+  } catch (error) {
+    console.error('[FirestoreOptimizer] Error fetching similar listings:', error);
+    return [];
+  } finally {
+    // Clear the fetching flag
+    fetchingSimilarListingsIds.delete(listingId);
+  }
 };
 
 // Function to fetch newest listings
@@ -388,163 +340,263 @@ export const fetchNewestListings = async (excludeListingId: string, maxListings:
   }
 };
 
-// Function to prefetch similar listings
-export const prefetchSimilarListings = async (listingId: string, game: string, maxListings: number = 6) => {
-  // Check cache first
-  const now = Date.now();
-  if (globalCache.similarListings[listingId] && now - globalCache.similarListings[listingId].timestamp < CACHE_EXPIRY.similarListings) {
-    console.log(`[FirestoreOptimizer] Using cached similar listings for ${listingId}`);
-    return globalCache.similarListings[listingId].data;
-  }
+// Hook to get user data with optimized fetching
+export const useOptimizedUserData = (userId: string) => {
+  const [userData, setUserData] = useState<any>(null);
+  const [loading, setLoading] = useState<boolean>(true);
   
-  try {
-    console.log(`[FirestoreOptimizer] Fetching similar listings for ${listingId}`);
-    
-    const { db } = getFirebaseServices();
-    if (!db) throw new Error('Firebase DB not initialized');
-    
-    // Simple query for listings with the same game
-    const gameQuery = query(
-      collection(db, 'listings'),
-      where('status', '==', 'active'),
-      where('game', '==', game),
-      where(documentId(), '!=', listingId),
-      limit(maxListings * 2)
-    );
-    
-    const querySnapshot = await getDocs(gameQuery);
-    
-    // Process results
-    const results = querySnapshot.docs.map(doc => {
-      const data = doc.data();
-      
-      return {
-        id: doc.id,
-        ...data,
-        createdAt: data.createdAt?.toDate() || new Date(),
-        expiresAt: data.expiresAt?.toDate() || new Date(),
-        price: Number(data.price) || 0,
-        imageUrls: Array.isArray(data.imageUrls) ? data.imageUrls : [],
-        isGraded: Boolean(data.isGraded),
-        gradeLevel: data.gradeLevel ? Number(data.gradeLevel) : undefined,
-        status: data.status || 'active',
-        condition: data.condition || 'Not specified',
-        game: data.game || 'Not specified',
-        city: data.city || 'Unknown',
-        state: data.state || 'Unknown',
-        gradingCompany: data.gradingCompany || undefined
-      };
-    });
-    
-    // Sort by relevance (simplified)
-    const sortedResults = results.sort((a, b) => {
-      // Newer listings get priority
-      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-    }).slice(0, maxListings);
-    
-    // If we don't have enough similar listings, fetch newest listings as fallback
-    if (sortedResults.length < maxListings) {
-      console.log(`[FirestoreOptimizer] Not enough similar listings (${sortedResults.length}/${maxListings}), fetching newest as fallback`);
-      
-      // Get IDs of listings we already have to avoid duplicates
-      const existingIds = new Set(sortedResults.map(listing => listing.id));
-      existingIds.add(listingId); // Also exclude current listing
-      
-      // Fetch newest listings
-      const newestListings = await fetchNewestListings(listingId, maxListings * 2);
-      
-      // Filter out duplicates and add to results until we reach maxListings
-      for (const listing of newestListings) {
-        if (!existingIds.has(listing.id) && sortedResults.length < maxListings) {
-          sortedResults.push(listing);
-          existingIds.add(listing.id);
-        }
-      }
-    }
-    
-    // Cache the results
-    globalCache.similarListings[listingId] = {
-      data: sortedResults,
-      timestamp: now
-    };
-    
-    persistCache();
-    
-    // Also prefetch user data for these listings
-    const userIds = sortedResults.map(listing => listing.userId).filter(Boolean);
-    if (userIds.length) {
-      batchFetchUserData(userIds);
-    }
-    
-    return sortedResults;
-  } catch (error) {
-    console.error('[FirestoreOptimizer] Error fetching similar listings:', error);
-    return [];
-  }
-};
-
-// Hook to get similar listings with optimized fetching
-export const useOptimizedSimilarListings = (currentListing: any, maxListings: number = 6) => {
-  const [similarListings, setSimilarListings] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
+  // Use a combined dependency array key to prevent unnecessary fetches
+  // when the userId doesn't actually change
+  const userIdKey = userId || 'none';
   
   useEffect(() => {
-    if (!currentListing?.id || !currentListing?.game) {
-      setIsLoading(false);
+    if (!userId) {
+      setLoading(false);
       return;
     }
+    
+    let isMounted = true;
     
     // Check cache first
     const now = Date.now();
-    if (
-      globalCache.similarListings[currentListing.id] && 
-      now - globalCache.similarListings[currentListing.id].timestamp < CACHE_EXPIRY.similarListings
-    ) {
-      setSimilarListings(globalCache.similarListings[currentListing.id].data);
-      setIsLoading(false);
-      
-      // Prefetch user data for these listings
-      const userIds = globalCache.similarListings[currentListing.id].data
-        .map(listing => listing.userId)
-        .filter(Boolean);
-      
-      if (userIds.length) {
-        batchFetchUserData(userIds);
-      }
-      
+    if (globalCache.users[userId] && now - globalCache.users[userId].timestamp < CACHE_EXPIRY.users) {
+      setUserData(globalCache.users[userId].data);
+      setLoading(false);
       return;
     }
     
-    // Fetch similar listings
-    const fetchSimilarListings = async () => {
+    // Fetch user data
+    const fetchUserData = async () => {
       try {
-        const listings = await prefetchSimilarListings(currentListing.id, currentListing.game, maxListings);
-        setSimilarListings(listings);
+        // If this user is already being fetched in a batch, wait for it
+        if (fetchingUserIds.has(userId)) {
+          let attempts = 0;
+          const maxAttempts = 50; // Maximum wait time: 5 seconds
+          
+          while (attempts < maxAttempts) {
+            await new Promise(resolve => setTimeout(resolve, 100)); // Wait 100ms
+            attempts++;
+            
+            // If it appeared in cache, use it
+            if (globalCache.users[userId] && 
+                now - globalCache.users[userId].timestamp < CACHE_EXPIRY.users) {
+              if (isMounted) {
+                setUserData(globalCache.users[userId].data);
+                setLoading(false);
+              }
+              return;
+            }
+            
+            // If it's no longer being fetched, break and fetch it individually
+            if (!fetchingUserIds.has(userId)) {
+              break;
+            }
+          }
+        }
+        
+        // Check cache again in case it was populated while waiting
+        if (globalCache.users[userId] && 
+            now - globalCache.users[userId].timestamp < CACHE_EXPIRY.users) {
+          if (isMounted) {
+            setUserData(globalCache.users[userId].data);
+            setLoading(false);
+          }
+          return;
+        }
+        
+        // Mark as being fetched
+        fetchingUserIds.add(userId);
+        
+        // Proceed with individual fetch if needed
+        const { db } = getFirebaseServices();
+        if (!db) throw new Error('Firebase DB not initialized');
+        
+        const userDoc = await getDoc(doc(db, 'users', userId));
+        
+        if (userDoc.exists()) {
+          const data = userDoc.data();
+          
+          // Extract user data
+          const userData = {
+            username: data.displayName || data.username || `User ${userId.substring(0, 6)}...`,
+            avatarUrl: data.avatarUrl || data.photoURL || null,
+            email: data.email || null,
+            // Also store Stripe seller status
+            stripeConnectAccountId: data.stripeConnectAccountId || null,
+            stripeConnectStatus: data.stripeConnectStatus || null,
+            hasStripeAccount: !!(data.stripeConnectAccountId && data.stripeConnectStatus === 'active')
+          };
+          
+          // Update cache
+          globalCache.users[userId] = {
+            data: userData,
+            timestamp: now
+          };
+          
+          // Also update seller status cache
+          globalCache.sellerStatus[userId] = {
+            hasStripeAccount: userData.hasStripeAccount,
+            timestamp: now
+          };
+          
+          // Persist cache
+          persistCache();
+          
+          if (isMounted) {
+            setUserData(userData);
+          }
+        } else {
+          // User not found
+          const fallbackData = {
+            username: `User ${userId.substring(0, 6)}...`,
+            avatarUrl: null,
+            hasStripeAccount: false
+          };
+          
+          // Cache with shorter expiration
+          globalCache.users[userId] = {
+            data: fallbackData,
+            timestamp: now - (CACHE_EXPIRY.users / 2)
+          };
+          
+          globalCache.sellerStatus[userId] = {
+            hasStripeAccount: false,
+            timestamp: now - (CACHE_EXPIRY.sellerStatus / 2)
+          };
+          
+          persistCache();
+          
+          if (isMounted) {
+            setUserData(fallbackData);
+          }
+        }
       } catch (error) {
-        console.error('[FirestoreOptimizer] Error in useOptimizedSimilarListings:', error);
-        setSimilarListings([]);
+        console.error('[FirestoreOptimizer] Error fetching user data:', error);
+        
+        // Fallback data on error
+        const fallbackData = {
+          username: `User ${userId.substring(0, 6)}...`,
+          avatarUrl: null,
+          hasStripeAccount: false
+        };
+        
+        if (isMounted) {
+          setUserData(fallbackData);
+        }
       } finally {
-        setIsLoading(false);
+        // Clear the fetching flag
+        fetchingUserIds.delete(userId);
+        
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
     
-    fetchSimilarListings();
-  }, [currentListing?.id, currentListing?.game, maxListings]);
+    fetchUserData();
+    
+    // Cleanup function
+    return () => {
+      isMounted = false;
+    };
+  }, [userIdKey]);
   
-  return { similarListings, isLoading };
+  return { userData, loading };
 };
 
-// Function to clear cache
-export const clearFirestoreCache = () => {
-  Object.keys(globalCache.users).forEach(key => delete globalCache.users[key]);
-  Object.keys(globalCache.sellerStatus).forEach(key => delete globalCache.sellerStatus[key]);
-  Object.keys(globalCache.listings).forEach(key => delete globalCache.listings[key]);
-  Object.keys(globalCache.similarListings).forEach(key => delete globalCache.similarListings[key]);
+// Hook to get seller status with optimized fetching
+export const useOptimizedSellerStatus = (userId: string) => {
+  const [hasStripeAccount, setHasStripeAccount] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
   
-  try {
-    localStorage.removeItem('firestoreCache');
-    console.log('[FirestoreOptimizer] Cache cleared');
-  } catch (e) {
-    console.warn('[FirestoreOptimizer] Error clearing cache from localStorage:', e);
-  }
-};
+  // Use a combined dependency array key
+  const userIdKey = userId || 'none';
+  
+  useEffect(() => {
+    if (!userId) {
+      setIsLoading(false);
+      return;
+    }
+    
+    let isMounted = true;
+    
+    // Check cache first
+    const now = Date.now();
+    if (globalCache.sellerStatus[userId] && now - globalCache.sellerStatus[userId].timestamp < CACHE_EXPIRY.sellerStatus) {
+      setHasStripeAccount(globalCache.sellerStatus[userId].hasStripeAccount);
+      setIsLoading(false);
+      return;
+    }
+    
+    // Check if we already have user data with seller status
+    if (globalCache.users[userId] && now - globalCache.users[userId].timestamp < CACHE_EXPIRY.users) {
+      const userData = globalCache.users[userId].data;
+      if (userData.hasStripeAccount !== undefined) {
+        setHasStripeAccount(userData.hasStripeAccount);
+        
+        // Update seller status cache
+        globalCache.sellerStatus[userId] = {
+          hasStripeAccount: userData.hasStripeAccount,
+          timestamp: now
+        };
+        
+        setIsLoading(false);
+        return;
+      }
+    }
+    
+    // If this user is already being fetched via user data, wait for it
+    if (fetchingUserIds.has(userId)) {
+      const waitForUserFetch = async () => {
+        let attempts = 0;
+        const maxAttempts = 50; // Maximum wait time: 5 seconds
+        
+        while (attempts < maxAttempts && fetchingUserIds.has(userId)) {
+          await new Promise(resolve => setTimeout(resolve, 100)); // Wait 100ms
+          attempts++;
+          
+          // Check if we have the data now
+          if (globalCache.sellerStatus[userId] && 
+              now - globalCache.sellerStatus[userId].timestamp < CACHE_EXPIRY.sellerStatus) {
+            if (isMounted) {
+              setHasStripeAccount(globalCache.sellerStatus[userId].hasStripeAccount);
+              setIsLoading(false);
+            }
+            return;
+          }
+        }
+        
+        // Check one more time after the wait
+        if (globalCache.sellerStatus[userId] && 
+            now - globalCache.sellerStatus[userId].timestamp < CACHE_EXPIRY.sellerStatus) {
+          if (isMounted) {
+            setHasStripeAccount(globalCache.sellerStatus[userId].hasStripeAccount);
+            setIsLoading(false);
+          }
+          return;
+        }
+        
+        // If still no data, proceed with fetch
+        if (isMounted) {
+          fetchSellerStatus();
+        }
+      };
+      
+      waitForUserFetch();
+      return;
+    }
+    
+    // Fetch seller status
+    const fetchSellerStatus = async () => {
+      try {
+        const { db } = getFirebaseServices();
+        if (!db) throw new Error('Firebase DB not initialized');
+        
+        const userDoc = await getDoc(doc(db, 'users', userId));
+        
+        if (userDoc.exists()) {
+          const data = userDoc.data();
+          const hasAccount = !!(
+            data.stripeConnectAccountId && 
+            data.stripeConnectStatus === 'active'
+          );
