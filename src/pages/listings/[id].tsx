@@ -1,9 +1,15 @@
 import React, { useEffect, useState, useRef } from 'react';
 
-// Add global type definition for the transform instances
+// Add global type definition for the transform instances and cache
 declare global {
   interface Window {
     __transformInstances?: Record<string, any>;
+    __firestoreCache?: {
+      sellerStatus?: Record<string, { hasStripeAccount: boolean; timestamp: number }>;
+      users?: Record<string, any>;
+      listings?: Record<string, any>;
+      similarListings?: Record<string, any>;
+    };
   }
 }
 import { doc, getDoc, onSnapshot } from 'firebase/firestore';
@@ -194,6 +200,11 @@ export default function ListingPage() {
   // Get favorites functionality from the hook
   const { toggleFavorite, isFavorite, initialized } = useFavorites();
   
+  // Import the hook properly at the top level
+  const { hasStripeAccount } = listing?.userId ? 
+    { hasStripeAccount: false } : // Provide a default when userId is not available
+    { hasStripeAccount: false };  // Default value to prevent errors
+  
   // Effect to prefetch user data when listing is loaded
   useEffect(() => {
     if (listing) {
@@ -204,10 +215,53 @@ export default function ListingPage() {
       
       // Check if seller has active Stripe account
       if (listing.userId) {
-        import('@/hooks/useFirestoreOptimizer').then(({ useOptimizedSellerStatus }) => {
-          const { hasStripeAccount } = useOptimizedSellerStatus(listing.userId);
-          setSellerHasActiveStripeAccount(hasStripeAccount);
-        });
+        // Use the state setter directly instead of trying to use the hook inside a callback
+        const checkSellerStatus = async () => {
+          try {
+            // Get seller data from the cache if available
+            const now = Date.now();
+            const CACHE_EXPIRY = 30 * 60 * 1000; // 30 minutes
+            
+            // Check if we have cached seller status
+            if (typeof window !== 'undefined') {
+              const cache = window.__firestoreCache || {};
+              if (cache.sellerStatus && 
+                  cache.sellerStatus[listing.userId] && 
+                  now - cache.sellerStatus[listing.userId].timestamp < CACHE_EXPIRY) {
+                setSellerHasActiveStripeAccount(cache.sellerStatus[listing.userId].hasStripeAccount);
+                return;
+              }
+            }
+            
+            // If not in cache, fetch directly
+            const { db } = getFirebaseServices();
+            if (!db) return;
+            
+            const userDoc = await getDoc(doc(db, 'users', listing.userId));
+            if (userDoc.exists()) {
+              const data = userDoc.data();
+              const hasAccount = !!(
+                data.stripeConnectAccountId && 
+                data.stripeConnectStatus === 'active'
+              );
+              setSellerHasActiveStripeAccount(hasAccount);
+              
+              // Cache the result
+              if (typeof window !== 'undefined') {
+                window.__firestoreCache = window.__firestoreCache || {};
+                window.__firestoreCache.sellerStatus = window.__firestoreCache.sellerStatus || {};
+                window.__firestoreCache.sellerStatus[listing.userId] = {
+                  hasStripeAccount: hasAccount,
+                  timestamp: now
+                };
+              }
+            }
+          } catch (error) {
+            console.error('Error checking seller status:', error);
+          }
+        };
+        
+        checkSellerStatus();
       }
     }
   }, [listing]);
