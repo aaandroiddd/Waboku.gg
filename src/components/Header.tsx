@@ -7,11 +7,10 @@ import dynamic from "next/dynamic";
 import {
   Sheet,
   SheetContent,
-  SheetHeader,
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { Menu, LayoutDashboard, Heart, MessageSquare, Settings, Store, LogOut } from "lucide-react";
+import { Menu, LayoutDashboard, Heart, MessageSquare, Settings, Store, LogOut, Home, Search, ClipboardList } from "lucide-react";
 import { useState, useCallback, useEffect, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { motion, useReducedMotion } from "framer-motion";
@@ -277,123 +276,141 @@ export default function Header({ animate = true }: HeaderProps) {
               </Button>
             </SheetTrigger>
             <SheetContent 
-              side="right" 
-              className="w-[280px] sm:w-[320px] p-0 flex flex-col"
-              style={{ 
-                height: '100dvh', // Use dynamic viewport height for better mobile support
-                maxHeight: '100dvh',
-                overscrollBehavior: 'contain', // Prevent scroll chaining
-              }}
+              side="left" 
+              className="p-0 w-72"
             >
-              {/* Header section */}
-              <div className="p-6 pb-2 flex-shrink-0 border-b">
-                <SheetHeader className="mb-0">
-                  <SheetTitle>Menu</SheetTitle>
-                </SheetHeader>
-              </div>
+              <SheetTitle className="sr-only">Navigation</SheetTitle>
               
-              {/* Scrollable content area */}
-              <div className="flex-1 overflow-y-auto">
-                <nav className="flex flex-col space-y-3 p-6 pt-4">
-                  <Link 
-                    href="/" 
-                    className="flex items-center gap-2 px-2 py-2 hover:bg-accent rounded-md transition-colors"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                    prefetch={false} // Prevent prefetching for better performance
-                  >
-                    Home
-                  </Link>
-                  <Link 
-                    href="/listings" 
-                    className="flex items-center gap-2 px-2 py-2 hover:bg-accent rounded-md transition-colors"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                    prefetch={false}
-                  >
-                    Browse Listings
-                  </Link>
-                  <Link 
-                    href="/wanted" 
-                    className="flex items-center gap-2 px-2 py-2 hover:bg-accent rounded-md transition-colors"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                    prefetch={false}
-                  >
-                    Wanted Board
-                  </Link>
-                  
-                  {user ? (
-                    <>
-                      <div className="pt-2 pb-2">
-                        <div className="text-sm font-medium text-muted-foreground px-2">
-                          Welcome, {profile?.username || 'User'}!
-                        </div>
+              {/* Dashboard-style sidebar with fixed header, scrollable content, and fixed footer */}
+              <div className="flex flex-col h-screen bg-card">
+                {/* Persistent header with logo and user info */}
+                <div className="p-6 border-b">
+                  <Logo className="h-8" alwaysShowFull={true} />
+                  {user && (
+                    <div className="mt-4 flex flex-col gap-1">
+                      <p className="text-sm text-muted-foreground truncate">{user.email}</p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <ThemeToggle />
                       </div>
-                      <Button
-                        variant="ghost"
-                        className="flex items-center justify-start gap-2 h-auto py-2"
-                        onClick={() => handleNavigation('/dashboard')}
-                      >
-                        <LayoutDashboard className="h-4 w-4" />
-                        Dashboard Overview
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        className="flex items-center justify-start gap-2 h-auto py-2"
-                        onClick={() => handleNavigation('/dashboard/create-listing')}
-                      >
-                        <Store className="h-4 w-4" />
-                        Create Listing
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        className="flex items-center justify-start gap-2 h-auto py-2"
-                        onClick={() => handleNavigation('/dashboard/favorites')}
-                      >
-                        <Heart className="h-4 w-4" />
-                        Favorites
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        className="flex items-center justify-start gap-2 h-auto py-2"
-                        onClick={() => handleNavigation('/dashboard/messages')}
-                      >
-                        <MessageSquare className="h-4 w-4" />
-                        Messages
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        className="flex items-center justify-start gap-2 h-auto py-2"
-                        onClick={() => handleNavigation('/dashboard/settings')}
-                      >
-                        <Settings className="h-4 w-4" />
-                        Settings
-                      </Button>
-                    </>
-                  ) : (
-                    <div className="flex flex-col gap-2 pt-2">
-                      <Link href="/auth/sign-in" prefetch={false}>
-                        <Button variant="outline" className="w-full">Sign In</Button>
-                      </Link>
-                      <Link href="/auth/sign-up" prefetch={false}>
-                        <Button className="w-full bg-sky-400 hover:bg-sky-500">Get Started</Button>
-                      </Link>
                     </div>
                   )}
-                </nav>
-              </div>
-              
-              {/* Fixed footer with sign out button */}
-              {user && (
-                <div className="p-6 pt-4 border-t flex-shrink-0 bg-background">
-                  <Button
-                    variant="destructive"
-                    className="flex items-center justify-start gap-2 h-auto py-2 w-full bg-[#b71c1c] hover:bg-[#b71c1c]/90"
-                    onClick={handleSignOut}
-                  >
-                    <LogOut className="h-4 w-4" />
-                    Sign Out
-                  </Button>
                 </div>
-              )}
+                
+                {/* Scrollable navigation area */}
+                <div className="flex-1 flex flex-col py-6 overflow-y-auto">
+                  <nav className="px-4 space-y-1 flex flex-col h-full">
+                    <div className="space-y-1">
+                      <button
+                        onClick={() => handleNavigation('/')}
+                        className={`flex items-center w-full gap-3 text-sm font-medium rounded-md px-3 py-2.5 hover:bg-accent hover:text-accent-foreground transition-colors ${
+                          router.pathname === '/' ? 'bg-accent text-accent-foreground' : 'text-muted-foreground'
+                        }`}
+                      >
+                        <Home className="h-5 w-5" />
+                        Home
+                      </button>
+                      
+                      <button
+                        onClick={() => handleNavigation('/listings')}
+                        className={`flex items-center w-full gap-3 text-sm font-medium rounded-md px-3 py-2.5 hover:bg-accent hover:text-accent-foreground transition-colors ${
+                          router.pathname.startsWith('/listings') ? 'bg-accent text-accent-foreground' : 'text-muted-foreground'
+                        }`}
+                      >
+                        <Search className="h-5 w-5" />
+                        Browse Listings
+                      </button>
+                      
+                      <button
+                        onClick={() => handleNavigation('/wanted')}
+                        className={`flex items-center w-full gap-3 text-sm font-medium rounded-md px-3 py-2.5 hover:bg-accent hover:text-accent-foreground transition-colors ${
+                          router.pathname.startsWith('/wanted') ? 'bg-accent text-accent-foreground' : 'text-muted-foreground'
+                        }`}
+                      >
+                        <ClipboardList className="h-5 w-5" />
+                        Wanted Board
+                      </button>
+                      
+                      {user ? (
+                        <>
+                          <div className="h-px bg-border my-4"></div>
+                          
+                          <button
+                            onClick={() => handleNavigation('/dashboard')}
+                            className={`flex items-center w-full gap-3 text-sm font-medium rounded-md px-3 py-2.5 hover:bg-accent hover:text-accent-foreground transition-colors ${
+                              router.pathname === '/dashboard' ? 'bg-accent text-accent-foreground' : 'text-muted-foreground'
+                            }`}
+                          >
+                            <LayoutDashboard className="h-5 w-5" />
+                            Dashboard
+                          </button>
+                          
+                          <button
+                            onClick={() => handleNavigation('/dashboard/create-listing')}
+                            className={`flex items-center w-full gap-3 text-sm font-medium rounded-md px-3 py-2.5 hover:bg-accent hover:text-accent-foreground transition-colors ${
+                              router.pathname === '/dashboard/create-listing' ? 'bg-accent text-accent-foreground' : 'text-muted-foreground'
+                            }`}
+                          >
+                            <Store className="h-5 w-5" />
+                            Create Listing
+                          </button>
+                          
+                          <button
+                            onClick={() => handleNavigation('/dashboard/favorites')}
+                            className={`flex items-center w-full gap-3 text-sm font-medium rounded-md px-3 py-2.5 hover:bg-accent hover:text-accent-foreground transition-colors ${
+                              router.pathname === '/dashboard/favorites' ? 'bg-accent text-accent-foreground' : 'text-muted-foreground'
+                            }`}
+                          >
+                            <Heart className="h-5 w-5" />
+                            Favorites
+                          </button>
+                          
+                          <button
+                            onClick={() => handleNavigation('/dashboard/messages')}
+                            className={`flex items-center w-full gap-3 text-sm font-medium rounded-md px-3 py-2.5 hover:bg-accent hover:text-accent-foreground transition-colors ${
+                              router.pathname === '/dashboard/messages' ? 'bg-accent text-accent-foreground' : 'text-muted-foreground'
+                            }`}
+                          >
+                            <MessageSquare className="h-5 w-5" />
+                            Messages
+                          </button>
+                          
+                          <button
+                            onClick={() => handleNavigation('/dashboard/settings')}
+                            className={`flex items-center w-full gap-3 text-sm font-medium rounded-md px-3 py-2.5 hover:bg-accent hover:text-accent-foreground transition-colors ${
+                              router.pathname === '/dashboard/settings' ? 'bg-accent text-accent-foreground' : 'text-muted-foreground'
+                            }`}
+                          >
+                            <Settings className="h-5 w-5" />
+                            Settings
+                          </button>
+                        </>
+                      ) : (
+                        <div className="flex flex-col gap-2 pt-4 px-3">
+                          <Link href="/auth/sign-in" prefetch={false} onClick={() => setIsMobileMenuOpen(false)}>
+                            <Button variant="outline" className="w-full">Sign In</Button>
+                          </Link>
+                          <Link href="/auth/sign-up" prefetch={false} onClick={() => setIsMobileMenuOpen(false)}>
+                            <Button className="w-full bg-sky-400 hover:bg-sky-500">Get Started</Button>
+                          </Link>
+                        </div>
+                      )}
+                    </div>
+                  </nav>
+                </div>
+                
+                {/* Persistent footer with sign out button */}
+                {user && (
+                  <div className="p-4 border-t bg-card">
+                    <button
+                      onClick={handleSignOut}
+                      className="flex items-center w-full gap-3 text-sm font-medium rounded-md px-3 py-2.5 hover:bg-accent hover:text-accent-foreground transition-colors text-red-500 hover:text-red-600"
+                    >
+                      <LogOut className="h-5 w-5" />
+                      Sign Out
+                    </button>
+                  </div>
+                )}
+              </div>
             </SheetContent>
           </Sheet>
         </div>
