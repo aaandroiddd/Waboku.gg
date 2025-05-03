@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { doc, getDoc, getDocs, query, collection, where, limit, documentId } from 'firebase/firestore';
 import { getFirebaseServices } from '@/lib/firebase';
+import { registerGlobalListener } from './useFirestoreListenerCleanup';
 
 // Global cache for all Firestore data
 interface FirestoreCache {
@@ -571,7 +572,21 @@ export const useOptimizedSimilarListings = (currentListing: any, maxListings: nu
         limit(maxListings * 2)
       );
       
-      const querySnapshot = await getDocs(gameQuery);
+      // Wrap the query in a promise that can be cancelled
+      const queryPromise = new Promise<any>((resolve, reject) => {
+        const queryTask = getDocs(gameQuery);
+        
+        // Register this as a cancellable operation
+        const pageId = `similar-listings-${currentListing.id}`;
+        registerGlobalListener(pageId, () => {
+          // This is a no-op for one-time queries, but good practice
+          console.log(`[FirestoreOptimizer] Cancelling similar listings query for ${currentListing.id}`);
+        });
+        
+        queryTask.then(resolve).catch(reject);
+      });
+      
+      const querySnapshot = await queryPromise;
       debugFetch(`Received ${querySnapshot.docs.length} results for ${currentListing.id}`);
       
       // Process results

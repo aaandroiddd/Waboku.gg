@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
+import { useFirestoreListenerCleanup } from '@/hooks/useFirestoreListenerCleanup';
 
 // Add global type definition for the transform instances and cache
 declare global {
@@ -313,14 +314,19 @@ export default function ListingPage() {
     }
   }, [listing, user]);
 
+  // Initialize the listener cleanup hook with a unique ID for this listing page
+  const listingId = typeof id === 'string' ? id : '';
+  const { registerListener } = useFirestoreListenerCleanup(`listing-${listingId}`);
+  
+  // Use the listing page cleanup hook to automatically clean up listeners when navigating away
+  useListingPageCleanup(listingId);
+  
   useEffect(() => {
     let isMounted = true;
     let retryCount = 0;
     let expirationCheckDone = false;
     const maxRetries = 5; // Increased from 3 to 5
     const retryDelay = 1500; // Increased from 1000ms to 1500ms
-    // Track any active listeners to clean them up
-    const activeListeners: (() => void)[] = [];
 
     async function fetchListing() {
       try {
@@ -494,6 +500,7 @@ export default function ListingPage() {
         // This is important for status changes, but we need to clean it up properly
         try {
           const listingRef = doc(db, 'listings', id);
+          // Register the listener with our cleanup system
           const unsubscribe = onSnapshot(listingRef, (doc) => {
             if (!isMounted) return; // Don't update state if component is unmounted
             
@@ -593,8 +600,8 @@ export default function ListingPage() {
             console.error('[Listing] Error in real-time listener:', error);
           });
           
-          // Add the unsubscribe function to our cleanup array
-          activeListeners.push(unsubscribe);
+          // Register the listener with our cleanup system
+          registerListener(unsubscribe);
         } catch (listenerError) {
           console.error('[Listing] Failed to set up real-time listener:', listenerError);
           // Continue without real-time updates
@@ -715,8 +722,7 @@ export default function ListingPage() {
 
     return () => {
       isMounted = false;
-      // Clean up any active Firestore listeners to prevent memory leaks and infinite loops
-      activeListeners.forEach(unsubscribe => unsubscribe());
+      // The listeners will be automatically cleaned up by the useFirestoreListenerCleanup hook
     };
   }, [id, user, startLoading, stopLoading]);
   

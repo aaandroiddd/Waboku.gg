@@ -1,4 +1,5 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useEffect } from 'react';
+import { useFirestoreListenerCleanup } from '@/hooks/useFirestoreListenerCleanup';
 import { Listing } from '@/types/database';
 import { ListingCard } from './ListingCard';
 import { Button } from '@/components/ui/button';
@@ -42,6 +43,11 @@ export const SimilarListings = ({ currentListing, maxListings = 6 }: SimilarList
   const { toggleFavorite, isFavorite, initialized } = useFavorites();
   const router = useRouter();
   
+  // Register with the listener cleanup system
+  const { registerListener } = useFirestoreListenerCleanup(
+    `similar-listings-${currentListing?.id || 'unknown'}`
+  );
+  
   // Create a stable key that only changes when truly necessary
   const listingKey = useMemo(() => 
     currentListing?.id ? `${currentListing.id}-${currentListing.game || 'unknown'}-${maxListings}` : null, 
@@ -54,6 +60,14 @@ export const SimilarListings = ({ currentListing, maxListings = 6 }: SimilarList
     game: currentListing.game,
     maxCount: maxListings
   } : null);
+  
+  // Clean up any cached data when component unmounts
+  useEffect(() => {
+    return () => {
+      // This is just for debugging - we'll see when the component unmounts
+      console.log(`[SimilarListings] Component unmounted for listing ${currentListing?.id}`);
+    };
+  }, [currentListing?.id]);
   
   const handleFavoriteClick = (e: React.MouseEvent, listing: Listing) => {
     e.preventDefault();
