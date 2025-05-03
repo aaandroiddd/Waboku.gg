@@ -1,4 +1,4 @@
-import React, { useMemo, useEffect } from 'react';
+import React, { useMemo, useEffect, useRef } from 'react';
 import { removeListenersByPrefix } from '@/lib/firebaseConnectionManager';
 import { Listing } from '@/types/database';
 import { ListingCard } from './ListingCard';
@@ -43,10 +43,6 @@ export const SimilarListings = ({ currentListing, maxListings = 6 }: SimilarList
   const { toggleFavorite, isFavorite, initialized } = useFavorites();
   const router = useRouter();
   
-  // Register with the listener cleanup system with a more specific ID
-  const cleanupId = `similar-listings-${currentListing?.id || 'unknown'}`;
-  const { registerListener } = useFirestoreListenerCleanup(cleanupId);
-  
   // Create a stable options object that only changes when truly necessary
   const listingOptions = useMemo(() => 
     currentListing?.id ? {
@@ -62,9 +58,14 @@ export const SimilarListings = ({ currentListing, maxListings = 6 }: SimilarList
   
   // Register a cleanup function for when the component unmounts
   useEffect(() => {
-    // Register a cleanup function with the global system
-    const cleanup = () => {
-      console.log(`[SimilarListings] Cleaning up for listing ${currentListing?.id}`);
+    // Define a cleanup function
+    const cleanupId = `similar-listings-${currentListing?.id || 'unknown'}`;
+    
+    return () => {
+      console.log(`[SimilarListings] Component unmounted for listing ${currentListing?.id}`);
+      
+      // Clean up any listeners with this prefix
+      removeListenersByPrefix(cleanupId);
       
       // Clean up any cached data in window.__firestoreCache
       if (typeof window !== 'undefined' && 
@@ -74,15 +75,7 @@ export const SimilarListings = ({ currentListing, maxListings = 6 }: SimilarList
         delete window.__firestoreCache.similarListings[currentListing.id];
       }
     };
-    
-    // Register this cleanup function
-    const unregister = registerListener(cleanup);
-    
-    return () => {
-      console.log(`[SimilarListings] Component unmounted for listing ${currentListing?.id}`);
-      unregister();
-    };
-  }, [currentListing?.id, registerListener]);
+  }, [currentListing?.id]);
   
   const handleFavoriteClick = (e: React.MouseEvent, listing: Listing) => {
     e.preventDefault();
