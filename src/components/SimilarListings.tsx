@@ -43,10 +43,9 @@ export const SimilarListings = ({ currentListing, maxListings = 6 }: SimilarList
   const { toggleFavorite, isFavorite, initialized } = useFavorites();
   const router = useRouter();
   
-  // Register with the listener cleanup system
-  const { registerListener } = useFirestoreListenerCleanup(
-    `similar-listings-${currentListing?.id || 'unknown'}`
-  );
+  // Register with the listener cleanup system with a more specific ID
+  const cleanupId = `similar-listings-${currentListing?.id || 'unknown'}`;
+  const { registerListener } = useFirestoreListenerCleanup(cleanupId);
   
   // Create a stable options object that only changes when truly necessary
   const listingOptions = useMemo(() => 
@@ -61,13 +60,29 @@ export const SimilarListings = ({ currentListing, maxListings = 6 }: SimilarList
   // Use the optimized hook with the memoized options
   const { similarListings, isLoading } = useOptimizedSimilarListings(listingOptions);
   
-  // Clean up any cached data when component unmounts
+  // Register a cleanup function for when the component unmounts
   useEffect(() => {
-    return () => {
-      // This is just for debugging - we'll see when the component unmounts
-      console.log(`[SimilarListings] Component unmounted for listing ${currentListing?.id}`);
+    // Register a cleanup function with the global system
+    const cleanup = () => {
+      console.log(`[SimilarListings] Cleaning up for listing ${currentListing?.id}`);
+      
+      // Clean up any cached data in window.__firestoreCache
+      if (typeof window !== 'undefined' && 
+          window.__firestoreCache?.similarListings && 
+          currentListing?.id) {
+        console.log(`[SimilarListings] Removing cache for ${currentListing.id}`);
+        delete window.__firestoreCache.similarListings[currentListing.id];
+      }
     };
-  }, [currentListing?.id]);
+    
+    // Register this cleanup function
+    const unregister = registerListener(cleanup);
+    
+    return () => {
+      console.log(`[SimilarListings] Component unmounted for listing ${currentListing?.id}`);
+      unregister();
+    };
+  }, [currentListing?.id, registerListener]);
   
   const handleFavoriteClick = (e: React.MouseEvent, listing: Listing) => {
     e.preventDefault();

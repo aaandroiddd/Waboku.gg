@@ -109,6 +109,19 @@ export const useListingPageCleanup = (listingId: string | null | undefined) => {
     // When the component mounts, we register that we're viewing this listing
     if (listingId) {
       console.log(`[FirestoreCleanup] Viewing listing ${listingId}`);
+      
+      // Clean up any stale listeners that might be related to this listing
+      // This helps when navigating between different listings
+      Object.keys(activeListeners).forEach(key => {
+        // If this is a listener from a previous listing page, clean it up
+        if ((key.includes('similar-listings-') || 
+             key.includes('listing-') ||
+             key.includes('listing-view-')) && 
+            !key.includes(listingId)) {
+          console.log(`[FirestoreCleanup] Cleaning up stale listener: ${key}`);
+          cleanupListener(key);
+        }
+      });
     }
     
     // When the component unmounts (user navigates away), clean up all listeners
@@ -124,9 +137,36 @@ export const useListingPageCleanup = (listingId: string | null | undefined) => {
             cleanupListener(key);
           }
         });
+        
+        // Also clean up any cached data for this listing
+        if (typeof window !== 'undefined' && window.__firestoreCache?.similarListings) {
+          console.log(`[FirestoreCleanup] Cleaning up cache for listing ${listingId}`);
+          delete window.__firestoreCache.similarListings[listingId];
+        }
       }
     };
   }, [listingId]);
   
   return null;
+};
+
+// Function to clean up all listeners related to a specific listing
+export const cleanupListingListeners = (listingId: string): void => {
+  if (!listingId) return;
+  
+  console.log(`[FirestoreCleanup] Manually cleaning up all listeners for listing ${listingId}`);
+  
+  // Find and clean up any listeners related to this listing
+  Object.keys(activeListeners).forEach(key => {
+    if (key.includes(`similar-listings-${listingId}`) || 
+        key.includes(`listing-${listingId}`) ||
+        key.includes(`listing-view-${listingId}`)) {
+      cleanupListener(key);
+    }
+  });
+  
+  // Also clean up any cached data for this listing
+  if (typeof window !== 'undefined' && window.__firestoreCache?.similarListings) {
+    delete window.__firestoreCache.similarListings[listingId];
+  }
 };

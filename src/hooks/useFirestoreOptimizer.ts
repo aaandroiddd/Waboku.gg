@@ -526,7 +526,29 @@ export const useOptimizedSimilarListings = (options: {
   const fetchRef = useRef({
     inProgress: false,
     listingId: null as string | null,
+    abortController: null as AbortController | null,
   });
+  
+  // Track if component is mounted to prevent state updates after unmount
+  const isMountedRef = useRef(true);
+  
+  // Cleanup function when component unmounts
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+      
+      // Abort any in-progress fetch
+      if (fetchRef.current.abortController) {
+        fetchRef.current.abortController.abort();
+      }
+      
+      // Clear any cached data for this listing
+      if (options?.id && typeof window !== 'undefined' && window.__firestoreCache?.similarListings) {
+        console.log(`[FirestoreOptimizer] Cleaning up cache for listing ${options.id}`);
+        delete window.__firestoreCache.similarListings[options.id];
+      }
+    };
+  }, []);
   
   // Use a callback to prevent dependency issues
   const fetchListings = useCallback(async () => {
@@ -547,18 +569,49 @@ export const useOptimizedSimilarListings = (options: {
       return;
     }
     
-    // Check cache first
+    // Check cache first - both in memory and in window.__firestoreCache
     const now = Date.now();
-    if (
-      globalCache.similarListings[listingId] && 
-      now - globalCache.similarListings[listingId].timestamp < CACHE_EXPIRY.similarListings
-    ) {
-      debugFetch(`Using cached data for ${listingId}`);
-      setSimilarListings(globalCache.similarListings[listingId].data);
-      setIsLoading(false);
-      setHasAttemptedFetch(true);
+    
+    // First check window.__firestoreCache which is shared across components
+    if (typeof window !== 'undefined' && 
+        window.__firestoreCache?.similarListings?.[listingId] && 
+        now - window.__firestoreCache.similarListings[listingId].timestamp < CACHE_EXPIRY.similarListings) {
+      
+      debugFetch(`Using window cache data for ${listingId}`);
+      if (isMountedRef.current) {
+        setSimilarListings(window.__firestoreCache.similarListings[listingId].data);
+        setIsLoading(false);
+        setHasAttemptedFetch(true);
+      }
       return;
     }
+    
+    // Then check local cache
+    if (globalCache.similarListings[listingId] && 
+        now - globalCache.similarListings[listingId].timestamp < CACHE_EXPIRY.similarListings) {
+      
+      debugFetch(`Using local cache data for ${listingId}`);
+      
+      // Update window cache too for sharing between components
+      if (typeof window !== 'undefined') {
+        window.__firestoreCache = window.__firestoreCache || {};
+        window.__firestoreCache.similarListings = window.__firestoreCache.similarListings || {};
+        window.__firestoreCache.similarListings[listingId] = globalCache.similarListings[listingId];
+      }
+      
+      if (isMountedRef.current) {
+        setSimilarListings(globalCache.similarListings[listingId].data);
+        setIsLoading(false);
+        setHasAttemptedFetch(true);
+      }
+      return;
+    }
+    
+    // Create a new abort controller for this fetch
+    if (fetchRef.current.abortController) {
+      fetchRef.current.abortController.abort();
+    }
+    fetchRef.current.abortController = new AbortController();
     
     // Mark as fetching
     fetchRef.current.inProgress = true;
@@ -580,22 +633,26 @@ export const useOptimizedSimilarListings = (options: {
         limit(maxListings * 2)
       );
       
-      // Wrap the query in a promise that can be cancelled
-      const queryPromise = new Promise<any>((resolve, reject) => {
-        const queryTask = getDocs(gameQuery);
-        
-        // Register this as a cancellable operation
-        const pageId = `similar-listings-${listingId}`;
-        registerGlobalListener(pageId, () => {
-          // This is a no-op for one-time queries, but good practice
-          console.log(`[FirestoreOptimizer] Cancelling similar listings query for ${listingId}`);
-        });
-        
-        queryTask.then(resolve).catch(reject);
-      });
+      // Register this query with the global cleanup system
+      const pageId = `similar-listings-${listingId}`;
+      const cleanupFunction = () => {
+        if (fetchRef.current.abortController) {
+          fetchRef.current.abortController.abort();
+        }
+        console.log(`[FirestoreOptimizer] Cancelling similar listings query for ${listingId}`);
+      };
       
-      const querySnapshot = await queryPromise;
+      registerGlobalListener(pageId, cleanupFunction);
+      
+      // Execute the query
+      const querySnapshot = await getDocs(gameQuery);
       debugFetch(`Received ${querySnapshot.docs.length} results for ${listingId}`);
+      
+      // Check if component is still mounted
+      if (!isMountedRef.current) {
+        debugFetch(`Component unmounted during fetch for ${listingId}, aborting`);
+        return;
+      }
       
       // Process results
       const results = querySnapshot.docs.map(doc => {
@@ -646,11 +703,20 @@ export const useOptimizedSimilarListings = (options: {
         }
       }
       
-      // Cache the results
-      globalCache.similarListings[listingId] = {
+      // Cache the results in both local and window cache
+      const cacheEntry = {
         data: finalResults,
         timestamp: now
       };
+      
+      globalCache.similarListings[listingId] = cacheEntry;
+      
+      // Update window cache for sharing between components
+      if (typeof window !== 'undefined') {
+        window.__firestoreCache = window.__firestoreCache || {};
+        window.__firestoreCache.similarListings = window.__firestoreCache.similarListings || {};
+        window.__firestoreCache.similarListings[listingId] = cacheEntry;
+      }
       
       try {
         localStorage.setItem('firestoreCache', JSON.stringify(globalCache));
@@ -659,19 +725,32 @@ export const useOptimizedSimilarListings = (options: {
         console.warn('[FirestoreOptimizer] Error saving to localStorage:', e);
       }
       
-      setSimilarListings(finalResults);
+      // Only update state if component is still mounted
+      if (isMountedRef.current) {
+        setSimilarListings(finalResults);
+      }
     } catch (error) {
       console.error('[FirestoreOptimizer] Error fetching similar listings:', error);
       debugFetch(`Error fetching similar listings for ${listingId}: ${error}`);
-      setSimilarListings([]);
+      
+      // Only update state if component is still mounted
+      if (isMountedRef.current) {
+        setSimilarListings([]);
+      }
     } finally {
       fetchRef.current.inProgress = false;
-      setIsLoading(false);
-      setHasAttemptedFetch(true);
+      fetchRef.current.abortController = null;
+      
+      // Only update state if component is still mounted
+      if (isMountedRef.current) {
+        setIsLoading(false);
+        setHasAttemptedFetch(true);
+      }
       debugFetch(`Fetch completed for ${listingId}`);
     }
   }, [options]);
   
+  // Only fetch on initial mount or when options change significantly
   useEffect(() => {
     if (!hasAttemptedFetch && options?.id && options?.game) {
       debugFetch(`Initial fetch trigger for ${options.id}`);

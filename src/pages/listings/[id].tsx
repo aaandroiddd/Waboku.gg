@@ -329,12 +329,24 @@ export default function ListingPage() {
         console.log(`[Listing] Cleaning up similar listings listeners for ${listingId}`);
         
         // Clean up any cached data for this listing
-        if (window.__firestoreCache && window.__firestoreCache.similarListings) {
-          delete window.__firestoreCache.similarListings[listingId];
+        if (window.__firestoreCache) {
+          if (window.__firestoreCache.similarListings && listingId) {
+            delete window.__firestoreCache.similarListings[listingId];
+          }
+          
+          // Also clean up any user data that might have been fetched for this listing
+          if (window.__firestoreCache.users && listing?.userId) {
+            delete window.__firestoreCache.users[listing.userId];
+          }
         }
+        
+        // Force cleanup of all listeners related to this listing
+        import('@/hooks/useFirestoreListenerCleanup').then(({ cleanupListingListeners }) => {
+          cleanupListingListeners(listingId);
+        });
       }
     };
-  }, [listingId]);
+  }, [listingId, listing?.userId]);
   
   useEffect(() => {
     let isMounted = true;
@@ -515,6 +527,10 @@ export default function ListingPage() {
         // This is important for status changes, but we need to clean it up properly
         try {
           const listingRef = doc(db, 'listings', id);
+          
+          // Create a unique ID for this specific listener
+          const listenerId = `listing-realtime-${id}`;
+          
           // Register the listener with our cleanup system
           const unsubscribe = onSnapshot(listingRef, (doc) => {
             if (!isMounted) return; // Don't update state if component is unmounted
@@ -615,8 +631,13 @@ export default function ListingPage() {
             console.error('[Listing] Error in real-time listener:', error);
           });
           
-          // Register the listener with our cleanup system
+          // Register the listener with our cleanup system using the specific ID
           registerListener(unsubscribe);
+          
+          // Also register with a specific ID for easier cleanup
+          import('@/hooks/useFirestoreListener').then(({ registerListener }) => {
+            registerListener(listenerId, unsubscribe);
+          });
         } catch (listenerError) {
           console.error('[Listing] Failed to set up real-time listener:', listenerError);
           // Continue without real-time updates
