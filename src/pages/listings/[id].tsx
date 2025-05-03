@@ -1,5 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { registerListener, removeListenersByPrefix, removeAllListeners } from '@/lib/firebaseConnectionManager';
+import { OptimizedSimilarListings } from '@/components/OptimizedSimilarListings';
+import { OwnerListings } from '@/components/OwnerListings';
 
 // Add global type definition for the transform instances and cache
 declare global {
@@ -1828,6 +1830,18 @@ export default function ListingPage() {
         </Card>
       </div>
       
+      {/* Similar Listings Section */}
+      {listing && (
+        <div className="container mx-auto px-4">
+          <OptimizedSimilarListings currentListing={listing} />
+          <OwnerListings 
+            ownerId={listing.userId} 
+            currentListingId={listing.id} 
+            ownerName={listing.username} 
+          />
+        </div>
+      )}
+
       <Footer />
       
       {/* Firestore Request Counter */}
