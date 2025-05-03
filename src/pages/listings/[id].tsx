@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { useFirestoreListenerCleanup } from '@/hooks/useFirestoreListenerCleanup';
+import { useFirestoreListenerCleanup, useListingPageCleanup } from '@/hooks/useFirestoreListenerCleanup';
 
 // Add global type definition for the transform instances and cache
 declare global {
