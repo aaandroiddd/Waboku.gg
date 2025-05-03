@@ -48,18 +48,18 @@ export const SimilarListings = ({ currentListing, maxListings = 6 }: SimilarList
     `similar-listings-${currentListing?.id || 'unknown'}`
   );
   
-  // Create a stable key that only changes when truly necessary
-  const listingKey = useMemo(() => 
-    currentListing?.id ? `${currentListing.id}-${currentListing.game || 'unknown'}-${maxListings}` : null, 
+  // Create a stable options object that only changes when truly necessary
+  const listingOptions = useMemo(() => 
+    currentListing?.id ? {
+      id: currentListing.id,
+      game: currentListing.game || 'unknown',
+      maxCount: maxListings
+    } : null, 
     [currentListing?.id, currentListing?.game, maxListings]
   );
   
-  // Use the optimized hook with the memoized key
-  const { similarListings, isLoading } = useOptimizedSimilarListings(listingKey ? {
-    id: currentListing.id,
-    game: currentListing.game,
-    maxCount: maxListings
-  } : null);
+  // Use the optimized hook with the memoized options
+  const { similarListings, isLoading } = useOptimizedSimilarListings(listingOptions);
   
   // Clean up any cached data when component unmounts
   useEffect(() => {

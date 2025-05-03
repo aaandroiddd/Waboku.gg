@@ -321,6 +321,21 @@ export default function ListingPage() {
   // Use the listing page cleanup hook to automatically clean up listeners when navigating away
   useListingPageCleanup(listingId);
   
+  // Ensure we clean up all similar listings listeners when unmounting
+  useEffect(() => {
+    return () => {
+      // Find and clean up any listeners related to similar listings
+      if (typeof window !== 'undefined') {
+        console.log(`[Listing] Cleaning up similar listings listeners for ${listingId}`);
+        
+        // Clean up any cached data for this listing
+        if (window.__firestoreCache && window.__firestoreCache.similarListings) {
+          delete window.__firestoreCache.similarListings[listingId];
+        }
+      }
+    };
+  }, [listingId]);
+  
   useEffect(() => {
     let isMounted = true;
     let retryCount = 0;

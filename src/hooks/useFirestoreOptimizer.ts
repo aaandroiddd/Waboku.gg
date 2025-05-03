@@ -513,7 +513,11 @@ const debugFetch = (message: string) => {
 };
 
 // Hook for optimized similar listings fetching
-export const useOptimizedSimilarListings = (currentListing: any, maxListings: number = 6) => {
+export const useOptimizedSimilarListings = (options: {
+  id: string;
+  game: string;
+  maxCount: number;
+} | null) => {
   const [similarListings, setSimilarListings] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [hasAttemptedFetch, setHasAttemptedFetch] = useState<boolean>(false);
@@ -526,27 +530,31 @@ export const useOptimizedSimilarListings = (currentListing: any, maxListings: nu
   
   // Use a callback to prevent dependency issues
   const fetchListings = useCallback(async () => {
-    if (!currentListing?.id || !currentListing?.game) {
+    if (!options?.id || !options?.game) {
       setIsLoading(false);
       return;
     }
     
-    debugFetch(`Fetch attempt for listing ${currentListing.id}`);
+    const listingId = options.id;
+    const game = options.game;
+    const maxListings = options.maxCount || 6;
+    
+    debugFetch(`Fetch attempt for listing ${listingId}`);
     
     // Skip if we're already fetching this listing
-    if (fetchRef.current.inProgress && fetchRef.current.listingId === currentListing.id) {
-      debugFetch(`Skipping duplicate fetch for ${currentListing.id} - already in progress`);
+    if (fetchRef.current.inProgress && fetchRef.current.listingId === listingId) {
+      debugFetch(`Skipping duplicate fetch for ${listingId} - already in progress`);
       return;
     }
     
     // Check cache first
     const now = Date.now();
     if (
-      globalCache.similarListings[currentListing.id] && 
-      now - globalCache.similarListings[currentListing.id].timestamp < CACHE_EXPIRY.similarListings
+      globalCache.similarListings[listingId] && 
+      now - globalCache.similarListings[listingId].timestamp < CACHE_EXPIRY.similarListings
     ) {
-      debugFetch(`Using cached data for ${currentListing.id}`);
-      setSimilarListings(globalCache.similarListings[currentListing.id].data);
+      debugFetch(`Using cached data for ${listingId}`);
+      setSimilarListings(globalCache.similarListings[listingId].data);
       setIsLoading(false);
       setHasAttemptedFetch(true);
       return;
@@ -554,11 +562,11 @@ export const useOptimizedSimilarListings = (currentListing: any, maxListings: nu
     
     // Mark as fetching
     fetchRef.current.inProgress = true;
-    fetchRef.current.listingId = currentListing.id;
-    debugFetch(`Starting actual fetch for ${currentListing.id}`);
+    fetchRef.current.listingId = listingId;
+    debugFetch(`Starting actual fetch for ${listingId}`);
     
     try {
-      console.log(`[FirestoreOptimizer] Fetching similar listings for ${currentListing.id}`);
+      console.log(`[FirestoreOptimizer] Fetching similar listings for ${listingId}`);
       
       const { db } = getFirebaseServices();
       if (!db) throw new Error('Firebase DB not initialized');
@@ -567,8 +575,8 @@ export const useOptimizedSimilarListings = (currentListing: any, maxListings: nu
       const gameQuery = query(
         collection(db, 'listings'),
         where('status', '==', 'active'),
-        where('game', '==', currentListing.game),
-        where(documentId(), '!=', currentListing.id),
+        where('game', '==', game),
+        where(documentId(), '!=', listingId),
         limit(maxListings * 2)
       );
       
@@ -577,17 +585,17 @@ export const useOptimizedSimilarListings = (currentListing: any, maxListings: nu
         const queryTask = getDocs(gameQuery);
         
         // Register this as a cancellable operation
-        const pageId = `similar-listings-${currentListing.id}`;
+        const pageId = `similar-listings-${listingId}`;
         registerGlobalListener(pageId, () => {
           // This is a no-op for one-time queries, but good practice
-          console.log(`[FirestoreOptimizer] Cancelling similar listings query for ${currentListing.id}`);
+          console.log(`[FirestoreOptimizer] Cancelling similar listings query for ${listingId}`);
         });
         
         queryTask.then(resolve).catch(reject);
       });
       
       const querySnapshot = await queryPromise;
-      debugFetch(`Received ${querySnapshot.docs.length} results for ${currentListing.id}`);
+      debugFetch(`Received ${querySnapshot.docs.length} results for ${listingId}`);
       
       // Process results
       const results = querySnapshot.docs.map(doc => {
@@ -624,10 +632,10 @@ export const useOptimizedSimilarListings = (currentListing: any, maxListings: nu
         
         // Get IDs of listings we already have to avoid duplicates
         const existingIds = new Set(sortedResults.map(listing => listing.id));
-        existingIds.add(currentListing.id); // Also exclude current listing
+        existingIds.add(listingId); // Also exclude current listing
         
         // Fetch newest listings
-        const newestListings = await fetchNewestListings(currentListing.id, maxListings * 2);
+        const newestListings = await fetchNewestListings(listingId, maxListings * 2);
         
         // Filter out duplicates and add to results until we reach maxListings
         for (const listing of newestListings) {
@@ -639,14 +647,14 @@ export const useOptimizedSimilarListings = (currentListing: any, maxListings: nu
       }
       
       // Cache the results
-      globalCache.similarListings[currentListing.id] = {
+      globalCache.similarListings[listingId] = {
         data: finalResults,
         timestamp: now
       };
       
       try {
         localStorage.setItem('firestoreCache', JSON.stringify(globalCache));
-        debugFetch(`Cached ${finalResults.length} listings for ${currentListing.id}`);
+        debugFetch(`Cached ${finalResults.length} listings for ${listingId}`);
       } catch (e) {
         console.warn('[FirestoreOptimizer] Error saving to localStorage:', e);
       }
@@ -654,22 +662,22 @@ export const useOptimizedSimilarListings = (currentListing: any, maxListings: nu
       setSimilarListings(finalResults);
     } catch (error) {
       console.error('[FirestoreOptimizer] Error fetching similar listings:', error);
-      debugFetch(`Error fetching similar listings for ${currentListing.id}: ${error}`);
+      debugFetch(`Error fetching similar listings for ${listingId}: ${error}`);
       setSimilarListings([]);
     } finally {
       fetchRef.current.inProgress = false;
       setIsLoading(false);
       setHasAttemptedFetch(true);
-      debugFetch(`Fetch completed for ${currentListing.id}`);
+      debugFetch(`Fetch completed for ${listingId}`);
     }
-  }, [currentListing?.id, currentListing?.game, maxListings]);
+  }, [options]);
   
   useEffect(() => {
-    if (!hasAttemptedFetch && currentListing?.id && currentListing?.game) {
-      debugFetch(`Initial fetch trigger for ${currentListing.id}`);
+    if (!hasAttemptedFetch && options?.id && options?.game) {
+      debugFetch(`Initial fetch trigger for ${options.id}`);
       fetchListings();
     }
-  }, [hasAttemptedFetch, currentListing?.id, currentListing?.game, fetchListings]);
+  }, [hasAttemptedFetch, options, fetchListings]);
   
   return { similarListings, isLoading, refetch: fetchListings };
 };
