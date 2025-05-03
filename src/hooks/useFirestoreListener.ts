@@ -1,103 +1,85 @@
-import { useEffect } from 'react';
-import { registerGlobalListener, cleanupListener } from './useFirestoreListenerCleanup';
+/**
+ * Custom hook for managing Firestore listeners with a registry system
+ * This hook provides a way to register and track Firestore listeners by ID
+ */
 
-// Map to track active listeners by ID
-const activeListenerMap: Map<string, () => void> = new Map();
+import { useEffect, useRef } from 'react';
+import { DocumentReference, CollectionReference, Query } from 'firebase/firestore';
+import { 
+  registerListener, 
+  removeListener, 
+  removeListenersByPrefix, 
+  getActiveListenersCount as getListenersCount, 
+  getActiveListeners 
+} from '../lib/firebaseConnectionManager';
 
 /**
- * Register a Firestore listener with a specific ID for easier cleanup
+ * Hook to create and manage a Firestore listener with a specific ID
+ * 
  * @param id Unique identifier for this listener
- * @param unsubscribe Function to call to unsubscribe the listener
- * @returns Function to manually unregister the listener
+ * @param ref Firestore reference (document, collection, or query)
+ * @param callback Function to call when data changes
+ * @param dependencies Array of dependencies to control when the listener is recreated
+ * @returns void
  */
-export const registerListener = (id: string, unsubscribe: () => void): () => void => {
-  // If there's already a listener with this ID, clean it up first
-  if (activeListenerMap.has(id)) {
-    console.log(`[FirestoreListener] Replacing existing listener for ${id}`);
-    const existingUnsubscribe = activeListenerMap.get(id);
-    if (existingUnsubscribe) {
-      existingUnsubscribe();
-    }
-  }
-  
-  // Register the new listener
-  activeListenerMap.set(id, unsubscribe);
-  console.log(`[FirestoreListener] Registered listener ${id}. Total active: ${activeListenerMap.size}`);
-  
-  // Also register with the global system
-  registerGlobalListener(id, unsubscribe);
-  
-  // Return a function to unregister this listener
-  return () => {
-    if (activeListenerMap.has(id)) {
-      console.log(`[FirestoreListener] Unregistering listener ${id}`);
-      const listenerUnsubscribe = activeListenerMap.get(id);
-      if (listenerUnsubscribe) {
-        listenerUnsubscribe();
-      }
-      activeListenerMap.delete(id);
-      
-      // Also clean up from the global registry
-      cleanupListener(id);
-    }
-  };
-};
-
-/**
- * Hook to manage a Firestore listener with automatic cleanup
- * @param id Unique identifier for this listener
- * @param createListener Function that creates and returns the listener unsubscribe function
- */
-export const useFirestoreListener = (
+export function useFirestoreListener<T>(
   id: string,
-  createListener: () => (() => void) | undefined
-) => {
+  ref: DocumentReference<T> | CollectionReference<T> | Query<T> | null,
+  callback: (data: any) => void,
+  dependencies: any[] = []
+): void {
+  // Store the callback in a ref to avoid recreating the listener when only the callback changes
+  const callbackRef = useRef(callback);
+  callbackRef.current = callback;
+
   useEffect(() => {
-    // Create the listener
-    const unsubscribe = createListener();
-    
-    // If the listener was created successfully, register it
-    if (unsubscribe) {
-      registerListener(id, unsubscribe);
-    }
-    
-    // Clean up when the component unmounts
+    // Skip if no reference is provided
+    if (!ref) return;
+
+    // Create new listener using the centralized registry
+    console.log(`Creating new Firestore listener with ID: ${id}`);
+    const unsubscribe = registerListener(id, ref, (snapshot) => {
+      callbackRef.current(snapshot);
+    });
+
+    // Cleanup function
     return () => {
-      if (unsubscribe) {
-        unsubscribe();
-      }
-      
-      // Also clean up from our registry
-      if (activeListenerMap.has(id)) {
-        activeListenerMap.delete(id);
-      }
-      
-      // And from the global registry
-      cleanupListener(id);
+      console.log(`Unmounting and cleaning up listener with ID: ${id}`);
+      removeListener(id);
     };
-  }, [id]);
-};
+  }, [id, ref, ...dependencies]);
+}
+
+/**
+ * Manually remove a specific listener by ID
+ * 
+ * @param id The ID of the listener to remove
+ * @returns boolean indicating if a listener was found and removed
+ */
+export function removeFirestoreListener(id: string): boolean {
+  return removeListener(id);
+}
+
+/**
+ * Remove all listeners with a specific prefix
+ * 
+ * @param prefix The prefix to match against listener IDs
+ * @returns number of listeners removed
+ */
+export function removeFirestoreListenersByPrefix(prefix: string): number {
+  return removeListenersByPrefix(prefix);
+}
 
 /**
  * Get the count of active listeners
  */
-export const getActiveListenerCount = (): number => {
-  return activeListenerMap.size;
-};
+export function getActiveListenersCount(): number {
+  return getListenersCount();
+}
 
 /**
- * Clean up all listeners
+ * Get all active listener information for debugging
  */
-export const cleanupAllListeners = (): void => {
-  console.log(`[FirestoreListener] Cleaning up all ${activeListenerMap.size} listeners`);
-  
-  activeListenerMap.forEach((unsubscribe, id) => {
-    try {
-      unsubscribe();
-    } catch (error) {
-      console.error(`[FirestoreListener] Error cleaning up listener ${id}:`, error);
-    }
-  });
-  
-  activeListenerMap.clear();
-};
+export function getActiveListenerInfo(): Array<{ id: string; path: string; timestamp: number }> {
+  return getActiveListeners();
+}

@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useFirestoreListenerCleanup, useListingPageCleanup } from '@/hooks/useFirestoreListenerCleanup';
+import { registerListener, removeListenersByPrefix } from '@/lib/firebaseConnectionManager';
 
 // Add global type definition for the transform instances and cache
 declare global {
@@ -13,7 +14,7 @@ declare global {
     };
   }
 }
-import { doc, getDoc, onSnapshot } from 'firebase/firestore';
+import { doc, getDoc } from 'firebase/firestore';
 import { batchFetchUserData } from '@/hooks/useFirestoreOptimizer';
 import { loadStripe } from '@stripe/stripe-js';
 import { BuyNowButton } from '@/components/BuyNowButton';
@@ -321,12 +322,12 @@ export default function ListingPage() {
   // Use the listing page cleanup hook to automatically clean up listeners when navigating away
   useListingPageCleanup(listingId);
   
-  // Ensure we clean up all similar listings listeners when unmounting
+  // Ensure we clean up all listeners when unmounting
   useEffect(() => {
     return () => {
-      // Find and clean up any listeners related to similar listings
+      // Clean up all listeners related to this listing
       if (typeof window !== 'undefined') {
-        console.log(`[Listing] Cleaning up similar listings listeners for ${listingId}`);
+        console.log(`[Listing] Cleaning up all listeners for ${listingId}`);
         
         // Clean up any cached data for this listing
         if (window.__firestoreCache) {
@@ -340,9 +341,11 @@ export default function ListingPage() {
           }
         }
         
-        // Force cleanup of all listeners related to this listing
-        import('@/hooks/useFirestoreListenerCleanup').then(({ cleanupListingListeners }) => {
-          cleanupListingListeners(listingId);
+        // Use the new connection manager to clean up all listeners with this prefix
+        import('@/lib/firebaseConnectionManager').then(({ removeListenersByPrefix }) => {
+          // Clean up all listeners related to this listing
+          removeListenersByPrefix(`listing-realtime-${listingId}`);
+          removeListenersByPrefix(`similar-listings-${listingId}`);
         });
       }
     };
@@ -531,112 +534,106 @@ export default function ListingPage() {
           // Create a unique ID for this specific listener
           const listenerId = `listing-realtime-${id}`;
           
-          // Register the listener with our cleanup system
-          const unsubscribe = onSnapshot(listingRef, (doc) => {
-            if (!isMounted) return; // Don't update state if component is unmounted
-            
-            if (doc.exists()) {
-              const updatedData = doc.data();
-              // Process the data and update the listing state
-              console.log('[Listing] Received real-time update for listing');
+          // Use the new connection manager to register the listener
+          import('@/lib/firebaseConnectionManager').then(({ registerListener }) => {
+            registerListener(listenerId, listingRef, (doc) => {
+              if (!isMounted) return; // Don't update state if component is unmounted
               
-              // Only update if there are actual changes to avoid infinite loops
-              if (JSON.stringify(updatedData) !== JSON.stringify(data)) {
-                console.log('[Listing] Updating listing with new data');
+              if (doc.exists()) {
+                const updatedData = doc.data();
+                // Process the data and update the listing state
+                console.log('[Listing] Received real-time update for listing');
                 
-                // Process timestamps safely
-                const convertTimestamp = (timestamp: any): Date => {
-                  try {
-                    if (!timestamp) return new Date();
-                    
-                    // Handle Firestore timestamp objects
-                    if (timestamp && typeof timestamp.toDate === 'function') {
-                      return timestamp.toDate();
+                // Only update if there are actual changes to avoid infinite loops
+                if (JSON.stringify(updatedData) !== JSON.stringify(data)) {
+                  console.log('[Listing] Updating listing with new data');
+                  
+                  // Process timestamps safely
+                  const convertTimestamp = (timestamp: any): Date => {
+                    try {
+                      if (!timestamp) return new Date();
+                      
+                      // Handle Firestore timestamp objects
+                      if (timestamp && typeof timestamp.toDate === 'function') {
+                        return timestamp.toDate();
+                      }
+                      
+                      // Handle JavaScript Date objects
+                      if (timestamp instanceof Date) {
+                        return timestamp;
+                      }
+                      
+                      // Handle numeric timestamps (milliseconds since epoch)
+                      if (typeof timestamp === 'number') {
+                        return new Date(timestamp);
+                      }
+                      
+                      // Handle string timestamps
+                      if (typeof timestamp === 'string') {
+                        return new Date(timestamp);
+                      }
+                      
+                      // Default fallback
+                      return new Date();
+                    } catch (error) {
+                      console.error('Error converting timestamp:', error, timestamp);
+                      return new Date();
                     }
-                    
-                    // Handle JavaScript Date objects
-                    if (timestamp instanceof Date) {
-                      return timestamp;
+                  };
+                  
+                  // Create listing object with careful type handling
+                  const createdAt = convertTimestamp(updatedData.createdAt);
+                  const expiresAt = updatedData.expiresAt ? convertTimestamp(updatedData.expiresAt) : 
+                    new Date(createdAt.getTime() + (updatedData.isPremium ? 30 : 2) * 24 * 60 * 60 * 1000);
+                  
+                  // Process location data safely
+                  let locationData = undefined;
+                  if (updatedData.location) {
+                    try {
+                      locationData = {
+                        latitude: typeof updatedData.location.latitude === 'number' ? updatedData.location.latitude : undefined,
+                        longitude: typeof updatedData.location.longitude === 'number' ? updatedData.location.longitude : undefined
+                      };
+                    } catch (error) {
+                      console.error('Error processing location data:', error);
                     }
-                    
-                    // Handle numeric timestamps (milliseconds since epoch)
-                    if (typeof timestamp === 'number') {
-                      return new Date(timestamp);
-                    }
-                    
-                    // Handle string timestamps
-                    if (typeof timestamp === 'string') {
-                      return new Date(timestamp);
-                    }
-                    
-                    // Default fallback
-                    return new Date();
-                  } catch (error) {
-                    console.error('Error converting timestamp:', error, timestamp);
-                    return new Date();
                   }
-                };
-                
-                // Create listing object with careful type handling
-                const createdAt = convertTimestamp(updatedData.createdAt);
-                const expiresAt = updatedData.expiresAt ? convertTimestamp(updatedData.expiresAt) : 
-                  new Date(createdAt.getTime() + (updatedData.isPremium ? 30 : 2) * 24 * 60 * 60 * 1000);
-                
-                // Process location data safely
-                let locationData = undefined;
-                if (updatedData.location) {
-                  try {
-                    locationData = {
-                      latitude: typeof updatedData.location.latitude === 'number' ? updatedData.location.latitude : undefined,
-                      longitude: typeof updatedData.location.longitude === 'number' ? updatedData.location.longitude : undefined
-                    };
-                  } catch (error) {
-                    console.error('Error processing location data:', error);
-                  }
+                  
+                  const updatedListing: Listing = {
+                    id: doc.id,
+                    title: updatedData.title || 'Untitled Listing',
+                    description: updatedData.description || '',
+                    price: typeof updatedData.price === 'number' ? updatedData.price : 
+                           typeof updatedData.price === 'string' ? parseFloat(updatedData.price) : 0,
+                    condition: updatedData.condition || 'unknown',
+                    game: updatedData.game || 'other',
+                    imageUrls: Array.isArray(updatedData.imageUrls) ? updatedData.imageUrls : [],
+                    coverImageIndex: typeof updatedData.coverImageIndex === 'number' ? updatedData.coverImageIndex : 0,
+                    userId: updatedData.userId || '',
+                    username: updatedData.username || 'Unknown User',
+                    createdAt: createdAt,
+                    expiresAt: expiresAt,
+                    status: updatedData.status || 'active',
+                    isGraded: Boolean(updatedData.isGraded),
+                    gradeLevel: updatedData.gradeLevel ? Number(updatedData.gradeLevel) : undefined,
+                    gradingCompany: updatedData.gradingCompany,
+                    city: updatedData.city || 'Unknown',
+                    state: updatedData.state || 'Unknown',
+                    favoriteCount: typeof updatedData.favoriteCount === 'number' ? updatedData.favoriteCount : 0,
+                    quantity: updatedData.quantity ? Number(updatedData.quantity) : undefined,
+                    cardName: updatedData.cardName || undefined,
+                    location: locationData,
+                    soldTo: updatedData.soldTo || null,
+                    archivedAt: updatedData.archivedAt ? convertTimestamp(updatedData.archivedAt) : null
+                  };
+                  
+                  // Update the listing state
+                  setListing(updatedListing);
                 }
-                
-                const updatedListing: Listing = {
-                  id: doc.id,
-                  title: updatedData.title || 'Untitled Listing',
-                  description: updatedData.description || '',
-                  price: typeof updatedData.price === 'number' ? updatedData.price : 
-                         typeof updatedData.price === 'string' ? parseFloat(updatedData.price) : 0,
-                  condition: updatedData.condition || 'unknown',
-                  game: updatedData.game || 'other',
-                  imageUrls: Array.isArray(updatedData.imageUrls) ? updatedData.imageUrls : [],
-                  coverImageIndex: typeof updatedData.coverImageIndex === 'number' ? updatedData.coverImageIndex : 0,
-                  userId: updatedData.userId || '',
-                  username: updatedData.username || 'Unknown User',
-                  createdAt: createdAt,
-                  expiresAt: expiresAt,
-                  status: updatedData.status || 'active',
-                  isGraded: Boolean(updatedData.isGraded),
-                  gradeLevel: updatedData.gradeLevel ? Number(updatedData.gradeLevel) : undefined,
-                  gradingCompany: updatedData.gradingCompany,
-                  city: updatedData.city || 'Unknown',
-                  state: updatedData.state || 'Unknown',
-                  favoriteCount: typeof updatedData.favoriteCount === 'number' ? updatedData.favoriteCount : 0,
-                  quantity: updatedData.quantity ? Number(updatedData.quantity) : undefined,
-                  cardName: updatedData.cardName || undefined,
-                  location: locationData,
-                  soldTo: updatedData.soldTo || null,
-                  archivedAt: updatedData.archivedAt ? convertTimestamp(updatedData.archivedAt) : null
-                };
-                
-                // Update the listing state
-                setListing(updatedListing);
               }
-            }
-          }, (error) => {
-            console.error('[Listing] Error in real-time listener:', error);
-          });
-          
-          // Register the listener with our cleanup system using the specific ID
-          registerListener(unsubscribe);
-          
-          // Also register with a specific ID for easier cleanup
-          import('@/hooks/useFirestoreListener').then(({ registerListener }) => {
-            registerListener(listenerId, unsubscribe);
+            }, (error) => {
+              console.error('[Listing] Error in real-time listener:', error);
+            });
           });
         } catch (listenerError) {
           console.error('[Listing] Failed to set up real-time listener:', listenerError);

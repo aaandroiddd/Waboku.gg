@@ -633,16 +633,14 @@ export const useOptimizedSimilarListings = (options: {
         limit(maxListings * 2)
       );
       
-      // Register this query with the global cleanup system
-      const pageId = `similar-listings-${listingId}`;
-      const cleanupFunction = () => {
-        if (fetchRef.current.abortController) {
-          fetchRef.current.abortController.abort();
-        }
-        console.log(`[FirestoreOptimizer] Cancelling similar listings query for ${listingId}`);
-      };
-      
-      registerGlobalListener(pageId, cleanupFunction);
+      // Import the connection manager for cleanup
+      import('@/lib/firebaseConnectionManager').then(({ removeListenersByPrefix }) => {
+        // Register cleanup for when component unmounts
+        const pageId = `similar-listings-${listingId}`;
+        
+        // Clean up any existing listeners with this prefix
+        removeListenersByPrefix(pageId);
+      });
       
       // Execute the query
       const querySnapshot = await getDocs(gameQuery);

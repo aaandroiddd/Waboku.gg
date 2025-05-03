@@ -1,5 +1,5 @@
 import React, { useMemo, useEffect } from 'react';
-import { useFirestoreListenerCleanup } from '@/hooks/useFirestoreListenerCleanup';
+import { removeListenersByPrefix } from '@/lib/firebaseConnectionManager';
 import { Listing } from '@/types/database';
 import { ListingCard } from './ListingCard';
 import { Button } from '@/components/ui/button';
