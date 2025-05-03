@@ -33,7 +33,6 @@ import { Dialog, DialogContent, DialogTitle, DialogDescription, DialogTrigger, D
 import { Chat } from '@/components/Chat';
 import { MakeOfferDialog } from '@/components/MakeOfferDialog';
 import { ReportListingDialog } from '@/components/ReportListingDialog';
-import { SimilarListings } from '@/components/SimilarListings';
 import Image from 'next/image';
 import { ArrowLeft, Calendar, Heart, MapPin, MessageCircle, User, ZoomIn, Minus, Plus, RotateCw, X, Flag } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
@@ -1827,16 +1826,7 @@ export default function ListingPage() {
             </div>
           </CardContent>
         </Card>
-
-
       </div>
-
-      {/* Similar Listings Section */}
-      {listing && (
-        <div className="container mx-auto p-4 mb-8">
-          <SimilarListings currentListing={listing} maxListings={6} />
-        </div>
-      )}
       
       <Footer />
       
