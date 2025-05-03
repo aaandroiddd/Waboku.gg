@@ -4,6 +4,7 @@ import { Listing } from '@/types/database';
 import { formatPrice } from '@/lib/price';
 import Image from 'next/image';
 import Link from 'next/link';
+import { MapPin } from 'lucide-react';
 
 interface SimplifiedListingCardProps {
   listing: Listing;
@@ -46,6 +47,10 @@ export const SimplifiedListingCard = ({ listing }: SimplifiedListingCardProps) =
           </div>
           <div className="flex-grow">
             <h3 className="font-medium text-sm line-clamp-2">{listing.title}</h3>
+            <div className="flex items-center mt-1 text-xs text-muted-foreground">
+              <MapPin className="h-3 w-3 mr-1 flex-shrink-0" />
+              <span className="truncate">{listing.city}, {listing.state}</span>
+            </div>
           </div>
         </CardContent>
       </Card>
