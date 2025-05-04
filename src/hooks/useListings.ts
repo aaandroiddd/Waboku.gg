@@ -663,6 +663,40 @@ export function useListings({ userId, searchQuery, showOnlyActive = false, skipI
     expirationMinutes: 5 // Cache expires after 5 minutes
   });
   
+  // Track previous auth state to detect login events
+  const [prevAuthState, setPrevAuthState] = useState<{
+    isLoggedIn: boolean;
+    userId: string | null;
+  }>({
+    isLoggedIn: false,
+    userId: null
+  });
+  
+  // Check for auth state changes
+  useEffect(() => {
+    // Check if this is a new login (user changed from null to a value)
+    const isNewLogin = user && (!prevAuthState.isLoggedIn || prevAuthState.userId !== user.uid);
+    
+    // Update previous auth state
+    if (user !== null && (user?.uid !== prevAuthState.userId || !prevAuthState.isLoggedIn)) {
+      setPrevAuthState({
+        isLoggedIn: true,
+        userId: user.uid
+      });
+      
+      // If this is a new login, clear all caches and force refresh
+      if (isNewLogin) {
+        console.log('Auth state changed: User logged in, clearing all listing caches');
+        clearAllListingCaches();
+      }
+    } else if (user === null && prevAuthState.isLoggedIn) {
+      setPrevAuthState({
+        isLoggedIn: false,
+        userId: null
+      });
+    }
+  }, [user]);
+
   useEffect(() => {
     // Calculate distance between two points using Haversine formula
     const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
@@ -1027,6 +1061,26 @@ const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: numbe
     }
   };
 
+  // Function to clear all listing-related caches
+  const clearAllListingCaches = () => {
+    if (typeof window === 'undefined') return;
+    
+    try {
+      const cacheKeys = Object.keys(localStorage).filter(key => 
+        key.startsWith('listings_')
+      );
+      
+      for (const key of cacheKeys) {
+        localStorage.removeItem(key);
+        console.log(`Cleared cache: ${key}`);
+      }
+      
+      console.log('Cleared all listing caches');
+    } catch (error) {
+      console.error('Error clearing listing caches:', error);
+    }
+  };
+
   return { 
     listings, 
     setListings, // Expose setListings to allow direct state updates
@@ -1039,6 +1093,7 @@ const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: numbe
     permanentlyDeleteListing,
     deleteListing,
     restoreListing,
-    refreshListings
+    refreshListings,
+    clearAllListingCaches // Expose the cache clearing function
   };
 }

@@ -242,8 +242,33 @@ const DashboardComponent = () => {
     }
   }, [listingsError, user, refreshListings]);
   
-  // Force refresh listings when the component mounts or when the user returns to this page
+  // Track previous auth state to detect login events
+  const [prevAuthState, setPrevAuthState] = useState<{
+    isLoggedIn: boolean;
+    userId: string | null;
+  }>({
+    isLoggedIn: false,
+    userId: null
+  });
+  
+  // Force refresh listings when the component mounts or when the user logs in
   useEffect(() => {
+    // Check if this is a new login (user changed from null to a value)
+    const isNewLogin = user && (!prevAuthState.isLoggedIn || prevAuthState.userId !== user.uid);
+    
+    // Update previous auth state
+    if (user !== null && (user?.uid !== prevAuthState.userId || !prevAuthState.isLoggedIn)) {
+      setPrevAuthState({
+        isLoggedIn: true,
+        userId: user.uid
+      });
+    } else if (user === null && prevAuthState.isLoggedIn) {
+      setPrevAuthState({
+        isLoggedIn: false,
+        userId: null
+      });
+    }
+    
     // Clear any cached listings data to ensure fresh data
     if (user) {
       try {
@@ -255,15 +280,26 @@ const DashboardComponent = () => {
         localStorage.removeItem(userListingsCacheKey);
         localStorage.removeItem(activeListingsCacheKey);
         
-        console.log('Cleared listings cache on dashboard mount');
-        
-        // Refresh listings data
-        refreshListings();
+        // If this is a new login, log it and force a refresh
+        if (isNewLogin) {
+          console.log('User logged in, clearing listings cache and forcing refresh');
+          
+          // Clear dashboard cache as well
+          clearListingsCache();
+          
+          // Small delay to ensure auth is fully established
+          setTimeout(() => {
+            refreshListings();
+          }, 500);
+        } else {
+          console.log('Cleared listings cache on dashboard mount');
+          refreshListings();
+        }
       } catch (cacheError) {
         console.error('Error clearing listings cache:', cacheError);
       }
     }
-  }, [user]);
+  }, [user, prevAuthState.isLoggedIn, prevAuthState.userId, clearListingsCache, refreshListings]);
   
   const sortedListings = [...(allListings || [])].sort((a, b) => {
     if (sortBy === 'date') {

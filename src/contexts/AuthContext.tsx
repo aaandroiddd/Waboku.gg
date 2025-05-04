@@ -233,6 +233,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       }
       
+      // Clear listing caches when user logs in to ensure fresh data
+      if (user && typeof window !== 'undefined') {
+        try {
+          // Clear all listing-related caches to ensure fresh data on login
+          const cacheKeys = Object.keys(localStorage).filter(key => 
+            key.startsWith('listings_') || key.startsWith('dashboard_data_')
+          );
+          
+          for (const key of cacheKeys) {
+            localStorage.removeItem(key);
+          }
+          
+          console.log('Cleared all listing and dashboard caches on login');
+        } catch (cacheError) {
+          console.error('Error clearing caches on login:', cacheError);
+        }
+      }
+      
       // Clear any existing token refresh interval
       if (tokenRefreshInterval) {
         clearInterval(tokenRefreshInterval);
