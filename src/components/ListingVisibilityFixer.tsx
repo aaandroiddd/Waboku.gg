@@ -10,6 +10,7 @@ import { getFirebaseServices } from '@/lib/firebase';
 import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
 import { useLoading } from '@/hooks/useLoading';
 import { RestoredListingFixer } from '@/components/RestoredListingFixer';
+import { ListingExpirationDebugger } from '@/components/ListingExpirationDebugger';
 
 interface ListingVisibilityFixerProps {
   onRefresh: () => Promise<void>;
@@ -343,6 +344,15 @@ export function ListingVisibilityFixer({ onRefresh, isLoading }: ListingVisibili
           use this tool to fix them.
         </p>
         <RestoredListingFixer />
+      </div>
+      
+      {/* Add the ListingExpirationDebugger component */}
+      <div className="mt-6">
+        <h3 className="text-lg font-medium mb-4">Fix Listing Expiration Issues</h3>
+        <p className="text-muted-foreground mb-4">
+          If your listings are incorrectly showing as expired, use this tool to check and fix expiration dates.
+        </p>
+        <ListingExpirationDebugger />
       </div>
     </div>
   );

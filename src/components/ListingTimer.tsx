@@ -182,12 +182,15 @@ export function ListingTimer({ createdAt, archivedAt, accountTier, status, listi
             if (isNaN(endTime)) {
               console.error('Invalid expiresAt timestamp:', expiresAt);
               endTime = 0; // This will trigger the fallback below
+            } else {
+              console.log('Successfully parsed expiresAt:', new Date(endTime).toISOString());
             }
           } catch (error) {
             console.error('Error parsing expiresAt:', error);
             endTime = 0; // This will trigger the fallback below
           }
         } else {
+          console.log('No expiresAt found, will calculate from createdAt');
           endTime = 0; // This will trigger the fallback below
         }
         
@@ -311,7 +314,11 @@ export function ListingTimer({ createdAt, archivedAt, accountTier, status, listi
     );
   }
 
-  if (isExpired && status === 'active') {
+  // Add a 5-minute buffer to prevent premature expiration display
+  const bufferTime = 5 * 60 * 1000; // 5 minutes in milliseconds
+  const isExpiredWithBuffer = isExpired && timeLeft <= bufferTime;
+  
+  if (isExpiredWithBuffer && status === 'active') {
     return (
       <div className="flex flex-col gap-2">
         <Alert variant="destructive">

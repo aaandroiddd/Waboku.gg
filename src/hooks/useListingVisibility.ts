@@ -181,7 +181,11 @@ export function useListingVisibility(listings: Listing[]) {
           timeRemaining: (expiresAt.getTime() - now.getTime()) / (60 * 60 * 1000) + ' hours'
         });
         
-        if (now > expiresAt) {
+        // Fix: Add buffer time to now to prevent premature expiration
+        // This gives listings a 5-minute grace period
+        const nowWithBuffer = new Date(now.getTime() - bufferTime);
+        
+        if (nowWithBuffer > expiresAt) {
           filteredOutReasons.current[listing.id] = `Expired on ${expiresAt.toISOString()}`;
           return false;
         }

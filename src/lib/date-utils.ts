@@ -76,11 +76,22 @@ export function createFutureDate(hours: number): Date {
 /**
  * Checks if a date is in the past (has expired)
  * @param date - The date to check
+ * @param bufferMinutes - Optional buffer time in minutes to add to the current time
  * @returns True if the date is in the past, false otherwise
  */
-export function isExpired(date: Date | string | any): boolean {
+export function isExpired(date: Date | string | any, bufferMinutes: number = 0): boolean {
   const parsedDate = parseDate(date);
-  return new Date() > parsedDate;
+  const now = new Date();
+  
+  // Apply buffer by subtracting from now (making now earlier)
+  // This gives a grace period before considering something expired
+  if (bufferMinutes > 0) {
+    const bufferMs = bufferMinutes * 60 * 1000;
+    const nowWithBuffer = new Date(now.getTime() - bufferMs);
+    return nowWithBuffer > parsedDate;
+  }
+  
+  return now > parsedDate;
 }
 
 /**
