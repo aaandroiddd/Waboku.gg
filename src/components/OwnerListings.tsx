@@ -140,8 +140,8 @@ export const OwnerListings = ({ ownerId, currentListingId, maxListings = 8, owne
             </CarouselItem>
           ))}
         </CarouselContent>
-        <CarouselPrevious className="hidden md:flex" />
-        <CarouselNext className="hidden md:flex" />
+        <CarouselPrevious />
+        <CarouselNext />
       </Carousel>
     </div>
   );

@@ -134,8 +134,8 @@ export const OptimizedSimilarListings = ({ currentListing, maxListings = 8 }: Op
             </CarouselItem>
           ))}
         </CarouselContent>
-        <CarouselPrevious className="hidden md:flex" />
-        <CarouselNext className="hidden md:flex" />
+        <CarouselPrevious />
+        <CarouselNext />
       </Carousel>
     </div>
   );
