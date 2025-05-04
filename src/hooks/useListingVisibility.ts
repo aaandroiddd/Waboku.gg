@@ -80,29 +80,79 @@ export function useListingVisibility(listings: Listing[]) {
         // Use our utility function to parse the date safely
         let expiresAt = null;
         
-        // Handle different date formats
-        if (listing.expiresAt instanceof Date) {
-          expiresAt = listing.expiresAt;
-        } else if (typeof listing.expiresAt === 'object' && listing.expiresAt && 'toDate' in listing.expiresAt) {
-          // Handle Firestore Timestamp
-          try {
-            // @ts-ignore - Firestore timestamp
-            expiresAt = listing.expiresAt.toDate();
-          } catch (e) {
-            console.error(`Failed to convert Firestore timestamp for listing ${listing.id}:`, e);
+        // Enhanced date parsing for expiresAt field
+        try {
+          // First try to use the expiresAt field if it exists
+          if (listing.expiresAt) {
+            // Handle different date formats
+            if (listing.expiresAt instanceof Date) {
+              expiresAt = listing.expiresAt;
+            } else if (typeof listing.expiresAt === 'object') {
+              // Handle Firestore Timestamp with toDate method
+              if ('toDate' in listing.expiresAt && typeof listing.expiresAt.toDate === 'function') {
+                expiresAt = listing.expiresAt.toDate();
+              } 
+              // Handle Firestore Timestamp with seconds field
+              else if ('seconds' in listing.expiresAt) {
+                expiresAt = new Date(listing.expiresAt.seconds * 1000);
+              }
+              // Handle serialized Firestore Timestamp (_seconds field)
+              else if ('_seconds' in listing.expiresAt) {
+                expiresAt = new Date(listing.expiresAt._seconds * 1000);
+              }
+            } else if (typeof listing.expiresAt === 'string') {
+              // Handle string date
+              expiresAt = new Date(listing.expiresAt);
+            } else if (typeof listing.expiresAt === 'number') {
+              // Handle numeric timestamp
+              expiresAt = new Date(listing.expiresAt);
+            }
+            
+            // Log the parsed expiresAt for debugging
+            if (expiresAt && !isNaN(expiresAt.getTime())) {
+              console.log(`Parsed expiresAt for listing ${listing.id}: ${expiresAt.toISOString()}`);
+            } else {
+              console.log(`Failed to parse expiresAt for listing ${listing.id}, value:`, listing.expiresAt);
+              expiresAt = null; // Reset to null if parsing failed
+            }
           }
-        } else {
-          // Try to parse as string or number
-          expiresAt = parseDate(listing.expiresAt, null);
+        } catch (e) {
+          console.error(`Error parsing expiresAt for listing ${listing.id}:`, e);
+          expiresAt = null;
         }
         
-        // If we couldn't parse the date, calculate it from createdAt and accountTier
-        if (!expiresAt) {
+        // If we couldn't parse the expiresAt field, calculate it from createdAt and accountTier
+        if (!expiresAt || isNaN(expiresAt.getTime())) {
           console.log(`No valid expiresAt for listing ${listing.id}, calculating from createdAt and accountTier`);
           
           try {
-            // Parse createdAt date
-            const createdAt = parseDate(listing.createdAt);
+            // Parse createdAt date with enhanced handling
+            let createdAt: Date | null = null;
+            
+            if (listing.createdAt instanceof Date) {
+              createdAt = listing.createdAt;
+            } else if (typeof listing.createdAt === 'object' && listing.createdAt) {
+              // Handle Firestore Timestamp with toDate method
+              if ('toDate' in listing.createdAt && typeof listing.createdAt.toDate === 'function') {
+                createdAt = listing.createdAt.toDate();
+              } 
+              // Handle Firestore Timestamp with seconds field
+              else if ('seconds' in listing.createdAt) {
+                createdAt = new Date(listing.createdAt.seconds * 1000);
+              }
+              // Handle serialized Firestore Timestamp (_seconds field)
+              else if ('_seconds' in listing.createdAt) {
+                createdAt = new Date(listing.createdAt._seconds * 1000);
+              }
+            } else if (typeof listing.createdAt === 'string') {
+              createdAt = new Date(listing.createdAt);
+            } else if (typeof listing.createdAt === 'number') {
+              createdAt = new Date(listing.createdAt);
+            }
+            
+            if (!createdAt || isNaN(createdAt.getTime())) {
+              throw new Error('Invalid createdAt date');
+            }
             
             // Calculate expiration based on account tier
             // Free tier: 48 hours, Premium tier: 720 hours (30 days)
@@ -122,7 +172,16 @@ export function useListingVisibility(listings: Listing[]) {
         // Add a small buffer time (5 minutes) to prevent edge cases where listings
         // might appear expired due to slight time differences between client and server
         const bufferTime = 5 * 60 * 1000; // 5 minutes in milliseconds
-        if (now > new Date(expiresAt.getTime() + bufferTime)) {
+        
+        // Debug log the expiration check
+        console.log(`Checking expiration for listing ${listing.id}:`, {
+          now: now.toISOString(),
+          expiresAt: expiresAt.toISOString(),
+          isExpired: now > expiresAt,
+          timeRemaining: (expiresAt.getTime() - now.getTime()) / (60 * 60 * 1000) + ' hours'
+        });
+        
+        if (now > expiresAt) {
           filteredOutReasons.current[listing.id] = `Expired on ${expiresAt.toISOString()}`;
           return false;
         }

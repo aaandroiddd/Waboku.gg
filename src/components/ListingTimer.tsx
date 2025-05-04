@@ -113,8 +113,12 @@ export function ListingTimer({ createdAt, archivedAt, accountTier, status, listi
           if (archivedAt instanceof Date) {
             startTime = archivedAt.getTime();
           } else if (typeof archivedAt === 'object') {
+            // Handle Firestore Timestamp with toDate method
+            if ('toDate' in archivedAt && typeof archivedAt.toDate === 'function') {
+              startTime = archivedAt.toDate().getTime();
+            }
             // Handle Firestore Timestamp with seconds and nanoseconds
-            if ('seconds' in archivedAt) {
+            else if ('seconds' in archivedAt) {
               startTime = archivedAt.seconds * 1000;
             } else if ('_seconds' in archivedAt) {
               startTime = archivedAt._seconds * 1000;
@@ -150,9 +154,21 @@ export function ListingTimer({ createdAt, archivedAt, accountTier, status, listi
             // Try to parse the expiresAt timestamp
             if (expiresAt instanceof Date) {
               endTime = expiresAt.getTime();
-            } else if (typeof expiresAt === 'object' && (expiresAt.seconds || expiresAt._seconds)) {
+            } else if (typeof expiresAt === 'object') {
+              // Handle Firestore Timestamp with toDate method
+              if ('toDate' in expiresAt && typeof expiresAt.toDate === 'function') {
+                endTime = expiresAt.toDate().getTime();
+              }
               // Handle Firestore Timestamp
-              endTime = (expiresAt.seconds || expiresAt._seconds) * 1000;
+              else if ('seconds' in expiresAt) {
+                endTime = expiresAt.seconds * 1000;
+              } else if ('_seconds' in expiresAt) {
+                endTime = expiresAt._seconds * 1000;
+              } else {
+                console.error('Invalid expiresAt format:', expiresAt);
+                // Fall back to calculating from createdAt
+                endTime = 0; // This will trigger the fallback below
+              }
             } else if (typeof expiresAt === 'string') {
               endTime = Date.parse(expiresAt);
             } else if (typeof expiresAt === 'number') {
@@ -180,9 +196,20 @@ export function ListingTimer({ createdAt, archivedAt, accountTier, status, listi
           try {
             if (createdAt instanceof Date) {
               startTime = createdAt.getTime();
-            } else if (typeof createdAt === 'object' && (createdAt.seconds || createdAt._seconds)) {
+            } else if (typeof createdAt === 'object') {
+              // Handle Firestore Timestamp with toDate method
+              if ('toDate' in createdAt && typeof createdAt.toDate === 'function') {
+                startTime = createdAt.toDate().getTime();
+              }
               // Handle Firestore Timestamp
-              startTime = (createdAt.seconds || createdAt._seconds) * 1000;
+              else if ('seconds' in createdAt) {
+                startTime = createdAt.seconds * 1000;
+              } else if ('_seconds' in createdAt) {
+                startTime = createdAt._seconds * 1000;
+              } else {
+                console.error('Invalid createdAt format:', createdAt);
+                startTime = now - 1000; // Fallback to current time minus 1 second
+              }
             } else if (typeof createdAt === 'string') {
               startTime = Date.parse(createdAt);
             } else if (typeof createdAt === 'number') {
@@ -210,11 +237,25 @@ export function ListingTimer({ createdAt, archivedAt, accountTier, status, listi
         }
         
         // Calculate duration based on start and end time
-        startTime = createdAt instanceof Date ? createdAt.getTime() : 
-                   typeof createdAt === 'object' && (createdAt.seconds || createdAt._seconds) ? 
-                   (createdAt.seconds || createdAt._seconds) * 1000 : 
-                   typeof createdAt === 'string' ? Date.parse(createdAt) : 
-                   typeof createdAt === 'number' ? createdAt : now - 1000;
+        // Make sure we have a valid startTime
+        if (!startTime || isNaN(startTime)) {
+          startTime = createdAt instanceof Date ? createdAt.getTime() : 
+                     typeof createdAt === 'object' && ('toDate' in createdAt && typeof createdAt.toDate === 'function') ? 
+                     createdAt.toDate().getTime() :
+                     typeof createdAt === 'object' && (createdAt.seconds || createdAt._seconds) ? 
+                     (createdAt.seconds || createdAt._seconds) * 1000 : 
+                     typeof createdAt === 'string' ? Date.parse(createdAt) : 
+                     typeof createdAt === 'number' ? createdAt : now - 1000;
+        }
+        
+        // Debug log the time calculations
+        console.log(`ListingTimer calculations for ${listingId || 'unknown'}:`, {
+          now: new Date(now).toISOString(),
+          startTime: new Date(startTime).toISOString(),
+          endTime: new Date(endTime).toISOString(),
+          duration: duration / (60 * 60 * 1000) + ' hours',
+          accountTier
+        });
                    
         duration = endTime - startTime;
       }

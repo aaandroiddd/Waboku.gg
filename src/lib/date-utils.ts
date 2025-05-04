@@ -16,13 +16,18 @@ export function parseDate(dateValue: any, fallbackDate: Date = new Date()): Date
     }
     
     // Handle Firestore timestamp with toDate method
-    if (dateValue && typeof dateValue.toDate === 'function') {
+    if (dateValue && typeof dateValue === 'object' && 'toDate' in dateValue && typeof dateValue.toDate === 'function') {
       return dateValue.toDate();
     }
     
-    // Handle Firestore timestamp in serialized form
+    // Handle Firestore timestamp in serialized form with seconds
     if (dateValue && typeof dateValue === 'object' && 'seconds' in dateValue) {
       return new Date(dateValue.seconds * 1000);
+    }
+    
+    // Handle serialized Firestore timestamp with _seconds (sometimes happens with JSON serialization)
+    if (dateValue && typeof dateValue === 'object' && '_seconds' in dateValue) {
+      return new Date(dateValue._seconds * 1000);
     }
     
     // Handle string date format (common when data comes from API)

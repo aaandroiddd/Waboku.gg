@@ -404,13 +404,75 @@ const DashboardComponent = () => {
     
     // Log the first few listings for debugging
     if (allListings.length > 0) {
+      // Enhanced debugging for the first listing
+      const sampleListing = allListings[0];
+      
+      // Parse dates for better debugging
+      let parsedCreatedAt = "unknown";
+      let parsedExpiresAt = "unknown";
+      
+      try {
+        if (sampleListing.createdAt instanceof Date) {
+          parsedCreatedAt = sampleListing.createdAt.toISOString();
+        } else if (typeof sampleListing.createdAt === 'object' && sampleListing.createdAt) {
+          if ('toDate' in sampleListing.createdAt && typeof sampleListing.createdAt.toDate === 'function') {
+            parsedCreatedAt = sampleListing.createdAt.toDate().toISOString();
+          } else if ('seconds' in sampleListing.createdAt) {
+            parsedCreatedAt = new Date(sampleListing.createdAt.seconds * 1000).toISOString();
+          } else if ('_seconds' in sampleListing.createdAt) {
+            parsedCreatedAt = new Date(sampleListing.createdAt._seconds * 1000).toISOString();
+          }
+        }
+      } catch (e) {
+        parsedCreatedAt = `Error parsing: ${e.message}`;
+      }
+      
+      try {
+        if (sampleListing.expiresAt instanceof Date) {
+          parsedExpiresAt = sampleListing.expiresAt.toISOString();
+        } else if (typeof sampleListing.expiresAt === 'object' && sampleListing.expiresAt) {
+          if ('toDate' in sampleListing.expiresAt && typeof sampleListing.expiresAt.toDate === 'function') {
+            parsedExpiresAt = sampleListing.expiresAt.toDate().toISOString();
+          } else if ('seconds' in sampleListing.expiresAt) {
+            parsedExpiresAt = new Date(sampleListing.expiresAt.seconds * 1000).toISOString();
+          } else if ('_seconds' in sampleListing.expiresAt) {
+            parsedExpiresAt = new Date(sampleListing.expiresAt._seconds * 1000).toISOString();
+          }
+        }
+      } catch (e) {
+        parsedExpiresAt = `Error parsing: ${e.message}`;
+      }
+      
+      // Calculate if the listing should be expired
+      const now = new Date();
+      const tierDuration = (sampleListing.accountTier === 'premium' ? 720 : 48) * 60 * 60 * 1000;
+      let isExpiredByCalculation = false;
+      
+      try {
+        const createdAtDate = new Date(parsedCreatedAt);
+        const calculatedExpiry = new Date(createdAtDate.getTime() + tierDuration);
+        isExpiredByCalculation = now > calculatedExpiry;
+      } catch (e) {
+        console.error('Error calculating expiration:', e);
+      }
+      
       console.log('Dashboard - Sample listing:', {
-        id: allListings[0].id,
-        title: allListings[0].title,
-        status: allListings[0].status,
-        createdAt: allListings[0].createdAt,
-        expiresAt: allListings[0].expiresAt,
-        game: allListings[0].game
+        id: sampleListing.id,
+        title: sampleListing.title,
+        status: sampleListing.status,
+        createdAt: {
+          raw: sampleListing.createdAt,
+          parsed: parsedCreatedAt
+        },
+        expiresAt: {
+          raw: sampleListing.expiresAt,
+          parsed: parsedExpiresAt
+        },
+        accountTier: sampleListing.accountTier,
+        tierDuration: `${tierDuration / (60 * 60 * 1000)} hours`,
+        currentTime: now.toISOString(),
+        isExpiredByCalculation,
+        game: sampleListing.game
       });
     }
   }, [allListings, properlyFilteredActiveListings, activeListings, gameFilter, sortBy, sortOrder, searchQuery]);
