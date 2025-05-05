@@ -58,6 +58,13 @@ export default function Header({ animate = true }: HeaderProps) {
   const controlHeader = useCallback(() => {
     const currentScrollY = window.scrollY;
     
+    // Always show header when at the top of the page
+    if (currentScrollY <= 10) {
+      setShowHeader(true);
+      setLastScrollY(currentScrollY);
+      return;
+    }
+    
     // Only update if we've scrolled more than the threshold
     if (Math.abs(currentScrollY - lastScrollY) > scrollThreshold) {
       // Show header when scrolling up, hide when scrolling down
@@ -65,7 +72,7 @@ export default function Header({ animate = true }: HeaderProps) {
         // Scrolling down & not at the top
         setShowHeader(false);
       } else {
-        // Scrolling up or at the top
+        // Scrolling up
         setShowHeader(true);
       }
       
@@ -86,13 +93,30 @@ export default function Header({ animate = true }: HeaderProps) {
       scrollTimeoutRef.current = setTimeout(() => {
         controlHeader();
         scrollTimeoutRef.current = null;
-      }, 100); // Throttle to 10 times per second
+      }, 50); // Throttle to 20 times per second for more responsive behavior
     };
     
     window.addEventListener('scroll', handleScroll);
     
+    // Force header visibility check on mount and when component updates
+    controlHeader();
+    
+    // Also add a check when user stops scrolling
+    const handleScrollEnd = () => {
+      // Wait a bit after scrolling stops to ensure we have the final position
+      setTimeout(() => {
+        // If we're at the top, always show the header
+        if (window.scrollY <= 10) {
+          setShowHeader(true);
+        }
+      }, 150);
+    };
+    
+    window.addEventListener('scrollend', handleScrollEnd);
+    
     return () => {
       window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('scrollend', handleScrollEnd);
       if (scrollTimeoutRef.current) {
         clearTimeout(scrollTimeoutRef.current);
       }
@@ -220,6 +244,22 @@ export default function Header({ animate = true }: HeaderProps) {
     }
   };
 
+  // Add mouse movement detection to ensure header is visible when user is active
+  useEffect(() => {
+    const handleMouseMove = () => {
+      // If we're near the top of the page, make sure header is visible
+      if (window.scrollY < 100) {
+        setShowHeader(true);
+      }
+    };
+    
+    window.addEventListener('mousemove', handleMouseMove);
+    
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+    };
+  }, []);
+  
   return (
     <motion.header 
       className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60"
@@ -228,6 +268,8 @@ export default function Header({ animate = true }: HeaderProps) {
       variants={showHideVariants}
       // Add layout="preserved" to maintain layout during animation
       layout="preserved"
+      // Add onMouseEnter to ensure header is visible when hovered
+      onMouseEnter={() => setShowHeader(true)}
     >
       <div className="container mx-auto px-4 h-10 flex items-center justify-between gap-4">
         <div>
