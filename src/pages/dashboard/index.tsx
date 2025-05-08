@@ -869,6 +869,16 @@ const DashboardComponent = () => {
               onView={handleViewListing}
               onShare={handleShare}
             />
+          ) : activeListings.length === 0 ? (
+            <Card className="p-6 text-center">
+              <h3 className="text-lg font-medium mb-2">No active listings</h3>
+              <p className="text-muted-foreground mb-4">
+                Active listings are cards or items you're currently selling. They'll appear here for other users to find and purchase.
+              </p>
+              <p className="text-sm text-muted-foreground">
+                To create a new listing, click the "Create Listing" button in the sidebar.
+              </p>
+            </Card>
           ) : (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {activeListings.map((listing) => (
