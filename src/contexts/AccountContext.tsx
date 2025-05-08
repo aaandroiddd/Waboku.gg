@@ -1,8 +1,8 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
 import { useAuth } from './AuthContext';
 import { AccountTier, ACCOUNT_TIERS, AccountFeatures, SubscriptionDetails } from '@/types/account';
 import { getFirestore, doc, onSnapshot, setDoc, updateDoc, getDoc } from 'firebase/firestore';
-import { getFirebaseServices } from '@/lib/firebase';
+import { getFirebaseServices, registerListener, removeListener } from '@/lib/firebase';
 
 interface AccountContextType {
   accountTier: AccountTier;
@@ -33,9 +33,15 @@ const defaultContext: AccountContextType = {
   cancelSubscription: async () => {
     throw new Error('Context not initialized');
   },
+  refreshAccountData: async () => {
+    throw new Error('Context not initialized');
+  }
 };
 
 const AccountContext = createContext<AccountContextType>(defaultContext);
+
+// Unique ID for the Firestore listener
+const ACCOUNT_LISTENER_ID = 'account-subscription-listener';
 
 export function AccountProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
@@ -43,23 +49,27 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [subscription, setSubscription] = useState<SubscriptionDetails>(defaultSubscription);
 
+  // Track active listeners to ensure proper cleanup
+  const firestoreListenerRef = useRef<(() => void) | null>(null);
+  const lastRefreshTimeRef = useRef<number>(0);
+  const lastCheckTimeRef = useRef<number>(0);
+  const isRefreshingRef = useRef<boolean>(false);
+  
   useEffect(() => {
     let isMounted = true;
-    let checkInterval: NodeJS.Timeout | null = null;
-    let lastCheckTime = 0;
 
     const checkSubscriptionStatus = async () => {
       if (!user) return null;
       
       // Prevent checking too frequently (at most once every 5 minutes)
       const now = Date.now();
-      if (now - lastCheckTime < 5 * 60 * 1000) {
+      if (now - lastCheckTimeRef.current < 5 * 60 * 1000) {
         console.log('Skipping subscription check - checked recently');
         return null;
       }
       
       try {
-        lastCheckTime = now;
+        lastCheckTimeRef.current = now;
         const idToken = await user.getIdToken();
         
         // Add timeout and retry logic for better network resilience
@@ -165,7 +175,22 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
       }
     };
 
+    // Clean up any existing listener
+    const cleanupListener = () => {
+      if (firestoreListenerRef.current) {
+        console.log('[AccountContext] Cleaning up previous Firestore listener');
+        firestoreListenerRef.current();
+        firestoreListenerRef.current = null;
+      }
+      
+      // Also try to remove using the registered listener system
+      removeListener(ACCOUNT_LISTENER_ID);
+    };
+
     const initializeAccount = async () => {
+      // Clean up any existing listener first
+      cleanupListener();
+      
       if (!user) {
         if (isMounted) {
           setAccountTier('free');
@@ -176,122 +201,148 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
       }
 
       try {
-        const { app } = getFirebaseServices();
-        const firestore = getFirestore(app);
-        const userDocRef = doc(firestore, 'users', user.uid);
+        const { app, db } = getFirebaseServices();
+        if (!db) {
+          console.error('[AccountContext] Firestore not initialized');
+          setIsLoading(false);
+          return;
+        }
+        
+        const userDocRef = doc(db, 'users', user.uid);
 
         // Initialize account for new users
-        const docSnapshot = await getDoc(userDocRef);
-        if (!docSnapshot.exists()) {
-          // Set default values for new users
-          await setDoc(userDocRef, {
-            accountTier: 'free',
-            subscription: {
-              status: 'none',
-              startDate: new Date().toISOString()
-            },
-            createdAt: new Date(),
-            updatedAt: new Date()
-          });
+        try {
+          const docSnapshot = await getDoc(userDocRef);
+          if (!docSnapshot.exists()) {
+            // Set default values for new users
+            await setDoc(userDocRef, {
+              accountTier: 'free',
+              subscription: {
+                status: 'none',
+                startDate: new Date().toISOString()
+              },
+              createdAt: new Date(),
+              updatedAt: new Date()
+            });
+          }
+        } catch (error) {
+          console.error('[AccountContext] Error checking/initializing user document:', error);
         }
 
-        // Set up listener for Firestore document changes
-        const unsubscribe = onSnapshot(userDocRef, async (doc) => {
-          if (!isMounted) return;
+        // Set up listener for Firestore document changes using the centralized listener system
+        console.log('[AccountContext] Setting up Firestore listener for account data');
+        
+        const unsubscribe = registerListener(
+          ACCOUNT_LISTENER_ID,
+          userDocRef,
+          async (docSnapshot) => {
+            if (!isMounted) return;
+            
+            try {
+              const data = docSnapshot.data();
+              if (data) {
+                // Check subscription status
+                const subscriptionStatus = await checkSubscriptionStatus();
+                
+                // Get subscription data
+                const subscriptionData = subscriptionStatus || data.subscription || defaultSubscription;
+                
+                // Determine account status based on subscription
+                const now = new Date();
+                const endDate = subscriptionData.endDate ? new Date(subscriptionData.endDate) : null;
+                const startDate = subscriptionData.startDate ? new Date(subscriptionData.startDate) : null;
+                
+                // Enhanced premium status check with better logging
+                const isActivePremium = (
+                  // Stripe subscription checks
+                  subscriptionData.status === 'active' ||
+                  (subscriptionData.status === 'canceled' && endDate && endDate > now) ||
+                  (subscriptionData.stripeSubscriptionId && startDate && startDate <= now && !subscriptionData.status) ||
+                  
+                  // Admin-set premium status checks
+                  (data.accountTier === 'premium' && subscriptionData.manuallyUpdated) ||
+                  (subscriptionData.currentPlan === 'premium') || // Check for currentPlan set by admin
+                  (subscriptionData.stripeSubscriptionId?.includes('admin_')) || // Check for admin-assigned subscription ID
+                  
+                  // Direct Firestore premium tier check
+                  (data.accountTier === 'premium' && data.subscription?.manuallyUpdated === true)
+                );
+                
+                console.log('[AccountContext] Account tier determination:', {
+                  uid: user.uid,
+                  email: user.email,
+                  currentTier: data.accountTier,
+                  calculatedTier: isActivePremium ? 'premium' : 'free',
+                  subscriptionStatus: subscriptionData.status,
+                  hasStripeId: !!subscriptionData.stripeSubscriptionId,
+                  isManuallyUpdated: !!subscriptionData.manuallyUpdated,
+                  currentPlan: subscriptionData.currentPlan
+                });
+                
+                // Set subscription data with enhanced validation
+                const currentStatus = (() => {
+                  if (subscriptionData.status === 'active') return 'active';
+                  if (subscriptionData.status === 'canceled' && endDate && endDate > now) return 'canceled';
+                  if (subscriptionData.stripeSubscriptionId && !subscriptionData.status) return 'active';
+                  return 'none';
+                })();
 
-          const data = doc.data();
-          if (data) {
-            // Check subscription status
-            const subscriptionStatus = await checkSubscriptionStatus();
-            
-            // Get subscription data
-            const subscriptionData = subscriptionStatus || data.subscription || defaultSubscription;
-            
-            // Determine account status based on subscription
-            const now = new Date();
-            const endDate = subscriptionData.endDate ? new Date(subscriptionData.endDate) : null;
-            const startDate = subscriptionData.startDate ? new Date(subscriptionData.startDate) : null;
-            
-            // Enhanced premium status check with better logging
-            const isActivePremium = (
-              // Stripe subscription checks
-              subscriptionData.status === 'active' ||
-              (subscriptionData.status === 'canceled' && endDate && endDate > now) ||
-              (subscriptionData.stripeSubscriptionId && startDate && startDate <= now && !subscriptionData.status) ||
-              
-              // Admin-set premium status checks
-              (data.accountTier === 'premium' && subscriptionData.manuallyUpdated) ||
-              (subscriptionData.currentPlan === 'premium') || // Check for currentPlan set by admin
-              (subscriptionData.stripeSubscriptionId?.includes('admin_')) || // Check for admin-assigned subscription ID
-              
-              // Direct Firestore premium tier check
-              (data.accountTier === 'premium' && data.subscription?.manuallyUpdated === true)
-            );
-            
-            console.log('Account tier determination:', {
-              uid: user.uid,
-              email: user.email,
-              currentTier: data.accountTier,
-              calculatedTier: isActivePremium ? 'premium' : 'free',
-              subscriptionStatus: subscriptionData.status,
-              hasStripeId: !!subscriptionData.stripeSubscriptionId,
-              isManuallyUpdated: !!subscriptionData.manuallyUpdated,
-              currentPlan: subscriptionData.currentPlan
-            });
-            
-            // Set subscription data with enhanced validation
-            const currentStatus = (() => {
-              if (subscriptionData.status === 'active') return 'active';
-              if (subscriptionData.status === 'canceled' && endDate && endDate > now) return 'canceled';
-              if (subscriptionData.stripeSubscriptionId && !subscriptionData.status) return 'active';
-              return 'none';
-            })();
+                // For admin-assigned subscriptions, ensure we have a renewal date
+                let renewalDate = subscriptionData.renewalDate;
+                if (subscriptionData.stripeSubscriptionId?.includes('admin_') && !renewalDate) {
+                  const endDate = new Date();
+                  endDate.setFullYear(endDate.getFullYear() + 1); // Set end date to 1 year from now
+                  renewalDate = endDate.toISOString();
+                }
 
-            // For admin-assigned subscriptions, ensure we have a renewal date
-            let renewalDate = subscriptionData.renewalDate;
-            if (subscriptionData.stripeSubscriptionId?.includes('admin_') && !renewalDate) {
-              const endDate = new Date();
-              endDate.setFullYear(endDate.getFullYear() + 1); // Set end date to 1 year from now
-              renewalDate = endDate.toISOString();
+                const subscriptionDetails = {
+                  startDate: subscriptionData.startDate,
+                  endDate: subscriptionData.endDate,
+                  renewalDate: renewalDate,
+                  status: currentStatus,
+                  stripeSubscriptionId: subscriptionData.stripeSubscriptionId
+                };
+                
+                setSubscription(subscriptionDetails);
+                setAccountTier(isActivePremium ? 'premium' : 'free');
+
+                // Update the database if needed
+                if (data.accountTier !== (isActivePremium ? 'premium' : 'free')) {
+                  try {
+                    await updateDoc(userDocRef, {
+                      accountTier: isActivePremium ? 'premium' : 'free',
+                      updatedAt: new Date()
+                    });
+                  } catch (updateError) {
+                    console.error('[AccountContext] Error updating account tier:', updateError);
+                  }
+                }
+              } else {
+                setAccountTier('free');
+                setSubscription(defaultSubscription);
+              }
+            } catch (error) {
+              console.error('[AccountContext] Error processing account data:', error);
+              setAccountTier('free');
+              setSubscription(defaultSubscription);
+            } finally {
+              setIsLoading(false);
             }
-
-            const subscriptionDetails = {
-              startDate: subscriptionData.startDate,
-              endDate: subscriptionData.endDate,
-              renewalDate: renewalDate,
-              status: currentStatus,
-              stripeSubscriptionId: subscriptionData.stripeSubscriptionId
-            };
-            
-            setSubscription(subscriptionDetails);
-            setAccountTier(isActivePremium ? 'premium' : 'free');
-
-            // Update the database if needed
-            if (data.accountTier !== (isActivePremium ? 'premium' : 'free')) {
-              await updateDoc(userDocRef, {
-                accountTier: isActivePremium ? 'premium' : 'free',
-                updatedAt: new Date()
-              });
+          },
+          (error) => {
+            console.error('[AccountContext] Error in Firestore listener:', error);
+            if (isMounted) {
+              setAccountTier('free');
+              setSubscription(defaultSubscription);
+              setIsLoading(false);
             }
-          } else {
-            setAccountTier('free');
-            setSubscription(defaultSubscription);
           }
-          setIsLoading(false);
-        }, (error) => {
-          console.error('Error loading account tier:', error);
-          if (isMounted) {
-            setAccountTier('free');
-            setSubscription(defaultSubscription);
-            setIsLoading(false);
-          }
-        });
+        );
 
-        return () => {
-          unsubscribe();
-        };
+        // Store the unsubscribe function
+        firestoreListenerRef.current = unsubscribe;
       } catch (error) {
-        console.error('Error initializing account:', error);
+        console.error('[AccountContext] Error initializing account:', error);
         if (isMounted) {
           setAccountTier('free');
           setSubscription(defaultSubscription);
@@ -304,9 +355,7 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
 
     return () => {
       isMounted = false;
-      if (checkInterval) {
-        clearInterval(checkInterval);
-      }
+      cleanupListener();
     };
   }, [user]);
 
@@ -331,7 +380,7 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
       const { url } = await response.json();
       window.location.href = url;
     } catch (error) {
-      console.error('Error upgrading account:', error);
+      console.error('[AccountContext] Error upgrading account:', error);
       throw error;
     }
   };
@@ -352,7 +401,7 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
     }
 
     try {
-      console.log('Initiating subscription cancellation:', {
+      console.log('[AccountContext] Initiating subscription cancellation:', {
         subscriptionId: subscription.stripeSubscriptionId,
         userId: user.uid,
         currentStatus: subscription.status,
@@ -361,7 +410,7 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
       
       // Special handling for preview environment
       if (process.env.NEXT_PUBLIC_CO_DEV_ENV === 'preview') {
-        console.log('Preview environment detected, using API for database update');
+        console.log('[AccountContext] Preview environment detected, using API for database update');
         
         // Even in preview mode, use the API to ensure proper database updates
         const idToken = await user.getIdToken(true); // Force token refresh
@@ -381,11 +430,11 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
         const data = await response.json();
         
         if (!response.ok) {
-          console.error('Preview subscription cancellation API error:', data);
+          console.error('[AccountContext] Preview subscription cancellation API error:', data);
           throw new Error(data.message || data.error || 'Failed to cancel subscription');
         }
 
-        console.log('Preview subscription cancellation successful:', data);
+        console.log('[AccountContext] Preview subscription cancellation successful:', data);
         
         // Update local state with the new subscription status
         setSubscription(prev => ({
@@ -421,11 +470,11 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
       const data = await response.json();
       
       if (!response.ok) {
-        console.error('Subscription cancellation API error:', data);
+        console.error('[AccountContext] Subscription cancellation API error:', data);
         throw new Error(data.message || data.error || 'Failed to cancel subscription');
       }
 
-      console.log('Subscription cancellation successful:', data);
+      console.log('[AccountContext] Subscription cancellation successful:', data);
       
       // Update local state with the new subscription status
       setSubscription(prev => ({
@@ -437,20 +486,13 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
       
       // If there was a database error but Stripe cancellation was successful
       if (data.databaseError) {
-        console.warn('Subscription canceled in Stripe but database update failed:', data.databaseError);
+        console.warn('[AccountContext] Subscription canceled in Stripe but database update failed:', data.databaseError);
         // We could show a warning to the user here if needed
       }
 
-      // Force a reload to ensure all components reflect the updated subscription status
-      setTimeout(() => {
-        if (typeof window !== 'undefined') {
-          window.location.reload();
-        }
-      }, 1500);
-
       return data;
     } catch (error: any) {
-      console.error('Error canceling subscription:', error);
+      console.error('[AccountContext] Error canceling subscription:', error);
       throw error;
     }
   };
@@ -458,17 +500,36 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
   const refreshAccountData = async () => {
     if (!user) return;
     
+    // Prevent multiple simultaneous refreshes
+    if (isRefreshingRef.current) {
+      console.log('[AccountContext] Refresh already in progress, skipping');
+      return;
+    }
+    
+    // Prevent refreshing too frequently
+    const now = Date.now();
+    if (now - lastRefreshTimeRef.current < 5000) { // 5 seconds minimum between refreshes
+      console.log('[AccountContext] Refresh requested too soon after previous refresh, skipping');
+      return;
+    }
+    
     try {
-      console.log('Manually refreshing account data for user:', user.uid);
+      isRefreshingRef.current = true;
+      lastRefreshTimeRef.current = now;
+      
+      console.log('[AccountContext] Manually refreshing account data for user:', user.uid);
       setIsLoading(true);
       
       // Force token refresh
       await user.getIdToken(true);
       
       // Get fresh data from Firestore
-      const { app } = getFirebaseServices();
-      const firestore = getFirestore(app);
-      const userDocRef = doc(firestore, 'users', user.uid);
+      const { db } = getFirebaseServices();
+      if (!db) {
+        throw new Error('Firestore not initialized');
+      }
+      
+      const userDocRef = doc(db, 'users', user.uid);
       const docSnapshot = await getDoc(userDocRef);
       
       if (docSnapshot.exists()) {
@@ -518,16 +579,17 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
         setSubscription(subscriptionDetails);
         setAccountTier(isActivePremium ? 'premium' : 'free');
         
-        console.log('Account data refreshed successfully:', {
+        console.log('[AccountContext] Account data refreshed successfully:', {
           accountTier: isActivePremium ? 'premium' : 'free',
           subscriptionStatus: currentStatus,
           endDate: subscriptionData.endDate || 'none'
         });
       }
     } catch (error) {
-      console.error('Error refreshing account data:', error);
+      console.error('[AccountContext] Error refreshing account data:', error);
     } finally {
       setIsLoading(false);
+      isRefreshingRef.current = false;
     }
   };
 

@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { ChevronLeft } from 'lucide-react';
 import { useRouter } from 'next/router';
 import { Footer } from '@/components/Footer';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { getDatabase, ref, set } from 'firebase/database';
 import { getFirestore, doc, setDoc } from 'firebase/firestore';
 import { useAuth } from '@/contexts/AuthContext';
@@ -31,10 +31,17 @@ export default function AccountStatus() {
   const router = useRouter();
   const { toast } = useToast();
   const { session_id, upgrade } = router.query;
+  
+  // Use a ref to track if we've already refreshed the data on initial load
+  const initialRefreshDoneRef = useRef(false);
 
   useEffect(() => {
-    // Refresh account data when the page loads
-    refreshAccountData();
+    // Refresh account data when the page loads, but only once
+    if (!initialRefreshDoneRef.current) {
+      console.log('[AccountStatus] Initial data refresh');
+      refreshAccountData();
+      initialRefreshDoneRef.current = true;
+    }
     
     // Check for auth redirect state in localStorage
     const checkAuthRedirect = () => {
@@ -125,6 +132,9 @@ export default function AccountStatus() {
                   title: "Success!",
                   description: "Your subscription has been processed. Your account has been upgraded to premium.",
                 });
+                
+                // Refresh the account data to reflect the changes
+                refreshAccountData();
               } catch (err) {
                 console.error('Preview mode: Failed to update subscription data', err);
               }
@@ -139,6 +149,9 @@ export default function AccountStatus() {
                   title: "Success!",
                   description: "Your subscription has been processed. Your account has been upgraded to premium.",
                 });
+                
+                // Refresh the account data to reflect the changes
+                refreshAccountData();
               } catch (err) {
                 console.error('Failed to check subscription status:', err);
               }
@@ -155,7 +168,7 @@ export default function AccountStatus() {
       // Remove the query parameters from the URL without refreshing the page
       router.replace('/dashboard/account-status', undefined, { shallow: true });
     }
-  }, [session_id, upgrade, toast, router, user]);
+  }, [session_id, upgrade, toast, router, user, refreshAccountData]);
 
   const handleCancelSubscription = async () => {
     try {
@@ -220,10 +233,8 @@ export default function AccountStatus() {
         description: `Your premium features will remain active until ${endDateFormatted}.`,
       });
 
-      // Refresh the page after a short delay to show updated status
-      setTimeout(() => {
-        window.location.reload();
-      }, 2000);
+      // Instead of reloading the page, just refresh the account data
+      await refreshAccountData();
     } catch (error: any) {
       console.error('Subscription cancellation failed:', {
         error: error.message,
@@ -502,10 +513,11 @@ export default function AccountStatus() {
                             description: "Your subscription has been reactivated in preview mode.",
                           });
                           
-                          // Redirect to simulate the success flow
-                          setTimeout(() => {
-                            router.push('/dashboard/account-status?upgrade=success');
-                          }, 1000);
+                          // Refresh account data instead of reloading
+                          await refreshAccountData();
+                          
+                          // Update URL to simulate the success flow without page reload
+                          router.push('/dashboard/account-status?upgrade=success', undefined, { shallow: true });
                           return;
                         } catch (error) {
                           console.error('Preview mode update failed:', error);
