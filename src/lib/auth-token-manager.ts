@@ -1,5 +1,7 @@
 import { User } from 'firebase/auth';
 
+import { shouldAllowTokenRefresh, recordTokenRefresh } from './auth-rate-limiter';
+
 // Enhanced token refresh mechanism with better error handling and retry logic
 export async function refreshAuthToken(user: User | null): Promise<string | null> {
   if (!user) {
@@ -14,34 +16,17 @@ export async function refreshAuthToken(user: User | null): Promise<string | null
   }
 
   let retryCount = 0;
-  const maxRetries = 5; // Increased from 3 to 5 for more resilience
+  const maxRetries = 3; // Reduced from 5 to 3 to avoid excessive retries
 
-  // Store the last successful token refresh time
-  const lastRefreshKey = `waboku_last_token_refresh_${user.uid}`;
-  let lastRefreshTime = 0;
-  
-  try {
-    const storedTime = localStorage.getItem(lastRefreshKey);
-    if (storedTime) {
-      lastRefreshTime = parseInt(storedTime, 10);
-    }
-  } catch (e) {
-    console.warn('Could not access localStorage for token refresh timing');
-  }
-  
-  // Only refresh if it's been more than 5 minutes since the last refresh
-  // This prevents excessive token refreshes which can trigger rate limits
-  const now = Date.now();
-  const fiveMinutesMs = 5 * 60 * 1000;
-  
-  if (now - lastRefreshTime < fiveMinutesMs) {
-    console.log('Token was refreshed recently, skipping refresh');
+  // Check if we should allow a forced token refresh based on rate limiting
+  if (!shouldAllowTokenRefresh(user.uid, true)) {
+    console.log('Token refresh rate limited, using current token instead');
     try {
       // Just get the current token without forcing refresh
       return await user.getIdToken(false);
     } catch (e) {
-      console.warn('Error getting current token, will force refresh:', e);
-      // Continue with forced refresh
+      console.warn('Error getting current token:', e);
+      return null; // Return null instead of continuing with forced refresh
     }
   }
 
@@ -53,12 +38,8 @@ export async function refreshAuthToken(user: User | null): Promise<string | null
       const token = await user.getIdToken(true);
       console.log('Auth token refreshed successfully');
       
-      // Store the successful refresh time
-      try {
-        localStorage.setItem(lastRefreshKey, now.toString());
-      } catch (e) {
-        console.warn('Could not store token refresh time in localStorage');
-      }
+      // Record the successful token refresh using our rate limiter
+      recordTokenRefresh(user.uid);
       
       return token;
     } catch (error) {
@@ -92,6 +73,7 @@ export async function refreshAuthToken(user: User | null): Promise<string | null
           
           // Store the access time, but not as a full refresh
           try {
+            const now = Date.now();
             localStorage.setItem(`waboku_token_access_${user.uid}`, now.toString());
           } catch (e) {
             console.warn('Could not store token access time in localStorage');
@@ -383,6 +365,12 @@ export async function getAuthToken(forceRefresh: boolean = false): Promise<strin
       return null;
     }
     
+    // Check if we should allow a forced token refresh based on rate limiting
+    if (forceRefresh && !shouldAllowTokenRefresh(currentUser.uid, true)) {
+      console.log('Token refresh rate limited in getAuthToken, using current token instead');
+      forceRefresh = false; // Downgrade to non-forced refresh
+    }
+    
     // Add retry logic for token fetch
     let attempts = 0;
     const maxAttempts = 3;
@@ -398,12 +386,17 @@ export async function getAuthToken(forceRefresh: boolean = false): Promise<strin
         // Race the token fetch against the timeout
         const token = await Promise.race([tokenPromise, timeoutPromise]) as string;
         
-        // Store the successful token fetch time
-        try {
-          const lastRefreshKey = `waboku_last_token_refresh_${currentUser.uid}`;
-          localStorage.setItem(lastRefreshKey, Date.now().toString());
-        } catch (e) {
-          console.warn('Could not store token refresh time in localStorage');
+        // Record the successful token refresh if it was forced
+        if (forceRefresh) {
+          recordTokenRefresh(currentUser.uid);
+        } else {
+          // Even for non-forced refreshes, update the timestamp but don't count it as a full refresh
+          try {
+            const now = Date.now();
+            localStorage.setItem(`waboku_token_access_${currentUser.uid}`, now.toString());
+          } catch (e) {
+            console.warn('Could not store token access time in localStorage');
+          }
         }
         
         return token;

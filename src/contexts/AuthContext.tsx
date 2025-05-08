@@ -157,57 +157,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     
     checkStoredAuthState();
     
-    // Enhanced function to refresh token periodically with improved error handling
+    // Enhanced function to refresh token periodically with improved error handling and rate limiting
     const setupTokenRefresh = (user: User) => {
-      // Calculate when to refresh the token (every 20 minutes to be safe)
+      // Calculate when to refresh the token (every 30 minutes to be safe)
       // Firebase tokens expire after 60 minutes
-      const refreshInterval = 20 * 60 * 1000; // 20 minutes
-      
-      // Store the last successful token refresh time
-      const lastRefreshKey = `waboku_last_token_refresh_${user.uid}`;
-      try {
-        localStorage.setItem(lastRefreshKey, Date.now().toString());
-      } catch (e) {
-        console.warn('Could not store initial token refresh time');
-      }
+      const refreshInterval = 30 * 60 * 1000; // 30 minutes - increased from 20 to reduce refresh frequency
       
       // Set up interval to refresh token
       const intervalId = setInterval(async () => {
         try {
-          // Check if we need to refresh based on last refresh time
-          let lastRefreshTime = 0;
-          try {
-            const storedTime = localStorage.getItem(lastRefreshKey);
-            if (storedTime) {
-              lastRefreshTime = parseInt(storedTime, 10);
-            }
-          } catch (e) {
-            console.warn('Could not access localStorage for token refresh timing');
-          }
-          
-          const now = Date.now();
-          // Only refresh if it's been more than 15 minutes since the last refresh
-          if (now - lastRefreshTime < 15 * 60 * 1000) {
-            console.log('Token was refreshed recently, skipping scheduled refresh');
-            return;
-          }
-          
-          console.log('Performing scheduled token refresh...');
+          console.log('Checking if token refresh is needed...');
           if (auth.currentUser) {
-            // Import the token manager for better refresh handling
+            // Import the token manager and rate limiter for better refresh handling
             const { refreshAuthToken } = await import('@/lib/auth-token-manager');
-            const token = await refreshAuthToken(auth.currentUser);
+            const { shouldAllowTokenRefresh } = await import('@/lib/auth-rate-limiter');
             
-            if (token) {
-              console.log('Auth token refreshed successfully');
-              // Update last refresh time
-              try {
-                localStorage.setItem(lastRefreshKey, now.toString());
-              } catch (e) {
-                console.warn('Could not store token refresh time');
+            // Check if we should allow a token refresh based on rate limiting
+            if (shouldAllowTokenRefresh(auth.currentUser.uid, true)) {
+              console.log('Performing scheduled token refresh...');
+              const token = await refreshAuthToken(auth.currentUser);
+              
+              if (token) {
+                console.log('Auth token refreshed successfully');
+              } else {
+                console.warn('Token refresh failed, will retry on next interval');
               }
             } else {
-              console.warn('Token refresh failed, will retry on next interval');
+              console.log('Token refresh skipped due to rate limiting');
             }
           } else {
             console.warn('No current user found for token refresh');
