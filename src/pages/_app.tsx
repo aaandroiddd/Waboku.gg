@@ -19,7 +19,7 @@ import { LoadingProvider, useLoading } from '@/contexts/LoadingContext';
 import { FirebaseConnectionManager } from '@/components/FirebaseConnectionManager';
 import { FirestoreConnectionManager } from '@/components/FirestoreConnectionManager';
 import { FirestoreListenerDebugger } from '@/components/FirestoreListenerDebugger';
-import { initializeFirebaseServices } from '@/lib/firebase';
+import { getFirebaseServices } from '@/lib/firebase';
 import { useCallback } from 'react';
 
 const LoadingScreen = dynamic(() => import('@/components/LoadingScreen').then(mod => ({ default: mod.LoadingScreen })), {
@@ -55,7 +55,7 @@ const MainContent = memo(({ Component, pageProps, pathname }: {
     setIsMounted(true);
     
     // Initialize Firebase services
-    initializeFirebaseServices();
+    getFirebaseServices();
   }, []);
 
   // Show loading screen while auth or account is initializing
