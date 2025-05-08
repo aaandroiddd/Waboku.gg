@@ -17,6 +17,7 @@ export interface SubscriptionDetails {
   renewalDate?: string;
   status: 'active' | 'canceled' | 'none' | 'pending';
   stripeSubscriptionId?: string;
+  cancelAtPeriodEnd?: boolean;
 }
 
 export interface AccountFeatures extends AccountLimits {

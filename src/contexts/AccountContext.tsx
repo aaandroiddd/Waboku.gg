@@ -19,7 +19,8 @@ const defaultSubscription: SubscriptionDetails = {
   stripeSubscriptionId: undefined,
   startDate: undefined,
   endDate: undefined,
-  renewalDate: undefined
+  renewalDate: undefined,
+  cancelAtPeriodEnd: false
 };
 
 const defaultContext: AccountContextType = {
@@ -303,7 +304,8 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
                   endDate: subscriptionData.endDate,
                   renewalDate: renewalDate,
                   status: currentStatus,
-                  stripeSubscriptionId: subscriptionData.stripeSubscriptionId
+                  stripeSubscriptionId: subscriptionData.stripeSubscriptionId,
+                  cancelAtPeriodEnd: subscriptionData.cancelAtPeriodEnd || false
                 };
                 
                 setSubscription(subscriptionDetails);
@@ -444,7 +446,8 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
           ...prev,
           status: 'canceled',
           endDate: data.endDate,
-          renewalDate: data.endDate
+          renewalDate: data.endDate,
+          cancelAtPeriodEnd: true
         }));
         
         return {
@@ -484,7 +487,8 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
         ...prev,
         status: 'canceled', // Explicitly set to 'canceled' instead of using data.status
         endDate: data.endDate,
-        renewalDate: data.endDate // Set renewal date to end date for canceled subscriptions
+        renewalDate: data.endDate, // Set renewal date to end date for canceled subscriptions
+        cancelAtPeriodEnd: true
       }));
       
       // If there was a database error but Stripe cancellation was successful
@@ -582,7 +586,8 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
           endDate: subscriptionData.endDate,
           renewalDate: renewalDate,
           status: currentStatus,
-          stripeSubscriptionId: subscriptionData.stripeSubscriptionId
+          stripeSubscriptionId: subscriptionData.stripeSubscriptionId,
+          cancelAtPeriodEnd: subscriptionData.cancelAtPeriodEnd || false
         };
         
         setSubscription(subscriptionDetails);

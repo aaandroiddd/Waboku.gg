@@ -135,11 +135,11 @@ export default async function handler(
         // Update subscription data
         const updatedSubscription = {
           ...subscriptionData,
-          status: 'canceled',
+          status: 'active', // Keep as active until the end date
           endDate: endDate.toISOString(),
           renewalDate: endDate.toISOString(),
           canceledAt: currentDate.toISOString(),
-          cancelAtPeriodEnd: true,
+          cancelAtPeriodEnd: true, // This is the key flag that indicates cancellation
           // Preserve the current plan and tier to ensure proper display
           currentPlan: subscriptionData.currentPlan || 'premium',
           tier: subscriptionData.tier || 'premium'

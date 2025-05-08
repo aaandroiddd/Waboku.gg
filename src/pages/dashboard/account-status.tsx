@@ -360,12 +360,12 @@ export default function AccountStatus() {
               <Badge 
                 variant={accountTier === 'premium' ? 'default' : 'secondary'} 
                 className={`
-                  ${accountTier === 'premium' && subscription?.status !== 'canceled' ? 'bg-gradient-to-r from-blue-500 to-purple-500' : ''}
-                  ${subscription?.status === 'canceled' ? 'bg-gradient-to-r from-orange-500 to-red-500' : ''}
+                  ${accountTier === 'premium' && !subscription?.cancelAtPeriodEnd ? 'bg-gradient-to-r from-blue-500 to-purple-500' : ''}
+                  ${(subscription?.status === 'canceled' || subscription?.cancelAtPeriodEnd) ? 'bg-gradient-to-r from-orange-500 to-red-500' : ''}
                 `}
               >
-                {accountTier === 'premium' && subscription?.status !== 'canceled' ? 'Premium ⭐' : 
-                 subscription?.status === 'canceled' ? 'Premium (Canceling)' : 'Free'}
+                {accountTier === 'premium' && !subscription?.cancelAtPeriodEnd ? 'Premium ⭐' : 
+                 (subscription?.status === 'canceled' || subscription?.cancelAtPeriodEnd) ? 'Premium (Canceling)' : 'Free'}
               </Badge>
             </div>
           </div>
