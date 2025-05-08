@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { registerListener, removeListenersByPrefix, removeAllListeners } from '@/lib/firebaseConnectionManager';
 import { OptimizedSimilarListings } from '@/components/OptimizedSimilarListings';
 import { OwnerListings } from '@/components/OwnerListings';
+import { useListingPageCleanup } from '@/hooks/useFirestoreListener';
 
 // Add global type definition for the transform instances and cache
 declare global {
@@ -315,34 +315,9 @@ export default function ListingPage() {
     }
   }, [listing, user]);
 
-  // Define a unique ID for this listing page
+  // Use the listing page cleanup hook to automatically clean up listeners when navigating away
   const listingId = typeof id === 'string' ? id : '';
-  
-  // Ensure we clean up all listeners when unmounting
-  useEffect(() => {
-    return () => {
-      // Clean up all listeners related to this listing
-      if (typeof window !== 'undefined') {
-        console.log(`[Listing] Cleaning up all listeners for ${listingId}`);
-        
-        // Clean up any cached data for this listing
-        if (window.__firestoreCache) {
-          if (window.__firestoreCache.similarListings && listingId) {
-            delete window.__firestoreCache.similarListings[listingId];
-          }
-          
-          // Also clean up any user data that might have been fetched for this listing
-          if (window.__firestoreCache.users && listing?.userId) {
-            delete window.__firestoreCache.users[listing.userId];
-          }
-        }
-        
-        // Clean up all listeners related to this listing
-        removeListenersByPrefix(`listing-realtime-${listingId}`);
-        removeListenersByPrefix(`similar-listings-${listingId}`);
-      }
-    };
-  }, [listingId, listing?.userId]);
+  useListingPageCleanup(listingId);
   
   useEffect(() => {
     let isMounted = true;
@@ -527,7 +502,10 @@ export default function ListingPage() {
           // Create a unique ID for this specific listener
           const listenerId = `listing-realtime-${id}`;
           
-          // Register the listener directly with the connection manager
+          // Import the registerListener function from our new firebase-service
+          import { registerListener } from '@/lib/firebase-service';
+          
+          // Register the listener with our centralized service
           registerListener(listenerId, listingRef, (doc) => {
             if (!isMounted) return; // Don't update state if component is unmounted
             

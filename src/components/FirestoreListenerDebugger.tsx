@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { getActiveListenerCount } from '@/hooks/useFirestoreListenerCleanup';
+import { getActiveListenersCount } from '@/lib/firebase-service';
 import { Badge } from '@/components/ui/badge';
 
 export function FirestoreListenerDebugger() {
@@ -7,11 +7,11 @@ export function FirestoreListenerDebugger() {
   
   useEffect(() => {
     // Update the count initially
-    setListenerCount(getActiveListenerCount());
+    setListenerCount(getActiveListenersCount());
     
     // Set up an interval to update the count
     const interval = setInterval(() => {
-      setListenerCount(getActiveListenerCount());
+      setListenerCount(getActiveListenersCount());
     }, 2000);
     
     return () => clearInterval(interval);

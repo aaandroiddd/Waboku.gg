@@ -16,10 +16,10 @@ import { useAccount } from '@/contexts/AccountContext';
 import { AnimatePresence } from 'framer-motion';
 import Head from 'next/head';
 import { LoadingProvider, useLoading } from '@/contexts/LoadingContext';
-import { FirebaseConnectionHandler } from '@/components/FirebaseConnectionHandler';
 import { FirebaseConnectionManager } from '@/components/FirebaseConnectionManager';
 import { FirestoreConnectionManager } from '@/components/FirestoreConnectionManager';
 import { FirestoreListenerDebugger } from '@/components/FirestoreListenerDebugger';
+import { initializeFirebaseServices } from '@/lib/firebase-service';
 import { useCallback } from 'react';
 
 const LoadingScreen = dynamic(() => import('@/components/LoadingScreen').then(mod => ({ default: mod.LoadingScreen })), {
@@ -50,9 +50,12 @@ const MainContent = memo(({ Component, pageProps, pathname }: {
   const { useThemeSync } = require('@/hooks/useThemeSync');
   const [isMounted, setIsMounted] = useState(false);
 
-  // Set mounted state on client-side
+  // Set mounted state on client-side and initialize Firebase
   useEffect(() => {
     setIsMounted(true);
+    
+    // Initialize Firebase services
+    initializeFirebaseServices();
   }, []);
 
   // Show loading screen while auth or account is initializing
@@ -85,9 +88,14 @@ const MainContent = memo(({ Component, pageProps, pathname }: {
       )}
       
       <Toaster />
-      {/* Only use FirestoreConnectionManager for Firestore connection management */}
-      {isMounted && <FirestoreConnectionManager />}
-      {isMounted && process.env.NODE_ENV === 'development' && <FirestoreListenerDebugger />}
+      {/* Firebase connection management */}
+      {isMounted && (
+        <>
+          <FirebaseConnectionManager />
+          <FirestoreConnectionManager />
+          {process.env.NODE_ENV === 'development' && <FirestoreListenerDebugger />}
+        </>
+      )}
     </>
   );
 });

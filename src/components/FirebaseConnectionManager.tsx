@@ -1,5 +1,9 @@
 import { useEffect, useState } from 'react';
-import { getFirebaseServices, connectionManager } from '@/lib/firebase';
+import { 
+  getFirebaseServices, 
+  enableNetwork, 
+  disableNetwork 
+} from '@/lib/firebase-service';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { RefreshCw, WifiOff } from 'lucide-react';
@@ -30,14 +34,6 @@ export function FirebaseConnectionManager() {
 
     checkConnection();
 
-    // Add connection listener
-    let removeListener: (() => void) | undefined;
-    if (connectionManager) {
-      removeListener = connectionManager.addConnectionListener(() => {
-        checkConnection();
-      });
-    }
-
     // Listen for online/offline events
     const handleOnline = () => {
       console.log('[FirebaseConnectionManager] Browser went online');
@@ -56,9 +52,6 @@ export function FirebaseConnectionManager() {
     }
 
     return () => {
-      if (removeListener) {
-        removeListener();
-      }
       if (typeof window !== 'undefined') {
         window.removeEventListener('online', handleOnline);
         window.removeEventListener('offline', handleOffline);
@@ -71,11 +64,17 @@ export function FirebaseConnectionManager() {
     setReconnectAttempts(prev => prev + 1);
     
     try {
-      // Get services and force a reconnection
-      const services = getFirebaseServices();
+      // First disable network to reset connections
+      await disableNetwork();
       
-      // Wait a moment to allow connection to establish
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Wait a moment
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Then re-enable network
+      await enableNetwork();
+      
+      // Get services and check if they're available
+      const services = getFirebaseServices();
       
       if (services.app && services.db) {
         setConnectionStatus('connected');

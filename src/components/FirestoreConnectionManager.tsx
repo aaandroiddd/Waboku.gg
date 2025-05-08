@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { db, disableNetwork, enableNetwork } from '@/lib/firebase';
+import { getDb, enableNetwork, disableNetwork } from '@/lib/firebase-service';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/router';
 
@@ -96,6 +96,7 @@ export function FirestoreConnectionManager() {
     if (typeof window === 'undefined') return;
     
     // Skip if Firestore is not initialized
+    const db = getDb();
     if (!db) return;
     
     const manageFirestoreConnection = async () => {
@@ -149,7 +150,7 @@ export function FirestoreConnectionManager() {
             await new Promise(resolve => setTimeout(resolve, 500));
             
             try {
-              await disableNetwork(db);
+              await disableNetwork();
               setIsFirestoreEnabled(false);
               setLastOperationTime(Date.now());
               
@@ -187,7 +188,7 @@ export function FirestoreConnectionManager() {
           console.log('Enabling Firestore - User logged in and/or page needs it');
           
           try {
-            await enableNetwork(db);
+            await enableNetwork();
             setIsFirestoreEnabled(true);
             setLastOperationTime(Date.now());
             

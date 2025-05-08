@@ -1,85 +1,84 @@
-/**
- * Custom hook for managing Firestore listeners with a registry system
- * This hook provides a way to register and track Firestore listeners by ID
- */
-
 import { useEffect, useRef } from 'react';
-import { DocumentReference, CollectionReference, Query } from 'firebase/firestore';
 import { 
   registerListener, 
   removeListener, 
-  removeListenersByPrefix, 
-  getActiveListenersCount as getListenersCount, 
-  getActiveListeners 
-} from '../lib/firebaseConnectionManager';
+  removeListenersByPrefix 
+} from '@/lib/firebase-service';
+import { 
+  DocumentReference, 
+  CollectionReference, 
+  Query, 
+  onSnapshot 
+} from 'firebase/firestore';
 
 /**
- * Hook to create and manage a Firestore listener with a specific ID
- * 
- * @param id Unique identifier for this listener
- * @param ref Firestore reference (document, collection, or query)
- * @param callback Function to call when data changes
- * @param dependencies Array of dependencies to control when the listener is recreated
- * @returns void
+ * Hook to manage Firestore listeners with automatic cleanup
+ * @param componentId Unique identifier for the component using this hook
  */
-export function useFirestoreListener<T>(
-  id: string,
-  ref: DocumentReference<T> | CollectionReference<T> | Query<T> | null,
-  callback: (data: any) => void,
-  dependencies: any[] = []
-): void {
-  // Store the callback in a ref to avoid recreating the listener when only the callback changes
-  const callbackRef = useRef(callback);
-  callbackRef.current = callback;
-
-  useEffect(() => {
-    // Skip if no reference is provided
-    if (!ref) return;
-
-    // Create new listener using the centralized registry
-    console.log(`Creating new Firestore listener with ID: ${id}`);
-    const unsubscribe = registerListener(id, ref, (snapshot) => {
-      callbackRef.current(snapshot);
-    });
-
-    // Cleanup function
+export function useFirestoreListener(componentId: string) {
+  const listenersRef = useRef<string[]>([]);
+  
+  // Register a listener with automatic cleanup
+  const addListener = <T>(
+    listenerId: string,
+    ref: DocumentReference<T> | CollectionReference<T> | Query<T>,
+    callback: (data: any) => void,
+    errorCallback?: (error: Error) => void
+  ) => {
+    // Create a unique ID for this listener
+    const uniqueId = `${componentId}-${listenerId}`;
+    
+    // Register the listener
+    registerListener(uniqueId, ref, callback, errorCallback);
+    
+    // Keep track of this listener ID
+    listenersRef.current.push(uniqueId);
+    
+    // Return a function to remove this specific listener
     return () => {
-      console.log(`Unmounting and cleaning up listener with ID: ${id}`);
-      removeListener(id);
+      removeListener(uniqueId);
+      listenersRef.current = listenersRef.current.filter(id => id !== uniqueId);
     };
-  }, [id, ref, ...dependencies]);
+  };
+  
+  // Clean up all listeners when the component unmounts
+  useEffect(() => {
+    return () => {
+      // Clean up all listeners registered by this component
+      removeListenersByPrefix(componentId);
+      listenersRef.current = [];
+    };
+  }, [componentId]);
+  
+  return {
+    addListener,
+    getActiveListenerCount: () => listenersRef.current.length
+  };
 }
 
 /**
- * Manually remove a specific listener by ID
- * 
- * @param id The ID of the listener to remove
- * @returns boolean indicating if a listener was found and removed
+ * Hook to automatically clean up all listeners when navigating away from a listing page
  */
-export function removeFirestoreListener(id: string): boolean {
-  return removeListener(id);
-}
-
-/**
- * Remove all listeners with a specific prefix
- * 
- * @param prefix The prefix to match against listener IDs
- * @returns number of listeners removed
- */
-export function removeFirestoreListenersByPrefix(prefix: string): number {
-  return removeListenersByPrefix(prefix);
-}
-
-/**
- * Get the count of active listeners
- */
-export function getActiveListenersCount(): number {
-  return getListenersCount();
-}
-
-/**
- * Get all active listener information for debugging
- */
-export function getActiveListenerInfo(): Array<{ id: string; path: string; timestamp: number }> {
-  return getActiveListeners();
+export function useListingPageCleanup(listingId: string | null | undefined) {
+  useEffect(() => {
+    // When the component unmounts (user navigates away), clean up all listeners
+    return () => {
+      if (listingId) {
+        console.log(`[Firebase] Navigating away from listing ${listingId}, cleaning up listeners`);
+        
+        // Clean up any listeners related to this listing
+        removeListenersByPrefix(`listing-${listingId}`);
+        removeListenersByPrefix(`similar-listings-${listingId}`);
+        removeListenersByPrefix(`listing-view-${listingId}`);
+        
+        // Also clean up any cached data for this listing
+        if (typeof window !== 'undefined' && (window as any).__firestoreCache?.similarListings) {
+          console.log(`[Firebase] Cleaning up cache for listing ${listingId}`);
+          delete (window as any).__firestoreCache.similarListings[listingId];
+        }
+      }
+    };
+  }, [listingId]);
+  
+  return null;
 }
