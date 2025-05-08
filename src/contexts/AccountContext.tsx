@@ -11,6 +11,7 @@ interface AccountContextType {
   subscription: SubscriptionDetails;
   upgradeToPremium: () => Promise<void>;
   cancelSubscription: () => Promise<void>;
+  refreshAccountData: () => Promise<void>;
 }
 
 const defaultSubscription: SubscriptionDetails = {
@@ -454,6 +455,82 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const refreshAccountData = async () => {
+    if (!user) return;
+    
+    try {
+      console.log('Manually refreshing account data for user:', user.uid);
+      setIsLoading(true);
+      
+      // Force token refresh
+      await user.getIdToken(true);
+      
+      // Get fresh data from Firestore
+      const { app } = getFirebaseServices();
+      const firestore = getFirestore(app);
+      const userDocRef = doc(firestore, 'users', user.uid);
+      const docSnapshot = await getDoc(userDocRef);
+      
+      if (docSnapshot.exists()) {
+        const data = docSnapshot.data();
+        
+        // Determine account status based on subscription
+        const now = new Date();
+        const subscriptionData = data.subscription || defaultSubscription;
+        const endDate = subscriptionData.endDate ? new Date(subscriptionData.endDate) : null;
+        const startDate = subscriptionData.startDate ? new Date(subscriptionData.startDate) : null;
+        
+        // Check if premium status is still valid
+        const isActivePremium = (
+          subscriptionData.status === 'active' ||
+          (subscriptionData.status === 'canceled' && endDate && endDate > now) ||
+          (subscriptionData.stripeSubscriptionId && startDate && startDate <= now && !subscriptionData.status) ||
+          (data.accountTier === 'premium' && subscriptionData.manuallyUpdated) ||
+          (subscriptionData.currentPlan === 'premium') ||
+          (subscriptionData.stripeSubscriptionId?.includes('admin_')) ||
+          (data.accountTier === 'premium' && data.subscription?.manuallyUpdated === true)
+        );
+        
+        // Set subscription data with enhanced validation
+        const currentStatus = (() => {
+          if (subscriptionData.status === 'active') return 'active';
+          if (subscriptionData.status === 'canceled' && endDate && endDate > now) return 'canceled';
+          if (subscriptionData.stripeSubscriptionId && !subscriptionData.status) return 'active';
+          return 'none';
+        })();
+
+        // For admin-assigned subscriptions, ensure we have a renewal date
+        let renewalDate = subscriptionData.renewalDate;
+        if (subscriptionData.stripeSubscriptionId?.includes('admin_') && !renewalDate) {
+          const endDate = new Date();
+          endDate.setFullYear(endDate.getFullYear() + 1); // Set end date to 1 year from now
+          renewalDate = endDate.toISOString();
+        }
+
+        const subscriptionDetails = {
+          startDate: subscriptionData.startDate,
+          endDate: subscriptionData.endDate,
+          renewalDate: renewalDate,
+          status: currentStatus,
+          stripeSubscriptionId: subscriptionData.stripeSubscriptionId
+        };
+        
+        setSubscription(subscriptionDetails);
+        setAccountTier(isActivePremium ? 'premium' : 'free');
+        
+        console.log('Account data refreshed successfully:', {
+          accountTier: isActivePremium ? 'premium' : 'free',
+          subscriptionStatus: currentStatus,
+          endDate: subscriptionData.endDate || 'none'
+        });
+      }
+    } catch (error) {
+      console.error('Error refreshing account data:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const value = {
     accountTier,
     features: ACCOUNT_TIERS[accountTier],
@@ -461,6 +538,7 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
     subscription,
     upgradeToPremium,
     cancelSubscription,
+    refreshAccountData,
   };
 
   return <AccountContext.Provider value={value}>{children}</AccountContext.Provider>;

@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/alert-dialog";
 
 export default function AccountStatus() {
-  const { accountTier, subscription = {}, cancelSubscription, isLoading } = useAccount();
+  const { accountTier, subscription = {}, cancelSubscription, isLoading, refreshAccountData } = useAccount();
   const { user } = useAuth();
   
   // Redirect unverified users or show verification message
@@ -78,6 +78,9 @@ export default function AccountStatus() {
   const { session_id, upgrade } = router.query;
 
   useEffect(() => {
+    // Refresh account data when the page loads
+    refreshAccountData();
+    
     // Check for auth redirect state in localStorage
     const checkAuthRedirect = () => {
       try {
@@ -318,17 +321,38 @@ export default function AccountStatus() {
           </Button>
 
           <div className="text-right">
-            <h1 className="text-3xl font-bold text-foreground mb-2">Account Status</h1>
+            <div className="flex items-center justify-end gap-2 mb-2">
+              <h1 className="text-3xl font-bold text-foreground">Account Status</h1>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => {
+                  toast({
+                    title: "Refreshing...",
+                    description: "Updating your subscription status...",
+                  });
+                  refreshAccountData().then(() => {
+                    toast({
+                      title: "Updated",
+                      description: "Your subscription status has been refreshed.",
+                    });
+                  });
+                }}
+                disabled={isLoading}
+              >
+                {isLoading ? "Refreshing..." : "Refresh Status"}
+              </Button>
+            </div>
             <div className="flex items-center gap-2 justify-end">
               <p className="text-muted-foreground">Current Plan:</p>
               <Badge 
                 variant={accountTier === 'premium' ? 'default' : 'secondary'} 
                 className={`
-                  ${accountTier === 'premium' ? 'bg-gradient-to-r from-blue-500 to-purple-500' : ''}
+                  ${accountTier === 'premium' && subscription?.status !== 'canceled' ? 'bg-gradient-to-r from-blue-500 to-purple-500' : ''}
                   ${subscription?.status === 'canceled' ? 'bg-gradient-to-r from-orange-500 to-red-500' : ''}
                 `}
               >
-                {accountTier === 'premium' ? 'Premium ⭐' : 
+                {accountTier === 'premium' && subscription?.status !== 'canceled' ? 'Premium ⭐' : 
                  subscription?.status === 'canceled' ? 'Premium (Canceling)' : 'Free'}
               </Badge>
             </div>

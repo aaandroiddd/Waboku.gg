@@ -69,12 +69,33 @@ export function AccountTierDebugger() {
           <div>{isLoading ? 'Yes' : 'No'}</div>
           
           <div className="font-medium">Subscription Status:</div>
-          <div>{subscription?.status || 'none'}</div>
+          <div>
+            {subscription?.status || 'none'}
+            {subscription?.status === 'canceled' && (
+              <Badge variant="outline" className="ml-2 bg-orange-500/20 text-orange-500 border-orange-500/20">
+                Canceled
+              </Badge>
+            )}
+          </div>
           
           {subscription?.stripeSubscriptionId && (
             <>
               <div className="font-medium">Subscription ID:</div>
               <div className="truncate">{subscription.stripeSubscriptionId}</div>
+            </>
+          )}
+          
+          {subscription?.startDate && (
+            <>
+              <div className="font-medium">Start Date:</div>
+              <div>{new Date(subscription.startDate).toLocaleDateString()}</div>
+            </>
+          )}
+          
+          {subscription?.renewalDate && (
+            <>
+              <div className="font-medium">Renewal Date:</div>
+              <div>{new Date(subscription.renewalDate).toLocaleDateString()}</div>
             </>
           )}
           
@@ -84,6 +105,33 @@ export function AccountTierDebugger() {
               <div>{new Date(subscription.endDate).toLocaleDateString()}</div>
             </>
           )}
+          
+          <div className="font-medium">Current Time:</div>
+          <div>{new Date().toLocaleDateString()} {new Date().toLocaleTimeString()}</div>
+          
+          <div className="font-medium">Is Premium Active:</div>
+          <div>
+            {accountTier === 'premium' ? (
+              <Badge variant="outline" className="bg-green-500/20 text-green-500 border-green-500/20">
+                Yes
+              </Badge>
+            ) : (
+              <Badge variant="outline" className="bg-red-500/20 text-red-500 border-red-500/20">
+                No
+              </Badge>
+            )}
+          </div>
+          
+          <div className="font-medium">Is Canceled but Active:</div>
+          <div>
+            {subscription?.status === 'canceled' && accountTier === 'premium' ? (
+              <Badge variant="outline" className="bg-amber-500/20 text-amber-500 border-amber-500/20">
+                Yes - Active until end date
+              </Badge>
+            ) : (
+              'No'
+            )}
+          </div>
         </div>
       </CardContent>
       <CardFooter className="pt-2">
