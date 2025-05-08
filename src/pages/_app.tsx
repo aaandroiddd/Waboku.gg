@@ -19,7 +19,7 @@ import { LoadingProvider, useLoading } from '@/contexts/LoadingContext';
 import { FirebaseConnectionManager } from '@/components/FirebaseConnectionManager';
 import { FirestoreConnectionManager } from '@/components/FirestoreConnectionManager';
 import { FirestoreListenerDebugger } from '@/components/FirestoreListenerDebugger';
-import { initializeFirebaseServices } from '@/lib/firebase-service';
+import { initializeFirebaseServices } from '@/lib/firebase';
 import { useCallback } from 'react';
 
 const LoadingScreen = dynamic(() => import('@/components/LoadingScreen').then(mod => ({ default: mod.LoadingScreen })), {

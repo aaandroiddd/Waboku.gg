@@ -1,42 +1,24 @@
-import { initializeApp, getApps, FirebaseApp } from 'firebase/app';
+import { FirebaseApp } from 'firebase/app';
 import {
-  getAuth as firebaseGetAuth,
-  setPersistence,
-  browserLocalPersistence,
   Auth
 } from 'firebase/auth';
 import {
-  getFirestore,
   Firestore,
-  enableIndexedDbPersistence,
-  disableNetwork as disableFirestoreNetwork,
-  enableNetwork as enableFirestoreNetwork,
   onSnapshot,
   Unsubscribe,
   DocumentReference,
   CollectionReference,
   Query
 } from 'firebase/firestore';
-import { getStorage as firebaseGetStorage, FirebaseStorage } from 'firebase/storage';
-import { getDatabase as firebaseGetDatabase, Database, ref, onValue } from 'firebase/database';
+import { FirebaseStorage } from 'firebase/storage';
+import { Database } from 'firebase/database';
 
-// Firebase configuration
-const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
-  databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL
-};
-
-// Singleton instances
-let firebaseApp: FirebaseApp | null = null;
-let firebaseAuth: Auth | null = null;
-let firebaseDb: Firestore | null = null;
-let firebaseStorage: FirebaseStorage | null = null;
-let firebaseDatabase: Database | null = null;
+// Import from the consolidated firebase.ts file
+import { 
+  getFirebaseServices as getFirebaseServicesFromBase,
+  disableNetwork as disableFirestoreNetwork,
+  enableNetwork as enableFirestoreNetwork
+} from './firebase';
 
 // Listener registry
 interface ListenerEntry {
@@ -50,87 +32,10 @@ const activeListeners: Map<string, ListenerEntry> = new Map();
 
 /**
  * Initialize Firebase services
- * This function ensures Firebase is only initialized once
+ * This function ensures Firebase is only initialized once by delegating to the base implementation
  */
 export function initializeFirebaseServices() {
-  // Only initialize once
-  if (firebaseApp) {
-    return {
-      app: firebaseApp,
-      auth: firebaseAuth,
-      db: firebaseDb,
-      storage: firebaseStorage,
-      database: firebaseDatabase
-    };
-  }
-
-  try {
-    // Check if Firebase is already initialized
-    if (!getApps().length) {
-      console.log('[Firebase] Initializing new Firebase app');
-      firebaseApp = initializeApp(firebaseConfig);
-    } else {
-      console.log('[Firebase] Firebase app already initialized, reusing existing app');
-      firebaseApp = getApps()[0];
-    }
-
-    // Initialize services
-    firebaseAuth = firebaseGetAuth(firebaseApp);
-    firebaseDb = getFirestore(firebaseApp);
-
-    // Only initialize storage in browser environment
-    if (typeof window !== 'undefined') {
-      firebaseStorage = firebaseGetStorage(firebaseApp);
-    }
-
-    // Initialize Realtime Database if URL is provided
-    if (firebaseConfig.databaseURL) {
-      firebaseDatabase = firebaseGetDatabase(firebaseApp);
-
-      // Test database connection
-      if (typeof window !== 'undefined') {
-        const testRef = ref(firebaseDatabase, '.info/serverTimeOffset');
-        onValue(testRef, () => {
-          console.log('[Firebase] Realtime Database connection verified');
-        }, { onlyOnce: true });
-      }
-    }
-
-    // Set persistence only in browser environment
-    if (typeof window !== 'undefined' && firebaseAuth) {
-      setPersistence(firebaseAuth, browserLocalPersistence)
-        .then(() => {
-          console.log('[Firebase] Auth persistence set to LOCAL');
-        })
-        .catch(error => {
-          console.error('[Firebase] Error setting auth persistence:', error);
-        });
-    }
-
-    // Enable Firestore persistence for offline support
-    if (typeof window !== 'undefined' && firebaseDb) {
-      enableIndexedDbPersistence(firebaseDb)
-        .then(() => {
-          console.log('[Firebase] Firestore persistence enabled');
-        })
-        .catch((err) => {
-          console.warn('[Firebase] Firestore persistence could not be enabled:', err.code);
-        });
-    }
-
-    console.log('[Firebase] Services initialized successfully');
-
-    return {
-      app: firebaseApp,
-      auth: firebaseAuth,
-      db: firebaseDb,
-      storage: firebaseStorage,
-      database: firebaseDatabase
-    };
-  } catch (error) {
-    console.error('[Firebase] Error initializing Firebase:', error);
-    throw error;
-  }
+  return getFirebaseServicesFromBase();
 }
 
 /**
@@ -138,17 +43,7 @@ export function initializeFirebaseServices() {
  * Initializes Firebase if not already initialized
  */
 export function getFirebaseServices() {
-  if (!firebaseApp || !firebaseDb) {
-    return initializeFirebaseServices();
-  }
-
-  return {
-    app: firebaseApp,
-    auth: firebaseAuth,
-    db: firebaseDb,
-    storage: firebaseStorage,
-    database: firebaseDatabase
-  };
+  return getFirebaseServicesFromBase();
 }
 
 /**
@@ -304,9 +199,10 @@ export function cleanupStaleListeners(maxAgeMs: number = 3600000): number {
  * Network control functions
  */
 export const disableNetwork = async () => {
-  if (firebaseDb) {
+  const { db } = getFirebaseServices();
+  if (db) {
     try {
-      await disableFirestoreNetwork(firebaseDb);
+      await disableFirestoreNetwork(db);
       console.log('[Firebase] Firestore network disabled');
       return true;
     } catch (error) {
@@ -318,9 +214,10 @@ export const disableNetwork = async () => {
 };
 
 export const enableNetwork = async () => {
-  if (firebaseDb) {
+  const { db } = getFirebaseServices();
+  if (db) {
     try {
-      await enableFirestoreNetwork(firebaseDb);
+      await enableFirestoreNetwork(db);
       console.log('[Firebase] Firestore network enabled');
       return true;
     } catch (error) {
@@ -338,9 +235,28 @@ if (typeof window !== 'undefined') {
   }, 3600000); // 1 hour
 }
 
-// Export Firebase instances
-export const getApp = () => firebaseApp;
-export const getDb = () => firebaseDb;
-export const getAuth = () => firebaseAuth;
-export const getFirebaseStorage = () => firebaseStorage;
-export const getFirebaseDatabase = () => firebaseDatabase;
+// Export Firebase instances through the getFirebaseServices function
+export const getApp = () => {
+  const { app } = getFirebaseServices();
+  return app;
+};
+
+export const getDb = () => {
+  const { db } = getFirebaseServices();
+  return db;
+};
+
+export const getAuth = () => {
+  const { auth } = getFirebaseServices();
+  return auth;
+};
+
+export const getFirebaseStorage = () => {
+  const { storage } = getFirebaseServices();
+  return storage;
+};
+
+export const getFirebaseDatabase = () => {
+  const { database } = getFirebaseServices();
+  return database;
+};

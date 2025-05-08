@@ -6,9 +6,8 @@ import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious
 import { Card, CardContent } from '@/components/ui/card';
 import { ArrowRight } from 'lucide-react';
 import { useRouter } from 'next/router';
-import { getFirebaseServices } from '@/lib/firebase';
+import { getFirebaseServices, registerListener, removeListenersByPrefix } from '@/lib/firebase';
 import { collection, query, where, limit, documentId } from 'firebase/firestore';
-import { registerListener, removeListenersByPrefix } from '@/lib/firebaseConnectionManager';
 
 interface OwnerListingsProps {
   ownerId: string;

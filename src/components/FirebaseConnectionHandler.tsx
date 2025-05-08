@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { initializeFirebaseServices } from '@/lib/firebase-service';
+import { initializeFirebaseServices } from '@/lib/firebase';
 
 interface FirebaseConnectionHandlerProps {
   children?: React.ReactNode;

@@ -14,11 +14,17 @@ import {
   enableIndexedDbPersistence,
   disableNetwork as disableFirestoreNetwork,
   enableNetwork as enableFirestoreNetwork,
-  connectFirestoreEmulator
+  connectFirestoreEmulator,
+  onSnapshot,
+  Unsubscribe,
+  DocumentReference,
+  CollectionReference,
+  Query
 } from 'firebase/firestore';
 import { getStorage, FirebaseStorage } from 'firebase/storage';
 import { getDatabase, Database, ref, onValue, connectDatabaseEmulator } from 'firebase/database';
 
+// Firebase configuration
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
   authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
@@ -29,8 +35,17 @@ const firebaseConfig = {
   databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL
 };
 
+// Singleton instances
+let firebaseApp: FirebaseApp | null = null;
+let firebaseAuth: Auth | null = null;
+let firebaseDb: Firestore | null = null;
+let firebaseStorage: FirebaseStorage | null = null;
+let firebaseDatabase: Database | null = null;
+let isInitialized = false;
+let initializationPromise: Promise<any> | null = null;
+
 // Log the config for debugging (without exposing full API key)
-console.log('Firebase config:', {
+console.log('[Firebase] Config:', {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY ? 
     `${process.env.NEXT_PUBLIC_FIREBASE_API_KEY.substring(0, 5)}...` : 'missing',
   authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || 'missing',
@@ -40,210 +55,266 @@ console.log('Firebase config:', {
 
 // Validate Firebase API key
 if (!process.env.NEXT_PUBLIC_FIREBASE_API_KEY) {
-  console.error('Firebase API key is missing in environment variables');
+  console.error('[Firebase] API key is missing in environment variables');
 }
 
-// Initialize Firebase services
+/**
+ * Initialize Firebase services
+ * This function ensures Firebase is only initialized once
+ */
 function initializeFirebase() {
-  try {
-    // Validate Firebase config with detailed logging
-    console.log('Validating Firebase configuration...');
-    
-    // Check for required config values
-    const missingConfigValues = Object.entries(firebaseConfig)
-      .filter(([key, value]) => !value)
-      .map(([key]) => key);
-    
-    if (missingConfigValues.length > 0) {
-      console.error('Firebase configuration is incomplete. Missing values for:', missingConfigValues);
-      
-      // Log specific missing values that are critical
-      if (!firebaseConfig.apiKey) console.error('CRITICAL: Firebase API key is missing');
-      if (!firebaseConfig.projectId) console.error('CRITICAL: Firebase project ID is missing');
-      if (!firebaseConfig.databaseURL) console.error('CRITICAL: Firebase database URL is missing - Realtime Database will not work');
-      
-      throw new Error('Firebase configuration is incomplete. Check your environment variables.');
-    }
-    
-    console.log('Firebase configuration validated successfully');
-
-    // Initialize Firebase app
-    let firebaseApp: FirebaseApp;
-    
-    // Check if Firebase is already initialized
-    if (!getApps().length) {
-      console.log('Initializing new Firebase app...');
-      firebaseApp = initializeApp(firebaseConfig);
-      console.log('Firebase app initialized successfully');
-    } else {
-      console.log('Firebase app already initialized, reusing existing app');
-      firebaseApp = getApps()[0];
-    }
-
-    // Initialize services with better error handling
-    let firebaseAuth: Auth;
-    let firebaseDb: Firestore;
-    let firebaseDatabase: Database;
-    let firebaseStorage: FirebaseStorage | null = null;
-    
-    try {
-      console.log('Initializing Firebase Auth...');
-      firebaseAuth = getAuth(firebaseApp);
-      console.log('Firebase Auth initialized successfully');
-    } catch (authError) {
-      console.error('Failed to initialize Firebase Auth:', authError);
-      throw new Error('Authentication service initialization failed');
-    }
-
-    try {
-      console.log('Initializing Firestore...');
-      firebaseDb = getFirestore(firebaseApp);
-      console.log('Firestore initialized successfully');
-    } catch (dbError) {
-      console.error('Failed to initialize Firestore:', dbError);
-      throw new Error('Database service initialization failed');
-    }
-
-    try {
-      console.log('Initializing Realtime Database with URL:', 
-        firebaseConfig.databaseURL ? 
-        `${firebaseConfig.databaseURL.substring(0, 8)}...` : 'missing');
-      
-      if (!firebaseConfig.databaseURL) {
-        console.error('CRITICAL: Firebase database URL is missing. Realtime Database will not work properly.');
-        throw new Error('Firebase Realtime Database URL is missing. Check your environment variables.');
-      }
-      
-      // Validate database URL format
-      try {
-        const parsedUrl = new URL(firebaseConfig.databaseURL);
-        
-        // Check if URL is HTTPS
-        if (parsedUrl.protocol !== 'https:') {
-          console.error('CRITICAL: Firebase database URL must use HTTPS protocol');
-          throw new Error('Firebase database URL must use HTTPS protocol');
-        }
-        
-        // Check if hostname follows Firebase Realtime Database pattern
-        if (!parsedUrl.hostname.includes('firebaseio.com')) {
-          console.error('CRITICAL: Firebase database URL hostname should contain firebaseio.com');
-          throw new Error('Firebase database URL hostname should contain firebaseio.com');
-        }
-        
-        console.log('Firebase database URL format is valid');
-      } catch (urlError) {
-        console.error('CRITICAL: Firebase database URL is invalid:', urlError);
-        throw new Error('Firebase database URL is invalid. It should be in the format https://[project-id]-[hash]-rtdb.firebaseio.com');
-      }
-      
-      // Explicitly pass the databaseURL to ensure it's properly configured
-      firebaseDatabase = getDatabase(firebaseApp);
-      
-      // Verify database connection
-      console.log('Realtime Database initialized successfully');
-      
-      // Add a test connection to verify database is working
-      if (typeof window !== 'undefined') {
-        try {
-          // Use .info/serverTimeOffset instead of .info/connected for initial test
-          // This is more reliable for testing actual data access
-          const testRef = ref(firebaseDatabase, '.info/serverTimeOffset');
-          onValue(testRef, (snapshot) => {
-            if (snapshot.exists()) {
-              const offset = snapshot.val();
-              console.log('Realtime Database connection verified with server time offset:', offset);
-            } else {
-              console.warn('Realtime Database connection test returned no data');
-            }
-          }, { onlyOnce: true });
-          
-          // Also set up the connected listener for ongoing connection status
-          const connectedRef = ref(firebaseDatabase, '.info/connected');
-          onValue(connectedRef, (snapshot) => {
-            const connected = snapshot.val();
-            console.log('Realtime Database connection status:', connected ? 'connected' : 'disconnected');
-          });
-        } catch (connError) {
-          console.error('Error testing database connection:', connError);
-          // Log more details about the error
-          console.error('Database connection error details:', {
-            message: connError instanceof Error ? connError.message : 'Unknown error',
-            name: connError instanceof Error ? connError.name : 'Unknown error type',
-            stack: connError instanceof Error ? connError.stack : 'No stack trace'
-          });
-        }
-      }
-    } catch (rtdbError) {
-      console.error('Failed to initialize Realtime Database:', rtdbError);
-      console.error('Realtime Database error details:', {
-        message: rtdbError instanceof Error ? rtdbError.message : 'Unknown error',
-        name: rtdbError instanceof Error ? rtdbError.name : 'Unknown error type',
-        stack: rtdbError instanceof Error ? rtdbError.stack : 'No stack trace'
-      });
-      throw new Error('Realtime Database service initialization failed');
-    }
-
-    // Only initialize storage in browser environment
-    if (typeof window !== 'undefined') {
-      try {
-        firebaseStorage = getStorage(firebaseApp);
-        console.log('Firebase Storage initialized successfully');
-      } catch (storageError) {
-        console.error('Failed to initialize Firebase Storage:', storageError);
-        // Non-critical, continue without storage
-      }
-    }
-
-    // Set persistence only in browser environment
-    if (typeof window !== 'undefined') {
-      setPersistence(firebaseAuth, browserLocalPersistence)
-        .then(() => {
-          console.log('Firebase Auth persistence set to LOCAL');
-        })
-        .catch(error => {
-          console.error('Error setting auth persistence:', error);
-          // Non-critical, continue without persistence
-        });
-    }
-
-    return { 
-      app: firebaseApp, 
-      auth: firebaseAuth, 
-      db: firebaseDb, 
-      storage: firebaseStorage, 
-      database: firebaseDatabase 
-    };
-  } catch (error) {
-    console.error('Error initializing Firebase:', error);
-    
-    // Provide more helpful error messages based on the error
-    if (error instanceof Error) {
-      if (error.message.includes('API key')) {
-        console.error('Firebase API key is invalid or missing');
-      } else if (error.message.includes('project')) {
-        console.error('Firebase project ID is invalid or missing');
-      } else if (error.message.includes('network')) {
-        console.error('Network error while initializing Firebase - check your internet connection');
-      }
-    }
-    
-    // Return a partially initialized object to prevent complete app failure
-    // This allows the app to at least render something instead of crashing completely
-    return { 
-      app: null, 
-      auth: null, 
-      db: null, 
-      storage: null, 
-      database: null,
-      initializationError: error
+  // If already initialized, return the existing instances
+  if (isInitialized && firebaseApp && firebaseDb) {
+    return {
+      app: firebaseApp,
+      auth: firebaseAuth,
+      db: firebaseDb,
+      storage: firebaseStorage,
+      database: firebaseDatabase
     };
   }
+  
+  // If initialization is in progress, return the promise
+  if (initializationPromise) {
+    return initializationPromise;
+  }
+  // Create a promise for the initialization
+  initializationPromise = new Promise((resolve) => {
+    try {
+      // Validate Firebase config with detailed logging
+      console.log('[Firebase] Validating configuration...');
+      
+      // Check for required config values
+      const missingConfigValues = Object.entries(firebaseConfig)
+        .filter(([key, value]) => !value)
+        .map(([key]) => key);
+      
+      if (missingConfigValues.length > 0) {
+        console.error('[Firebase] Configuration is incomplete. Missing values for:', missingConfigValues);
+        
+        // Log specific missing values that are critical
+        if (!firebaseConfig.apiKey) console.error('[Firebase] CRITICAL: API key is missing');
+        if (!firebaseConfig.projectId) console.error('[Firebase] CRITICAL: Project ID is missing');
+        if (!firebaseConfig.databaseURL) console.error('[Firebase] CRITICAL: Database URL is missing - Realtime Database will not work');
+        
+        throw new Error('Firebase configuration is incomplete. Check your environment variables.');
+      }
+      
+      console.log('[Firebase] Configuration validated successfully');
+
+      // Initialize Firebase app
+      // Check if Firebase is already initialized
+      if (!getApps().length) {
+        console.log('[Firebase] Initializing new Firebase app');
+        firebaseApp = initializeApp(firebaseConfig);
+        console.log('[Firebase] App initialized successfully');
+      } else {
+        console.log('[Firebase] App already initialized, reusing existing app');
+        firebaseApp = getApps()[0];
+      }
+
+      // Initialize services with better error handling
+      try {
+        console.log('[Firebase] Initializing Auth...');
+        firebaseAuth = getAuth(firebaseApp);
+        console.log('[Firebase] Auth initialized successfully');
+      } catch (authError) {
+        console.error('[Firebase] Failed to initialize Auth:', authError);
+        throw new Error('Authentication service initialization failed');
+      }
+
+      try {
+        console.log('[Firebase] Initializing Firestore...');
+        firebaseDb = getFirestore(firebaseApp);
+        console.log('[Firebase] Firestore initialized successfully');
+      } catch (dbError) {
+        console.error('[Firebase] Failed to initialize Firestore:', dbError);
+        throw new Error('Database service initialization failed');
+      }
+
+      try {
+        console.log('[Firebase] Initializing Realtime Database with URL:', 
+          firebaseConfig.databaseURL ? 
+          `${firebaseConfig.databaseURL.substring(0, 8)}...` : 'missing');
+        
+        if (!firebaseConfig.databaseURL) {
+          console.error('[Firebase] CRITICAL: Database URL is missing. Realtime Database will not work properly.');
+          throw new Error('Firebase Realtime Database URL is missing. Check your environment variables.');
+        }
+        
+        // Validate database URL format
+        try {
+          const parsedUrl = new URL(firebaseConfig.databaseURL);
+          
+          // Check if URL is HTTPS
+          if (parsedUrl.protocol !== 'https:') {
+            console.error('[Firebase] CRITICAL: Database URL must use HTTPS protocol');
+            throw new Error('Firebase database URL must use HTTPS protocol');
+          }
+          
+          // Check if hostname follows Firebase Realtime Database pattern
+          if (!parsedUrl.hostname.includes('firebaseio.com')) {
+            console.error('[Firebase] CRITICAL: Database URL hostname should contain firebaseio.com');
+            throw new Error('Firebase database URL hostname should contain firebaseio.com');
+          }
+          
+          console.log('[Firebase] Database URL format is valid');
+        } catch (urlError) {
+          console.error('[Firebase] CRITICAL: Database URL is invalid:', urlError);
+          throw new Error('Firebase database URL is invalid. It should be in the format https://[project-id]-[hash]-rtdb.firebaseio.com');
+        }
+        
+        // Explicitly pass the databaseURL to ensure it's properly configured
+        firebaseDatabase = getDatabase(firebaseApp);
+        
+        // Verify database connection
+        console.log('[Firebase] Realtime Database initialized successfully');
+        
+        // Add a test connection to verify database is working
+        if (typeof window !== 'undefined') {
+          try {
+            // Use .info/serverTimeOffset instead of .info/connected for initial test
+            // This is more reliable for testing actual data access
+            const testRef = ref(firebaseDatabase, '.info/serverTimeOffset');
+            onValue(testRef, (snapshot) => {
+              if (snapshot.exists()) {
+                const offset = snapshot.val();
+                console.log('[Firebase] Realtime Database connection verified with server time offset:', offset);
+              } else {
+                console.warn('[Firebase] Realtime Database connection test returned no data');
+              }
+            }, { onlyOnce: true });
+            
+            // Also set up the connected listener for ongoing connection status
+            const connectedRef = ref(firebaseDatabase, '.info/connected');
+            onValue(connectedRef, (snapshot) => {
+              const connected = snapshot.val();
+              console.log('[Firebase] Realtime Database connection status:', connected ? 'connected' : 'disconnected');
+            });
+          } catch (connError) {
+            console.error('[Firebase] Error testing database connection:', connError);
+            // Log more details about the error
+            console.error('[Firebase] Database connection error details:', {
+              message: connError instanceof Error ? connError.message : 'Unknown error',
+              name: connError instanceof Error ? connError.name : 'Unknown error type',
+              stack: connError instanceof Error ? connError.stack : 'No stack trace'
+            });
+          }
+        }
+      } catch (rtdbError) {
+        console.error('[Firebase] Failed to initialize Realtime Database:', rtdbError);
+        console.error('[Firebase] Realtime Database error details:', {
+          message: rtdbError instanceof Error ? rtdbError.message : 'Unknown error',
+          name: rtdbError instanceof Error ? rtdbError.name : 'Unknown error type',
+          stack: rtdbError instanceof Error ? rtdbError.stack : 'No stack trace'
+        });
+        throw new Error('Realtime Database service initialization failed');
+      }
+
+      // Only initialize storage in browser environment
+      if (typeof window !== 'undefined') {
+        try {
+          firebaseStorage = getStorage(firebaseApp);
+          console.log('[Firebase] Storage initialized successfully');
+        } catch (storageError) {
+          console.error('[Firebase] Failed to initialize Storage:', storageError);
+          // Non-critical, continue without storage
+        }
+      }
+
+      // Set persistence only in browser environment
+      if (typeof window !== 'undefined' && firebaseAuth) {
+        setPersistence(firebaseAuth, browserLocalPersistence)
+          .then(() => {
+            console.log('[Firebase] Auth persistence set to LOCAL');
+          })
+          .catch(error => {
+            console.error('[Firebase] Error setting auth persistence:', error);
+            // Non-critical, continue without persistence
+          });
+      }
+
+      // Enable Firestore persistence for offline support
+      if (typeof window !== 'undefined' && firebaseDb) {
+        enableIndexedDbPersistence(firebaseDb)
+          .then(() => {
+            console.log('[Firebase] Firestore persistence enabled');
+          })
+          .catch((err) => {
+            console.warn('[Firebase] Firestore persistence could not be enabled:', err.code);
+          });
+      }
+
+      isInitialized = true;
+      console.log('[Firebase] Services initialized successfully');
+
+      const services = {
+        app: firebaseApp,
+        auth: firebaseAuth,
+        db: firebaseDb,
+        storage: firebaseStorage,
+        database: firebaseDatabase
+      };
+
+      resolve(services);
+      return services;
+    } catch (error) {
+      console.error('[Firebase] Error initializing Firebase:', error);
+      
+      // Provide more helpful error messages based on the error
+      if (error instanceof Error) {
+        if (error.message.includes('API key')) {
+          console.error('[Firebase] API key is invalid or missing');
+        } else if (error.message.includes('project')) {
+          console.error('[Firebase] Project ID is invalid or missing');
+        } else if (error.message.includes('network')) {
+          console.error('[Firebase] Network error while initializing Firebase - check your internet connection');
+        }
+      }
+      
+      // Return a partially initialized object to prevent complete app failure
+      const services = { 
+        app: firebaseApp, 
+        auth: firebaseAuth, 
+        db: firebaseDb, 
+        storage: firebaseStorage, 
+        database: firebaseDatabase,
+        initializationError: error
+      };
+      
+      resolve(services);
+      return services;
+    }
+  });
+
+  return initializationPromise;
 }
 
-// Initialize Firebase on module load
-let services: ReturnType<typeof initializeFirebase>;
+/**
+ * Get Firebase services
+ * Initializes Firebase if not already initialized
+ */
+export function getFirebaseServices() {
+  if (isInitialized && firebaseApp && firebaseDb) {
+    return {
+      app: firebaseApp,
+      auth: firebaseAuth,
+      db: firebaseDb,
+      storage: firebaseStorage,
+      database: firebaseDatabase
+    };
+  }
+  
+  // If initialization is in progress, return a promise that resolves to the services
+  if (initializationPromise) {
+    return initializationPromise;
+  }
+  
+  // Otherwise, initialize Firebase
+  return initializeFirebase();
+}
 
-// Initialize Firebase services with retry mechanism
+// Initialize Firebase on module load if in browser environment
 if (typeof window !== 'undefined') {
   // Add a global error handler for unhandled Firebase errors
   window.addEventListener('unhandledrejection', (event) => {
@@ -266,159 +337,8 @@ if (typeof window !== 'undefined') {
     }
   });
   
-  const initializeWithRetry = async (maxRetries = 3, delay = 1500) => {
-    let lastError = null;
-    
-    for (let attempt = 0; attempt < maxRetries; attempt++) {
-      try {
-        console.log(`[Firebase] Initialization attempt ${attempt + 1}/${maxRetries}`);
-        const initializedServices = initializeFirebase();
-        
-        // Verify that critical services are available
-        if (initializedServices.app && initializedServices.db) {
-          console.log('[Firebase] Services initialized successfully on attempt', attempt + 1);
-          return initializedServices;
-        } else {
-          console.warn('[Firebase] Incomplete initialization, missing critical services');
-          // Wait before retrying
-          if (attempt < maxRetries - 1) {
-            await new Promise(resolve => setTimeout(resolve, delay));
-          }
-        }
-      } catch (error) {
-        lastError = error;
-        console.error(`[Firebase] Initialization attempt ${attempt + 1} failed:`, error);
-        
-        // Wait before retrying
-        if (attempt < maxRetries - 1) {
-          await new Promise(resolve => setTimeout(resolve, delay));
-        }
-      }
-    }
-    
-    console.error(`[Firebase] All ${maxRetries} initialization attempts failed`);
-    return { 
-      app: null, 
-      auth: null, 
-      db: null, 
-      storage: null, 
-      database: null,
-      initializationError: lastError
-    };
-  };
-
-  // Initialize immediately but with retry capability
-  try {
-    services = initializeFirebase();
-    
-    // If initial attempt failed or is incomplete, retry in the background
-    if (!services.app || !services.db) {
-      console.warn('[Firebase] Initial initialization incomplete, scheduling background retry');
-      
-      // Schedule a background retry that will update the services object
-      setTimeout(async () => {
-        try {
-          const retryServices = await initializeWithRetry(3, 2000);
-          
-          // Update the services with retry results if better than what we have
-          if (retryServices.app && retryServices.db && (!services.app || !services.db)) {
-            console.log('[Firebase] Background retry succeeded, updating services');
-            Object.assign(services, retryServices);
-          }
-        } catch (retryError) {
-          console.error('[Firebase] Background retry failed:', retryError);
-        }
-      }, 1000);
-    } else {
-      console.log('[Firebase] Services initialized successfully on first attempt');
-    }
-  } catch (error) {
-    console.error('[Firebase] Initial initialization failed:', error);
-    services = { 
-      app: null, 
-      auth: null, 
-      db: null, 
-      storage: null, 
-      database: null,
-      initializationError: error
-    };
-    
-    // Schedule a background retry
-    setTimeout(async () => {
-      try {
-        const retryServices = await initializeWithRetry(3, 2000);
-        Object.assign(services, retryServices);
-      } catch (retryError) {
-        console.error('[Firebase] Background retry failed:', retryError);
-      }
-    }, 1000);
-  }
-} else {
-  // Server-side initialization with empty services
-  services = { 
-    app: null, 
-    auth: null, 
-    db: null, 
-    storage: null, 
-    database: null
-  };
-}
-
-// Export initialized services
-export const app = services.app;
-export const auth = services.auth;
-export const db = services.db;
-export const storage = services.storage;
-export const database = services.database;
-
-// Aliases for backward compatibility
-export const firebaseApp = app;
-export const firebaseAuth = auth;
-export const firebaseDb = db;
-export const firebaseStorage = storage;
-export const firebaseDatabase = database;
-
-// Singleton pattern for Firebase services
-let servicesInstance = null;
-
-// Helper function to get Firebase services with better error handling
-export function getFirebaseServices() {
-  // Return cached instance if available
-  if (servicesInstance && servicesInstance.app && servicesInstance.db) {
-    return servicesInstance;
-  }
-  
-  // Check if services are initialized
-  if (app && auth && db) {
-    servicesInstance = services;
-    return services;
-  }
-  
-  // If we're in the browser, try to reinitialize
-  if (typeof window !== 'undefined') {
-    console.warn('[Firebase] Services not fully initialized when requested, attempting to reinitialize');
-    
-    try {
-      // Try to initialize again
-      const reinitialized = initializeFirebase();
-      
-      // If we got valid services, update the global services object
-      if (reinitialized.app && reinitialized.auth && reinitialized.db) {
-        console.log('[Firebase] Reinitialization successful');
-        Object.assign(services, reinitialized);
-        servicesInstance = services;
-        return services;
-      } else {
-        console.error('[Firebase] Reinitialization failed to produce valid services');
-      }
-    } catch (error) {
-      console.error('[Firebase] Error during reinitialization:', error);
-    }
-  }
-  
-  // Return the services even if incomplete - the calling code should handle null values
-  console.warn('[Firebase] Returning potentially incomplete services');
-  return services;
+  // Initialize Firebase immediately
+  initializeFirebase();
 }
 
 // Connection manager for Firestore and Realtime Database
@@ -449,6 +369,7 @@ class FirebaseConnectionManager {
       this.isOnline = navigator.onLine;
       
       // Setup connection monitoring for Realtime Database
+      const { database } = getFirebaseServices();
       if (database) {
         try {
           const connectedRef = ref(database, '.info/connected');
@@ -488,6 +409,7 @@ class FirebaseConnectionManager {
     if (!this.isOnline || this.isReconnecting) return;
     
     // If we have database, check connection status
+    const { database } = getFirebaseServices();
     if (database) {
       try {
         const connectedRef = ref(database, '.info/connected');
@@ -524,9 +446,10 @@ class FirebaseConnectionManager {
     this.isOnline = false;
     
     // Disable Firestore network to prevent unnecessary retries
+    const { db } = getFirebaseServices();
     if (db) {
       try {
-        disableNetwork(db).then(() => {
+        disableFirestoreNetwork(db).then(() => {
           console.log('[Firebase] Firestore network disabled due to offline status');
         }).catch(error => {
           console.error('[Firebase] Error disabling Firestore network:', error);
@@ -609,16 +532,17 @@ class FirebaseConnectionManager {
     
     try {
       // First disable the network to reset any hanging connections
+      const { db } = getFirebaseServices();
       if (db) {
         try {
-          await disableNetwork(db);
+          await disableFirestoreNetwork(db);
           console.log('[Firebase] Firestore network disabled for reconnection');
           
           // Short delay to ensure disconnection is complete
           await new Promise(resolve => setTimeout(resolve, 1000));
           
           // Then re-enable the network
-          await enableNetwork(db);
+          await enableFirestoreNetwork(db);
           console.log('[Firebase] Firestore network re-enabled');
           
           // Reset error counters on successful reconnect
@@ -683,5 +607,171 @@ class FirebaseConnectionManager {
 export const connectionManager = typeof window !== 'undefined' ? new FirebaseConnectionManager() : null;
 
 // Export network control functions
-export const disableNetwork = (firestore: Firestore) => disableFirestoreNetwork(firestore);
-export const enableNetwork = (firestore: Firestore) => enableFirestoreNetwork(firestore);
+export const disableNetwork = disableFirestoreNetwork;
+export const enableNetwork = enableFirestoreNetwork;
+
+// Listener registry
+interface ListenerEntry {
+  id: string;
+  unsubscribe: Unsubscribe;
+  timestamp: number;
+  path: string;
+}
+
+const activeListeners: Map<string, ListenerEntry> = new Map();
+
+/**
+ * Register a Firestore listener with automatic cleanup
+ */
+export function registerListener<T>(
+  id: string,
+  ref: DocumentReference<T> | CollectionReference<T> | Query<T>,
+  callback: (data: any) => void,
+  errorCallback?: (error: Error) => void
+): Unsubscribe {
+  // Remove existing listener with the same ID if it exists
+  if (activeListeners.has(id)) {
+    console.log(`[Firebase] Removing existing listener with ID: ${id}`);
+    removeListener(id);
+  }
+
+  // Create new listener
+  const unsubscribe = onSnapshot(
+    ref,
+    (snapshot) => {
+      try {
+        callback(snapshot);
+      } catch (error) {
+        console.error(`[Firebase] Error in listener callback (${id}):`, error);
+        if (errorCallback) errorCallback(error as Error);
+      }
+    },
+    (error) => {
+      console.error(`[Firebase] Error in Firestore listener (${id}):`, error);
+      if (errorCallback) errorCallback(error);
+    }
+  );
+
+  // Store listener in registry
+  const path = ref.path || (ref as any)._query?.path || "unknown-path";
+  activeListeners.set(id, {
+    id,
+    unsubscribe,
+    timestamp: Date.now(),
+    path
+  });
+
+  console.log(`[Firebase] Registered Firestore listener: ${id} for path: ${path}`);
+  console.log(`[Firebase] Active listeners count: ${activeListeners.size}`);
+
+  return unsubscribe;
+}
+
+/**
+ * Remove a specific listener by ID
+ */
+export function removeListener(id: string): boolean {
+  const listener = activeListeners.get(id);
+  if (listener) {
+    try {
+      listener.unsubscribe();
+      activeListeners.delete(id);
+      console.log(`[Firebase] Removed Firestore listener: ${id}`);
+      return true;
+    } catch (error) {
+      console.error(`[Firebase] Error removing listener ${id}:`, error);
+      // Still remove from registry even if unsubscribe fails
+      activeListeners.delete(id);
+      return false;
+    }
+  }
+  return false;
+}
+
+/**
+ * Remove all listeners for a specific prefix
+ */
+export function removeListenersByPrefix(prefix: string): number {
+  let count = 0;
+
+  for (const [id, listener] of activeListeners.entries()) {
+    if (id.startsWith(prefix)) {
+      try {
+        listener.unsubscribe();
+        activeListeners.delete(id);
+        count++;
+      } catch (error) {
+        console.error(`[Firebase] Error removing listener ${id}:`, error);
+        activeListeners.delete(id);
+      }
+    }
+  }
+
+  if (count > 0) {
+    console.log(`[Firebase] Removed ${count} listeners with prefix: ${prefix}`);
+  }
+
+  return count;
+}
+
+/**
+ * Remove all active listeners
+ */
+export function removeAllListeners(): number {
+  let count = 0;
+
+  for (const [id, listener] of activeListeners.entries()) {
+    try {
+      listener.unsubscribe();
+      count++;
+    } catch (error) {
+      console.error(`[Firebase] Error removing listener ${id}:`, error);
+    }
+  }
+
+  activeListeners.clear();
+  console.log(`[Firebase] Removed all ${count} Firestore listeners`);
+
+  return count;
+}
+
+/**
+ * Get the count of active listeners
+ */
+export function getActiveListenersCount(): number {
+  return activeListeners.size;
+}
+
+/**
+ * Clean up old listeners that might have been forgotten
+ */
+export function cleanupStaleListeners(maxAgeMs: number = 3600000): number {
+  const now = Date.now();
+  let count = 0;
+
+  for (const [id, listener] of activeListeners.entries()) {
+    if (now - listener.timestamp > maxAgeMs) {
+      try {
+        listener.unsubscribe();
+        activeListeners.delete(id);
+        count++;
+      } catch (error) {
+        console.error(`[Firebase] Error removing stale listener ${id}:`, error);
+        activeListeners.delete(id);
+      }
+    }
+  }
+
+  if (count > 0) {
+    console.log(`[Firebase] Cleaned up ${count} stale listeners`);
+  }
+
+  return count;
+}
+
+// Automatically clean up stale listeners every hour if in browser environment
+if (typeof window !== 'undefined') {
+  setInterval(() => {
+    cleanupStaleListeners();
+  }, 3600000); // 1 hour
+}
