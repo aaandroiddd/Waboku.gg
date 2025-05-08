@@ -159,9 +159,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     
     // Enhanced function to refresh token periodically with improved error handling and rate limiting
     const setupTokenRefresh = (user: User) => {
-      // Calculate when to refresh the token (every 30 minutes to be safe)
+      // Calculate when to refresh the token (every 45 minutes to be safe)
       // Firebase tokens expire after 60 minutes
-      const refreshInterval = 30 * 60 * 1000; // 30 minutes - increased from 20 to reduce refresh frequency
+      const refreshInterval = 45 * 60 * 1000; // 45 minutes - increased from 30 to further reduce refresh frequency
       
       // Set up interval to refresh token
       const intervalId = setInterval(async () => {

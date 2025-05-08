@@ -1,6 +1,6 @@
 import { User } from 'firebase/auth';
 
-import { shouldAllowTokenRefresh, recordTokenRefresh } from './auth-rate-limiter';
+import { shouldAllowTokenRefresh, recordTokenRefresh, recordQuotaExceededError } from './auth-rate-limiter';
 
 // Enhanced token refresh mechanism with better error handling and retry logic
 export async function refreshAuthToken(user: User | null): Promise<string | null> {
@@ -45,8 +45,18 @@ export async function refreshAuthToken(user: User | null): Promise<string | null
     } catch (error) {
       console.error(`Token refresh error (attempt ${retryCount + 1}/${maxRetries}):`, error);
       
-      // Check if this is a network error or a Firebase Auth error
+      // Check for quota exceeded error
       const errorMessage = error.message || '';
+      if (errorMessage.includes('QUOTA_EXCEEDED') || 
+          (error.code === 400 && errorMessage.includes('QUOTA_EXCEEDED'))) {
+        console.error('Firebase Auth quota exceeded error detected in refreshAuthToken');
+        // Record the quota exceeded error to trigger circuit breaker
+        recordQuotaExceededError();
+        // Return null immediately, don't retry
+        return null;
+      }
+      
+      // Check if this is a network error or a Firebase Auth error
       const isNetworkError = errorMessage.includes('network') || 
                              errorMessage.includes('timeout') || 
                              errorMessage.includes('connection');
@@ -403,6 +413,16 @@ export async function getAuthToken(forceRefresh: boolean = false): Promise<strin
       } catch (tokenError: any) {
         attempts++;
         console.warn(`Token fetch attempt ${attempts} failed:`, tokenError.message);
+        
+        // Check for quota exceeded error
+        if (tokenError.message?.includes('QUOTA_EXCEEDED') || 
+            (tokenError.code === 400 && tokenError.message?.includes('QUOTA_EXCEEDED'))) {
+          console.error('Firebase Auth quota exceeded error detected');
+          // Record the quota exceeded error to trigger circuit breaker
+          recordQuotaExceededError();
+          // Return null immediately, don't retry
+          return null;
+        }
         
         // If this is a network error or timeout, wait and retry
         const isNetworkError = tokenError.code === 'auth/network-request-failed' || 
