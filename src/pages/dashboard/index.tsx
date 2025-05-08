@@ -23,7 +23,7 @@ import { DeleteListingDialog } from "@/components/DeleteListingDialog";
 import { ListingsSearchBar } from "@/components/ListingsSearchBar";
 import { WantedPostsSection } from "@/components/dashboard/WantedPostsSection";
 import { WantedPostsDebugger } from "@/components/dashboard/WantedPostsDebugger";
-import { useListings } from '@/hooks/useListings';
+import { useOptimizedListings } from '@/hooks/useOptimizedListings';
 import { useProfile } from '@/hooks/useProfile';
 import { useListingVisibility } from '@/hooks/useListingVisibility';
 import { Listing } from '@/types/database';
@@ -132,7 +132,7 @@ const DashboardComponent = () => {
   const [error, setError] = useState<string | null>(null);
   
   // Use cached listings if available, otherwise fetch from API
-  const { listings: fetchedListings, setListings, loading: listingsLoading, error: listingsError, refreshListings, updateListingStatus, permanentlyDeleteListing } = useListings({ 
+  const { listings: fetchedListings, setListings, loading: listingsLoading, error: listingsError, refreshListings, updateListingStatus, permanentlyDeleteListing } = useOptimizedListings({ 
     userId: user?.uid,
     showOnlyActive: false,
     skipInitialFetch: !!cachedListings // Skip initial fetch if we have cached data
