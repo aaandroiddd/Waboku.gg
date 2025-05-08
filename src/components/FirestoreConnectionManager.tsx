@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { getDb, enableNetwork, disableNetwork, removeAllListeners } from '@/lib/firebase';
+import { getFirebaseServices, enableNetwork, disableNetwork, removeAllListeners } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/router';
 import { cleanupAllListeners } from '@/hooks/useFirestoreListenerCleanup';
@@ -97,7 +97,7 @@ export function FirestoreConnectionManager() {
     if (typeof window === 'undefined') return;
     
     // Skip if Firestore is not initialized
-    const db = getDb();
+    const { db } = getFirebaseServices();
     if (!db) return;
     
     const manageFirestoreConnection = async () => {
