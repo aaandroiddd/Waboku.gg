@@ -1,7 +1,8 @@
 import { useEffect, useState, useCallback } from 'react';
-import { getDb, enableNetwork, disableNetwork } from '@/lib/firebase-service';
+import { getDb, enableNetwork, disableNetwork, removeAllListeners } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/router';
+import { cleanupAllListeners } from '@/hooks/useFirestoreListenerCleanup';
 
 // Pages that need active Firestore connections
 const PAGES_REQUIRING_FIRESTORE = [
@@ -150,6 +151,11 @@ export function FirestoreConnectionManager() {
             await new Promise(resolve => setTimeout(resolve, 500));
             
             try {
+              // First clean up all listeners to prevent them from reconnecting
+              removeAllListeners();
+              cleanupAllListeners();
+              
+              // Then disable the network
               await disableNetwork();
               setIsFirestoreEnabled(false);
               setLastOperationTime(Date.now());

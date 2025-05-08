@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { getActiveListenersCount } from '@/lib/firebase-service';
+import { getActiveListenersCount } from '@/lib/firebase';
 import { Badge } from '@/components/ui/badge';
 
 export function FirestoreListenerDebugger() {

@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react';
 import { 
   getFirebaseServices, 
   enableNetwork, 
-  disableNetwork 
-} from '@/lib/firebase-service';
+  disableNetwork,
+  removeAllListeners
+} from '@/lib/firebase';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { RefreshCw, WifiOff } from 'lucide-react';
@@ -64,7 +65,10 @@ export function FirebaseConnectionManager() {
     setReconnectAttempts(prev => prev + 1);
     
     try {
-      // First disable network to reset connections
+      // First clean up all listeners
+      removeAllListeners();
+      
+      // Then disable network to reset connections
       await disableNetwork();
       
       // Wait a moment

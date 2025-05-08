@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { initializeFirebaseServices } from '@/lib/firebase';
+import { getFirebaseServices } from '@/lib/firebase';
 
 interface FirebaseConnectionHandlerProps {
   children?: React.ReactNode;
@@ -10,7 +10,8 @@ export function FirebaseConnectionHandler({ children }: FirebaseConnectionHandle
   useEffect(() => {
     const initFirebase = async () => {
       try {
-        await initializeFirebaseServices();
+        // Use getFirebaseServices instead of initializeFirebaseServices
+        await getFirebaseServices();
       } catch (error) {
         console.error("Firebase initialization error:", error);
         // Silently handle errors - no UI feedback
