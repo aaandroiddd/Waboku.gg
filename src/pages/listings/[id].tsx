@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { OptimizedSimilarListings } from '@/components/OptimizedSimilarListings';
 import { OwnerListings } from '@/components/OwnerListings';
 import { useListingPageCleanup } from '@/hooks/useFirestoreListener';
+import { registerListener } from '@/lib/firebase-service';
 
 // Add global type definition for the transform instances and cache
 declare global {
@@ -501,9 +502,6 @@ export default function ListingPage() {
           
           // Create a unique ID for this specific listener
           const listenerId = `listing-realtime-${id}`;
-          
-          // Import the registerListener function from our new firebase-service
-          import { registerListener } from '@/lib/firebase-service';
           
           // Register the listener with our centralized service
           registerListener(listenerId, listingRef, (doc) => {

@@ -1,12 +1,12 @@
 import { initializeApp, getApps, FirebaseApp } from 'firebase/app';
-import { 
-  getAuth, 
-  setPersistence, 
-  browserLocalPersistence, 
-  Auth 
+import {
+  getAuth as firebaseGetAuth,
+  setPersistence,
+  browserLocalPersistence,
+  Auth
 } from 'firebase/auth';
-import { 
-  getFirestore, 
+import {
+  getFirestore,
   Firestore,
   enableIndexedDbPersistence,
   disableNetwork as disableFirestoreNetwork,
@@ -17,8 +17,8 @@ import {
   CollectionReference,
   Query
 } from 'firebase/firestore';
-import { getStorage, FirebaseStorage } from 'firebase/storage';
-import { getDatabase, Database, ref, onValue } from 'firebase/database';
+import { getStorage as firebaseGetStorage, FirebaseStorage } from 'firebase/storage';
+import { getDatabase as firebaseGetDatabase, Database, ref, onValue } from 'firebase/database';
 
 // Firebase configuration
 const firebaseConfig = {
@@ -75,18 +75,18 @@ export function initializeFirebaseServices() {
     }
 
     // Initialize services
-    firebaseAuth = getAuth(firebaseApp);
+    firebaseAuth = firebaseGetAuth(firebaseApp);
     firebaseDb = getFirestore(firebaseApp);
-    
+
     // Only initialize storage in browser environment
     if (typeof window !== 'undefined') {
-      firebaseStorage = getStorage(firebaseApp);
+      firebaseStorage = firebaseGetStorage(firebaseApp);
     }
 
     // Initialize Realtime Database if URL is provided
     if (firebaseConfig.databaseURL) {
-      firebaseDatabase = getDatabase(firebaseApp);
-      
+      firebaseDatabase = firebaseGetDatabase(firebaseApp);
+
       // Test database connection
       if (typeof window !== 'undefined') {
         const testRef = ref(firebaseDatabase, '.info/serverTimeOffset');
@@ -119,7 +119,7 @@ export function initializeFirebaseServices() {
     }
 
     console.log('[Firebase] Services initialized successfully');
-    
+
     return {
       app: firebaseApp,
       auth: firebaseAuth,
@@ -141,7 +141,7 @@ export function getFirebaseServices() {
   if (!firebaseApp || !firebaseDb) {
     return initializeFirebaseServices();
   }
-  
+
   return {
     app: firebaseApp,
     auth: firebaseAuth,
@@ -194,7 +194,7 @@ export function registerListener<T>(
 
   console.log(`[Firebase] Registered Firestore listener: ${id} for path: ${path}`);
   console.log(`[Firebase] Active listeners count: ${activeListeners.size}`);
-  
+
   return unsubscribe;
 }
 
@@ -224,7 +224,7 @@ export function removeListener(id: string): boolean {
  */
 export function removeListenersByPrefix(prefix: string): number {
   let count = 0;
-  
+
   for (const [id, listener] of activeListeners.entries()) {
     if (id.startsWith(prefix)) {
       try {
@@ -237,11 +237,11 @@ export function removeListenersByPrefix(prefix: string): number {
       }
     }
   }
-  
+
   if (count > 0) {
     console.log(`[Firebase] Removed ${count} listeners with prefix: ${prefix}`);
   }
-  
+
   return count;
 }
 
@@ -250,7 +250,7 @@ export function removeListenersByPrefix(prefix: string): number {
  */
 export function removeAllListeners(): number {
   let count = 0;
-  
+
   for (const [id, listener] of activeListeners.entries()) {
     try {
       listener.unsubscribe();
@@ -259,10 +259,10 @@ export function removeAllListeners(): number {
       console.error(`[Firebase] Error removing listener ${id}:`, error);
     }
   }
-  
+
   activeListeners.clear();
   console.log(`[Firebase] Removed all ${count} Firestore listeners`);
-  
+
   return count;
 }
 
@@ -279,7 +279,7 @@ export function getActiveListenersCount(): number {
 export function cleanupStaleListeners(maxAgeMs: number = 3600000): number {
   const now = Date.now();
   let count = 0;
-  
+
   for (const [id, listener] of activeListeners.entries()) {
     if (now - listener.timestamp > maxAgeMs) {
       try {
@@ -292,11 +292,11 @@ export function cleanupStaleListeners(maxAgeMs: number = 3600000): number {
       }
     }
   }
-  
+
   if (count > 0) {
     console.log(`[Firebase] Cleaned up ${count} stale listeners`);
   }
-  
+
   return count;
 }
 
@@ -342,5 +342,5 @@ if (typeof window !== 'undefined') {
 export const getApp = () => firebaseApp;
 export const getDb = () => firebaseDb;
 export const getAuth = () => firebaseAuth;
-export const getStorage = () => firebaseStorage;
-export const getDatabase = () => firebaseDatabase;
+export const getFirebaseStorage = () => firebaseStorage;
+export const getFirebaseDatabase = () => firebaseDatabase;
