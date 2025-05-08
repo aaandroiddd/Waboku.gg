@@ -21,6 +21,7 @@ import { FirestoreConnectionManager } from '@/components/FirestoreConnectionMana
 import { FirestoreListenerDebugger } from '@/components/FirestoreListenerDebugger';
 import { getFirebaseServices } from '@/lib/firebase';
 import { useCallback } from 'react';
+import { useThemeSync } from '@/hooks/useThemeSync';
 
 const LoadingScreen = dynamic(() => import('@/components/LoadingScreen').then(mod => ({ default: mod.LoadingScreen })), {
   ssr: false
@@ -47,8 +48,10 @@ const MainContent = memo(({ Component, pageProps, pathname }: {
   const auth = useAuth();
   const account = useAccount();
   const { isLoading } = useLoading();
-  const { useThemeSync } = require('@/hooks/useThemeSync');
   const [isMounted, setIsMounted] = useState(false);
+  
+  // Use the imported hook directly
+  useThemeSync();
 
   // Set mounted state on client-side and initialize Firebase
   useEffect(() => {
@@ -62,9 +65,6 @@ const MainContent = memo(({ Component, pageProps, pathname }: {
   if (auth.isLoading || account.isLoading) {
     return <LoadingScreen isLoading={true} />;
   }
-
-  // Initialize theme sync
-  useThemeSync();
 
   // Determine if we're on mobile for simpler transitions
   const isMobile = isMounted && window.innerWidth < 768;

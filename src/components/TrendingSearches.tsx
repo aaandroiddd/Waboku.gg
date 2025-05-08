@@ -37,6 +37,7 @@ function TrendingSearchesContent() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [localTrending, setLocalTrending] = useState<Array<{term: string, count: number}>>([]);
+  const [fetchFailed, setFetchFailed] = useState(false);
   
   // Use local state as a fallback when API fails
   useEffect(() => {
@@ -98,10 +99,24 @@ function TrendingSearchesContent() {
     if (error) {
       console.error('TrendingSearches component encountered an error:', error);
       setErrorMessage(error);
+      setFetchFailed(true);
     } else {
       setErrorMessage(null);
+      setFetchFailed(false);
     }
   }, [error]);
+  
+  // Handle fetch errors gracefully
+  useEffect(() => {
+    // If we have local trending data but the fetch failed, use the local data
+    if (fetchFailed && localTrending.length > 0) {
+      console.log('Using cached trending data due to fetch failure');
+    }
+    // If we have no data at all, use default trending
+    else if (fetchFailed && trendingSearches.length === 0 && localTrending.length === 0) {
+      console.log('Using default trending data due to fetch failure');
+    }
+  }, [fetchFailed, localTrending.length, trendingSearches.length]);
 
   // Common container with fixed height to prevent layout shifts
   return (

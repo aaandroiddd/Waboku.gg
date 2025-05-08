@@ -66,9 +66,23 @@ export function useTrendingSearches() {
       // Use absolute URL with origin to avoid path resolution issues
       // Add a cache-busting parameter to prevent browser caching
       const timestamp = Date.now();
-      const apiUrl = typeof window !== 'undefined' 
-        ? `${window.location.origin}/api/trending-searches?_=${timestamp}` 
-        : `/api/trending-searches?_=${timestamp}`;
+      
+      // Use a more robust approach to construct the URL
+      let apiUrl;
+      try {
+        if (typeof window !== 'undefined') {
+          // In browser context
+          const baseUrl = window.location.origin;
+          apiUrl = `${baseUrl}/api/trending-searches?_=${timestamp}`;
+        } else {
+          // In server context (should not happen in this hook)
+          apiUrl = `/api/trending-searches?_=${timestamp}`;
+        }
+      } catch (error) {
+        console.error('[TrendingSearches] Error constructing API URL:', error);
+        // Fallback to a simple URL
+        apiUrl = `/api/trending-searches?_=${timestamp}`;
+      }
       
       console.log(`[TrendingSearches] Fetching from ${apiUrl}`);
       
