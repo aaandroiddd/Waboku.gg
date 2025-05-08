@@ -221,76 +221,7 @@ export default function AccountStatus() {
         description: "Canceling your subscription...",
       });
 
-      // Handle preview environment
-      if (process.env.NEXT_PUBLIC_CO_DEV_ENV === 'preview') {
-        try {
-          // Prepare cancellation data
-          const currentDate = new Date();
-          const endDate = new Date();
-          endDate.setDate(currentDate.getDate() + 30); // Set end date to 30 days from now
-          
-          // Update Realtime Database
-          const db = getDatabase();
-          
-          // Update account fields individually to avoid validation issues
-          await set(ref(db, `users/${user?.uid}/account/tier`), 'premium'); // Keep as premium until end date
-          await set(ref(db, `users/${user?.uid}/account/status`), 'active');
-          await set(ref(db, `users/${user?.uid}/account/lastUpdated`), Date.now());
-          
-          // Then update the subscription details
-          const userRef = ref(db, `users/${user?.uid}/account/subscription`);
-          
-          // Make sure we have all required fields to satisfy validation rules
-          await set(userRef, {
-            status: 'canceled',
-            startDate: subscription.startDate || currentDate.toISOString(),
-            endDate: endDate.toISOString(),
-            renewalDate: endDate.toISOString(), // Set renewal date to end date
-            stripeSubscriptionId: subscription.stripeSubscriptionId || 'preview-sub-canceled',
-            canceledAt: currentDate.toISOString(),
-            cancelAtPeriodEnd: true,
-            tier: 'premium' // Add tier information
-          });
-
-          // Also update Firestore for consistency
-          const firestore = getFirestore();
-          const userDocRef = doc(firestore, 'users', user?.uid);
-          await setDoc(userDocRef, {
-            accountTier: 'premium', // Keep as premium until end date
-            updatedAt: currentDate.toISOString(),
-            subscription: {
-              status: 'canceled',
-              stripeSubscriptionId: subscription.stripeSubscriptionId || 'preview-sub-canceled',
-              startDate: subscription.startDate || currentDate.toISOString(),
-              endDate: endDate.toISOString(),
-              renewalDate: endDate.toISOString(),
-              canceledAt: currentDate.toISOString(),
-              currentPlan: 'premium'
-            }
-          }, { merge: true });
-          
-          console.log('Preview mode: Updated subscription cancellation in both databases');
-
-          toast({
-            title: "Subscription Canceled",
-            description: `Your premium features will remain active until ${endDate.toLocaleDateString()}.`,
-          });
-
-          // Refresh the page after a short delay to show updated status
-          setTimeout(() => {
-            window.location.reload();
-          }, 2000);
-          
-          return;
-        } catch (previewError: any) {
-          console.error('Preview mode update failed:', previewError);
-          
-          // If direct database update fails, fall back to API call
-          console.log('Falling back to API call for preview environment');
-        }
-      }
-
-      // Production flow
+      // For both preview and production, use the API to ensure proper handling
       if (!subscription.stripeSubscriptionId) {
         throw new Error('No active subscription ID found');
       }
@@ -302,7 +233,7 @@ export default function AccountStatus() {
       // Get a fresh token
       const idToken = await user.getIdToken(true);
 
-      // Make direct API call with all required data
+      // Make API call with all required data
       const response = await fetch('/api/stripe/cancel-subscription', {
         method: 'POST',
         headers: {
@@ -311,7 +242,8 @@ export default function AccountStatus() {
         },
         body: JSON.stringify({
           subscriptionId: subscription.stripeSubscriptionId,
-          userId: user.uid
+          userId: user.uid,
+          isPreview: process.env.NEXT_PUBLIC_CO_DEV_ENV === 'preview'
         })
       });
 

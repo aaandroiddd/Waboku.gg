@@ -44,6 +44,42 @@
           "lastUpdated": {
             ".validate": "newData.isNumber() && newData.val() <= now"
           },
+          "subscription": {
+            ".validate": "true",
+            "status": {
+              ".validate": "newData.isString() && (newData.val() === 'active' || newData.val() === 'canceled' || newData.val() === 'none' || newData.val() === 'trialing' || newData.val() === 'replaced')"
+            },
+            "stripeSubscriptionId": {
+              ".validate": "!newData.exists() || newData.isString()"
+            },
+            "startDate": {
+              ".validate": "!newData.exists() || newData.isString()"
+            },
+            "endDate": {
+              ".validate": "!newData.exists() || newData.isString()"
+            },
+            "renewalDate": {
+              ".validate": "!newData.exists() || newData.isString()"
+            },
+            "canceledAt": {
+              ".validate": "!newData.exists() || newData.isString()"
+            },
+            "cancelAtPeriodEnd": {
+              ".validate": "!newData.exists() || newData.isBoolean()"
+            },
+            "tier": {
+              ".validate": "!newData.exists() || newData.isString()"
+            },
+            "currentPeriodEnd": {
+              ".validate": "!newData.exists() || newData.isNumber()"
+            },
+            "lastUpdated": {
+              ".validate": "!newData.exists() || newData.isNumber()"
+            },
+            "$other": {
+              ".validate": "true"
+            }
+          },
           "$other": {
             ".validate": false
           }

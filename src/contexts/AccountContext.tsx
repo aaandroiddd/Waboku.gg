@@ -360,24 +360,44 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
       
       // Special handling for preview environment
       if (process.env.NEXT_PUBLIC_CO_DEV_ENV === 'preview') {
-        console.log('Preview environment detected, using direct database update');
+        console.log('Preview environment detected, using API for database update');
         
-        // For preview environment, we'll update the local state directly
-        // The actual database update will be handled in the account-status.tsx page
-        const endDate = new Date();
-        endDate.setDate(endDate.getDate() + 30); // 30 days from now
+        // Even in preview mode, use the API to ensure proper database updates
+        const idToken = await user.getIdToken(true); // Force token refresh
+        const response = await fetch('/api/stripe/cancel-subscription', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${idToken}`
+          },
+          body: JSON.stringify({
+            subscriptionId: subscription.stripeSubscriptionId,
+            userId: user.uid,
+            isPreview: true
+          })
+        });
+
+        const data = await response.json();
         
+        if (!response.ok) {
+          console.error('Preview subscription cancellation API error:', data);
+          throw new Error(data.message || data.error || 'Failed to cancel subscription');
+        }
+
+        console.log('Preview subscription cancellation successful:', data);
+        
+        // Update local state with the new subscription status
         setSubscription(prev => ({
           ...prev,
           status: 'canceled',
-          endDate: endDate.toISOString(),
-          renewalDate: endDate.toISOString()
+          endDate: data.endDate,
+          renewalDate: data.endDate
         }));
         
         return {
           success: true,
           message: 'Subscription will be canceled at the end of the billing period',
-          endDate: endDate.toISOString(),
+          endDate: data.endDate,
           status: 'canceled',
           isPreview: true
         };

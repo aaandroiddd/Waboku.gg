@@ -46,7 +46,7 @@ export default async function handler(
   }
 
   try {
-    let { subscriptionId, userId } = req.body;
+    let { subscriptionId, userId, isPreview } = req.body;
 
     // Try to get userId from Authorization header if not provided in the request body
     if (!userId && req.headers.authorization) {
@@ -71,7 +71,7 @@ export default async function handler(
     }
 
     // Check for preview environment
-    const isPreview = process.env.NEXT_PUBLIC_CO_DEV_ENV === 'preview';
+    isPreview = isPreview || process.env.NEXT_PUBLIC_CO_DEV_ENV === 'preview';
     
     // Detailed request logging
     console.log(`[Cancel Subscription ${requestId}] Cancellation request received:`, {
