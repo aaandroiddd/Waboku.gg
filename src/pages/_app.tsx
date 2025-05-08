@@ -69,6 +69,19 @@ const MainContent = memo(({ Component, pageProps, pathname }: {
   // Determine if we're on mobile for simpler transitions
   const isMobile = isMounted && window.innerWidth < 768;
 
+  // Handle custom layout
+  const getLayoutContent = () => {
+    // Check if the component has a getLayout function
+    if (Component.getLayout) {
+      // Apply the custom layout
+      return Component.getLayout(<Component {...pageProps} />);
+    }
+    // Use default layout
+    return <Component {...pageProps} />;
+  };
+
+  const content = getLayoutContent();
+
   return (
     <>
       {/* Always show loading screen when isLoading is true */}
@@ -77,12 +90,12 @@ const MainContent = memo(({ Component, pageProps, pathname }: {
       {/* Use different transition approaches for mobile vs desktop */}
       {isMobile ? (
         <PageTransition key={pathname}>
-          {Component.getLayout ? Component.getLayout(<Component {...pageProps} />) : <Component {...pageProps} />}
+          {content}
         </PageTransition>
       ) : (
         <AnimatePresence mode="wait">
           <PageTransition key={pathname}>
-            {Component.getLayout ? Component.getLayout(<Component {...pageProps} />) : <Component {...pageProps} />}
+            {content}
           </PageTransition>
         </AnimatePresence>
       )}

@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/alert-dialog";
 
 export default function AccountStatus() {
+  // Move all hooks to the top of the component to ensure consistent hook calls
   const { accountTier, subscription = {}, cancelSubscription, isLoading, refreshAccountData } = useAccount();
   const { user } = useAuth();
   const router = useRouter();
@@ -681,6 +682,9 @@ export default function AccountStatus() {
   );
 }
 
+// Define a proper getLayout function that ensures consistent rendering
 AccountStatus.getLayout = function getLayout(page: React.ReactElement) {
+  // Return the page directly without wrapping it in DashboardLayout
+  // This is important because we want to use a custom layout for this page
   return page;
 };
