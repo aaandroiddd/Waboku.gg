@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { doc, getDoc } from 'firebase/firestore';
 import { ref, get } from 'firebase/database';
-import { firebaseDb, getFirebaseServices } from '@/lib/firebase';
+import { getFirebaseServices } from '@/lib/firebase';
 import { UserProfile } from '@/types/database';
 
 // Cache to store profiles across component instances
@@ -77,14 +77,20 @@ export function useProfile(userId: string | null) {
         }
       }
       
+      // Get Firestore instance from Firebase services
+      const { db } = getFirebaseServices();
+      if (!db) {
+        throw new Error('Firestore database is not initialized');
+      }
+      
       // First try to get the user document
-      const userDoc = await getDoc(doc(firebaseDb, 'users', id));
+      const userDoc = await getDoc(doc(db, 'users', id));
       let userData = userDoc.data();
       
       // Try to get the review stats for this user
       let userRating = null;
       try {
-        const reviewStatsDoc = await getDoc(doc(firebaseDb, 'reviewStats', id));
+        const reviewStatsDoc = await getDoc(doc(db, 'reviewStats', id));
         if (reviewStatsDoc.exists()) {
           const statsData = reviewStatsDoc.data();
           if (statsData && typeof statsData.averageRating === 'number') {

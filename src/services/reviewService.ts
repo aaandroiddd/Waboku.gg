@@ -10,10 +10,11 @@ import {
   updateDoc,
   serverTimestamp,
   limit,
-  Timestamp
+  Timestamp,
+  deleteDoc
 } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
-import { db } from '../lib/firebase';
+import { getFirebaseServices } from '../lib/firebase';
 
 // Utility function to safely convert Firestore timestamps to JavaScript Date objects
 const convertTimestamps = (data) => {
@@ -49,6 +50,11 @@ const convertTimestamps = (data) => {
  */
 export const fetchReviewsForSeller = async (sellerId, limitCount = 50) => {
   try {
+    const { db } = getFirebaseServices();
+    if (!db) {
+      throw new Error('Firestore database is not initialized');
+    }
+    
     const reviewsRef = collection(db, 'reviews');
     
     const q = query(
@@ -82,6 +88,11 @@ export const fetchReviewsForSeller = async (sellerId, limitCount = 50) => {
  */
 export const fetchReviewsByBuyer = async (buyerId, limitCount = 50) => {
   try {
+    const { db } = getFirebaseServices();
+    if (!db) {
+      throw new Error('Firestore database is not initialized');
+    }
+    
     const reviewsRef = collection(db, 'reviews');
     
     const q = query(
@@ -113,6 +124,11 @@ export const fetchReviewsByBuyer = async (buyerId, limitCount = 50) => {
  */
 export const getSellerReviewStats = async (sellerId) => {
   try {
+    const { db } = getFirebaseServices();
+    if (!db) {
+      throw new Error('Firestore database is not initialized');
+    }
+    
     const statsRef = doc(db, 'reviewStats', sellerId);
     const statsDoc = await getDoc(statsRef);
     
@@ -141,6 +157,11 @@ export const getSellerReviewStats = async (sellerId) => {
  */
 export const updateSellerReviewStats = async (sellerId) => {
   try {
+    const { db } = getFirebaseServices();
+    if (!db) {
+      throw new Error('Firestore database is not initialized');
+    }
+    
     // Get all published reviews for this seller
     const reviewsRef = collection(db, 'reviews');
     const q = query(
@@ -196,6 +217,11 @@ export const updateSellerReviewStats = async (sellerId) => {
  */
 export const submitReview = async (reviewData) => {
   try {
+    const { db } = getFirebaseServices();
+    if (!db) {
+      throw new Error('Firestore database is not initialized');
+    }
+    
     // Create a new review document in the main reviews collection
     const reviewsRef = collection(db, 'reviews');
     const newReviewRef = doc(reviewsRef);
@@ -244,6 +270,11 @@ export const submitReview = async (reviewData) => {
  */
 export const toggleReviewHelpful = async (reviewId) => {
   try {
+    const { db } = getFirebaseServices();
+    if (!db) {
+      throw new Error('Firestore database is not initialized');
+    }
+    
     // Get the current user
     const auth = getAuth();
     const currentUser = auth.currentUser;
@@ -348,6 +379,11 @@ export const markReviewAsHelpful = async (reviewId) => {
 export const addSellerResponse = async (reviewId, responseText) => {
   try {
     console.log('Adding seller response to review:', reviewId);
+    
+    const { db } = getFirebaseServices();
+    if (!db) {
+      throw new Error('Firestore database is not initialized');
+    }
     
     const reviewRef = doc(db, 'reviews', reviewId);
     const reviewDoc = await getDoc(reviewRef);
