@@ -259,6 +259,9 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
                   (subscriptionData.status === 'canceled' && endDate && endDate > now) ||
                   (subscriptionData.stripeSubscriptionId && startDate && startDate <= now && !subscriptionData.status) ||
                   
+                  // Regular subscription checks
+                  (subscriptionData.stripeSubscriptionId?.startsWith('sub_') && !subscriptionData.stripeSubscriptionId?.includes('admin_')) ||
+                  
                   // Admin-set premium status checks
                   (data.accountTier === 'premium' && subscriptionData.manuallyUpdated) ||
                   (subscriptionData.currentPlan === 'premium') || // Check for currentPlan set by admin
@@ -543,9 +546,15 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
         
         // Check if premium status is still valid
         const isActivePremium = (
+          // Stripe subscription checks
           subscriptionData.status === 'active' ||
           (subscriptionData.status === 'canceled' && endDate && endDate > now) ||
           (subscriptionData.stripeSubscriptionId && startDate && startDate <= now && !subscriptionData.status) ||
+          
+          // Regular subscription checks
+          (subscriptionData.stripeSubscriptionId?.startsWith('sub_') && !subscriptionData.stripeSubscriptionId?.includes('admin_')) ||
+          
+          // Admin-set premium status checks
           (data.accountTier === 'premium' && subscriptionData.manuallyUpdated) ||
           (subscriptionData.currentPlan === 'premium') ||
           (subscriptionData.stripeSubscriptionId?.includes('admin_')) ||

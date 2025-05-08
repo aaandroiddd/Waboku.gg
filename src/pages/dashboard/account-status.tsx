@@ -409,10 +409,16 @@ export default function AccountStatus() {
                 Your subscription renews automatically every 30 days.
               </p>
             )}
-            {accountTier === 'premium' && subscription.stripeSubscriptionId?.includes('admin_') && (
-              <p className="text-sm text-muted-foreground mt-2">
-                Your account has been upgraded to premium by an administrator.
-              </p>
+            {accountTier === 'premium' && (
+              subscription.stripeSubscriptionId?.includes('admin_') ? (
+                <p className="text-sm text-muted-foreground mt-2">
+                  Your account has been upgraded to premium by an administrator.
+                </p>
+              ) : subscription.status === 'active' ? (
+                <p className="text-sm text-muted-foreground mt-2">
+                  Your subscription renews automatically every 30 days.
+                </p>
+              ) : null
             )}
             {subscription.status === 'canceled' && subscription.endDate && (
               <div className="mt-4">

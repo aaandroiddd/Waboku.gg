@@ -139,7 +139,10 @@ export default async function handler(
           endDate: endDate.toISOString(),
           renewalDate: endDate.toISOString(),
           canceledAt: currentDate.toISOString(),
-          cancelAtPeriodEnd: true
+          cancelAtPeriodEnd: true,
+          // Preserve the current plan and tier to ensure proper display
+          currentPlan: subscriptionData.currentPlan || 'premium',
+          tier: subscriptionData.tier || 'premium'
         };
         
         // Sync the updated data to both databases using our improved sync function
@@ -183,7 +186,10 @@ export default async function handler(
           endDate: endDate,
           renewalDate: endDate,
           canceledAt: new Date().toISOString(),
-          cancelAtPeriodEnd: true
+          cancelAtPeriodEnd: true,
+          // Preserve the current plan and tier to ensure proper display
+          currentPlan: subscriptionData.currentPlan || 'premium',
+          tier: subscriptionData.tier || 'premium'
         };
         
         // Sync the updated data to both databases
@@ -280,7 +286,10 @@ export default async function handler(
             endDate: endDate.toISOString(),
             renewalDate: endDate.toISOString(),
             canceledAt: currentDate.toISOString(),
-            cancelAtPeriodEnd: true
+            cancelAtPeriodEnd: true,
+            // Preserve the current plan and tier to ensure proper display
+            currentPlan: subscriptionData.currentPlan || 'premium',
+            tier: subscriptionData.tier || 'premium'
           };
           
           // Sync the updated data to both databases

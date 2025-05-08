@@ -33,7 +33,7 @@ export async function syncSubscriptionData(userId: string, subscriptionData: any
     const endDate = subscriptionData.endDate ? new Date(subscriptionData.endDate) : null;
     const renewalDate = subscriptionData.renewalDate ? new Date(subscriptionData.renewalDate) : endDate;
     
-    // FIXED: More comprehensive check for premium status
+    // More comprehensive check for premium status
     // If subscription is active, or canceled but still within the paid period
     if (
       subscriptionData.currentPlan === 'premium' || 
@@ -49,6 +49,15 @@ export async function syncSubscriptionData(userId: string, subscriptionData: any
       ) {
         accountTier = 'premium';
       }
+    }
+    
+    // If the subscription ID is a regular Stripe subscription (starts with 'sub_')
+    // and not an admin subscription, ensure we don't show admin upgrade message
+    if (subscriptionData.stripeSubscriptionId && 
+        subscriptionData.stripeSubscriptionId.startsWith('sub_') &&
+        !subscriptionData.stripeSubscriptionId.includes('admin_')) {
+      // This is a regular user-purchased subscription
+      accountTier = 'premium';
     }
     
     // FIXED: If manually updated to premium, respect that setting
