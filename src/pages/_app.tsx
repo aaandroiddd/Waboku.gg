@@ -77,12 +77,12 @@ const MainContent = memo(({ Component, pageProps, pathname }: {
       {/* Use different transition approaches for mobile vs desktop */}
       {isMobile ? (
         <PageTransition key={pathname}>
-          <Component {...pageProps} />
+          {Component.getLayout ? Component.getLayout(<Component {...pageProps} />) : <Component {...pageProps} />}
         </PageTransition>
       ) : (
         <AnimatePresence mode="wait">
           <PageTransition key={pathname}>
-            <Component {...pageProps} />
+            {Component.getLayout ? Component.getLayout(<Component {...pageProps} />) : <Component {...pageProps} />}
           </PageTransition>
         </AnimatePresence>
       )}
