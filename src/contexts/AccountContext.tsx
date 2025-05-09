@@ -266,7 +266,7 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
                   // Admin-set premium status checks
                   (data.accountTier === 'premium' && subscriptionData.manuallyUpdated) ||
                   (subscriptionData.currentPlan === 'premium') || // Check for currentPlan set by admin
-                  (subscriptionData.stripeSubscriptionId?.includes('admin_')) || // Check for admin-assigned subscription ID
+                  (subscriptionData.stripeSubscriptionId?.includes('admin_') && subscriptionData.status !== 'none') || // Check for valid admin-assigned subscription ID
                   
                   // Direct Firestore premium tier check
                   (data.accountTier === 'premium' && data.subscription?.manuallyUpdated === true)
@@ -561,7 +561,7 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
           // Admin-set premium status checks
           (data.accountTier === 'premium' && subscriptionData.manuallyUpdated) ||
           (subscriptionData.currentPlan === 'premium') ||
-          (subscriptionData.stripeSubscriptionId?.includes('admin_')) ||
+          (subscriptionData.stripeSubscriptionId?.includes('admin_') && subscriptionData.status !== 'none') ||
           (data.accountTier === 'premium' && data.subscription?.manuallyUpdated === true)
         );
         

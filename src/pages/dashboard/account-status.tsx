@@ -377,7 +377,7 @@ export default function AccountStatus() {
             <div className="flex justify-between">
               <span className="text-muted-foreground">Status:</span>
               <Badge variant={accountTier === 'premium' ? 'default' : 'secondary'} className="bg-blue-500">
-                {accountTier === 'premium' && subscription.stripeSubscriptionId?.includes('admin_') ? 'Active (Admin)' : 
+                {accountTier === 'premium' && subscription.stripeSubscriptionId?.includes('admin_') && subscription.status !== 'none' ? 'Active (Admin)' : 
                  subscription.status === 'active' ? 'Active' : 
                  subscription.status === 'canceled' ? 'Canceled' : 'No Active Subscription'}
               </Badge>
