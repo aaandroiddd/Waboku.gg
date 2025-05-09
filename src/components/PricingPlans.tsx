@@ -160,14 +160,29 @@ export function PricingPlans() {
       // Always use Stripe checkout, even in preview environment
       console.log('Creating checkout session and redirecting to Stripe');
       
-      // Production flow - Create checkout session
-      const response = await fetch('/api/stripe/create-checkout', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${idToken}`,
-        },
+      // Log the user's current state for debugging
+      console.log('Current user state before checkout:', {
+        uid: user.uid,
+        email: user.email,
+        emailVerified: user.emailVerified,
+        isPremium: isPremium,
+        subscriptionId: subscriptionId || 'none'
       });
+      
+      // Production flow - Create checkout session
+      let response;
+      try {
+        response = await fetch('/api/stripe/create-checkout', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${idToken}`,
+          },
+        });
+      } catch (fetchError) {
+        console.error('Network error during checkout request:', fetchError);
+        throw new Error('Failed to connect to the payment service. Please check your internet connection and try again.');
+      }
 
       console.log('Received response from create-checkout:', response.status);
       
@@ -208,6 +223,24 @@ export function PricingPlans() {
           setTimeout(() => {
             window.location.href = retryData.sessionUrl;
           }, 1000);
+          
+          return;
+        }
+        
+        // Handle specific error codes
+        if (errorData.code === 'SUBSCRIPTION_EXISTS') {
+          console.log('User already has an active subscription:', errorData);
+          
+          // Show a more helpful message
+          toast({
+            title: "Subscription Already Active",
+            description: "You already have an active premium subscription. Please refresh the page to see your current status.",
+          });
+          
+          // Refresh the page after a short delay to update the UI
+          setTimeout(() => {
+            window.location.reload();
+          }, 2000);
           
           return;
         }

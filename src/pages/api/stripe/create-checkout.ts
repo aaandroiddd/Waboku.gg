@@ -177,12 +177,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }
         // Only block if the subscription is active in our database, NOT canceled, and we didn't just cancel a Stripe subscription
         else if (currentSubscription?.status === 'active' && !isCanceled) {
+          console.log('[Create Checkout] User already has an active subscription:', {
+            userId,
+            subscriptionId: currentSubscription?.stripeSubscriptionId,
+            status: currentSubscription?.status
+          });
           return res.status(400).json({ 
             error: 'Subscription exists',
             message: 'You already have an active subscription',
             code: 'SUBSCRIPTION_EXISTS'
           });
         }
+        
+        // Log the current subscription state for debugging
+        console.log('[Create Checkout] Current subscription state before proceeding:', {
+          userId,
+          status: currentSubscription?.status || 'none',
+          isCanceled,
+          stripeSubscriptionId: currentSubscription?.stripeSubscriptionId || 'none',
+          accountTier: accountData?.tier || 'free'
+        });
         
         // If subscription is canceled or we're resubscribing, clear it from the database before creating a new one
         if ((currentSubscription?.status === 'canceled' || accountData?.subscription?.status === 'canceled') && !foundStripeSubscription) {
@@ -207,6 +221,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           }
         }
         
+        // For free tier users, ensure we have a clean state
+        if (!currentSubscription || currentSubscription.status === 'none' || accountData?.tier === 'free') {
+          console.log('[Create Checkout] Free tier user upgrading to premium:', {
+            userId,
+            email: userEmail,
+            currentTier: accountData?.tier || 'free'
+          });
+          
+          // No need to clear anything, just proceed with checkout
+        }
+        
         // If we get here, either there's no subscription or it's canceled, so allow checkout
 
         // Always create a real Stripe checkout session, even in preview mode
@@ -229,14 +254,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/account-status`,
           metadata: {
             userId: userId,
-            billingPeriod: 'monthly'
+            billingPeriod: 'monthly',
+            userEmail: userEmail,
+            upgradeType: 'premium_subscription'
           },
           allow_promotion_codes: true,
           billing_address_collection: 'auto',
           subscription_data: {
             metadata: {
               userId: userId,
-              billingPeriod: 'monthly'
+              billingPeriod: 'monthly',
+              userEmail: userEmail
             }
           },
         };
@@ -244,16 +272,39 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         // If we found an existing customer, use that instead of creating a new one
         if (stripeCustomerId) {
           sessionParams.customer = stripeCustomerId;
+          console.log('[Create Checkout] Using existing Stripe customer:', stripeCustomerId);
         } else {
           sessionParams.customer_email = userEmail;
+          console.log('[Create Checkout] Creating new customer with email:', userEmail);
         }
         
-        const session = await stripe.checkout.sessions.create(sessionParams);
-
-        console.log('[Create Checkout] Successfully created checkout session:', { 
-          sessionId: session.id,
-          url: session.url 
+        console.log('[Create Checkout] Creating Stripe checkout session with params:', {
+          mode: sessionParams.mode,
+          priceId: process.env.STRIPE_PREMIUM_PRICE_ID,
+          hasCustomer: !!stripeCustomerId,
+          hasEmail: !!userEmail
         });
+        
+        let session;
+        try {
+          session = await stripe.checkout.sessions.create(sessionParams);
+          console.log('[Create Checkout] Successfully created checkout session:', { 
+            sessionId: session.id,
+            url: session.url 
+          });
+        } catch (stripeError: any) {
+          console.error('[Create Checkout] Error creating Stripe checkout session:', {
+            error: stripeError.message,
+            code: stripeError.code,
+            type: stripeError.type
+          });
+          
+          return res.status(400).json({
+            error: 'Failed to create checkout session',
+            message: stripeError.message || 'An error occurred with the payment processor',
+            code: stripeError.code || 'STRIPE_ERROR'
+          });
+        }
 
         return res.status(200).json({ 
           sessionUrl: session.url,
