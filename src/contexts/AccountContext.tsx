@@ -215,16 +215,22 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
         try {
           const docSnapshot = await getDoc(userDocRef);
           if (!docSnapshot.exists()) {
-            // Set default values for new users
+            // Set default values for new users with explicit free tier settings
             await setDoc(userDocRef, {
               accountTier: 'free',
               subscription: {
                 status: 'none',
-                startDate: new Date().toISOString()
+                startDate: new Date().toISOString(),
+                currentPlan: 'free',
+                tier: 'free',
+                stripeSubscriptionId: null,
+                manuallyUpdated: false
               },
               createdAt: new Date(),
               updatedAt: new Date()
             });
+            
+            console.log('[AccountContext] Created new user document with explicit free tier settings');
           }
         } catch (error) {
           console.error('[AccountContext] Error checking/initializing user document:', error);
@@ -253,24 +259,34 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
                 const endDate = subscriptionData.endDate ? new Date(subscriptionData.endDate) : null;
                 const startDate = subscriptionData.startDate ? new Date(subscriptionData.startDate) : null;
                 
-                // Enhanced premium status check with better logging
-                const isActivePremium = (
-                  // Stripe subscription checks
-                  subscriptionData.status === 'active' ||
-                  (subscriptionData.status === 'canceled' && endDate && endDate > now) ||
-                  (subscriptionData.stripeSubscriptionId && startDate && startDate <= now && !subscriptionData.status) ||
-                  
-                  // Regular subscription checks
-                  (subscriptionData.stripeSubscriptionId?.startsWith('sub_') && !subscriptionData.stripeSubscriptionId?.includes('admin_')) ||
-                  
-                  // Admin-set premium status checks
-                  (data.accountTier === 'premium' && subscriptionData.manuallyUpdated) ||
-                  (subscriptionData.currentPlan === 'premium') || // Check for currentPlan set by admin
-                  (subscriptionData.stripeSubscriptionId?.includes('admin_') && subscriptionData.status !== 'none') || // Check for valid admin-assigned subscription ID
-                  
-                  // Direct Firestore premium tier check
-                  (data.accountTier === 'premium' && data.subscription?.manuallyUpdated === true)
+                // More strict premium status check with validation
+                let isActivePremium = (
+                  // Must have an active status AND one of the following conditions
+                  (subscriptionData.status === 'active' && (
+                    // Regular Stripe subscription
+                    (subscriptionData.stripeSubscriptionId?.startsWith('sub_') && !subscriptionData.stripeSubscriptionId?.includes('admin_')) ||
+                    // Admin-assigned subscription with proper format
+                    (subscriptionData.stripeSubscriptionId?.startsWith('admin_')) ||
+                    // Explicitly set premium plan with manual update flag
+                    (subscriptionData.currentPlan === 'premium' && subscriptionData.manuallyUpdated === true)
+                  )) ||
+                  // Special case for canceled but still valid subscriptions
+                  (subscriptionData.status === 'canceled' && endDate && endDate > now && subscriptionData.stripeSubscriptionId)
                 );
+                
+                // Additional validation to prevent incorrect premium status
+                if (isActivePremium) {
+                  // Double-check that we have valid premium indicators
+                  const hasPremiumIndicators = 
+                    subscriptionData.stripeSubscriptionId || 
+                    (subscriptionData.currentPlan === 'premium' && subscriptionData.manuallyUpdated) ||
+                    (data.accountTier === 'premium' && data.subscription?.manuallyUpdated === true);
+                  
+                  if (!hasPremiumIndicators) {
+                    console.warn('[AccountContext] Prevented incorrect premium status assignment for user:', user.uid);
+                    isActivePremium = false;
+                  }
+                }
                 
                 console.log('[AccountContext] Account tier determination:', {
                   uid: user.uid,
@@ -548,22 +564,34 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
         const endDate = subscriptionData.endDate ? new Date(subscriptionData.endDate) : null;
         const startDate = subscriptionData.startDate ? new Date(subscriptionData.startDate) : null;
         
-        // Check if premium status is still valid
-        const isActivePremium = (
-          // Stripe subscription checks
-          subscriptionData.status === 'active' ||
-          (subscriptionData.status === 'canceled' && endDate && endDate > now) ||
-          (subscriptionData.stripeSubscriptionId && startDate && startDate <= now && !subscriptionData.status) ||
-          
-          // Regular subscription checks
-          (subscriptionData.stripeSubscriptionId?.startsWith('sub_') && !subscriptionData.stripeSubscriptionId?.includes('admin_')) ||
-          
-          // Admin-set premium status checks
-          (data.accountTier === 'premium' && subscriptionData.manuallyUpdated) ||
-          (subscriptionData.currentPlan === 'premium') ||
-          (subscriptionData.stripeSubscriptionId?.includes('admin_') && subscriptionData.status !== 'none') ||
-          (data.accountTier === 'premium' && data.subscription?.manuallyUpdated === true)
+        // Use the same improved premium status check logic
+        let isActivePremium = (
+          // Must have an active status AND one of the following conditions
+          (subscriptionData.status === 'active' && (
+            // Regular Stripe subscription
+            (subscriptionData.stripeSubscriptionId?.startsWith('sub_') && !subscriptionData.stripeSubscriptionId?.includes('admin_')) ||
+            // Admin-assigned subscription with proper format
+            (subscriptionData.stripeSubscriptionId?.startsWith('admin_')) ||
+            // Explicitly set premium plan with manual update flag
+            (subscriptionData.currentPlan === 'premium' && subscriptionData.manuallyUpdated === true)
+          )) ||
+          // Special case for canceled but still valid subscriptions
+          (subscriptionData.status === 'canceled' && endDate && endDate > now && subscriptionData.stripeSubscriptionId)
         );
+        
+        // Additional validation to prevent incorrect premium status
+        if (isActivePremium) {
+          // Double-check that we have valid premium indicators
+          const hasPremiumIndicators = 
+            subscriptionData.stripeSubscriptionId || 
+            (subscriptionData.currentPlan === 'premium' && subscriptionData.manuallyUpdated) ||
+            (data.accountTier === 'premium' && data.subscription?.manuallyUpdated === true);
+          
+          if (!hasPremiumIndicators) {
+            console.warn('[AccountContext] Prevented incorrect premium status assignment during refresh for user:', user.uid);
+            isActivePremium = false;
+          }
+        }
         
         // Set subscription data with enhanced validation
         const currentStatus = (() => {

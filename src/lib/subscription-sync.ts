@@ -66,9 +66,10 @@ export async function syncSubscriptionData(userId: string, subscriptionData: any
       accountTier = 'premium';
     }
     
-    // FIXED: If subscription ID exists and includes 'admin_', always set as premium
+    // More strict check for admin subscriptions
     if (subscriptionData.stripeSubscriptionId && 
-        subscriptionData.stripeSubscriptionId.includes('admin_')) {
+        subscriptionData.stripeSubscriptionId.startsWith('admin_') &&
+        subscriptionData.status !== 'none') {
       accountTier = 'premium';
     }
     
