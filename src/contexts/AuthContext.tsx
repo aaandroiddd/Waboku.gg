@@ -1082,9 +1082,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         prompt: 'select_account'
       });
       
+      let result;
       try {
         // Before signing in with popup, check if email exists
-        const result = await signInWithPopup(auth, provider);
+        result = await signInWithPopup(auth, provider);
         const user = result.user;
         
         if (!user.email) {
@@ -1202,12 +1203,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         setProfile(newProfile);
         
-        // Store the profile completion status for redirection
+        // Redirect to onboarding wizard immediately for new users
         if (typeof window !== 'undefined') {
-          localStorage.setItem('needs_profile_completion', 'true');
+          console.log('New Google user detected, redirecting to onboarding wizard');
+          window.location.href = '/auth/complete-profile';
+          return { ...result, needsProfileCompletion: true };
         }
-        
-        return { ...result, needsProfileCompletion: true };
       } else {
         // If profile exists but wasn't found by email query
         const existingProfile = profileDoc.data() as UserProfile;

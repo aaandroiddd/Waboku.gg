@@ -266,10 +266,29 @@ export default async function handler(
       // Continue with deletion
     }
     
-    // 9. Delete user profile
+    // 9. Delete user profile and all subcollections
     try {
-      await db.collection('users').doc(userId).delete();
-      console.log('User profile deleted successfully');
+      // First, get all subcollections of the user document
+      const userRef = db.collection('users').doc(userId);
+      const collections = await userRef.listCollections();
+      
+      console.log(`Found ${collections.length} subcollections to delete for user ${userId}`);
+      
+      // Delete each subcollection
+      for (const collectionRef of collections) {
+        const collectionName = collectionRef.id;
+        console.log(`Deleting subcollection: ${collectionName}`);
+        
+        const snapshot = await collectionRef.get();
+        const deletePromises = snapshot.docs.map(doc => doc.ref.delete());
+        await Promise.all(deletePromises);
+        
+        console.log(`Deleted ${snapshot.size} documents from subcollection ${collectionName}`);
+      }
+      
+      // Finally delete the user document itself
+      await userRef.delete();
+      console.log('User profile and all subcollections deleted successfully');
     } catch (profileError) {
       console.error('Error deleting user profile:', profileError);
       // Continue with auth deletion

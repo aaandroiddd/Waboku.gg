@@ -348,7 +348,9 @@ function SignInComponent() {
                     
                     // Check if profile completion is needed
                     if (result && result.needsProfileCompletion) {
-                      router.push('/auth/complete-profile');
+                      console.log('Profile completion needed, redirecting to onboarding wizard');
+                      window.location.href = '/auth/complete-profile';
+                      return;
                     }
                   } catch (err: any) {
                     // Check if this is a multi-factor auth error
