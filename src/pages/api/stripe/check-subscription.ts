@@ -254,10 +254,65 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           
           // If Stripe subscription not found, reset status
           if (stripeError.code === 'resource_missing') {
+            console.log(`[Subscription Check ${requestId}] Subscription not found in Stripe, checking for customer by email`);
+            
+            // Check if this might be a user who deleted their account and created a new one
+            if (userEmail) {
+              try {
+                // Look for customer in Stripe by email
+                const customers = await stripe.customers.list({
+                  email: userEmail,
+                  limit: 1
+                });
+                
+                if (customers.data.length > 0) {
+                  const stripeCustomerId = customers.data[0].id;
+                  console.log(`[Subscription Check ${requestId}] Found existing Stripe customer:`, {
+                    email: userEmail,
+                    customerId: stripeCustomerId
+                  });
+                  
+                  // Check if this customer has any subscriptions
+                  const subscriptions = await stripe.subscriptions.list({
+                    customer: stripeCustomerId,
+                    limit: 5
+                  });
+                  
+                  if (subscriptions.data.length > 0) {
+                    console.log(`[Subscription Check ${requestId}] Found subscriptions for customer:`, {
+                      count: subscriptions.data.length,
+                      statuses: subscriptions.data.map(sub => sub.status)
+                    });
+                    
+                    // Cancel all existing subscriptions and delete the customer
+                    for (const subscription of subscriptions.data) {
+                      if (subscription.status !== 'canceled') {
+                        await stripe.subscriptions.cancel(subscription.id);
+                        console.log(`[Subscription Check ${requestId}] Canceled subscription:`, subscription.id);
+                      }
+                    }
+                    
+                    try {
+                      await stripe.customers.del(stripeCustomerId);
+                      console.log(`[Subscription Check ${requestId}] Deleted Stripe customer:`, stripeCustomerId);
+                    } catch (deleteError) {
+                      console.error(`[Subscription Check ${requestId}] Error deleting customer:`, deleteError);
+                    }
+                  }
+                }
+              } catch (customerError) {
+                console.error(`[Subscription Check ${requestId}] Error checking for customer:`, customerError);
+              }
+            }
+            
+            // Reset subscription data in our database
             const resetSubscription = {
               ...subscriptionData,
               status: 'none',
-              stripeSubscriptionId: null
+              stripeSubscriptionId: null,
+              accountTier: 'free',
+              tier: 'free',
+              currentPlan: 'free'
             };
             
             // Sync the reset data to both databases
@@ -266,6 +321,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             // Update local reference for response
             subscriptionData.status = 'none';
             subscriptionData.stripeSubscriptionId = null;
+            subscriptionData.accountTier = 'free';
+            subscriptionData.tier = 'free';
+            subscriptionData.currentPlan = 'free';
           }
         }
       }

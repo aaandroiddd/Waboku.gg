@@ -52,14 +52,19 @@ export default async function handler(
           console.log(`Canceling subscription: ${userData.subscription.stripeSubscriptionId}`);
           
           // First check if the subscription exists and is not already canceled
-          const subscription = await stripe.subscriptions.retrieve(userData.subscription.stripeSubscriptionId);
-          
-          if (subscription && subscription.status !== 'canceled') {
-            // Cancel the subscription immediately rather than at period end
-            await stripe.subscriptions.cancel(userData.subscription.stripeSubscriptionId);
-            console.log('Subscription canceled successfully');
-          } else {
-            console.log('Subscription already canceled or not found');
+          try {
+            const subscription = await stripe.subscriptions.retrieve(userData.subscription.stripeSubscriptionId);
+            
+            if (subscription && subscription.status !== 'canceled') {
+              // Cancel the subscription immediately rather than at period end
+              await stripe.subscriptions.cancel(userData.subscription.stripeSubscriptionId);
+              console.log('Subscription canceled successfully');
+            } else {
+              console.log('Subscription already canceled or not found');
+            }
+          } catch (subError) {
+            console.error('Error retrieving subscription:', subError);
+            // Continue with deletion even if subscription retrieval fails
           }
           
           // Also check if we need to delete the customer to prevent future issues
@@ -249,7 +254,19 @@ export default async function handler(
       // Continue with other deletions
     }
     
-    // 8. Delete user profile
+    // 8. Clean up subscription data in Realtime Database
+    try {
+      // Clear subscription data in Realtime Database
+      await realtimeDb.ref(`users/${userId}/account/subscription`).remove();
+      await realtimeDb.ref(`users/${userId}/account/tier`).set('free');
+      await realtimeDb.ref(`users/${userId}/account/status`).set('none');
+      console.log('Subscription data cleared from Realtime Database');
+    } catch (subCleanupError) {
+      console.error('Error clearing subscription data from Realtime Database:', subCleanupError);
+      // Continue with deletion
+    }
+    
+    // 9. Delete user profile
     try {
       await db.collection('users').doc(userId).delete();
       console.log('User profile deleted successfully');
@@ -258,7 +275,7 @@ export default async function handler(
       // Continue with auth deletion
     }
     
-    // 9. Delete user authentication
+    // 10. Delete user authentication
     try {
       await auth.deleteUser(userId);
       console.log('User authentication deleted successfully');

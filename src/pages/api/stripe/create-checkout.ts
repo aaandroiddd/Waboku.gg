@@ -97,6 +97,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         // Look for customer in Stripe by email BEFORE checking our database
         let foundStripeSubscription = false;
         let stripeCustomerId = null;
+        let customerDeleted = false;
         
         try {
           console.log('[Create Checkout] Checking for existing Stripe customer by email:', userEmail);
@@ -112,26 +113,42 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
               customerId: stripeCustomerId
             });
             
-            // Check if this customer has any active subscriptions
+            // Check if this customer has any subscriptions (active or canceled)
             const subscriptions = await stripe.subscriptions.list({
               customer: stripeCustomerId,
-              status: 'active',
-              limit: 5
+              limit: 10
             });
             
-            // If there are active subscriptions in Stripe, cancel them
+            // If there are any subscriptions in Stripe, handle them
             if (subscriptions.data.length > 0) {
-              console.log('[Create Checkout] Found active subscriptions in Stripe:', {
+              console.log('[Create Checkout] Found subscriptions in Stripe:', {
                 count: subscriptions.data.length,
-                subscriptionIds: subscriptions.data.map(sub => sub.id)
+                subscriptionIds: subscriptions.data.map(sub => sub.id),
+                statuses: subscriptions.data.map(sub => sub.status)
               });
               
               foundStripeSubscription = true;
               
               // Cancel all existing subscriptions
               for (const subscription of subscriptions.data) {
-                await stripe.subscriptions.cancel(subscription.id);
-                console.log('[Create Checkout] Canceled existing subscription:', subscription.id);
+                if (subscription.status !== 'canceled') {
+                  await stripe.subscriptions.cancel(subscription.id);
+                  console.log('[Create Checkout] Canceled existing subscription:', subscription.id);
+                } else {
+                  console.log('[Create Checkout] Subscription already canceled:', subscription.id);
+                }
+              }
+              
+              // For users who deleted their account and created a new one,
+              // we should delete the customer and create a fresh one
+              try {
+                await stripe.customers.del(stripeCustomerId);
+                console.log('[Create Checkout] Deleted existing Stripe customer:', stripeCustomerId);
+                stripeCustomerId = null; // Reset so we create a new customer
+                customerDeleted = true;
+              } catch (deleteError) {
+                console.error('[Create Checkout] Error deleting Stripe customer:', deleteError);
+                // Continue with the existing customer if deletion fails
               }
             }
           }
@@ -169,7 +186,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
               lastUpdated: Date.now()
             });
             
-            console.log('[Create Checkout] Cleared subscription data in database');
+            // Also clear in Firestore for consistency
+            const firestore = firebaseAdmin.firestore();
+            await firestore.collection('users').doc(userId).set({
+              accountTier: 'free',
+              subscription: {
+                status: 'none',
+                stripeSubscriptionId: null,
+                lastUpdated: Date.now()
+              }
+            }, { merge: true });
+            
+            console.log('[Create Checkout] Cleared subscription data in databases');
           } catch (clearError) {
             console.error('[Create Checkout] Error clearing subscription data:', clearError);
             // Continue anyway as this is not critical
@@ -269,8 +297,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           },
         };
         
-        // If we found an existing customer, use that instead of creating a new one
-        if (stripeCustomerId) {
+        // If we found an existing customer and didn't delete it, use it
+        // Otherwise create a new one
+        if (stripeCustomerId && !customerDeleted) {
           sessionParams.customer = stripeCustomerId;
           console.log('[Create Checkout] Using existing Stripe customer:', stripeCustomerId);
         } else {
