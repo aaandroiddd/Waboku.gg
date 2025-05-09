@@ -50,11 +50,79 @@ export default async function handler(
       if (userData?.subscription?.stripeSubscriptionId) {
         try {
           console.log(`Canceling subscription: ${userData.subscription.stripeSubscriptionId}`);
-          await stripe.subscriptions.cancel(userData.subscription.stripeSubscriptionId);
-          console.log('Subscription canceled successfully');
+          
+          // First check if the subscription exists and is not already canceled
+          const subscription = await stripe.subscriptions.retrieve(userData.subscription.stripeSubscriptionId);
+          
+          if (subscription && subscription.status !== 'canceled') {
+            // Cancel the subscription immediately rather than at period end
+            await stripe.subscriptions.cancel(userData.subscription.stripeSubscriptionId);
+            console.log('Subscription canceled successfully');
+          } else {
+            console.log('Subscription already canceled or not found');
+          }
+          
+          // Also check if we need to delete the customer to prevent future issues
+          if (userData.stripeCustomerId) {
+            try {
+              // Delete the customer from Stripe to prevent issues if they sign up again
+              await stripe.customers.del(userData.stripeCustomerId);
+              console.log(`Deleted Stripe customer: ${userData.stripeCustomerId}`);
+            } catch (customerError) {
+              console.error('Error deleting Stripe customer:', customerError);
+              // Continue with deletion even if customer deletion fails
+            }
+          } else if (userData.email) {
+            // Try to find and delete the customer by email
+            try {
+              const customers = await stripe.customers.list({
+                email: userData.email,
+                limit: 1
+              });
+              
+              if (customers.data.length > 0) {
+                await stripe.customers.del(customers.data[0].id);
+                console.log(`Deleted Stripe customer by email: ${userData.email}`);
+              }
+            } catch (customerError) {
+              console.error('Error finding/deleting Stripe customer by email:', customerError);
+            }
+          }
         } catch (stripeError) {
           console.error('Error canceling subscription:', stripeError);
           // Continue with deletion even if subscription cancellation fails
+        }
+      } else if (userData?.email) {
+        // Even if no subscription ID is stored, check if there's a customer in Stripe by email
+        try {
+          const customers = await stripe.customers.list({
+            email: userData.email,
+            limit: 1
+          });
+          
+          if (customers.data.length > 0) {
+            const customer = customers.data[0];
+            
+            // Check for any subscriptions
+            const subscriptions = await stripe.subscriptions.list({
+              customer: customer.id
+            });
+            
+            // Cancel any active subscriptions
+            for (const subscription of subscriptions.data) {
+              if (subscription.status !== 'canceled') {
+                await stripe.subscriptions.cancel(subscription.id);
+                console.log(`Canceled subscription ${subscription.id} for customer ${customer.id}`);
+              }
+            }
+            
+            // Delete the customer
+            await stripe.customers.del(customer.id);
+            console.log(`Deleted Stripe customer found by email: ${userData.email}`);
+          }
+        } catch (stripeError) {
+          console.error('Error checking/deleting Stripe customer by email:', stripeError);
+          // Continue with deletion
         }
       }
     }

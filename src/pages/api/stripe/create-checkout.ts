@@ -93,7 +93,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           });
         }
 
-        // Check if user already has an active subscription
+        // Check if user already has an active subscription in our database
         const db = firebaseAdmin.database();
         const userRef = db.ref(`users/${userId}/account/subscription`);
         const snapshot = await userRef.once('value');
@@ -113,14 +113,60 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         
         // Only block if the subscription is active and NOT canceled
         if (currentSubscription?.status === 'active' && !isCanceled) {
-          return res.status(400).json({ 
-            error: 'Subscription exists',
-            message: 'You already have an active subscription',
-            code: 'SUBSCRIPTION_EXISTS'
-          });
+          // Before blocking, check if this might be a user who deleted their account and signed up again
+          // Look for customer in Stripe by email
+          try {
+            const customers = await stripe.customers.list({
+              email: userEmail,
+              limit: 1
+            });
+            
+            if (customers.data.length > 0) {
+              const customer = customers.data[0];
+              console.log('[Create Checkout] Found existing Stripe customer for email:', {
+                email: userEmail,
+                customerId: customer.id
+              });
+              
+              // Check if this customer has any active subscriptions
+              const subscriptions = await stripe.subscriptions.list({
+                customer: customer.id,
+                status: 'active',
+                limit: 1
+              });
+              
+              // If there's an active subscription in Stripe but not in our database,
+              // it likely means the user deleted their account and signed up again
+              if (subscriptions.data.length > 0) {
+                console.log('[Create Checkout] Found active subscription in Stripe but not in our database:', {
+                  subscriptionId: subscriptions.data[0].id,
+                  status: subscriptions.data[0].status
+                });
+                
+                // Cancel the existing subscription in Stripe
+                await stripe.subscriptions.update(subscriptions.data[0].id, {
+                  cancel_at_period_end: true
+                });
+                
+                console.log('[Create Checkout] Canceled previous subscription for resubscribing user');
+              }
+            }
+          } catch (stripeError) {
+            // Log but continue - this is just a best-effort check
+            console.error('[Create Checkout] Error checking for existing Stripe customer:', stripeError);
+          }
+          
+          // If we still have an active subscription in our database, block the checkout
+          if (currentSubscription?.status === 'active' && !isCanceled) {
+            return res.status(400).json({ 
+              error: 'Subscription exists',
+              message: 'You already have an active subscription',
+              code: 'SUBSCRIPTION_EXISTS'
+            });
+          }
         }
         
-        // If subscription is canceled, clear it from the database before creating a new one
+        // If subscription is canceled or we're resubscribing, clear it from the database before creating a new one
         if (currentSubscription?.status === 'canceled' || accountData?.subscription?.status === 'canceled') {
           console.log('[Create Checkout] Clearing canceled subscription before creating new one:', {
             userId,
