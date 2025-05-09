@@ -160,7 +160,20 @@ const ProfileContent = ({ userId }: { userId: string | null }) => {
     />;
   }
 
-  const joinDate = profile.joinDate ? format(new Date(profile.joinDate), 'MMMM yyyy') : 'Unknown';
+  // Safely format the join date to prevent "Invalid time value" errors
+  let joinDate = 'Unknown';
+  try {
+    if (profile.joinDate) {
+      // Ensure we have a valid date string before formatting
+      const dateObj = new Date(profile.joinDate);
+      // Check if the date is valid before formatting
+      if (!isNaN(dateObj.getTime())) {
+        joinDate = format(dateObj, 'MMMM yyyy');
+      }
+    }
+  } catch (error) {
+    console.error('Error formatting join date:', error);
+  }
 
   return (
     <div className="min-h-screen flex flex-col">

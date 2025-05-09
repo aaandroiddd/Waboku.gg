@@ -455,29 +455,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         });
       });
 
-      // Create the profile
+      // Create the profile with proper initialization of all fields
+      const currentDate = new Date().toISOString();
       const newProfile: UserProfile = {
         uid: createdUser.uid,
         email: createdUser.email!,
         username,
-        joinDate: new Date().toISOString(),
+        displayName: username,
+        joinDate: currentDate,
         totalSales: 0,
         rating: 0,
         bio: '',
         location: '',
         avatarUrl: '',
+        photoURL: '',
         isEmailVerified: false,
         verificationSentAt: null,
+        profileCompleted: false, // Mark as incomplete to trigger onboarding
+        lastUpdated: currentDate,
         social: {
           youtube: '',
           twitter: '',
           facebook: ''
         },
         accountTier: 'free',
+        tier: 'free',
         subscription: {
           status: 'inactive',
           currentPlan: 'free',
-          startDate: new Date().toISOString()
+          startDate: currentDate
         }
       };
 
@@ -1152,29 +1158,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           counter++;
         }
 
+        const currentDate = new Date().toISOString();
         const newProfile: UserProfile = {
           uid: user.uid,
           email: user.email,
           username: tempUsername,
-          joinDate: new Date().toISOString(),
+          displayName: user.displayName || tempUsername,
+          joinDate: currentDate,
           totalSales: 0,
           rating: 0,
           bio: '',
           location: '',
           avatarUrl: user.photoURL || '',
+          photoURL: user.photoURL || '',
           isEmailVerified: user.emailVerified,
           verificationSentAt: null,
-          profileCompleted: false, // Mark as incomplete
+          profileCompleted: false, // Mark as incomplete to trigger onboarding
+          lastUpdated: currentDate,
           social: {
             youtube: '',
             twitter: '',
             facebook: ''
           },
           accountTier: 'free',
+          tier: 'free',
           subscription: {
             status: 'inactive',
             currentPlan: 'free',
-            startDate: new Date().toISOString()
+            startDate: currentDate
           }
         };
 

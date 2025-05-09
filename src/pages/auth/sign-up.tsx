@@ -109,7 +109,8 @@ function SignUpComponent() {
       }
 
       await signUp(formData.email, formData.password, formData.username);
-      router.push('/dashboard');
+      // Redirect to profile completion page instead of dashboard
+      router.push('/auth/complete-profile');
     } catch (err: any) {
       console.error('Sign up error:', {
         errorCode: err.code || 'unknown',

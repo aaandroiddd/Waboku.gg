@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { useAuth } from '@/contexts/AuthContext';
-import ProfileCompletionForm from '@/components/ProfileCompletionForm';
+import OnboardingWizard from '@/components/OnboardingWizard';
 import { LoadingScreen } from '@/components/LoadingScreen';
 
 export default function CompleteProfilePage() {
@@ -26,9 +26,9 @@ export default function CompleteProfilePage() {
     return <LoadingScreen />;
   }
 
-  // If user is logged in but profile is not completed, show the form
+  // If user is logged in but profile is not completed, show the onboarding wizard
   if (user && !profile?.profileCompleted) {
-    return <ProfileCompletionForm />;
+    return <OnboardingWizard />;
   }
 
   // This will show briefly during redirects
