@@ -144,65 +144,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         
         // If we get here, either there's no subscription or it's canceled, so allow checkout
 
-        // Preview environment handling
-        if (process.env.NEXT_PUBLIC_CO_DEV_ENV === 'preview') {
-          console.log('[Create Checkout] Preview environment detected, simulating checkout');
-          
-          try {
-            // Generate a unique subscription ID for preview mode
-            const previewSubscriptionId = `preview_${Date.now()}`;
-            const currentDate = new Date();
-            const renewalDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days from now
-            const stripeCustomerId = `cus_preview_${userId.substring(0, 8)}`;
-            
-            // Create a complete subscription object
-            const subscriptionData = {
-              status: 'active',
-              tier: 'premium',
-              billingPeriod: 'monthly',
-              stripeSubscriptionId: previewSubscriptionId,
-              startDate: currentDate.toISOString(),
-              renewalDate: renewalDate.toISOString(),
-              currentPeriodEnd: Math.floor(renewalDate.getTime() / 1000),
-              lastUpdated: Date.now()
-            };
-            
-            // Update the entire account object at once to ensure consistency
-            await db.ref(`users/${userId}/account`).set({
-              tier: 'premium',
-              status: 'active',
-              lastUpdated: Date.now(),
-              stripeCustomerId: stripeCustomerId,
-              subscription: subscriptionData
-            });
-            
-            console.log('[Create Checkout] Preview mode: Updated account data in Realtime Database');
-            
-            // Also update in Firestore for consistency
-            const firestore = firebaseAdmin.firestore();
-            await firestore.collection('users').doc(userId).set({
-              accountTier: 'premium',
-              updatedAt: currentDate.toISOString(),
-              subscription: {
-                currentPlan: 'premium',
-                status: 'active',
-                billingPeriod: 'monthly',
-                stripeSubscriptionId: previewSubscriptionId,
-                startDate: currentDate.toISOString(),
-                renewalDate: renewalDate.toISOString()
-              }
-            }, { merge: true });
-            
-            console.log('[Create Checkout] Preview mode: Updated subscription data in Firestore for user:', userId);
-          } catch (previewError) {
-            console.error('[Create Checkout] Preview mode update failed:', previewError);
-          }
-          
-          return res.status(200).json({ 
-            sessionUrl: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/account-status?session_id=preview_session`,
-            isPreview: true
-          });
-        }
+        // Always create a real Stripe checkout session, even in preview mode
+        console.log('[Create Checkout] Creating Stripe checkout session for all environments');
 
         console.log('[Create Checkout] Creating Stripe checkout session');
 

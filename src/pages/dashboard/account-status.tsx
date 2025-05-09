@@ -78,83 +78,21 @@ export default function AccountStatus() {
           .then(async () => {
             console.log('Token refreshed after checkout');
             
-            // For preview environment, update the database directly
-            if (process.env.NEXT_PUBLIC_CO_DEV_ENV === 'preview' && user.uid) {
-              try {
-                // Prepare subscription data
-                const currentDate = new Date();
-                const renewalDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
-                const subscriptionId = `preview_${Date.now()}`;
-                
-                // Update Realtime Database
-                const db = getDatabase();
-                
-                // Update account fields individually to avoid validation issues
-                await set(ref(db, `users/${user.uid}/account/tier`), 'premium');
-                await set(ref(db, `users/${user.uid}/account/status`), 'active');
-                await set(ref(db, `users/${user.uid}/account/lastUpdated`), Date.now());
-                
-                // Then update the subscription details separately
-                // First create a complete subscription object
-                const subscriptionData = {
-                  status: 'active',
-                  tier: 'premium',
-                  stripeSubscriptionId: subscriptionId,
-                  startDate: currentDate.toISOString(),
-                  renewalDate: renewalDate.toISOString(),
-                  currentPeriodEnd: Math.floor(renewalDate.getTime() / 1000),
-                  lastUpdated: Date.now()
-                };
-                
-                // Update subscription fields
-                const subscriptionRef = ref(db, `users/${user.uid}/account/subscription`);
-                await set(subscriptionRef, subscriptionData);
-                
-                // Update Firestore for consistency
-                const firestore = getFirestore();
-                const userDocRef = doc(firestore, 'users', user.uid);
-                await setDoc(userDocRef, {
-                  accountTier: 'premium',
-                  updatedAt: currentDate.toISOString(),
-                  subscription: {
-                    status: 'active',
-                    stripeSubscriptionId: subscriptionId, // Use a regular subscription ID, not admin
-                    startDate: currentDate.toISOString(),
-                    renewalDate: renewalDate.toISOString(),
-                    currentPlan: 'premium'
-                  }
-                }, { merge: true });
-                
-                console.log('Preview mode: Updated subscription data in both databases');
-                
-                // Don't reload the page, just update the UI
-                toast({
-                  title: "Success!",
-                  description: "Your subscription has been processed. Your account has been upgraded to premium.",
-                });
-                
-                // Refresh the account data to reflect the changes
-                refreshAccountData();
-              } catch (err) {
-                console.error('Preview mode: Failed to update subscription data', err);
-              }
-            } else {
-              // For production, check if the subscription was updated
-              try {
-                // Wait a moment for the webhook to process
-                await new Promise(resolve => setTimeout(resolve, 2000));
-                
-                // Don't force a page reload, just update the UI
-                toast({
-                  title: "Success!",
-                  description: "Your subscription has been processed. Your account has been upgraded to premium.",
-                });
-                
-                // Refresh the account data to reflect the changes
-                refreshAccountData();
-              } catch (err) {
-                console.error('Failed to check subscription status:', err);
-              }
+            // For all environments, check if the subscription was updated
+            try {
+              // Wait a moment for the webhook to process
+              await new Promise(resolve => setTimeout(resolve, 2000));
+              
+              // Don't force a page reload, just update the UI
+              toast({
+                title: "Success!",
+                description: "Your subscription has been processed. Your account has been upgraded to premium.",
+              });
+              
+              // Refresh the account data to reflect the changes
+              refreshAccountData();
+            } catch (err) {
+              console.error('Failed to check subscription status:', err);
             }
           })
           .catch(err => console.error('Error refreshing token:', err));
@@ -440,95 +378,25 @@ export default function AccountStatus() {
                         description: "Preparing subscription checkout...",
                       });
 
-                      // For testing purposes in preview environment
-                      if (process.env.NEXT_PUBLIC_CO_DEV_ENV === 'preview') {
-                        console.log('Preview mode: Starting resubscription process');
+                      // Always use Stripe checkout for all environments
+                      console.log('Starting resubscription process with Stripe checkout');
+                      
+                      // First, clear the canceled subscription status
+                      try {
+                        const db = getDatabase();
+                        const subscriptionRef = ref(db, `users/${user?.uid}/account/subscription`);
                         
-                        // First, clear the canceled subscription status
-                        try {
-                          const db = getDatabase();
-                          const subscriptionRef = ref(db, `users/${user?.uid}/account/subscription`);
-                          
-                          // Mark the subscription as replaced
-                          await set(subscriptionRef, {
-                            ...subscription,
-                            status: 'replaced',
-                            lastUpdated: Date.now()
-                          });
-                          
-                          console.log('Preview mode: Cleared canceled subscription status');
-                        } catch (clearError) {
-                          console.error('Preview mode: Error clearing canceled subscription:', clearError);
-                          // Continue anyway as this is not critical
-                        }
+                        // Mark the subscription as replaced
+                        await set(subscriptionRef, {
+                          ...subscription,
+                          status: 'replaced',
+                          lastUpdated: Date.now()
+                        });
                         
-                        // Simulate successful resubscription by directly updating Firebase
-                        try {
-                          // Prepare subscription data
-                          const currentDate = new Date();
-                          const renewalDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
-                          const subscriptionId = `preview_${Date.now()}`;
-                          
-                          // Update Realtime Database
-                          const db = getDatabase();
-                          
-                          // Create a complete subscription object first
-                          const subscriptionData = {
-                            status: 'active',
-                            tier: 'premium',
-                            stripeSubscriptionId: subscriptionId,
-                            startDate: currentDate.toISOString(),
-                            renewalDate: renewalDate.toISOString(),
-                            currentPeriodEnd: Math.floor(renewalDate.getTime() / 1000),
-                            lastUpdated: Date.now(),
-                            billingPeriod: 'monthly'
-                          };
-                          
-                          // Update account fields
-                          await set(ref(db, `users/${user?.uid}/account`), {
-                            tier: 'premium',
-                            status: 'active',
-                            lastUpdated: Date.now(),
-                            subscription: subscriptionData,
-                            stripeCustomerId: user?.uid ? `cus_preview_${user.uid.substring(0, 8)}` : 'cus_preview'
-                          });
-                          
-                          console.log('Preview mode: Updated account data in Realtime Database');
-                          
-                          // Update Firestore for consistency
-                          const firestore = getFirestore();
-                          const userDocRef = doc(firestore, 'users', user?.uid);
-                          await setDoc(userDocRef, {
-                            accountTier: 'premium',
-                            updatedAt: currentDate.toISOString(),
-                            subscription: {
-                              status: 'active',
-                              stripeSubscriptionId: subscriptionId,
-                              startDate: currentDate.toISOString(),
-                              renewalDate: renewalDate.toISOString(),
-                              currentPlan: 'premium',
-                              billingPeriod: 'monthly'
-                            }
-                          }, { merge: true });
-                          
-                          console.log('Preview mode: Updated resubscription data in Firestore');
-
-                          // Show success message
-                          toast({
-                            title: "Success!",
-                            description: "Your subscription has been reactivated in preview mode.",
-                          });
-                          
-                          // Refresh account data instead of reloading
-                          await refreshAccountData();
-                          
-                          // Update URL to simulate the success flow without page reload
-                          router.push('/dashboard/account-status?upgrade=success', undefined, { shallow: true });
-                          return;
-                        } catch (error) {
-                          console.error('Preview mode update failed:', error);
-                          throw new Error('Failed to simulate subscription in preview mode');
-                        }
+                        console.log('Cleared canceled subscription status');
+                      } catch (clearError) {
+                        console.error('Error clearing canceled subscription:', clearError);
+                        // Continue anyway as this is not critical
                       }
 
                       if (!user) {

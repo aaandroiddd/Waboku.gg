@@ -157,43 +157,8 @@ export function PricingPlans() {
 
       console.log('Making request to create checkout session');
       
-      // Special handling for preview environment
-      if (process.env.NEXT_PUBLIC_CO_DEV_ENV === 'preview') {
-        console.log('Preview environment detected, using direct update approach');
-        
-        try {
-          // Make the API call to create checkout (which will update the database in preview mode)
-          const response = await fetch('/api/stripe/create-checkout', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${idToken}`,
-            },
-          });
-          
-          if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.message || 'Failed to process subscription in preview mode');
-          }
-          
-          const data = await response.json();
-          
-          toast({
-            title: "Success!",
-            description: "Your account has been upgraded to premium in preview mode.",
-          });
-          
-          // Redirect to the success page
-          if (typeof window !== 'undefined') {
-            window.location.href = data.sessionUrl;
-          }
-          
-          return;
-        } catch (previewError: any) {
-          console.error('Preview mode subscription error:', previewError);
-          throw previewError;
-        }
-      }
+      // Always use Stripe checkout, even in preview environment
+      console.log('Creating checkout session and redirecting to Stripe');
       
       // Production flow - Create checkout session
       const response = await fetch('/api/stripe/create-checkout', {
