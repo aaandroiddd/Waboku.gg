@@ -136,7 +136,8 @@ export function PricingPlans() {
       try {
         // Import the auth persistence helper
         const { storeAuthStateForStripe } = await import('@/lib/auth-stripe-persistence');
-        storeAuthStateForStripe(user.uid, user.email || '');
+        await storeAuthStateForStripe(user.uid, user.email || '');
+        console.log('Auth state stored for Stripe redirect');
       } catch (storageError) {
         console.warn('Could not store auth state:', storageError);
       }

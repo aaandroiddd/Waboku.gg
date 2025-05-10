@@ -40,113 +40,113 @@ export default function AccountStatus() {
     if (!initialRefreshDoneRef.current) {
       console.log('[AccountStatus] Initial data refresh');
       
-      // Add a small delay to allow Firebase connections to stabilize
-      setTimeout(() => {
-        refreshAccountData();
-      }, 1000);
-      
-      initialRefreshDoneRef.current = true;
-      
-      // If we're returning from Stripe, try to reconnect Firebase
+      // If we're returning from Stripe, handle special reconnection logic
       if (session_id || upgrade === 'success') {
-        const reconnectFirebase = async () => {
+        const handleStripeReturn = async () => {
+          console.log('[AccountStatus] Handling return from Stripe checkout');
+          
           try {
-            const { connectionManager } = await import('@/lib/firebase');
-            if (connectionManager) {
-              await connectionManager.reconnectFirebase();
-              console.log('Firebase reconnection attempted after Stripe return');
-            }
-          } catch (error) {
-            console.error('Error reconnecting Firebase after Stripe return:', error);
-          }
-        };
-        
-        reconnectFirebase();
-      }
-    }
-    
-    // Check for auth redirect state in localStorage
-    const checkAuthRedirect = async () => {
-      try {
-        // Import the auth persistence helper
-        const { getStoredAuthState, clearStoredAuthState, isReturningFromStripe } = await import('@/lib/auth-stripe-persistence');
-        
-        // Check if we're returning from Stripe
-        if (isReturningFromStripe()) {
-          const storedAuth = getStoredAuthState();
-          if (storedAuth) {
-            console.log('Found auth state from Stripe redirect:', {
-              uid: storedAuth.userId ? `${storedAuth.userId.substring(0, 5)}...` : 'missing',
-              email: storedAuth.email ? `${storedAuth.email.substring(0, 3)}...` : 'missing',
-              timestamp: storedAuth.timestamp ? new Date(storedAuth.timestamp).toISOString() : 'missing',
-              age: storedAuth.timestamp ? `${Math.floor((Date.now() - storedAuth.timestamp) / 1000 / 60)} minutes` : 'unknown'
-            });
+            // Import the auth persistence helpers
+            const { 
+              getStoredAuthState, 
+              clearStoredAuthState, 
+              isReturningFromStripe,
+              attemptAuthRestoration,
+              getStoredAuthToken
+            } = await import('@/lib/auth-stripe-persistence');
             
-            // If we have a stored user ID but no current user, try to refresh auth state
-            if (storedAuth.userId && !user) {
-              console.log('User should be authenticated, attempting to restore session');
-              
-              // Try to reconnect Firebase
-              try {
-                const { connectionManager } = await import('@/lib/firebase');
-                if (connectionManager) {
+            // First attempt to restore authentication
+            const authRestored = await attemptAuthRestoration();
+            console.log('[AccountStatus] Auth restoration attempt result:', authRestored);
+            
+            // Reconnect Firebase with multiple attempts
+            try {
+              const { connectionManager } = await import('@/lib/firebase');
+              if (connectionManager) {
+                // First attempt
+                await connectionManager.reconnectFirebase();
+                console.log('[AccountStatus] First Firebase reconnection attempted');
+                
+                // Second attempt after a delay
+                setTimeout(async () => {
                   await connectionManager.reconnectFirebase();
-                  console.log('Firebase reconnection attempted');
-                }
-              } catch (reconnectError) {
-                console.error('Error reconnecting Firebase:', reconnectError);
+                  console.log('[AccountStatus] Second Firebase reconnection attempted');
+                  
+                  // After reconnection, refresh account data
+                  setTimeout(() => {
+                    refreshAccountData();
+                    console.log('[AccountStatus] Account data refreshed after reconnection');
+                  }, 1000);
+                }, 2000);
+              }
+            } catch (reconnectError) {
+              console.error('[AccountStatus] Error reconnecting Firebase:', reconnectError);
+            }
+            
+            // Get stored auth state for logging
+            const storedAuth = getStoredAuthState();
+            if (storedAuth) {
+              console.log('[AccountStatus] Found auth state from Stripe redirect:', {
+                uid: storedAuth.userId ? `${storedAuth.userId.substring(0, 5)}...` : 'missing',
+                email: storedAuth.email ? `${storedAuth.email.substring(0, 3)}...` : 'missing',
+                timestamp: storedAuth.timestamp ? new Date(storedAuth.timestamp).toISOString() : 'missing',
+                age: storedAuth.timestamp ? `${Math.floor((Date.now() - storedAuth.timestamp) / 1000 / 60)} minutes` : 'unknown',
+                hasToken: !!getStoredAuthToken()
+              });
+            }
+            
+            // Force token refresh if user is available
+            if (user) {
+              try {
+                await user.getIdToken(true);
+                console.log('[AccountStatus] Token refreshed after checkout');
+              } catch (tokenError) {
+                console.error('[AccountStatus] Error refreshing token:', tokenError);
               }
             }
             
-            // Clear the stored auth state after checking
-            clearStoredAuthState();
-          }
-        }
-      } catch (error) {
-        console.error('Error checking auth redirect state:', error);
-      }
-    };
-    
-    if (session_id || upgrade === 'success') {
-      // Check auth state first
-      checkAuthRedirect();
-      
-      // Force token refresh to ensure we have the latest auth state
-      if (user) {
-        user.getIdToken(true)
-          .then(async () => {
-            console.log('Token refreshed after checkout');
+            // Wait a moment for the webhook to process and connections to stabilize
+            await new Promise(resolve => setTimeout(resolve, 3000));
             
-            // For all environments, check if the subscription was updated
-            try {
-              // Wait a moment for the webhook to process
-              await new Promise(resolve => setTimeout(resolve, 2000));
-              
-              // Don't force a page reload, just update the UI
-              toast({
-                title: "Success!",
-                description: "Your subscription has been processed. Your account has been upgraded to premium.",
-              });
-              
-              // Refresh the account data to reflect the changes
-              await refreshAccountData();
-              
-              // Force reload the page to ensure all subscription data is properly loaded
-              // This helps with users who previously deleted their accounts
+            // Show success message
+            toast({
+              title: "Success!",
+              description: "Your subscription has been processed. Your account has been upgraded to premium.",
+            });
+            
+            // Refresh the account data to reflect the changes
+            await refreshAccountData();
+            
+            // Clear stored auth state after processing
+            clearStoredAuthState();
+            
+            // Force reload the page to ensure all subscription data is properly loaded
+            // This helps with users who previously deleted their accounts
+            setTimeout(() => {
               window.location.reload();
-            } catch (err) {
-              console.error('Failed to check subscription status:', err);
-            }
-          })
-          .catch(err => console.error('Error refreshing token:', err));
+            }, 1000);
+          } catch (error) {
+            console.error('[AccountStatus] Error handling Stripe return:', error);
+            
+            // Still try to refresh account data even if there was an error
+            refreshAccountData();
+          }
+        };
+        
+        // Execute the Stripe return handler
+        handleStripeReturn();
       } else {
-        toast({
-          title: "Success!",
-          description: "Your subscription has been processed. Your account will be upgraded shortly.",
-        });
+        // Normal page load - just refresh account data after a small delay
+        setTimeout(() => {
+          refreshAccountData();
+        }, 1000);
       }
       
-      // Remove the query parameters from the URL without refreshing the page
+      initialRefreshDoneRef.current = true;
+    }
+    
+    // Remove query parameters from URL without refreshing the page
+    if (session_id || upgrade === 'success') {
       router.replace('/dashboard/account-status', undefined, { shallow: true });
     }
   }, [session_id, upgrade, toast, router, user, refreshAccountData]);

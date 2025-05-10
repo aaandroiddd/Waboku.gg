@@ -368,8 +368,19 @@ if (typeof window !== 'undefined') {
       if (url.includes('firestore.googleapis.com') && !response.ok) {
         console.error(`[Firebase] Firestore request failed with status ${response.status}:`, url);
         
+        // Special handling for Write channel errors (common after Stripe checkout)
+        if (url.includes('/Write/channel') && response.status === 400) {
+          console.warn('[Firebase] Detected Firestore Write channel error, attempting immediate reconnection');
+          
+          if (connectionManager) {
+            // Force immediate reconnection for Write channel errors
+            setTimeout(() => {
+              connectionManager.reconnectFirebase();
+            }, 100);
+          }
+        }
         // Notify the connection manager for 4xx/5xx errors
-        if (connectionManager && (response.status >= 400)) {
+        else if (connectionManager && (response.status >= 400)) {
           connectionManager.handleFetchError(url);
         }
       }
@@ -381,8 +392,19 @@ if (typeof window !== 'undefined') {
       if (url.includes('firestore.googleapis.com')) {
         console.error('[Firebase] Fetch error for Firestore request:', error);
         
+        // Special handling for Write channel errors
+        if (url.includes('/Write/channel')) {
+          console.warn('[Firebase] Detected Firestore Write channel error in catch block, attempting immediate reconnection');
+          
+          if (connectionManager) {
+            // Force immediate reconnection for Write channel errors
+            setTimeout(() => {
+              connectionManager.reconnectFirebase();
+            }, 100);
+          }
+        }
         // Notify the connection manager
-        if (connectionManager) {
+        else if (connectionManager) {
           connectionManager.handleFetchError(url);
         }
       }
