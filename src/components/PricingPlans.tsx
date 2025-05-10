@@ -258,6 +258,14 @@ export function PricingPlans() {
         description: "You'll be redirected to Stripe to complete your payment.",
       });
 
+      // Store additional metadata to help with subscription sync
+      try {
+        localStorage.setItem('waboku_checkout_initiated', Date.now().toString());
+        localStorage.setItem('waboku_checkout_session_url', data.sessionUrl);
+      } catch (storageError) {
+        console.warn('Could not store checkout metadata:', storageError);
+      }
+
       // Use router for navigation if available, otherwise fallback to direct location change
       if (typeof window !== 'undefined' && window.location) {
         // Add a small delay to ensure toast is shown

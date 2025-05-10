@@ -106,7 +106,28 @@ export default function AccountStatus() {
             }
             
             // Wait a moment for the webhook to process and connections to stabilize
-            await new Promise(resolve => setTimeout(resolve, 3000));
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            
+            // Force sync subscription data with Stripe
+            try {
+              console.log('[AccountStatus] Forcing subscription sync after Stripe checkout');
+              const syncResponse = await fetch('/api/stripe/sync-subscription', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${await user.getIdToken(true)}`
+                }
+              });
+              
+              if (syncResponse.ok) {
+                const syncData = await syncResponse.json();
+                console.log('[AccountStatus] Subscription sync successful:', syncData);
+              } else {
+                console.error('[AccountStatus] Subscription sync failed:', await syncResponse.text());
+              }
+            } catch (syncError) {
+              console.error('[AccountStatus] Error syncing subscription:', syncError);
+            }
             
             // Show success message
             toast({

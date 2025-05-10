@@ -102,6 +102,23 @@ export default async function handler(
           const renewalDate = new Date(currentDate);
           renewalDate.setDate(currentDate.getDate() + 30); // 30 days from now
 
+          // Create a complete subscription object to ensure all fields are properly set
+          const completeSubscriptionData = {
+            status: 'active',
+            tier: 'premium',
+            currentPlan: 'premium',
+            stripeSubscriptionId: session.subscription as string, // Store the subscription ID
+            startDate: currentDate.toISOString(),
+            renewalDate: renewalDate.toISOString(),
+            endDate: renewalDate.toISOString(), // Using endDate for consistency
+            currentPeriodEnd: Math.floor(renewalDate.getTime() / 1000),
+            cancelAtPeriodEnd: false,
+            canceledAt: null,
+            lastUpdated: Date.now()
+          };
+          
+          console.log('[Stripe Webhook] Complete subscription data:', completeSubscriptionData);
+
           // Update user's subscription status immediately after successful checkout in Realtime DB
           // Update tier and status separately to comply with validation rules
           await realtimeDb.ref(`users/${userId}/account/tier`).set('premium');
@@ -109,24 +126,13 @@ export default async function handler(
           
           // Update subscription fields separately
           const subscriptionRef = realtimeDb.ref(`users/${userId}/account/subscription`);
-          await subscriptionRef.update({
-            status: 'active', // Changed from 'processing' to 'active' for immediate effect
-            tier: 'premium',
-            startDate: currentDate.toISOString(),
-            renewalDate: renewalDate.toISOString(),
-            currentPeriodEnd: Math.floor(renewalDate.getTime() / 1000),
-            lastUpdated: Date.now()
-          });
+          await subscriptionRef.update(completeSubscriptionData);
 
-          // Also update Firestore for consistency
+          // Also update Firestore for consistency - use set with merge: false to ensure complete replacement
           await firestoreDb.collection('users').doc(userId).set({
             accountTier: 'premium', // Top-level field for easier queries
-            subscription: {
-              currentPlan: 'premium',
-              status: 'active',
-              startDate: currentDate.toISOString(),
-              endDate: renewalDate.toISOString() // Using endDate for consistency
-            }
+            subscription: completeSubscriptionData,
+            updatedAt: new Date()
           }, { merge: true });
 
           console.log('[Stripe Webhook] User account updated to premium:', {
