@@ -134,12 +134,9 @@ export function PricingPlans() {
     try {
       // Store auth state in localStorage before any API calls
       try {
-        // Store minimal info to help maintain session awareness
-        localStorage.setItem('waboku_auth_redirect', JSON.stringify({
-          uid: user.uid,
-          timestamp: Date.now()
-        }));
-        console.log('Stored auth redirect state in localStorage');
+        // Import the auth persistence helper
+        const { storeAuthStateForStripe } = await import('@/lib/auth-stripe-persistence');
+        storeAuthStateForStripe(user.uid, user.email || '');
       } catch (storageError) {
         console.warn('Could not store auth state:', storageError);
       }

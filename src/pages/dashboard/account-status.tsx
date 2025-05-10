@@ -39,28 +39,67 @@ export default function AccountStatus() {
     // Refresh account data when the page loads, but only once
     if (!initialRefreshDoneRef.current) {
       console.log('[AccountStatus] Initial data refresh');
-      refreshAccountData();
+      
+      // Add a small delay to allow Firebase connections to stabilize
+      setTimeout(() => {
+        refreshAccountData();
+      }, 1000);
+      
       initialRefreshDoneRef.current = true;
+      
+      // If we're returning from Stripe, try to reconnect Firebase
+      if (session_id || upgrade === 'success') {
+        const reconnectFirebase = async () => {
+          try {
+            const { connectionManager } = await import('@/lib/firebase');
+            if (connectionManager) {
+              await connectionManager.reconnectFirebase();
+              console.log('Firebase reconnection attempted after Stripe return');
+            }
+          } catch (error) {
+            console.error('Error reconnecting Firebase after Stripe return:', error);
+          }
+        };
+        
+        reconnectFirebase();
+      }
     }
     
     // Check for auth redirect state in localStorage
-    const checkAuthRedirect = () => {
+    const checkAuthRedirect = async () => {
       try {
-        if (typeof window !== 'undefined' && window.localStorage) {
-          const storedAuth = localStorage.getItem('waboku_auth_redirect');
+        // Import the auth persistence helper
+        const { getStoredAuthState, clearStoredAuthState, isReturningFromStripe } = await import('@/lib/auth-stripe-persistence');
+        
+        // Check if we're returning from Stripe
+        if (isReturningFromStripe()) {
+          const storedAuth = getStoredAuthState();
           if (storedAuth) {
-            console.log('Found auth redirect state, user should be authenticated');
-            
-            // Parse the stored auth data
-            const authData = JSON.parse(storedAuth);
-            console.log('Auth redirect data:', {
-              uid: authData.uid ? `${authData.uid.substring(0, 5)}...` : 'missing',
-              timestamp: authData.timestamp ? new Date(authData.timestamp).toISOString() : 'missing',
-              age: authData.timestamp ? `${Math.floor((Date.now() - authData.timestamp) / 1000 / 60)} minutes` : 'unknown'
+            console.log('Found auth state from Stripe redirect:', {
+              uid: storedAuth.userId ? `${storedAuth.userId.substring(0, 5)}...` : 'missing',
+              email: storedAuth.email ? `${storedAuth.email.substring(0, 3)}...` : 'missing',
+              timestamp: storedAuth.timestamp ? new Date(storedAuth.timestamp).toISOString() : 'missing',
+              age: storedAuth.timestamp ? `${Math.floor((Date.now() - storedAuth.timestamp) / 1000 / 60)} minutes` : 'unknown'
             });
             
+            // If we have a stored user ID but no current user, try to refresh auth state
+            if (storedAuth.userId && !user) {
+              console.log('User should be authenticated, attempting to restore session');
+              
+              // Try to reconnect Firebase
+              try {
+                const { connectionManager } = await import('@/lib/firebase');
+                if (connectionManager) {
+                  await connectionManager.reconnectFirebase();
+                  console.log('Firebase reconnection attempted');
+                }
+              } catch (reconnectError) {
+                console.error('Error reconnecting Firebase:', reconnectError);
+              }
+            }
+            
             // Clear the stored auth state after checking
-            localStorage.removeItem('waboku_auth_redirect');
+            clearStoredAuthState();
           }
         }
       } catch (error) {

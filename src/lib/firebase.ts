@@ -362,6 +362,18 @@ if (typeof window !== 'undefined') {
   window.fetch = async function(input, init) {
     try {
       const response = await originalFetch(input, init);
+      
+      // Check if this is a Firestore-related fetch that failed
+      const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : '';
+      if (url.includes('firestore.googleapis.com') && !response.ok) {
+        console.error(`[Firebase] Firestore request failed with status ${response.status}:`, url);
+        
+        // Notify the connection manager for 4xx/5xx errors
+        if (connectionManager && (response.status >= 400)) {
+          connectionManager.handleFetchError(url);
+        }
+      }
+      
       return response;
     } catch (error) {
       // Check if this is a Firestore-related fetch
@@ -371,7 +383,7 @@ if (typeof window !== 'undefined') {
         
         // Notify the connection manager
         if (connectionManager) {
-          connectionManager.handleConnectionError('Fetch error for Firestore request');
+          connectionManager.handleFetchError(url);
         }
       }
       throw error;
