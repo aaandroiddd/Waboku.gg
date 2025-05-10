@@ -318,24 +318,65 @@ export function getFirebaseServices() {
 if (typeof window !== 'undefined') {
   // Add a global error handler for unhandled Firebase errors
   window.addEventListener('unhandledrejection', (event) => {
-    if (event.reason && event.reason.name === 'FirebaseError') {
-      console.error('[Firebase] Unhandled Firebase promise rejection:', event.reason);
-      
-      // If it's a network error, try to reconnect
-      if (event.reason.code === 'failed-precondition' || 
-          event.reason.code === 'unavailable' || 
-          event.reason.code === 'resource-exhausted') {
-        console.log('[Firebase] Network-related error detected, attempting reconnection...');
+    if (event.reason) {
+      // Handle Firebase errors
+      if (event.reason.name === 'FirebaseError') {
+        console.error('[Firebase] Unhandled Firebase promise rejection:', event.reason);
         
-        // If we have a connection manager, trigger reconnection
+        // If it's a network error, try to reconnect
+        if (event.reason.code === 'failed-precondition' || 
+            event.reason.code === 'unavailable' || 
+            event.reason.code === 'resource-exhausted') {
+          console.log('[Firebase] Network-related error detected, attempting reconnection...');
+          
+          // If we have a connection manager, trigger reconnection
+          if (connectionManager) {
+            setTimeout(() => {
+              connectionManager.reconnectFirebase();
+            }, 2000);
+          }
+        }
+      } 
+      // Handle fetch errors which might be related to Firebase
+      else if (event.reason.name === 'TypeError' && 
+               event.reason.message === 'Failed to fetch' && 
+               event.reason.stack && 
+               (event.reason.stack.includes('firestore.googleapis.com') || 
+                event.reason.stack.includes('Firestore'))) {
+        
+        console.error('[Firebase] Unhandled fetch error for Firestore:', event.reason);
+        
+        // If we have a connection manager, trigger reconnection with backoff
         if (connectionManager) {
+          console.log('[Firebase] Fetch error detected, attempting reconnection with backoff...');
           setTimeout(() => {
             connectionManager.reconnectFirebase();
-          }, 2000);
+          }, 5000);
         }
       }
     }
   });
+  
+  // Also add a global fetch error handler
+  const originalFetch = window.fetch;
+  window.fetch = async function(input, init) {
+    try {
+      const response = await originalFetch(input, init);
+      return response;
+    } catch (error) {
+      // Check if this is a Firestore-related fetch
+      const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : '';
+      if (url.includes('firestore.googleapis.com')) {
+        console.error('[Firebase] Fetch error for Firestore request:', error);
+        
+        // Notify the connection manager
+        if (connectionManager) {
+          connectionManager.handleConnectionError('Fetch error for Firestore request');
+        }
+      }
+      throw error;
+    }
+  };
   
   // Initialize Firebase immediately
   initializeFirebase();
@@ -355,9 +396,12 @@ class FirebaseConnectionManager {
   private connectionErrors: Set<string> = new Set();
   private consecutiveErrors: number = 0;
   private reconnectInProgress: boolean = false;
+  private fetchErrorCount: number = 0;
+  private lastFetchErrorTime: number = 0;
   
-  // Make this property public to allow external access
+  // Make these properties public to allow external access
   public reconnectFirebase: () => Promise<void>;
+  public handleConnectionError: (reason: string) => void;
 
   constructor() {
     if (typeof window !== 'undefined') {
@@ -402,6 +446,55 @@ class FirebaseConnectionManager {
     this.reconnectAttempts = 0;
     this.consecutiveErrors = 0;
     this.connectionErrors.clear();
+    this.fetchErrorCount = 0;
+  }
+  
+  /**
+   * Handle a fetch error specifically for Firestore requests
+   * This implements a more aggressive circuit breaker for fetch errors
+   */
+  public handleFetchError(url: string) {
+    const now = Date.now();
+    this.fetchErrorCount++;
+    this.lastFetchErrorTime = now;
+    
+    console.warn(`[Firebase] Fetch error #${this.fetchErrorCount} for URL: ${url}`);
+    
+    // If we're getting too many fetch errors in a short period, implement circuit breaker
+    if (this.fetchErrorCount > 3) {
+      const timeSinceFirstError = now - this.lastFetchErrorTime;
+      
+      if (timeSinceFirstError < 10000) { // 10 seconds
+        console.error(`[Firebase] Multiple fetch errors detected (${this.fetchErrorCount} in ${timeSinceFirstError}ms)`);
+        console.log('[Firebase] Implementing circuit breaker for Firestore connections');
+        
+        // Force disable network for a cooling period
+        const { db } = getFirebaseServices();
+        if (db) {
+          disableFirestoreNetwork(db).then(() => {
+            console.log('[Firebase] Firestore network disabled due to fetch errors');
+            
+            // Schedule re-enable after cooling period
+            setTimeout(() => {
+              if (this.isOnline) {
+                console.log('[Firebase] Attempting to re-enable Firestore network after cooling period');
+                enableFirestoreNetwork(db).then(() => {
+                  console.log('[Firebase] Firestore network re-enabled after cooling period');
+                  this.fetchErrorCount = 0;
+                }).catch(error => {
+                  console.error('[Firebase] Error re-enabling Firestore network:', error);
+                });
+              }
+            }, 30000); // 30 second cooling period
+          }).catch(error => {
+            console.error('[Firebase] Error disabling Firestore network:', error);
+          });
+        }
+      }
+    }
+    
+    // Also trigger normal connection error handling
+    this.handleConnectionError(`Fetch error for URL: ${url}`);
   }
 
   private checkConnection = () => {
@@ -467,6 +560,25 @@ class FirebaseConnectionManager {
     
     console.log(`[Firebase] Connection error (${this.consecutiveErrors}): ${reason}`);
     
+    // Implement circuit breaker pattern
+    if (this.consecutiveErrors > 5 && this.reconnectAttempts > 3) {
+      console.warn(`[Firebase] Circuit breaker activated after ${this.consecutiveErrors} consecutive errors`);
+      
+      // Reset after a longer cooling period
+      if (this.reconnectTimeoutId) {
+        clearTimeout(this.reconnectTimeoutId);
+      }
+      
+      this.reconnectTimeoutId = setTimeout(() => {
+        console.log('[Firebase] Circuit breaker reset after cooling period');
+        this.consecutiveErrors = 0;
+        this.reconnectAttempts = 0;
+        this.reconnectFirebase();
+      }, 300000); // 5 minutes cooling period
+      
+      return;
+    }
+    
     // Limit reconnection attempts
     if (this.reconnectAttempts >= this.maxReconnectAttempts) {
       console.warn(`[Firebase] Maximum reconnect attempts (${this.maxReconnectAttempts}) reached`);
@@ -480,7 +592,7 @@ class FirebaseConnectionManager {
         console.log('[Firebase] Resetting reconnect attempts counter after cooling period');
         this.reconnectAttempts = 0;
         this.reconnectFirebase();
-      }, 120000); // 2 minutes cooling period
+      }, 180000); // 3 minutes cooling period
       
       return;
     }
@@ -501,10 +613,10 @@ class FirebaseConnectionManager {
       clearTimeout(this.reconnectTimeoutId);
     }
     
-    // Exponential backoff for reconnect attempts with jitter
-    const baseDelay = this.reconnectInterval * Math.pow(1.5, this.reconnectAttempts - 1);
-    const jitter = Math.random() * 1000; // Add up to 1 second of jitter
-    const delay = Math.min(baseDelay + jitter, 60000);
+    // Enhanced exponential backoff for reconnect attempts with jitter
+    const baseDelay = this.reconnectInterval * Math.pow(2, this.reconnectAttempts - 1);
+    const jitter = Math.random() * 2000; // Add up to 2 seconds of jitter
+    const delay = Math.min(baseDelay + jitter, 120000); // Cap at 2 minutes
     
     console.log(`[Firebase] Scheduling reconnect attempt ${this.reconnectAttempts} in ${Math.round(delay)}ms`);
     
@@ -535,22 +647,64 @@ class FirebaseConnectionManager {
       const { db } = getFirebaseServices();
       if (db) {
         try {
-          await disableFirestoreNetwork(db);
-          console.log('[Firebase] Firestore network disabled for reconnection');
+          // Wrap in try/catch to handle potential network errors during disabling
+          try {
+            await disableFirestoreNetwork(db);
+            console.log('[Firebase] Firestore network disabled for reconnection');
+          } catch (disableError) {
+            console.warn('[Firebase] Error disabling Firestore network:', disableError);
+            // Continue anyway - we'll still try to re-enable
+          }
           
           // Short delay to ensure disconnection is complete
-          await new Promise(resolve => setTimeout(resolve, 1000));
+          await new Promise(resolve => setTimeout(resolve, 2000));
           
-          // Then re-enable the network
-          await enableFirestoreNetwork(db);
-          console.log('[Firebase] Firestore network re-enabled');
+          // Then re-enable the network with retry logic
+          let enableSuccess = false;
+          let retryCount = 0;
           
-          // Reset error counters on successful reconnect
-          this.resetErrorState();
-          this.notifyListeners();
+          while (!enableSuccess && retryCount < 3) {
+            try {
+              await enableFirestoreNetwork(db);
+              console.log('[Firebase] Firestore network re-enabled');
+              enableSuccess = true;
+              
+              // Reset error counters on successful reconnect
+              this.resetErrorState();
+              this.notifyListeners();
+            } catch (enableError) {
+              retryCount++;
+              console.warn(`[Firebase] Error enabling Firestore network (attempt ${retryCount}/3):`, enableError);
+              
+              if (retryCount < 3) {
+                // Wait before retrying with increasing delay
+                await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
+              }
+            }
+          }
+          
+          if (!enableSuccess) {
+            throw new Error('Failed to re-enable Firestore network after multiple attempts');
+          }
         } catch (error) {
           console.error('[Firebase] Error during Firestore reconnection:', error);
-          // Don't throw here, just log the error
+          // Don't throw here, just log the error and continue
+        }
+        
+        // Verify connection status after reconnection attempt
+        try {
+          const connectedRef = ref(firebaseDatabase, '.info/connected');
+          onValue(connectedRef, (snapshot) => {
+            const connected = snapshot.val();
+            console.log(`[Firebase] Connection status after reconnect: ${connected ? 'connected' : 'disconnected'}`);
+            
+            if (!connected) {
+              // If still not connected, schedule another attempt with increased backoff
+              this.handleConnectionError('Still disconnected after reconnect attempt');
+            }
+          }, { onlyOnce: true });
+        } catch (verifyError) {
+          console.warn('[Firebase] Error verifying connection status:', verifyError);
         }
       }
     } catch (error) {
@@ -562,7 +716,7 @@ class FirebaseConnectionManager {
       setTimeout(() => {
         this.isReconnecting = false;
         this.reconnectInProgress = false;
-      }, 5000);
+      }, 10000); // Increased cooldown period
     }
   }
 
@@ -635,22 +789,55 @@ export function registerListener<T>(
     removeListener(id);
   }
 
-  // Create new listener
-  const unsubscribe = onSnapshot(
-    ref,
-    (snapshot) => {
-      try {
-        callback(snapshot);
-      } catch (error) {
-        console.error(`[Firebase] Error in listener callback (${id}):`, error);
-        if (errorCallback) errorCallback(error as Error);
+  // Create new listener with enhanced error handling
+  let unsubscribe: Unsubscribe;
+  
+  try {
+    unsubscribe = onSnapshot(
+      ref,
+      (snapshot) => {
+        try {
+          callback(snapshot);
+        } catch (error) {
+          console.error(`[Firebase] Error in listener callback (${id}):`, error);
+          if (errorCallback) errorCallback(error as Error);
+        }
+      },
+      (error) => {
+        console.error(`[Firebase] Error in Firestore listener (${id}):`, error);
+        
+        // Check if it's a network-related error
+        if (error.code === 'failed-precondition' || 
+            error.code === 'unavailable' || 
+            error.code === 'resource-exhausted' ||
+            error.message.includes('network') ||
+            error.message.includes('fetch')) {
+          
+          console.log(`[Firebase] Network-related error in listener ${id}, attempting reconnection...`);
+          
+          // If we have a connection manager, trigger reconnection
+          if (connectionManager) {
+            setTimeout(() => {
+              connectionManager.reconnectFirebase();
+            }, 2000);
+          }
+        }
+        
+        if (errorCallback) errorCallback(error);
       }
-    },
-    (error) => {
-      console.error(`[Firebase] Error in Firestore listener (${id}):`, error);
-      if (errorCallback) errorCallback(error);
-    }
-  );
+    );
+  } catch (setupError) {
+    console.error(`[Firebase] Error setting up listener (${id}):`, setupError);
+    
+    // Create a no-op unsubscribe function
+    unsubscribe = () => {};
+    
+    // Notify error callback if provided
+    if (errorCallback) errorCallback(setupError as Error);
+    
+    // Return early
+    return unsubscribe;
+  }
 
   // Store listener in registry
   const path = ref.path || (ref as any)._query?.path || "unknown-path";
