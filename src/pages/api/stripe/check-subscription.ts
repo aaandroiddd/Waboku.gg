@@ -284,20 +284,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                       statuses: subscriptions.data.map(sub => sub.status)
                     });
                     
-                    // Cancel all existing subscriptions and delete the customer
+                    // Cancel all existing subscriptions
                     for (const subscription of subscriptions.data) {
                       if (subscription.status !== 'canceled') {
                         await stripe.subscriptions.cancel(subscription.id);
                         console.log(`[Subscription Check ${requestId}] Canceled subscription:`, subscription.id);
                       }
                     }
-                    
-                    try {
-                      await stripe.customers.del(stripeCustomerId);
-                      console.log(`[Subscription Check ${requestId}] Deleted Stripe customer:`, stripeCustomerId);
-                    } catch (deleteError) {
-                      console.error(`[Subscription Check ${requestId}] Error deleting customer:`, deleteError);
-                    }
+                  }
+                  
+                  // Always try to delete the customer for users who recreated accounts
+                  try {
+                    await stripe.customers.del(stripeCustomerId);
+                    console.log(`[Subscription Check ${requestId}] Deleted Stripe customer:`, stripeCustomerId);
+                  } catch (deleteError) {
+                    console.error(`[Subscription Check ${requestId}] Error deleting customer:`, deleteError);
+                    // Continue with deletion even if customer deletion fails
                   }
                 }
               } catch (customerError) {
@@ -312,7 +314,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
               stripeSubscriptionId: null,
               accountTier: 'free',
               tier: 'free',
-              currentPlan: 'free'
+              currentPlan: 'free',
+              cancelAtPeriodEnd: false
             };
             
             // Sync the reset data to both databases
@@ -324,6 +327,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             subscriptionData.accountTier = 'free';
             subscriptionData.tier = 'free';
             subscriptionData.currentPlan = 'free';
+            subscriptionData.cancelAtPeriodEnd = false;
           }
         }
       }

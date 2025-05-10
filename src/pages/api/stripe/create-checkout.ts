@@ -140,7 +140,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
               }
               
               // For users who deleted their account and created a new one,
-              // we should delete the customer and create a fresh one
+              // ALWAYS delete the customer and create a fresh one
               try {
                 await stripe.customers.del(stripeCustomerId);
                 console.log('[Create Checkout] Deleted existing Stripe customer:', stripeCustomerId);
@@ -148,7 +148,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 customerDeleted = true;
               } catch (deleteError) {
                 console.error('[Create Checkout] Error deleting Stripe customer:', deleteError);
-                // Continue with the existing customer if deletion fails
+                // Even if deletion fails, force creation of a new customer
+                stripeCustomerId = null;
+                customerDeleted = true;
+                console.log('[Create Checkout] Forcing new customer creation despite deletion error');
               }
             }
           }
@@ -175,9 +178,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         // Check if the subscription is canceled in our database
         const isCanceled = currentSubscription?.status === 'canceled' || accountData?.subscription?.status === 'canceled';
         
-        // If we found and canceled a Stripe subscription, clear any subscription data in our database
-        if (foundStripeSubscription) {
-          console.log('[Create Checkout] Clearing database subscription data after canceling Stripe subscription');
+        // ALWAYS clear subscription data in our database for users who previously had accounts
+        // This ensures a clean state for the new checkout
+        if (foundStripeSubscription || customerDeleted) {
+          console.log('[Create Checkout] Clearing database subscription data for user with previous account');
           try {
             // Clear the subscription status in Realtime Database
             await userRef.update({
@@ -204,7 +208,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           }
         }
         // Only block if the subscription is active in our database, NOT canceled, and we didn't just cancel a Stripe subscription
-        else if (currentSubscription?.status === 'active' && !isCanceled) {
+        else if (currentSubscription?.status === 'active' && !isCanceled && !foundStripeSubscription) {
           console.log('[Create Checkout] User already has an active subscription:', {
             userId,
             subscriptionId: currentSubscription?.stripeSubscriptionId,
@@ -297,12 +301,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           },
         };
         
-        // If we found an existing customer and didn't delete it, use it
-        // Otherwise create a new one
-        if (stripeCustomerId && !customerDeleted) {
+        // For users who previously had accounts and signed up again,
+        // ALWAYS create a new customer to avoid issues
+        if (foundStripeSubscription || customerDeleted) {
+          sessionParams.customer_email = userEmail;
+          console.log('[Create Checkout] Creating new customer for user with previous account:', userEmail);
+        } 
+        // For normal users, use existing customer if available
+        else if (stripeCustomerId) {
           sessionParams.customer = stripeCustomerId;
           console.log('[Create Checkout] Using existing Stripe customer:', stripeCustomerId);
-        } else {
+        } 
+        // Default case - new user
+        else {
           sessionParams.customer_email = userEmail;
           console.log('[Create Checkout] Creating new customer with email:', userEmail);
         }
