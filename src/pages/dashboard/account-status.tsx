@@ -306,26 +306,8 @@ export default function AccountStatus() {
           </Button>
 
           <div className="text-right">
-            <div className="flex items-center justify-end gap-2 mb-2">
+            <div className="mb-2">
               <h1 className="text-3xl font-bold text-foreground">Account Status</h1>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={async () => {
-                  toast({
-                    title: "Refreshing...",
-                    description: "Updating your subscription status...",
-                  });
-                  await refreshAccountData();
-                  toast({
-                    title: "Updated",
-                    description: "Your subscription status has been refreshed.",
-                  });
-                }}
-                disabled={isLoading}
-              >
-                {isLoading ? "Refreshing..." : "Refresh Status"}
-              </Button>
             </div>
             <div className="flex items-center gap-2 justify-end">
               <p className="text-muted-foreground">Current Plan:</p>
@@ -548,64 +530,92 @@ export default function AccountStatus() {
               </svg>
             </summary>
             <div className="mt-4 px-4">
-              {/* Special button for users who recreated their account and have subscription issues */}
-              <Card className="p-6 border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950">
-                <h3 className="text-lg font-semibold mb-2 text-amber-800 dark:text-amber-300">Having Subscription Issues?</h3>
-                <p className="text-sm text-amber-700 dark:text-amber-400 mb-4">
-                  If you previously deleted your account and created a new one, you might experience issues with your subscription.
-                  Click the button below to fix potential subscription conflicts.
-                </p>
-                <Button 
-                  variant="outline"
-                  className="border-amber-500 text-amber-700 hover:bg-amber-100 dark:text-amber-300 dark:hover:bg-amber-900"
-                  onClick={async () => {
-                    try {
+              <div className="space-y-4">
+                {/* Refresh Status Button */}
+                <Card className="p-6 border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950">
+                  <h3 className="text-lg font-semibold mb-2 text-blue-800 dark:text-blue-300">Refresh Subscription Status</h3>
+                  <p className="text-sm text-blue-700 dark:text-blue-400 mb-4">
+                    If your subscription status doesn't appear to be up-to-date, you can manually refresh it.
+                  </p>
+                  <Button 
+                    variant="outline"
+                    className="border-blue-500 text-blue-700 hover:bg-blue-100 dark:text-blue-300 dark:hover:bg-blue-900"
+                    onClick={async () => {
                       toast({
-                        title: "Processing...",
-                        description: "Checking and fixing subscription data...",
+                        title: "Refreshing...",
+                        description: "Updating your subscription status...",
                       });
-                      
-                      if (!user) {
-                        throw new Error('You must be logged in to perform this action');
-                      }
-                      
-                      // Get a fresh token
-                      const idToken = await user.getIdToken(true);
-                      
-                      // Call our dedicated cleanup endpoint
-                      const response = await fetch('/api/stripe/cleanup-subscription', {
-                        method: 'POST',
-                        headers: {
-                          'Authorization': `Bearer ${idToken}`,
-                          'Content-Type': 'application/json'
-                        }
-                      });
-                      
-                      if (!response.ok) {
-                        const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
-                        throw new Error(errorData.message || 'Failed to clean up subscription data');
-                      }
-                      
-                      // Refresh account data
                       await refreshAccountData();
-                      
                       toast({
-                        title: "Completed",
-                        description: "Subscription data has been checked and fixed. Please try upgrading again if needed.",
+                        title: "Updated",
+                        description: "Your subscription status has been refreshed.",
                       });
-                    } catch (error: any) {
-                      console.error('Error fixing subscription:', error);
-                      toast({
-                        title: "Error",
-                        description: error.message || "Failed to fix subscription data. Please contact support.",
-                        variant: "destructive",
-                      });
-                    }
-                  }}
-                >
-                  Fix Subscription Data
-                </Button>
-              </Card>
+                    }}
+                    disabled={isLoading}
+                  >
+                    {isLoading ? "Refreshing..." : "Refresh Status"}
+                  </Button>
+                </Card>
+                
+                {/* Special button for users who recreated their account and have subscription issues */}
+                <Card className="p-6 border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950">
+                  <h3 className="text-lg font-semibold mb-2 text-amber-800 dark:text-amber-300">Having Subscription Issues?</h3>
+                  <p className="text-sm text-amber-700 dark:text-amber-400 mb-4">
+                    If you previously deleted your account and created a new one, you might experience issues with your subscription.
+                    Click the button below to fix potential subscription conflicts.
+                  </p>
+                  <Button 
+                    variant="outline"
+                    className="border-amber-500 text-amber-700 hover:bg-amber-100 dark:text-amber-300 dark:hover:bg-amber-900"
+                    onClick={async () => {
+                      try {
+                        toast({
+                          title: "Processing...",
+                          description: "Checking and fixing subscription data...",
+                        });
+                        
+                        if (!user) {
+                          throw new Error('You must be logged in to perform this action');
+                        }
+                        
+                        // Get a fresh token
+                        const idToken = await user.getIdToken(true);
+                        
+                        // Call our dedicated cleanup endpoint
+                        const response = await fetch('/api/stripe/cleanup-subscription', {
+                          method: 'POST',
+                          headers: {
+                            'Authorization': `Bearer ${idToken}`,
+                            'Content-Type': 'application/json'
+                          }
+                        });
+                        
+                        if (!response.ok) {
+                          const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
+                          throw new Error(errorData.message || 'Failed to clean up subscription data');
+                        }
+                        
+                        // Refresh account data
+                        await refreshAccountData();
+                        
+                        toast({
+                          title: "Completed",
+                          description: "Subscription data has been checked and fixed. Please try upgrading again if needed.",
+                        });
+                      } catch (error: any) {
+                        console.error('Error fixing subscription:', error);
+                        toast({
+                          title: "Error",
+                          description: error.message || "Failed to fix subscription data. Please contact support.",
+                          variant: "destructive",
+                        });
+                      }
+                    }}
+                  >
+                    Fix Subscription Data
+                  </Button>
+                </Card>
+              </div>
             </div>
           </details>
         </div>

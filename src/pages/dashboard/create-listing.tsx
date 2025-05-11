@@ -66,6 +66,7 @@ const CreateListingPage = () => {
     cardName: "",
     quantity: "" as string,
     termsAccepted: false,
+    offersOnly: false,
   });
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -100,10 +101,13 @@ const CreateListingPage = () => {
       }
     }
 
-    if (!formData.price) {
-      newErrors.price = "Price is required";
-    } else if (isNaN(parseFloat(formData.price)) || parseFloat(formData.price) <= 0) {
-      newErrors.price = "Please enter a valid price";
+    // Only validate price if not in "offers only" mode
+    if (!formData.offersOnly) {
+      if (!formData.price) {
+        newErrors.price = "Price is required";
+      } else if (isNaN(parseFloat(formData.price)) || parseFloat(formData.price) <= 0) {
+        newErrors.price = "Please enter a valid price";
+      }
     }
 
     if (!formData.game) {
@@ -169,9 +173,11 @@ const CreateListingPage = () => {
     setUploadProgress(0);
 
     try {
+      // Prepare listing data with special handling for "offers only" mode
       const listingData = {
         ...formData,
-        price: formData.price.trim(),
+        // If offers only is checked, set price to 0 and add offersOnly flag
+        price: formData.offersOnly ? "0" : formData.price.trim(),
         onUploadProgress: (progress: number) => {
           setUploadProgress(Math.round(progress));
         }
@@ -397,19 +403,53 @@ const CreateListingPage = () => {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="price">Price *</Label>
+                    <div className="flex justify-between items-center">
+                      <Label htmlFor="price">Price {!formData.offersOnly && '*'}</Label>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox 
+                          id="offersOnly" 
+                          checked={formData.offersOnly}
+                          onCheckedChange={(checked) => {
+                            if (typeof checked === 'boolean') {
+                              setFormData(prev => ({ 
+                                ...prev, 
+                                offersOnly: checked,
+                                // Clear price if offers only is checked
+                                price: checked ? "" : prev.price
+                              }));
+                              // Clear price error if offers only is checked
+                              if (checked) {
+                                setErrors(prev => ({ ...prev, price: undefined }));
+                              }
+                            }
+                          }}
+                        />
+                        <label
+                          htmlFor="offersOnly"
+                          className="text-sm font-medium leading-none cursor-pointer"
+                        >
+                          Offers Only
+                        </label>
+                      </div>
+                    </div>
                     <Input
                       id="price"
-                      required
+                      required={!formData.offersOnly}
+                      disabled={formData.offersOnly}
                       type="number"
                       min="0"
                       step="0.01"
                       value={formData.price}
                       onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                      placeholder="0.00"
+                      placeholder={formData.offersOnly ? "Accepting offers only" : "0.00"}
                       className={errors.price ? "border-red-500" : ""}
                     />
                     {errors.price && <p className="text-sm text-red-500">{errors.price}</p>}
+                    {formData.offersOnly && (
+                      <p className="text-xs text-muted-foreground">
+                        Buyers will be able to make offers, but won't be able to purchase directly.
+                      </p>
+                    )}
                   </div>
 
                   <div className="space-y-2">
