@@ -25,6 +25,7 @@ export interface Listing {
   latitude?: number;
   longitude?: number;
   distance?: number;
+  offersOnly?: boolean;
   location?: {
     latitude?: number;
     longitude?: number;
@@ -57,6 +58,7 @@ export interface CreateListingData {
   gradingCompany?: string;
   city: string;
   state: string;
+  offersOnly?: boolean;
 }
 
 export interface UserFavorite {

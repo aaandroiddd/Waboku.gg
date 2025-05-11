@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Footer } from '@/components/Footer';
 import { ListingDebuggerTool } from '@/components/ListingDebuggerTool';
+import { ListingVisibilityTroubleshooter } from '@/components/admin/ListingVisibilityTroubleshooter';
 
 export default function ListingDiagnosticsPage() {
   const router = useRouter();
@@ -87,7 +88,17 @@ export default function ListingDiagnosticsPage() {
             </AlertDescription>
           </Alert>
           
-          <ListingDebuggerTool />
+          <div className="space-y-8">
+            <ListingDebuggerTool />
+            
+            <div className="mt-8">
+              <h2 className="text-xl font-semibold mb-4">User Listing Troubleshooter</h2>
+              <p className="text-muted-foreground mb-4">
+                This tool is available to admins to diagnose issues with specific user listings.
+              </p>
+              <ListingVisibilityTroubleshooter />
+            </div>
+          </div>
         </Card>
       </div>
       <Footer />

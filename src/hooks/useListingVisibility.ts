@@ -191,7 +191,15 @@ export function useListingVisibility(listings: Listing[]) {
         }
         
         // Check for required fields
-        const requiredFields = ['title', 'price', 'userId', 'username'];
+        // Note: price is not required if the listing is "offers only"
+        const isOffersOnly = listing.offersOnly === true;
+        const requiredFields = ['title', 'userId', 'username'];
+        
+        // Only require price if not "offers only"
+        if (!isOffersOnly) {
+          requiredFields.push('price');
+        }
+        
         const missingFields = requiredFields.filter(field => !listing[field as keyof Listing]);
         
         if (missingFields.length > 0) {

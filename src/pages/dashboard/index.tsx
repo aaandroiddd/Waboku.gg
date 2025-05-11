@@ -683,7 +683,7 @@ const DashboardComponent = () => {
           mode={dialogState.mode}
         />
       
-      {/* Show the listing visibility fixer if there are no active listings but there are listings in total */}
+      {/* Show a simplified message if there are no active listings but there are listings in total */}
       {allListings.length > 0 && properlyFilteredActiveListings.length === 0 && (
         <div className="mb-6">
           <Alert variant="warning" className="mb-4">
@@ -691,17 +691,34 @@ const DashboardComponent = () => {
             <AlertTitle>No Active Listings Visible</AlertTitle>
             <AlertDescription>
               You have {allListings.length} total listings, but none are currently showing as active. 
-              This could be due to expired listings, caching issues, or visibility problems.
-              Use the tools below to diagnose and fix the issue.
+              This could be due to expired listings or listings set to "offers only".
+              Try refreshing your listings or creating a new listing.
             </AlertDescription>
           </Alert>
           
-          <div className="p-4 border rounded-lg bg-card">
-            <h3 className="text-lg font-medium mb-4">Listing Visibility Troubleshooter</h3>
-            <ListingVisibilityFixer 
-              onRefresh={refreshListings} 
-              isLoading={loadingState} 
-            />
+          <div className="flex justify-end">
+            <Button 
+              variant="outline" 
+              onClick={handleRefreshListings} 
+              disabled={refreshLoading}
+              className="mr-2"
+            >
+              {refreshLoading ? (
+                <>
+                  <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                  Refreshing...
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                  Refresh Listings
+                </>
+              )}
+            </Button>
+            
+            <Button onClick={() => router.push('/dashboard/create-listing')}>
+              Create New Listing
+            </Button>
           </div>
         </div>
       )}
