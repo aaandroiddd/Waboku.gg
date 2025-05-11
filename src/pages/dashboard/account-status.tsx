@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { ChevronLeft } from 'lucide-react';
 import { useRouter } from 'next/router';
 import { Footer } from '@/components/Footer';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { getDatabase, ref, set } from 'firebase/database';
 import { getFirestore, doc, setDoc } from 'firebase/firestore';
 import { useAuth } from '@/contexts/AuthContext';
@@ -23,6 +23,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { LoadingScreen } from '@/components/LoadingScreen';
 
 export default function AccountStatus() {
   // Move all hooks to the top of the component to ensure consistent hook calls
@@ -32,17 +33,22 @@ export default function AccountStatus() {
   const { toast } = useToast();
   const { session_id, upgrade } = router.query;
   
-  // Use a ref to track if we've already refreshed the data on initial load
-  const initialRefreshDoneRef = useRef(false);
+  // Track page initialization state
+  const [pageState, setPageState] = useState<'initializing' | 'loading' | 'ready'>('initializing');
+  const initializationComplete = useRef(false);
 
+  // Consolidated initialization function
   useEffect(() => {
-    // Refresh account data when the page loads, but only once
-    if (!initialRefreshDoneRef.current) {
-      console.log('[AccountStatus] Initial data refresh');
-      
-      // If we're returning from Stripe, handle special reconnection logic
-      if (session_id || upgrade === 'success') {
-        const handleStripeReturn = async () => {
+    // Skip if already initialized
+    if (initializationComplete.current) return;
+    
+    const initializePage = async () => {
+      try {
+        setPageState('loading');
+        console.log('[AccountStatus] Initializing page');
+        
+        // Handle Stripe checkout return if needed
+        if (session_id || upgrade === 'success') {
           console.log('[AccountStatus] Handling return from Stripe checkout');
           
           try {
@@ -50,7 +56,6 @@ export default function AccountStatus() {
             const { 
               getStoredAuthState, 
               clearStoredAuthState, 
-              isReturningFromStripe,
               attemptAuthRestoration,
               getStoredAuthToken
             } = await import('@/lib/auth-stripe-persistence');
@@ -59,40 +64,15 @@ export default function AccountStatus() {
             const authRestored = await attemptAuthRestoration();
             console.log('[AccountStatus] Auth restoration attempt result:', authRestored);
             
-            // Reconnect Firebase with multiple attempts
+            // Reconnect Firebase (single attempt)
             try {
               const { connectionManager } = await import('@/lib/firebase');
               if (connectionManager) {
-                // First attempt
                 await connectionManager.reconnectFirebase();
-                console.log('[AccountStatus] First Firebase reconnection attempted');
-                
-                // Second attempt after a delay
-                setTimeout(async () => {
-                  await connectionManager.reconnectFirebase();
-                  console.log('[AccountStatus] Second Firebase reconnection attempted');
-                  
-                  // After reconnection, refresh account data
-                  setTimeout(() => {
-                    refreshAccountData();
-                    console.log('[AccountStatus] Account data refreshed after reconnection');
-                  }, 1000);
-                }, 2000);
+                console.log('[AccountStatus] Firebase reconnection completed');
               }
             } catch (reconnectError) {
               console.error('[AccountStatus] Error reconnecting Firebase:', reconnectError);
-            }
-            
-            // Get stored auth state for logging
-            const storedAuth = getStoredAuthState();
-            if (storedAuth) {
-              console.log('[AccountStatus] Found auth state from Stripe redirect:', {
-                uid: storedAuth.userId ? `${storedAuth.userId.substring(0, 5)}...` : 'missing',
-                email: storedAuth.email ? `${storedAuth.email.substring(0, 3)}...` : 'missing',
-                timestamp: storedAuth.timestamp ? new Date(storedAuth.timestamp).toISOString() : 'missing',
-                age: storedAuth.timestamp ? `${Math.floor((Date.now() - storedAuth.timestamp) / 1000 / 60)} minutes` : 'unknown',
-                hasToken: !!getStoredAuthToken()
-              });
             }
             
             // Force token refresh if user is available
@@ -105,23 +85,25 @@ export default function AccountStatus() {
               }
             }
             
-            // Wait a moment for the webhook to process and connections to stabilize
-            await new Promise(resolve => setTimeout(resolve, 2000));
-            
             // Force sync subscription data with Stripe
             try {
-              console.log('[AccountStatus] Forcing subscription sync after Stripe checkout');
+              console.log('[AccountStatus] Syncing subscription data with Stripe');
               const syncResponse = await fetch('/api/stripe/sync-subscription', {
                 method: 'POST',
                 headers: {
                   'Content-Type': 'application/json',
-                  'Authorization': `Bearer ${await user.getIdToken(true)}`
+                  'Authorization': `Bearer ${await user?.getIdToken(true)}`
                 }
               });
               
               if (syncResponse.ok) {
-                const syncData = await syncResponse.json();
-                console.log('[AccountStatus] Subscription sync successful:', syncData);
+                console.log('[AccountStatus] Subscription sync successful');
+                
+                // Show success message
+                toast({
+                  title: "Success!",
+                  description: "Your subscription has been processed. Your account has been upgraded to premium.",
+                });
               } else {
                 console.error('[AccountStatus] Subscription sync failed:', await syncResponse.text());
               }
@@ -129,47 +111,31 @@ export default function AccountStatus() {
               console.error('[AccountStatus] Error syncing subscription:', syncError);
             }
             
-            // Show success message
-            toast({
-              title: "Success!",
-              description: "Your subscription has been processed. Your account has been upgraded to premium.",
-            });
-            
-            // Refresh the account data to reflect the changes
-            await refreshAccountData();
-            
             // Clear stored auth state after processing
             clearStoredAuthState();
-            
-            // Force reload the page to ensure all subscription data is properly loaded
-            // This helps with users who previously deleted their accounts
-            setTimeout(() => {
-              window.location.reload();
-            }, 1000);
           } catch (error) {
             console.error('[AccountStatus] Error handling Stripe return:', error);
-            
-            // Still try to refresh account data even if there was an error
-            refreshAccountData();
           }
-        };
+          
+          // Remove query parameters from URL without refreshing the page
+          router.replace('/dashboard/account-status', undefined, { shallow: true });
+        }
         
-        // Execute the Stripe return handler
-        handleStripeReturn();
-      } else {
-        // Normal page load - just refresh account data after a small delay
-        setTimeout(() => {
-          refreshAccountData();
-        }, 1000);
+        // Refresh account data once
+        await refreshAccountData();
+        
+        // Mark initialization as complete
+        initializationComplete.current = true;
+        setPageState('ready');
+        
+      } catch (error) {
+        console.error('[AccountStatus] Error during page initialization:', error);
+        // Still mark as ready to avoid getting stuck in loading state
+        setPageState('ready');
       }
-      
-      initialRefreshDoneRef.current = true;
-    }
+    };
     
-    // Remove query parameters from URL without refreshing the page
-    if (session_id || upgrade === 'success') {
-      router.replace('/dashboard/account-status', undefined, { shallow: true });
-    }
+    initializePage();
   }, [session_id, upgrade, toast, router, user, refreshAccountData]);
 
   const handleCancelSubscription = async () => {
@@ -235,7 +201,7 @@ export default function AccountStatus() {
         description: `Your premium features will remain active until ${endDateFormatted}.`,
       });
 
-      // Instead of reloading the page, just refresh the account data
+      // Refresh the account data to reflect the changes
       await refreshAccountData();
     } catch (error: any) {
       console.error('Subscription cancellation failed:', {
@@ -275,6 +241,11 @@ export default function AccountStatus() {
       day: 'numeric'
     });
   };
+
+  // Show loading screen while initializing
+  if (pageState === 'initializing' || pageState === 'loading') {
+    return <LoadingScreen message="Loading account information..." />;
+  }
 
   // Render email verification message if user is not verified
   if (user && !user.emailVerified) {
@@ -340,16 +311,15 @@ export default function AccountStatus() {
               <Button 
                 variant="outline" 
                 size="sm" 
-                onClick={() => {
+                onClick={async () => {
                   toast({
                     title: "Refreshing...",
                     description: "Updating your subscription status...",
                   });
-                  refreshAccountData().then(() => {
-                    toast({
-                      title: "Updated",
-                      description: "Your subscription status has been refreshed.",
-                    });
+                  await refreshAccountData();
+                  toast({
+                    title: "Updated",
+                    description: "Your subscription status has been refreshed.",
                   });
                 }}
                 disabled={isLoading}
@@ -469,35 +439,7 @@ export default function AccountStatus() {
 
                       // Force token refresh and get a fresh token
                       const freshToken = await user.getIdToken(true);
-                      console.log('Token obtained successfully:', {
-                        tokenLength: freshToken.length,
-                        timestamp: new Date().toISOString()
-                      });
-
-                      // First, clear the canceled subscription status via a separate API call
-                      try {
-                        // Update the subscription status in the database to indicate it's being replaced
-                        const db = getDatabase();
-                        const subscriptionRef = ref(db, `users/${user.uid}/account/subscription`);
-                        
-                        // Make a copy of the subscription object and update the status
-                        const updatedSubscription = {
-                          ...(subscription || {}),
-                          status: 'replaced',
-                          lastUpdated: Date.now()
-                        };
-                        
-                        // Set the entire object to ensure all required fields are present
-                        await set(subscriptionRef, updatedSubscription);
-                        
-                        console.log('Cleared canceled subscription status before resubscribing');
-                      } catch (clearError) {
-                        console.error('Error clearing canceled subscription:', clearError);
-                        // Continue anyway as this is not critical
-                      }
-
-                      // Add a small delay to ensure the database update completes
-                      await new Promise(resolve => setTimeout(resolve, 500));
+                      console.log('Token obtained successfully');
 
                       // Now make the API call to create a new checkout session
                       const response = await fetch('/api/stripe/create-checkout', {
@@ -508,7 +450,6 @@ export default function AccountStatus() {
                         }
                       });
                       
-                      console.log('Checkout response status:', response.status);
                       if (!response.ok) {
                         const errorText = await response.text();
                         console.error('Checkout error response:', errorText);
@@ -518,38 +459,6 @@ export default function AccountStatus() {
                         } catch (e) {
                           throw new Error('Failed to create checkout session: ' + errorText);
                         }
-                      }
-
-                      if (response.status === 401) {
-                        // Token might be expired, try to refresh and retry
-                        const newToken = await user?.getIdToken(true);
-                        if (!newToken) {
-                          throw new Error('Failed to refresh authentication');
-                        }
-
-                        const retryResponse = await fetch('/api/stripe/create-checkout', {
-                          method: 'POST',
-                          headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${newToken}`,
-                          },
-                        });
-
-                        if (!retryResponse.ok) {
-                          const errorData = await retryResponse.json();
-                          throw new Error(errorData.message || 'Failed to create checkout session after token refresh');
-                        }
-
-                        const retryData = await retryResponse.json();
-                        
-                        if (retryData.isPreview) {
-                          // For preview environment, use Next.js router
-                          router.push(retryData.sessionUrl);
-                        } else {
-                          // Use client-side redirect for production Stripe checkout
-                          window.location.assign(retryData.sessionUrl);
-                        }
-                        return;
                       }
 
                       const data = await response.json();
@@ -669,9 +578,6 @@ export default function AccountStatus() {
                   title: "Completed",
                   description: "Subscription data has been checked and fixed. Please try upgrading again if needed.",
                 });
-                
-                // Force reload the page to ensure all subscription data is properly loaded
-                window.location.reload();
               } catch (error: any) {
                 console.error('Error fixing subscription:', error);
                 toast({
