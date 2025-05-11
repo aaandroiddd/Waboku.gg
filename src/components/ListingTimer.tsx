@@ -356,7 +356,7 @@ export function ListingTimer({ createdAt, archivedAt, accountTier, status, listi
         <Alert variant="warning">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
-            Archived: Will be deleted in {formatTimeLeft()}
+            Archived: Will be automatically deleted in {formatTimeLeft()}
           </AlertDescription>
         </Alert>
       )}

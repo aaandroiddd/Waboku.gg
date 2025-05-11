@@ -85,7 +85,11 @@ const DashboardComponent = () => {
                   const expirationTime = new Date(now);
                   expirationTime.setHours(expirationTime.getHours() + tierDuration);
                   return expirationTime;
-                })()
+                })(),
+                // Clear archive-related fields
+                originalCreatedAt: null,
+                previousStatus: null,
+                previousExpiresAt: null
               } 
             : listing
         )
@@ -476,7 +480,8 @@ const DashboardComponent = () => {
       });
     }
   }, [allListings, properlyFilteredActiveListings, activeListings, gameFilter, sortBy, sortOrder, searchQuery]);
-  const previousListings = filteredAndSortedListings.filter(listing => listing.status !== 'active');
+  // Filter for archived listings specifically
+  const archivedListings = filteredAndSortedListings.filter(listing => listing.status === 'archived');
 
   useEffect(() => {
     if (!loading && !user) {
@@ -524,13 +529,23 @@ const DashboardComponent = () => {
         
         // Update local state to immediately reflect the change
         // This ensures the listing moves from active to archived tab without requiring a refresh
+        const now = new Date();
         setListings(prevListings => 
           prevListings.map(listing => 
             listing.id === listingId 
               ? { 
                   ...listing, 
                   status: 'archived',
-                  archivedAt: new Date(),
+                  archivedAt: now,
+                  // Store the original status and expiration for potential restoration
+                  previousStatus: listing.status,
+                  previousExpiresAt: listing.expiresAt,
+                  // Set a 7-day expiration for archived listings
+                  expiresAt: (() => {
+                    const archiveExpiration = new Date(now);
+                    archiveExpiration.setDate(archiveExpiration.getDate() + 7);
+                    return archiveExpiration;
+                  })()
                 } 
               : listing
           )
@@ -1009,7 +1024,7 @@ const DashboardComponent = () => {
             </div>
           ) : (
             <ArchivedListings
-              listings={previousListings}
+              listings={archivedListings}
               accountTier={profile?.tier || 'free'}
               onRestore={handleRestoreListing}
               onDelete={(listingId) => {

@@ -83,6 +83,12 @@ export function ArchivedListings({
                   status="archived"
                 />
               </div>
+              {/* Display archived status with date */}
+              {listing.archivedAt && (
+                <div className="text-sm text-amber-600 font-medium">
+                  Archived on {new Date(listing.archivedAt).toLocaleDateString()}
+                </div>
+              )}
               <div className="flex flex-wrap gap-2 mt-4">
                 <Button
                   variant="outline"

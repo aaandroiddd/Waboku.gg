@@ -382,9 +382,15 @@ export function useOptimizedListings({ userId, searchQuery, showOnlyActive = fal
         const archiveExpiration = new Date(now);
         archiveExpiration.setDate(archiveExpiration.getDate() + 7);
         
+        // Store the original status for potential restoration
+        updateData.previousStatus = listingData.status;
+        updateData.previousExpiresAt = listingData.expiresAt;
+        
+        // Set archive-specific fields
         updateData.archivedAt = now;
         updateData.expiresAt = archiveExpiration;
         updateData.originalCreatedAt = listingData.createdAt;
+        updateData.updatedAt = now;
       } else if (status === 'active') {
         // When activating/restoring, set new dates and remove archive-related fields
         
