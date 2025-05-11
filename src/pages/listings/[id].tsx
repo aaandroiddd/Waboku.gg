@@ -1765,7 +1765,8 @@ export default function ListingPage() {
                       </Button>
                     ) : (
                       <>
-                        {sellerHasActiveStripeAccount ? (
+                        {/* Show Buy Now button only if not "Offers Only" */}
+                        {!listing.offersOnly && sellerHasActiveStripeAccount ? (
                           <BuyNowButton
                             listingId={listing.id}
                             sellerId={listing.userId}
@@ -1776,7 +1777,7 @@ export default function ListingPage() {
                           >
                             Buy Now
                           </BuyNowButton>
-                        ) : (
+                        ) : !listing.offersOnly ? (
                           <Button
                             variant="outline"
                             size="lg"
@@ -1786,15 +1787,17 @@ export default function ListingPage() {
                           >
                             Buy Now Unavailable
                           </Button>
-                        )}
+                        ) : null}
+                        
+                        {/* Make Offer button - full width if offers only */}
                         <Button
-                          variant="outline"
+                          variant={listing.offersOnly ? "default" : "outline"}
                           size="lg"
                           onClick={handleMakeOffer}
-                          className="w-full border-blue-500 text-blue-500 hover:bg-blue-500/10"
+                          className={`${listing.offersOnly ? "col-span-2 bg-blue-600 hover:bg-blue-700 text-white" : "w-full border-blue-500 text-blue-500 hover:bg-blue-500/10"}`}
                           disabled={user?.uid === listing.userId || listing.soldTo || listing.archivedAt || listing.status === 'sold'}
                         >
-                          Make Offer
+                          {listing.offersOnly ? "Make Offer (Required)" : "Make Offer"}
                         </Button>
                       </>
                     )}

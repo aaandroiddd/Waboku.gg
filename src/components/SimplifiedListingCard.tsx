@@ -38,10 +38,10 @@ export const SimplifiedListingCard = ({ listing }: SimplifiedListingCardProps) =
                 target.src = '/images/rect.png';
               }}
             />
-            {/* Price Badge */}
+            {/* Price Badge or Offers Only Badge */}
             <div className="absolute bottom-2 right-2 z-10">
               <span className="px-2 py-1 bg-black/75 text-white rounded-md font-semibold text-sm">
-                {formatPrice(listing.price)}
+                {listing.offersOnly ? "Offers Only" : formatPrice(listing.price)}
               </span>
             </div>
           </div>
