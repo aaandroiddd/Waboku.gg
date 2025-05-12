@@ -303,8 +303,7 @@ export default function Header({ animate = true }: HeaderProps) {
         </nav>
 
         {/* Mobile Navigation */}
-        <div className="md:hidden flex items-center gap-2">
-          <ThemeToggle />
+        <div className="md:hidden flex items-center">
           <Sheet open={isMobileMenuOpen} onOpenChange={handleMenuToggle}>
             <SheetTrigger asChild>
               <Button 
@@ -331,9 +330,6 @@ export default function Header({ animate = true }: HeaderProps) {
                   {user && (
                     <div className="mt-4 flex flex-col gap-1">
                       <p className="text-sm text-muted-foreground truncate">{user.email}</p>
-                      <div className="flex items-center gap-2 mt-1">
-                        <ThemeToggle />
-                      </div>
                     </div>
                   )}
                 </div>
