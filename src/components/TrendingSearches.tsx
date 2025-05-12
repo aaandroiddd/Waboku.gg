@@ -9,22 +9,22 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { FirebaseErrorBoundary } from '@/components/FirebaseErrorBoundary';
 
 const itemVariants = {
-  initial: { opacity: 0, x: -20 },
+  initial: { opacity: 0, x: -10 },
   animate: (i: number) => ({
     opacity: 1,
     x: 0,
     transition: {
-      delay: i * 0.1,
-      duration: 0.4,
-      ease: [0.23, 1, 0.32, 1],
+      delay: i * 0.05, // Reduced delay between items
+      duration: 0.3,   // Slightly faster animation
+      ease: "easeOut", // Simpler easing function
     },
   }),
   exit: { 
     opacity: 0,
-    x: -20,
+    x: -10,           // Reduced movement distance
     transition: {
       duration: 0.2,
-      ease: [0.23, 1, 0.32, 1],
+      ease: "easeIn", // Simpler easing function
     },
   },
 };
@@ -139,6 +139,7 @@ function TrendingSearchesContent() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
+            style={{ willChange: "opacity" }}
           >
             <Loader2 className="h-4 w-4 animate-spin" />
             <span className="text-sm">Loading trending searches...</span>
@@ -150,6 +151,7 @@ function TrendingSearchesContent() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
+            style={{ willChange: "opacity" }}
           >
             <TrendingUp className="h-4 w-4" />
             <span className="text-sm">Start searching to see trending results</span>
@@ -161,6 +163,7 @@ function TrendingSearchesContent() {
             initial="initial"
             animate="animate"
             exit="exit"
+            style={{ willChange: "transform, opacity" }}
           >
             <div className="flex items-center gap-1 text-muted-foreground">
               <TrendingUp className="h-4 w-4" />
@@ -207,7 +210,7 @@ function TrendingSearchesContent() {
                   key={search.term}
                   custom={index}
                   variants={itemVariants}
-                  layout
+                  style={{ willChange: "transform, opacity" }}
                 >
                   <Button
                     variant="outline"
@@ -225,7 +228,7 @@ function TrendingSearchesContent() {
                   key="more-link"
                   variants={itemVariants}
                   custom={3}
-                  layout
+                  style={{ willChange: "transform, opacity" }}
                 >
                   <Button
                     variant="outline"

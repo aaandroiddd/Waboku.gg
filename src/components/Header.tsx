@@ -218,28 +218,38 @@ export default function Header({ animate = true }: HeaderProps) {
       transition: {
         type: prefersReducedMotion || isMobile ? "tween" : "spring",
         damping: isMobile ? 25 : 20,
-        stiffness: isMobile ? 120 : 100,
-        duration: isMobile ? 0.2 : 0.3
+        stiffness: isMobile ? 100 : 100,
+        duration: isMobile ? 0.15 : 0.2
       }
     }
   };
 
-  // Animation variants for header show/hide
+  // Animation variants for header show/hide - simplified for mobile
   const showHideVariants = {
     visible: { 
       y: 0,
       opacity: 1,
       transition: {
-        y: { type: "spring", stiffness: 300, damping: 30 },
-        opacity: { duration: 0.2 }
+        y: { 
+          type: isMobile ? "tween" : "spring", 
+          stiffness: isMobile ? undefined : 300, 
+          damping: isMobile ? undefined : 30,
+          duration: isMobile ? 0.15 : undefined
+        },
+        opacity: { duration: isMobile ? 0.1 : 0.2 }
       }
     },
     hidden: { 
       y: -60,
       opacity: 0,
       transition: {
-        y: { type: "spring", stiffness: 300, damping: 30 },
-        opacity: { duration: 0.2 }
+        y: { 
+          type: isMobile ? "tween" : "spring", 
+          stiffness: isMobile ? undefined : 300, 
+          damping: isMobile ? undefined : 30,
+          duration: isMobile ? 0.15 : undefined
+        },
+        opacity: { duration: isMobile ? 0.1 : 0.2 }
       }
     }
   };
@@ -270,6 +280,7 @@ export default function Header({ animate = true }: HeaderProps) {
       layout="preserved"
       // Add onMouseEnter to ensure header is visible when hovered
       onMouseEnter={() => setShowHeader(true)}
+      style={{ willChange: "transform, opacity" }}
     >
       <div className="container mx-auto px-4 h-10 flex items-center justify-between gap-4">
         <div>
@@ -309,8 +320,13 @@ export default function Header({ animate = true }: HeaderProps) {
               <Button 
                 variant="ghost" 
                 size="icon" 
-                className="md:hidden will-change-transform"
-                style={{ transform: 'translateZ(0)' }} // Force hardware acceleration
+                className="md:hidden"
+                style={{ 
+                  willChange: "transform", 
+                  transform: 'translateZ(0)',
+                  backfaceVisibility: 'hidden',
+                  WebkitBackfaceVisibility: 'hidden'
+                }} // Enhanced hardware acceleration
               >
                 <Menu className="h-5 w-5" />
                 <span className="sr-only">Toggle menu</span>

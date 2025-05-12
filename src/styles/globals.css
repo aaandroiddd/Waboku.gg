@@ -40,6 +40,10 @@
     animation-duration: 8s !important;
     /* Use transform for better performance */
     transform: translateZ(0);
+    /* Disable on low-end devices */
+    @media (prefers-reduced-motion: reduce) {
+      animation: none !important;
+    }
   }
   
   /* Preserve fade-in animation speed for title and subtitle to match desktop */
@@ -47,6 +51,10 @@
     animation: fade-in 0.8s ease-out forwards, float-up 6s ease-in-out infinite !important;
     animation-delay: 0.2s, 1s !important;
     transform: translateZ(0);
+    /* Disable floating animation on low-end devices */
+    @media (prefers-reduced-motion: reduce) {
+      animation: fade-in 0.8s ease-out forwards !important;
+    }
   }
   
   .animate-subtitle {
@@ -59,6 +67,18 @@
   .sheet-content {
     will-change: transform;
     transform: translateZ(0);
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    perspective: 1000;
+    -webkit-perspective: 1000;
+  }
+  
+  /* Optimize framer-motion animations */
+  .framer-motion-div {
+    will-change: transform, opacity;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    transform: translateZ(0);
   }
   
   /* Optimize background animations for mobile */
@@ -69,9 +89,37 @@
   .midnight .hero-background::before,
   .midnight .hero-background::after {
     /* Slower animations on mobile */
-    animation-duration: 20s !important;
+    animation-duration: 30s !important;
     /* Reduce opacity for better performance */
-    opacity: 0.2 !important;
+    opacity: 0.15 !important;
+    /* Disable animations on low-end devices */
+    @media (prefers-reduced-motion: reduce) {
+      animation: none !important;
+      opacity: 0.1 !important;
+    }
+  }
+  
+  /* Optimize for older devices - detect by checking for older browsers */
+  @supports not (backdrop-filter: blur(4px)) {
+    .hero-background::before,
+    .hero-background::after,
+    .dark .hero-background::before,
+    .dark .hero-background::after,
+    .midnight .hero-background::before,
+    .midnight .hero-background::after {
+      display: none !important;
+    }
+    
+    .animate-title,
+    .animate-subtitle {
+      animation: fade-in 0.5s ease-out forwards !important;
+      animation-delay: 0.1s !important;
+    }
+    
+    /* Simplify backdrop blur for older devices */
+    .bg-background\/95 {
+      background-color: var(--background) !important;
+    }
   }
   
   /* Simplify gradient animations on mobile */
