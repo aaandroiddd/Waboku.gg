@@ -262,8 +262,12 @@ export function DashboardSidebar({ onNavigate }: DashboardSidebarProps) {
     </div>
   );
 
+  // Import useMediaQuery hook to detect mobile screens
+  const isMobile = useMediaQuery("(max-width: 768px)");
+  const isSmallMobile = useMediaQuery("(max-width: 380px)");
+
   return (
-    <div className="flex flex-col h-screen sticky top-0 bg-card border-r">
+    <div className="flex flex-col h-[100dvh] sticky top-0 bg-card border-r">
       {/* Persistent header */}
       <div className="p-6 border-b">
         <Logo className="h-8" alwaysShowFull={true} />
@@ -301,7 +305,6 @@ export function DashboardSidebar({ onNavigate }: DashboardSidebarProps) {
                     </div>
                   </div>
                 </div>
-
               </div>
             )}
           </div>
@@ -359,6 +362,7 @@ function SignOutButton({ onNavigate }: { onNavigate?: () => void }) {
   const { signOut } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
+  const isMobile = useMediaQuery("(max-width: 768px)");
   
   const handleSignOut = async () => {
     try {
@@ -430,10 +434,12 @@ function SignOutButton({ onNavigate }: { onNavigate?: () => void }) {
     }
   };
   
+  // Enhanced styling for better visibility on mobile
   return (
     <button
       onClick={handleSignOut}
-      className="flex items-center w-full gap-3 text-sm font-medium rounded-md px-3 py-3.5 hover:bg-accent hover:text-accent-foreground transition-colors bg-red-500/10 text-red-500 hover:text-red-600"
+      className="flex items-center w-full gap-3 text-sm font-medium rounded-md px-3 py-4 hover:bg-accent hover:text-accent-foreground transition-colors bg-red-500/10 text-red-500 hover:text-red-600"
+      style={{ minHeight: isMobile ? '56px' : 'auto' }}
     >
       <LogOut className="h-5 w-5" />
       <span className="font-medium">Sign Out</span>

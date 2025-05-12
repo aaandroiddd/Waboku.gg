@@ -211,7 +211,9 @@ export const DashboardLayout = ({ children }: { children: ReactNode }) => {
           </SheetTrigger>
           <SheetContent side="left" className="p-0 w-72">
             <SheetTitle className="sr-only">Dashboard Navigation</SheetTitle>
-            <DashboardSidebar onNavigate={() => setIsSidebarOpen(false)} />
+            <div className="h-[100dvh] overflow-hidden">
+              <DashboardSidebar onNavigate={() => setIsSidebarOpen(false)} />
+            </div>
           </SheetContent>
         </Sheet>
 
