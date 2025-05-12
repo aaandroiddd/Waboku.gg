@@ -25,6 +25,15 @@ export default function MfaVerification({ resolver, onComplete, onCancel }: MfaV
   const initializeRecaptcha = () => {
     if (!recaptchaContainerRef.current) return;
     
+    // Skip reCAPTCHA initialization in preview environments
+    if (typeof window !== 'undefined' && window.location.hostname.includes('preview.co.dev')) {
+      console.log('Preview environment detected, skipping reCAPTCHA initialization');
+      setError(
+        "reCAPTCHA is disabled in preview environments. This feature requires the production domain."
+      );
+      return;
+    }
+    
     try {
       // Clear any existing reCAPTCHA
       recaptchaContainerRef.current.innerHTML = "";

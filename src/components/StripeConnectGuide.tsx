@@ -3,11 +3,76 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { InfoIcon, CheckCircle, AlertCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { Steps, Step } from '@/components/ui/steps';
 import { cn } from '@/lib/utils';
 
 interface StripeConnectGuideProps {
   accountStatus: 'none' | 'pending' | 'active' | 'error';
+}
+
+// Custom Step component
+interface StepProps {
+  title: string;
+  description: string;
+  status: 'upcoming' | 'current' | 'complete';
+  stepNumber: number;
+  isLast?: boolean;
+}
+
+function Step({ title, description, status, stepNumber, isLast = false }: StepProps) {
+  return (
+    <div className="flex items-start">
+      <div className="flex-shrink-0 mr-4">
+        <div
+          className={cn(
+            "flex items-center justify-center w-8 h-8 rounded-full border-2",
+            status === "upcoming" && "border-gray-300 text-gray-400",
+            status === "current" && "border-primary text-primary",
+            status === "complete" && "border-green-500 bg-green-500 text-white"
+          )}
+        >
+          {status === "complete" ? (
+            <CheckCircle className="h-4 w-4" />
+          ) : (
+            <span className="text-sm font-medium">{stepNumber}</span>
+          )}
+        </div>
+        {!isLast && (
+          <div
+            className={cn(
+              "w-0.5 h-10 ml-4 -mt-1",
+              status === "upcoming" && "bg-gray-200",
+              status === "current" && "bg-gray-300",
+              status === "complete" && "bg-green-500"
+            )}
+          />
+        )}
+      </div>
+      <div className="pt-1 pb-8">
+        <h3
+          className={cn(
+            "text-base font-medium",
+            status === "upcoming" && "text-gray-500",
+            status === "current" && "text-primary",
+            status === "complete" && "text-green-600"
+          )}
+        >
+          {title}
+        </h3>
+        {description && (
+          <p
+            className={cn(
+              "mt-1 text-sm",
+              status === "upcoming" && "text-gray-400",
+              status === "current" && "text-gray-600",
+              status === "complete" && "text-gray-600"
+            )}
+          >
+            {description}
+          </p>
+        )}
+      </div>
+    </div>
+  );
 }
 
 export function StripeConnectGuide({ accountStatus }: StripeConnectGuideProps) {
@@ -43,56 +108,60 @@ export function StripeConnectGuide({ accountStatus }: StripeConnectGuideProps) {
           </Alert>
         )}
 
-        <div className="mb-8">
-          <Steps>
-            <Step 
-              title="Create a Stripe Connect Account" 
-              description="Click the 'Set Up Stripe Connect' button to start the process."
-              status={accountStatus === 'none' ? 'current' : 'complete'}
-            />
-            
-            <Step 
-              title="Complete Stripe Onboarding" 
-              description="Fill out the required information including your personal details, business information, and banking details."
-              status={
-                accountStatus === 'none' 
-                  ? 'upcoming' 
-                  : accountStatus === 'pending' 
-                    ? 'current' 
-                    : 'complete'
-              }
-            />
-            
-            <Step 
-              title="Verify Your Identity" 
-              description="Stripe requires identity verification to comply with financial regulations. You'll need to provide identification documents."
-              status={
-                accountStatus === 'none' || accountStatus === 'pending' 
-                  ? 'upcoming' 
+        <div className="mb-8 flex flex-col space-y-4">
+          <Step 
+            title="Create a Stripe Connect Account" 
+            description="Click the 'Set Up Stripe Connect' button to start the process."
+            status={accountStatus === 'none' ? 'current' : 'complete'}
+            stepNumber={1}
+          />
+          
+          <Step 
+            title="Complete Stripe Onboarding" 
+            description="Fill out the required information including your personal details, business information, and banking details."
+            status={
+              accountStatus === 'none' 
+                ? 'upcoming' 
+                : accountStatus === 'pending' 
+                  ? 'current' 
                   : 'complete'
-              }
-            />
-            
-            <Step 
-              title="Add Banking Information" 
-              description="Connect your bank account to receive payouts from your sales."
-              status={
-                accountStatus === 'none' || accountStatus === 'pending' 
-                  ? 'upcoming' 
-                  : 'complete'
-              }
-            />
-            
-            <Step 
-              title="Start Selling" 
-              description="Once your account is active, you can start selling cards and receive payments directly to your bank account."
-              status={
-                accountStatus === 'active' 
-                  ? 'complete' 
-                  : 'upcoming'
-              }
-            />
-          </Steps>
+            }
+            stepNumber={2}
+          />
+          
+          <Step 
+            title="Verify Your Identity" 
+            description="Stripe requires identity verification to comply with financial regulations. You'll need to provide identification documents."
+            status={
+              accountStatus === 'none' || accountStatus === 'pending' 
+                ? 'upcoming' 
+                : 'complete'
+            }
+            stepNumber={3}
+          />
+          
+          <Step 
+            title="Add Banking Information" 
+            description="Connect your bank account to receive payouts from your sales."
+            status={
+              accountStatus === 'none' || accountStatus === 'pending' 
+                ? 'upcoming' 
+                : 'complete'
+            }
+            stepNumber={4}
+          />
+          
+          <Step 
+            title="Start Selling" 
+            description="Once your account is active, you can start selling cards and receive payments directly to your bank account."
+            status={
+              accountStatus === 'active' 
+                ? 'complete' 
+                : 'upcoming'
+            }
+            stepNumber={5}
+            isLast={true}
+          />
         </div>
 
         <Alert className="mt-6 bg-blue-50 border-blue-200 dark:bg-blue-950 dark:border-blue-800">
