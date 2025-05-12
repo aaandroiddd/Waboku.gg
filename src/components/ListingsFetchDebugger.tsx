@@ -42,9 +42,41 @@ export function ListingsFetchDebugger() {
       
       const fetchedListings = snapshot.docs.map(doc => {
         const data = doc.data();
+        
+        // Process timestamps for better display
+        let createdAt, expiresAt, archivedAt;
+        
+        try {
+          // Handle createdAt timestamp
+          if (data.createdAt?.toDate) {
+            createdAt = data.createdAt.toDate();
+          } else if (data.createdAt) {
+            createdAt = new Date(data.createdAt);
+          }
+          
+          // Handle expiresAt timestamp
+          if (data.expiresAt?.toDate) {
+            expiresAt = data.expiresAt.toDate();
+          } else if (data.expiresAt) {
+            expiresAt = new Date(data.expiresAt);
+          }
+          
+          // Handle archivedAt timestamp
+          if (data.archivedAt?.toDate) {
+            archivedAt = data.archivedAt.toDate();
+          } else if (data.archivedAt) {
+            archivedAt = new Date(data.archivedAt);
+          }
+        } catch (e) {
+          console.error('Error processing timestamps:', e);
+        }
+        
         return {
           id: doc.id,
-          ...data
+          ...data,
+          createdAt,
+          expiresAt,
+          archivedAt
         };
       });
 
@@ -58,10 +90,13 @@ export function ListingsFetchDebugger() {
           id: listing.id,
           title: listing.title,
           status: listing.status,
-          createdAt: listing.createdAt?.toDate?.() || listing.createdAt,
-          expiresAt: listing.expiresAt?.toDate?.() || listing.expiresAt
+          createdAt: listing.createdAt,
+          expiresAt: listing.expiresAt,
+          archivedAt: listing.archivedAt,
+          offersOnly: listing.offersOnly
         })),
         hasActiveListings: fetchedListings.some(listing => listing.status === 'active'),
+        hasArchivedListings: fetchedListings.some(listing => listing.status === 'archived'),
         statusCounts: fetchedListings.reduce((acc: any, listing) => {
           acc[listing.status || 'unknown'] = (acc[listing.status || 'unknown'] || 0) + 1;
           return acc;
@@ -149,6 +184,10 @@ export function ListingsFetchDebugger() {
                               <div><strong>Status:</strong> {listing.status}</div>
                               <div><strong>Created:</strong> {listing.createdAt?.toString()}</div>
                               <div><strong>Expires:</strong> {listing.expiresAt?.toString()}</div>
+                              {listing.archivedAt && (
+                                <div><strong>Archived At:</strong> {listing.archivedAt?.toString()}</div>
+                              )}
+                              <div><strong>Offers Only:</strong> {listing.offersOnly ? 'Yes' : 'No'}</div>
                             </div>
                           ))}
                         </div>

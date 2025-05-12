@@ -193,14 +193,48 @@ export function useOptimizedListings({ userId, searchQuery, showOnlyActive = fal
                 createdAt = new Date();
               }
               
+              // Process additional timestamps
+              let archivedAt = null;
+              let updatedAt = null;
+              let previousExpiresAt = null;
+              
+              try {
+                // Process archivedAt if it exists
+                if (data.archivedAt?.toDate) {
+                  archivedAt = data.archivedAt.toDate();
+                } else if (data.archivedAt) {
+                  archivedAt = new Date(data.archivedAt);
+                }
+                
+                // Process updatedAt if it exists
+                if (data.updatedAt?.toDate) {
+                  updatedAt = data.updatedAt.toDate();
+                } else if (data.updatedAt) {
+                  updatedAt = new Date(data.updatedAt);
+                }
+                
+                // Process previousExpiresAt if it exists
+                if (data.previousExpiresAt?.toDate) {
+                  previousExpiresAt = data.previousExpiresAt.toDate();
+                } else if (data.previousExpiresAt) {
+                  previousExpiresAt = new Date(data.previousExpiresAt);
+                }
+              } catch (e) {
+                console.error(`Error parsing additional timestamps for listing ${doc.id}:`, e);
+              }
+              
               const listing = {
                 id: doc.id,
                 ...data,
                 createdAt,
                 expiresAt,
+                archivedAt,
+                updatedAt,
+                previousExpiresAt,
                 price: Number(data.price) || 0,
                 imageUrls: Array.isArray(data.imageUrls) ? data.imageUrls : [],
                 isGraded: Boolean(data.isGraded),
+                offersOnly: Boolean(data.offersOnly),
                 gradeLevel: data.gradeLevel ? Number(data.gradeLevel) : undefined,
                 status: data.status || 'active',
                 condition: data.condition || 'Not specified',
@@ -210,6 +244,9 @@ export function useOptimizedListings({ userId, searchQuery, showOnlyActive = fal
                 gradingCompany: data.gradingCompany || undefined,
                 distance: 0 // Default distance
               } as Listing;
+              
+              // Log the status for debugging
+              console.log(`Listing ${doc.id} status: ${listing.status}, archivedAt: ${listing.archivedAt}`);
 
               return listing;
             });

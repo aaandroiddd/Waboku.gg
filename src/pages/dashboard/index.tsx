@@ -481,8 +481,8 @@ const DashboardComponent = () => {
       });
     }
   }, [allListings, properlyFilteredActiveListings, activeListings, gameFilter, sortBy, sortOrder, searchQuery]);
-  // Filter for archived listings specifically
-  const archivedListings = filteredAndSortedListings.filter(listing => listing.status === 'archived');
+  // Filter for archived listings specifically - ensure we're explicitly checking for 'archived' status
+  const archivedListings = allListings.filter(listing => listing.status === 'archived');
 
   useEffect(() => {
     if (!loading && !user) {
@@ -768,8 +768,8 @@ const DashboardComponent = () => {
 
       <Tabs defaultValue="active" className="space-y-4">
         <TabsList>
-          <TabsTrigger value="active">Active Listings</TabsTrigger>
-          <TabsTrigger value="previous">Archived Listings</TabsTrigger>
+          <TabsTrigger value="active">Active Listings ({activeListings.length})</TabsTrigger>
+          <TabsTrigger value="previous">Archived Listings ({archivedListings.length})</TabsTrigger>
         </TabsList>
 
         <TabsContent value="active" className="space-y-4">
