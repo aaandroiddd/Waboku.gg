@@ -214,11 +214,66 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             subscriptionId: currentSubscription?.stripeSubscriptionId,
             status: currentSubscription?.status
           });
-          return res.status(400).json({ 
-            error: 'Subscription exists',
-            message: 'You already have an active subscription',
-            code: 'SUBSCRIPTION_EXISTS'
-          });
+          
+          // Before returning an error, try to clean up the subscription data
+          // This helps users who are getting the "Subscription exists" error but can't upgrade
+          try {
+            // Import the subscription sync function
+            const { syncSubscriptionData } = await import('@/lib/subscription-sync');
+            
+            // Check if the subscription actually exists in Stripe
+            if (currentSubscription?.stripeSubscriptionId && 
+                !currentSubscription.stripeSubscriptionId.startsWith('admin_')) {
+              try {
+                await stripe.subscriptions.retrieve(currentSubscription.stripeSubscriptionId);
+                // If we get here, the subscription exists in Stripe, so the error is valid
+                return res.status(400).json({ 
+                  error: 'Subscription exists',
+                  message: 'You already have an active subscription',
+                  code: 'SUBSCRIPTION_EXISTS'
+                });
+              } catch (stripeError: any) {
+                // If the subscription doesn't exist in Stripe, clean up our database
+                if (stripeError.code === 'resource_missing') {
+                  console.log('[Create Checkout] Subscription exists in database but not in Stripe, cleaning up');
+                  
+                  // Clear the subscription data in our database
+                  await syncSubscriptionData(userId, {
+                    status: 'none',
+                    stripeSubscriptionId: null,
+                    tier: 'free',
+                    currentPlan: 'free',
+                    lastUpdated: Date.now()
+                  });
+                  
+                  // Continue with checkout creation
+                  console.log('[Create Checkout] Cleaned up invalid subscription data, proceeding with checkout');
+                } else {
+                  // For other Stripe errors, return the original error
+                  return res.status(400).json({ 
+                    error: 'Subscription exists',
+                    message: 'You already have an active subscription',
+                    code: 'SUBSCRIPTION_EXISTS'
+                  });
+                }
+              }
+            } else {
+              // If there's no subscription ID or it's an admin subscription, return the original error
+              return res.status(400).json({ 
+                error: 'Subscription exists',
+                message: 'You already have an active subscription',
+                code: 'SUBSCRIPTION_EXISTS'
+              });
+            }
+          } catch (cleanupError) {
+            console.error('[Create Checkout] Error cleaning up subscription data:', cleanupError);
+            // Return the original error if cleanup fails
+            return res.status(400).json({ 
+              error: 'Subscription exists',
+              message: 'You already have an active subscription',
+              code: 'SUBSCRIPTION_EXISTS'
+            });
+          }
         }
         
         // Log the current subscription state for debugging
