@@ -294,12 +294,11 @@ export function DashboardSidebar({ onNavigate }: DashboardSidebarProps) {
                     </div>
                   </div>
                   
-                  {/* Theme toggle in its own row for better mobile accessibility */}
+                  {/* Theme toggle without text label */}
                   <div className="flex items-center">
                     <div className="touch-manipulation p-1">
                       <ThemeToggle />
                     </div>
-                    <span className="text-sm text-muted-foreground ml-2">Theme</span>
                   </div>
                 </div>
 

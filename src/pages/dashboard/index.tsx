@@ -767,9 +767,9 @@ const DashboardComponent = () => {
 
 
       <Tabs defaultValue="active" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="active">Active Listings ({activeListings.length})</TabsTrigger>
-          <TabsTrigger value="previous">Archived Listings ({archivedListings.length})</TabsTrigger>
+        <TabsList className="w-full flex flex-wrap">
+          <TabsTrigger value="active" className="flex-1 min-w-[150px]">Active Listings ({activeListings.length})</TabsTrigger>
+          <TabsTrigger value="previous" className="flex-1 min-w-[150px]">Archived Listings ({archivedListings.length})</TabsTrigger>
         </TabsList>
 
         <TabsContent value="active" className="space-y-4">
