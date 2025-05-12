@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useToast } from "@/components/ui/use-toast";
 import { ListingVisibilityFixer } from "@/components/ListingVisibilityFixer";
+import { ListingsFetchDebugger } from "@/components/ListingsFetchDebugger";
 import { ProfileAvatar } from "@/components/ProfileAvatar";
 import { ProfileName } from "@/components/ProfileName";
 import { Star, Edit2, Trash2, MessageCircle, Share2, ExternalLink, AlertCircle, RefreshCw } from "lucide-react";
@@ -736,6 +737,11 @@ const DashboardComponent = () => {
             </Button>
           </div>
         </div>
+      )}
+      
+      {/* Add the listings fetch debugger */}
+      {allListings.length === 0 && (
+        <ListingsFetchDebugger />
       )}
       
       {/* Dashboard Header */}

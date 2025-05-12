@@ -153,10 +153,11 @@ export function useOptimizedListings({ userId, searchQuery, showOnlyActive = fal
           listenerId,
           q,
           (snapshot) => {
-            console.log(`Received snapshot with ${snapshot.docs.length} listings`);
+            console.log(`Received snapshot with ${snapshot.docs.length} listings for user ${userId || 'unknown'}`);
             
             const fetchedListings = snapshot.docs.map(doc => {
               const data = doc.data();
+              console.log(`Processing listing ${doc.id}: status=${data.status}, title=${data.title}`);
               
               // Create a default expiration date if none exists
               let expiresAt;

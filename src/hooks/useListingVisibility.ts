@@ -200,6 +200,11 @@ export function useListingVisibility(listings: Listing[]) {
           requiredFields.push('price');
         }
         
+        // Debug log for offers only listings
+        if (isOffersOnly) {
+          console.log(`Listing ${listing.id} is offers-only, price check skipped`);
+        }
+        
         const missingFields = requiredFields.filter(field => !listing[field as keyof Listing]);
         
         if (missingFields.length > 0) {
