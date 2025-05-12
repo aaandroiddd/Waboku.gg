@@ -243,7 +243,7 @@ export default function MfaVerification({ resolver, onComplete, onCancel }: MfaV
   };
 
   return (
-    <Card className="w-[400px]">
+    <Card className="w-full max-w-[400px]">
       <CardHeader>
         <CardTitle>Two-Factor Authentication</CardTitle>
         <CardDescription>
@@ -302,7 +302,11 @@ export default function MfaVerification({ resolver, onComplete, onCancel }: MfaV
             <p className="text-sm text-muted-foreground">
               Need to resend the code? Complete the CAPTCHA verification below.
             </p>
-            <div id="mfa-recaptcha-container" ref={recaptchaContainerRef} className="flex justify-center"></div>
+            <div className="w-full overflow-hidden px-2">
+              <div className="flex justify-center">
+                <div id="mfa-recaptcha-container" ref={recaptchaContainerRef} className="transform scale-[0.75] origin-center xs:scale-90 sm:scale-100 max-w-full"></div>
+              </div>
+            </div>
           </div>
         </CardContent>
         

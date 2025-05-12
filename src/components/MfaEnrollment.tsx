@@ -389,7 +389,11 @@ export default function MfaEnrollment() {
               </p>
             </div>
             
-            <div id="recaptcha-container" ref={recaptchaContainerRef} className="flex justify-center"></div>
+            <div className="w-full overflow-hidden px-2">
+              <div className="flex justify-center">
+                <div id="recaptcha-container" ref={recaptchaContainerRef} className="transform scale-[0.75] origin-center xs:scale-90 sm:scale-100 max-w-full"></div>
+              </div>
+            </div>
           </CardContent>
           
           <CardFooter>
