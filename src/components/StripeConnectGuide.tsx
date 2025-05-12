@@ -4,6 +4,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { InfoIcon, CheckCircle, AlertCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Steps, Step } from '@/components/ui/steps';
+import { cn } from '@/lib/utils';
 
 interface StripeConnectGuideProps {
   accountStatus: 'none' | 'pending' | 'active' | 'error';
