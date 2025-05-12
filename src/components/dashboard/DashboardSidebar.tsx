@@ -13,6 +13,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { LogOut } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
+import { useMediaQuery } from '@/hooks/useMediaQuery';
 
 interface DashboardSidebarProps {
   onNavigate?: () => void;
@@ -262,7 +263,7 @@ export function DashboardSidebar({ onNavigate }: DashboardSidebarProps) {
     </div>
   );
 
-  // Import useMediaQuery hook to detect mobile screens
+  // Define media query breakpoints
   const isMobile = useMediaQuery("(max-width: 768px)");
   const isSmallMobile = useMediaQuery("(max-width: 380px)");
 
