@@ -433,10 +433,10 @@ function SignOutButton({ onNavigate }: { onNavigate?: () => void }) {
   return (
     <button
       onClick={handleSignOut}
-      className="flex items-center w-full gap-3 text-sm font-medium rounded-md px-3 py-2.5 hover:bg-accent hover:text-accent-foreground transition-colors text-red-500 hover:text-red-600"
+      className="flex items-center w-full gap-3 text-sm font-medium rounded-md px-3 py-3.5 hover:bg-accent hover:text-accent-foreground transition-colors bg-red-500/10 text-red-500 hover:text-red-600"
     >
       <LogOut className="h-5 w-5" />
-      Sign Out
+      <span className="font-medium">Sign Out</span>
     </button>
   );
 }

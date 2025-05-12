@@ -324,7 +324,7 @@ export default function Header({ animate = true }: HeaderProps) {
               <SheetTitle className="sr-only">Navigation</SheetTitle>
               
               {/* Dashboard-style sidebar with fixed header, scrollable content, and fixed footer */}
-              <div className="flex flex-col h-screen bg-card">
+              <div className="flex flex-col h-[100dvh] bg-card">
                 {/* Persistent header with logo and user info */}
                 <div className="p-6 border-b">
                   <Logo className="h-8" alwaysShowFull={true} />
@@ -445,10 +445,10 @@ export default function Header({ animate = true }: HeaderProps) {
                   <div className="p-4 border-t bg-card">
                     <button
                       onClick={handleSignOut}
-                      className="flex items-center w-full gap-3 text-sm font-medium rounded-md px-3 py-2.5 hover:bg-accent hover:text-accent-foreground transition-colors text-red-500 hover:text-red-600"
+                      className="flex items-center w-full gap-3 text-sm font-medium rounded-md px-3 py-3.5 hover:bg-accent hover:text-accent-foreground transition-colors bg-red-500/10 text-red-500 hover:text-red-600"
                     >
                       <LogOut className="h-5 w-5" />
-                      Sign Out
+                      <span className="font-medium">Sign Out</span>
                     </button>
                   </div>
                 )}
