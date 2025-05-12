@@ -1,9 +1,9 @@
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { InfoIcon, CheckCircle, AlertCircle, CheckIcon } from 'lucide-react';
+import { InfoIcon, CheckCircle, AlertCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { cn } from '@/lib/utils';
+import { Steps, Step } from '@/components/ui/steps';
 
 interface StripeConnectGuideProps {
   accountStatus: 'none' | 'pending' | 'active' | 'error';
@@ -43,19 +43,14 @@ export function StripeConnectGuide({ accountStatus }: StripeConnectGuideProps) {
         )}
 
         <div className="mb-8">
-          {/* Custom Steps Implementation */}
-          <div className="flex flex-col space-y-4">
-            {/* Step 1 */}
-            <StepItem 
+          <Steps>
+            <Step 
               title="Create a Stripe Connect Account" 
               description="Click the 'Set Up Stripe Connect' button to start the process."
               status={accountStatus === 'none' ? 'current' : 'complete'}
-              stepNumber={1}
-              totalSteps={5}
             />
             
-            {/* Step 2 */}
-            <StepItem 
+            <Step 
               title="Complete Stripe Onboarding" 
               description="Fill out the required information including your personal details, business information, and banking details."
               status={
@@ -65,12 +60,9 @@ export function StripeConnectGuide({ accountStatus }: StripeConnectGuideProps) {
                     ? 'current' 
                     : 'complete'
               }
-              stepNumber={2}
-              totalSteps={5}
             />
             
-            {/* Step 3 */}
-            <StepItem 
+            <Step 
               title="Verify Your Identity" 
               description="Stripe requires identity verification to comply with financial regulations. You'll need to provide identification documents."
               status={
@@ -78,12 +70,9 @@ export function StripeConnectGuide({ accountStatus }: StripeConnectGuideProps) {
                   ? 'upcoming' 
                   : 'complete'
               }
-              stepNumber={3}
-              totalSteps={5}
             />
             
-            {/* Step 4 */}
-            <StepItem 
+            <Step 
               title="Add Banking Information" 
               description="Connect your bank account to receive payouts from your sales."
               status={
@@ -91,12 +80,9 @@ export function StripeConnectGuide({ accountStatus }: StripeConnectGuideProps) {
                   ? 'upcoming' 
                   : 'complete'
               }
-              stepNumber={4}
-              totalSteps={5}
             />
             
-            {/* Step 5 */}
-            <StepItem 
+            <Step 
               title="Start Selling" 
               description="Once your account is active, you can start selling cards and receive payments directly to your bank account."
               status={
@@ -104,10 +90,8 @@ export function StripeConnectGuide({ accountStatus }: StripeConnectGuideProps) {
                   ? 'complete' 
                   : 'upcoming'
               }
-              stepNumber={5}
-              totalSteps={5}
             />
-          </div>
+          </Steps>
         </div>
 
         <Alert className="mt-6 bg-blue-50 border-blue-200 dark:bg-blue-950 dark:border-blue-800">
@@ -125,76 +109,5 @@ export function StripeConnectGuide({ accountStatus }: StripeConnectGuideProps) {
         </Alert>
       </CardContent>
     </Card>
-  );
-}
-
-interface StepItemProps {
-  title: string;
-  description?: string;
-  status?: "upcoming" | "current" | "complete";
-  stepNumber: number;
-  totalSteps: number;
-}
-
-function StepItem({
-  title,
-  description,
-  status = "upcoming",
-  stepNumber,
-  totalSteps,
-}: StepItemProps) {
-  return (
-    <div className="flex items-start">
-      <div className="flex-shrink-0 mr-4">
-        <div
-          className={cn(
-            "flex items-center justify-center w-8 h-8 rounded-full border-2",
-            status === "upcoming" && "border-gray-300 text-gray-400",
-            status === "current" && "border-primary text-primary",
-            status === "complete" && "border-green-500 bg-green-500 text-white"
-          )}
-        >
-          {status === "complete" ? (
-            <CheckIcon className="h-4 w-4" />
-          ) : (
-            <span className="text-sm font-medium">{stepNumber}</span>
-          )}
-        </div>
-        {stepNumber !== totalSteps && (
-          <div
-            className={cn(
-              "w-0.5 h-10 ml-4 -mt-1",
-              status === "upcoming" && "bg-gray-200",
-              status === "current" && "bg-gray-300",
-              status === "complete" && "bg-green-500"
-            )}
-          />
-        )}
-      </div>
-      <div className="pt-1 pb-8">
-        <h3
-          className={cn(
-            "text-base font-medium",
-            status === "upcoming" && "text-gray-500",
-            status === "current" && "text-primary",
-            status === "complete" && "text-green-600"
-          )}
-        >
-          {title}
-        </h3>
-        {description && (
-          <p
-            className={cn(
-              "mt-1 text-sm",
-              status === "upcoming" && "text-gray-400",
-              status === "current" && "text-gray-600",
-              status === "complete" && "text-gray-600"
-            )}
-          >
-            {description}
-          </p>
-        )}
-      </div>
-    </div>
   );
 }
