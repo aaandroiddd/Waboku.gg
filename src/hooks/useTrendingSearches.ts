@@ -47,6 +47,12 @@ export function useTrendingSearches() {
       return FALLBACK_TRENDING;
     }
     
+    // Skip API calls in preview environments
+    if (typeof window !== 'undefined' && window.location.hostname.includes('preview.co.dev')) {
+      console.log('[TrendingSearches] Preview environment detected, skipping API call');
+      return FALLBACK_TRENDING;
+    }
+    
     // Return empty array as fallback data
     const emptyTrending: TrendingSearch[] = [];
     let timeoutId: NodeJS.Timeout | null = null;

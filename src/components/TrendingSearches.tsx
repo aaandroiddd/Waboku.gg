@@ -97,11 +97,12 @@ function TrendingSearchesContent() {
   // Disable automatic fetching in development/preview environments
   useEffect(() => {
     // If we're in a preview environment, use default trending data
-    if (window.location.hostname.includes('preview.co.dev')) {
+    if (typeof window !== 'undefined' && window.location.hostname.includes('preview.co.dev')) {
       console.log('Preview environment detected, using default trending data');
       setLocalTrending(defaultTrending);
+      setFetchFailed(true); // Prevent API calls in preview environment
     }
-  }, []);
+  }, [defaultTrending]);
   
   // Log errors for debugging
   useEffect(() => {
