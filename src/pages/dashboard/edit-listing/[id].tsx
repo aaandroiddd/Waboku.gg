@@ -14,6 +14,7 @@ import { InfoIcon } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from '@/components/ui/use-toast';
 import { doc, getDoc } from 'firebase/firestore';
 import { Listing } from '@/types/database';
@@ -50,6 +51,7 @@ const EditListingPage = () => {
     imageUrls: [] as string[],
     coverImageIndex: 0,
     cardName: '',
+    offersOnly: false,
   });
 
   const [errors, setErrors] = useState<{
@@ -81,10 +83,13 @@ const EditListingPage = () => {
       }
     }
 
-    if (!formData.price) {
-      newErrors.price = "Price is required";
-    } else if (isNaN(parseFloat(formData.price)) || parseFloat(formData.price) <= 0) {
-      newErrors.price = "Please enter a valid price";
+    // Only validate price if not in "offers only" mode
+    if (!formData.offersOnly) {
+      if (!formData.price) {
+        newErrors.price = "Price is required";
+      } else if (isNaN(parseFloat(formData.price)) || parseFloat(formData.price) <= 0) {
+        newErrors.price = "Please enter a valid price";
+      }
     }
 
     if (!formData.game) {
@@ -245,6 +250,7 @@ const EditListingPage = () => {
           imageUrls: Array.isArray(listing.imageUrls) ? listing.imageUrls : [],
           coverImageIndex: typeof listing.coverImageIndex === 'number' ? listing.coverImageIndex : 0,
           cardName: listing.cardName || '',
+          offersOnly: Boolean(listing.offersOnly),
         });
         
         console.log('Form data initialized successfully');
@@ -304,7 +310,7 @@ const EditListingPage = () => {
       const updateData = {
         title: formData.title,
         description: formData.description,
-        price: parseFloat(formData.price),
+        price: formData.offersOnly ? 0 : parseFloat(formData.price),
         condition: formData.condition,
         game: formData.game,
         city: formData.city,
@@ -313,6 +319,7 @@ const EditListingPage = () => {
         quantity: formData.quantity,
         coverImageIndex: formData.coverImageIndex,
         cardName: formData.cardName,
+        offersOnly: formData.offersOnly,
       };
       
       console.log("Updating listing with cover image index:", formData.coverImageIndex);
@@ -455,19 +462,53 @@ const EditListingPage = () => {
 
                 <div className="grid grid-cols-3 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="price">Price *</Label>
+                    <div className="flex justify-between items-center">
+                      <Label htmlFor="price">Price {!formData.offersOnly && '*'}</Label>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox 
+                          id="offersOnly" 
+                          checked={formData.offersOnly}
+                          onCheckedChange={(checked) => {
+                            if (typeof checked === 'boolean') {
+                              setFormData(prev => ({ 
+                                ...prev, 
+                                offersOnly: checked,
+                                // Clear price if offers only is checked
+                                price: checked ? "" : prev.price
+                              }));
+                              // Clear price error if offers only is checked
+                              if (checked) {
+                                setErrors(prev => ({ ...prev, price: undefined }));
+                              }
+                            }
+                          }}
+                        />
+                        <label
+                          htmlFor="offersOnly"
+                          className="text-sm font-medium leading-none cursor-pointer"
+                        >
+                          Offers Only
+                        </label>
+                      </div>
+                    </div>
                     <Input
                       id="price"
-                      required
+                      required={!formData.offersOnly}
+                      disabled={formData.offersOnly}
                       type="number"
                       min="0"
                       step="0.01"
                       value={formData.price}
                       onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                      placeholder="0.00"
+                      placeholder={formData.offersOnly ? "Accepting offers only" : "0.00"}
                       className={errors.price ? "border-red-500" : ""}
                     />
                     {errors.price && <p className="text-sm text-red-500">{errors.price}</p>}
+                    {formData.offersOnly && (
+                      <p className="text-xs text-muted-foreground">
+                        Buyers will be able to make offers, but won't be able to purchase directly.
+                      </p>
+                    )}
                   </div>
 
                   <div className="space-y-2">
