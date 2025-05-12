@@ -38,8 +38,14 @@ export function ThemeToggle() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon">
-          {getThemeIcon()}
+        <Button 
+          variant="ghost" 
+          size="icon"
+          className="w-10 h-10 relative p-2 touch-manipulation" // Added touch-manipulation for better mobile handling
+        >
+          <div className="w-full h-full flex items-center justify-center">
+            {getThemeIcon()}
+          </div>
           <span className="sr-only">Toggle theme</span>
         </Button>
       </DropdownMenuTrigger>

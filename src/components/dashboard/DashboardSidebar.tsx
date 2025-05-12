@@ -272,26 +272,35 @@ export function DashboardSidebar({ onNavigate }: DashboardSidebarProps) {
             <p className="text-sm text-muted-foreground truncate">{user.email}</p>
             {isEmailVerified() && (
               <div className="flex flex-col gap-2">
-                <div className="flex items-center gap-2">
-                  <div className="inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 text-green-500 bg-green-500/10 hover:bg-green-500/20 border-green-500/20">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="12"
-                      height="12"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      className="mr-1"
-                    >
-                      <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z" />
-                      <path d="m9 12 2 2 4-4" />
-                    </svg>
-                    Verified
+                <div className="flex flex-col gap-3">
+                  <div className="flex items-center gap-2">
+                    <div className="inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 text-green-500 bg-green-500/10 hover:bg-green-500/20 border-green-500/20">
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="12"
+                        height="12"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        className="mr-1"
+                      >
+                        <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z" />
+                        <path d="m9 12 2 2 4-4" />
+                      </svg>
+                      Verified
+                    </div>
                   </div>
-                  <ThemeToggle />
+                  
+                  {/* Theme toggle in its own row for better mobile accessibility */}
+                  <div className="flex items-center">
+                    <div className="touch-manipulation p-1">
+                      <ThemeToggle />
+                    </div>
+                    <span className="text-sm text-muted-foreground ml-2">Theme</span>
+                  </div>
                 </div>
 
               </div>
