@@ -2,7 +2,8 @@ import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Steps, Step } from '@/components/ui/steps';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { InfoIcon, CheckCircle, AlertCircle } from 'lucide-react';
+import { InfoIcon, CheckCircle, AlertCircle, CreditCard } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 
 interface StripeConnectGuideProps {
   accountStatus: 'none' | 'pending' | 'active' | 'error';
@@ -10,9 +11,12 @@ interface StripeConnectGuideProps {
 
 export function StripeConnectGuide({ accountStatus }: StripeConnectGuideProps) {
   return (
-    <Card>
+    <Card className="border-none shadow-lg">
       <CardHeader>
-        <CardTitle>Stripe Connect Setup Guide</CardTitle>
+        <div className="flex items-center gap-2">
+          <CardTitle>Stripe Connect Setup Guide</CardTitle>
+          <Badge variant="outline" className="ml-2">Step-by-Step</Badge>
+        </div>
         <CardDescription>
           Follow these steps to set up your Stripe Connect account and start receiving payments
         </CardDescription>
@@ -88,11 +92,11 @@ export function StripeConnectGuide({ accountStatus }: StripeConnectGuideProps) {
           />
         </Steps>
 
-        <Alert className="mt-6">
-          <InfoIcon className="h-4 w-4" />
-          <AlertTitle>Important Information</AlertTitle>
-          <AlertDescription>
-            <ul className="list-disc pl-5 space-y-1 text-sm">
+        <Alert className="mt-6 bg-blue-50 border-blue-200 dark:bg-blue-950 dark:border-blue-800">
+          <InfoIcon className="h-4 w-4 text-blue-500" />
+          <AlertTitle className="text-blue-700 dark:text-blue-300">Important Information</AlertTitle>
+          <AlertDescription className="text-blue-600 dark:text-blue-400">
+            <ul className="list-disc pl-5 space-y-2 text-sm">
               <li>Stripe Connect allows you to receive payments directly to your bank account</li>
               <li>Our platform charges a 10% fee on each transaction</li>
               <li>Payouts are typically processed within 2-7 business days, depending on your bank</li>

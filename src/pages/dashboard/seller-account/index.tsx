@@ -5,8 +5,22 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
+import { Badge } from '@/components/ui/badge';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
-import { CheckCircle, AlertCircle, ExternalLink, ArrowRight, ShoppingBag, RefreshCw } from 'lucide-react';
+import { 
+  CheckCircle, 
+  AlertCircle, 
+  ExternalLink, 
+  ArrowRight, 
+  ShoppingBag, 
+  RefreshCw,
+  CreditCard,
+  Bank,
+  Calendar,
+  BarChart3,
+  Shield,
+  DollarSign
+} from 'lucide-react';
 import { StripeConnectGuide } from '@/components/StripeConnectGuide';
 import { useSellerAccountEligibility } from '@/hooks/useSellerAccountEligibility';
 import { LoadingAnimation } from '@/components/LoadingAnimation';
@@ -111,15 +125,18 @@ export default function SellerAccount() {
 
   return (
     <DashboardLayout>
-      <div className="container mx-auto py-6 space-y-6">
-        <div className="flex flex-col space-y-2">
-          <h1 className="text-3xl font-bold tracking-tight pl-5">Seller Account</h1>
-          <p className="text-muted-foreground pl-5">
-            Set up your Stripe Connect account to receive payments from buyers
-          </p>
+      <div className="container mx-auto py-6 space-y-8">
+        {/* Hero Section */}
+        <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-blue-900 to-blue-800 p-8 md:p-12">
+          <div className="absolute inset-0 bg-[url('/images/cards-pattern.svg')] opacity-10"></div>
+          <div className="relative z-10">
+            <h1 className="text-3xl md:text-4xl font-bold text-white mb-4">Seller Account</h1>
+            <p className="text-xl text-blue-100 max-w-3xl">
+              Set up your Stripe Connect account to receive payments directly from buyers on our platform
+            </p>
+          </div>
         </div>
 
-        <Separator />
 
         {/* Loading state */}
         {isPageLoading && (
@@ -267,38 +284,120 @@ export default function SellerAccount() {
               </Alert>
             )}
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Stripe Connect</CardTitle>
-                  <CardDescription>
-                    Connect your Stripe account to receive payments directly from buyers on our platform.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-4">
-                    <div className="space-y-4">
-                      <div className="space-y-2">
-                        <h3 className="font-medium">Benefits of Stripe Connect</h3>
-                        <ul className="list-disc pl-5 space-y-1 text-sm text-muted-foreground">
-                          <li>Receive payments directly to your bank account</li>
-                          <li>Secure payment processing</li>
-                          <li>Automatic payouts on a schedule you choose</li>
-                          <li>Detailed reporting and transaction history</li>
-                        </ul>
+            {/* Benefits of Stripe Connect Section */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
+              <div className="md:col-span-1">
+                <h2 className="text-3xl font-bold tracking-tight">Benefits of Stripe Connect</h2>
+                <Badge variant="outline" className="mt-2">Secure Payments</Badge>
+              </div>
+              <div className="md:col-span-2">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <Card className="border-none shadow-lg hover:shadow-xl transition-shadow">
+                    <CardContent className="pt-6">
+                      <div className="rounded-full w-12 h-12 flex items-center justify-center bg-primary/10 mb-4">
+                        <Bank className="text-primary h-6 w-6" />
                       </div>
-                      <div className="space-y-2">
-                        <h3 className="font-medium">How it works</h3>
-                        <ul className="list-disc pl-5 space-y-1 text-sm text-muted-foreground">
-                          <li>Complete the Stripe onboarding process</li>
-                          <li>Verify your identity and banking information</li>
-                          <li>Start selling cards and receiving payments</li>
-                          <li>Platform fee: 10% of each transaction</li>
-                        </ul>
+                      <h3 className="text-xl font-semibold mb-2">Direct Deposits</h3>
+                      <p className="text-muted-foreground">Receive payments directly to your bank account with no intermediaries.</p>
+                    </CardContent>
+                  </Card>
+                  
+                  <Card className="border-none shadow-lg hover:shadow-xl transition-shadow">
+                    <CardContent className="pt-6">
+                      <div className="rounded-full w-12 h-12 flex items-center justify-center bg-primary/10 mb-4">
+                        <Shield className="text-primary h-6 w-6" />
                       </div>
+                      <h3 className="text-xl font-semibold mb-2">Secure Processing</h3>
+                      <p className="text-muted-foreground">Industry-leading security protocols protect your transactions and customer data.</p>
+                    </CardContent>
+                  </Card>
+                  
+                  <Card className="border-none shadow-lg hover:shadow-xl transition-shadow">
+                    <CardContent className="pt-6">
+                      <div className="rounded-full w-12 h-12 flex items-center justify-center bg-primary/10 mb-4">
+                        <Calendar className="text-primary h-6 w-6" />
+                      </div>
+                      <h3 className="text-xl font-semibold mb-2">Scheduled Payouts</h3>
+                      <p className="text-muted-foreground">Automatic payouts on a schedule you choose for consistent cash flow.</p>
+                    </CardContent>
+                  </Card>
+                  
+                  <Card className="border-none shadow-lg hover:shadow-xl transition-shadow">
+                    <CardContent className="pt-6">
+                      <div className="rounded-full w-12 h-12 flex items-center justify-center bg-primary/10 mb-4">
+                        <BarChart3 className="text-primary h-6 w-6" />
+                      </div>
+                      <h3 className="text-xl font-semibold mb-2">Detailed Reporting</h3>
+                      <p className="text-muted-foreground">Comprehensive transaction history and financial reporting tools.</p>
+                    </CardContent>
+                  </Card>
+                </div>
+              </div>
+            </div>
+
+            <Separator className="my-8" />
+
+            {/* How It Works Section */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
+              <div className="md:col-span-1">
+                <h2 className="text-3xl font-bold tracking-tight">How It Works</h2>
+                <Badge variant="outline" className="mt-2">Simple Process</Badge>
+              </div>
+              <div className="md:col-span-2">
+                <ul className="space-y-6">
+                  <li className="flex items-start">
+                    <div className="flex-shrink-0 mr-4">
+                      <div className="rounded-full w-10 h-10 bg-primary/10 flex items-center justify-center text-primary font-semibold">1</div>
                     </div>
-                  </div>
-                </CardContent>
+                    <div>
+                      <h3 className="font-semibold text-lg">Complete the Stripe onboarding process</h3>
+                      <p className="text-muted-foreground">Follow the guided steps to set up your Stripe Connect account with all required information.</p>
+                    </div>
+                  </li>
+                  
+                  <li className="flex items-start">
+                    <div className="flex-shrink-0 mr-4">
+                      <div className="rounded-full w-10 h-10 bg-primary/10 flex items-center justify-center text-primary font-semibold">2</div>
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-lg">Verify your identity and banking information</h3>
+                      <p className="text-muted-foreground">Provide the necessary documentation to verify your identity and connect your bank account.</p>
+                    </div>
+                  </li>
+                  
+                  <li className="flex items-start">
+                    <div className="flex-shrink-0 mr-4">
+                      <div className="rounded-full w-10 h-10 bg-primary/10 flex items-center justify-center text-primary font-semibold">3</div>
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-lg">Start selling cards and receiving payments</h3>
+                      <p className="text-muted-foreground">Once approved, your listings will be available for purchase with direct payment processing.</p>
+                    </div>
+                  </li>
+                  
+                  <li className="flex items-start">
+                    <div className="flex-shrink-0 mr-4">
+                      <div className="rounded-full w-10 h-10 bg-primary/10 flex items-center justify-center text-primary font-semibold">4</div>
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-lg">Platform fee: 10% of each transaction</h3>
+                      <p className="text-muted-foreground">A small fee is deducted from each sale to cover payment processing and platform maintenance.</p>
+                    </div>
+                  </li>
+                </ul>
+              </div>
+            </div>
+
+            <Separator className="my-8" />
+
+            {/* Action Card */}
+            <Card className="border-none shadow-lg">
+              <CardHeader>
+                <CardTitle>Stripe Connect</CardTitle>
+                <CardDescription>
+                  Connect your Stripe account to receive payments directly from buyers on our platform.
+                </CardDescription>
+              </CardHeader>
                 <CardFooter className="flex flex-col space-y-4 sm:flex-row sm:space-y-0 sm:space-x-4 sm:justify-between flex-wrap">
                   {accountData?.status === 'none' && (
                     <Button
@@ -353,8 +452,9 @@ export default function SellerAccount() {
                     Back to Dashboard
                   </Button>
                 </CardFooter>
-              </Card>
-              
+            </Card>
+            
+            <div className="mt-8">
               <StripeConnectGuide accountStatus={accountData?.status || 'none'} />
             </div>
           </>
