@@ -18,7 +18,7 @@ interface StepProps {
   isLast?: boolean;
 }
 
-function Step({ title, description, status, stepNumber, isLast = false }: StepProps) {
+const Step: React.FC<StepProps> = ({ title, description, status, stepNumber, isLast = false }) => {
   return (
     <div className="flex items-start">
       <div className="flex-shrink-0 mr-4">
@@ -73,9 +73,30 @@ function Step({ title, description, status, stepNumber, isLast = false }: StepPr
       </div>
     </div>
   );
-}
+};
 
-export function StripeConnectGuide({ accountStatus }: StripeConnectGuideProps) {
+export const StripeConnectGuide: React.FC<StripeConnectGuideProps> = ({ accountStatus }) => {
+  // Determine step statuses based on account status
+  const getStepStatus = (stepNumber: number): 'upcoming' | 'current' | 'complete' => {
+    if (accountStatus === 'active') {
+      return 'complete';
+    }
+    
+    if (accountStatus === 'pending') {
+      if (stepNumber === 1) return 'complete';
+      if (stepNumber === 2) return 'current';
+      return 'upcoming';
+    }
+    
+    if (accountStatus === 'none') {
+      if (stepNumber === 1) return 'current';
+      return 'upcoming';
+    }
+    
+    // Default for error or other states
+    return stepNumber === 1 ? 'current' : 'upcoming';
+  };
+
   return (
     <Card className="border-none shadow-lg">
       <CardHeader>
@@ -112,53 +133,35 @@ export function StripeConnectGuide({ accountStatus }: StripeConnectGuideProps) {
           <Step 
             title="Create a Stripe Connect Account" 
             description="Click the 'Set Up Stripe Connect' button to start the process."
-            status={accountStatus === 'none' ? 'current' : 'complete'}
+            status={getStepStatus(1)}
             stepNumber={1}
           />
           
           <Step 
             title="Complete Stripe Onboarding" 
             description="Fill out the required information including your personal details, business information, and banking details."
-            status={
-              accountStatus === 'none' 
-                ? 'upcoming' 
-                : accountStatus === 'pending' 
-                  ? 'current' 
-                  : 'complete'
-            }
+            status={getStepStatus(2)}
             stepNumber={2}
           />
           
           <Step 
             title="Verify Your Identity" 
             description="Stripe requires identity verification to comply with financial regulations. You'll need to provide identification documents."
-            status={
-              accountStatus === 'none' || accountStatus === 'pending' 
-                ? 'upcoming' 
-                : 'complete'
-            }
+            status={getStepStatus(3)}
             stepNumber={3}
           />
           
           <Step 
             title="Add Banking Information" 
             description="Connect your bank account to receive payouts from your sales."
-            status={
-              accountStatus === 'none' || accountStatus === 'pending' 
-                ? 'upcoming' 
-                : 'complete'
-            }
+            status={getStepStatus(4)}
             stepNumber={4}
           />
           
           <Step 
             title="Start Selling" 
             description="Once your account is active, you can start selling cards and receive payments directly to your bank account."
-            status={
-              accountStatus === 'active' 
-                ? 'complete' 
-                : 'upcoming'
-            }
+            status={accountStatus === 'active' ? 'complete' : 'upcoming'}
             stepNumber={5}
             isLast={true}
           />
@@ -180,4 +183,4 @@ export function StripeConnectGuide({ accountStatus }: StripeConnectGuideProps) {
       </CardContent>
     </Card>
   );
-}
+};
