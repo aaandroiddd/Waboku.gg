@@ -131,7 +131,7 @@ export const OwnerListings = ({ ownerId, currentListingId, maxListings = 8, owne
         </Button>
       </div>
       
-      <Carousel className="w-full">
+      <Carousel className="w-full relative">
         <CarouselContent className="-ml-4">
           {ownerListings.map((listing) => (
             <CarouselItem key={listing.id} className="pl-4 md:basis-1/4 lg:basis-1/4">
@@ -139,8 +139,8 @@ export const OwnerListings = ({ ownerId, currentListingId, maxListings = 8, owne
             </CarouselItem>
           ))}
         </CarouselContent>
-        <CarouselPrevious />
-        <CarouselNext />
+        <CarouselPrevious className="h-8 w-8 md:h-8 md:w-8" />
+        <CarouselNext className="h-8 w-8 md:h-8 md:w-8" />
       </Carousel>
     </div>
   );
