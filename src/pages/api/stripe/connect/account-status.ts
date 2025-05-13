@@ -1,119 +1,129 @@
-import { NextApiRequest, NextApiResponse } from 'next';
-import Stripe from 'stripe';
-import { getFirebaseAdmin } from '@/lib/firebase-admin';
-import { getFirestore } from 'firebase-admin/firestore';
-import { getAuth } from 'firebase-admin/auth';
+// src/components/StripeConnectGuide.tsx
+import React from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Separator } from '@/components/ui/separator';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { CheckCircle, Info, AlertCircle } from 'lucide-react';
 
-if (!process.env.STRIPE_SECRET_KEY) {
-  throw new Error('Missing STRIPE_SECRET_KEY');
-}
+type StripeConnectGuideProps = {
+  accountStatus: 'none' | 'pending' | 'active' | 'error';
+};
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-  apiVersion: '2023-10-16',
-});
+export function StripeConnectGuide({ accountStatus }: StripeConnectGuideProps) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Stripe Connect Guide</CardTitle>
+        <CardDescription>
+          Learn how to complete the Stripe Connect onboarding process
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        {accountStatus === 'none' && (
+          <Alert variant="default" className="bg-blue-500/10 border-blue-500">
+            <Info className="h-4 w-4 text-blue-500" />
+            <AlertTitle className="text-blue-500">Get Started</AlertTitle>
+            <AlertDescription className="text-blue-700 dark:text-blue-300">
+              Click the "Set Up Stripe Connect" button above to begin the onboarding process.
+            </AlertDescription>
+          </Alert>
+        )}
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
-  if (req.method !== 'GET') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
+        {accountStatus === 'pending' && (
+          <Alert variant="default" className="bg-amber-500/10 border-amber-500">
+            <AlertCircle className="h-4 w-4 text-amber-500" />
+            <AlertTitle className="text-amber-500">Complete Onboarding</AlertTitle>
+            <AlertDescription className="text-amber-700 dark:text-amber-300">
+              Please complete all steps in the Stripe Connect onboarding process by clicking the "Complete Onboarding" button above.
+            </AlertDescription>
+          </Alert>
+        )}
 
-  try {
-    // Initialize Firebase Admin
-    getFirebaseAdmin();
-    const auth = getAuth();
-    const db = getFirestore();
+        {accountStatus === 'active' && (
+          <Alert variant="default" className="bg-green-500/10 border-green-500">
+            <CheckCircle className="h-4 w-4 text-green-500" />
+            <AlertTitle className="text-green-500">Account Active</AlertTitle>
+            <AlertDescription className="text-green-700 dark:text-green-300">
+              Your Stripe Connect account is fully set up and ready to accept payments.
+            </AlertDescription>
+          </Alert>
+        )}
 
-    // Get the user from the session
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
+        <Separator />
 
-    const token = authHeader.split('Bearer ')[1];
-    const decodedToken = await auth.verifyIdToken(token);
-    const userId = decodedToken.uid;
+        <div className="space-y-4">
+          <h3 className="font-semibold text-lg">Onboarding Steps</h3>
+          
+          <div className="space-y-4">
+            <div className="flex">
+              <div className={`flex-shrink-0 mr-4 h-8 w-8 rounded-full flex items-center justify-center ${
+                accountStatus !== 'none' ? 'bg-green-100 text-green-600 dark:bg-green-900 dark:text-green-300' : 'bg-muted text-muted-foreground'
+              }`}>
+                {accountStatus !== 'none' ? (
+                  <CheckCircle className="h-5 w-5" />
+                ) : (
+                  <span>1</span>
+                )}
+              </div>
+              <div>
+                <h4 className="font-medium">Create a Stripe Connect account</h4>
+                <p className="text-sm text-muted-foreground">
+                  Start the process by setting up your Stripe Connect account through our platform.
+                </p>
+              </div>
+            </div>
 
-    if (!userId) {
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
+            <div className="flex">
+              <div className={`flex-shrink-0 mr-4 h-8 w-8 rounded-full flex items-center justify-center ${
+                accountStatus === 'active' ? 'bg-green-100 text-green-600 dark:bg-green-900 dark:text-green-300' : 'bg-muted text-muted-foreground'
+              }`}>
+                {accountStatus === 'active' ? (
+                  <CheckCircle className="h-5 w-5" />
+                ) : (
+                  <span>2</span>
+                )}
+              </div>
+              <div>
+                <h4 className="font-medium">Complete account verification</h4>
+                <p className="text-sm text-muted-foreground">
+                  Provide the required information to verify your identity and business details.
+                </p>
+              </div>
+            </div>
 
-    // Get the user's Connect account ID
-    const userDoc = await db.collection('users').doc(userId).get();
-    const userData = userDoc.data();
-    
-    // Check if the user has any listings (to determine eligibility)
-    const listingsSnapshot = await db.collection('listings')
-      .where('userId', '==', userId)
-      .limit(1)
-      .get();
-    
-    const hasListings = !listingsSnapshot.empty;
-    
-    // If user has listings but metadata doesn't reflect it, update the metadata
-    if (hasListings && userData && (!userData.hasActiveListings || !userData.listingCount)) {
-      await db.collection('users').doc(userId).update({
-        hasActiveListings: true,
-        listingCount: userData.listingCount ? userData.listingCount + 1 : 1
-      });
-      console.log('Updated user metadata with listing information');
-    }
+            <div className="flex">
+              <div className={`flex-shrink-0 mr-4 h-8 w-8 rounded-full flex items-center justify-center ${
+                accountStatus === 'active' ? 'bg-green-100 text-green-600 dark:bg-green-900 dark:text-green-300' : 'bg-muted text-muted-foreground'
+              }`}>
+                {accountStatus === 'active' ? (
+                  <CheckCircle className="h-5 w-5" />
+                ) : (
+                  <span>3</span>
+                )}
+              </div>
+              <div>
+                <h4 className="font-medium">Link your bank account</h4>
+                <p className="text-sm text-muted-foreground">
+                  Connect your bank account to receive direct deposits from sales on our platform.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
 
-    if (!userData?.stripeConnectAccountId) {
-      return res.status(200).json({ status: 'none', hasListings });
-    }
+        <Separator />
 
-    // Get the account details from Stripe
-    const account = await stripe.accounts.retrieve(userData.stripeConnectAccountId);
-
-    // Check if the account is fully onboarded
-    let status: 'none' | 'pending' | 'active' | 'error' = 'none';
-
-    if (account.details_submitted && account.charges_enabled && account.payouts_enabled) {
-      status = 'active';
-      
-      // Update the user's Connect account status in Firestore
-      await db.collection('users').doc(userId).update({
-        stripeConnectStatus: 'active',
-        stripeConnectDetailsSubmitted: true,
-        stripeConnectChargesEnabled: true,
-        stripeConnectPayoutsEnabled: true,
-        stripeConnectUpdatedAt: new Date(),
-      });
-    } else if (account.details_submitted) {
-      status = 'pending';
-      
-      // Update the user's Connect account status in Firestore
-      await db.collection('users').doc(userId).update({
-        stripeConnectStatus: 'pending',
-        stripeConnectDetailsSubmitted: true,
-        stripeConnectChargesEnabled: account.charges_enabled,
-        stripeConnectPayoutsEnabled: account.payouts_enabled,
-        stripeConnectUpdatedAt: new Date(),
-      });
-    } else {
-      status = 'pending';
-      
-      // Update the user's Connect account status in Firestore
-      await db.collection('users').doc(userId).update({
-        stripeConnectStatus: 'pending',
-        stripeConnectDetailsSubmitted: false,
-        stripeConnectUpdatedAt: new Date(),
-      });
-    }
-
-    return res.status(200).json({
-      status,
-      accountId: userData.stripeConnectAccountId,
-      detailsSubmitted: account.details_submitted,
-      chargesEnabled: account.charges_enabled,
-      payoutsEnabled: account.payouts_enabled,
-      hasListings,
-    });
-  } catch (error: any) {
-    console.error('Error checking Connect account status:', error);
-    return res.status(500).json({ error: error.message || 'Error checking Connect account status' });
-  }
+        <div>
+          <h3 className="font-semibold text-lg mb-2">Important Notes</h3>
+          <ul className="list-disc pl-5 space-y-1 text-sm text-muted-foreground">
+            <li>All information provided to Stripe is secure and encrypted.</li>
+            <li>You'll need to provide legal documentation for identity verification.</li>
+            <li>Bank account information is required for receiving payouts.</li>
+            <li>Stripe may take 24-48 hours to verify your account after submission.</li>
+            <li>Our platform fee (10%) is automatically deducted from each transaction.</li>
+          </ul>
+        </div>
+      </CardContent>
+    </Card>
+  );
 }
