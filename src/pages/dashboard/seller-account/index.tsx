@@ -20,7 +20,8 @@ import {
   Calendar,
   BarChart3,
   Shield,
-  DollarSign
+  DollarSign,
+  Folder
 } from 'lucide-react';
 import { StripeConnectGuide } from '@/components/StripeConnectGuide';
 import { useSellerAccountEligibility } from '@/hooks/useSellerAccountEligibility';
