@@ -1,7 +1,7 @@
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Info, CheckCircle, AlertCircle } from 'lucide-react';
+import { InfoIcon, CheckCircle, AlertCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
@@ -165,7 +165,7 @@ export function StripeConnectGuide({ accountStatus }: StripeConnectGuideProps) {
         </div>
 
         <Alert className="mt-6 bg-blue-50 border-blue-200 dark:bg-blue-950 dark:border-blue-800">
-          <Info className="h-4 w-4 text-blue-500" />
+          <InfoIcon className="h-4 w-4 text-blue-500" />
           <AlertTitle className="text-blue-700 dark:text-blue-300">Important Information</AlertTitle>
           <AlertDescription className="text-blue-600 dark:text-blue-400">
             <ul className="list-disc pl-5 space-y-2 text-sm">
