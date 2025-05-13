@@ -12,6 +12,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/components/ui/use-toast';
 import { Card } from '@/components/ui/card';
 import { AccountTierDebugger } from '@/components/dashboard/AccountTierDebugger';
+import { AccountStatusHistory } from '@/components/AccountStatusHistory';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -498,6 +499,10 @@ export default function AccountStatus() {
             )}
           </div>
         </Card>
+        
+        <div className="mb-8">
+          <AccountStatusHistory />
+        </div>
         
         <div className="mb-8">
           <h2 className="text-xl font-semibold text-foreground mb-4">Subscription Plans</h2>
