@@ -1,10 +1,9 @@
 import Link from "next/link";
 import { Button } from "./ui/button";
 import { useAuth } from "@/contexts/AuthContext";
-import { LogOut } from "lucide-react";
 
 export function Footer() {
-  const { user, signOut } = useAuth();
+  const { user } = useAuth();
   
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -49,17 +48,6 @@ export function Footer() {
             </Link>
           </div>
           <div className="flex flex-col items-center gap-2">
-            {user && (
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={signOut}
-                className="flex items-center gap-2 mb-2 bg-[#b71c1c] hover:bg-[#b71c1c]/90"
-              >
-                <LogOut className="h-4 w-4" />
-                <span>Sign Out</span>
-              </Button>
-            )}
             <div className="text-sm text-muted-foreground">
               © {new Date().getFullYear()} Waboku.gg. All rights reserved.
             </div>

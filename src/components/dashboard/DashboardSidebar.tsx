@@ -299,12 +299,7 @@ export function DashboardSidebar({ onNavigate }: DashboardSidebarProps) {
                     </div>
                   </div>
                   
-                  {/* Theme toggle only shown on desktop */}
-                  <div className="hidden md:flex items-center">
-                    <div className="touch-manipulation p-1">
-                      <ThemeToggle />
-                    </div>
-                  </div>
+                  {/* Theme toggle removed from desktop */}
                 </div>
               </div>
             )}
