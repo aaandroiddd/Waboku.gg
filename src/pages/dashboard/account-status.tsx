@@ -500,16 +500,30 @@ export default function AccountStatus() {
           </div>
         </Card>
         
+        <div className="mb-8">
+          <h2 className="text-xl font-semibold text-foreground mb-4">Subscription Plans</h2>
+          <PricingPlans />
+        </div>
+        
         {/* Account History section with collapsible content */}
         <div className="mb-8">
           <details className="group">
             <summary className="flex cursor-pointer items-center justify-between rounded-lg bg-muted px-4 py-2 hover:bg-muted/80">
               <div className="flex items-center gap-2">
-                <img 
-                  src="https://assets.co.dev/171838d1-5208-4d56-8fa3-d46502238350/image-330ace0.png" 
-                  alt="Account history" 
-                  className="h-5 w-5"
-                />
+                <svg 
+                  className="h-5 w-5" 
+                  xmlns="http://www.w3.org/2000/svg" 
+                  viewBox="0 0 24 24" 
+                  fill="none" 
+                  stroke="currentColor" 
+                  strokeWidth="2" 
+                  strokeLinecap="round" 
+                  strokeLinejoin="round"
+                >
+                  <path d="M21 8v13H3V8"></path>
+                  <path d="M1 3h22v5H1z"></path>
+                  <path d="M10 12h4"></path>
+                </svg>
                 <span className="font-medium">Account History</span>
               </div>
               <svg
@@ -531,21 +545,25 @@ export default function AccountStatus() {
           </details>
         </div>
         
-        <div className="mb-8">
-          <h2 className="text-xl font-semibold text-foreground mb-4">Subscription Plans</h2>
-          <PricingPlans />
-        </div>
-        
         {/* Advanced section with collapsible content */}
         <div className="mb-8">
           <details className="group">
             <summary className="flex cursor-pointer items-center justify-between rounded-lg bg-muted px-4 py-2 hover:bg-muted/80">
               <div className="flex items-center gap-2">
-                <img 
-                  src="https://assets.co.dev/171838d1-5208-4d56-8fa3-d46502238350/image-330ace0.png" 
-                  alt="Advanced settings" 
-                  className="h-5 w-5"
-                />
+                <svg 
+                  className="h-5 w-5" 
+                  xmlns="http://www.w3.org/2000/svg" 
+                  viewBox="0 0 24 24" 
+                  fill="none" 
+                  stroke="currentColor" 
+                  strokeWidth="2" 
+                  strokeLinecap="round" 
+                  strokeLinejoin="round"
+                >
+                  <path d="M12 2a10 10 0 1 0 0 20 10 10 0 1 0 0-20z"></path>
+                  <path d="M12 16v-4"></path>
+                  <path d="M12 8h.01"></path>
+                </svg>
                 <span className="font-medium">Advanced</span>
               </div>
               <svg
