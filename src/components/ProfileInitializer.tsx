@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { UserProfile } from '@/types/database';
 import { LoadingScreen } from '@/components/LoadingScreen';
 import OnboardingWizard from '@/components/OnboardingWizard';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { getFirebaseServices } from '@/lib/firebase';
 
 /**
@@ -39,11 +39,38 @@ export default function ProfileInitializer() {
           console.log('Creating basic profile for user:', user.uid);
           const { db } = getFirebaseServices();
           
+          // Generate a safe username
+          let safeUsername = user.displayName || '';
+          if (!safeUsername && user.email) {
+            safeUsername = user.email.split('@')[0];
+          }
+          
+          // Ensure username is valid
+          if (!safeUsername || safeUsername.length < 3) {
+            safeUsername = `user_${Math.floor(Math.random() * 10000)}`;
+          }
+          
+          // Replace any invalid characters
+          safeUsername = safeUsername.replace(/[^a-zA-Z0-9_]/g, '_');
+          
+          // Check if username already exists
+          let finalUsername = safeUsername;
+          try {
+            const usernameDoc = await getDoc(doc(db, 'usernames', safeUsername));
+            if (usernameDoc.exists()) {
+              // Generate a unique username
+              finalUsername = `${safeUsername}_${Math.floor(Math.random() * 10000)}`;
+            }
+          } catch (usernameError) {
+            console.error('Error checking username:', usernameError);
+            // Continue with original username if check fails
+          }
+          
           // Create a basic profile with default values
           const basicProfile: UserProfile = {
             uid: user.uid,
-            username: user.displayName || user.email?.split('@')[0] || '',
-            displayName: user.displayName || user.email?.split('@')[0] || '',
+            username: finalUsername,
+            displayName: finalUsername,
             email: user.email || '',
             avatarUrl: user.photoURL || '',
             photoURL: user.photoURL || '',
@@ -70,7 +97,16 @@ export default function ProfileInitializer() {
           
           // Create the profile document
           await setDoc(doc(db, 'users', user.uid), basicProfile);
-          console.log('Basic profile created successfully');
+          
+          // Create username document
+          await setDoc(doc(db, 'usernames', finalUsername), {
+            uid: user.uid,
+            username: finalUsername,
+            status: 'active',
+            createdAt: new Date().toISOString()
+          });
+          
+          console.log('Basic profile created successfully with username:', finalUsername);
           
           // Mark as initialized
           setInitialized(true);

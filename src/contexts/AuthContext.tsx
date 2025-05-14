@@ -756,11 +756,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (!profile) {
         console.log('No profile found, creating a basic profile before updating');
         
+        // Generate a safe username
+        let safeUsername = data.username || user.displayName || '';
+        if (!safeUsername && user.email) {
+          safeUsername = user.email.split('@')[0];
+        }
+        
+        // Ensure username is valid
+        if (!safeUsername || safeUsername.length < 3) {
+          safeUsername = `user_${Math.floor(Math.random() * 10000)}`;
+        }
+        
+        // Replace any invalid characters
+        safeUsername = safeUsername.replace(/[^a-zA-Z0-9_]/g, '_');
+        
         // Create a basic profile with default values
         const basicProfile: UserProfile = {
           uid: user.uid,
-          username: data.username || user.displayName || user.email?.split('@')[0] || '',
-          displayName: data.username || user.displayName || user.email?.split('@')[0] || '',
+          username: safeUsername,
+          displayName: safeUsername,
           email: user.email || '',
           avatarUrl: data.photoURL || user.photoURL || '',
           photoURL: data.photoURL || user.photoURL || '',
@@ -785,22 +799,49 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           profileCompleted: true
         };
         
-        // Create the profile document
-        await setDoc(doc(db, 'users', user.uid), basicProfile);
-        
-        // Create username document
-        await setDoc(doc(db, 'usernames', basicProfile.username), {
-          uid: user.uid,
-          username: basicProfile.username,
-          status: 'active',
-          createdAt: new Date().toISOString()
-        });
-        
-        // Update local profile state
-        setProfile(basicProfile);
-        
-        // Return early as we've created the profile with the provided data
-        return;
+        try {
+          // Create the profile document
+          await setDoc(doc(db, 'users', user.uid), basicProfile);
+          
+          // Check if username already exists
+          const usernameDoc = await getDoc(doc(db, 'usernames', safeUsername));
+          
+          if (!usernameDoc.exists()) {
+            // Create username document
+            await setDoc(doc(db, 'usernames', safeUsername), {
+              uid: user.uid,
+              username: safeUsername,
+              status: 'active',
+              createdAt: new Date().toISOString()
+            });
+          } else {
+            // If username exists, generate a unique one
+            const uniqueUsername = `${safeUsername}_${Math.floor(Math.random() * 10000)}`;
+            
+            // Update the profile with the unique username
+            basicProfile.username = uniqueUsername;
+            await setDoc(doc(db, 'users', user.uid), basicProfile);
+            
+            // Create username document with unique name
+            await setDoc(doc(db, 'usernames', uniqueUsername), {
+              uid: user.uid,
+              username: uniqueUsername,
+              status: 'active',
+              createdAt: new Date().toISOString()
+            });
+          }
+          
+          // Update local profile state
+          setProfile(basicProfile);
+          
+          console.log('Basic profile created successfully:', basicProfile);
+          
+          // Return early as we've created the profile with the provided data
+          return;
+        } catch (createError) {
+          console.error('Error creating basic profile:', createError);
+          throw new Error('Failed to create profile. Please try again.');
+        }
       }
       
       // If we have a profile, proceed with normal update

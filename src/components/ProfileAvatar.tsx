@@ -46,13 +46,16 @@ export function ProfileAvatar({ user, size = 'md', className = '' }: ProfileAvat
   
   // Get initials for fallback
   const getInitials = () => {
-    if (profile?.username && profile.username.length > 0) {
+    // Safely check if profile exists and has username
+    if (profile?.username && typeof profile.username === 'string' && profile.username.length > 0) {
       return profile.username.charAt(0).toUpperCase();
     }
-    if (user?.displayName && user.displayName.length > 0) {
+    // Safely check if user has displayName
+    if (user?.displayName && typeof user.displayName === 'string' && user.displayName.length > 0) {
       return user.displayName.charAt(0).toUpperCase();
     }
-    if (user?.email && user.email.length > 0) {
+    // Safely check if user has email
+    if (user?.email && typeof user.email === 'string' && user.email.length > 0) {
       return user.email.charAt(0).toUpperCase();
     }
     return 'U';

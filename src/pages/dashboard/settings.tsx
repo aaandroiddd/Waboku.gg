@@ -543,12 +543,26 @@ const SettingsPageContent = () => {
         try {
           const { db } = await import('@/lib/firebase');
           
+          // Generate a safe username
+          let safeUsername = formData.username || user.displayName || '';
+          if (!safeUsername && user.email) {
+            safeUsername = user.email.split('@')[0];
+          }
+          
+          // Ensure username is valid
+          if (!safeUsername || safeUsername.length < 3) {
+            safeUsername = `user_${Math.floor(Math.random() * 10000)}`;
+          }
+          
+          // Replace any invalid characters
+          safeUsername = safeUsername.replace(/[^a-zA-Z0-9_]/g, '_');
+          
           // Create a basic profile with default values
           const basicProfile = {
             uid: user.uid,
             email: user.email,
-            username: formData.username,
-            displayName: formData.username,
+            username: safeUsername,
+            displayName: safeUsername,
             joinDate: new Date().toISOString(),
             bio: formData.bio || "",
             contact: formData.contact || "",
@@ -567,11 +581,46 @@ const SettingsPageContent = () => {
               status: 'inactive',
               currentPlan: 'free',
               startDate: new Date().toISOString()
-            }
+            },
+            profileCompleted: true
           };
+          
+          // Check if username already exists
+          const usernameDoc = await getDoc(doc(db, 'usernames', safeUsername));
+          
+          if (!usernameDoc.exists()) {
+            // Create username document
+            await setDoc(doc(db, 'usernames', safeUsername), {
+              uid: user.uid,
+              username: safeUsername,
+              status: 'active',
+              createdAt: new Date().toISOString()
+            });
+          } else {
+            // If username exists, generate a unique one
+            const uniqueUsername = `${safeUsername}_${Math.floor(Math.random() * 10000)}`;
+            
+            // Update the profile with the unique username
+            basicProfile.username = uniqueUsername;
+            
+            // Create username document with unique name
+            await setDoc(doc(db, 'usernames', uniqueUsername), {
+              uid: user.uid,
+              username: uniqueUsername,
+              status: 'active',
+              createdAt: new Date().toISOString()
+            });
+          }
           
           await setDoc(doc(db, 'users', user.uid), basicProfile);
           console.log('Basic profile created successfully');
+          
+          // Update local state with the new profile
+          setProfile(basicProfile);
+          
+          // Force reload the page after creating the profile
+          window.location.reload();
+          return;
         } catch (createError) {
           console.error('Error creating basic profile:', createError);
           throw new Error("Failed to create profile. Please try refreshing the page.");
