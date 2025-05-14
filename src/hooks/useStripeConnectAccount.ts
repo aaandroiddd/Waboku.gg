@@ -148,7 +148,7 @@ export function useStripeConnectAccount(forceRefresh = false) {
   }, [user, forceRefresh]);
 
   // Function to manually refresh the account status
-  const refreshAccountStatus = () => {
+  const refreshAccountStatus = async () => {
     if (user) {
       // Clear the cache for this user
       if (stripeConnectCache[user.uid]) {
@@ -156,9 +156,62 @@ export function useStripeConnectAccount(forceRefresh = false) {
         saveCache();
       }
       
-      // Force a refresh by setting forceRefresh to true
-      setIsLoading(true);
-      fetchAccountStatus();
+      try {
+        // Force a refresh by setting forceRefresh to true
+        setIsLoading(true);
+        setError(null);
+
+        // Get the auth token
+        const token = await user.getIdToken(true);
+        
+        const response = await fetch('/api/stripe/connect/account-status', {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to check account status');
+        }
+
+        const data = await response.json();
+        
+        const accountData: StripeConnectAccountData = {
+          status: data.status,
+          accountId: data.accountId,
+          detailsSubmitted: data.detailsSubmitted,
+          chargesEnabled: data.chargesEnabled,
+          payoutsEnabled: data.payoutsEnabled,
+          hasListings: data.hasListings
+        };
+        
+        // Update state
+        setAccountData(accountData);
+        
+        // Cache the result
+        stripeConnectCache[user.uid] = {
+          data: accountData,
+          timestamp: Date.now()
+        };
+        
+        // Save to localStorage
+        saveCache();
+      } catch (err: any) {
+        console.error('Error refreshing Stripe Connect account status:', err);
+        setError(err.message || 'Failed to check account status');
+        
+        // Set error status in account data
+        const errorData: StripeConnectAccountData = {
+          status: 'error',
+          errorMessage: err.message || 'Failed to check account status'
+        };
+        
+        setAccountData(errorData);
+      } finally {
+        setIsLoading(false);
+      }
     }
   };
 
