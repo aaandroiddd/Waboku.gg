@@ -104,7 +104,7 @@ export function UserNameLink({
     
     return (
       <Link 
-        href={isRealUsername ? `/profile/${displayName}` : '#'} 
+        href={isRealUsername ? `/profile/${encodeURIComponent(displayName)}` : '#'} 
         className={`font-medium hover:underline ${className}`}
         onClick={(e) => {
           e.stopPropagation();
