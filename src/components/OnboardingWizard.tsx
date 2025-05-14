@@ -13,7 +13,11 @@ import { Progress } from '@/components/ui/progress';
 import { useUserProfileSync } from '@/hooks/useUserProfileSync';
 import { Check, ArrowRight } from 'lucide-react';
 
-export default function OnboardingWizard() {
+interface OnboardingWizardProps {
+  initialProfile?: UserProfile | null;
+}
+
+export default function OnboardingWizard({ initialProfile }: OnboardingWizardProps) {
   const { user, profile, updateProfile: authUpdateProfile } = useAuth();
   const { syncProfile } = useUserProfileSync();
   const router = useRouter();
@@ -21,10 +25,10 @@ export default function OnboardingWizard() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
-    username: profile?.username || '',
-    bio: profile?.bio || '',
-    location: profile?.location || '',
-    avatarUrl: profile?.avatarUrl || user?.photoURL || '',
+    username: initialProfile?.username || profile?.username || '',
+    bio: initialProfile?.bio || profile?.bio || '',
+    location: initialProfile?.location || profile?.location || '',
+    avatarUrl: initialProfile?.avatarUrl || profile?.avatarUrl || user?.photoURL || '',
   });
 
   // Update form data when profile or user changes

@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { UserProfile } from '@/types/database';
 import { LoadingScreen } from '@/components/LoadingScreen';
 import OnboardingWizard from '@/components/OnboardingWizard';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
+import { doc, setDoc, getDoc, collection, query, where, getDocs, limit } from 'firebase/firestore';
 import { getFirebaseServices } from '@/lib/firebase';
 
 /**
@@ -17,6 +17,7 @@ export default function ProfileInitializer() {
   const [isInitializing, setIsInitializing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [initialized, setInitialized] = useState(false);
+  const [profileData, setProfileData] = useState<UserProfile | null>(null);
 
   useEffect(() => {
     // If user is not logged in, redirect to sign in
@@ -32,12 +33,39 @@ export default function ProfileInitializer() {
     }
     
     // If we're not loading and have a user but no profile, create a basic profile
-    if (!isLoading && user && !profile && !initialized && !isInitializing) {
+    if (!isLoading && user && !initialized && !isInitializing) {
       const initializeProfile = async () => {
         setIsInitializing(true);
         try {
-          console.log('Creating basic profile for user:', user.uid);
+          console.log('Checking/creating profile for user:', user.uid);
           const { db } = getFirebaseServices();
+          
+          // First check if a profile already exists
+          const profileDoc = await getDoc(doc(db, 'users', user.uid));
+          
+          if (profileDoc.exists()) {
+            // Profile exists, but may need to be marked as incomplete
+            const existingProfile = profileDoc.data() as UserProfile;
+            
+            // If profile exists but is incomplete, update it
+            if (!existingProfile.profileCompleted) {
+              console.log('Profile exists but is incomplete, updating it');
+              setProfileData(existingProfile);
+              setInitialized(true);
+              setIsInitializing(false);
+              return;
+            }
+            
+            // If profile is complete, redirect to dashboard
+            if (existingProfile.profileCompleted) {
+              console.log('Profile is complete, redirecting to dashboard');
+              router.push('/dashboard');
+              return;
+            }
+          }
+          
+          // No profile exists, create a new one
+          console.log('No profile found, creating a basic profile');
           
           // Generate a safe username
           let safeUsername = user.displayName || '';
@@ -53,18 +81,48 @@ export default function ProfileInitializer() {
           // Replace any invalid characters
           safeUsername = safeUsername.replace(/[^a-zA-Z0-9_]/g, '_');
           
-          // Check if username already exists
+          // Check if username already exists - first check usernames collection
           let finalUsername = safeUsername;
-          try {
-            const usernameDoc = await getDoc(doc(db, 'usernames', safeUsername));
-            if (usernameDoc.exists()) {
-              // Generate a unique username
-              finalUsername = `${safeUsername}_${Math.floor(Math.random() * 10000)}`;
+          let isUnique = false;
+          let counter = 1;
+          
+          while (!isUnique) {
+            try {
+              // Check in usernames collection
+              const usernameDoc = await getDoc(doc(db, 'usernames', finalUsername));
+              
+              if (!usernameDoc.exists()) {
+                // Also check in users collection by username field
+                const usersRef = collection(db, 'users');
+                const usernameQuery = query(
+                  usersRef, 
+                  where('username', '==', finalUsername),
+                  limit(1)
+                );
+                
+                const usernameSnapshot = await getDocs(usernameQuery);
+                
+                if (usernameSnapshot.empty) {
+                  isUnique = true;
+                } else {
+                  finalUsername = `${safeUsername}_${counter}`;
+                  counter++;
+                }
+              } else {
+                finalUsername = `${safeUsername}_${counter}`;
+                counter++;
+              }
+            } catch (usernameError) {
+              console.error('Error checking username:', usernameError);
+              // Generate a unique username with timestamp to ensure uniqueness
+              finalUsername = `${safeUsername}_${Date.now().toString().slice(-6)}`;
+              isUnique = true;
             }
-          } catch (usernameError) {
-            console.error('Error checking username:', usernameError);
-            // Continue with original username if check fails
           }
+          
+          // Determine auth provider
+          const authProvider = user.providerData[0]?.providerId || 'unknown';
+          const isGoogleUser = authProvider === 'google.com';
           
           // Create a basic profile with default values
           const basicProfile: UserProfile = {
@@ -81,7 +139,7 @@ export default function ProfileInitializer() {
             rating: null,
             contact: '',
             isEmailVerified: user.emailVerified || false,
-            authProvider: user.providerData[0]?.providerId || 'unknown',
+            authProvider: authProvider,
             social: {
               youtube: '',
               twitter: '',
@@ -92,7 +150,8 @@ export default function ProfileInitializer() {
               currentPlan: 'free',
               status: 'inactive'
             },
-            profileCompleted: false
+            profileCompleted: false,
+            lastUpdated: new Date().toISOString()
           };
           
           // Create the profile document
@@ -103,10 +162,14 @@ export default function ProfileInitializer() {
             uid: user.uid,
             username: finalUsername,
             status: 'active',
-            createdAt: new Date().toISOString()
+            createdAt: new Date().toISOString(),
+            isTemporary: true // Mark as temporary until user confirms in onboarding
           });
           
           console.log('Basic profile created successfully with username:', finalUsername);
+          
+          // Store the profile data
+          setProfileData(basicProfile);
           
           // Mark as initialized
           setInitialized(true);
@@ -146,8 +209,8 @@ export default function ProfileInitializer() {
 
   // If user is logged in and we have a profile (either existing or newly created),
   // show the onboarding wizard
-  if (user && (profile || initialized)) {
-    return <OnboardingWizard />;
+  if (user && (profile || profileData || initialized)) {
+    return <OnboardingWizard initialProfile={profileData || profile} />;
   }
 
   // This will show briefly during redirects

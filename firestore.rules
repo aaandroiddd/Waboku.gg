@@ -57,7 +57,11 @@ service cloud.firestore {
     }
 
     function isValidProfile(data) {
-      return true; // Temporarily allowing all profile data to identify the issue
+      return data.uid is string
+        && data.email is string
+        && data.username is string
+        && data.username.size() >= 3
+        && data.username.size() <= 30;
     }
 
     // Allow read access to usernames collection for everyone
@@ -74,8 +78,7 @@ service cloud.firestore {
       allow create: if isAuthenticated() 
         && userId == request.auth.uid;
       allow update: if (isAuthenticated() 
-        && userId == request.auth.uid 
-        && request.resource.data.uid == userId) || isSigningOut(userId);
+        && userId == request.auth.uid) || isSigningOut(userId);
       allow delete: if isOwner(userId);
     }
     
