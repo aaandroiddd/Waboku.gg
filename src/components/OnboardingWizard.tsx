@@ -44,6 +44,22 @@ export default function OnboardingWizard({ initialProfile }: OnboardingWizardPro
         location: profileSource?.location || prev.location,
         avatarUrl: profileSource?.avatarUrl || user?.photoURL || prev.avatarUrl,
       }));
+      
+      // Log the auth provider for debugging
+      if (user) {
+        const provider = user.providerData[0]?.providerId || 'unknown';
+        console.log('User auth provider:', provider);
+        
+        // For Google users, pre-populate with Google profile data if available
+        if (provider === 'google.com' && user.displayName) {
+          console.log('Google user detected, using Google profile data');
+          setFormData(prev => ({
+            ...prev,
+            username: prev.username || user.displayName?.replace(/\s+/g, '_').toLowerCase() || '',
+            avatarUrl: user.photoURL || prev.avatarUrl,
+          }));
+        }
+      }
     }
   }, [profile, initialProfile, user]);
 

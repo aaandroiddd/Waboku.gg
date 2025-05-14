@@ -132,12 +132,15 @@ export default function ProfileInitializer() {
           const authProvider = user.providerData[0]?.providerId || 'unknown';
           const isGoogleUser = authProvider === 'google.com';
           
+          // For Google users, use their display name if available
+          let displayName = user.displayName || finalUsername;
+          
           // Create a basic profile with default values
           const currentDate = new Date().toISOString();
           const basicProfile: UserProfile = {
             uid: user.uid,
             username: finalUsername,
-            displayName: finalUsername,
+            displayName: displayName,
             email: user.email || '',
             avatarUrl: user.photoURL || '',
             photoURL: user.photoURL || '',

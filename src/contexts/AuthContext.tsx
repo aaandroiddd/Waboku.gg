@@ -1215,8 +1215,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         };
 
         // Check if profile needs completion (missing username, bio, or location)
-        if (!existingProfile.profileCompleted && 
-            (!existingProfile.username || !existingProfile.location)) {
+        if (!existingProfile.profileCompleted || 
+            !existingProfile.username || 
+            !existingProfile.location) {
           needsProfileCompletion = true;
           updatedProfile.profileCompleted = false;
         }
@@ -1295,19 +1296,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         setProfile(newProfile);
         
-        // Redirect to onboarding wizard immediately for new users
+        // Always set needsProfileCompletion to true for new users
+        needsProfileCompletion = true;
+        
+        // Store the profile completion status for redirection
         if (typeof window !== 'undefined') {
-          console.log('New Google user detected, redirecting to onboarding wizard');
-          window.location.href = '/auth/complete-profile';
-          return { ...result, needsProfileCompletion: true };
+          localStorage.setItem('needs_profile_completion', 'true');
         }
       } else {
         // If profile exists but wasn't found by email query
         const existingProfile = profileDoc.data() as UserProfile;
         
         // Check if profile needs completion
-        if (!existingProfile.profileCompleted && 
-            (!existingProfile.username || !existingProfile.location)) {
+        if (!existingProfile.profileCompleted || 
+            !existingProfile.username || 
+            !existingProfile.location) {
           needsProfileCompletion = true;
           
           // Update profile to mark as incomplete
@@ -1325,10 +1328,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
         
         setProfile(existingProfile);
-        return { ...result, needsProfileCompletion };
       }
 
-      return result;
+      return { ...result, needsProfileCompletion };
     } catch (err: any) {
       console.error('Google sign in error:', err);
       let errorMessage = 'Failed to sign in with Google';
