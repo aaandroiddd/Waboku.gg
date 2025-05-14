@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { useRouter } from 'next/router';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';

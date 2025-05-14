@@ -346,7 +346,7 @@ export function DashboardSidebar({ onNavigate }: DashboardSidebarProps) {
       {/* Persistent footer with sign out button */}
       {user && (
         <div className="p-4 border-t bg-card">
-          <SignOutButton onNavigate={onNavigate} />
+          <SignOutButton onNavigate={onNavigate} isMobile={isMobile} />
         </div>
       )}
     </div>
@@ -354,11 +354,10 @@ export function DashboardSidebar({ onNavigate }: DashboardSidebarProps) {
 }
 
 // Separate component for sign-out button to avoid React hooks rules issues
-function SignOutButton({ onNavigate }: { onNavigate?: () => void }) {
+function SignOutButton({ onNavigate, isMobile }: { onNavigate?: () => void, isMobile: boolean }) {
   const { signOut } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
-  const isMobile = useMediaQuery("(max-width: 768px)");
   
   const handleSignOut = async () => {
     try {
