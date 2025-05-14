@@ -80,11 +80,17 @@ export default function OnboardingWizard() {
         throw new Error('Username must be at least 3 characters long');
       }
 
+      // Create a safe username from the input (alphanumeric and underscores only)
+      const safeUsername = formData.username.replace(/[^a-zA-Z0-9_]/g, '_');
+
       // Update profile with completed information
       await authUpdateProfile({
-        username: formData.username,
-        bio: formData.bio,
-        location: formData.location,
+        username: safeUsername,
+        displayName: safeUsername,
+        bio: formData.bio || '',
+        location: formData.location || '',
+        avatarUrl: formData.avatarUrl || user.photoURL || '',
+        photoURL: formData.avatarUrl || user.photoURL || '',
         profileCompleted: true,
         lastUpdated: new Date().toISOString()
       } as Partial<UserProfile>);
@@ -93,8 +99,8 @@ export default function OnboardingWizard() {
       if (user.uid) {
         await syncProfile(
           user.uid,
-          formData.username,
-          formData.avatarUrl
+          safeUsername,
+          formData.avatarUrl || user.photoURL || null
         );
       }
 
@@ -113,8 +119,15 @@ export default function OnboardingWizard() {
     }
   };
 
-  if (!user || !profile) {
+  // If no user, show nothing
+  if (!user) {
     return null;
+  }
+  
+  // If no profile, create a default form data state
+  if (!profile && user) {
+    // This is a fallback in case ProfileInitializer didn't create a profile
+    console.log('No profile found in OnboardingWizard, using default values');
   }
 
   const progress = (step / 3) * 100;
@@ -141,7 +154,7 @@ export default function OnboardingWizard() {
                 <div className="flex justify-center mb-6">
                   <Avatar className="w-24 h-24">
                     <AvatarImage src={formData.avatarUrl || '/images/default-avatar.svg'} alt="Profile" />
-                    <AvatarFallback>{formData.username.substring(0, 2).toUpperCase() || user.email?.substring(0, 2).toUpperCase()}</AvatarFallback>
+                    <AvatarFallback>{(formData.username || '').substring(0, 2).toUpperCase() || (user.email || '').substring(0, 2).toUpperCase() || 'U'}</AvatarFallback>
                   </Avatar>
                 </div>
 

@@ -349,7 +349,11 @@ function SignInComponent() {
                     // Check if profile completion is needed
                     if (result && result.needsProfileCompletion) {
                       console.log('Profile completion needed, redirecting to onboarding wizard');
-                      window.location.href = '/auth/complete-profile';
+                      // Mark user as needing profile completion
+                      if (typeof window !== 'undefined') {
+                        localStorage.setItem('needs_profile_completion', 'true');
+                      }
+                      router.push('/auth/complete-profile');
                       return;
                     }
                   } catch (err: any) {

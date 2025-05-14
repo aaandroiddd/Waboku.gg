@@ -250,14 +250,25 @@ const SettingsPageContent = () => {
               uid: currentUser.uid,
               email: currentUser.email,
               username: currentUser.displayName || currentUser.email?.split('@')[0] || "",
+              displayName: currentUser.displayName || currentUser.email?.split('@')[0] || "",
               joinDate: new Date().toISOString(),
               bio: "",
               contact: "",
               location: "",
+              avatarUrl: currentUser.photoURL || "",
+              photoURL: currentUser.photoURL || "",
+              isEmailVerified: currentUser.emailVerified || false,
               social: {
                 youtube: "",
                 twitter: "",
                 facebook: ""
+              },
+              accountTier: 'free',
+              tier: 'free',
+              subscription: {
+                status: 'inactive',
+                currentPlan: 'free',
+                startDate: new Date().toISOString()
               }
             };
             

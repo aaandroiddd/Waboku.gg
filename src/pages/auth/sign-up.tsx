@@ -109,7 +109,13 @@ function SignUpComponent() {
       }
 
       await signUp(formData.email, formData.password, formData.username);
-      // Redirect to profile completion page instead of dashboard
+      
+      // Mark user as needing profile completion
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('needs_profile_completion', 'true');
+      }
+      
+      // Redirect to profile completion page
       router.push('/auth/complete-profile');
     } catch (err: any) {
       console.error('Sign up error:', {
@@ -274,8 +280,19 @@ function SignUpComponent() {
                 try {
                   setError(null);
                   setIsGoogleLoading(true);
-                  await signInWithGoogle();
-                  router.push('/dashboard');
+                  const result = await signInWithGoogle();
+                  
+                  // Check if profile completion is needed
+                  if (result && result.needsProfileCompletion) {
+                    console.log('Profile completion needed, redirecting to onboarding wizard');
+                    // Mark user as needing profile completion
+                    if (typeof window !== 'undefined') {
+                      localStorage.setItem('needs_profile_completion', 'true');
+                    }
+                    router.push('/auth/complete-profile');
+                  } else {
+                    router.push('/dashboard');
+                  }
                 } catch (err: any) {
                   const error = err instanceof Error ? err : new Error(err.message || "Failed to sign in with Google");
                   error.name = err.code || err.name || "auth/unknown";
