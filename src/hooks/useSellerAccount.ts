@@ -1,15 +1,14 @@
-import { useState, useEffect, useCallback } from 'react';
-import { useToast } from '@/components/ui/use-toast';
-import { useRouter } from 'next/router';
+import { useState, useEffect } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface AccountStatus {
   isConnected: boolean;
   isEnabled: boolean;
   needsMoreInfo: boolean;
-  accountLink?: string;
 }
 
 export function useSellerAccount() {
+  const { user } = useAuth();
   const [accountStatus, setAccountStatus] = useState<AccountStatus>({
     isConnected: false,
     isEnabled: false,
@@ -17,15 +16,24 @@ export function useSellerAccount() {
   });
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { toast } = useToast();
-  const router = useRouter();
 
-  const fetchAccountStatus = useCallback(async () => {
+  // Function to fetch account status
+  async function fetchAccountStatus() {
+    if (!user) {
+      setIsLoading(false);
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
     
     try {
-      const response = await fetch('/api/stripe/connect/account-status');
+      const token = await user.getIdToken(true);
+      const response = await fetch('/api/stripe/connect/account-status', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
       
       if (!response.ok) {
         throw new Error('Failed to fetch account status');
@@ -36,25 +44,26 @@ export function useSellerAccount() {
         isConnected: !!data.accountId,
         isEnabled: data.payoutsEnabled || false,
         needsMoreInfo: data.detailsSubmitted ? !data.payoutsEnabled : true,
-        accountLink: data.accountLink,
       });
     } catch (err) {
       console.error('Error fetching account status:', err);
       setError('Failed to load account status. Please try again later.');
-      toast({
-        title: 'Error',
-        description: 'Failed to load account status. Please try again later.',
-        variant: 'destructive',
-      });
     } finally {
       setIsLoading(false);
     }
-  }, [toast]);
+  }
 
-  const createAccount = async () => {
+  // Function to create a new account
+  async function createAccount() {
+    if (!user) return;
+    
     try {
+      const token = await user.getIdToken(true);
       const response = await fetch('/api/stripe/connect/create-account', {
         method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
       });
       
       if (!response.ok) {
@@ -64,25 +73,27 @@ export function useSellerAccount() {
       const data = await response.json();
       
       if (data.url) {
-        window.location.href = data.url;
+        window.open(data.url, '_blank');
       } else {
         throw new Error('No redirect URL provided');
       }
     } catch (err) {
       console.error('Error creating account:', err);
-      toast({
-        title: 'Error',
-        description: 'Failed to create seller account. Please try again later.',
-        variant: 'destructive',
-      });
       throw err;
     }
-  };
+  }
 
-  const updateAccount = async () => {
+  // Function to update an existing account
+  async function updateAccount() {
+    if (!user) return;
+    
     try {
+      const token = await user.getIdToken(true);
       const response = await fetch('/api/stripe/connect/update-account', {
         method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
       });
       
       if (!response.ok) {
@@ -92,24 +103,20 @@ export function useSellerAccount() {
       const data = await response.json();
       
       if (data.url) {
-        window.location.href = data.url;
+        window.open(data.url, '_blank');
       } else {
         throw new Error('No redirect URL provided');
       }
     } catch (err) {
       console.error('Error updating account:', err);
-      toast({
-        title: 'Error',
-        description: 'Failed to update seller account. Please try again later.',
-        variant: 'destructive',
-      });
       throw err;
     }
-  };
+  }
 
+  // Fetch account status on component mount
   useEffect(() => {
     fetchAccountStatus();
-  }, [fetchAccountStatus]);
+  }, [user]);
 
   return {
     accountStatus,
