@@ -56,9 +56,9 @@ export default function ProfileInitializer() {
             isEmailVerified: user.emailVerified || false,
             authProvider: user.providerData[0]?.providerId || 'unknown',
             social: {
-              youtube: null,
-              twitter: null,
-              facebook: null
+              youtube: '',
+              twitter: '',
+              facebook: ''
             },
             tier: 'free',
             subscription: {

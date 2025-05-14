@@ -537,6 +537,47 @@ const SettingsPageContent = () => {
         }
       }
 
+      // Check if we have a profile, if not create a basic one first
+      if (!profile && user) {
+        console.log('No profile found, creating a basic profile before updating');
+        try {
+          const { db } = await import('@/lib/firebase');
+          
+          // Create a basic profile with default values
+          const basicProfile = {
+            uid: user.uid,
+            email: user.email,
+            username: formData.username,
+            displayName: formData.username,
+            joinDate: new Date().toISOString(),
+            bio: formData.bio || "",
+            contact: formData.contact || "",
+            location: formData.location || "",
+            avatarUrl: photoURL || "",
+            photoURL: photoURL || "",
+            isEmailVerified: user.emailVerified || false,
+            social: {
+              youtube: formData.youtube || '',
+              twitter: formData.twitter || '',
+              facebook: formData.facebook || ''
+            },
+            accountTier: 'free',
+            tier: 'free',
+            subscription: {
+              status: 'inactive',
+              currentPlan: 'free',
+              startDate: new Date().toISOString()
+            }
+          };
+          
+          await setDoc(doc(db, 'users', user.uid), basicProfile);
+          console.log('Basic profile created successfully');
+        } catch (createError) {
+          console.error('Error creating basic profile:', createError);
+          throw new Error("Failed to create profile. Please try refreshing the page.");
+        }
+      }
+
       // Update profile with all user data
       try {
         await updateProfile({
@@ -558,7 +599,8 @@ const SettingsPageContent = () => {
         // If this looks like an auth error, try refreshing token and retrying
         if (profileError.message?.includes('auth') || 
             profileError.code?.includes('auth') || 
-            profileError.message?.includes('permission')) {
+            profileError.message?.includes('permission') ||
+            profileError.message?.includes('No profile found')) {
           
           if (user) {
             console.log('Refreshing token and retrying profile update...');
@@ -590,6 +632,9 @@ const SettingsPageContent = () => {
       
       // Reset avatar file after successful upload
       setAvatarFile(null);
+      
+      // Force reload the page after successful update to ensure fresh data
+      window.location.reload();
     } catch (err: any) {
       console.error('Profile update error:', err);
       
@@ -600,6 +645,8 @@ const SettingsPageContent = () => {
         setError("For security reasons, please sign out and sign back in to update your profile.");
       } else if (err.code?.includes('network') || err.message?.includes('network')) {
         setError("Network error. Please check your internet connection and try again.");
+      } else if (err.message?.includes('No profile found')) {
+        setError("Profile not found. Please refresh the page to create your profile.");
       } else {
         setError(err.message || "An unexpected error occurred. Please try again.");
       }

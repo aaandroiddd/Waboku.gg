@@ -750,9 +750,60 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const updateProfile = async (data: Partial<UserProfile> & { photoURL?: string }) => {
     if (!user) throw new Error('No user logged in');
-    if (!profile) throw new Error('No profile found');
-
+    
     try {
+      // If no profile exists, create a basic one first
+      if (!profile) {
+        console.log('No profile found, creating a basic profile before updating');
+        
+        // Create a basic profile with default values
+        const basicProfile: UserProfile = {
+          uid: user.uid,
+          username: data.username || user.displayName || user.email?.split('@')[0] || '',
+          displayName: data.username || user.displayName || user.email?.split('@')[0] || '',
+          email: user.email || '',
+          avatarUrl: data.photoURL || user.photoURL || '',
+          photoURL: data.photoURL || user.photoURL || '',
+          bio: data.bio || '',
+          location: data.location || '',
+          joinDate: new Date().toISOString(),
+          totalSales: 0,
+          rating: null,
+          contact: data.contact || '',
+          isEmailVerified: user.emailVerified || false,
+          authProvider: user.providerData[0]?.providerId || 'unknown',
+          social: {
+            youtube: data.social?.youtube || '',
+            twitter: data.social?.twitter || '',
+            facebook: data.social?.facebook || ''
+          },
+          tier: 'free',
+          subscription: {
+            currentPlan: 'free',
+            status: 'inactive'
+          },
+          profileCompleted: true
+        };
+        
+        // Create the profile document
+        await setDoc(doc(db, 'users', user.uid), basicProfile);
+        
+        // Create username document
+        await setDoc(doc(db, 'usernames', basicProfile.username), {
+          uid: user.uid,
+          username: basicProfile.username,
+          status: 'active',
+          createdAt: new Date().toISOString()
+        });
+        
+        // Update local profile state
+        setProfile(basicProfile);
+        
+        // Return early as we've created the profile with the provided data
+        return;
+      }
+      
+      // If we have a profile, proceed with normal update
       if (data.username && data.username !== profile.username) {
         // Check if new username is available
         const usernameDoc = await getDoc(doc(db, 'usernames', data.username));
@@ -825,7 +876,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.error('Error clearing profile cache:', cacheError);
       }
     } catch (err: any) {
-      if (data.username && data.username !== profile.username) {
+      if (profile && data.username && data.username !== profile.username) {
         try {
           await deleteDoc(doc(db, 'usernames', data.username));
           await setDoc(doc(db, 'usernames', profile.username), {
