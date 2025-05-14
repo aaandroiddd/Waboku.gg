@@ -31,18 +31,21 @@ export default function OnboardingWizard({ initialProfile }: OnboardingWizardPro
     avatarUrl: initialProfile?.avatarUrl || profile?.avatarUrl || user?.photoURL || '',
   });
 
-  // Update form data when profile or user changes
+  // Update form data when profile, initialProfile, or user changes
   useEffect(() => {
-    if (profile || user) {
+    const profileSource = initialProfile || profile;
+    
+    if (profileSource || user) {
+      console.log('Updating form data from profile source:', profileSource);
       setFormData(prev => ({
         ...prev,
-        username: profile?.username || prev.username,
-        bio: profile?.bio || prev.bio,
-        location: profile?.location || prev.location,
-        avatarUrl: profile?.avatarUrl || user?.photoURL || prev.avatarUrl,
+        username: profileSource?.username || prev.username,
+        bio: profileSource?.bio || prev.bio,
+        location: profileSource?.location || prev.location,
+        avatarUrl: profileSource?.avatarUrl || user?.photoURL || prev.avatarUrl,
       }));
     }
-  }, [profile, user]);
+  }, [profile, initialProfile, user]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;

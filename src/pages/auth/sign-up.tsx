@@ -115,8 +115,8 @@ function SignUpComponent() {
         localStorage.setItem('needs_profile_completion', 'true');
       }
       
-      // Redirect to profile completion page
-      router.push('/auth/complete-profile');
+      // Force a redirect to the complete-profile page
+      window.location.href = '/auth/complete-profile';
     } catch (err: any) {
       console.error('Sign up error:', {
         errorCode: err.code || 'unknown',
@@ -289,7 +289,8 @@ function SignUpComponent() {
                     if (typeof window !== 'undefined') {
                       localStorage.setItem('needs_profile_completion', 'true');
                     }
-                    router.push('/auth/complete-profile');
+                    // Force a redirect to the complete-profile page
+                    window.location.href = '/auth/complete-profile';
                   } else {
                     router.push('/dashboard');
                   }

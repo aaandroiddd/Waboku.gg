@@ -18,6 +18,14 @@ export default function ProfileInitializer() {
   const [error, setError] = useState<string | null>(null);
   const [initialized, setInitialized] = useState(false);
   const [profileData, setProfileData] = useState<UserProfile | null>(null);
+  const [localProfile, setLocalProfile] = useState<UserProfile | null>(null);
+
+  // Set local profile when auth profile changes
+  useEffect(() => {
+    if (profile) {
+      setLocalProfile(profile);
+    }
+  }, [profile]);
 
   useEffect(() => {
     // If user is not logged in, redirect to sign in
@@ -32,8 +40,8 @@ export default function ProfileInitializer() {
       return;
     }
     
-    // If we're not loading and have a user but no profile, create a basic profile
-    if (!isLoading && user && !initialized && !isInitializing) {
+    // If we're not loading and have a user but no profile or profile data, create a basic profile
+    if (!isLoading && user && !initialized && !isInitializing && !profileData) {
       const initializeProfile = async () => {
         setIsInitializing(true);
         try {
@@ -125,6 +133,7 @@ export default function ProfileInitializer() {
           const isGoogleUser = authProvider === 'google.com';
           
           // Create a basic profile with default values
+          const currentDate = new Date().toISOString();
           const basicProfile: UserProfile = {
             uid: user.uid,
             username: finalUsername,
@@ -134,7 +143,7 @@ export default function ProfileInitializer() {
             photoURL: user.photoURL || '',
             bio: '',
             location: '',
-            joinDate: new Date().toISOString(),
+            joinDate: currentDate,
             totalSales: 0,
             rating: null,
             contact: '',
@@ -145,13 +154,15 @@ export default function ProfileInitializer() {
               twitter: '',
               facebook: ''
             },
+            accountTier: 'free',
             tier: 'free',
             subscription: {
               currentPlan: 'free',
-              status: 'inactive'
+              status: 'inactive',
+              startDate: currentDate
             },
             profileCompleted: false,
-            lastUpdated: new Date().toISOString()
+            lastUpdated: currentDate
           };
           
           // Create the profile document
@@ -209,8 +220,13 @@ export default function ProfileInitializer() {
 
   // If user is logged in and we have a profile (either existing or newly created),
   // show the onboarding wizard
-  if (user && (profile || profileData || initialized)) {
-    return <OnboardingWizard initialProfile={profileData || profile} />;
+  if (user && (localProfile || profileData || initialized)) {
+    // Use profileData if available, otherwise fall back to localProfile
+    const profileToUse = profileData || localProfile;
+    
+    console.log('Rendering OnboardingWizard with profile:', profileToUse);
+    
+    return <OnboardingWizard initialProfile={profileToUse} />;
   }
 
   // This will show briefly during redirects
