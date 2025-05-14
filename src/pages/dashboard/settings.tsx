@@ -644,7 +644,11 @@ const SettingsPageContent = () => {
                   {avatarPreview ? (
                     <Avatar className="w-24 h-24">
                       <AvatarImage src={avatarPreview} />
-                      <AvatarFallback>{formData.username.slice(0, 2).toUpperCase()}</AvatarFallback>
+                      <AvatarFallback>
+                        {formData.username && formData.username.length > 0 
+                          ? formData.username.slice(0, 2).toUpperCase() 
+                          : user?.displayName?.slice(0, 2).toUpperCase() || user?.email?.slice(0, 2).toUpperCase() || 'U'}
+                      </AvatarFallback>
                     </Avatar>
                   ) : (
                     <ProfileAvatar user={user} size="xl" className="w-24 h-24" />

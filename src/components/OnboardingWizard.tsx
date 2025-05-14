@@ -154,7 +154,13 @@ export default function OnboardingWizard() {
                 <div className="flex justify-center mb-6">
                   <Avatar className="w-24 h-24">
                     <AvatarImage src={formData.avatarUrl || '/images/default-avatar.svg'} alt="Profile" />
-                    <AvatarFallback>{(formData.username || '').substring(0, 2).toUpperCase() || (user.email || '').substring(0, 2).toUpperCase() || 'U'}</AvatarFallback>
+                    <AvatarFallback>
+                      {formData.username && formData.username.length > 0 
+                        ? formData.username.substring(0, 2).toUpperCase() 
+                        : user.email && user.email.length > 0 
+                          ? user.email.substring(0, 2).toUpperCase() 
+                          : 'U'}
+                    </AvatarFallback>
                   </Avatar>
                 </div>
 
