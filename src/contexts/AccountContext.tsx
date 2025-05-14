@@ -330,10 +330,37 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
                 // Update the database if needed
                 if (data.accountTier !== (isActivePremium ? 'premium' : 'free')) {
                   try {
+                    const newTier = isActivePremium ? 'premium' : 'free';
+                    
+                    // Update user document with new tier
                     await updateDoc(userDocRef, {
-                      accountTier: isActivePremium ? 'premium' : 'free',
+                      accountTier: newTier,
                       updatedAt: new Date()
                     });
+                    
+                    // Also update all active listings to reflect the new tier
+                    try {
+                      const idToken = await user.getIdToken(true);
+                      const response = await fetch('/api/stripe/update-listing-tiers', {
+                        method: 'POST',
+                        headers: {
+                          'Content-Type': 'application/json',
+                          'Authorization': `Bearer ${idToken}`
+                        },
+                        body: JSON.stringify({
+                          accountTier: newTier
+                        })
+                      });
+                      
+                      if (response.ok) {
+                        const result = await response.json();
+                        console.log(`[AccountContext] Updated ${result.updated} listings to ${newTier} tier`);
+                      } else {
+                        console.error('[AccountContext] Failed to update listing tiers:', await response.text());
+                      }
+                    } catch (listingUpdateError) {
+                      console.error('[AccountContext] Error updating listing tiers:', listingUpdateError);
+                    }
                   } catch (updateError) {
                     console.error('[AccountContext] Error updating account tier:', updateError);
                   }
@@ -619,13 +646,51 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
         };
         
         setSubscription(subscriptionDetails);
-        setAccountTier(isActivePremium ? 'premium' : 'free');
+        const newTier = isActivePremium ? 'premium' : 'free';
+        setAccountTier(newTier);
         
         console.log('[AccountContext] Account data refreshed successfully:', {
-          accountTier: isActivePremium ? 'premium' : 'free',
+          accountTier: newTier,
           subscriptionStatus: currentStatus,
           endDate: subscriptionData.endDate || 'none'
         });
+        
+        // Update user document if needed
+        if (data.accountTier !== newTier) {
+          try {
+            // Update user document with new tier
+            await updateDoc(userDocRef, {
+              accountTier: newTier,
+              updatedAt: new Date()
+            });
+            
+            // Also update all active listings to reflect the new tier
+            try {
+              const idToken = await user.getIdToken(true);
+              const response = await fetch('/api/stripe/update-listing-tiers', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${idToken}`
+                },
+                body: JSON.stringify({
+                  accountTier: newTier
+                })
+              });
+              
+              if (response.ok) {
+                const result = await response.json();
+                console.log(`[AccountContext] Updated ${result.updated} listings to ${newTier} tier during refresh`);
+              } else {
+                console.error('[AccountContext] Failed to update listing tiers during refresh:', await response.text());
+              }
+            } catch (listingUpdateError) {
+              console.error('[AccountContext] Error updating listing tiers during refresh:', listingUpdateError);
+            }
+          } catch (updateError) {
+            console.error('[AccountContext] Error updating account tier during refresh:', updateError);
+          }
+        }
       }
     } catch (error) {
       console.error('[AccountContext] Error refreshing account data:', error);

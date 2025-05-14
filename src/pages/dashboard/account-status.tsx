@@ -608,63 +608,125 @@ export default function AccountStatus() {
                 </Card>
                 
                 {/* Special button for users who recreated their account and have subscription issues */}
-                <Card className="p-6 border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950">
-                  <h3 className="text-lg font-semibold mb-2 text-amber-800 dark:text-amber-300">Having Subscription Issues?</h3>
-                  <p className="text-sm text-amber-700 dark:text-amber-400 mb-4">
-                    If you previously deleted your account and created a new one, you might experience issues with your subscription.
-                    Click the button below to fix potential subscription conflicts.
-                  </p>
-                  <Button 
-                    variant="outline"
-                    className="border-amber-500 text-amber-700 hover:bg-amber-100 dark:text-amber-300 dark:hover:bg-amber-900"
-                    onClick={async () => {
-                      try {
-                        toast({
-                          title: "Processing...",
-                          description: "Checking and fixing subscription data...",
-                        });
-                        
-                        if (!user) {
-                          throw new Error('You must be logged in to perform this action');
-                        }
-                        
-                        // Get a fresh token
-                        const idToken = await user.getIdToken(true);
-                        
-                        // Call our dedicated cleanup endpoint
-                        const response = await fetch('/api/stripe/cleanup-subscription', {
-                          method: 'POST',
-                          headers: {
-                            'Authorization': `Bearer ${idToken}`,
-                            'Content-Type': 'application/json'
+                <div className="space-y-4">
+                  <Card className="p-6 border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950">
+                    <h3 className="text-lg font-semibold mb-2 text-amber-800 dark:text-amber-300">Having Subscription Issues?</h3>
+                    <p className="text-sm text-amber-700 dark:text-amber-400 mb-4">
+                      If you previously deleted your account and created a new one, you might experience issues with your subscription.
+                      Click the button below to fix potential subscription conflicts.
+                    </p>
+                    <Button 
+                      variant="outline"
+                      className="border-amber-500 text-amber-700 hover:bg-amber-100 dark:text-amber-300 dark:hover:bg-amber-900"
+                      onClick={async () => {
+                        try {
+                          toast({
+                            title: "Processing...",
+                            description: "Checking and fixing subscription data...",
+                          });
+                          
+                          if (!user) {
+                            throw new Error('You must be logged in to perform this action');
                           }
-                        });
-                        
-                        if (!response.ok) {
-                          const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
-                          throw new Error(errorData.message || 'Failed to clean up subscription data');
+                          
+                          // Get a fresh token
+                          const idToken = await user.getIdToken(true);
+                          
+                          // Call our dedicated cleanup endpoint
+                          const response = await fetch('/api/stripe/cleanup-subscription', {
+                            method: 'POST',
+                            headers: {
+                              'Authorization': `Bearer ${idToken}`,
+                              'Content-Type': 'application/json'
+                            }
+                          });
+                          
+                          if (!response.ok) {
+                            const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
+                            throw new Error(errorData.message || 'Failed to clean up subscription data');
+                          }
+                          
+                          // Refresh account data
+                          await refreshAccountData();
+                          
+                          toast({
+                            title: "Completed",
+                            description: "Subscription data has been checked and fixed. Please try upgrading again if needed.",
+                          });
+                        } catch (error: any) {
+                          console.error('Error fixing subscription:', error);
+                          toast({
+                            title: "Error",
+                            description: error.message || "Failed to fix subscription data. Please contact support.",
+                            variant: "destructive",
+                          });
                         }
-                        
-                        // Refresh account data
-                        await refreshAccountData();
-                        
-                        toast({
-                          title: "Completed",
-                          description: "Subscription data has been checked and fixed. Please try upgrading again if needed.",
-                        });
-                      } catch (error: any) {
-                        console.error('Error fixing subscription:', error);
-                        toast({
-                          title: "Error",
-                          description: error.message || "Failed to fix subscription data. Please contact support.",
-                          variant: "destructive",
-                        });
-                      }
-                    }}
-                  >
-                    Fix Subscription Data
-                  </Button>
-                </Card>
+                      }}
+                    >
+                      Fix Subscription Data
+                    </Button>
+                  </Card>
+                  
+                  <Card className="p-6 border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-950">
+                    <h3 className="text-lg font-semibold mb-2 text-green-800 dark:text-green-300">Update Listing Tiers</h3>
+                    <p className="text-sm text-green-700 dark:text-green-400 mb-4">
+                      If your listings are showing the wrong plan type (e.g., "Free plan" when you have Premium), 
+                      click the button below to update all your active listings to match your current account tier.
+                    </p>
+                    <Button 
+                      variant="outline"
+                      className="border-green-500 text-green-700 hover:bg-green-100 dark:text-green-300 dark:hover:bg-green-900"
+                      onClick={async () => {
+                        try {
+                          toast({
+                            title: "Processing...",
+                            description: "Updating your listing tiers...",
+                          });
+                          
+                          if (!user) {
+                            throw new Error('You must be logged in to perform this action');
+                          }
+                          
+                          // Get a fresh token
+                          const idToken = await user.getIdToken(true);
+                          
+                          // Call our update listing tiers endpoint
+                          const response = await fetch('/api/stripe/update-listing-tiers', {
+                            method: 'POST',
+                            headers: {
+                              'Authorization': `Bearer ${idToken}`,
+                              'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                              accountTier
+                            })
+                          });
+                          
+                          if (!response.ok) {
+                            const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
+                            throw new Error(errorData.message || 'Failed to update listing tiers');
+                          }
+                          
+                          const result = await response.json();
+                          
+                          toast({
+                            title: "Completed",
+                            description: `Successfully updated ${result.updated} listings to ${accountTier} tier.`,
+                          });
+                        } catch (error: any) {
+                          console.error('Error updating listing tiers:', error);
+                          toast({
+                            title: "Error",
+                            description: error.message || "Failed to update listing tiers. Please try again later.",
+                            variant: "destructive",
+                          });
+                        }
+                      }}
+                    >
+                      Update Listing Tiers
+                    </Button>
+                  </Card>
+                </div>
               </div>
             </div>
           </details>
