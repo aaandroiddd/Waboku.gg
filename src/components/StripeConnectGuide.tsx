@@ -75,26 +75,32 @@ const Step: React.FC<StepProps> = ({ title, description, status, stepNumber, isL
   );
 };
 
+// Helper function to determine step statuses based on account status
+// Moved outside of component to avoid React Hook rules violation
+const determineStepStatus = (accountStatus: 'none' | 'pending' | 'active' | 'error', stepNumber: number): 'upcoming' | 'current' | 'complete' => {
+  if (accountStatus === 'active') {
+    return 'complete';
+  }
+  
+  if (accountStatus === 'pending') {
+    if (stepNumber === 1) return 'complete';
+    if (stepNumber === 2) return 'current';
+    return 'upcoming';
+  }
+  
+  if (accountStatus === 'none') {
+    if (stepNumber === 1) return 'current';
+    return 'upcoming';
+  }
+  
+  // Default for error or other states
+  return stepNumber === 1 ? 'current' : 'upcoming';
+};
+
 export const StripeConnectGuide: React.FC<StripeConnectGuideProps> = ({ accountStatus }) => {
-  // Determine step statuses based on account status
+  // Use the helper function
   const getStepStatus = (stepNumber: number): 'upcoming' | 'current' | 'complete' => {
-    if (accountStatus === 'active') {
-      return 'complete';
-    }
-    
-    if (accountStatus === 'pending') {
-      if (stepNumber === 1) return 'complete';
-      if (stepNumber === 2) return 'current';
-      return 'upcoming';
-    }
-    
-    if (accountStatus === 'none') {
-      if (stepNumber === 1) return 'current';
-      return 'upcoming';
-    }
-    
-    // Default for error or other states
-    return stepNumber === 1 ? 'current' : 'upcoming';
+    return determineStepStatus(accountStatus, stepNumber);
   };
 
   return (
