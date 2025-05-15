@@ -2,11 +2,8 @@ import { useState, useEffect } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Shield } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { getFirestore, doc, getDoc } from 'firebase/firestore';
-import { firebaseApp } from '@/lib/firebase';
-
-// Initialize Firestore
-const db = getFirestore(firebaseApp);
+import { doc, getDoc } from 'firebase/firestore';
+import { getFirebaseServices } from '@/lib/firebase';
 
 interface ModeratorBadgeProps {
   userId?: string;
@@ -25,6 +22,14 @@ export const ModeratorBadge = ({ userId, className = '' }: ModeratorBadgeProps) 
         const uid = userId || user?.uid;
         
         if (!uid) {
+          setLoading(false);
+          return;
+        }
+
+        // Get Firestore instance from Firebase services
+        const { db } = getFirebaseServices();
+        if (!db) {
+          console.error('Firestore database is not initialized');
           setLoading(false);
           return;
         }
