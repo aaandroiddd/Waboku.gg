@@ -233,30 +233,18 @@ export default function ListingsPage() {
     setFilteredListings(filtered);
   }, [allListings, searchQuery, selectedState, selectedGame, selectedCondition, priceRange, showGradedOnly]);
 
+  const { recordSearch } = useTrendingSearches();
+
   const handleSearch = async () => {
     try {
       // Only record search term if there is one
       if (searchQuery.trim()) {
-        const response = await fetch('/api/search/record', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ searchTerm: searchQuery }),
-        });
-
-        if (!response.ok) {
-          const data = await response.json();
-          if (response.status === 429) {
-            // Rate limit exceeded
-            alert('Please wait a moment before searching again.');
-            return;
-          } else if (response.status === 400) {
-            // Invalid or inappropriate search term
-            alert('Invalid or inappropriate search term.');
-            return;
-          }
-          throw new Error(data.error || 'Failed to process search');
+        try {
+          // Use the recordSearch function from useTrendingSearches hook
+          await recordSearch(searchQuery.trim());
+        } catch (error) {
+          console.error('Error recording search:', error);
+          // Continue with search regardless of recording error
         }
       }
 

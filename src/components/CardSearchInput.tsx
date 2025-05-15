@@ -51,27 +51,11 @@ const CardSearchInput: React.FC<CardSearchInputProps> = ({
       return;
     }
 
-    // Only record the search term if it's not empty
-    if (normalizedTerm) {
-      try {
-        await fetch('/api/search/record', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ searchTerm: normalizedTerm }),
-        });
-      } catch (error) {
-        console.error('Failed to record search term:', error);
-        // Don't show error to user as this is analytics only
-      }
-    }
-
     if (onSearch) {
       setIsSearching(true);
       try {
-        // Pass the normalized term (which might be empty) to show all listings
-        // Important: Pass the actual search term to ensure it's properly used in the URL
+        // Pass the actual search term to the parent component
+        // The parent SearchBar component will handle recording the search term
         await onSearch(term.trim());
       } finally {
         setIsSearching(false);
