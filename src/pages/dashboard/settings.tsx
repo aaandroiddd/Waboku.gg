@@ -69,7 +69,7 @@ const SettingsPageContent = () => {
       setIsDeletingAccount(false);
     }
   };
-  const { user, updateProfile, deleteAccount } = useAuth();
+  const { user, profile, updateProfile, deleteAccount } = useAuth();
   const [formData, setFormData] = useState({
     username: user?.displayName || "",
     bio: "",
@@ -615,8 +615,7 @@ const SettingsPageContent = () => {
           await setDoc(doc(db, 'users', user.uid), basicProfile);
           console.log('Basic profile created successfully');
           
-          // Update local state with the new profile
-          setProfile(basicProfile);
+          // No need to update local state here, the page will reload
           
           // Force reload the page after creating the profile
           window.location.reload();
