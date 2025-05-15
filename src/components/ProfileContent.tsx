@@ -13,6 +13,7 @@ import { Youtube, Twitter, Facebook, ArrowLeft } from 'lucide-react';
 import { Footer } from '@/components/Footer';
 import { SellerBadge } from '@/components/SellerBadge';
 import { AdminBadge } from '@/components/AdminBadge';
+import { ModeratorBadge } from '@/components/ModeratorBadge';
 import { MessageDialog } from '@/components/MessageDialog';
 import { StripeSellerBadge } from '@/components/StripeSellerBadge';
 import { UserReviewsTabs } from '@/components/UserReviewsTabs';
@@ -162,15 +163,26 @@ export const ProfileContent = ({ userId }: { userId: string | null }) => {
   let joinDate = 'Unknown';
   try {
     if (profile.joinDate) {
-      // Ensure we have a valid date string before formatting
-      const dateObj = new Date(profile.joinDate);
+      // Handle different date formats
+      let dateObj;
+      
+      // Handle Firestore Timestamp objects
+      if (typeof profile.joinDate === 'object' && profile.joinDate !== null && 'seconds' in profile.joinDate) {
+        dateObj = new Date(profile.joinDate.seconds * 1000);
+      } else {
+        // Handle string date format
+        dateObj = new Date(profile.joinDate);
+      }
+      
       // Check if the date is valid before formatting
       if (!isNaN(dateObj.getTime())) {
         joinDate = format(dateObj, 'MMMM yyyy');
+      } else {
+        console.warn('Invalid date format:', profile.joinDate);
       }
     }
   } catch (error) {
-    console.error('Error formatting join date:', error);
+    console.error('Error formatting join date:', error, profile.joinDate);
   }
 
   return (
@@ -236,6 +248,7 @@ export const ProfileContent = ({ userId }: { userId: string | null }) => {
                       <div className="flex flex-wrap gap-2 justify-center sm:justify-start">
                         <SellerBadge userId={userId} />
                         <StripeSellerBadge userId={userId} />
+                        <ModeratorBadge userId={userId} />
                         {profile.isAdmin && <AdminBadge />}
                       </div>
                     </div>

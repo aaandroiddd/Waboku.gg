@@ -35,7 +35,24 @@ export const ModeratorBadge = ({ userId, className = '' }: ModeratorBadgeProps) 
         
         if (userSnap.exists()) {
           const userData = userSnap.data();
-          setIsModerator(userData.roles?.includes('moderator') || false);
+          
+          // Handle different role formats
+          let hasModerator = false;
+          
+          // Check if roles is an array
+          if (Array.isArray(userData.roles)) {
+            hasModerator = userData.roles.includes('moderator');
+          } 
+          // Check if roles is a string
+          else if (typeof userData.roles === 'string') {
+            hasModerator = userData.roles === 'moderator';
+          }
+          // Check if isModerator is a boolean flag
+          else if (userData.isModerator === true) {
+            hasModerator = true;
+          }
+          
+          setIsModerator(hasModerator);
         }
         
         setLoading(false);

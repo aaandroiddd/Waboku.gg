@@ -1,4 +1,39 @@
 import { useState, useEffect, useCallback } from 'react';
+import { Timestamp } from 'firebase/firestore';
+
+// Helper function to format date fields from various formats
+function formatDateField(dateField: any): string | null {
+  if (!dateField) return null;
+  
+  try {
+    // Handle Firestore Timestamp
+    if (dateField && typeof dateField.toDate === 'function') {
+      return dateField.toDate().toISOString();
+    }
+    
+    // Handle string date
+    if (typeof dateField === 'string') {
+      const date = new Date(dateField);
+      if (!isNaN(date.getTime())) {
+        return date.toISOString();
+      }
+    }
+    
+    // Handle numeric timestamp (milliseconds)
+    if (typeof dateField === 'number') {
+      return new Date(dateField).toISOString();
+    }
+    
+    // Handle object with seconds and nanoseconds (Firestore Timestamp-like)
+    if (dateField && typeof dateField === 'object' && 'seconds' in dateField) {
+      return new Date(dateField.seconds * 1000).toISOString();
+    }
+  } catch (e) {
+    console.error('Error formatting date field:', e, dateField);
+  }
+  
+  return null;
+}
 import { doc, getDoc } from 'firebase/firestore';
 import { ref, get } from 'firebase/database';
 import { getFirebaseServices } from '@/lib/firebase';
@@ -159,7 +194,7 @@ export function useProfile(userId: string | null) {
         photoURL: userData?.photoURL || userData?.avatarUrl || userData?.avatar || null,
         bio: userData?.bio || userData?.about || '',
         location: userData?.location || '',
-        joinDate: userData?.createdAt || userData?.joinDate || userData?.created || new Date().toISOString(),
+        joinDate: formatDateField(userData?.createdAt) || formatDateField(userData?.joinDate) || formatDateField(userData?.created) || new Date().toISOString(),
         totalSales: typeof userData?.totalSales === 'number' ? userData.totalSales : 0,
         // Use the rating from reviewStats if available, otherwise fall back to user document
         rating: userRating !== null ? userRating : (typeof userData?.rating === 'number' ? userData.rating : null),
