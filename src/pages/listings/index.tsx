@@ -244,6 +244,8 @@ export default function ListingsPage() {
           // Use the recordSearch function from useTrendingSearches hook
           console.log('Recording search term from listings page:', searchQuery.trim());
           await recordSearch(searchQuery.trim());
+          // Add a small delay to ensure the search is recorded before refreshing the page
+          await new Promise(resolve => setTimeout(resolve, 100));
         } catch (error) {
           console.error('Error recording search:', error);
           // Continue with search regardless of recording error

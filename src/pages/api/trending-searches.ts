@@ -26,7 +26,7 @@ const getAllowedOrigins = () => {
   return origins;
 };
 
-const CACHE_DURATION = 300 * 1000; // 300 seconds cache (5 minutes)
+const CACHE_DURATION = 60 * 1000; // 60 seconds cache (1 minute)
 let cachedTrending: any = null;
 let lastCacheTime = 0;
 
@@ -66,7 +66,7 @@ export default async function handler(
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Content-Type', 'application/json');
-  res.setHeader('Cache-Control', 'public, max-age=300'); // Allow caching for 5 minutes
+  res.setHeader('Cache-Control', 'public, max-age=60'); // Allow caching for 1 minute
   
   // Handle preflight request
   if (req.method === 'OPTIONS') {
@@ -195,8 +195,8 @@ export default async function handler(
       return res.status(499).end();
     }
     
-    // Calculate timestamp for 1 hour ago (reduced from 24 hours for testing)
-    const oneHourAgo = Date.now() - (1 * 60 * 60 * 1000);
+    // Calculate timestamp for 30 minutes ago (reduced from 1 hour for faster visibility)
+    const thirtyMinutesAgo = Date.now() - (30 * 60 * 1000);
     
     // Query the database with timeout
     let snapshot;
@@ -205,7 +205,7 @@ export default async function handler(
         database
           .ref('searchTerms')
           .orderByChild('lastUpdated')
-          .startAt(oneHourAgo)
+          .startAt(thirtyMinutesAgo)
           .once('value'),
         new Promise((_, reject) => 
           setTimeout(() => reject(new Error('Database query timeout')), 2500)
@@ -218,14 +218,14 @@ export default async function handler(
     }
     
     if (!snapshot || !snapshot.exists()) {
-      console.info(`Path: /api/trending-searches [${requestId}] No trending searches found in the last 24 hours`);
+      console.info(`Path: /api/trending-searches [${requestId}] No trending searches found in the last 30 minutes`);
       clearTimeout(requestTimeout);
       return res.status(200).json(FALLBACK_TRENDING);
     }
 
     const searchCounts: { [key: string]: { term: string, count: number } } = {};
     
-    // Aggregate search counts from the last 24 hours
+    // Aggregate search counts from the last 30 minutes
     snapshot.forEach((childSnapshot) => {
       const search = childSnapshot.val();
       if (search && search.term && validateSearchTerm(search.term)) {

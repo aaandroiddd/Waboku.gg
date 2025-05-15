@@ -103,10 +103,7 @@
     "searchTerms": {
       ".read": true,
       ".write": true,
-      ".indexOn": ["count", "lastUpdated"],
-      "$termId": {
-        ".validate": "true"
-      }
+      ".indexOn": ["count", "lastUpdated"]
     },
 
     "searches": {

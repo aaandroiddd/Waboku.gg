@@ -10,7 +10,7 @@ interface TrendingSearch {
 // No fallback data - we'll show a message instead
 const FALLBACK_TRENDING: TrendingSearch[] = [];
 
-const REFRESH_INTERVAL = 180 * 1000; // 180 seconds (increased from 120)
+const REFRESH_INTERVAL = 60 * 1000; // 60 seconds (reduced from 180)
 const MAX_RETRIES = 1; // Reduced from 2 to avoid excessive retries
 const INITIAL_RETRY_DELAY = 2000; // 2 seconds
 const REQUEST_TIMEOUT = 5000; // 5 seconds (increased from 3)
@@ -239,6 +239,8 @@ export function useTrendingSearches() {
   const recordSearch = async (term: string) => {
     if (!term.trim()) return;
     
+    console.log(`[TrendingSearches] Attempting to record search term: "${term}"`);
+    
     try {
       // First try the API endpoint for more reliable recording
       try {
@@ -251,6 +253,8 @@ export function useTrendingSearches() {
           apiUrl = `/api/search/record`;
         }
         
+        console.log(`[TrendingSearches] Sending search term to API: ${apiUrl}`);
+        
         const response = await fetch(apiUrl, {
           method: 'POST',
           headers: {
@@ -259,9 +263,13 @@ export function useTrendingSearches() {
           body: JSON.stringify({ searchTerm: term.trim() }),
         });
         
+        const responseData = await response.json();
+        
         if (response.ok) {
-          console.log(`[TrendingSearches] Successfully recorded search term via API: ${term}`);
+          console.log(`[TrendingSearches] Successfully recorded search term via API: ${term}`, responseData);
           return;
+        } else {
+          console.warn(`[TrendingSearches] API returned error status ${response.status}:`, responseData);
         }
       } catch (apiError) {
         console.warn('[TrendingSearches] Failed to record search via API, falling back to direct DB:', apiError);
@@ -270,20 +278,57 @@ export function useTrendingSearches() {
       // Fallback to direct database write if API fails
       if (!database) {
         console.warn('[TrendingSearches] Cannot record search: database not initialized');
-        return; // Silently fail if database is not initialized
+        
+        // Try to initialize database connection if it's not already initialized
+        try {
+          await connectionManager.ensureConnected();
+          console.log('[TrendingSearches] Successfully initialized database connection');
+        } catch (connError) {
+          console.error('[TrendingSearches] Failed to initialize database connection:', connError);
+          return;
+        }
       }
 
-      const searchTermRef = ref(database, `searchTerms/${term.trim().toLowerCase()}`);
-      const snapshot = await get(searchTermRef);
-      const currentCount = snapshot.exists() ? snapshot.val().count || 0 : 0;
+      console.log(`[TrendingSearches] Attempting direct database write for term: "${term}"`);
       
-      await set(searchTermRef, {
-        term: term.trim(),
-        count: currentCount + 1,
-        lastUpdated: Date.now()
-      });
-      
-      console.log(`[TrendingSearches] Successfully recorded search term via direct DB: ${term}`);
+      try {
+        // Use a simpler path structure to avoid potential issues
+        const searchTermRef = ref(database, `searchTerms/${term.trim().toLowerCase()}`);
+        
+        // First try to get the current count
+        const snapshot = await get(searchTermRef);
+        console.log(`[TrendingSearches] Current data for term:`, snapshot.exists() ? snapshot.val() : 'No existing data');
+        
+        const currentCount = snapshot.exists() ? snapshot.val().count || 0 : 0;
+        
+        const updateData = {
+          term: term.trim(),
+          count: currentCount + 1,
+          lastUpdated: Date.now()
+        };
+        
+        console.log(`[TrendingSearches] Writing data to database:`, updateData);
+        
+        // Set the data
+        await set(searchTermRef, updateData);
+        
+        console.log(`[TrendingSearches] Successfully recorded search term via direct DB: ${term}`);
+      } catch (dbError) {
+        console.error('[TrendingSearches] Error writing to database:', dbError);
+        
+        // Try one more time with a simplified data structure
+        try {
+          const simpleRef = ref(database, `searchTerms/${term.trim().toLowerCase()}`);
+          await set(simpleRef, {
+            term: term.trim(),
+            count: 1,
+            lastUpdated: Date.now()
+          });
+          console.log(`[TrendingSearches] Successfully recorded search term with simplified data`);
+        } catch (finalError) {
+          console.error('[TrendingSearches] Final attempt to write to database failed:', finalError);
+        }
+      }
     } catch (error) {
       console.error('[TrendingSearches] Error recording search:', error);
       // Don't throw the error as this is a non-critical operation

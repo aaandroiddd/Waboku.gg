@@ -161,6 +161,7 @@ export default function Home() {
       if (searchQuery.trim()) {
         try {
           // Use the recordSearch function from useTrendingSearches hook
+          console.log('Recording search term from home page:', searchQuery.trim());
           await recordSearch(searchQuery.trim());
         } catch (error) {
           console.error('Error recording search:', error);
