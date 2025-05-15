@@ -896,7 +896,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           ...profile.social,
           ...(data.social || {})
         },
-        lastUpdated: new Date().toISOString()
+        lastUpdated: new Date().toISOString(),
+        profileCompleted: true // Mark profile as completed when updated
       };
 
       // Update Firestore profile
@@ -904,6 +905,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       // Update local profile state
       setProfile(updatedProfile as UserProfile);
+      
+      // Mark onboarding as completed in localStorage
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(`onboarding_completed_${user.uid}`, 'true');
+        localStorage.removeItem('needs_profile_completion');
+      }
       
       // Clear profile cache to ensure fresh data on next fetch
       try {
@@ -1217,126 +1224,142 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const profileDoc = await getDoc(doc(db, 'users', user.uid));
       const profileExists = profileDoc.exists();
       
+      // Check if user has already completed onboarding before
+      const onboardingCompletedKey = `onboarding_completed_${user.uid}`;
+      const onboardingCompleted = localStorage.getItem(onboardingCompletedKey);
+      
       // Determine if profile completion is needed
       let needsProfileCompletion = isNewUser; // Default to true for new users
       
-      // If profile exists in users collection by email
-      if (!emailSnapshot.empty) {
-        const existingUserDoc = emailSnapshot.docs[0];
-        const existingProfile = existingUserDoc.data() as UserProfile;
+      // If onboarding was previously completed, don't trigger it again
+      if (onboardingCompleted === 'true') {
+        console.log('User has previously completed onboarding, skipping');
+        needsProfileCompletion = false;
+      } else {
+        // If profile exists in users collection by email
+        if (!emailSnapshot.empty) {
+          const existingUserDoc = emailSnapshot.docs[0];
+          const existingProfile = existingUserDoc.data() as UserProfile;
 
-        console.log('Found existing profile by email:', existingProfile.username);
+          console.log('Found existing profile by email:', existingProfile.username);
 
-        // If the profile exists, preserve the existing data
-        const updatedProfile = {
-          ...existingProfile,
-          isEmailVerified: user.emailVerified,
-          lastSignIn: new Date().toISOString(),
-          // Only update these if they don't exist
-          avatarUrl: existingProfile.avatarUrl || user.photoURL || '',
-        };
-
-        // Check if profile needs completion (missing username, bio, or location)
-        if (!existingProfile.profileCompleted || 
-            !existingProfile.username || 
-            existingProfile.username.length < 3 ||
-            !existingProfile.location) {
-          console.log('Profile exists but needs completion');
-          needsProfileCompletion = true;
-          updatedProfile.profileCompleted = false;
-        }
-
-        // Update the profile with preserved data
-        await setDoc(doc(db, 'users', existingUserDoc.id), updatedProfile, { merge: true });
-        setProfile(updatedProfile as UserProfile);
-      }
-      // If profile exists directly by user ID but wasn't found by email
-      else if (profileExists) {
-        const existingProfile = profileDoc.data() as UserProfile;
-        
-        console.log('Found existing profile by user ID:', existingProfile.username);
-        
-        // Check if profile needs completion
-        if (!existingProfile.profileCompleted || 
-            !existingProfile.username || 
-            existingProfile.username.length < 3 ||
-            !existingProfile.location) {
-          console.log('Profile exists but needs completion');
-          needsProfileCompletion = true;
-          
-          // Update profile to mark as incomplete
-          await setDoc(doc(db, 'users', user.uid), {
+          // If the profile exists, preserve the existing data
+          const updatedProfile = {
             ...existingProfile,
-            profileCompleted: false,
-            lastSignIn: new Date().toISOString()
-          }, { merge: true });
+            isEmailVerified: user.emailVerified,
+            lastSignIn: new Date().toISOString(),
+            // Only update these if they don't exist
+            avatarUrl: existingProfile.avatarUrl || user.photoURL || '',
+          };
+
+          // Check if profile needs completion (missing username, bio, or location)
+          if (!existingProfile.profileCompleted || 
+              !existingProfile.username || 
+              existingProfile.username.length < 3 ||
+              !existingProfile.location) {
+            console.log('Profile exists but needs completion');
+            needsProfileCompletion = true;
+            updatedProfile.profileCompleted = false;
+          } else {
+            // If profile is complete, mark it in localStorage
+            localStorage.setItem(onboardingCompletedKey, 'true');
+          }
+
+          // Update the profile with preserved data
+          await setDoc(doc(db, 'users', existingUserDoc.id), updatedProfile, { merge: true });
+          setProfile(updatedProfile as UserProfile);
+        }
+        // If profile exists directly by user ID but wasn't found by email
+        else if (profileExists) {
+          const existingProfile = profileDoc.data() as UserProfile;
           
-          existingProfile.profileCompleted = false;
+          console.log('Found existing profile by user ID:', existingProfile.username);
+          
+          // Check if profile needs completion
+          if (!existingProfile.profileCompleted || 
+              !existingProfile.username || 
+              existingProfile.username.length < 3 ||
+              !existingProfile.location) {
+            console.log('Profile exists but needs completion');
+            needsProfileCompletion = true;
+            
+            // Update profile to mark as incomplete
+            await setDoc(doc(db, 'users', user.uid), {
+              ...existingProfile,
+              profileCompleted: false,
+              lastSignIn: new Date().toISOString()
+            }, { merge: true });
+            
+            existingProfile.profileCompleted = false;
+          } else {
+            // If profile is complete, mark it in localStorage
+            localStorage.setItem(onboardingCompletedKey, 'true');
+          }
+          
+          setProfile(existingProfile);
         }
-        
-        setProfile(existingProfile);
-      }
-      // If no profile exists at all, create a new one
-      else {
-        console.log('No profile found, creating new profile for Google user');
-        needsProfileCompletion = true;
-        
-        // Generate a temporary username for new Google users
-        const baseUsername = user.email.split('@')[0];
-        let tempUsername = baseUsername;
-        let counter = 1;
+        // If no profile exists at all, create a new one
+        else {
+          console.log('No profile found, creating new profile for Google user');
+          needsProfileCompletion = true;
+          
+          // Generate a temporary username for new Google users
+          const baseUsername = user.email.split('@')[0];
+          let tempUsername = baseUsername;
+          let counter = 1;
 
-        while (true) {
-          const usernameDoc = await getDoc(doc(db, 'usernames', tempUsername));
-          if (!usernameDoc.exists()) break;
-          tempUsername = `${baseUsername}${counter}`;
-          counter++;
+          while (true) {
+            const usernameDoc = await getDoc(doc(db, 'usernames', tempUsername));
+            if (!usernameDoc.exists()) break;
+            tempUsername = `${baseUsername}${counter}`;
+            counter++;
+          }
+
+          const currentDate = new Date().toISOString();
+          const newProfile: UserProfile = {
+            uid: user.uid,
+            email: user.email,
+            username: tempUsername,
+            displayName: user.displayName || tempUsername,
+            joinDate: currentDate,
+            totalSales: 0,
+            rating: 0,
+            bio: '',
+            location: '',
+            avatarUrl: user.photoURL || '',
+            photoURL: user.photoURL || '',
+            isEmailVerified: user.emailVerified,
+            verificationSentAt: null,
+            profileCompleted: false, // Mark as incomplete to trigger onboarding
+            lastUpdated: currentDate,
+            social: {
+              youtube: '',
+              twitter: '',
+              facebook: ''
+            },
+            accountTier: 'free',
+            tier: 'free',
+            subscription: {
+              status: 'inactive',
+              currentPlan: 'free',
+              startDate: currentDate
+            },
+            authProvider: 'google.com'
+          };
+
+          // Create user profile
+          await setDoc(doc(db, 'users', user.uid), newProfile);
+
+          // Create temporary username document
+          await setDoc(doc(db, 'usernames', tempUsername), {
+            uid: user.uid,
+            username: tempUsername,
+            createdAt: new Date().toISOString(),
+            isTemporary: true // Mark as temporary
+          });
+
+          setProfile(newProfile);
         }
-
-        const currentDate = new Date().toISOString();
-        const newProfile: UserProfile = {
-          uid: user.uid,
-          email: user.email,
-          username: tempUsername,
-          displayName: user.displayName || tempUsername,
-          joinDate: currentDate,
-          totalSales: 0,
-          rating: 0,
-          bio: '',
-          location: '',
-          avatarUrl: user.photoURL || '',
-          photoURL: user.photoURL || '',
-          isEmailVerified: user.emailVerified,
-          verificationSentAt: null,
-          profileCompleted: false, // Mark as incomplete to trigger onboarding
-          lastUpdated: currentDate,
-          social: {
-            youtube: '',
-            twitter: '',
-            facebook: ''
-          },
-          accountTier: 'free',
-          tier: 'free',
-          subscription: {
-            status: 'inactive',
-            currentPlan: 'free',
-            startDate: currentDate
-          },
-          authProvider: 'google.com'
-        };
-
-        // Create user profile
-        await setDoc(doc(db, 'users', user.uid), newProfile);
-
-        // Create temporary username document
-        await setDoc(doc(db, 'usernames', tempUsername), {
-          uid: user.uid,
-          username: tempUsername,
-          createdAt: new Date().toISOString(),
-          isTemporary: true // Mark as temporary
-        });
-
-        setProfile(newProfile);
       }
       
       // Store the profile completion status for redirection if needed

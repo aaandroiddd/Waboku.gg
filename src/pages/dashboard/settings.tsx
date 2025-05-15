@@ -797,6 +797,12 @@ const SettingsPageContent = () => {
                 <p className="text-xs text-muted-foreground">
                   {formData.bio.length}/1000 characters
                 </p>
+                {profile?.bio && (
+                  <div className="mt-2 p-3 bg-muted/50 rounded-md">
+                    <p className="text-xs font-medium text-muted-foreground mb-1">Current Bio:</p>
+                    <p className="text-sm">{profile.bio}</p>
+                  </div>
+                )}
               </div>
 
               {/* Social Media Links */}
@@ -812,6 +818,11 @@ const SettingsPageContent = () => {
                     placeholder="https://youtube.com/@yourchannel"
                     type="url"
                   />
+                  {profile?.social?.youtube && (
+                    <div className="mt-1 text-xs text-muted-foreground">
+                      Current: <a href={profile.social.youtube} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">{profile.social.youtube}</a>
+                    </div>
+                  )}
                 </div>
 
                 <div className="space-y-2">
@@ -823,6 +834,11 @@ const SettingsPageContent = () => {
                     placeholder="https://x.com/yourusername"
                     type="url"
                   />
+                  {profile?.social?.twitter && (
+                    <div className="mt-1 text-xs text-muted-foreground">
+                      Current: <a href={profile.social.twitter} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">{profile.social.twitter}</a>
+                    </div>
+                  )}
                 </div>
 
                 <div className="space-y-2">
@@ -834,6 +850,11 @@ const SettingsPageContent = () => {
                     placeholder="https://facebook.com/yourusername"
                     type="url"
                   />
+                  {profile?.social?.facebook && (
+                    <div className="mt-1 text-xs text-muted-foreground">
+                      Current: <a href={profile.social.facebook} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">{profile.social.facebook}</a>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -851,6 +872,11 @@ const SettingsPageContent = () => {
                 <p className="text-xs text-muted-foreground">
                   This will be visible to other users
                 </p>
+                {profile?.contact && (
+                  <div className="mt-1 text-xs text-muted-foreground">
+                    Current contact information: <span className="font-medium">{profile.contact}</span>
+                  </div>
+                )}
               </div>
 
               {/* Location Section */}
@@ -873,6 +899,11 @@ const SettingsPageContent = () => {
                 <p className="text-xs text-muted-foreground">
                   Help others find local trades. Search for your city or use the current location option.
                 </p>
+                {profile?.location && (
+                  <div className="mt-1 text-xs text-muted-foreground">
+                    Current location: <span className="font-medium">{profile.location}</span>
+                  </div>
+                )}
               </div>
 
               <Separator />

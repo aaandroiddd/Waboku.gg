@@ -148,9 +148,11 @@ export default function OnboardingWizard({ initialProfile }: OnboardingWizardPro
         );
       }
 
-      // Clear the profile completion flag from localStorage
+      // Mark onboarding as completed in localStorage
       if (typeof window !== 'undefined') {
         localStorage.removeItem('needs_profile_completion');
+        localStorage.setItem(`onboarding_completed_${user.uid}`, 'true');
+        console.log('Onboarding marked as completed for user:', user.uid);
       }
 
       // Redirect to dashboard after successful completion

@@ -34,9 +34,25 @@ export default function ProfileInitializer() {
       return;
     }
 
+    // Check if onboarding was previously completed
+    if (!isLoading && user) {
+      const onboardingCompletedKey = `onboarding_completed_${user.uid}`;
+      const onboardingCompleted = localStorage.getItem(onboardingCompletedKey);
+      
+      if (onboardingCompleted === 'true') {
+        console.log('Onboarding was previously completed, redirecting to dashboard');
+        router.push('/dashboard');
+        return;
+      }
+    }
+
     // If user is logged in and profile is already completed, redirect to dashboard
     if (!isLoading && user && profile?.profileCompleted) {
       console.log('Profile is already completed, redirecting to dashboard');
+      // Mark onboarding as completed in localStorage
+      if (typeof window !== 'undefined' && user) {
+        localStorage.setItem(`onboarding_completed_${user.uid}`, 'true');
+      }
       router.push('/dashboard');
       return;
     }
