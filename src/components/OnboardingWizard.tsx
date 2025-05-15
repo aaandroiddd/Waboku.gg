@@ -37,13 +37,14 @@ export default function OnboardingWizard({ initialProfile }: OnboardingWizardPro
     
     if (profileSource || user) {
       console.log('Updating form data from profile source:', profileSource);
-      setFormData(prev => ({
-        ...prev,
-        username: profileSource?.username || prev.username,
-        bio: profileSource?.bio || prev.bio,
-        location: profileSource?.location || prev.location,
-        avatarUrl: profileSource?.avatarUrl || user?.photoURL || prev.avatarUrl,
-      }));
+      
+      // Default form data update from profile
+      const updatedFormData = {
+        username: profileSource?.username || '',
+        bio: profileSource?.bio || '',
+        location: profileSource?.location || '',
+        avatarUrl: profileSource?.avatarUrl || user?.photoURL || '',
+      };
       
       // Log the auth provider for debugging
       if (user) {
@@ -51,15 +52,35 @@ export default function OnboardingWizard({ initialProfile }: OnboardingWizardPro
         console.log('User auth provider:', provider);
         
         // For Google users, pre-populate with Google profile data if available
-        if (provider === 'google.com' && user.displayName) {
-          console.log('Google user detected, using Google profile data');
-          setFormData(prev => ({
-            ...prev,
-            username: prev.username || user.displayName?.replace(/\s+/g, '_').toLowerCase() || '',
-            avatarUrl: user.photoURL || prev.avatarUrl,
-          }));
+        if (provider === 'google.com') {
+          console.log('Google user detected in onboarding wizard');
+          console.log('Google display name:', user.displayName);
+          console.log('Google photo URL:', user.photoURL);
+          
+          if (user.displayName) {
+            // Create a username from Google display name (lowercase, replace spaces with underscores)
+            const suggestedUsername = user.displayName
+              .replace(/\s+/g, '_')
+              .toLowerCase()
+              .replace(/[^a-z0-9_]/g, '');
+              
+            console.log('Suggested username from Google display name:', suggestedUsername);
+            
+            // Only use the suggested username if we don't already have one
+            if (!updatedFormData.username || updatedFormData.username.length < 3) {
+              updatedFormData.username = suggestedUsername;
+            }
+          }
+          
+          // Always use Google photo URL if available
+          if (user.photoURL) {
+            updatedFormData.avatarUrl = user.photoURL;
+          }
         }
       }
+      
+      // Update the form data
+      setFormData(updatedFormData);
     }
   }, [profile, initialProfile, user]);
 

@@ -280,19 +280,25 @@ function SignUpComponent() {
                 try {
                   setError(null);
                   setIsGoogleLoading(true);
+                  console.log('Starting Google sign-up process');
                   const result = await signInWithGoogle();
                   
                   // Check if profile completion is needed
                   if (result && result.needsProfileCompletion) {
                     console.log('Profile completion needed, redirecting to onboarding wizard');
-                    // Mark user as needing profile completion
-                    if (typeof window !== 'undefined') {
-                      localStorage.setItem('needs_profile_completion', 'true');
+                    
+                    // Log whether this is a new user or existing user
+                    if (result.isNewUser) {
+                      console.log('This is a new Google user (sign-up)');
+                    } else {
+                      console.log('This is a returning Google user with incomplete profile');
                     }
+                    
                     // Force a full page reload redirect to the complete-profile page
-                    window.location.replace('/auth/complete-profile');
+                    window.location.href = '/auth/complete-profile';
                     return;
                   } else {
+                    console.log('No profile completion needed, continuing to dashboard');
                     router.push('/dashboard');
                   }
                 } catch (err: any) {

@@ -1174,14 +1174,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         prompt: 'select_account'
       });
       
+      // Track if this is a new user (sign-up) or existing user (sign-in)
+      let isNewUser = false;
       let result;
+      let user;
+      
       try {
-        // Before signing in with popup, check if email exists
+        // Sign in with popup
+        console.log('Attempting Google sign-in/sign-up');
         result = await signInWithPopup(auth, provider);
-        const user = result.user;
+        user = result.user;
         
         if (!user.email) {
           throw new Error('No email provided from Google account');
+        }
+        
+        // Check if this is a new user by looking at metadata
+        const metadata = user.metadata;
+        if (metadata.creationTime === metadata.lastSignInTime) {
+          console.log('This appears to be a new Google user (first sign-in)');
+          isNewUser = true;
+        } else {
+          console.log('This appears to be a returning Google user');
         }
       } catch (err: any) {
         // Check if this is a multi-factor auth error
@@ -1194,16 +1208,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw err;
       }
 
-      // Check if user profile exists with this email
+      // Always check if user profile exists with this email
       const usersRef = collection(db, 'users');
       const emailQuery = query(usersRef, where('email', '==', user.email));
       const emailSnapshot = await getDocs(emailQuery);
       
-      let needsProfileCompletion = false;
+      // Also check if profile exists directly by user ID
+      const profileDoc = await getDoc(doc(db, 'users', user.uid));
+      const profileExists = profileDoc.exists();
       
+      // Determine if profile completion is needed
+      let needsProfileCompletion = isNewUser; // Default to true for new users
+      
+      // If profile exists in users collection by email
       if (!emailSnapshot.empty) {
         const existingUserDoc = emailSnapshot.docs[0];
         const existingProfile = existingUserDoc.data() as UserProfile;
+
+        console.log('Found existing profile by email:', existingProfile.username);
 
         // If the profile exists, preserve the existing data
         const updatedProfile = {
@@ -1217,7 +1239,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Check if profile needs completion (missing username, bio, or location)
         if (!existingProfile.profileCompleted || 
             !existingProfile.username || 
+            existingProfile.username.length < 3 ||
             !existingProfile.location) {
+          console.log('Profile exists but needs completion');
           needsProfileCompletion = true;
           updatedProfile.profileCompleted = false;
         }
@@ -1225,21 +1249,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Update the profile with preserved data
         await setDoc(doc(db, 'users', existingUserDoc.id), updatedProfile, { merge: true });
         setProfile(updatedProfile as UserProfile);
+      }
+      // If profile exists directly by user ID but wasn't found by email
+      else if (profileExists) {
+        const existingProfile = profileDoc.data() as UserProfile;
         
-        // Store the profile completion status for redirection
-        if (needsProfileCompletion) {
-          if (typeof window !== 'undefined') {
-            localStorage.setItem('needs_profile_completion', 'true');
-          }
+        console.log('Found existing profile by user ID:', existingProfile.username);
+        
+        // Check if profile needs completion
+        if (!existingProfile.profileCompleted || 
+            !existingProfile.username || 
+            existingProfile.username.length < 3 ||
+            !existingProfile.location) {
+          console.log('Profile exists but needs completion');
+          needsProfileCompletion = true;
+          
+          // Update profile to mark as incomplete
+          await setDoc(doc(db, 'users', user.uid), {
+            ...existingProfile,
+            profileCompleted: false,
+            lastSignIn: new Date().toISOString()
+          }, { merge: true });
+          
+          existingProfile.profileCompleted = false;
         }
         
-        return { ...result, needsProfileCompletion };
+        setProfile(existingProfile);
       }
-
-      // If no profile exists, create a new one
-      const profileDoc = await getDoc(doc(db, 'users', user.uid));
-      
-      if (!profileDoc.exists()) {
+      // If no profile exists at all, create a new one
+      else {
+        console.log('No profile found, creating new profile for Google user');
+        needsProfileCompletion = true;
+        
         // Generate a temporary username for new Google users
         const baseUsername = user.email.split('@')[0];
         let tempUsername = baseUsername;
@@ -1280,7 +1321,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             status: 'inactive',
             currentPlan: 'free',
             startDate: currentDate
-          }
+          },
+          authProvider: 'google.com'
         };
 
         // Create user profile
@@ -1295,42 +1337,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         });
 
         setProfile(newProfile);
-        
-        // Always set needsProfileCompletion to true for new users
-        needsProfileCompletion = true;
-        
-        // Store the profile completion status for redirection
+      }
+      
+      // Store the profile completion status for redirection if needed
+      if (needsProfileCompletion) {
+        console.log('Setting needs_profile_completion flag to true');
         if (typeof window !== 'undefined') {
           localStorage.setItem('needs_profile_completion', 'true');
         }
       } else {
-        // If profile exists but wasn't found by email query
-        const existingProfile = profileDoc.data() as UserProfile;
-        
-        // Check if profile needs completion
-        if (!existingProfile.profileCompleted || 
-            !existingProfile.username || 
-            !existingProfile.location) {
-          needsProfileCompletion = true;
-          
-          // Update profile to mark as incomplete
-          await setDoc(doc(db, 'users', user.uid), {
-            ...existingProfile,
-            profileCompleted: false
-          }, { merge: true });
-          
-          existingProfile.profileCompleted = false;
-          
-          // Store the profile completion status for redirection
-          if (typeof window !== 'undefined') {
-            localStorage.setItem('needs_profile_completion', 'true');
-          }
+        console.log('User does not need profile completion');
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('needs_profile_completion');
         }
-        
-        setProfile(existingProfile);
       }
 
-      return { ...result, needsProfileCompletion };
+      return { ...result, needsProfileCompletion, isNewUser };
     } catch (err: any) {
       console.error('Google sign in error:', err);
       let errorMessage = 'Failed to sign in with Google';

@@ -36,6 +36,7 @@ export default function ProfileInitializer() {
 
     // If user is logged in and profile is already completed, redirect to dashboard
     if (!isLoading && user && profile?.profileCompleted) {
+      console.log('Profile is already completed, redirecting to dashboard');
       router.push('/dashboard');
       return;
     }
@@ -132,8 +133,18 @@ export default function ProfileInitializer() {
           const authProvider = user.providerData[0]?.providerId || 'unknown';
           const isGoogleUser = authProvider === 'google.com';
           
+          console.log('User auth provider:', authProvider, 'isGoogleUser:', isGoogleUser);
+          
           // For Google users, use their display name if available
           let displayName = user.displayName || finalUsername;
+          
+          // For Google users, log additional information for debugging
+          if (isGoogleUser) {
+            console.log('Google user detected during profile initialization');
+            console.log('Google display name:', user.displayName);
+            console.log('Google photo URL:', user.photoURL);
+            console.log('Generated username:', finalUsername);
+          }
           
           // Create a basic profile with default values
           const currentDate = new Date().toISOString();
