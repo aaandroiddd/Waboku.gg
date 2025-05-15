@@ -16,6 +16,7 @@ import { checkAndClearStaleAuthData } from "@/lib/auth-token-manager";
 import AnimatedBackground from "@/components/AnimatedBackground";
 import { ContentLoader } from "@/components/ContentLoader";
 import { useListings } from "@/hooks/useListings";
+import { useTrendingSearches } from "@/hooks/useTrendingSearches";
 import Link from "next/link";
 import { FirebaseConnectionHandler } from "@/components/FirebaseConnectionHandler";
 import { StateSelect } from "@/components/StateSelect";
