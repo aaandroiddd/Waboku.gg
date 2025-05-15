@@ -39,26 +39,19 @@ function TrendingSearchesContent() {
   const [localTrending, setLocalTrending] = useState<Array<{term: string, count: number}>>([]);
   const [fetchFailed, setFetchFailed] = useState(false);
   
-  // Use local state as a fallback when API fails
+  // Use local state as a fallback when API succeeds
   useEffect(() => {
     if (trendingSearches && trendingSearches.length > 0) {
       setLocalTrending(trendingSearches);
     }
   }, [trendingSearches]);
   
-  // Provide some default trending searches as fallback
-  const defaultTrending = [
-    { term: "Pokemon", count: 10 },
-    { term: "Magic", count: 8 },
-    { term: "Yu-Gi-Oh", count: 6 }
-  ];
-  
-  // The trending searches to display - use local cache if API fails, or default if nothing available
+  // The trending searches to display - use local cache if API fails, but never use mock data
   const displayTrending = trendingSearches.length > 0 
     ? trendingSearches 
-    : localTrending.length > 0 
+    : localTrending.length > 0 && !error
       ? localTrending 
-      : error ? defaultTrending : [];
+      : [];
 
   const handleSearchClick = useCallback((term: string) => {
     router.push({
@@ -94,15 +87,13 @@ function TrendingSearchesContent() {
     }
   }, [error, refreshAttempt, handleRefresh]);
   
-  // Disable automatic fetching in development/preview environments
+  // Log if we're in a preview environment
   useEffect(() => {
-    // If we're in a preview environment, use default trending data
     if (typeof window !== 'undefined' && window.location.hostname.includes('preview.co.dev')) {
-      console.log('Preview environment detected, using default trending data');
-      setLocalTrending(defaultTrending);
+      console.log('Preview environment detected');
       setFetchFailed(true); // Prevent API calls in preview environment
     }
-  }, [defaultTrending]);
+  }, []);
   
   // Log errors for debugging
   useEffect(() => {
@@ -122,9 +113,9 @@ function TrendingSearchesContent() {
     if (fetchFailed && localTrending.length > 0) {
       console.log('Using cached trending data due to fetch failure');
     }
-    // If we have no data at all, use default trending
+    // If we have no data at all, show the empty state message
     else if (fetchFailed && trendingSearches.length === 0 && localTrending.length === 0) {
-      console.log('Using default trending data due to fetch failure');
+      console.log('No trending data available, showing empty state');
     }
   }, [fetchFailed, localTrending.length, trendingSearches.length]);
 
@@ -154,7 +145,7 @@ function TrendingSearchesContent() {
             style={{ willChange: "opacity" }}
           >
             <TrendingUp className="h-4 w-4" />
-            <span className="text-sm">Start searching to see trending results</span>
+            <span className="text-sm">Search for cards to help build trending results</span>
           </motion.div>
         ) : (
           <motion.div 
@@ -194,7 +185,7 @@ function TrendingSearchesContent() {
                       <AlertCircle className="h-4 w-4 text-amber-500" />
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p>Using cached data. Refresh to try again.</p>
+                      <p>Unable to load trending searches. Refresh to try again.</p>
                       {errorMessage && (
                         <p className="text-xs text-muted-foreground mt-1">{errorMessage}</p>
                       )}
