@@ -13,6 +13,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Search, MapPin, Filter, Check, LayoutGrid, List, X } from 'lucide-react';
 import { useListings } from '@/hooks/useListings';
+import { useTrendingSearches } from '@/hooks/useTrendingSearches';
 import { FirebaseConnectionHandler } from '@/components/FirebaseConnectionHandler';
 import {
   Select,
