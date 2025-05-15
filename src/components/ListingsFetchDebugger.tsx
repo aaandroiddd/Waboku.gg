@@ -1,9 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { collection, query, where, orderBy, getDocs } from 'firebase/firestore';
 import { getFirebaseServices } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle, RefreshCw } from 'lucide-react';
 
@@ -119,85 +118,84 @@ export function ListingsFetchDebugger() {
         </p>
       </div>
       <div className="space-y-4">
-          <Button 
-            onClick={fetchListingsDirectly} 
-            disabled={loading}
-            variant="outline"
-          >
-            {loading ? (
-              <>
-                <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                Checking...
-              </>
-            ) : (
-              <>
-                <RefreshCw className="mr-2 h-4 w-4" />
-                Check Listings in Firestore
-              </>
-            )}
-          </Button>
-
-          {error && (
-            <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
-              <AlertTitle>Error</AlertTitle>
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
+        <Button 
+          onClick={fetchListingsDirectly} 
+          disabled={loading}
+          variant="outline"
+        >
+          {loading ? (
+            <>
+              <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+              Checking...
+            </>
+          ) : (
+            <>
+              <RefreshCw className="mr-2 h-4 w-4" />
+              Check Listings in Firestore
+            </>
           )}
+        </Button>
 
-          {debugInfo && (
-            <div className="mt-4">
-              <div className="mb-2 flex justify-between items-center">
-                <h3 className="font-semibold">Results</h3>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  onClick={() => setExpanded(!expanded)}
-                >
-                  {expanded ? 'Show Less' : 'Show More'}
-                </Button>
-              </div>
-              
-              <div className="space-y-2 text-sm">
-                <div><strong>Total Listings:</strong> {debugInfo.totalListings}</div>
-                <div><strong>Status Counts:</strong> {Object.entries(debugInfo.statusCounts).map(([status, count]) => (
-                  <span key={status} className="mr-3">
-                    {status}: {count}
-                  </span>
-                ))}</div>
-                
-                {expanded && (
-                  <>
-                    <div><strong>User ID:</strong> {debugInfo.userId}</div>
-                    <div><strong>Timestamp:</strong> {debugInfo.timestamp}</div>
-                    <div><strong>Has Active Listings:</strong> {debugInfo.hasActiveListings ? 'Yes' : 'No'}</div>
-                    
-                    {debugInfo.listingSample.length > 0 && (
-                      <div className="mt-2">
-                        <strong>Sample Listings:</strong>
-                        <div className="mt-1 space-y-2">
-                          {debugInfo.listingSample.map((listing: any) => (
-                            <div key={listing.id} className="p-2 bg-muted rounded-md">
-                              <div><strong>ID:</strong> {listing.id}</div>
-                              <div><strong>Title:</strong> {listing.title}</div>
-                              <div><strong>Status:</strong> {listing.status}</div>
-                              <div><strong>Created:</strong> {listing.createdAt?.toString()}</div>
-                              <div><strong>Expires:</strong> {listing.expiresAt?.toString()}</div>
-                              {listing.archivedAt && (
-                                <div><strong>Archived At:</strong> {listing.archivedAt?.toString()}</div>
-                              )}
-                              <div><strong>Offers Only:</strong> {listing.offersOnly ? 'Yes' : 'No'}</div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </>
-                )}
-              </div>
+        {error && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Error</AlertTitle>
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+
+        {debugInfo && (
+          <div className="mt-4">
+            <div className="mb-2 flex justify-between items-center">
+              <h3 className="font-semibold">Results</h3>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => setExpanded(!expanded)}
+              >
+                {expanded ? 'Show Less' : 'Show More'}
+              </Button>
             </div>
-          )}
-        </div>
+            
+            <div className="space-y-2 text-sm">
+              <div><strong>Total Listings:</strong> {debugInfo.totalListings}</div>
+              <div><strong>Status Counts:</strong> {Object.entries(debugInfo.statusCounts).map(([status, count]) => (
+                <span key={status} className="mr-3">
+                  {status}: {count}
+                </span>
+              ))}</div>
+              
+              {expanded && (
+                <>
+                  <div><strong>User ID:</strong> {debugInfo.userId}</div>
+                  <div><strong>Timestamp:</strong> {debugInfo.timestamp}</div>
+                  <div><strong>Has Active Listings:</strong> {debugInfo.hasActiveListings ? 'Yes' : 'No'}</div>
+                  
+                  {debugInfo.listingSample.length > 0 && (
+                    <div className="mt-2">
+                      <strong>Sample Listings:</strong>
+                      <div className="mt-1 space-y-2">
+                        {debugInfo.listingSample.map((listing: any) => (
+                          <div key={listing.id} className="p-2 bg-muted rounded-md">
+                            <div><strong>ID:</strong> {listing.id}</div>
+                            <div><strong>Title:</strong> {listing.title}</div>
+                            <div><strong>Status:</strong> {listing.status}</div>
+                            <div><strong>Created:</strong> {listing.createdAt?.toString()}</div>
+                            <div><strong>Expires:</strong> {listing.expiresAt?.toString()}</div>
+                            {listing.archivedAt && (
+                              <div><strong>Archived At:</strong> {listing.archivedAt?.toString()}</div>
+                            )}
+                            <div><strong>Offers Only:</strong> {listing.offersOnly ? 'Yes' : 'No'}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
