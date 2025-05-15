@@ -111,15 +111,14 @@ export function ListingsFetchDebugger() {
   };
 
   return (
-    <Card className="mb-6">
-      <CardHeader className="pb-3">
-        <CardTitle className="text-lg font-medium">Listings Fetch Debugger</CardTitle>
-        <CardDescription>
+    <div className="space-y-4">
+      <div className="pb-3">
+        <h3 className="text-lg font-medium">Listings Fetch Debugger</h3>
+        <p className="text-sm text-muted-foreground">
           Diagnose issues with listings not appearing in your dashboard
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-4">
+        </p>
+      </div>
+      <div className="space-y-4">
           <Button 
             onClick={fetchListingsDirectly} 
             disabled={loading}
@@ -199,7 +198,7 @@ export function ListingsFetchDebugger() {
             </div>
           )}
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }

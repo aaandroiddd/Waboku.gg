@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useToast } from "@/components/ui/use-toast";
 import { ListingVisibilityFixer } from "@/components/ListingVisibilityFixer";
-import { ListingsFetchDebugger } from "@/components/ListingsFetchDebugger";
+import { AdvancedTools } from "@/components/dashboard/AdvancedTools";
 import { ProfileAvatar } from "@/components/ProfileAvatar";
 import { ProfileName } from "@/components/ProfileName";
 import { Star, Edit2, Trash2, MessageCircle, Share2, ExternalLink, AlertCircle, RefreshCw } from "lucide-react";
@@ -739,10 +739,7 @@ const DashboardComponent = () => {
         </div>
       )}
       
-      {/* Add the listings fetch debugger */}
-      {allListings.length === 0 && (
-        <ListingsFetchDebugger />
-      )}
+
       
       {/* Dashboard Header */}
       <div className="mb-8">
@@ -1045,6 +1042,9 @@ const DashboardComponent = () => {
           )}
         </TabsContent>
       </Tabs>
+      
+      {/* Advanced Tools Section */}
+      <AdvancedTools />
       </FirebaseConnectionHandler>
     </DashboardLayout>
   );
