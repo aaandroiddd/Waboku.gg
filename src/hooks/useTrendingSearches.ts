@@ -240,6 +240,34 @@ export function useTrendingSearches() {
     if (!term.trim()) return;
     
     try {
+      // First try the API endpoint for more reliable recording
+      try {
+        // Use absolute URL with origin to avoid path resolution issues
+        let apiUrl;
+        if (typeof window !== 'undefined') {
+          const baseUrl = window.location.origin;
+          apiUrl = `${baseUrl}/api/search/record`;
+        } else {
+          apiUrl = `/api/search/record`;
+        }
+        
+        const response = await fetch(apiUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ searchTerm: term.trim() }),
+        });
+        
+        if (response.ok) {
+          console.log(`[TrendingSearches] Successfully recorded search term via API: ${term}`);
+          return;
+        }
+      } catch (apiError) {
+        console.warn('[TrendingSearches] Failed to record search via API, falling back to direct DB:', apiError);
+      }
+      
+      // Fallback to direct database write if API fails
       if (!database) {
         console.warn('[TrendingSearches] Cannot record search: database not initialized');
         return; // Silently fail if database is not initialized
@@ -255,7 +283,7 @@ export function useTrendingSearches() {
         lastUpdated: Date.now()
       });
       
-      console.log(`[TrendingSearches] Successfully recorded search term: ${term}`);
+      console.log(`[TrendingSearches] Successfully recorded search term via direct DB: ${term}`);
     } catch (error) {
       console.error('[TrendingSearches] Error recording search:', error);
       // Don't throw the error as this is a non-critical operation

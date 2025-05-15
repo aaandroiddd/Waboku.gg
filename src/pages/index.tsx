@@ -204,6 +204,7 @@ export default function Home() {
     // Record search term if it's not empty
     if (query.trim()) {
       try {
+        console.log('Recording search term:', query.trim());
         recordSearch(query.trim()).catch(error => {
           console.error('Error recording search:', error);
           // Continue with search regardless of recording error

@@ -43,6 +43,7 @@ function TrendingSearchesContent() {
   useEffect(() => {
     if (trendingSearches && trendingSearches.length > 0) {
       setLocalTrending(trendingSearches);
+      setFetchFailed(false); // Reset fetch failed flag if we have data
     }
   }, [trendingSearches]);
   
@@ -52,6 +53,18 @@ function TrendingSearchesContent() {
     : localTrending.length > 0 && !error
       ? localTrending 
       : [];
+      
+  // Debug logging to help troubleshoot
+  useEffect(() => {
+    console.log('[TrendingSearches] Current state:', {
+      trendingSearches: trendingSearches.length,
+      localTrending: localTrending.length,
+      error,
+      loading,
+      fetchFailed,
+      displayTrending: displayTrending.length
+    });
+  }, [trendingSearches, localTrending, error, loading, fetchFailed, displayTrending]);
 
   const handleSearchClick = useCallback((term: string) => {
     router.push({

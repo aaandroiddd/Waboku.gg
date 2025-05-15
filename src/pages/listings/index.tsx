@@ -242,6 +242,7 @@ export default function ListingsPage() {
       if (searchQuery.trim()) {
         try {
           // Use the recordSearch function from useTrendingSearches hook
+          console.log('Recording search term from listings page:', searchQuery.trim());
           await recordSearch(searchQuery.trim());
         } catch (error) {
           console.error('Error recording search:', error);

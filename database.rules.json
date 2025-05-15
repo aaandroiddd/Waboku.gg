@@ -105,13 +105,7 @@
       ".write": true,
       ".indexOn": ["count", "lastUpdated"],
       "$termId": {
-        ".validate": "newData.hasChildren(['term', 'count'])",
-        "term": {
-          ".validate": "newData.isString() && newData.val().length >= 2 && newData.val().length <= 50"
-        },
-        "count": {
-          ".validate": "newData.isNumber() && newData.val() >= 0"
-        }
+        ".validate": "true"
       }
     },
 

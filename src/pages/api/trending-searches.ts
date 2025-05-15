@@ -195,8 +195,8 @@ export default async function handler(
       return res.status(499).end();
     }
     
-    // Calculate timestamp for 24 hours ago
-    const twentyFourHoursAgo = Date.now() - (24 * 60 * 60 * 1000);
+    // Calculate timestamp for 1 hour ago (reduced from 24 hours for testing)
+    const oneHourAgo = Date.now() - (1 * 60 * 60 * 1000);
     
     // Query the database with timeout
     let snapshot;
@@ -205,7 +205,7 @@ export default async function handler(
         database
           .ref('searchTerms')
           .orderByChild('lastUpdated')
-          .startAt(twentyFourHoursAgo)
+          .startAt(oneHourAgo)
           .once('value'),
         new Promise((_, reject) => 
           setTimeout(() => reject(new Error('Database query timeout')), 2500)
