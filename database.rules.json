@@ -1,7 +1,7 @@
 {
   "rules": {
     ".read": "auth != null",
-    ".write": "auth != null && newData.hasChildren(['messages']) && !newData.hasChild('users') && !newData.hasChild('chats') && !newData.hasChild('listings') && !newData.hasChild('wanted') && !newData.hasChild('wantedPosts') && !newData.hasChild('favorites') && !newData.hasChild('searchTerms') && !newData.hasChild('searches') && !newData.hasChild('userStatus') && !newData.hasChild('typing') && !newData.hasChild('lastActive') && !newData.hasChild('connection_tests') && !newData.hasChild('debug')",
+    ".write": "auth != null && newData.hasChildren(['messages']) && !newData.hasChild('users') && !newData.hasChild('chats') && !newData.hasChild('listings') && !newData.hasChild('wanted') && !newData.hasChild('wantedPosts') && !newData.hasChild('favorites') && !newData.hasChild('searches') && !newData.hasChild('userStatus') && !newData.hasChild('typing') && !newData.hasChild('lastActive') && !newData.hasChild('connection_tests') && !newData.hasChild('debug')",
     
     "connection_tests": {
       ".read": true,
@@ -103,7 +103,19 @@
     "searchTerms": {
       ".read": true,
       ".write": true,
-      ".indexOn": ["count", "lastUpdated"]
+      ".indexOn": ["count", "lastUpdated"],
+      "$term": {
+        ".validate": "newData.hasChildren(['term', 'count', 'lastUpdated'])",
+        "term": {
+          ".validate": "newData.isString() && newData.val().length >= 2 && newData.val().length <= 50"
+        },
+        "count": {
+          ".validate": "newData.isNumber() && newData.val() >= 0"
+        },
+        "lastUpdated": {
+          ".validate": "newData.isNumber() && newData.val() <= now"
+        }
+      }
     },
 
     "searches": {

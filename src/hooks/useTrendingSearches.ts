@@ -261,6 +261,8 @@ export function useTrendingSearches() {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({ searchTerm: term.trim() }),
+          // Add credentials to ensure cookies are sent
+          credentials: 'same-origin',
         });
         
         const responseData = await response.json();
@@ -318,13 +320,14 @@ export function useTrendingSearches() {
         
         // Try one more time with a simplified data structure
         try {
-          const simpleRef = ref(database, `searchTerms/${term.trim().toLowerCase()}`);
-          await set(simpleRef, {
+          // Try using push instead of set for a different approach
+          const searchTermsRef = ref(database, 'searchTerms');
+          await push(searchTermsRef, {
             term: term.trim(),
             count: 1,
             lastUpdated: Date.now()
           });
-          console.log(`[TrendingSearches] Successfully recorded search term with simplified data`);
+          console.log(`[TrendingSearches] Successfully recorded search term with push method`);
         } catch (finalError) {
           console.error('[TrendingSearches] Final attempt to write to database failed:', finalError);
         }

@@ -42,7 +42,8 @@ export default async function handler(
       return res.status(429).json({ error: 'Rate limit exceeded. Please try again later.' });
     }
 
-    const { searchTerm } = req.body;
+    // Check for searchTerm in both formats (for backward compatibility)
+    const searchTerm = req.body.searchTerm || req.body.term;
     
     // Validate search term
     if (!searchTerm || typeof searchTerm !== 'string') {
@@ -119,18 +120,35 @@ export default async function handler(
       // Set a timeout for the database operation
       const dbOperationPromise = Promise.race([
         (async () => {
-          const searchRef = database.ref('searchTerms').child(normalizedTerm.toLowerCase());
-          const snapshot = await searchRef.once('value');
-          const currentCount = snapshot.exists() ? snapshot.val()?.count || 0 : 0;
+          // Try both approaches for maximum reliability
+          try {
+            // Approach 1: Update existing record with count
+            const searchRef = database.ref('searchTerms').child(normalizedTerm.toLowerCase());
+            const snapshot = await searchRef.once('value');
+            const currentCount = snapshot.exists() ? snapshot.val()?.count || 0 : 0;
+            
+            const updateData = {
+              term: normalizedTerm,
+              count: currentCount + 1,
+              lastUpdated: Date.now()
+            };
+            
+            await searchRef.set(updateData);
+            console.log(`Path: /api/search/record [${requestId}] Successfully updated existing search term: "${normalizedTerm}"`);
+          } catch (updateError) {
+            console.error(`Path: /api/search/record [${requestId}] Error updating search term, trying push method:`, updateError);
+            
+            // Approach 2: Push as new entry
+            const searchesRef = database.ref('searchTerms');
+            await searchesRef.push({
+              term: normalizedTerm,
+              count: 1,
+              lastUpdated: Date.now()
+            });
+            console.log(`Path: /api/search/record [${requestId}] Successfully pushed new search term: "${normalizedTerm}"`);
+          }
           
-          const updateData = {
-            term: normalizedTerm,
-            count: currentCount + 1,
-            lastUpdated: Date.now()
-          };
-          
-          await searchRef.set(updateData);
-          return updateData;
+          return { success: true };
         })(),
         new Promise((_, reject) => 
           setTimeout(() => reject(new Error('Database operation timeout')), DB_OPERATION_TIMEOUT)
