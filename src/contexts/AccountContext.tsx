@@ -71,11 +71,21 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
       
       try {
         lastCheckTimeRef.current = now;
-        const idToken = await user.getIdToken();
+        
+        // Get a fresh token to ensure we have the latest authentication
+        let idToken;
+        try {
+          idToken = await user.getIdToken(true);
+          console.log('Successfully obtained fresh ID token for subscription check');
+        } catch (tokenError) {
+          console.error('Error getting fresh ID token:', tokenError);
+          // Fall back to regular token if refresh fails
+          idToken = await user.getIdToken();
+        }
         
         // Add timeout and retry logic for better network resilience
         let attempts = 0;
-        const maxAttempts = 2; // Reduced from 3 to 2 to fail faster
+        const maxAttempts = 3; // Increased back to 3 attempts for better reliability
         
         while (attempts < maxAttempts) {
           try {
@@ -83,20 +93,36 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
             
             // Use AbortController to implement timeout
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 5000); // Reduced from 10s to 5s
+            const timeoutId = setTimeout(() => {
+              controller.abort();
+              console.warn(`Subscription check timed out (attempt ${attempts + 1})`);
+            }, 10000); // Increased back to 10s for better reliability
             
+            // Make the fetch request with more detailed logging
+            console.log(`Making fetch request to /api/stripe/check-subscription (attempt ${attempts + 1})`);
             const response = await fetch('/api/stripe/check-subscription', {
+              method: 'GET',
               headers: {
-                'Authorization': `Bearer ${idToken}`
+                'Authorization': `Bearer ${idToken}`,
+                'Content-Type': 'application/json',
+                'Cache-Control': 'no-cache'
               },
-              signal: controller.signal
+              signal: controller.signal,
+              // Ensure we're not using cached responses
+              cache: 'no-store'
             });
             
             // Clear the timeout
             clearTimeout(timeoutId);
             
             if (!response.ok) {
-              const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
+              let errorData;
+              try {
+                errorData = await response.json();
+              } catch (parseError) {
+                errorData = { message: 'Failed to parse error response' };
+              }
+              
               console.warn(`Subscription check failed with status ${response.status}:`, errorData);
               
               // For 401 errors, we might need a new token
@@ -104,7 +130,11 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
                 // Try to get a fresh token for the next attempt
                 if (attempts < maxAttempts - 1) {
                   console.log('Auth error detected, refreshing token for next attempt');
-                  await user.getIdToken(true);
+                  try {
+                    idToken = await user.getIdToken(true);
+                  } catch (refreshError) {
+                    console.error('Failed to refresh token:', refreshError);
+                  }
                 }
               }
               
@@ -122,16 +152,28 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
               throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
             }
             
-            const data = await response.json();
-            console.log('Subscription check successful:', {
-              isPremium: data.isPremium,
-              status: data.status,
-              tier: data.tier
-            });
+            // Successfully got a response, parse the JSON
+            let data;
+            try {
+              data = await response.json();
+              console.log('Subscription check successful:', {
+                isPremium: data.isPremium,
+                status: data.status,
+                tier: data.tier
+              });
+              return data;
+            } catch (jsonError) {
+              console.error('Error parsing subscription check response:', jsonError);
+              throw new Error('Failed to parse subscription data');
+            }
             
-            return data;
           } catch (fetchError: any) {
             attempts++;
+            console.error(`Subscription check attempt ${attempts} failed:`, {
+              error: fetchError.message,
+              name: fetchError.name,
+              stack: fetchError.stack?.split('\n')[0]
+            });
             
             // If this is our last attempt, don't block the app - return a default response
             if (attempts >= maxAttempts) {
@@ -147,10 +189,11 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
             // For network errors, wait before retrying
             const isNetworkError = fetchError.name === 'AbortError' || 
                                   fetchError.message.includes('network') ||
-                                  fetchError.message.includes('fetch');
+                                  fetchError.message.includes('fetch') ||
+                                  fetchError.message.includes('Failed to fetch');
             
             if (isNetworkError) {
-              const delay = Math.min(1000 * Math.pow(2, attempts), 3000); // Reduced max delay
+              const delay = Math.min(1000 * Math.pow(2, attempts), 5000); // Increased max delay to 5s
               console.log(`Network error, waiting ${delay}ms before retry...`);
               await new Promise(resolve => setTimeout(resolve, delay));
             }
@@ -158,6 +201,7 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
         }
         
         // This should never be reached due to the return in the loop
+        console.warn('Reached end of subscription check function without returning data');
         return {
           isPremium: false,
           status: 'none',
