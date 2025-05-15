@@ -44,6 +44,14 @@ export const ModeratorBadge = ({ userId, className = '' }: ModeratorBadgeProps) 
           // Handle different role formats
           let hasModerator = false;
           
+          // Log the roles data for debugging
+          console.log('ModeratorBadge - User roles data:', {
+            uid,
+            roles: userData.roles,
+            rolesType: typeof userData.roles,
+            isArray: Array.isArray(userData.roles)
+          });
+          
           // Check if roles is an array
           if (Array.isArray(userData.roles)) {
             hasModerator = userData.roles.includes('moderator');
@@ -56,6 +64,16 @@ export const ModeratorBadge = ({ userId, className = '' }: ModeratorBadgeProps) 
           else if (userData.isModerator === true) {
             hasModerator = true;
           }
+          
+          // Also check if user is an admin (admins can access moderator features)
+          if (!hasModerator && userData.isAdmin === true) {
+            hasModerator = true;
+          }
+          
+          console.log('ModeratorBadge - Moderator check result:', {
+            uid,
+            hasModerator
+          });
           
           setIsModerator(hasModerator);
         }

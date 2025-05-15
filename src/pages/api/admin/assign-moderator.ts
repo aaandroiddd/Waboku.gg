@@ -52,51 +52,79 @@ export default async function handler(
 
     // Update the user's roles based on the action
     if (action === 'add') {
-      // Only add moderator role if it doesn't already exist
-      if (!currentRoles.includes('moderator')) {
-        const newRoles = [...currentRoles, 'moderator'];
-        console.log('Updating roles to:', newRoles);
-        
-        // Add moderator role to the user while preserving existing roles
-        await userRef.update({
-          roles: newRoles
-        });
-
-        console.log('Moderator role assigned successfully');
-        return res.status(200).json({ 
-          success: true,
-          message: 'Moderator role assigned successfully'
-        });
+      // Handle different role formats
+      if (Array.isArray(currentRoles)) {
+        // Only add moderator role if it doesn't already exist in the array
+        if (!currentRoles.includes('moderator')) {
+          const newRoles = [...currentRoles, 'moderator'];
+          console.log('Updating roles array to:', newRoles);
+          
+          // Add moderator role to the user while preserving existing roles
+          await userRef.update({
+            roles: newRoles,
+            // Also set the isModerator flag for backward compatibility
+            isModerator: true
+          });
+        } else {
+          console.log('User already has moderator role in roles array');
+        }
+      } else if (typeof currentRoles === 'string') {
+        // If roles is a string, convert it to an array
+        if (currentRoles !== 'moderator') {
+          const newRoles = [currentRoles, 'moderator'];
+          console.log('Converting string role to array:', newRoles);
+          
+          await userRef.update({
+            roles: newRoles,
+            isModerator: true
+          });
+        } else {
+          console.log('User already has moderator role as string');
+        }
       } else {
-        console.log('User already has moderator role');
-        return res.status(200).json({ 
-          success: true,
-          message: 'User already has moderator role'
+        // If roles doesn't exist or is not in a recognized format, set it as an array
+        console.log('Setting new roles array with moderator');
+        await userRef.update({
+          roles: ['moderator'],
+          isModerator: true
         });
       }
+      
+      console.log('Moderator role assigned successfully');
+      return res.status(200).json({ 
+        success: true,
+        message: 'Moderator role assigned successfully'
+      });
     } else {
-      // Remove moderator role if it exists
-      if (currentRoles.includes('moderator')) {
+      // Remove moderator role
+      if (Array.isArray(currentRoles) && currentRoles.includes('moderator')) {
         const newRoles = currentRoles.filter(role => role !== 'moderator');
         console.log('Updating roles to:', newRoles);
         
         // Update with new roles array (without moderator)
         await userRef.update({
-          roles: newRoles
+          roles: newRoles,
+          isModerator: false
         });
-
-        console.log('Moderator role removed successfully');
-        return res.status(200).json({ 
-          success: true,
-          message: 'Moderator role removed successfully'
+      } else if (typeof currentRoles === 'string' && currentRoles === 'moderator') {
+        // If roles is just the string 'moderator', remove it
+        console.log('Removing moderator string role');
+        await userRef.update({
+          roles: [],
+          isModerator: false
         });
       } else {
-        console.log('User does not have moderator role');
-        return res.status(200).json({ 
-          success: true,
-          message: 'User does not have moderator role'
+        // Ensure isModerator is false even if roles didn't need updating
+        await userRef.update({
+          isModerator: false
         });
       }
+
+      console.log('Moderator role removed successfully');
+      return res.status(200).json({ 
+        success: true,
+        message: 'Moderator role removed successfully'
+      });
     }
   } catch (error) {
     console.error(`Error ${action === 'add' ? 'assigning' : 'removing'} moderator role:`, error);
