@@ -431,6 +431,22 @@ export default function AdminDashboard() {
             </div>
           </Card>
           
+          {/* Account Tier Sync Section */}
+          <Card className="p-6 mb-8">
+            <h2 className="text-xl font-semibold mb-4">Account Tier Synchronization</h2>
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Sync account tiers with Stripe subscription data to ensure correct listing expiration.
+              </p>
+              <Button 
+                onClick={() => router.push(`/admin/account-tier-sync`)}
+                className="w-full bg-green-600 hover:bg-green-700"
+              >
+                Account Tier Sync
+              </Button>
+            </div>
+          </Card>
+          
           {/* Database Usage Monitoring Section */}
           <Card className="p-6 mb-8">
             <h2 className="text-xl font-semibold mb-4">Database Usage Monitoring</h2>

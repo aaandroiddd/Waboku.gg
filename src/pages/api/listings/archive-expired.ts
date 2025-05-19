@@ -2,6 +2,7 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import { getFirebaseAdmin } from '@/lib/firebase-admin';
 import { Timestamp } from 'firebase-admin/firestore';
 import { ACCOUNT_TIERS } from '@/types/account';
+import { determineUserAccountTier } from '@/lib/listing-expiration';
 
 // Maximum number of operations in a single batch
 const BATCH_SIZE = 500;
@@ -76,17 +77,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
         const createdAt = data.createdAt?.toDate() || new Date();
         
-        // Get user data to determine account tier
-        const userRef = db.collection('users').doc(data.userId);
-        const userDoc = await userRef.get();
-        
-        const userData = userDoc.data();
-        if (!userData) {
-          console.warn(`[Archive Expired] No user data found for listing ${doc.id}, userId: ${data.userId}`);
-          return null;
-        }
-        
-        const accountTier = userData.accountTier || 'free';
+        // Get user account tier with enhanced function
+        const accountTier = await determineUserAccountTier(data.userId);
         const tierDuration = ACCOUNT_TIERS[accountTier]?.listingDuration || ACCOUNT_TIERS.free.listingDuration;
         
         // Calculate expiration time based on tier duration

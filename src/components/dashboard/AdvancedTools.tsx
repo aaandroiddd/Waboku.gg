@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ListingsFetchDebugger } from "@/components/ListingsFetchDebugger";
+import { ListingRestorationTool } from "./ListingRestorationTool";
 import { ChevronDown, ChevronUp, Settings } from "lucide-react";
 
 export function AdvancedTools() {
@@ -29,8 +30,9 @@ export function AdvancedTools() {
       </CardHeader>
       
       {isExpanded && (
-        <CardContent>
+        <CardContent className="space-y-6">
           <ListingsFetchDebugger />
+          <ListingRestorationTool />
         </CardContent>
       )}
     </Card>
