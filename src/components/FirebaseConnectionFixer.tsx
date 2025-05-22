@@ -3,18 +3,23 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from './ui/button';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { Badge } from './ui/badge';
-import { fixFirebaseConnection, forceReconnectFirebase } from '@/lib/firebase-connection-fix';
+import { fixFirebaseConnection, forceReconnectFirebase, fixFirestoreListenChannel } from '@/lib/firebase-connection-fix';
 import { Loader2 } from 'lucide-react';
 
 export function FirebaseConnectionFixer() {
   const [isFixing, setIsFixing] = useState(false);
   const [isReconnecting, setIsReconnecting] = useState(false);
+  const [isFixingListenChannel, setIsFixingListenChannel] = useState(false);
   const [fixResult, setFixResult] = useState<{
     success: boolean;
     message: string;
     details?: any;
   } | null>(null);
   const [reconnectResult, setReconnectResult] = useState<{
+    success: boolean;
+    message: string;
+  } | null>(null);
+  const [listenChannelResult, setListenChannelResult] = useState<{
     success: boolean;
     message: string;
   } | null>(null);
@@ -55,6 +60,24 @@ export function FirebaseConnectionFixer() {
       setIsReconnecting(false);
     }
   };
+  
+  const runListenChannelFix = async () => {
+    setIsFixingListenChannel(true);
+    setListenChannelResult(null);
+    
+    try {
+      const result = await fixFirestoreListenChannel();
+      setListenChannelResult(result);
+    } catch (error) {
+      console.error('Error fixing Listen channel:', error);
+      setListenChannelResult({
+        success: false,
+        message: `Unexpected error: ${error instanceof Error ? error.message : 'Unknown error'}`
+      });
+    } finally {
+      setIsFixingListenChannel(false);
+    }
+  };
 
   return (
     <Card className="w-full max-w-3xl mx-auto">
@@ -75,6 +98,7 @@ export function FirebaseConnectionFixer() {
             <li>Run the connection diagnostics to identify specific issues</li>
             <li>Use the "Fix Connection" button to attempt automatic repairs</li>
             <li>Try the "Force Reconnect" option if messages still aren't loading</li>
+            <li>Use "Fix Listen Channel" if you see "Failed to fetch" errors with "/Listen/channel" in the URL</li>
             <li>Refresh the page after applying fixes</li>
           </ul>
         </div>
@@ -105,11 +129,22 @@ export function FirebaseConnectionFixer() {
             </AlertDescription>
           </Alert>
         )}
+        
+        {listenChannelResult && (
+          <Alert variant={listenChannelResult.success ? "default" : "destructive"}>
+            <AlertTitle>
+              {listenChannelResult.success ? "Listen Channel Fix Successful" : "Listen Channel Fix Failed"}
+            </AlertTitle>
+            <AlertDescription>
+              {listenChannelResult.message}
+            </AlertDescription>
+          </Alert>
+        )}
       </CardContent>
-      <CardFooter className="flex justify-between">
+      <CardFooter className="flex flex-wrap gap-2 justify-between">
         <Button 
           onClick={runConnectionFix} 
-          disabled={isFixing || isReconnecting}
+          disabled={isFixing || isReconnecting || isFixingListenChannel}
           className="flex items-center gap-2"
         >
           {isFixing && <Loader2 className="h-4 w-4 animate-spin" />}
@@ -118,11 +153,20 @@ export function FirebaseConnectionFixer() {
         <Button 
           onClick={runForceReconnect} 
           variant="outline"
-          disabled={isFixing || isReconnecting}
+          disabled={isFixing || isReconnecting || isFixingListenChannel}
           className="flex items-center gap-2"
         >
           {isReconnecting && <Loader2 className="h-4 w-4 animate-spin" />}
           {isReconnecting ? 'Reconnecting...' : 'Force Reconnect'}
+        </Button>
+        <Button 
+          onClick={runListenChannelFix} 
+          variant="secondary"
+          disabled={isFixing || isReconnecting || isFixingListenChannel}
+          className="flex items-center gap-2"
+        >
+          {isFixingListenChannel && <Loader2 className="h-4 w-4 animate-spin" />}
+          {isFixingListenChannel ? 'Fixing Listen Channel...' : 'Fix Listen Channel'}
         </Button>
       </CardFooter>
     </Card>

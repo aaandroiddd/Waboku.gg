@@ -1,5 +1,6 @@
 import { getDatabase, ref, onValue, set } from 'firebase/database';
-import { getFirebaseServices } from '@/lib/firebase';
+import { getFirebaseServices, removeAllListeners } from '@/lib/firebase';
+import { disableNetwork as disableFirestoreNetwork, enableNetwork as enableFirestoreNetwork } from 'firebase/firestore';
 
 /**
  * This function attempts to fix Firebase Realtime Database connection issues
@@ -205,13 +206,37 @@ export async function forceReconnectFirebase(): Promise<{
     console.log('[Firebase Fix] Forcing Firebase reconnection...');
     
     // Get Firebase services
-    const { database } = getFirebaseServices();
+    const { database, db } = getFirebaseServices();
     
     if (!database) {
       return {
         success: false,
         message: 'Firebase Realtime Database is not initialized'
       };
+    }
+    
+    // First, clear any Firestore listeners
+    if (db) {
+      try {
+        // Remove all listeners to prevent them from reconnecting automatically
+        const removedCount = removeAllListeners();
+        console.log(`[Firebase Fix] Removed ${removedCount} Firestore listeners`);
+        
+        // Disable and re-enable Firestore network
+        await disableFirestoreNetwork(db);
+        console.log('[Firebase Fix] Firestore network disabled');
+        
+        // Clear browser caches
+        await clearFirestoreCaches();
+        
+        // Wait before re-enabling
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        await enableFirestoreNetwork(db);
+        console.log('[Firebase Fix] Firestore network re-enabled');
+      } catch (firestoreError) {
+        console.error('[Firebase Fix] Error resetting Firestore:', firestoreError);
+      }
     }
     
     // Write a special value to force a connection reset
@@ -259,5 +284,140 @@ export async function forceReconnectFirebase(): Promise<{
       success: false,
       message: `Error during forced reconnection: ${error instanceof Error ? error.message : 'Unknown error'}`
     };
+  }
+}
+
+/**
+ * This function specifically targets Firestore Listen channel errors
+ * by implementing a specialized recovery strategy
+ */
+export async function fixFirestoreListenChannel(): Promise<{
+  success: boolean;
+  message: string;
+}> {
+  try {
+    console.log('[Firebase Fix] Attempting to fix Firestore Listen channel issues...');
+    
+    // Get Firestore instance
+    const { db } = getFirebaseServices();
+    
+    if (!db) {
+      return {
+        success: false,
+        message: 'Firestore is not initialized'
+      };
+    }
+    
+    // Step 1: Remove all listeners
+    const removedCount = removeAllListeners();
+    console.log(`[Firebase Fix] Removed ${removedCount} Firestore listeners`);
+    
+    // Step 2: Disable Firestore network
+    try {
+      await disableFirestoreNetwork(db);
+      console.log('[Firebase Fix] Firestore network disabled');
+    } catch (disableError) {
+      console.error('[Firebase Fix] Error disabling Firestore network:', disableError);
+      return {
+        success: false,
+        message: `Failed to disable Firestore network: ${disableError instanceof Error ? disableError.message : 'Unknown error'}`
+      };
+    }
+    
+    // Step 3: Clear Firestore caches
+    try {
+      await clearFirestoreCaches();
+      console.log('[Firebase Fix] Firestore caches cleared');
+    } catch (cacheError) {
+      console.error('[Firebase Fix] Error clearing Firestore caches:', cacheError);
+      // Continue anyway, this is not critical
+    }
+    
+    // Step 4: Wait before re-enabling
+    await new Promise(resolve => setTimeout(resolve, 3000));
+    
+    // Step 5: Re-enable Firestore network
+    try {
+      await enableFirestoreNetwork(db);
+      console.log('[Firebase Fix] Firestore network re-enabled');
+    } catch (enableError) {
+      console.error('[Firebase Fix] Error re-enabling Firestore network:', enableError);
+      return {
+        success: false,
+        message: `Failed to re-enable Firestore network: ${enableError instanceof Error ? enableError.message : 'Unknown error'}`
+      };
+    }
+    
+    return {
+      success: true,
+      message: 'Firestore Listen channel recovery completed successfully'
+    };
+  } catch (error) {
+    console.error('[Firebase Fix] Error during Firestore Listen channel recovery:', error);
+    return {
+      success: false,
+      message: `Error during Firestore Listen channel recovery: ${error instanceof Error ? error.message : 'Unknown error'}`
+    };
+  }
+}
+
+/**
+ * Clear Firestore caches in the browser
+ */
+export async function clearFirestoreCaches(): Promise<void> {
+  if (typeof window === 'undefined') return;
+  
+  console.log('[Firebase Fix] Clearing Firestore caches...');
+  
+  // Clear localStorage items related to Firestore
+  try {
+    Object.keys(localStorage).forEach(key => {
+      if (key.startsWith('firestore') || 
+          key.includes('firestore') || 
+          key.includes('firebase') || 
+          key.includes('fs_')) {
+        localStorage.removeItem(key);
+      }
+    });
+    console.log('[Firebase Fix] Cleared Firestore localStorage items');
+  } catch (localStorageError) {
+    console.error('[Firebase Fix] Error clearing localStorage:', localStorageError);
+  }
+  
+  // Clear IndexedDB databases related to Firestore
+  try {
+    const dbNames = ['firestore/[DEFAULT]/main', 'firestore/[DEFAULT]/metadata'];
+    
+    const deletePromises = dbNames.map(dbName => {
+      return new Promise<void>((resolve, reject) => {
+        try {
+          const request = window.indexedDB.deleteDatabase(dbName);
+          
+          request.onsuccess = () => {
+            console.log(`[Firebase Fix] Successfully deleted IndexedDB database: ${dbName}`);
+            resolve();
+          };
+          
+          request.onerror = (event) => {
+            console.error(`[Firebase Fix] Error deleting IndexedDB database ${dbName}:`, event);
+            reject(new Error(`Failed to delete IndexedDB database ${dbName}`));
+          };
+          
+          request.onblocked = (event) => {
+            console.warn(`[Firebase Fix] Deletion of IndexedDB database ${dbName} blocked:`, event);
+            // Try to resolve anyway, as this is not critical
+            resolve();
+          };
+        } catch (error) {
+          console.error(`[Firebase Fix] Error setting up deletion for IndexedDB database ${dbName}:`, error);
+          reject(error);
+        }
+      });
+    });
+    
+    await Promise.allSettled(deletePromises);
+    console.log('[Firebase Fix] IndexedDB cleanup completed');
+  } catch (indexedDBError) {
+    console.error('[Firebase Fix] Error clearing IndexedDB:', indexedDBError);
   }
 }
