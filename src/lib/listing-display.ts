@@ -9,7 +9,7 @@ export function getDisplayPrice(listing: Listing | null | undefined): string {
   if (!listing) return '';
   
   // Check if this is an "Offers Only" listing
-  if (listing.offersOnly === true) {
+  if (listing.offersOnly === true || (listing.price === 0 && listing.offersOnly !== false)) {
     return "Offers Only";
   }
   
