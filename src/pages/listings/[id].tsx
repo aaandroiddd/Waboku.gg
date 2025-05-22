@@ -592,7 +592,9 @@ export default function ListingPage() {
                   cardName: updatedData.cardName || undefined,
                   location: locationData,
                   soldTo: updatedData.soldTo || null,
-                  archivedAt: updatedData.archivedAt ? convertTimestamp(updatedData.archivedAt) : null
+                  archivedAt: updatedData.archivedAt ? convertTimestamp(updatedData.archivedAt) : null,
+                  // Explicitly include offersOnly property with default value
+                  offersOnly: updatedData.offersOnly === true
                 };
                 
                 // Update the listing state
@@ -695,7 +697,9 @@ export default function ListingPage() {
           location: locationData,
           // Add sold status fields
           soldTo: data.soldTo || null,
-          archivedAt: data.archivedAt ? convertTimestamp(data.archivedAt) : null
+          archivedAt: data.archivedAt ? convertTimestamp(data.archivedAt) : null,
+          // Explicitly include offersOnly property with default value
+          offersOnly: data.offersOnly === true
         };
         
         // Make expiresAt available to the client-side code
@@ -1558,7 +1562,7 @@ export default function ListingPage() {
 
                 <div className="text-center">
                   <div className="text-3xl md:text-4xl font-bold text-primary">
-                    {listing.offersOnly ? (
+                    {listing.offersOnly === true || (listing.price === 0 && listing.offersOnly !== false) ? (
                       <span className="bg-blue-500/20 px-3 py-1 rounded-md">Offers Only</span>
                     ) : formatPrice(listing.price)}
                   </div>
