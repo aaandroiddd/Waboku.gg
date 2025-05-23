@@ -1561,7 +1561,7 @@ export default function ListingPage() {
                 </div>
 
                 <div className="text-center">
-                  <div className="text-3xl md:text-4xl font-bold text-white">
+                  <div className="text-3xl md:text-4xl font-bold text-foreground">
                     {listing.offersOnly === true || (listing.price === 0 && listing.offersOnly !== false) ? (
                       <span>Offers Only</span>
                     ) : formatPrice(listing.price)}
