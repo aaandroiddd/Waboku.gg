@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { getFirebaseServices } from '@/lib/firebase';
-import { fixFirestoreListenChannel } from '@/lib/firebase-connection-fix';
+import { fixFirestoreListenChannel, clearFirestoreCaches } from '@/lib/firebase-connection-fix';
 
 interface FirebaseConnectionHandlerProps {
   children?: React.ReactNode;
@@ -14,6 +14,31 @@ export function FirebaseConnectionHandler({
   const [initError, setInitError] = useState<Error | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
   const [isFixingConnection, setIsFixingConnection] = useState(false);
+
+  // Function to attempt fixing the connection
+  const tryFixConnection = useCallback(async () => {
+    if (isFixingConnection) return;
+    
+    setIsFixingConnection(true);
+    try {
+      console.log("Attempting to fix Firestore connection...");
+      
+      // First clear all caches
+      await clearFirestoreCaches();
+      console.log("Cleared Firestore caches");
+      
+      // Then fix the Listen channel
+      await fixFirestoreListenChannel();
+      console.log("Connection fix completed");
+      
+      // Reset error state
+      setInitError(null);
+    } catch (error) {
+      console.error("Error fixing connection:", error);
+    } finally {
+      setIsFixingConnection(false);
+    }
+  }, [isFixingConnection]);
 
   // Initialize Firebase services in the background
   useEffect(() => {
@@ -64,24 +89,7 @@ export function FirebaseConnectionHandler({
     };
   }, [autoFix]);
   
-  // Function to attempt fixing the connection
-  const tryFixConnection = async () => {
-    if (isFixingConnection) return;
-    
-    setIsFixingConnection(true);
-    try {
-      console.log("Attempting to fix Firestore connection...");
-      await fixFirestoreListenChannel();
-      console.log("Connection fix completed");
-      
-      // Reset error state
-      setInitError(null);
-    } catch (error) {
-      console.error("Error fixing connection:", error);
-    } finally {
-      setIsFixingConnection(false);
-    }
-  };
+
 
   // Simply render children without any connection check UI
   return <>{children}</>;

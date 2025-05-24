@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Button } from "./ui/button";
 import { useAuth } from "@/contexts/AuthContext";
+import { ClearBrowserCacheButton } from "./ClearBrowserCacheButton";
 
 export function Footer() {
   const { user } = useAuth();
@@ -46,11 +47,21 @@ export function Footer() {
                 Privacy Policy
               </Button>
             </Link>
+            <Link href="/connection-troubleshoot" passHref>
+              <Button variant="link" className="text-muted-foreground hover:text-primary">
+                Connection Help
+              </Button>
+            </Link>
           </div>
           <div className="flex flex-col items-center gap-2">
             <div className="text-sm text-muted-foreground">
               © {new Date().getFullYear()} Waboku.gg. All rights reserved.
             </div>
+            <ClearBrowserCacheButton 
+              variant="outline" 
+              size="sm" 
+              className="text-xs"
+            />
           </div>
         </div>
       </div>

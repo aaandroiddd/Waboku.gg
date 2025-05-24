@@ -18,7 +18,9 @@ export function useClientCache<T>(options: CacheOptions) {
     if (typeof window === 'undefined') return { data: null, expired: true };
     
     try {
-      const cachedItem = sessionStorage.getItem(key);
+      // Try localStorage first, then fall back to sessionStorage
+      // This helps with cross-domain issues since localStorage is more persistent
+      const cachedItem = localStorage.getItem(key) || sessionStorage.getItem(key);
       
       if (!cachedItem) return { data: null, expired: true };
       
@@ -49,6 +51,8 @@ export function useClientCache<T>(options: CacheOptions) {
         timestamp: Date.now()
       };
       
+      // Store in both localStorage and sessionStorage for better persistence
+      localStorage.setItem(key, JSON.stringify(cacheItem));
       sessionStorage.setItem(key, JSON.stringify(cacheItem));
       
       if (process.env.NODE_ENV === 'development') {
@@ -62,6 +66,8 @@ export function useClientCache<T>(options: CacheOptions) {
   // Function to clear specific cache
   const clearCache = useCallback((): void => {
     if (typeof window === 'undefined') return;
+    // Clear from both storage types
+    localStorage.removeItem(key);
     sessionStorage.removeItem(key);
     
     if (process.env.NODE_ENV === 'development') {

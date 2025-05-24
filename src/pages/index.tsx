@@ -93,6 +93,7 @@ export default function Home() {
   const [displayCount, setDisplayCount] = useState(8);
   const [connectionError, setConnectionError] = useState(false);
   const [isRecovering, setIsRecovering] = useState(false);
+  const [cacheCleared, setCacheCleared] = useState(false);
 
   const { latitude, longitude, loading: geoLoading } = useGeolocation({ autoRequest: false });
   const { listings: allListings, isLoading, error: listingsError } = useListings();
@@ -105,6 +106,33 @@ export default function Home() {
       if (staleDataFound) {
         console.log('Stale authentication data was found and cleared');
       }
+      
+      // Clear any stale cache on initial load
+      const clearStaleCache = async () => {
+        try {
+          // Check if we've already cleared cache in this session
+          const hasCleared = sessionStorage.getItem('cache_cleared');
+          if (!hasCleared) {
+            console.log('Performing initial cache check and cleanup');
+            
+            // Clear all listing-related localStorage items
+            Object.keys(localStorage).forEach(key => {
+              if (key.startsWith('listings_')) {
+                localStorage.removeItem(key);
+                console.log(`Cleared potentially stale cache: ${key}`);
+              }
+            });
+            
+            // Mark that we've cleared cache in this session
+            sessionStorage.setItem('cache_cleared', 'true');
+            setCacheCleared(true);
+          }
+        } catch (error) {
+          console.error('Error during initial cache cleanup:', error);
+        }
+      };
+      
+      clearStaleCache();
       
       // Add a global error handler for Firestore fetch errors
       const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
@@ -399,13 +427,27 @@ export default function Home() {
                       onClick={async () => {
                         setIsRecovering(true);
                         try {
-                          // First clear caches
+                          // First clear all browser caches related to Firestore
                           await clearFirestoreCaches();
+                          console.log('Cleared all Firestore caches');
+                          
+                          // Clear all listing-related localStorage items
+                          Object.keys(localStorage).forEach(key => {
+                            if (key.startsWith('listings_')) {
+                              localStorage.removeItem(key);
+                              console.log(`Cleared cache: ${key}`);
+                            }
+                          });
+                          
                           // Then fix the Listen channel
                           await fixFirestoreListenChannel();
+                          console.log('Fixed Firestore Listen channel');
+                          
                           // Reset error state
                           setConnectionError(false);
+                          
                           // Force page refresh to get a clean state
+                          console.log('Reloading page with clean state');
                           window.location.reload();
                         } catch (error) {
                           console.error('Error recovering connection:', error);
