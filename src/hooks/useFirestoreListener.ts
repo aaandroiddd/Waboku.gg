@@ -61,20 +61,37 @@ export function useFirestoreListener(componentId: string) {
  */
 export function useListingPageCleanup(listingId: string | null | undefined) {
   useEffect(() => {
+    // When the component mounts, log that we're on a listing page
+    if (listingId) {
+      console.log(`[Firebase] Viewing listing ${listingId}, setting up cleanup for later`);
+    }
+    
     // When the component unmounts (user navigates away), clean up all listeners
     return () => {
       if (listingId) {
         console.log(`[Firebase] Navigating away from listing ${listingId}, cleaning up listeners`);
         
-        // Clean up any listeners related to this listing
+        // Clean up any listeners related to this listing with all possible prefixes
         removeListenersByPrefix(`listing-${listingId}`);
         removeListenersByPrefix(`similar-listings-${listingId}`);
+        removeListenersByPrefix(`owner-listings-`); // Clean up owner listings
         removeListenersByPrefix(`listing-view-${listingId}`);
         
         // Also clean up any cached data for this listing
-        if (typeof window !== 'undefined' && (window as any).__firestoreCache?.similarListings) {
-          console.log(`[Firebase] Cleaning up cache for listing ${listingId}`);
-          delete (window as any).__firestoreCache.similarListings[listingId];
+        if (typeof window !== 'undefined') {
+          try {
+            if ((window as any).__firestoreCache?.similarListings) {
+              console.log(`[Firebase] Cleaning up similarListings cache for listing ${listingId}`);
+              delete (window as any).__firestoreCache.similarListings[listingId];
+            }
+            
+            if ((window as any).__firestoreCache?.listings && (window as any).__firestoreCache.listings[listingId]) {
+              console.log(`[Firebase] Cleaning up listings cache for listing ${listingId}`);
+              delete (window as any).__firestoreCache.listings[listingId];
+            }
+          } catch (error) {
+            console.error('[Firebase] Error cleaning up cache:', error);
+          }
         }
       }
     };
