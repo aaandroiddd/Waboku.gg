@@ -11,6 +11,7 @@ import Header from "@/components/Header";
 import { GameCategories } from "@/components/GameCategories";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Loader2 } from "lucide-react";
 import { TrendingSearches } from "@/components/TrendingSearches";
 import { checkAndClearStaleAuthData } from "@/lib/auth-token-manager";
 import AnimatedBackground from "@/components/AnimatedBackground";
@@ -19,6 +20,7 @@ import { useListings } from "@/hooks/useListings";
 import { useTrendingSearches } from "@/hooks/useTrendingSearches";
 import Link from "next/link";
 import { FirebaseConnectionHandler } from "@/components/FirebaseConnectionHandler";
+import { fixFirestoreListenChannel, clearFirestoreCaches } from "@/lib/firebase-connection-fix";
 import { StateSelect } from "@/components/StateSelect";
 
 // Subtitles array - moved outside component to prevent recreation on each render
@@ -89,20 +91,46 @@ export default function Home() {
     []
   );
   const [displayCount, setDisplayCount] = useState(8);
+  const [connectionError, setConnectionError] = useState(false);
+  const [isRecovering, setIsRecovering] = useState(false);
 
   const { latitude, longitude, loading: geoLoading } = useGeolocation({ autoRequest: false });
-  const { listings: allListings, isLoading } = useListings();
+  const { listings: allListings, isLoading, error: listingsError } = useListings();
   const router = useRouter();
 
-  // Check for stale auth data only once on mount
+  // Check for stale auth data and handle connection issues on mount
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const staleDataFound = checkAndClearStaleAuthData();
       if (staleDataFound) {
         console.log('Stale authentication data was found and cleared');
       }
+      
+      // Add a global error handler for Firestore fetch errors
+      const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
+        if (event.reason && 
+            (event.reason.message === 'Failed to fetch' || 
+             (event.reason.stack && event.reason.stack.includes('firestore.googleapis.com')))) {
+          console.error('Detected Firestore fetch error on home page:', event.reason);
+          setConnectionError(true);
+        }
+      };
+      
+      window.addEventListener('unhandledrejection', handleUnhandledRejection);
+      
+      return () => {
+        window.removeEventListener('unhandledrejection', handleUnhandledRejection);
+      };
     }
   }, []);
+  
+  // Monitor for listing errors and trigger recovery if needed
+  useEffect(() => {
+    if (listingsError) {
+      console.error('Listings error detected:', listingsError);
+      setConnectionError(true);
+    }
+  }, [listingsError]);
   
   // Memoize the processed listings to avoid recalculation on every render
   const processedListings = useMemo(() => {
@@ -359,26 +387,76 @@ export default function Home() {
             
             <div className="max-w-[1400px] mx-auto">
               <FirebaseConnectionHandler>
-                <ContentLoader 
-                  isLoading={isLoading} 
-                  loadingMessage="Loading listings..."
-                  minHeight="400px"
-                  fallback={
-                    <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                      {[...Array(8)].map((_, i) => (
-                        <Skeleton key={i} className="h-64 w-full" />
-                      ))}
+                {connectionError ? (
+                  <div className="flex flex-col items-center justify-center p-8 space-y-4">
+                    <div className="text-center space-y-2">
+                      <h3 className="text-lg font-semibold">Connection Issue Detected</h3>
+                      <p className="text-sm text-muted-foreground">
+                        We're having trouble loading the latest listings. This might be due to a temporary connection issue.
+                      </p>
                     </div>
-                  }
-                >
-                  <ListingGrid 
-                    listings={processedListings} 
-                    loading={false} // We're handling loading state with ContentLoader
-                    displayCount={displayCount}
-                    hasMore={processedListings.length > displayCount}
-                    onLoadMore={() => setDisplayCount(prev => prev + 8)}
-                  />
-                </ContentLoader>
+                    <Button 
+                      onClick={async () => {
+                        setIsRecovering(true);
+                        try {
+                          // First clear caches
+                          await clearFirestoreCaches();
+                          // Then fix the Listen channel
+                          await fixFirestoreListenChannel();
+                          // Reset error state
+                          setConnectionError(false);
+                          // Force page refresh to get a clean state
+                          window.location.reload();
+                        } catch (error) {
+                          console.error('Error recovering connection:', error);
+                          // If automatic recovery fails, suggest a manual refresh
+                          alert('Unable to automatically fix the connection. Please try refreshing the page manually.');
+                        } finally {
+                          setIsRecovering(false);
+                        }
+                      }}
+                      disabled={isRecovering}
+                      className="flex items-center gap-2"
+                    >
+                      {isRecovering ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Fixing Connection...
+                        </>
+                      ) : (
+                        <>Fix Connection</>
+                      )}
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      onClick={() => window.location.reload()}
+                      className="mt-2"
+                    >
+                      Refresh Page
+                    </Button>
+                  </div>
+                ) : (
+                  <ContentLoader 
+                    isLoading={isLoading} 
+                    loadingMessage="Loading listings..."
+                    minHeight="400px"
+                    fallback={
+                      <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                        {[...Array(8)].map((_, i) => (
+                          <Skeleton key={i} className="h-64 w-full" />
+                        ))}
+                      </div>
+                    }
+                  >
+                    <ListingGrid 
+                      listings={processedListings} 
+                      loading={false} // We're handling loading state with ContentLoader
+                      displayCount={displayCount}
+                      hasMore={processedListings.length > displayCount}
+                      onLoadMore={() => setDisplayCount(prev => prev + 8)}
+                    />
+                  </ContentLoader>
+                )}
               </FirebaseConnectionHandler>
             </div>
           </section>
