@@ -136,22 +136,23 @@ const DashboardComponent = () => {
   const { tab = 'active', new: newListingId } = router.query;
   const [error, setError] = useState<string | null>(null);
   
-  // Use cached listings if available, otherwise fetch from API
+  // Always fetch fresh data, but use cache for immediate display
   const { listings: fetchedListings, setListings, loading: listingsLoading, error: listingsError, refreshListings, updateListingStatus, permanentlyDeleteListing } = useOptimizedListings({ 
     userId: user?.uid,
     showOnlyActive: false,
-    skipInitialFetch: !!cachedListings // Skip initial fetch if we have cached data
+    skipInitialFetch: false // Always fetch fresh data
   });
   
-  // Combine cached and fetched listings
-  const allListings = cachedListings || fetchedListings;
+  // Use fetched listings as the primary source, with cached listings as fallback only during loading
+  const allListings = fetchedListings.length > 0 ? fetchedListings : (listingsLoading && cachedListings ? cachedListings : fetchedListings);
   
   // Update cache when new listings are fetched
   useEffect(() => {
-    if (fetchedListings && fetchedListings.length > 0 && user) {
+    if (fetchedListings && fetchedListings.length >= 0 && user) { // Changed to >= 0 to cache even empty arrays
       saveListingsToCache(fetchedListings);
     }
   }, [fetchedListings, user, saveListingsToCache]);
+=======
   
   const { profile, loading: profileLoading } = useProfile(user?.uid || null);
   

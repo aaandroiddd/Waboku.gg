@@ -84,21 +84,23 @@ export function useOptimizedListings({ userId, searchQuery, showOnlyActive = fal
 
   // Setup the Firestore listener
   useEffect(() => {
-    // Skip if we're supposed to skip initial fetch
-    if (skipInitialFetch) {
-      console.log('Skipping initial fetch as requested');
-      setIsLoading(false);
-      return;
-    }
-
-    // Check if we have cached data
+    // Check if we have cached data first
     const { data: cachedListings, expired } = getFromCache();
     
-    if (cachedListings && !expired) {
-      console.log(`Using cached listings data (${cachedListings.length} items)`);
+    if (cachedListings && !expired && !skipInitialFetch) {
+      console.log(`Using cached listings data (${cachedListings.length} items) while setting up listener`);
       // Set listings from cache immediately to improve perceived performance
       setListings(cachedListings);
       setIsLoading(false);
+    }
+
+    // Skip setting up listener if we're supposed to skip initial fetch
+    if (skipInitialFetch) {
+      console.log('Skipping initial fetch as requested');
+      if (!cachedListings) {
+        setIsLoading(false);
+      }
+      return;
     }
 
     const setupListener = async () => {
