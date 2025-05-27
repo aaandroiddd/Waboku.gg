@@ -112,29 +112,31 @@ export default function ImageCarousel({ images }: ImageCarouselProps) {
 
   return (
     <>
-      {/* Wrapper with space for external arrows on desktop */}
-      <div className={`relative w-full ${isMobile ? 'max-w-md' : 'max-w-lg'} mx-auto ${!isMobile ? 'px-12' : ''}`}>
-        <div className="relative w-full max-w-md mx-auto">
-          {/* Arrows - positioned outside the carousel container on desktop */}
+      {/* Main container with proper spacing for arrows */}
+      <div className={`relative w-full ${isMobile ? 'max-w-md' : 'max-w-2xl'} mx-auto`}>
+        {/* Carousel container with margin for arrows */}
+        <div className={`relative w-full ${!isMobile ? 'mx-12' : ''} max-w-md mx-auto`}>
+          {/* Desktop arrows positioned right next to the carousel */}
           {!isMobile && (
             <>
               <button
-                className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-12 z-10 bg-white/90 hover:bg-white p-2 rounded-full shadow-lg transition-all duration-200 hover:scale-110 border border-gray-200"
+                className="absolute -left-12 top-1/2 -translate-y-1/2 z-20 bg-white/90 hover:bg-white p-3 rounded-full shadow-lg transition-all duration-200 hover:scale-110 border border-gray-200 dark:bg-gray-800/90 dark:hover:bg-gray-800 dark:border-gray-600"
                 onClick={() => instanceRef.current?.prev()}
                 aria-label="Previous image"
+                style={{ pointerEvents: 'auto' }}
               >
-                <ChevronLeft className="h-5 w-5" />
+                <ChevronLeft className="h-5 w-5 dark:text-white" />
               </button>
               <button
-                className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-12 z-10 bg-white/90 hover:bg-white p-2 rounded-full shadow-lg transition-all duration-200 hover:scale-110 border border-gray-200"
+                className="absolute -right-12 top-1/2 -translate-y-1/2 z-20 bg-white/90 hover:bg-white p-3 rounded-full shadow-lg transition-all duration-200 hover:scale-110 border border-gray-200 dark:bg-gray-800/90 dark:hover:bg-gray-800 dark:border-gray-600"
                 onClick={() => instanceRef.current?.next()}
                 aria-label="Next image"
+                style={{ pointerEvents: 'auto' }}
               >
-                <ChevronRight className="h-5 w-5" />
+                <ChevronRight className="h-5 w-5 dark:text-white" />
               </button>
             </>
           )}
-
           {/* Carousel */}
           <div 
             ref={sliderRef} 
