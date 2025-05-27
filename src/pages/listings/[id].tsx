@@ -77,6 +77,9 @@ export default function ListingPage() {
   // Dialog state is now handled by Radix UI
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [sellerHasActiveStripeAccount, setSellerHasActiveStripeAccount] = useState(false);
+  
+  // Import the useMediaQuery hook at the top to avoid initialization issues
+  const isMobile = useMediaQuery('(max-width: 768px)');
 
   useEffect(() => {
     if (listing?.coverImageIndex !== undefined) {
@@ -762,9 +765,6 @@ export default function ListingPage() {
       router.replace(`/listings/${listing.id}`, undefined, { shallow: true });
     }
   }, [router.isReady, router.query, listing, user, isMobile]);
-
-  // Import the useMediaQuery hook
-  const isMobile = useMediaQuery('(max-width: 768px)');
   
   // Dialog is now handled directly in each carousel item
 
