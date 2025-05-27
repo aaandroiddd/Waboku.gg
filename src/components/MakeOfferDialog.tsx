@@ -234,27 +234,27 @@ export function MakeOfferDialog({
         onComplete={() => setTutorialCompleted(true)} 
       />
       <Dialog open={open} onOpenChange={handleOpenChange}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Make an Offer</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-lg font-semibold text-foreground">Make an Offer</DialogTitle>
+            <DialogDescription className="text-sm text-muted-foreground leading-relaxed">
               Enter your offer amount for this listing. The seller will be notified and can accept or decline.
             </DialogDescription>
           </DialogHeader>
         <form onSubmit={handleSubmit}>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
-              <Label htmlFor="listing">Listing</Label>
-              <div className="text-sm text-muted-foreground">{listingTitle}</div>
+              <Label htmlFor="listing" className="text-sm font-medium text-foreground">Listing</Label>
+              <div className="text-sm text-foreground font-medium bg-muted/50 p-2 rounded-md">{listingTitle}</div>
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="listingPrice">Listing Price</Label>
-              <div className="text-sm font-medium">{formatPrice(listingPrice)}</div>
+              <Label htmlFor="listingPrice" className="text-sm font-medium text-foreground">Listing Price</Label>
+              <div className="text-sm font-semibold text-foreground bg-muted/50 p-2 rounded-md">{formatPrice(listingPrice)}</div>
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="offerAmount">Your Offer</Label>
+              <Label htmlFor="offerAmount" className="text-sm font-medium text-foreground">Your Offer</Label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-medium">$</span>
                 <Input
                   id="offerAmount"
                   type="number"
@@ -266,33 +266,37 @@ export function MakeOfferDialog({
                     // Clear error when user changes the input
                     if (error) setError(null);
                   }}
-                  className="pl-7"
+                  className="pl-7 text-foreground font-medium"
                   required
                   disabled={isSubmitting}
                 />
               </div>
-              <p className="text-xs text-muted-foreground">Enter the amount you want to offer for this item</p>
+              <p className="text-xs text-muted-foreground leading-relaxed">Enter the amount you want to offer for this item</p>
             </div>
             
             <div className="grid gap-2 mt-2">
-              <Label>Delivery Method</Label>
+              <Label className="text-sm font-medium text-foreground">Delivery Method</Label>
               <Tabs 
                 value={deliveryMethod} 
                 onValueChange={(value) => setDeliveryMethod(value as 'shipping' | 'pickup')}
                 className="w-full"
               >
                 <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="shipping" disabled={!hasStripeAccount && !isLoadingStripeStatus}>
+                  <TabsTrigger 
+                    value="shipping" 
+                    disabled={!hasStripeAccount && !isLoadingStripeStatus}
+                    className="text-sm font-medium"
+                  >
                     Shipping
                   </TabsTrigger>
-                  <TabsTrigger value="pickup">Local Pickup</TabsTrigger>
+                  <TabsTrigger value="pickup" className="text-sm font-medium">Local Pickup</TabsTrigger>
                 </TabsList>
                 
                 {!hasStripeAccount && !isLoadingStripeStatus && deliveryMethod === 'shipping' && (
                   <div className="mt-2">
                     <Alert variant="destructive">
                       <AlertCircle className="h-4 w-4" />
-                      <AlertDescription className="ml-2">
+                      <AlertDescription className="ml-2 text-sm font-medium">
                         This seller doesn't support shipping. You can only make a local pickup offer.
                       </AlertDescription>
                     </Alert>
@@ -303,7 +307,7 @@ export function MakeOfferDialog({
                   <div className="space-y-3">
                     <Alert className="bg-blue-500/10 border-blue-500/50">
                       <InfoIcon className="h-4 w-4 text-blue-500" />
-                      <AlertDescription className="ml-2">
+                      <AlertDescription className="ml-2 text-sm font-medium text-blue-700 dark:text-blue-300">
                         If your offer is accepted, you will need to provide a shipping address.
                       </AlertDescription>
                     </Alert>
@@ -311,7 +315,7 @@ export function MakeOfferDialog({
                     {hasStripeAccount && (
                       <Alert className="bg-green-500/10 border-green-500/50">
                         <CreditCard className="h-4 w-4 text-green-500" />
-                        <AlertDescription className="ml-2">
+                        <AlertDescription className="ml-2 text-sm font-medium text-green-700 dark:text-green-300">
                           This seller accepts online payments. You'll be asked to pay after providing shipping information.
                         </AlertDescription>
                       </Alert>
@@ -326,7 +330,7 @@ export function MakeOfferDialog({
                       />
                       <Label 
                         htmlFor="shipping-acknowledge" 
-                        className="text-sm font-normal leading-tight cursor-pointer"
+                        className="text-sm font-normal leading-relaxed cursor-pointer text-foreground"
                       >
                         I understand that I will need to provide my shipping address after the seller accepts my offer.
                       </Label>
@@ -342,7 +346,7 @@ export function MakeOfferDialog({
                         />
                         <Label 
                           htmlFor="payment-acknowledge" 
-                          className="text-sm font-normal leading-tight cursor-pointer"
+                          className="text-sm font-normal leading-relaxed cursor-pointer text-foreground"
                         >
                           I understand that I will need to make payment after providing shipping information if my offer is accepted.
                         </Label>
@@ -354,7 +358,7 @@ export function MakeOfferDialog({
                   <div className="space-y-3">
                     <Alert className="bg-amber-500/10 border-amber-500/50">
                       <AlertCircle className="h-4 w-4 text-amber-500" />
-                      <AlertDescription className="ml-2">
+                      <AlertDescription className="ml-2 text-sm font-medium text-amber-700 dark:text-amber-300">
                         You'll need to arrange pickup details with the seller if your offer is accepted.
                       </AlertDescription>
                     </Alert>
@@ -368,7 +372,7 @@ export function MakeOfferDialog({
                       />
                       <Label 
                         htmlFor="pickup-acknowledge" 
-                        className="text-sm font-normal leading-tight cursor-pointer"
+                        className="text-sm font-normal leading-relaxed cursor-pointer text-foreground"
                       >
                         I understand that I will need to arrange pickup with the seller after my offer is accepted.
                       </Label>
@@ -381,7 +385,7 @@ export function MakeOfferDialog({
             {error && (
               <Alert variant="destructive" className="mt-2">
                 <AlertCircle className="h-4 w-4" />
-                <AlertDescription className="ml-2">{error}</AlertDescription>
+                <AlertDescription className="ml-2 text-sm font-medium">{error}</AlertDescription>
               </Alert>
             )}
           </div>
