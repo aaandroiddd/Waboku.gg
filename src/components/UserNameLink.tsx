@@ -17,13 +17,15 @@ interface UserNameLinkProps {
   initialUsername?: string;
   className?: string;
   showProfileOnClick?: boolean;
+  isDeletedUser?: boolean; // New prop to indicate if this is a deleted user
 }
 
 export function UserNameLink({ 
   userId, 
   initialUsername, 
   className = "", 
-  showProfileOnClick = true 
+  showProfileOnClick = true,
+  isDeletedUser = false
 }: UserNameLinkProps) {
   // Default to a better loading state that shows we're loading a specific user
   const defaultDisplayName = initialUsername || 
@@ -33,8 +35,8 @@ export function UserNameLink({
   // Use local state to ensure consistent display even during loading
   const [displayName, setDisplayName] = useState<string>(defaultDisplayName);
   
-  // Use our optimized hook
-  const { userData, loading } = useOptimizedUserData(userId);
+  // Use our optimized hook only if not a deleted user
+  const { userData, loading } = useOptimizedUserData(isDeletedUser ? null : userId);
   
   // Load from sessionStorage on mount
   useEffect(() => {
@@ -92,25 +94,26 @@ export function UserNameLink({
     }
   }, [userData, initialUsername, userId]);
   
-  // Show skeleton while loading, but only for a short time
+  // Show skeleton while loading, but only for a short time and not for deleted users
   // to avoid flickering between "Loading..." and actual data
-  if (loading && displayName === 'Loading user...') {
+  if (loading && displayName === 'Loading user...' && !isDeletedUser) {
     return <Skeleton className="h-4 w-24 inline-block" />;
   }
   
   if (showProfileOnClick) {
-    // Only link to profile if we have a real username (not a fallback with "User" prefix)
+    // Only link to profile if we have a real username and the user is not deleted
     const isRealUsername = !displayName.startsWith('User ') || displayName === 'User';
+    const canLinkToProfile = isRealUsername && !isDeletedUser;
     
     return (
       <Link 
-        href={isRealUsername ? `/profile/${encodeURIComponent(displayName)}` : '#'} 
-        className={`font-medium hover:underline ${className}`}
+        href={canLinkToProfile ? `/profile/${encodeURIComponent(displayName)}` : '#'} 
+        className={`font-medium ${canLinkToProfile ? 'hover:underline' : 'cursor-default'} ${className}`}
         onClick={(e) => {
           e.stopPropagation();
           
-          // If it's not a real username, show a tooltip or message instead of navigating
-          if (!isRealUsername) {
+          // If it's not a real username or deleted user, show a message instead of navigating
+          if (!canLinkToProfile) {
             e.preventDefault();
             alert('This user\'s profile is not available');
           }

@@ -3,6 +3,8 @@ export interface Review {
   orderId: string;
   listingId: string;
   reviewerId: string; // The user who wrote the review (buyer/customer)
+  reviewerUsername?: string; // Stored username for deleted users
+  reviewerAvatarUrl?: string; // Stored avatar URL for deleted users
   sellerId: string;   // The user who owned the listing (seller/merchant)
   rating: number;     // 1-5 star rating
   comment: string;    // Review text

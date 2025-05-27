@@ -73,6 +73,21 @@ export default async function handler(
         status: orderData.status,
         reviewSubmitted: orderData.reviewSubmitted
       });
+
+      // Get the reviewer's profile data to store username and avatar
+      console.log('[create-review] Getting reviewer profile data:', userId);
+      const reviewerDoc = await adminDb.collection('users').doc(userId).get();
+      let reviewerUsername = 'Anonymous User';
+      let reviewerAvatarUrl = null;
+      
+      if (reviewerDoc.exists) {
+        const reviewerData = reviewerDoc.data();
+        reviewerUsername = reviewerData.username || reviewerData.displayName || 'Anonymous User';
+        reviewerAvatarUrl = reviewerData.avatarUrl || reviewerData.photoURL || null;
+        console.log('[create-review] Reviewer data found:', { username: reviewerUsername, hasAvatar: !!reviewerAvatarUrl });
+      } else {
+        console.log('[create-review] Reviewer profile not found, using default values');
+      }
       
       // Verify that the user is the buyer of this order
       if (orderData.buyerId !== userId) {
@@ -110,6 +125,8 @@ export default async function handler(
           orderId,
           listingId: orderData.listingId,
           reviewerId: userId,
+          reviewerUsername,
+          reviewerAvatarUrl,
           sellerId: orderData.sellerId,
           rating,
           comment: comment || '',

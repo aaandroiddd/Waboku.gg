@@ -25,10 +25,10 @@ export function ReviewCard({ review, showSellerResponse = true, allowHelpful = t
   const [isMarkingHelpful, setIsMarkingHelpful] = useState<boolean>(false);
   const [hasMarkedHelpful, setHasMarkedHelpful] = useState<boolean>(false);
   
-  // Use the useUserData hook instead of manual fetching
+  // Use stored username/avatar if available (for deleted users), otherwise fetch from user data
   const { userData, loading: isLoadingUser } = useUserData(review.reviewerId);
-  const reviewerName = userData?.username || 'Anonymous User';
-  const reviewerAvatar = userData?.avatarUrl || null;
+  const reviewerName = review.reviewerUsername || userData?.username || 'Anonymous User';
+  const reviewerAvatar = review.reviewerAvatarUrl || userData?.avatarUrl || null;
   
   // Check if the current user has already marked this review as helpful
   useEffect(() => {
@@ -117,6 +117,7 @@ export function ReviewCard({ review, showSellerResponse = true, allowHelpful = t
                   <UserNameLink 
                     userId={review.reviewerId} 
                     initialUsername={reviewerName}
+                    isDeletedUser={!!review.reviewerUsername && !userData}
                   />
                   {review.isVerifiedPurchase && (
                     <span className="ml-2 text-xs bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 px-2 py-0.5 rounded-full">
