@@ -112,60 +112,63 @@ export default function ImageCarousel({ images }: ImageCarouselProps) {
 
   return (
     <>
-      <div className="relative w-full max-w-md mx-auto">
-        {/* Arrows - hidden on mobile */}
-        {!isMobile && (
-          <>
-            <button
-              className="absolute left-2 top-1/2 -translate-y-1/2 z-10 bg-white/80 hover:bg-white p-2 rounded-full shadow"
-              onClick={() => instanceRef.current?.prev()}
-              aria-label="Previous image"
-            >
-              <ChevronLeft className="h-5 w-5" />
-            </button>
-            <button
-              className="absolute right-2 top-1/2 -translate-y-1/2 z-10 bg-white/80 hover:bg-white p-2 rounded-full shadow"
-              onClick={() => instanceRef.current?.next()}
-              aria-label="Next image"
-            >
-              <ChevronRight className="h-5 w-5" />
-            </button>
-          </>
-        )}
+      {/* Wrapper with space for external arrows on desktop */}
+      <div className={`relative w-full ${isMobile ? 'max-w-md' : 'max-w-lg'} mx-auto ${!isMobile ? 'px-12' : ''}`}>
+        <div className="relative w-full max-w-md mx-auto">
+          {/* Arrows - positioned outside the carousel container on desktop */}
+          {!isMobile && (
+            <>
+              <button
+                className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-12 z-10 bg-white/90 hover:bg-white p-2 rounded-full shadow-lg transition-all duration-200 hover:scale-110 border border-gray-200"
+                onClick={() => instanceRef.current?.prev()}
+                aria-label="Previous image"
+              >
+                <ChevronLeft className="h-5 w-5" />
+              </button>
+              <button
+                className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-12 z-10 bg-white/90 hover:bg-white p-2 rounded-full shadow-lg transition-all duration-200 hover:scale-110 border border-gray-200"
+                onClick={() => instanceRef.current?.next()}
+                aria-label="Next image"
+              >
+                <ChevronRight className="h-5 w-5" />
+              </button>
+            </>
+          )}
 
-        {/* Carousel */}
-        <div 
-          ref={sliderRef} 
-          className="keen-slider rounded-2xl overflow-hidden touch-manipulation"
-        >
-          {images.map((src, idx) => (
-            <motion.div
-              key={idx}
-              className="keen-slider__slide flex items-center justify-center bg-gray-100 dark:bg-gray-800"
-              onClick={() => openModal(idx)}
-            >
-              <img
-                src={src}
-                alt={`Image ${idx + 1}`}
-                className="object-contain w-full h-64 md:h-80 cursor-pointer"
-                loading="lazy"
+          {/* Carousel */}
+          <div 
+            ref={sliderRef} 
+            className="keen-slider rounded-2xl overflow-hidden touch-manipulation"
+          >
+            {images.map((src, idx) => (
+              <motion.div
+                key={idx}
+                className="keen-slider__slide flex items-center justify-center bg-gray-100 dark:bg-gray-800"
+                onClick={() => openModal(idx)}
+              >
+                <img
+                  src={src}
+                  alt={`Image ${idx + 1}`}
+                  className="object-contain w-full h-64 md:h-80 cursor-pointer"
+                  loading="lazy"
+                />
+              </motion.div>
+            ))}
+          </div>
+
+          {/* Dots - larger on mobile for better touch targets */}
+          <div className="flex justify-center mt-4 gap-2">
+            {images.map((_, idx) => (
+              <button
+                key={idx}
+                onClick={() => instanceRef.current?.moveToSlide(idx)}
+                className={`${isMobile ? 'h-3 w-3' : 'h-2 w-2'} rounded-full ${
+                  currentSlide === idx ? "bg-black dark:bg-white" : "bg-gray-300 dark:bg-gray-700"
+                }`}
+                aria-label={`Go to image ${idx + 1}`}
               />
-            </motion.div>
-          ))}
-        </div>
-
-        {/* Dots - larger on mobile for better touch targets */}
-        <div className="flex justify-center mt-4 gap-2">
-          {images.map((_, idx) => (
-            <button
-              key={idx}
-              onClick={() => instanceRef.current?.moveToSlide(idx)}
-              className={`${isMobile ? 'h-3 w-3' : 'h-2 w-2'} rounded-full ${
-                currentSlide === idx ? "bg-black dark:bg-white" : "bg-gray-300 dark:bg-gray-700"
-              }`}
-              aria-label={`Go to image ${idx + 1}`}
-            />
-          ))}
+            ))}
+          </div>
         </div>
       </div>
 
