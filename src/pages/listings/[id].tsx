@@ -1555,7 +1555,7 @@ export default function ListingPage() {
                         </CarouselItem>
                       ))}
                     </CarouselContent>
-                    <CarouselPrevious className="hidden md:flex -left-4" />
+                    <CarouselPrevious className="hidden md:flex -left-4 mx-[40px]" />
                     <CarouselNext className="hidden md:flex -right-4 mx-[40px]" />
                   </Carousel>
                 </div>
