@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { Button } from "./ui/button";
 import { useAuth } from "@/contexts/AuthContext";
-import { ClearBrowserCacheButton } from "./ClearBrowserCacheButton";
 
 export function Footer() {
   const { user } = useAuth();
@@ -57,11 +56,6 @@ export function Footer() {
             <div className="text-sm text-muted-foreground">
               © {new Date().getFullYear()} Waboku.gg. All rights reserved.
             </div>
-            <ClearBrowserCacheButton 
-              variant="outline" 
-              size="sm" 
-              className="text-xs"
-            />
           </div>
         </div>
       </div>
