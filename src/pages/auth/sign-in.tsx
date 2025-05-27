@@ -362,7 +362,19 @@ function SignInComponent() {
                       window.location.href = '/auth/complete-profile';
                       return;
                     } else {
-                      console.log('No profile completion needed, continuing to dashboard');
+                      console.log('No profile completion needed, checking for redirect state');
+                      
+                      // Check if there's a redirect state to handle
+                      const redirectState = getRedirectState();
+                      if (redirectState) {
+                        console.log('Found redirect state after Google sign-in:', redirectState);
+                        // The useEffect will handle the redirect, but we can also trigger it manually
+                        setTimeout(() => {
+                          handlePostLoginRedirect();
+                        }, 100);
+                      } else {
+                        console.log('No redirect state found, will go to dashboard');
+                      }
                     }
                   } catch (err: any) {
                     // Check if this is a multi-factor auth error

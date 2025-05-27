@@ -129,6 +129,27 @@ export function AuthRedirectProvider({ children }: { children: React.ReactNode }
     }
   }, [user]);
 
+  // Additional effect to handle Google sign-in redirects specifically
+  useEffect(() => {
+    if (user && !isSignOutInProgress()) {
+      // Check if this is a Google sign-in that just completed
+      const checkGoogleSignInRedirect = () => {
+        const state = getRedirectState();
+        if (state) {
+          console.log('Google sign-in detected with redirect state:', state);
+          // Trigger the redirect handling immediately for Google users
+          handlePostLoginRedirect();
+        }
+      };
+
+      // Check immediately and also after a short delay
+      checkGoogleSignInRedirect();
+      const timer = setTimeout(checkGoogleSignInRedirect, 200);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [user, handlePostLoginRedirect, getRedirectState]);
+
   return (
     <AuthRedirectContext.Provider value={{ 
       saveRedirectState, 
