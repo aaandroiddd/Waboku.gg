@@ -99,7 +99,8 @@ export function AuthRedirectProvider({ children }: { children: React.ReactNode }
         const actionHandled = await handlePostLoginAction(
           state.action, 
           state.params, 
-          user
+          user,
+          router // Pass the router instance for better navigation
         );
         
         // If the action was handled successfully, clear the redirect state
@@ -120,12 +121,21 @@ export function AuthRedirectProvider({ children }: { children: React.ReactNode }
   // Auto-trigger redirect when user logs in
   useEffect(() => {
     if (user && !isSignOutInProgress()) {
-      // Small delay to ensure the user state is fully settled
-      const timer = setTimeout(() => {
-        handlePostLoginRedirect();
-      }, 100);
-      
-      return () => clearTimeout(timer);
+      // Check if there's a redirect state that needs handling
+      const state = getRedirectState();
+      if (state) {
+        console.log('User logged in with redirect state:', state);
+        
+        // For Google authentication, we need a longer delay to ensure
+        // the authentication state is fully settled
+        const delay = state.action === 'make_offer' || state.action === 'send_message' ? 300 : 100;
+        
+        const timer = setTimeout(() => {
+          handlePostLoginRedirect();
+        }, delay);
+        
+        return () => clearTimeout(timer);
+      }
     }
   }, [user]);
 
@@ -137,14 +147,16 @@ export function AuthRedirectProvider({ children }: { children: React.ReactNode }
         const state = getRedirectState();
         if (state) {
           console.log('Google sign-in detected with redirect state:', state);
-          // Trigger the redirect handling immediately for Google users
-          handlePostLoginRedirect();
+          // Trigger the redirect handling with a longer delay for Google users
+          // to ensure the authentication state is fully settled
+          setTimeout(() => {
+            handlePostLoginRedirect();
+          }, 500);
         }
       };
 
-      // Check immediately and also after a short delay
-      checkGoogleSignInRedirect();
-      const timer = setTimeout(checkGoogleSignInRedirect, 200);
+      // Check after a delay to allow Google auth to fully complete
+      const timer = setTimeout(checkGoogleSignInRedirect, 400);
       
       return () => clearTimeout(timer);
     }

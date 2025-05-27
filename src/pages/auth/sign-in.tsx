@@ -368,10 +368,12 @@ function SignInComponent() {
                       const redirectState = getRedirectState();
                       if (redirectState) {
                         console.log('Found redirect state after Google sign-in:', redirectState);
-                        // The useEffect will handle the redirect, but we can also trigger it manually
+                        // For Google sign-in, we need to wait a bit longer for the auth state to settle
+                        // The AuthRedirectContext will also handle this, but we trigger it manually as well
                         setTimeout(() => {
+                          console.log('Manually triggering post-login redirect after Google sign-in');
                           handlePostLoginRedirect();
-                        }, 100);
+                        }, 600);
                       } else {
                         console.log('No redirect state found, will go to dashboard');
                       }
