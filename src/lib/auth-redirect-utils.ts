@@ -59,17 +59,34 @@ export async function handlePostLoginAction(
         }
         return false;
         
-      case 'route_guard_redirect':
-        // This is handled by the AuthRedirectContext
-        return true;
+      case 'make_offer':
+        if (params.listingId) {
+          // Redirect to the listing page and trigger the make offer dialog
+          const url = new URL(`/listings/${params.listingId}`, window.location.origin);
+          url.searchParams.set('action', 'make_offer');
+          window.location.href = url.toString();
+          return true;
+        }
+        return false;
         
       case 'send_message':
-        if (params.recipientId && params.returnPath) {
-          // Redirect back to the original page
+        if (params.recipientId && params.listingId) {
+          // Redirect to the listing page and trigger the message dialog
+          const url = new URL(`/listings/${params.listingId}`, window.location.origin);
+          url.searchParams.set('action', 'send_message');
+          url.searchParams.set('recipientId', params.recipientId);
+          window.location.href = url.toString();
+          return true;
+        } else if (params.recipientId && params.returnPath) {
+          // Fallback: redirect back to the original page
           window.location.href = params.returnPath;
           return true;
         }
         return false;
+        
+      case 'route_guard_redirect':
+        // This is handled by the AuthRedirectContext
+        return true;
         
       default:
         return false;

@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { formatPrice } from '@/lib/price';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
+import { useAuthRedirect } from '@/contexts/AuthRedirectContext';
 import { useRouter } from 'next/router';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle, InfoIcon, CreditCard } from 'lucide-react';
@@ -41,6 +42,7 @@ export function MakeOfferDialog({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { user } = useAuth();
+  const { saveRedirectState } = useAuthRedirect();
   const router = useRouter();
   const [deliveryMethod, setDeliveryMethod] = useState<'shipping' | 'pickup'>('shipping');
   const { hasStripeAccount, isLoading: isLoadingStripeStatus } = useStripeSellerStatus(sellerId);
@@ -68,6 +70,14 @@ export function MakeOfferDialog({
     setError(null);
     
     if (!user) {
+      // Save the redirect state before redirecting to sign-in
+      saveRedirectState('make_offer', {
+        listingId,
+        sellerId,
+        listingTitle,
+        listingPrice,
+        listingImageUrl
+      });
       toast.error('Please sign in to make an offer');
       router.push('/auth/sign-in');
       return;

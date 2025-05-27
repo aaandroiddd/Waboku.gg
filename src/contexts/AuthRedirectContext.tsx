@@ -92,6 +92,8 @@ export function AuthRedirectProvider({ children }: { children: React.ReactNode }
     
     const state = getRedirectState();
     if (state && user) {
+      console.log('Handling post-login redirect:', state);
+      
       // First try to handle any specific actions
       if (state.action && state.params) {
         const actionHandled = await handlePostLoginAction(
@@ -114,6 +116,18 @@ export function AuthRedirectProvider({ children }: { children: React.ReactNode }
       }
     }
   };
+
+  // Auto-trigger redirect when user logs in
+  useEffect(() => {
+    if (user && !isSignOutInProgress()) {
+      // Small delay to ensure the user state is fully settled
+      const timer = setTimeout(() => {
+        handlePostLoginRedirect();
+      }, 100);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [user]);
 
   return (
     <AuthRedirectContext.Provider value={{ 

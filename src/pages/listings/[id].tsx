@@ -39,6 +39,7 @@ import { ReportListingDialog } from '@/components/ReportListingDialog';
 import Image from 'next/image';
 import { ArrowLeft, Calendar, Heart, MapPin, MessageCircle, User, ZoomIn, Minus, Plus, RotateCw, X, Flag } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useAuthRedirect } from '@/contexts/AuthRedirectContext';
 import { useFavorites } from '@/hooks/useFavorites';
 import { useFavoriteGroups } from '@/hooks/useFavoriteGroups';
 import { AddToGroupDialog } from '@/components/AddToGroupDialog';
@@ -199,6 +200,7 @@ export default function ListingPage() {
   const [isOfferDialogOpen, setIsOfferDialogOpen] = useState(false);
   const [isReportDialogOpen, setIsReportDialogOpen] = useState(false);
   const { user } = useAuth();
+  const { saveRedirectState } = useAuthRedirect();
 
   // Get favorites functionality from the hook
   const { toggleFavorite, isFavorite, initialized } = useFavorites();
@@ -736,6 +738,31 @@ export default function ListingPage() {
     }
   }, [listing, isFavorite, initialized, user]);
 
+  // Effect to handle URL parameters for post-login actions
+  useEffect(() => {
+    if (!router.isReady || !listing || !user) return;
+
+    const { action, recipientId } = router.query;
+
+    if (action === 'make_offer') {
+      // Trigger make offer dialog
+      setIsOfferDialogOpen(true);
+      // Clean up URL parameters
+      router.replace(`/listings/${listing.id}`, undefined, { shallow: true });
+    } else if (action === 'send_message' && recipientId === listing.userId) {
+      // Trigger message dialog/action
+      if (isMobile) {
+        // For mobile, redirect to message page
+        router.push(`/messages/send?recipientId=${listing.userId}&listingId=${listing.id}&listingTitle=${encodeURIComponent(listing.title || '')}&returnTo=${encodeURIComponent(`/listings/${listing.id}`)}`);
+      } else {
+        // For desktop, open chat dialog
+        setIsChatOpen(true);
+      }
+      // Clean up URL parameters
+      router.replace(`/listings/${listing.id}`, undefined, { shallow: true });
+    }
+  }, [router.isReady, router.query, listing, user, isMobile]);
+
   // Import the useMediaQuery hook
   const isMobile = useMediaQuery('(max-width: 768px)');
   
@@ -912,6 +939,13 @@ export default function ListingPage() {
 
   const handleMessage = () => {
     if (!user) {
+      // Save the redirect state before redirecting to sign-in
+      saveRedirectState('send_message', {
+        recipientId: listing?.userId,
+        listingId: listing?.id,
+        listingTitle: listing?.title,
+        returnPath: `/listings/${listing?.id}`
+      });
       toast.error('Please sign up to send messages');
       router.push('/auth/sign-up');
       return;
