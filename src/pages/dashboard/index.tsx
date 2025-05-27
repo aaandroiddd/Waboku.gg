@@ -65,6 +65,39 @@ const DashboardComponent = () => {
     userId: user?.uid 
   });
 
+  const { toast } = useToast();
+  const router = useRouter();
+  const { tab = 'active', new: newListingId } = router.query;
+  const [error, setError] = useState<string | null>(null);
+  
+  // Always fetch fresh data, but use cache for immediate display
+  const { listings: fetchedListings, setListings, loading: listingsLoading, error: listingsError, refreshListings, updateListingStatus, permanentlyDeleteListing } = useOptimizedListings({ 
+    userId: user?.uid,
+    showOnlyActive: false,
+    skipInitialFetch: false // Always fetch fresh data
+  });
+  
+  // Use fetched listings as the primary source, with cached listings as fallback only during loading
+  const allListings = fetchedListings.length > 0 ? fetchedListings : (listingsLoading && cachedListings ? cachedListings : fetchedListings);
+  
+  // Update cache when new listings are fetched
+  useEffect(() => {
+    if (fetchedListings && fetchedListings.length >= 0 && user) { // Changed to >= 0 to cache even empty arrays
+      saveListingsToCache(fetchedListings);
+    }
+  }, [fetchedListings, user, saveListingsToCache]);
+  
+  const { profile, loading: profileLoading } = useProfile(user?.uid || null);
+  
+  // Use the listing visibility hook to properly filter active listings
+  const { visibleListings: properlyFilteredActiveListings } = useListingVisibility(
+    allListings.filter(listing => listing.status === 'active')
+  );
+  
+  const { isLoading: loadingState } = useLoading();
+  // Ensure loading state is true until all data is properly loaded
+  const loading = authLoading || listingsLoading || profileLoading || loadingState;
+
   const handleRestoreListing = async (listingId: string) => {
     try {
       await updateListingStatus(listingId, 'active');
@@ -131,39 +164,6 @@ const DashboardComponent = () => {
       });
     }
   };
-  const { toast } = useToast();
-  const router = useRouter();
-  const { tab = 'active', new: newListingId } = router.query;
-  const [error, setError] = useState<string | null>(null);
-  
-  // Always fetch fresh data, but use cache for immediate display
-  const { listings: fetchedListings, setListings, loading: listingsLoading, error: listingsError, refreshListings, updateListingStatus, permanentlyDeleteListing } = useOptimizedListings({ 
-    userId: user?.uid,
-    showOnlyActive: false,
-    skipInitialFetch: false // Always fetch fresh data
-  });
-  
-  // Use fetched listings as the primary source, with cached listings as fallback only during loading
-  const allListings = fetchedListings.length > 0 ? fetchedListings : (listingsLoading && cachedListings ? cachedListings : fetchedListings);
-  
-  // Update cache when new listings are fetched
-  useEffect(() => {
-    if (fetchedListings && fetchedListings.length >= 0 && user) { // Changed to >= 0 to cache even empty arrays
-      saveListingsToCache(fetchedListings);
-    }
-  }, [fetchedListings, user, saveListingsToCache]);
-=======
-  
-  const { profile, loading: profileLoading } = useProfile(user?.uid || null);
-  
-  // Use the listing visibility hook to properly filter active listings
-  const { visibleListings: properlyFilteredActiveListings } = useListingVisibility(
-    allListings.filter(listing => listing.status === 'active')
-  );
-  
-  const { isLoading: loadingState } = useLoading();
-  // Ensure loading state is true until all data is properly loaded
-  const loading = authLoading || listingsLoading || profileLoading || loadingState;
 
   const handleShare = (listingId: string) => {
     const url = `${window.location.origin}/listings/${listingId}`;
