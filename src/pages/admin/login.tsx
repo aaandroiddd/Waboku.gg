@@ -112,12 +112,27 @@ export default function AdminLogin() {
     setIsGoogleLoading(true);
     
     try {
-      // Sign in with Google
-      const result = await signInWithGoogle();
+      // Import Firebase auth directly to get the user immediately after sign-in
+      const { getFirebaseServices } = await import('@/lib/firebase');
+      const { auth } = getFirebaseServices();
       
-      if (result && result.user) {
+      // Sign in with Google
+      await signInWithGoogle();
+      
+      // Wait for auth state to settle and get the current user directly from Firebase
+      let attempts = 0;
+      const maxAttempts = 10;
+      let currentUser = null;
+      
+      while (attempts < maxAttempts && !currentUser) {
+        await new Promise(resolve => setTimeout(resolve, 500));
+        currentUser = auth.currentUser;
+        attempts++;
+      }
+      
+      if (currentUser) {
         // Check if user has moderator role by trying to access the moderation API
-        const token = await result.user.getIdToken(true);
+        const token = await currentUser.getIdToken(true);
         const response = await fetch('/api/admin/moderation/get-listings?filter=pending', {
           method: 'GET',
           headers: {
@@ -136,8 +151,12 @@ export default function AdminLogin() {
           return;
         } else {
           // User is not a moderator
+          const responseText = await response.text();
+          console.error('Moderation API response:', response.status, responseText);
           setError('You do not have moderator permissions.');
         }
+      } else {
+        setError('Authentication failed. Please try again.');
       }
     } catch (err: any) {
       console.error('Google login error:', err);
