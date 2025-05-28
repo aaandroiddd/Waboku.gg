@@ -106,7 +106,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     console.log('Listing updated with report information');
 
-    return res.status(200).json({ success: true, message: 'Report submitted successfully' });
+    // Generate a user-friendly report number (first 8 characters of the report ID)
+    const reportNumber = reportId.substring(0, 8).toUpperCase();
+
+    return res.status(200).json({ 
+      success: true, 
+      message: 'Report submitted successfully',
+      reportId: reportNumber,
+      reportNumber: reportNumber
+    });
   } catch (error: any) {
     console.error('Error submitting report:', error);
     return res.status(500).json({ error: 'Failed to submit report', details: error.message });
