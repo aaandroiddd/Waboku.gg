@@ -66,6 +66,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const listingData = listingDoc.data();
     console.log('Listing found:', { title: listingData?.title, id: listingId });
 
+    // Check if the user is trying to report their own listing
+    if (listingData?.userId === reportedBy) {
+      console.log('User attempting to report their own listing:', { userId: reportedBy, listingId });
+      return res.status(403).json({ error: 'You cannot report your own listing' });
+    }
+
     // Create a unique ID for the report
     const reportId = `${listingId}_${reportedBy}_${Date.now()}`;
     

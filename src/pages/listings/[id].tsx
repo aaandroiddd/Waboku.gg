@@ -1748,7 +1748,7 @@ export default function ListingPage() {
                     <Calendar className="h-4 w-4 mr-2" />
                     Listed on {listing.createdAt.toLocaleDateString()}
                   </div>
-                  {user && (
+                  {user && user.uid !== listing?.userId && (
                     <Button
                       variant="outline"
                       size="sm"
@@ -1922,6 +1922,7 @@ export default function ListingPage() {
           onOpenChange={setIsReportDialogOpen}
           listingId={listing.id}
           listingTitle={listing.title}
+          listingOwnerId={listing.userId}
         />
       )}
     </div>

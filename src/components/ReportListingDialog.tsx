@@ -15,6 +15,7 @@ interface ReportListingDialogProps {
   onOpenChange: (open: boolean) => void;
   listingId: string;
   listingTitle: string;
+  listingOwnerId?: string;
 }
 
 const reportReasons = [
@@ -26,7 +27,7 @@ const reportReasons = [
   { value: 'other', label: 'Other issue' },
 ];
 
-export function ReportListingDialog({ open, onOpenChange, listingId, listingTitle }: ReportListingDialogProps) {
+export function ReportListingDialog({ open, onOpenChange, listingId, listingTitle, listingOwnerId }: ReportListingDialogProps) {
   const [reason, setReason] = useState<string>('');
   const [description, setDescription] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
@@ -46,6 +47,13 @@ export function ReportListingDialog({ open, onOpenChange, listingId, listingTitl
         }
       });
     }
+
+    // Check if user is trying to report their own listing
+    if (open && user && listingOwnerId && user.uid === listingOwnerId) {
+      onOpenChange(false);
+      toast.error('You cannot report your own listing');
+      return;
+    }
     
     // Reset form when dialog opens
     if (open) {
@@ -54,10 +62,15 @@ export function ReportListingDialog({ open, onOpenChange, listingId, listingTitl
       setReportSubmitted(false);
       setReportNumber('');
     }
-  }, [open, user, onOpenChange, router]);
+  }, [open, user, onOpenChange, router, listingOwnerId]);
 
   // If no user, don't render the dialog content
   if (!user) {
+    return null;
+  }
+
+  // If user is the listing owner, don't render the dialog content
+  if (listingOwnerId && user.uid === listingOwnerId) {
     return null;
   }
 
