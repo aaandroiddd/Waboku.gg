@@ -1,19 +1,18 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { getFirebaseServices } from '@/lib/firebase';
-import { doc, getDoc, updateDoc, serverTimestamp, setDoc, collection, query, where, limit, getDocs } from 'firebase/firestore';
+import { getFirebaseAdmin } from '@/lib/firebase-admin';
 import { getAuth } from 'firebase-admin/auth';
-import { initAdmin } from '@/lib/firebase-admin';
 
 // Helper function to handle report processing
 async function processReport(
   reportDoc: any, 
-  reportRef: any, 
+  reportId: string,
   listingId: string, 
   action: 'dismiss' | 'remove', 
   notes: string | null, 
   rejectionReason: string | null, 
   moderatorId: string,
   db: any,
+  admin: any,
   res: NextApiResponse
 ) {
   const reportData = reportDoc.data();
@@ -21,19 +20,18 @@ async function processReport(
   console.log('Processing report for listing:', listingId);
   
   // Get the listing document
-  const listingRef = doc(db, 'listings', listingId);
-  const listingDoc = await getDoc(listingRef);
+  const listingDoc = await db.collection('listings').doc(listingId).get();
   
-  if (!listingDoc.exists()) {
+  if (!listingDoc.exists) {
     console.log('Listing not found:', listingId);
     return res.status(404).json({ error: 'Listing not found' });
   }
   
   // Update the report status
-  await updateDoc(reportRef, {
+  await db.collection('reports').doc(reportId).update({
     status: action === 'dismiss' ? 'dismissed' : 'actioned',
     moderatedBy: moderatorId,
-    moderatedAt: serverTimestamp(),
+    moderatedAt: admin.firestore.FieldValue.serverTimestamp(),
     moderatorNotes: notes || null,
     actionTaken: action
   });
@@ -42,15 +40,15 @@ async function processReport(
   
   // If the action is to remove the listing, update the listing status
   if (action === 'remove') {
-    await updateDoc(listingRef, {
+    await db.collection('listings').doc(listingId).update({
       status: 'archived',
-      archivedAt: serverTimestamp(),
+      archivedAt: admin.firestore.FieldValue.serverTimestamp(),
       archivedReason: 'reported',
       archivedBy: moderatorId,
       moderationDetails: {
         moderatorId,
         actionTaken: 'reject',
-        timestamp: serverTimestamp(),
+        timestamp: admin.firestore.FieldValue.serverTimestamp(),
         notes: notes || null,
         rejectionReason: rejectionReason || 'reported_by_user'
       }
@@ -60,18 +58,17 @@ async function processReport(
     
     // Send a notification to the listing owner
     const listingData = listingDoc.data();
-    const ownerId = listingData.userId;
+    const ownerId = listingData?.userId;
     
     if (ownerId) {
       try {
-        const notificationRef = doc(db, 'users', ownerId, 'notifications', `report_${reportDoc.id}`);
-        await setDoc(notificationRef, {
+        await db.collection('users').doc(ownerId).collection('notifications').doc(`report_${reportId}`).set({
           type: 'listing_removed',
           listingId,
           listingTitle: listingData.title,
           reason: rejectionReason || 'reported_by_user',
           message: 'Your listing has been removed due to a user report.',
-          createdAt: serverTimestamp(),
+          createdAt: admin.firestore.FieldValue.serverTimestamp(),
           read: false
         });
         console.log('Notification sent to listing owner:', ownerId);
@@ -97,15 +94,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     console.log('Handle report API called');
     
-    // Initialize Firebase Admin if needed
-    initAdmin();
-    
-    const { reportId, action, notes, rejectionReason } = req.body;
+    const { reportId, action, notes, rejectionReason, listingId } = req.body;
 
     // Validate required fields
     if (!reportId || !action) {
       console.log('Missing required fields:', { reportId, action });
       return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    // Initialize Firebase Admin
+    const { admin, db } = getFirebaseAdmin();
+    if (!admin || !db) {
+      throw new Error('Firebase Admin not initialized');
     }
 
     // Authenticate the request
@@ -125,27 +125,49 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const decodedToken = await getAuth().verifyIdToken(token);
         console.log('Token verified for user:', decodedToken.uid);
         
-        // Check if user is a moderator
-        const { db } = getFirebaseServices();
-        if (!db) {
-          throw new Error('Firebase services not initialized');
-        }
-        
         // Get user document to check if they're a moderator
-        const userDoc = await getDoc(doc(db, 'users', decodedToken.uid));
+        const userDoc = await db.collection('users').doc(decodedToken.uid).get();
         
-        if (userDoc.exists()) {
+        if (userDoc.exists) {
           const userData = userDoc.data();
-          // Check for moderator role in different possible formats
-          if (userData.isModerator || 
-              userData.isAdmin || 
-              userData.roles === 'moderator' || 
-              userData.roles === 'admin' || 
-              (userData.roles && userData.roles[0] === 'moderator') ||
-              (userData.roles && userData.roles.includes && userData.roles.includes('moderator'))) {
+          console.log('User roles check in handle-report:', {
+            uid: decodedToken.uid,
+            roles: userData?.roles,
+            rolesType: typeof userData?.roles,
+            isArray: Array.isArray(userData?.roles),
+            hasRoles: !!userData?.roles
+          });
+          
+          // Handle different role formats
+          let isAdmin = false;
+          let isModerator = false;
+          
+          // Direct boolean flags
+          if (userData?.isAdmin === true) {
+            isAdmin = true;
+          }
+          if (userData?.isModerator === true) {
+            isModerator = true;
+          }
+          
+          // String role
+          if (typeof userData?.roles === 'string') {
+            if (userData.roles === 'admin') isAdmin = true;
+            if (userData.roles === 'moderator') isModerator = true;
+          }
+          
+          // Array of roles
+          if (Array.isArray(userData?.roles)) {
+            for (const role of userData.roles) {
+              if (role === 'admin') isAdmin = true;
+              if (role === 'moderator') isModerator = true;
+            }
+          }
+          
+          if (isAdmin || isModerator) {
             isAuthorized = true;
             moderatorId = decodedToken.uid;
-            console.log('User authorized as moderator/admin:', moderatorId, 'Role format:', userData.roles);
+            console.log('User authorized as moderator/admin:', moderatorId);
           } else {
             console.log('User not authorized as moderator. User data:', JSON.stringify(userData));
           }
@@ -161,53 +183,41 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(401).json({ error: 'Unauthorized' });
     }
     
-    // Get Firebase services
-    const { db } = getFirebaseServices();
-    if (!db) {
-      console.error('Firebase services not initialized');
-      throw new Error('Firebase services not initialized');
-    }
-    
     // Get the report document
-    const reportRef = doc(db, 'reports', reportId);
-    const reportDoc = await getDoc(reportRef);
+    const reportDoc = await db.collection('reports').doc(reportId).get();
     
-    if (!reportDoc.exists()) {
+    if (!reportDoc.exists) {
       console.log('Report not found with ID:', reportId);
       
       // Check if we have a listing ID in the request body
-      const { listingId } = req.body;
       if (listingId) {
         console.log('Trying to find report using listing ID:', listingId);
         
         // Try to find a pending report for this listing
-        const reportsCollection = collection(db, 'reports');
-        const q = query(
-          reportsCollection,
-          where('listingId', '==', listingId),
-          where('status', '==', 'pending'),
-          limit(1)
-        );
-        
-        const querySnapshot = await getDocs(q);
+        const querySnapshot = await db.collection('reports')
+          .where('listingId', '==', listingId)
+          .where('status', '==', 'pending')
+          .limit(1)
+          .get();
         
         if (!querySnapshot.empty) {
           // Found a report for this listing
           const foundReportDoc = querySnapshot.docs[0];
-          const foundReportRef = doc(db, 'reports', foundReportDoc.id);
+          const foundReportId = foundReportDoc.id;
           
-          console.log('Found report with ID:', foundReportDoc.id, 'for listing:', listingId);
+          console.log('Found report with ID:', foundReportId, 'for listing:', listingId);
           
           // Process the report using our helper function
           return processReport(
             foundReportDoc,
-            foundReportRef,
+            foundReportId,
             listingId,
             action,
             notes,
             rejectionReason,
             moderatorId,
             db,
+            admin,
             res
           );
         } else {
@@ -221,17 +231,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // If we found the report directly, process it
     return processReport(
       reportDoc,
-      reportRef,
-      reportDoc.data().listingId,
+      reportId,
+      reportDoc.data()?.listingId,
       action,
       notes,
       rejectionReason,
       moderatorId,
       db,
+      admin,
       res
     );
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error handling report:', error);
-    return res.status(500).json({ error: 'Failed to handle report' });
+    return res.status(500).json({ 
+      error: 'Failed to handle report',
+      details: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
 }
