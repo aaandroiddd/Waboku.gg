@@ -314,7 +314,14 @@ export default function Header({ animate = true }: HeaderProps) {
         </nav>
 
         {/* Mobile Navigation */}
-        <div className="md:hidden flex items-center">
+        <div className="md:hidden flex items-center space-x-2"> {/* Added space-x-2 for spacing */}
+          {user && (
+            <span 
+              className="h-2.5 w-2.5 rounded-full bg-green-500" 
+              title="Logged In"
+              aria-label="Logged In Status: Active"
+            ></span>
+          )}
           <Sheet open={isMobileMenuOpen} onOpenChange={handleMenuToggle}>
             <SheetTrigger asChild>
               <Button 
