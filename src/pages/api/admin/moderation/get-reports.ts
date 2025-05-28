@@ -1,8 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { getFirebaseServices } from '@/lib/firebase';
-import { collection, getDocs, query, where, orderBy, limit, getDoc, doc } from 'firebase/firestore';
+import { getFirebaseAdmin } from '@/lib/firebase-admin';
 import { getAuth } from 'firebase-admin/auth';
-import { initAdmin } from '@/lib/firebase-admin';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   // Only allow GET requests
@@ -13,14 +11,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     console.log('Get reports API called');
     
-    // Initialize Firebase Admin if needed
-    initAdmin();
-    
     // Get filter parameter (pending, resolved, all)
     const { filter = 'pending', limit: limitParam = '20' } = req.query;
     const limitNumber = parseInt(limitParam as string) || 20;
     
     console.log('Fetching reports with filter:', filter, 'limit:', limitNumber);
+    
+    // Initialize Firebase Admin
+    const { admin, db } = getFirebaseAdmin();
+    if (!admin || !db) {
+      throw new Error('Firebase Admin not initialized');
+    }
     
     // Authenticate the request
     let isAuthorized = false;
@@ -39,25 +40,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const decodedToken = await getAuth().verifyIdToken(token);
         console.log('Token verified for user:', decodedToken.uid);
         
-        // Check if user is a moderator
-        const { db } = getFirebaseServices();
-        if (!db) {
-          throw new Error('Firebase services not initialized');
-        }
-        
         // Get user document to check if they're a moderator
-        const userDoc = await getDoc(doc(db, 'users', decodedToken.uid));
+        const userDoc = await db.collection('users').doc(decodedToken.uid).get();
         
-        if (userDoc.exists()) {
+        if (userDoc.exists) {
           const userData = userDoc.data();
-          // Check for moderator role in different possible formats
-          // Log the raw roles data to help with debugging
-          console.log('Raw user roles data:', {
+          console.log('User roles check in get-reports:', {
             uid: decodedToken.uid,
-            roles: userData.roles,
-            rolesType: typeof userData.roles,
-            isArray: Array.isArray(userData.roles),
-            hasRoles: !!userData.roles
+            roles: userData?.roles,
+            rolesType: typeof userData?.roles,
+            isArray: Array.isArray(userData?.roles),
+            hasRoles: !!userData?.roles
           });
           
           // Handle different role formats
@@ -65,40 +58,31 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           let isModerator = false;
           
           // Direct boolean flags
-          if (userData.isAdmin === true) {
+          if (userData?.isAdmin === true) {
             isAdmin = true;
           }
-          if (userData.isModerator === true) {
+          if (userData?.isModerator === true) {
             isModerator = true;
           }
           
           // String role
-          if (typeof userData.roles === 'string') {
+          if (typeof userData?.roles === 'string') {
             if (userData.roles === 'admin') isAdmin = true;
             if (userData.roles === 'moderator') isModerator = true;
           }
           
           // Array of roles
-          if (Array.isArray(userData.roles)) {
-            // Check each item in the array
+          if (Array.isArray(userData?.roles)) {
             for (const role of userData.roles) {
               if (role === 'admin') isAdmin = true;
               if (role === 'moderator') isModerator = true;
             }
           }
           
-          console.log('User roles check in get-reports:', {
-            uid: decodedToken.uid,
-            roles: userData.roles,
-            isArray: Array.isArray(userData.roles),
-            isAdmin,
-            isModerator
-          });
-          
           if (isAdmin || isModerator) {
             isAuthorized = true;
             moderatorId = decodedToken.uid;
-            console.log('User authorized as moderator/admin:', moderatorId, 'Role format:', userData.roles);
+            console.log('User authorized as moderator/admin:', moderatorId);
           } else {
             console.log('User not authorized as moderator. User data:', JSON.stringify(userData));
           }
@@ -114,91 +98,42 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(401).json({ error: 'Unauthorized' });
     }
     
-    // Fetch reports from Firestore
-    const { db } = getFirebaseServices();
-    if (!db) {
-      console.error('Firebase services not initialized');
-      throw new Error('Firebase services not initialized');
-    }
+    // Fetch reports from Firestore using Firebase Admin
+    console.log('Fetching reports from Firestore...');
     
-    // Build query based on filter
-    let reportsQuery;
     let reportsSnapshot;
     
-    console.log('Building reports query');
-    
-    // First try with the most specific query
+    // Build query based on filter - use simple approach first
     if (filter === 'all') {
-      reportsQuery = query(
-        collection(db, 'reports'),
-        orderBy('reportedAt', 'desc'),
-        limit(limitNumber)
-      );
+      reportsSnapshot = await db.collection('reports')
+        .orderBy('reportedAt', 'desc')
+        .limit(limitNumber)
+        .get();
     } else {
-      // Check if we need to use 'pending' as the status filter
+      // For specific status, try with where clause
       const statusFilter = filter === 'pending' ? 'pending' : filter;
       console.log(`Using status filter: ${statusFilter}`);
       
-      // Try different query approaches in order of preference
       try {
-        console.log('Trying query with where and orderBy');
-        // First try with both where and orderBy (requires composite index)
-        reportsQuery = query(
-          collection(db, 'reports'),
-          where('status', '==', statusFilter),
-          orderBy('reportedAt', 'desc'),
-          limit(limitNumber)
-        );
-        
-        // Execute the query to see if it works
-        reportsSnapshot = await getDocs(reportsQuery);
-        console.log(`Query with where and orderBy succeeded, found ${reportsSnapshot.size} reports`);
-      } catch (indexError) {
-        console.warn('Composite index error, falling back to simple query:', indexError);
-        
-        // Fall back to just using where without orderBy if index doesn't exist
-        try {
-          console.log('Trying query with where only');
-          reportsQuery = query(
-            collection(db, 'reports'),
-            where('status', '==', statusFilter),
-            limit(limitNumber)
-          );
-          
-          // Execute the query
-          reportsSnapshot = await getDocs(reportsQuery);
-          console.log(`Query with where only succeeded, found ${reportsSnapshot.size} reports`);
-        } catch (whereError) {
-          console.error('Error with where query, using basic query:', whereError);
-          
-          // Last resort - just get all reports with a limit
-          reportsQuery = query(
-            collection(db, 'reports'),
-            limit(limitNumber)
-          );
-          
-          // Execute the query
-          reportsSnapshot = await getDocs(reportsQuery);
-          console.log(`Basic query succeeded, found ${reportsSnapshot.size} reports`);
-        }
+        reportsSnapshot = await db.collection('reports')
+          .where('status', '==', statusFilter)
+          .limit(limitNumber)
+          .get();
+        console.log(`Query with where clause succeeded, found ${reportsSnapshot.size} reports`);
+      } catch (whereError) {
+        console.warn('Where query failed, falling back to get all:', whereError);
+        // Fall back to getting all reports and filtering in memory
+        reportsSnapshot = await db.collection('reports')
+          .limit(limitNumber * 2) // Get more to account for filtering
+          .get();
       }
     }
     
-    // If we haven't executed the query yet (for the 'all' case), do it now
-    if (!reportsSnapshot) {
-      console.log('Executing query for all reports');
-      reportsSnapshot = await getDocs(reportsQuery);
-      console.log(`Found ${reportsSnapshot.size} reports`);
-    }
-    
-    // Process reports and fetch associated listings
-    const reports = [];
-    const listingIds = new Set();
+    console.log(`Found ${reportsSnapshot.size} reports in collection`);
     
     // Check if we have any reports
     if (reportsSnapshot.empty) {
       console.log('No reports found in the collection');
-      // Return empty array early
       return res.status(200).json({ 
         success: true, 
         reports: [],
@@ -207,40 +142,56 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       });
     }
     
-    // First, collect all report data and listing IDs
+    // Process reports
+    const reports = [];
+    const listingIds = new Set();
+    
     reportsSnapshot.forEach(doc => {
       const reportData = doc.data();
-      reports.push({
+      
+      // If we're filtering and the query didn't work, filter here
+      if (filter !== 'all' && filter !== 'pending') {
+        if (reportData.status !== filter) {
+          return; // Skip this report
+        }
+      } else if (filter === 'pending' && reportData.status && reportData.status !== 'pending') {
+        return; // Skip non-pending reports
+      }
+      
+      const report = {
         id: doc.id,
         ...reportData,
-        reportedAt: reportData.reportedAt?.toDate?.() || null,
-        moderatedAt: reportData.moderatedAt?.toDate?.() || null
-      });
+        reportedAt: reportData.reportedAt ? reportData.reportedAt.toDate() : null,
+        moderatedAt: reportData.moderatedAt ? reportData.moderatedAt.toDate() : null
+      };
+      
+      reports.push(report);
       
       if (reportData.listingId) {
         listingIds.add(reportData.listingId);
       }
     });
     
-    // Fetch all listings in a single batch
+    console.log(`Processing ${reports.length} reports after filtering`);
+    
+    // Fetch associated listings
     const listingsMap = {};
     if (listingIds.size > 0) {
       console.log(`Fetching ${listingIds.size} associated listings`);
       
       for (const listingId of listingIds) {
         try {
-          const listingDocRef = doc(db, 'listings', listingId as string);
-          const listingDocSnap = await getDoc(listingDocRef);
+          const listingDoc = await db.collection('listings').doc(listingId as string).get();
           
-          if (listingDocSnap.exists()) {
-            const listingData = listingDocSnap.data();
+          if (listingDoc.exists) {
+            const listingData = listingDoc.data();
             listingsMap[listingId] = {
               ...listingData,
               id: listingId,
-              createdAt: listingData.createdAt?.toDate?.() || null,
-              expiresAt: listingData.expiresAt?.toDate?.() || null,
-              archivedAt: listingData.archivedAt?.toDate?.() || null,
-              moderatedAt: listingData.moderatedAt?.toDate?.() || null
+              createdAt: listingData?.createdAt ? listingData.createdAt.toDate() : null,
+              expiresAt: listingData?.expiresAt ? listingData.expiresAt.toDate() : null,
+              archivedAt: listingData?.archivedAt ? listingData.archivedAt.toDate() : null,
+              moderatedAt: listingData?.moderatedAt ? listingData.moderatedAt.toDate() : null
             };
           } else {
             console.log(`Listing ${listingId} not found`);
@@ -253,14 +204,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     
     // Combine reports with their listings
     const reportedListings = reports.map(report => {
-      // Log the report data to help with debugging
       console.log('Processing report:', {
         id: report.id,
         listingId: report.listingId,
-        fields: Object.keys(report)
+        status: report.status
       });
       
-      // If the listing exists in our map, combine it with the report data
+      // If the listing exists, combine it with the report data
       if (listingsMap[report.listingId]) {
         const listing = listingsMap[report.listingId];
         return {
@@ -274,14 +224,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           moderatedAt: report.moderatedAt,
           moderatedBy: report.moderatedBy,
           moderatorNotes: report.moderatorNotes,
-          // Add fields from the screenshot
           reason: report.reason || '',
           status: report.status || 'pending'
         };
       }
       
       // If the listing doesn't exist, create a placeholder with report data
-      // This handles cases where the listing might have been deleted
       return {
         id: report.listingId || '',
         title: report.listingTitle || 'Unknown Listing',
@@ -300,10 +248,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         moderatedAt: report.moderatedAt,
         moderatedBy: report.moderatedBy,
         moderatorNotes: report.moderatorNotes,
-        // Add fields from the screenshot
         reason: report.reason || '',
         status: report.status || 'pending',
-        // Add listing fields from the report data
         listingId: report.listingId || '',
         listingTitle: report.listingTitle || 'Unknown Listing',
         listingPrice: report.listingPrice || 0,
@@ -321,22 +267,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       reports: reportedListings,
       total: reportedListings.length
     });
-  } catch (error) {
-    // More detailed error logging
+    
+  } catch (error: any) {
     console.error('Error fetching reports:', error);
     
-    // Log the error details
-    if (error instanceof Error) {
-      console.error('Error name:', error.name);
-      console.error('Error message:', error.message);
-      console.error('Error stack:', error.stack);
-    }
-    
-    // Check if it's a Firebase error with code
-    if (error && typeof error === 'object' && 'code' in error) {
-      console.error('Firebase error code:', (error as any).code);
-    }
-    
-    return res.status(500).json({ error: 'Failed to fetch reports' });
+    return res.status(500).json({ 
+      error: 'Failed to fetch reports',
+      details: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
 }
