@@ -21,25 +21,33 @@ async function processReport(
   
   // Get the listing document
   const listingDoc = await db.collection('listings').doc(listingId).get();
+  const listingExists = listingDoc.exists;
+  const listingData = listingExists ? listingDoc.data() : null;
   
-  if (!listingDoc.exists) {
-    console.log('Listing not found:', listingId);
-    return res.status(404).json({ error: 'Listing not found' });
+  if (!listingExists) {
+    console.log('Listing not found (may have been deleted):', listingId);
   }
   
-  // Update the report status
-  await db.collection('reports').doc(reportId).update({
+  // Always update the report status, regardless of whether the listing exists
+  const reportUpdateData: any = {
     status: action === 'dismiss' ? 'dismissed' : 'actioned',
     moderatedBy: moderatorId,
     moderatedAt: admin.firestore.FieldValue.serverTimestamp(),
     moderatorNotes: notes || null,
     actionTaken: action
-  });
+  };
+  
+  // Add a flag if the listing was already deleted
+  if (!listingExists) {
+    reportUpdateData.listingAlreadyDeleted = true;
+  }
+  
+  await db.collection('reports').doc(reportId).update(reportUpdateData);
   
   console.log('Report updated with status:', action === 'dismiss' ? 'dismissed' : 'actioned');
   
-  // If the action is to remove the listing, update the listing status
-  if (action === 'remove') {
+  // If the action is to remove the listing and the listing still exists
+  if (action === 'remove' && listingExists) {
     await db.collection('listings').doc(listingId).update({
       status: 'archived',
       archivedAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -57,7 +65,6 @@ async function processReport(
     console.log('Listing archived due to report');
     
     // Send a notification to the listing owner
-    const listingData = listingDoc.data();
     const ownerId = listingData?.userId;
     
     if (ownerId) {
@@ -77,11 +84,26 @@ async function processReport(
         // Continue even if notification fails
       }
     }
+  } else if (action === 'remove' && !listingExists) {
+    console.log('Cannot remove listing - it has already been deleted');
+  }
+  
+  // Determine the appropriate success message
+  let message = '';
+  if (action === 'dismiss') {
+    message = listingExists 
+      ? 'Report dismissed' 
+      : 'Report dismissed (listing was already deleted)';
+  } else {
+    message = listingExists 
+      ? 'Listing removed and report actioned' 
+      : 'Report actioned (listing was already deleted)';
   }
   
   return res.status(200).json({ 
     success: true, 
-    message: action === 'dismiss' ? 'Report dismissed' : 'Listing removed and report actioned' 
+    message,
+    listingExists
   });
 }
 
