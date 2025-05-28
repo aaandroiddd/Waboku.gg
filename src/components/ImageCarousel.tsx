@@ -225,25 +225,21 @@ export default function ImageCarousel({ images }: ImageCarouselProps) {
                 draggable="false"
               />
 
-              {/* Left/Right Arrows inside Modal - hidden on mobile (using swipe instead) */}
-              {!isMobile && (
-                <>
-                  <button
-                    className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/30 p-2 rounded-full"
-                    onClick={() => setCurrentSlide((prev) => (prev - 1 + images.length) % images.length)}
-                    aria-label="Previous image"
-                  >
-                    <ChevronLeft className="h-6 w-6 text-white" />
-                  </button>
-                  <button
-                    className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/30 p-2 rounded-full"
-                    onClick={() => setCurrentSlide((prev) => (prev + 1) % images.length)}
-                    aria-label="Next image"
-                  >
-                    <ChevronRight className="h-6 w-6 text-white" />
-                  </button>
-                </>
-              )}
+              {/* Left/Right Arrows inside Modal - visible on all devices */}
+              <button
+                className={`absolute left-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/30 ${isMobile ? 'p-3' : 'p-2'} rounded-full transition-all duration-200 hover:scale-110`}
+                onClick={() => setCurrentSlide((prev) => (prev - 1 + images.length) % images.length)}
+                aria-label="Previous image"
+              >
+                <ChevronLeft className={`${isMobile ? 'h-7 w-7' : 'h-6 w-6'} text-white`} />
+              </button>
+              <button
+                className={`absolute right-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/30 ${isMobile ? 'p-3' : 'p-2'} rounded-full transition-all duration-200 hover:scale-110`}
+                onClick={() => setCurrentSlide((prev) => (prev + 1) % images.length)}
+                aria-label="Next image"
+              >
+                <ChevronRight className={`${isMobile ? 'h-7 w-7' : 'h-6 w-6'} text-white`} />
+              </button>
               
               {/* Mobile indicator text */}
               {isMobile && (
