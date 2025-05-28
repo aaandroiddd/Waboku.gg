@@ -91,6 +91,46 @@ export function FirebaseConnectionHandler({
   
 
 
-  // Simply render children without any connection check UI
-  return <>{children}</>;
+  // UI: Show error banner if connection error is detected
+  return (
+    <>
+      {initError && (
+        <div className="fixed top-0 left-0 w-full z-[1000] bg-red-600 text-white flex flex-col md:flex-row items-center justify-between px-4 py-3 shadow-lg">
+          <div className="flex-1 flex flex-col md:flex-row items-center gap-2">
+            <span className="font-semibold">Connection Error:</span>
+            <span>
+              {initError.message.includes('Failed to fetch')
+                ? 'Unable to connect to the database. Please check your internet connection, disable VPN/adblock, or try again.'
+                : initError.message}
+            </span>
+            <a
+              href="/connection-troubleshoot"
+              className="underline text-white hover:text-amber-200 ml-2"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Connection Help
+            </a>
+          </div>
+          <div className="flex items-center gap-2 mt-2 md:mt-0">
+            <button
+              onClick={tryFixConnection}
+              disabled={isFixingConnection}
+              className="bg-white text-red-700 font-semibold px-3 py-1 rounded hover:bg-amber-100 transition disabled:opacity-60"
+            >
+              {isFixingConnection ? "Retrying..." : "Retry Connection"}
+            </button>
+            <button
+              onClick={() => setInitError(null)}
+              className="ml-2 text-white/80 hover:text-white text-lg"
+              aria-label="Dismiss"
+            >
+              ×
+            </button>
+          </div>
+        </div>
+      )}
+      {children}
+    </>
+  );
 }
