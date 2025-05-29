@@ -38,24 +38,38 @@ export function MessageDialog({ recipientId, recipientName }: MessageDialogProps
 
   // Check if user is trying to message themselves
   useEffect(() => {
-    if (isOpen) {
-      const { auth } = getFirebaseServices()
-      const currentUser = auth.currentUser
-      
-      if (currentUser && currentUser.uid === recipientId) {
-        setIsSelfMessage(true)
-        toast({
-          variant: "destructive",
-          title: "Cannot message yourself",
-          description: "You cannot send messages to yourself.",
-        })
-        // Close the dialog after showing the toast
-        setTimeout(() => setIsOpen(false), 1500)
-      } else {
-        setIsSelfMessage(false)
+    const checkSelfMessage = async () => {
+      if (isOpen) {
+        const services = await getFirebaseServices();
+        const auth = services.auth;
+
+        if (!auth) {
+          toast({
+            variant: "destructive",
+            title: "Error",
+            description: "Authentication service unavailable. Please try again later.",
+          });
+          setIsOpen(false);
+          return;
+        }
+        const currentUser = auth.currentUser;
+
+        if (currentUser && currentUser.uid === recipientId) {
+          setIsSelfMessage(true);
+          toast({
+            variant: "destructive",
+            title: "Cannot message yourself",
+            description: "You cannot send messages to yourself.",
+          });
+          // Close the dialog after showing the toast
+          setTimeout(() => setIsOpen(false), 1500);
+        } else {
+          setIsSelfMessage(false);
+        }
       }
-    }
-  }, [isOpen, recipientId, toast])
+    };
+    checkSelfMessage();
+  }, [isOpen, recipientId, toast]);
 
   const handleSendMessage = async () => {
     if (isSelfMessage) {
@@ -79,18 +93,23 @@ export function MessageDialog({ recipientId, recipientName }: MessageDialogProps
 
     setIsSending(true)
     try {
-      const { auth } = getFirebaseServices()
-      const currentUser = auth.currentUser
-      
+      const services = await getFirebaseServices();
+      const auth = services.auth;
+
+      if (!auth) {
+        throw new Error("Firebase Auth service is not available. Initialization may have failed.");
+      }
+      const currentUser = auth.currentUser;
+
       if (!currentUser) {
-        throw new Error("You must be logged in to send messages")
+        throw new Error("You must be logged in to send messages");
       }
 
       // Double-check to prevent self-messaging
       if (currentUser.uid === recipientId) {
-        throw new Error("You cannot send messages to yourself")
+        throw new Error("You cannot send messages to yourself");
       }
-      
+
       // Log the message details to help with debugging
       console.log('Sending message:', {
         recipientId,
@@ -198,21 +217,31 @@ export function MessageDialog({ recipientId, recipientName }: MessageDialogProps
     }
   }
 
-  const handleMessageButtonClick = () => {
-    const { auth } = getFirebaseServices();
+  const handleMessageButtonClick = async () => {
+    const services = await getFirebaseServices();
+    const auth = services.auth;
+
+    if (!auth) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Messaging service is currently unavailable. Please try again later.",
+      });
+      return;
+    }
     const currentUser = auth.currentUser;
-    
+
     if (!currentUser) {
       // User is not authenticated, save the action and redirect
-      saveRedirectState('send_message', { 
-        recipientId, 
+      saveRedirectState('send_message', {
+        recipientId,
         recipientName,
         returnPath: router.asPath
       });
       router.push('/auth/sign-in');
       return;
     }
-    
+
     // User is authenticated, open the dialog
     setIsOpen(true);
   };
