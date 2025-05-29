@@ -2,6 +2,7 @@ import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Listing } from '@/types/database';
 import { formatPrice } from '@/lib/price';
+import { getListingUrl } from '@/lib/listing-slug';
 import Image from 'next/image';
 import Link from 'next/link';
 import { MapPin } from 'lucide-react';
@@ -21,7 +22,7 @@ export const SimplifiedListingCard = ({ listing }: SimplifiedListingCardProps) =
     : '/images/rect.png';
 
   return (
-    <Link href={`/listings/${listing.id}`} className="block h-full">
+    <Link href={getListingUrl(listing)} className="block h-full">
       <Card className="overflow-hidden h-full hover:shadow-md transition-shadow duration-200">
         <CardContent className="p-3 h-full flex flex-col">
           <div className="aspect-square bg-muted rounded-lg mb-2 relative overflow-hidden flex-shrink-0">

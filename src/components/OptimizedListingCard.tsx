@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { generateListingUrl } from '@/lib/listing-slug';
 import Link from 'next/link';
 import Image from 'next/image';
 import { optimizedGet, databaseCache } from '@/lib/database-query-optimizer';
@@ -140,7 +141,7 @@ const OptimizedListingCard: React.FC<ListingCardProps> = ({
       </CardContent>
       
       <CardFooter className="p-4 pt-0">
-        <Link href={`/listings/${id}`} className="w-full">
+        <Link href={generateListingUrl(title, game || 'other', id)} className="w-full">
           <Button variant="default" className="w-full">
             View Details
           </Button>

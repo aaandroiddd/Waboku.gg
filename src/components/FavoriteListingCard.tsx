@@ -8,6 +8,7 @@ import Image from 'next/image';
 import { DistanceIndicator } from './DistanceIndicator';
 import { Listing } from '@/types/database';
 import { formatPrice } from '@/lib/price';
+import { getListingUrl } from '@/lib/listing-slug';
 import { motion } from 'framer-motion';
 import { UserNameLink } from './UserNameLink';
 import { StripeSellerBadge } from './StripeSellerBadge';
@@ -132,7 +133,7 @@ export const FavoriteListingCard = memo(({
       layout
     >
       <Card className="relative overflow-hidden group">
-        <Link href={`/listings/${listing.id}`}>
+        <Link href={getListingUrl(listing)}>
           <CardContent className="p-3 h-full flex flex-col">
             <div className="aspect-square bg-muted rounded-lg mb-4 relative overflow-hidden flex-shrink-0">
               {/* Price Badge */}

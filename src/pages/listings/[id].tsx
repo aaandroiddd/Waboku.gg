@@ -72,6 +72,10 @@ const getConditionColor = (condition: string) => {
 export default function ListingPage() {
   const router = useRouter();
   const { id } = router.query;
+  
+  // Handle both old format (/listings/id) and new format (/listings/gameCategory/slug-id)
+  // The router will pass the full path segments in different ways
+  const listingId = Array.isArray(id) ? id[id.length - 1] : id;
   const [listing, setListing] = useState<Listing | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -350,7 +354,10 @@ export default function ListingPage() {
 
     async function fetchListing() {
       try {
-        if (!id || typeof id !== 'string') {
+        // Use the extracted listing ID, but handle both old and new formats
+        const actualListingId = listingId || (typeof id === 'string' ? id : '');
+        
+        if (!actualListingId) {
           throw new Error('Invalid listing ID');
         }
 
@@ -479,8 +486,8 @@ export default function ListingPage() {
               return;
             }
             
-            console.log(`[Listing] Fetching listing ${id} (attempt ${attempt + 1}/${maxRetries + 1})`);
-            const listingRef = doc(db, 'listings', id);
+            console.log(`[Listing] Fetching listing ${actualListingId} (attempt ${attempt + 1}/${maxRetries + 1})`);
+            const listingRef = doc(db, 'listings', actualListingId);
             listingDoc = await getDoc(listingRef);
             
             if (listingDoc.exists()) {

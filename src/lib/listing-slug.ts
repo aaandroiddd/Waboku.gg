@@ -193,3 +193,22 @@ export function createShortIdMapping(listingId: string): { shortId: string; full
     fullId: listingId
   };
 }
+
+/**
+ * Extract listing ID from a slug
+ * Expects format: "slug-text-12345678"
+ */
+export function extractListingIdFromSlug(slug: string): string | null {
+  if (!slug) return null;
+  
+  // Split by hyphens and look for the last part that looks like an ID
+  const parts = slug.split('-');
+  const lastPart = parts[parts.length - 1];
+  
+  // Check if the last part looks like a Firebase document ID (alphanumeric, 8+ characters)
+  if (lastPart && /^[a-zA-Z0-9]{8,}$/.test(lastPart)) {
+    return lastPart;
+  }
+  
+  return null;
+}
