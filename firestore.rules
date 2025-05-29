@@ -211,6 +211,13 @@ service cloud.firestore {
       allow delete: if false; // Don't allow deletion of review stats
     }
 
+    // Short ID mappings collection rules
+    match /shortIdMappings/{shortId} {
+      allow read: if true; // Anyone can read mappings
+      allow create, update: if true; // Allow creation from server-side code
+      allow delete: if false; // Don't allow deletion of mappings
+    }
+
     // Default rule - deny everything else
     match /{document=**} {
       allow read, write: if false;

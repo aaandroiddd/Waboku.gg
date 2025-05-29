@@ -1,6 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { getFirebaseServices } from '@/lib/firebase';
-import { doc, getDoc, collection, query, where, getDocs, limit, setDoc } from 'firebase/firestore';
+import { getFirebaseAdmin } from '@/lib/firebase-admin';
 
 // Function to generate the same 7-digit numeric ID from a Firebase document ID
 function generateNumericShortId(listingId: string): string {
@@ -34,19 +33,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const { db } = getFirebaseServices();
+    const { db } = getFirebaseAdmin();
     if (!db) {
       throw new Error('Database not initialized');
     }
 
     // First, try to find the mapping in the shortIdMappings collection
     try {
-      const mappingDoc = await getDoc(doc(db, 'shortIdMappings', shortId));
-      if (mappingDoc.exists()) {
+      const mappingDoc = await db.collection('shortIdMappings').doc(shortId).get();
+      if (mappingDoc.exists) {
         const data = mappingDoc.data();
         // Verify the listing still exists
-        const listingDoc = await getDoc(doc(db, 'listings', data.fullId));
-        if (listingDoc.exists()) {
+        const listingDoc = await db.collection('listings').doc(data.fullId).get();
+        if (listingDoc.exists) {
           return res.status(200).json({ 
             success: true, 
             fullId: data.fullId,
@@ -59,23 +58,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     // Fallback: scan through active listings (limited to prevent timeout)
-    const listingsRef = collection(db, 'listings');
-    const activeListingsQuery = query(
-      listingsRef,
-      where('status', '==', 'active'),
-      limit(1000) // Limit to prevent timeout
-    );
+    const activeListingsQuery = await db.collection('listings')
+      .where('status', '==', 'active')
+      .limit(1000) // Limit to prevent timeout
+      .get();
     
-    const querySnapshot = await getDocs(activeListingsQuery);
-    
-    for (const listingDoc of querySnapshot.docs) {
+    for (const listingDoc of activeListingsQuery.docs) {
       const docId = listingDoc.id;
       const generatedShortId = generateNumericShortId(docId);
       
       if (generatedShortId === shortId) {
         // Found the matching listing, create the mapping for future use
         try {
-          await setDoc(doc(db, 'shortIdMappings', shortId), {
+          await db.collection('shortIdMappings').doc(shortId).set({
             fullId: docId,
             createdAt: new Date(),
             listingTitle: listingDoc.data().title || 'Unknown'
