@@ -327,8 +327,7 @@ export default function ListingPage() {
   }, [listing, user]);
 
   // Use the listing page cleanup hook to automatically clean up listeners when navigating away
-  const listingId = typeof id === 'string' ? id : '';
-  useListingPageCleanup(listingId);
+  useListingPageCleanup(typeof listingId === 'string' ? listingId : '');
   
   // Effect to handle URL redirection for new format
   useEffect(() => {
