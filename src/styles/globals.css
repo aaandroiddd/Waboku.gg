@@ -33,6 +33,30 @@
     transform: translateZ(0);
   }
   
+  /* Disable heavy animations on mobile for better performance */
+  .framer-motion-div {
+    /* Reduce animation complexity */
+    animation-duration: 0.2s !important;
+    transition-duration: 0.2s !important;
+    /* Use simpler easing */
+    animation-timing-function: ease-out !important;
+    transition-timing-function: ease-out !important;
+  }
+  
+  /* Optimize motion components for mobile */
+  [data-framer-motion] {
+    will-change: transform, opacity !important;
+    backface-visibility: hidden !important;
+    -webkit-backface-visibility: hidden !important;
+    transform: translateZ(0) !important;
+  }
+  
+  /* Reduce complexity of spring animations on mobile */
+  .motion-safe\:animate-spring {
+    animation: none !important;
+    transition: all 0.2s ease-out !important;
+  }
+  
   /* Optimize animations for mobile */
   .float-animation,
   .motion-safe\:animate-float {

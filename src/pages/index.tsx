@@ -22,6 +22,7 @@ import Link from "next/link";
 import { FirebaseConnectionHandler } from "@/components/FirebaseConnectionHandler";
 import { fixFirestoreListenChannel, clearFirestoreCaches } from "@/lib/firebase-connection-fix";
 import { StateSelect } from "@/components/StateSelect";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
 
 // Subtitles array - moved outside component to prevent recreation on each render
 const subtitles = [
@@ -41,6 +42,7 @@ const subtitles = [
 ];
 
 // Animation variants - moved outside component to prevent recreation on each render
+// Desktop variants with full animations
 const containerVariants = {
   hidden: { opacity: 0 },
   visible: {
@@ -50,6 +52,18 @@ const containerVariants = {
       delayChildren: 0.3,
       duration: 0.6,
       ease: [0.23, 1, 0.32, 1]
+    }
+  }
+};
+
+// Mobile variants with simplified animations
+const containerVariantsMobile = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      duration: 0.3,
+      ease: "easeOut"
     }
   }
 };
@@ -69,6 +83,20 @@ const heroBackgroundVariants = {
   }
 };
 
+// Mobile version with faster, simpler animation
+const heroBackgroundVariantsMobile = {
+  hidden: { 
+    opacity: 0
+  },
+  visible: { 
+    opacity: 1,
+    transition: {
+      duration: 0.5,
+      ease: "easeOut"
+    }
+  }
+};
+
 const itemVariants = {
   hidden: { opacity: 0, y: 20 },
   visible: {
@@ -78,6 +106,18 @@ const itemVariants = {
       type: "spring",
       damping: 12,
       stiffness: 100
+    }
+  }
+};
+
+// Mobile version with simpler transition
+const itemVariantsMobile = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      duration: 0.2,
+      ease: "easeOut"
     }
   }
 };
@@ -94,6 +134,11 @@ export default function Home() {
   const [connectionError, setConnectionError] = useState(false);
   const [isRecovering, setIsRecovering] = useState(false);
   const [cacheCleared, setCacheCleared] = useState(false);
+
+  // Mobile detection for animation optimization
+  const isMobile = useMediaQuery("(max-width: 768px)");
+  const isLowEndDevice = useMediaQuery("(max-width: 480px)");
+  const prefersReducedMotion = useMediaQuery("(prefers-reduced-motion: reduce)");
 
   const { latitude, longitude, loading: geoLoading } = useGeolocation({ autoRequest: false });
   const { listings: allListings, isLoading, error: listingsError } = useListings();
@@ -303,6 +348,12 @@ export default function Home() {
     setTimeout(() => handleSearch(), 0);
   }, [handleSearch]);
 
+  // Determine which animation variants to use based on device capabilities
+  const shouldUseSimpleAnimations = isMobile || isLowEndDevice || prefersReducedMotion;
+  const currentHeroBackgroundVariants = shouldUseSimpleAnimations ? heroBackgroundVariantsMobile : heroBackgroundVariants;
+  const currentContainerVariants = shouldUseSimpleAnimations ? containerVariantsMobile : containerVariants;
+  const currentItemVariants = shouldUseSimpleAnimations ? itemVariantsMobile : itemVariants;
+
   return (
     <>
       <Head>
@@ -327,7 +378,7 @@ export default function Home() {
             <div className="hero-background opacity-0"></div>
             <motion.div 
               className="hero-background absolute inset-0"
-              variants={heroBackgroundVariants}
+              variants={currentHeroBackgroundVariants}
               initial="hidden"
               animate="visible"
             >
