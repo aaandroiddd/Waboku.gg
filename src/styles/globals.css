@@ -72,8 +72,9 @@
   
   /* Preserve fade-in animation speed for title and subtitle to match desktop */
   .animate-title {
-    animation: fade-in 0.8s ease-out forwards, float-up 6s ease-in-out infinite !important;
-    animation-delay: 0.2s, 1s !important;
+    /* Only fade-in animation on mobile, no floating */
+    animation: fade-in 0.8s ease-out forwards !important;
+    animation-delay: 0.2s !important;
     transform: translateZ(0);
     /* Disable floating animation on low-end devices */
     @media (prefers-reduced-motion: reduce) {
@@ -327,12 +328,21 @@
 }
 
 .animate-title {
-  animation: fade-in 0.8s ease-out forwards, float-up 6s ease-in-out infinite;
-  animation-delay: 0.2s, 1s;
+  /* Default: only fade-in animation for mobile */
+  animation: fade-in 0.8s ease-out forwards;
+  animation-delay: 0.2s;
   opacity: 0;
   /* Prevent layout shifts by ensuring the element doesn't affect layout */
   position: relative;
   transform: translateZ(0);
+}
+
+/* Enable floating animation only on desktop (larger than mobile) */
+@media (min-width: 769px) {
+  .animate-title {
+    animation: fade-in 0.8s ease-out forwards, float-up 6s ease-in-out infinite;
+    animation-delay: 0.2s, 1s;
+  }
 }
 
 .animate-subtitle {
