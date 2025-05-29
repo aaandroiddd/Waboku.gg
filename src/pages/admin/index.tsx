@@ -463,6 +463,22 @@ export default function AdminDashboard() {
             </div>
           </Card>
           
+          {/* Listing Analytics Section */}
+          <Card className="p-6 mb-8">
+            <h2 className="text-xl font-semibold mb-4">Listing Analytics & Capacity Monitoring</h2>
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Monitor marketplace health, listing counts per category, and 7-digit ID capacity usage.
+              </p>
+              <Button 
+                onClick={() => router.push(`/admin/listing-analytics`)}
+                className="w-full bg-blue-600 hover:bg-blue-700"
+              >
+                Listing Analytics Dashboard
+              </Button>
+            </div>
+          </Card>
+          
           {/* Listing Visibility Diagnostics Section */}
           <Card className="p-6 mb-8">
             <h2 className="text-xl font-semibold mb-4">Listing Visibility Diagnostics</h2>
