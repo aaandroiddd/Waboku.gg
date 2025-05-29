@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { getFirebaseAdminServices } from '@/lib/firebase-admin';
+import { getFirebaseAdmin } from '@/lib/firebase-admin';
 import { GAME_MAPPING, OTHER_GAME_MAPPING } from '@/lib/game-mappings';
 
 interface CategoryStats {
@@ -40,7 +40,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const { db } = getFirebaseAdminServices();
+    const { db } = getFirebaseAdmin();
     if (!db) {
       throw new Error('Database not initialized');
     }
