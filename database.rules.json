@@ -1,7 +1,7 @@
 {
   "rules": {
     ".read": "auth != null",
-    ".write": "auth != null && newData.hasChildren(['messages']) && !newData.hasChild('users') && !newData.hasChild('chats') && !newData.hasChild('listings') && !newData.hasChild('wanted') && !newData.hasChild('wantedPosts') && !newData.hasChild('favorites') && !newData.hasChild('searches') && !newData.hasChild('userStatus') && !newData.hasChild('typing') && !newData.hasChild('lastActive') && !newData.hasChild('connection_tests') && !newData.hasChild('debug')",
+    ".write": "auth != null",
     
     "connection_tests": {
       ".read": true,
