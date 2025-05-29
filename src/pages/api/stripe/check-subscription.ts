@@ -307,77 +307,84 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
               }
             }
             
-            // Reset subscription data in our database
-            const resetSubscription = {
-              ...subscriptionData,
-              status: 'none',
-              stripeSubscriptionId: null,
-              accountTier: 'free',
-              tier: 'free',
-              currentPlan: 'free',
-              cancelAtPeriodEnd: false
-            };
-            
-            // Sync the reset data to both databases
-            await syncSubscriptionData(userId, resetSubscription);
-            
-            // Update local reference for response
-            subscriptionData.status = 'none';
-            subscriptionData.stripeSubscriptionId = null;
-            subscriptionData.accountTier = 'free';
-            subscriptionData.tier = 'free';
-            subscriptionData.currentPlan = 'free';
-            subscriptionData.cancelAtPeriodEnd = false;
+            // Subscription ID not found in Stripe.
+            // Log this event. The user's existing data in Firestore will not be changed by this block.
+            // The response will reflect that this specific subscription ID was not found/active.
+            console.warn(`[Subscription Check ${requestId}] Stripe subscription ID ${subscriptionData.stripeSubscriptionId} not found in Stripe. User's persisted data will not be altered by this specific 'resource_missing' event. Downstream logic will determine final tier based on current DB state and this API response.`);
+            subscriptionData.status = 'error_stripe_resource_missing'; // Indicate the issue
+            // We don't nullify stripeSubscriptionId here from the original data,
+            // so that the response can still report what ID was checked.
+            // The key is not calling syncSubscriptionData to force a 'free' tier write.
           }
+          // For other Stripe errors, we also don't aggressively change DB data here.
+          // Let the existing DB state and AccountContext logic handle it.
         }
       }
       
+      // Determine active status based on potentially updated subscriptionData
       const now = Date.now() / 1000;
-      const isActive = (subscriptionData.status === 'active' || subscriptionData.status === 'trialing') && 
-                      subscriptionData.currentPeriodEnd && 
-                      subscriptionData.currentPeriodEnd > now;
+      let isActive = false;
+      if (subscriptionData.status === 'active' || subscriptionData.status === 'trialing') {
+        if (subscriptionData.currentPeriodEnd && subscriptionData.currentPeriodEnd > now) {
+          isActive = true;
+        }
+      }
+      // If status was changed to 'error_stripe_resource_missing', it won't be active.
 
-      console.log(`[Subscription Check ${requestId}] Final status:`, {
+      console.log(`[Subscription Check ${requestId}] Final status determination:`, {
         userId,
         isActive,
+        calculatedTier: (isActive && (subscriptionData.accountTier === 'premium' || subscriptionData.currentPlan === 'premium')) ? 'premium' : 'free',
         subscription: {
-          status: subscriptionData.status,
-          tier: subscriptionData.accountTier || subscriptionData.currentPlan,
+          status: subscriptionData.status, // This might be 'error_stripe_resource_missing'
+          originalAccountTier: subscriptionData.accountTier, // From DB
+          originalCurrentPlan: subscriptionData.currentPlan, // From DB
           currentPeriodEnd: subscriptionData.currentPeriodEnd
         }
       });
 
-      // Check if this is an admin-assigned subscription
-      const isAdminAssigned = subscriptionData.stripeSubscriptionId?.includes('admin_');
-      
-      // For admin-assigned subscriptions, ensure we have a renewal date
-      if (isAdminAssigned && (!subscriptionData.renewalDate || !subscriptionData.startDate)) {
-        const currentDate = new Date();
-        const endDate = new Date();
-        endDate.setFullYear(currentDate.getFullYear() + 1); // Set end date to 1 year from now
-        
-        const updatedSubscription = {
-          ...subscriptionData,
-          startDate: subscriptionData.startDate || currentDate.toISOString(),
-          renewalDate: endDate.toISOString(),
-        };
-        
-        // Sync the updated data to both databases
-        await syncSubscriptionData(userId, updatedSubscription);
-        
-        // Update local reference for response
-        subscriptionData.startDate = updatedSubscription.startDate;
-        subscriptionData.renewalDate = updatedSubscription.renewalDate;
+      // Check if this is an admin-assigned subscription and ensure dates if it's considered active
+      // This part should only run if the subscription is otherwise considered valid/active from DB or Stripe direct check
+      if (subscriptionData.stripeSubscriptionId?.includes('admin_') && 
+          (subscriptionData.status === 'active' || subscriptionData.status === 'trialing')) {
+        if (!subscriptionData.renewalDate || !subscriptionData.startDate) {
+          const currentDate = new Date();
+          const adminEndDate = new Date();
+          adminEndDate.setFullYear(currentDate.getFullYear() + 1);
+          
+          const adminUpdatedSubscription = {
+            ...subscriptionData, // original data from getSubscriptionData
+            startDate: subscriptionData.startDate || currentDate.toISOString(),
+            renewalDate: adminEndDate.toISOString(),
+            // Ensure status is active if it's an admin sub being "fixed" here
+            status: 'active', 
+            accountTier: 'premium', // ensure tier is premium
+            currentPlan: 'premium'
+          };
+          
+          // Sync these updated dates for admin subs back to DB
+          await syncSubscriptionData(userId, adminUpdatedSubscription);
+          
+          // Update local subscriptionData for the response
+          subscriptionData.startDate = adminUpdatedSubscription.startDate;
+          subscriptionData.renewalDate = adminUpdatedSubscription.renewalDate;
+          subscriptionData.status = 'active';
+          subscriptionData.accountTier = 'premium';
+          subscriptionData.currentPlan = 'premium';
+          isActive = true; // Recalculate isActive based on updated admin data
+        }
       }
       
+      const finalTier = (isActive && (subscriptionData.accountTier === 'premium' || subscriptionData.currentPlan === 'premium')) ? 'premium' : 'free';
+
       return res.status(200).json({
-        isPremium: isActive && (subscriptionData.accountTier === 'premium' || subscriptionData.currentPlan === 'premium'),
-        status: subscriptionData.status || 'none',
-        tier: subscriptionData.accountTier || subscriptionData.currentPlan || 'free',
+        isPremium: finalTier === 'premium',
+        status: subscriptionData.status || 'none', // could be 'error_stripe_resource_missing'
+        tier: finalTier,
         currentPeriodEnd: subscriptionData.currentPeriodEnd,
         renewalDate: subscriptionData.renewalDate,
         startDate: subscriptionData.startDate,
-        subscriptionId: subscriptionData.stripeSubscriptionId
+        subscriptionId: subscriptionData.stripeSubscriptionId // The ID that was checked
       });
 
     } catch (authError: any) {
