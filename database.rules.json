@@ -159,6 +159,7 @@
 
     "messages": {
       ".read": "auth != null",
+      ".write": "auth != null",
       ".indexOn": ["timestamp", "chatId"],
       "$chatId": {
         ".read": "auth != null && (root.child('chats').child($chatId).child('participants').child(auth.uid).exists() || !root.child('chats').child($chatId).exists())",
