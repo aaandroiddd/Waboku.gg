@@ -359,6 +359,21 @@ export default function ListingPage() {
             }
           }
         }
+        
+        // Handle category-only URLs: /listings/gameCategory/
+        if (Array.isArray(slug) && slug.length === 1) {
+          const [gameCategory] = slug;
+          
+          // Import game mappings to check if this is a valid category
+          const { GAME_MAPPING, OTHER_GAME_MAPPING } = await import('@/lib/game-mappings');
+          const allGameValues = [...Object.values(GAME_MAPPING), ...Object.values(OTHER_GAME_MAPPING)];
+          
+          if (allGameValues.includes(gameCategory as any)) {
+            // Redirect to listings page with game filter
+            router.replace(`/listings?game=${gameCategory}`);
+            return;
+          }
+        }
 
         // If we can't parse the URL or resolve the ID, show error
         setError('Invalid listing URL format');
