@@ -23,6 +23,7 @@ import { parseDate, isExpired } from '@/lib/date-utils';
 import { useStripeSellerStatus } from '@/hooks/useStripeSellerStatus';
 import { useFavoriteGroups } from '@/hooks/useFavoriteGroups';
 import { AddToGroupDialog } from './AddToGroupDialog';
+import { getListingUrl } from '@/lib/listing-slug';
 
 const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
   const R = 3959; // Earth's radius in miles
@@ -343,7 +344,7 @@ export const ListingCard = memo(({ listing, isFavorite, onFavoriteClick, onAddTo
         onCreateAndAddToGroup={handleCreateAndAddToGroup}
       />
       <Card className="relative overflow-hidden group h-full">
-        <Link href={`/listings/${listing.id}`}>
+        <Link href={getListingUrl(listing)}>
           <CardContent className="p-3 h-full flex flex-col" style={{ minHeight: '420px' }}>
             <div className="aspect-square bg-muted rounded-lg mb-4 relative overflow-hidden flex-shrink-0">
               {/* Price Badge or Offers Only Badge */}

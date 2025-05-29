@@ -51,6 +51,7 @@ import { DistanceIndicator } from '@/components/DistanceIndicator';
 import { useLoading } from '@/contexts/LoadingContext';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { FirestoreRequestCounter } from '@/components/FirestoreRequestCounter';
+import { generateListingUrl } from '@/lib/listing-slug';
 
 const getConditionColor = (condition: string) => {
   const colors: Record<string, string> = {
@@ -325,6 +326,21 @@ export default function ListingPage() {
   const listingId = typeof id === 'string' ? id : '';
   useListingPageCleanup(listingId);
   
+  // Effect to handle URL redirection for new format
+  useEffect(() => {
+    if (!listing || !router.isReady) return;
+
+    // Check if we're on the old URL format and redirect to new format
+    const currentPath = router.asPath;
+    const isOldFormat = currentPath.match(/^\/listings\/[^\/]+$/); // /listings/id format
+
+    if (isOldFormat) {
+      const newUrl = generateListingUrl(listing.title, listing.game, listing.id);
+      console.log('Redirecting from old URL format to new format:', newUrl);
+      router.replace(newUrl, undefined, { shallow: true });
+    }
+  }, [listing, router]);
+
   useEffect(() => {
     let isMounted = true;
     let retryCount = 0;
