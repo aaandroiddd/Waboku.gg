@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { extractListingIdFromSlug } from '@/lib/listing-slug';
 
 // This is a catch-all route that handles the new URL format
-// /listings/gameCategory/slug-id
+// /listings/gameCategory/slug-7digitid
 export default function ListingCatchAll() {
   const router = useRouter();
   const { slug } = router.query;
@@ -16,15 +16,15 @@ export default function ListingCatchAll() {
       setIsResolving(true);
 
       try {
-        // Handle the new URL format: /listings/gameCategory/slug-id
+        // Handle the new URL format: /listings/gameCategory/slug-7digitid
         if (Array.isArray(slug) && slug.length === 2) {
           const [gameCategory, slugWithId] = slug;
           
-          // Extract the listing ID from the slug
+          // Extract the 7-digit numeric ID from the slug
           const shortId = extractListingIdFromSlug(slugWithId);
           
-          if (shortId) {
-            // Try to resolve the short ID to a full ID
+          if (shortId && /^\d{7}$/.test(shortId)) {
+            // Try to resolve the 7-digit ID to a full Firebase document ID
             try {
               const response = await fetch(`/api/listings/resolve-short-id?shortId=${shortId}`);
               
@@ -37,20 +37,15 @@ export default function ListingCatchAll() {
                 }
               }
               
-              // If resolution fails, try using the short ID directly
-              // This handles cases where the short ID is actually a full ID
-              router.replace(`/listings/${shortId}`, undefined, { shallow: true });
-              return;
+              console.log('Failed to resolve short ID:', shortId);
             } catch (error) {
               console.error('Error resolving short ID:', error);
-              // Fallback to using the short ID directly
-              router.replace(`/listings/${shortId}`, undefined, { shallow: true });
-              return;
             }
           }
         }
 
-        // If we can't parse the URL, redirect to listings page
+        // If we can't parse the URL or resolve the ID, redirect to listings page
+        console.log('Unable to resolve listing URL, redirecting to listings page');
         router.replace('/listings');
       } finally {
         setIsResolving(false);

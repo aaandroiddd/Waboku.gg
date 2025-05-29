@@ -340,9 +340,10 @@ export default function ListingPage() {
     if (isOldFormat) {
       const newUrl = generateListingUrl(listing.title, listing.game, listing.id);
       console.log('Redirecting from old URL format to new format:', newUrl);
-      router.replace(newUrl, undefined, { shallow: true });
+      // Use router.push instead of replace to avoid navigation loops
+      router.push(newUrl);
     }
-  }, [listing, router]);
+  }, [listing, router.isReady]); // Remove router from dependencies to prevent loops
 
   useEffect(() => {
     let isMounted = true;

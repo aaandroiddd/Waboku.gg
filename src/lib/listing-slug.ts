@@ -137,14 +137,33 @@ export function generateListingSlug(title: string): string {
 }
 
 /**
+ * Generates a 7-digit numeric ID from a Firebase document ID
+ */
+function generateNumericShortId(listingId: string): string {
+  // Create a hash from the listing ID and convert to numeric
+  let hash = 0;
+  for (let i = 0; i < listingId.length; i++) {
+    const char = listingId.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32-bit integer
+  }
+  
+  // Convert to positive number and ensure it's 7 digits
+  const positiveHash = Math.abs(hash);
+  const shortId = (positiveHash % 9000000) + 1000000; // Ensures 7-digit number between 1000000-9999999
+  
+  return shortId.toString();
+}
+
+/**
  * Generates the complete listing URL path
  */
 export function generateListingUrl(title: string, game: string, listingId: string): string {
   const gameSlug = getGameSlug(game);
   const titleSlug = generateListingSlug(title);
   
-  // Extract first 8 characters of the listing ID for the URL
-  const shortId = listingId.substring(0, 8);
+  // Generate 7-digit numeric ID from the listing ID
+  const shortId = generateNumericShortId(listingId);
   
   return `/listings/${gameSlug}/${titleSlug}-${shortId}`;
 }
@@ -153,8 +172,8 @@ export function generateListingUrl(title: string, game: string, listingId: strin
  * Parses a listing URL to extract the listing ID
  */
 export function parseListingUrl(url: string): { gameSlug: string; titleSlug: string; listingId: string } | null {
-  // Match pattern: /listings/{game-category}/{slug}-{8-digit-id}
-  const match = url.match(/^\/listings\/([^\/]+)\/(.+)-([a-zA-Z0-9]{8})$/);
+  // Match pattern: /listings/{game-category}/{slug}-{7-digit-id}
+  const match = url.match(/^\/listings\/([^\/]+)\/(.+)-(\d{7})$/);
   
   if (!match) {
     return null;
@@ -189,24 +208,24 @@ export function getListingUrl(listing: { id: string; title: string; game: string
  */
 export function createShortIdMapping(listingId: string): { shortId: string; fullId: string } {
   return {
-    shortId: listingId.substring(0, 8),
+    shortId: generateNumericShortId(listingId),
     fullId: listingId
   };
 }
 
 /**
  * Extract listing ID from a slug
- * Expects format: "slug-text-12345678"
+ * Expects format: "slug-text-1234567"
  */
 export function extractListingIdFromSlug(slug: string): string | null {
   if (!slug) return null;
   
-  // Split by hyphens and look for the last part that looks like an ID
+  // Split by hyphens and look for the last part that looks like a 7-digit numeric ID
   const parts = slug.split('-');
   const lastPart = parts[parts.length - 1];
   
-  // Check if the last part looks like a Firebase document ID (alphanumeric, 8+ characters)
-  if (lastPart && /^[a-zA-Z0-9]{8,}$/.test(lastPart)) {
+  // Check if the last part is a 7-digit number
+  if (lastPart && /^\d{7}$/.test(lastPart)) {
     return lastPart;
   }
   
