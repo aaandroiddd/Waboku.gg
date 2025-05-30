@@ -1,20 +1,20 @@
 {
   "rules": {
-    ".read": "auth != null",
-    ".write": "auth != null",
+    ".read": false,
+    ".write": false,
     
     "connection_tests": {
-      ".read": true,
-      ".write": true,
+      ".read": "auth != null && root.child('users').child(auth.uid).child('account').child('tier').val() === 'admin'",
+      ".write": "auth != null && root.child('users').child(auth.uid).child('account').child('tier').val() === 'admin'",
       "$test_id": {
-        ".read": true,
-        ".write": true
+        ".read": "auth != null && root.child('users').child(auth.uid).child('account').child('tier').val() === 'admin'",
+        ".write": "auth != null && root.child('users').child(auth.uid).child('account').child('tier').val() === 'admin'"
       }
     },
     
     "debug": {
-      ".read": true,
-      ".write": true
+      ".read": "auth != null && root.child('users').child(auth.uid).child('account').child('tier').val() === 'admin'",
+      ".write": "auth != null && root.child('users').child(auth.uid).child('account').child('tier').val() === 'admin'"
     },
     
     "users": {
@@ -187,12 +187,12 @@
     },
 
     "messages": {
-      ".read": "auth != null",
-      ".write": "auth != null",
+      ".read": false,
+      ".write": false,
       ".indexOn": ["timestamp", "chatId"],
       "$chatId": {
-        ".read": "auth != null",
-        ".write": "auth != null",
+        ".read": "auth != null && (root.child('chats').child($chatId).child('participants').child(auth.uid).exists() || root.child('users').child(auth.uid).child('account').child('tier').val() === 'admin')",
+        ".write": "auth != null && root.child('chats').child($chatId).child('participants').child(auth.uid).exists()",
         "$messageId": {
           ".validate": "newData.hasChildren(['senderId', 'content', 'timestamp', 'type'])",
           "senderId": {
@@ -227,12 +227,12 @@
     },
 
     "chats": {
-      ".read": "auth != null",
-      ".write": "auth != null",
+      ".read": false,
+      ".write": false,
       ".indexOn": ["createdAt", "participants"],
       "$chatId": {
-        ".read": "auth != null",
-        ".write": "auth != null",
+        ".read": "auth != null && (root.child('chats').child($chatId).child('participants').child(auth.uid).exists() || root.child('users').child(auth.uid).child('account').child('tier').val() === 'admin')",
+        ".write": "auth != null && (root.child('chats').child($chatId).child('participants').child(auth.uid).exists() || !data.exists())",
         ".validate": "newData.hasChildren(['participants', 'createdAt'])",
         "participants": {
           ".validate": "newData.hasChildren()",
