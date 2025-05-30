@@ -85,6 +85,8 @@
           }
         },
         "messageThreads": {
+          ".read": "auth != null && auth.uid === $uid",
+          ".write": "auth != null && auth.uid === $uid",
           "$chatId": {
             ".validate": "newData.hasChildren(['recipientId', 'chatId', 'lastMessageTime'])",
             "recipientId": {
