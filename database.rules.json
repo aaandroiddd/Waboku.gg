@@ -4,11 +4,11 @@
     ".write": false,
     
     "connection_tests": {
-      ".read": "auth != null && root.child('users').child(auth.uid).child('account').child('tier').val() === 'admin'",
-      ".write": "auth != null && root.child('users').child(auth.uid).child('account').child('tier').val() === 'admin'",
+      ".read": "auth != null",
+      ".write": "auth != null",
       "$test_id": {
-        ".read": "auth != null && root.child('users').child(auth.uid).child('account').child('tier').val() === 'admin'",
-        ".write": "auth != null && root.child('users').child(auth.uid).child('account').child('tier').val() === 'admin'"
+        ".read": "auth != null",
+        ".write": "auth != null"
       }
     },
     
