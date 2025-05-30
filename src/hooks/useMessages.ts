@@ -233,10 +233,13 @@ export const useMessages = (chatId?: string) => {
   const markAsRead = async (messageIds: string[]) => {
     if (!chatId || !user || !database) return;
 
-    const updates: Record<string, boolean> = {};
+    const updates: Record<string, any> = {};
     messageIds.forEach(messageId => {
       updates[`messages/${chatId}/${messageId}/read`] = true;
     });
+
+    // Reset unread count for this user in their message thread
+    updates[`users/${user.uid}/messageThreads/${chatId}/unreadCount`] = 0;
 
     try {
       // Try to update using the root reference first (for batch efficiency)
@@ -251,6 +254,11 @@ export const useMessages = (chatId?: string) => {
           const messageRef = ref(database, `messages/${chatId}/${messageId}`);
           await update(messageRef, { read: true });
         }
+        
+        // Also update unread count separately
+        const userThreadRef = ref(database, `users/${user.uid}/messageThreads/${chatId}/unreadCount`);
+        await set(userThreadRef, 0);
+        
         console.log('Individual updates completed successfully');
       } catch (fallbackError) {
         console.error('Error in fallback individual updates:', fallbackError);
@@ -344,7 +352,7 @@ export const useMessages = (chatId?: string) => {
     const messageRef = push(ref(database, `messages/${chatReference}`));
     await set(messageRef, newMessage);
 
-    // Update last message and listing info in chat
+    // Update last message and listing info in chat, plus user message threads
     const chatUpdates: any = {
       [`chats/${chatReference}/lastMessage`]: {
         ...newMessage,
@@ -358,6 +366,29 @@ export const useMessages = (chatId?: string) => {
       chatUpdates[`chats/${chatReference}/listingId`] = listingId;
       chatUpdates[`chats/${chatReference}/listingTitle`] = listingTitle;
     }
+
+    // Update message threads for both participants
+    const messageTime = newMessage.timestamp;
+    
+    // Update sender's message thread
+    chatUpdates[`users/${user.uid}/messageThreads/${chatReference}`] = {
+      recipientId: receiverId,
+      chatId: chatReference,
+      lastMessageTime: messageTime,
+      unreadCount: 0, // Sender doesn't have unread messages
+      ...(listingId ? { listingId } : {}),
+      ...(listingTitle ? { listingTitle } : {})
+    };
+
+    // Update receiver's message thread (increment unread count)
+    chatUpdates[`users/${receiverId}/messageThreads/${chatReference}`] = {
+      recipientId: user.uid,
+      chatId: chatReference,
+      lastMessageTime: messageTime,
+      unreadCount: 1, // Receiver has 1 new unread message
+      ...(listingId ? { listingId } : {}),
+      ...(listingTitle ? { listingTitle } : {})
+    };
 
     try {
       // Try to update using the root reference first
@@ -373,12 +404,27 @@ export const useMessages = (chatId?: string) => {
         // Extract just the chat updates (removing the path prefix)
         const directChatUpdates = {};
         Object.entries(chatUpdates).forEach(([path, value]) => {
-          const relativePath = path.replace(`chats/${chatReference}/`, '');
-          directChatUpdates[relativePath] = value;
+          if (path.startsWith(`chats/${chatReference}/`)) {
+            const relativePath = path.replace(`chats/${chatReference}/`, '');
+            directChatUpdates[relativePath] = value;
+          }
         });
         
         await update(chatRef, directChatUpdates);
-        console.log('Direct chat update completed successfully');
+        
+        // Also update user message threads separately
+        const userUpdates = {};
+        Object.entries(chatUpdates).forEach(([path, value]) => {
+          if (path.startsWith('users/')) {
+            userUpdates[path] = value;
+          }
+        });
+        
+        if (Object.keys(userUpdates).length > 0) {
+          await update(ref(database), userUpdates);
+        }
+        
+        console.log('Direct chat and user thread updates completed successfully');
       } catch (fallbackError) {
         console.error('Error in fallback chat update:', fallbackError);
       }

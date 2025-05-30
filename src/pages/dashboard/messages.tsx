@@ -1,6 +1,6 @@
 import { useRouter } from 'next/router';
 import { useEffect, useState, useRef, useMemo } from 'react';
-import { getDatabase, ref, onValue, get } from 'firebase/database';
+import { getDatabase, ref, onValue, get, update } from 'firebase/database';
 import { doc, getDoc } from 'firebase/firestore';
 import { db, getFirebaseServices } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
@@ -151,7 +151,59 @@ export default function MessagesPage() {
     const userThreadsRef = ref(database, `users/${user.uid}/messageThreads`);
 
     const processUserThreads = async (threadsData: any) => {
+      // If no message threads exist, check if there are any chats where user is a participant
+      // and create message threads for them
       if (!threadsData) {
+        console.log('No message threads found, checking for existing chats...');
+        
+        try {
+          // Check all chats where user is a participant
+          const chatsRef = ref(database, 'chats');
+          const chatsSnapshot = await get(chatsRef);
+          const allChats = chatsSnapshot.val() || {};
+          
+          const userChats = Object.entries(allChats).filter(([chatId, chatData]: [string, any]) => {
+            return chatData.participants?.[user.uid] && !chatData.deletedBy?.[user.uid];
+          });
+
+          if (userChats.length > 0) {
+            console.log(`Found ${userChats.length} existing chats, creating message threads...`);
+            
+            // Create message threads for existing chats
+            const threadUpdates: Record<string, any> = {};
+            
+            for (const [chatId, chatData] of userChats) {
+              const otherParticipantId = Object.keys(chatData.participants).find(id => id !== user.uid);
+              if (otherParticipantId) {
+                threadUpdates[`users/${user.uid}/messageThreads/${chatId}`] = {
+                  recipientId: otherParticipantId,
+                  chatId: chatId,
+                  lastMessageTime: chatData.lastMessage?.timestamp || chatData.createdAt || Date.now(),
+                  unreadCount: 0, // Start with 0, will be updated when new messages arrive
+                  ...(chatData.listingId ? { listingId: chatData.listingId } : {}),
+                  ...(chatData.listingTitle ? { listingTitle: chatData.listingTitle } : {})
+                };
+              }
+            }
+
+            if (Object.keys(threadUpdates).length > 0) {
+              await update(ref(database), threadUpdates);
+              console.log('Message threads created successfully');
+              
+              // Reload with the newly created threads
+              const userThreadsRef = ref(database, `users/${user.uid}/messageThreads`);
+              const newThreadsSnapshot = await get(userThreadsRef);
+              const newThreadsData = newThreadsSnapshot.val();
+              
+              if (newThreadsData) {
+                return processUserThreads(newThreadsData);
+              }
+            }
+          }
+        } catch (error) {
+          console.error('Error checking for existing chats:', error);
+        }
+        
         setChats([]);
         setLoading(false);
         return;
