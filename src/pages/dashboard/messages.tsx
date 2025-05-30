@@ -132,87 +132,6 @@ export default function MessagesPage() {
     };
   }, [clearUnreadCount, resetUnreadCount]);
   
-  // Prefetch user profiles when component mounts to improve loading performance
-  useEffect(() => {
-    if (!user) return;
-    
-    // Preload common user data to improve performance
-    const preloadUserData = async () => {
-      try {
-        const { database } = getFirebaseServices();
-        if (!database) return;
-        
-        // Get a snapshot of recent chats to prefetch user profiles
-        const chatsRef = ref(database, 'chats');
-        const snapshot = await get(chatsRef);
-        const data = snapshot.val();
-        
-        if (!data) return;
-        
-        // Extract unique participant IDs
-        const participantIds = new Set<string>();
-        Object.values(data).forEach((chat: any) => {
-          if (chat.participants && typeof chat.participants === 'object') {
-            Object.keys(chat.participants).forEach(id => {
-              if (id !== user.uid) {
-                participantIds.add(id);
-              }
-            });
-          }
-        });
-        
-        // Prefetch user data for all participants
-        if (participantIds.size > 0) {
-          console.log(`Prefetching data for ${participantIds.size} message participants`);
-          
-          // First prefetch in batches
-          await prefetchUserData(Array.from(participantIds));
-          
-          // Then individually fetch the first few participants to ensure they're loaded immediately
-          // This helps with the initial rendering of the chat list
-          const priorityParticipants = Array.from(participantIds).slice(0, 5);
-          await Promise.allSettled(
-            priorityParticipants.map(async (userId) => {
-              try {
-                const userDoc = await getDoc(doc(db, 'users', userId));
-                if (userDoc.exists()) {
-                  const data = userDoc.data();
-                  const username = data.displayName || data.username || 'Unknown User';
-                  
-                  // Update the profile cache directly
-                  profileCache.current[userId] = {
-                    data: {
-                      username,
-                      avatarUrl: data.avatarUrl || data.photoURL || null
-                    },
-                    timestamp: Date.now()
-                  };
-                  
-                  // Also store in localStorage for persistence
-                  if (typeof window !== 'undefined') {
-                    const profileCacheKey = `profile_${userId}`;
-                    localStorage.setItem(profileCacheKey, JSON.stringify({
-                      username,
-                      avatarUrl: data.avatarUrl || data.photoURL || null,
-                      timestamp: Date.now()
-                    }));
-                  }
-                }
-              } catch (err) {
-                console.error(`Error prefetching priority user ${userId}:`, err);
-              }
-            })
-          );
-        }
-      } catch (err) {
-        console.error('Error preloading user data:', err);
-        // Non-critical error, don't need to show to user
-      }
-    };
-    
-    preloadUserData();
-  }, [user]);
-
   useEffect(() => {
     if (!user) {
       setLoading(false);
@@ -227,37 +146,55 @@ export default function MessagesPage() {
       return;
     }
 
-    const chatsRef = ref(database, 'chats');
+    // Use the user's messageThreads to get their chats
+    const userThreadsRef = ref(database, `users/${user.uid}/messageThreads`);
 
-    const processChats = async (data: any) => {
-      if (!data) {
+    const processUserThreads = async (threadsData: any) => {
+      if (!threadsData) {
         setChats([]);
+        setLoading(false);
         return;
       }
 
-      const chatList = Object.entries(data)
-        .map(([id, chat]: [string, any]) => ({
-          id,
-          ...chat,
-        }))
-        .filter((chat) => {
-          // Check if the chat has participants and the current user is a participant
-          const isParticipant = chat.participants && chat.participants[user.uid];
+      // Get chat IDs from user's message threads
+      const chatIds = Object.keys(threadsData);
+      
+      if (chatIds.length === 0) {
+        setChats([]);
+        setLoading(false);
+        return;
+      }
+
+      // Fetch individual chats that the user participates in
+      const chatPromises = chatIds.map(async (chatId) => {
+        try {
+          const chatRef = ref(database, `chats/${chatId}`);
+          const chatSnapshot = await get(chatRef);
+          const chatData = chatSnapshot.val();
           
-          // Check if the chat is not deleted by the current user
-          // This handles both boolean and timestamp-based deletion flags
-          const isNotDeleted = !chat.deletedBy || chat.deletedBy[user.uid] === undefined;
-          
-          return isParticipant && isNotDeleted;
-        })
+          if (chatData && chatData.participants?.[user.uid] && !chatData.deletedBy?.[user.uid]) {
+            return {
+              id: chatId,
+              ...chatData
+            };
+          }
+          return null;
+        } catch (error) {
+          console.error(`Error fetching chat ${chatId}:`, error);
+          return null;
+        }
+      });
+
+      const chatResults = await Promise.all(chatPromises);
+      const validChats = chatResults
+        .filter((chat): chat is ChatPreview => chat !== null)
         .sort((a, b) => (b.lastMessage?.timestamp || 0) - (a.lastMessage?.timestamp || 0));
 
-      // Set chats immediately to improve perceived performance
-      setChats(chatList);
+      setChats(validChats);
       
-      // Then fetch user profiles in the background
+      // Fetch user profiles for participants
       const uniqueParticipants = new Set<string>();
-      chatList.forEach(chat => {
+      validChats.forEach(chat => {
         Object.keys(chat.participants || {}).forEach(participantId => {
           if (participantId !== user.uid) {
             uniqueParticipants.add(participantId);
@@ -265,13 +202,8 @@ export default function MessagesPage() {
         });
       });
 
-      // Use the new batch prefetch function for better performance
+      // Fetch profiles for participants
       const participantIds = Array.from(uniqueParticipants);
-      
-      // Prefetch all user data in batches
-      await prefetchUserData(participantIds);
-      
-      // Then fetch individual profiles to update the UI
       const profiles: Record<string, ParticipantProfile> = {};
       await Promise.all(
         participantIds.map(async (id) => {
@@ -288,17 +220,17 @@ export default function MessagesPage() {
 
     // Initial load
     setLoading(true);
-    get(chatsRef)
-      .then(snapshot => processChats(snapshot.val()))
+    get(userThreadsRef)
+      .then(snapshot => processUserThreads(snapshot.val()))
       .catch(err => {
-        console.error('Error loading initial chats:', err);
+        console.error('Error loading user message threads:', err);
         setError('Failed to load messages');
         setLoading(false);
       });
 
-    // Real-time updates
-    const unsubscribe = onValue(chatsRef, 
-      snapshot => processChats(snapshot.val()),
+    // Real-time updates for user's message threads
+    const unsubscribe = onValue(userThreadsRef, 
+      snapshot => processUserThreads(snapshot.val()),
       error => {
         console.error('Real-time update error:', error);
         setError('Failed to receive updates');
