@@ -17,6 +17,7 @@ import { DatabaseConnectionStatus } from '@/components/DatabaseConnectionStatus'
 import { FirestoreDisabler } from '@/components/FirestoreDisabler';
 import { ClearFirestoreCache } from '@/components/ClearFirestoreCache';
 import { MessageThreadDebugger } from '@/components/MessageThreadDebugger';
+import { MessageSystemDebugger } from '@/components/MessageSystemDebugger';
 import { prefetchUserData } from '@/hooks/useUserData';
 
 interface ChatPreview {
@@ -469,8 +470,9 @@ export default function MessagesPage() {
             ) : (
               <ScrollArea className="flex-1">
                 <div className="space-y-3 p-4">
-                  {/* Debug component - temporary */}
+                  {/* Debug components - temporary */}
                   <MessageThreadDebugger />
+                  <MessageSystemDebugger />
                   
                   {chats.map((chat) => {
                     const otherParticipant = getOtherParticipant(chat);
