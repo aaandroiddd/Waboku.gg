@@ -54,6 +54,7 @@ export function useOffers() {
                 ...data,
                 createdAt: data.createdAt?.toDate() || new Date(),
                 updatedAt: data.updatedAt?.toDate() || new Date(),
+                expiresAt: data.expiresAt?.toDate() || null,
                 // Ensure listingSnapshot has all required fields
                 listingSnapshot: {
                   title: data.listingSnapshot?.title || 'Unknown Listing',
@@ -83,6 +84,7 @@ export function useOffers() {
                 ...data,
                 createdAt: data.createdAt?.toDate() || new Date(),
                 updatedAt: data.updatedAt?.toDate() || new Date(),
+                expiresAt: data.expiresAt?.toDate() || null,
                 // Ensure listingSnapshot has all required fields
                 listingSnapshot: {
                   title: data.listingSnapshot?.title || 'Unknown Listing',
