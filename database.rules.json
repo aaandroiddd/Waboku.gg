@@ -188,8 +188,8 @@
     "messages": {
       ".indexOn": ["timestamp", "chatId"],
       "$chatId": {
-        ".read": "auth != null && root.child('users').child(auth.uid).child('messageThreads').child($chatId).exists()",
-        ".write": "auth != null && root.child('users').child(auth.uid).child('messageThreads').child($chatId).exists()",
+        ".read": "auth != null && (root.child('users').child(auth.uid).child('messageThreads').child($chatId).exists() || root.child('chats').child($chatId).child('participants').child(auth.uid).exists())",
+        ".write": "auth != null && (root.child('users').child(auth.uid).child('messageThreads').child($chatId).exists() || root.child('chats').child($chatId).child('participants').child(auth.uid).exists())",
         "$messageId": {
           ".validate": "newData.hasChildren(['senderId', 'content', 'timestamp', 'type'])",
           "senderId": {
@@ -226,8 +226,8 @@
     "chats": {
       ".indexOn": ["createdAt", "participants"],
       "$chatId": {
-        ".read": "auth != null && root.child('users').child(auth.uid).child('messageThreads').child($chatId).exists()",
-        ".write": "auth != null && (root.child('users').child(auth.uid).child('messageThreads').child($chatId).exists() || !data.exists())",
+        ".read": "auth != null && (root.child('users').child(auth.uid).child('messageThreads').child($chatId).exists() || data.child('participants').child(auth.uid).exists())",
+        ".write": "auth != null && (root.child('users').child(auth.uid).child('messageThreads').child($chatId).exists() || data.child('participants').child(auth.uid).exists() || !data.exists())",
         ".validate": "newData.hasChildren(['participants', 'createdAt'])",
         "participants": {
           ".validate": "newData.hasChildren()",
