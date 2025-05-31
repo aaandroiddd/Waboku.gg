@@ -470,10 +470,6 @@ export default function MessagesPage() {
             ) : (
               <ScrollArea className="flex-1">
                 <div className="space-y-3 p-4">
-                  {/* Debug components - temporary */}
-                  <MessageThreadDebugger />
-                  <MessageSystemDebugger />
-                  
                   {chats.map((chat) => {
                     const otherParticipant = getOtherParticipant(chat);
                     const isUnread = chat.lastMessage && 
