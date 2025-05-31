@@ -130,7 +130,7 @@
 
     "searchTerms": {
       ".read": true,
-      ".write": true,
+      ".write": "auth != null",
       ".indexOn": ["count", "lastUpdated"],
       "$term": {
         ".validate": "newData.hasChildren(['term', 'count', 'lastUpdated'])",
@@ -186,16 +186,14 @@
     },
 
     "messages": {
-      ".read": "auth != null",
-      ".write": "auth != null",
       ".indexOn": ["timestamp", "chatId"],
       "$chatId": {
-        ".read": "auth != null",
-        ".write": "auth != null",
+        ".read": "auth != null && (root.child('chats').child($chatId).child('participants').child(auth.uid).exists() || root.child('users').child(auth.uid).child('messageThreads').child($chatId).exists())",
+        ".write": "auth != null && root.child('chats').child($chatId).child('participants').child(auth.uid).exists()",
         "$messageId": {
           ".validate": "newData.hasChildren(['senderId', 'content', 'timestamp', 'type'])",
           "senderId": {
-            ".validate": "newData.val() === auth.uid || (data.exists() && data.child('senderId').val() === newData.child('senderId').val())"
+            ".validate": "newData.val() === auth.uid"
           },
           "receiverId": {
             ".validate": "newData.isString()"
@@ -226,12 +224,10 @@
     },
 
     "chats": {
-      ".read": "auth != null",
-      ".write": "auth != null",
       ".indexOn": ["createdAt", "participants"],
       "$chatId": {
-        ".read": "auth != null",
-        ".write": "auth != null",
+        ".read": "auth != null && data.child('participants').child(auth.uid).exists()",
+        ".write": "auth != null && (data.child('participants').child(auth.uid).exists() || !data.exists())",
         ".validate": "newData.hasChildren(['participants', 'createdAt'])",
         "participants": {
           ".validate": "newData.hasChildren()",
