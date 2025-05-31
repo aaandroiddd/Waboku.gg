@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { getFirebaseAdmin } from '@/lib/firebase-admin';
 import { verifyAuthToken } from '@/lib/auth-utils';
+import { FieldValue } from 'firebase-admin/firestore';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -22,8 +23,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     // Get Firestore instance
-    const admin = getFirebaseAdmin();
-    const db = admin.firestore();
+    const { admin, db } = getFirebaseAdmin();
 
     // Find all active listings for this user
     const listingsSnapshot = await db.collection('listings')
@@ -47,7 +47,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (listingData.accountTier !== accountTier) {
         batch.update(doc.ref, { 
           accountTier,
-          updatedAt: admin.firestore.FieldValue.serverTimestamp()
+          updatedAt: FieldValue.serverTimestamp()
         });
         updateCount++;
       }

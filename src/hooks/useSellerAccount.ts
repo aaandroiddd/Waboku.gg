@@ -17,11 +17,27 @@ export const useSellerAccount = () => {
         throw new Error('Firebase DB is not initialized');
       }
       
-      const sellerDocRef = doc(db, 'sellerAccounts', userId);
-      const sellerDoc = await getDoc(sellerDocRef);
+      // Fetch from users collection where Stripe Connect data is actually stored
+      const userDocRef = doc(db, 'users', userId);
+      const userDoc = await getDoc(userDocRef);
       
-      if (sellerDoc.exists()) {
-        return sellerDoc.data();
+      if (userDoc.exists()) {
+        const userData = userDoc.data();
+        
+        // Check if user has Stripe Connect account
+        if (userData.stripeConnectAccountId) {
+          return {
+            status: userData.stripeConnectStatus || 'pending',
+            accountId: userData.stripeConnectAccountId,
+            detailsSubmitted: userData.stripeConnectDetailsSubmitted || false,
+            chargesEnabled: userData.stripeConnectChargesEnabled || false,
+            payoutsEnabled: userData.stripeConnectPayoutsEnabled || false,
+            createdAt: userData.stripeConnectCreatedAt,
+            updatedAt: userData.stripeConnectUpdatedAt
+          };
+        } else {
+          return { status: 'not_registered' };
+        }
       } else {
         return { status: 'not_registered' };
       }
@@ -35,10 +51,12 @@ export const useSellerAccount = () => {
     const waitForUserFetch = async () => {
       if (!user) {
         setLoading(false);
+        setError(null);
         return;
       }
 
       try {
+        setError(null); // Clear any previous errors
         const status = await fetchSellerStatus(user.uid);
         setSellerStatus(status);
       } catch (err) {
@@ -74,9 +92,9 @@ export const useSellerAccount = () => {
     refreshSellerStatus,
     // Also return the original account status interface for compatibility
     accountStatus: {
-      isConnected: sellerStatus?.status === 'connected' || sellerStatus?.status === 'verified',
-      isEnabled: sellerStatus?.status === 'verified',
-      needsMoreInfo: sellerStatus?.status === 'pending' || sellerStatus?.status === 'connected'
+      isConnected: sellerStatus?.status === 'active' || sellerStatus?.accountId,
+      isEnabled: sellerStatus?.status === 'active' && sellerStatus?.chargesEnabled && sellerStatus?.payoutsEnabled,
+      needsMoreInfo: sellerStatus?.status === 'pending' || (sellerStatus?.accountId && sellerStatus?.status !== 'active')
     },
     isLoading: loading,
     createAccount: async () => {

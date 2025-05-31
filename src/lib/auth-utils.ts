@@ -1,6 +1,8 @@
 import { User } from 'firebase/auth';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { getFirebaseServices } from './firebase';
+import { getFirebaseAdmin } from './firebase-admin';
+import { NextApiRequest } from 'next';
 
 /**
  * Utility function to check if a user has multiple authentication methods
@@ -87,4 +89,52 @@ export function hasGoogleAuth(user: User | null) {
  */
 export function hasEmailAuth(user: User | null) {
   return hasAuthProvider(user, 'password');
+}
+
+/**
+ * Verify authentication token from API request
+ * @param req The Next.js API request object
+ * @returns Object with success status and user ID if successful
+ */
+export async function verifyAuthToken(req: NextApiRequest): Promise<{ success: boolean; uid?: string; error?: string }> {
+  try {
+    // Get the authorization header
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return { success: false, error: 'Missing or invalid authorization header' };
+    }
+
+    // Extract the token
+    const token = authHeader.split('Bearer ')[1];
+    if (!token) {
+      return { success: false, error: 'Missing authentication token' };
+    }
+
+    // Initialize Firebase Admin and verify the token
+    const { auth } = getFirebaseAdmin();
+    const decodedToken = await auth.verifyIdToken(token);
+    
+    if (!decodedToken || !decodedToken.uid) {
+      return { success: false, error: 'Invalid authentication token' };
+    }
+
+    return { success: true, uid: decodedToken.uid };
+  } catch (error: any) {
+    console.error('Error verifying auth token:', error);
+    
+    // Handle specific Firebase Auth errors
+    if (error.code === 'auth/id-token-expired') {
+      return { success: false, error: 'Authentication token has expired' };
+    } else if (error.code === 'auth/id-token-revoked') {
+      return { success: false, error: 'Authentication token has been revoked' };
+    } else if (error.code === 'auth/invalid-id-token') {
+      return { success: false, error: 'Invalid authentication token format' };
+    } else if (error.code === 'auth/user-not-found') {
+      return { success: false, error: 'User not found' };
+    } else if (error.code === 'auth/user-disabled') {
+      return { success: false, error: 'User account has been disabled' };
+    }
+    
+    return { success: false, error: 'Authentication verification failed' };
+  }
 }
