@@ -8,7 +8,6 @@ import Image from 'next/image';
 import { DistanceIndicator } from './DistanceIndicator';
 import { Listing } from '@/types/database';
 import { formatPrice } from '@/lib/price';
-import { motion } from 'framer-motion';
 import { UserNameLink } from './UserNameLink';
 import { StripeSellerBadge } from './StripeSellerBadge';
 import { memo, useEffect, useState } from 'react';
@@ -24,6 +23,7 @@ import { useStripeSellerStatus } from '@/hooks/useStripeSellerStatus';
 import { useFavoriteGroups } from '@/hooks/useFavoriteGroups';
 import { AddToGroupDialog } from './AddToGroupDialog';
 import { getListingUrl } from '@/lib/listing-slug';
+import { MobileAnimationWrapper, MobileMotionButton, MobileMotionSpan } from './MobileAnimationWrapper';
 
 const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
   const R = 3959; // Earth's radius in miles
@@ -46,23 +46,13 @@ interface ListingCardProps {
   getConditionColor: (condition: string) => { base: string; hover: string };
 }
 
-// Detect if we're on a mobile device to simplify animations
-const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
-
 const cardVariants = {
-  hidden: isMobile ? { 
-    opacity: 0
-  } : { 
+  hidden: { 
     opacity: 0,
     y: 20,
     scale: 0.95
   },
-  visible: isMobile ? { 
-    opacity: 1,
-    transition: {
-      duration: 0.3
-    }
-  } : { 
+  visible: { 
     opacity: 1,
     y: 0,
     scale: 1,
@@ -71,7 +61,7 @@ const cardVariants = {
       ease: [0.23, 1, 0.32, 1]
     }
   },
-  hover: isMobile ? {} : {
+  hover: {
     y: -8,
     scale: 1.02,
     transition: {
@@ -81,7 +71,7 @@ const cardVariants = {
   }
 };
 
-const imageVariants = isMobile ? {} : {
+const imageVariants = {
   hover: {
     scale: 1.05,
     transition: {
@@ -91,11 +81,7 @@ const imageVariants = isMobile ? {} : {
   }
 };
 
-const buttonVariants = isMobile ? {
-  tap: {
-    scale: 0.95
-  }
-} : {
+const buttonVariants = {
   hover: {
     scale: 1.1,
     transition: {
@@ -327,7 +313,7 @@ export const ListingCard = memo(({ listing, isFavorite, onFavoriteClick, onAddTo
   };
 
   return (
-    <motion.div
+    <MobileAnimationWrapper
       variants={cardVariants}
       initial="hidden"
       animate="visible"
@@ -348,7 +334,7 @@ export const ListingCard = memo(({ listing, isFavorite, onFavoriteClick, onAddTo
           <CardContent className="p-3 h-full flex flex-col" style={{ minHeight: '420px' }}>
             <div className="aspect-square bg-muted rounded-lg mb-4 relative overflow-hidden flex-shrink-0">
               {/* Price Badge or Offers Only Badge */}
-              <motion.div 
+              <MobileAnimationWrapper 
                 className="absolute bottom-2 right-2 z-10"
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -357,13 +343,13 @@ export const ListingCard = memo(({ listing, isFavorite, onFavoriteClick, onAddTo
                 <span className="px-3 py-1 bg-black/75 text-white rounded-md font-semibold text-sm sm:text-base">
                   {listing.offersOnly ? "Offers Only" : formatPrice(listing.price)}
                 </span>
-              </motion.div>
+              </MobileAnimationWrapper>
 
               {/* Top Bar with Favorite and Graded Badge */}
               <div className="absolute top-0 left-0 right-0 p-2 z-20">
                 <div className="flex items-start justify-between">
                   <div className="flex items-start gap-2 flex-wrap">
-                    <motion.div
+                    <MobileAnimationWrapper
                       variants={buttonVariants}
                       whileHover="hover"
                       whileTap="tap"
@@ -397,11 +383,11 @@ export const ListingCard = memo(({ listing, isFavorite, onFavoriteClick, onAddTo
                           aria-label={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
                         />
                       </Button>
-                    </motion.div>
+                    </MobileAnimationWrapper>
                     
                     {/* Archived Badge */}
                     {listing.status === 'archived' && (
-                      <motion.div 
+                      <MobileAnimationWrapper 
                         className="flex-shrink-0"
                         initial={{ opacity: 0, x: -10 }}
                         animate={{ opacity: 1, x: 0 }}
@@ -419,12 +405,12 @@ export const ListingCard = memo(({ listing, isFavorite, onFavoriteClick, onAddTo
                           </svg>
                           <span>Archived</span>
                         </span>
-                      </motion.div>
+                      </MobileAnimationWrapper>
                     )}
                     
                     {/* Sold Badge */}
                     {listing.status === 'sold' && (
-                      <motion.div 
+                      <MobileAnimationWrapper 
                         className="flex-shrink-0"
                         initial={{ opacity: 0, x: -10 }}
                         animate={{ opacity: 1, x: 0 }}
@@ -442,12 +428,12 @@ export const ListingCard = memo(({ listing, isFavorite, onFavoriteClick, onAddTo
                           </svg>
                           <span>Sold</span>
                         </span>
-                      </motion.div>
+                      </MobileAnimationWrapper>
                     )}
                     
                     {/* Under Review Badge */}
                     {listing.needsReview && listing.status === 'active' && (
-                      <motion.div 
+                      <MobileAnimationWrapper 
                         className="flex-shrink-0"
                         initial={{ opacity: 0, x: -10 }}
                         animate={{ opacity: 1, x: 0 }}
@@ -465,12 +451,12 @@ export const ListingCard = memo(({ listing, isFavorite, onFavoriteClick, onAddTo
                           </svg>
                           <span>Under Review</span>
                         </span>
-                      </motion.div>
+                      </MobileAnimationWrapper>
                     )}
                     
                     {/* Graded Badge */}
                     {listing.isGraded && (
-                      <motion.div 
+                      <MobileAnimationWrapper 
                         className="flex-shrink-0"
                         initial={{ opacity: 0, x: -10 }}
                         animate={{ opacity: 1, x: 0 }}
@@ -491,18 +477,18 @@ export const ListingCard = memo(({ listing, isFavorite, onFavoriteClick, onAddTo
                           <span className="hidden sm:inline">{listing.gradingCompany}</span>
                           <span className="font-bold">{listing.gradeLevel}</span>
                         </span>
-                      </motion.div>
+                      </MobileAnimationWrapper>
                     )}
                   </div>
                 </div>
               </div>
               
               {listing.imageUrls && listing.imageUrls.length > 0 ? (
-                <motion.div 
+                <MobileAnimationWrapper 
                   className="relative w-full h-full bg-muted/50"
                   variants={imageVariants}
                 >
-                  <motion.div 
+                  <MobileAnimationWrapper 
                     className="absolute inset-0 bg-gradient-to-br from-muted/80 to-muted animate-pulse" 
                     initial={{ opacity: 1 }}
                     animate={{ opacity: [1, 0.5, 1] }}
@@ -554,14 +540,14 @@ export const ListingCard = memo(({ listing, isFavorite, onFavoriteClick, onAddTo
                       />
                     );
                   })()}
-                </motion.div>
+                </MobileAnimationWrapper>
               ) : (
                 <div className="w-full h-full flex items-center justify-center bg-secondary">
                   <span className="text-muted-foreground">No image</span>
                 </div>
               )}
             </div>
-            <motion.div 
+            <MobileAnimationWrapper 
               className="space-y-2"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -575,7 +561,7 @@ export const ListingCard = memo(({ listing, isFavorite, onFavoriteClick, onAddTo
                 </p>
               </div>
               <div className="flex items-center gap-2 flex-wrap mt-1">
-                <motion.div whileHover={{ scale: 1.05 }}>
+                <MobileAnimationWrapper whileHover={{ scale: 1.05 }}>
                   {listing.game && (
                     <GameCategoryBadge 
                       game={listing.game} 
@@ -584,22 +570,22 @@ export const ListingCard = memo(({ listing, isFavorite, onFavoriteClick, onAddTo
                       onClick={(e) => e.stopPropagation()} // Prevent link navigation when clicking the badge
                     />
                   )}
-                </motion.div>
-                <motion.div whileHover={{ scale: 1.05 }}>
+                </MobileAnimationWrapper>
+                <MobileAnimationWrapper whileHover={{ scale: 1.05 }}>
                   <Badge className={`${getConditionColor(listing.condition).base} ${getConditionColor(listing.condition).hover} shadow-sm font-medium`}>
                     {listing.condition}
                   </Badge>
-                </motion.div>
-                <motion.div whileHover={{ scale: 1.05 }}>
+                </MobileAnimationWrapper>
+                <MobileAnimationWrapper whileHover={{ scale: 1.05 }}>
                   <StripeSellerBadge userId={listing.userId} className="text-xs" />
-                </motion.div>
+                </MobileAnimationWrapper>
                 {listing.isGraded && (
-                  <motion.span 
+                  <MobileMotionSpan 
                     className="text-xs px-2 py-0.5 bg-primary/20 text-primary rounded-full shadow-sm font-medium"
                     whileHover={{ scale: 1.05 }}
                   >
                     {listing.gradingCompany} {listing.gradeLevel}
-                  </motion.span>
+                  </MobileMotionSpan>
                 )}
               </div>
               <div className="flex items-center justify-between text-xs">
@@ -637,11 +623,11 @@ export const ListingCard = memo(({ listing, isFavorite, onFavoriteClick, onAddTo
                   </span>
                 )}
               </div>
-            </motion.div>
+            </MobileAnimationWrapper>
           </CardContent>
         </Link>
       </Card>
-    </motion.div>
+    </MobileAnimationWrapper>
   );
 });
 

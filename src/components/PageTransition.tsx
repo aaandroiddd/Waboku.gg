@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { ReactNode, useEffect } from "react";
 import { useLoading } from "@/contexts/LoadingContext";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
 
 interface PageTransitionProps {
   children: ReactNode;
@@ -9,20 +10,19 @@ interface PageTransitionProps {
 const pageVariants = {
   initial: {
     opacity: 0,
-    // Remove the y-axis movement to prevent layout shift
     y: 0,
   },
   animate: {
     opacity: 1,
     y: 0,
     transition: {
-      duration: 0.3, // Reduced from 0.4 to 0.3 for faster transitions
+      duration: 0.3,
       ease: [0.23, 1, 0.32, 1],
     },
   },
   exit: {
     opacity: 0,
-    y: 0, // Keep at 0 to prevent layout shift during exit
+    y: 0,
     transition: {
       duration: 0.2,
       ease: [0.23, 1, 0.32, 1],
@@ -32,27 +32,27 @@ const pageVariants = {
 
 export function PageTransition({ children }: PageTransitionProps) {
   const { stopLoading } = useLoading();
+  const isMobile = useMediaQuery("(max-width: 768px)");
 
   // When the component mounts, stop loading immediately
   useEffect(() => {
-    // Immediately stop loading to prevent layout shifts
     stopLoading();
-    
     return () => {};
   }, [stopLoading]);
 
-  // Check if we're running on a mobile device to reduce animation complexity
-  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+  // On mobile, render without any animations
+  if (isMobile) {
+    return <div>{children}</div>;
+  }
 
+  // On desktop, render with full page transition animations
   return (
     <motion.div
-      initial={isMobile ? { opacity: 0 } : "initial"}
-      animate={isMobile ? { opacity: 1 } : "animate"}
-      exit={isMobile ? { opacity: 0 } : "exit"}
-      variants={!isMobile ? pageVariants : undefined}
-      transition={isMobile ? { duration: 0.3 } : undefined}
+      initial="initial"
+      animate="animate"
+      exit="exit"
+      variants={pageVariants}
       onAnimationComplete={() => stopLoading()}
-      // Add layout="position" to help maintain layout during animations
       layout="position"
     >
       {children}

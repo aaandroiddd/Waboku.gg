@@ -66,9 +66,6 @@ const MainContent = memo(({ Component, pageProps, pathname }: {
     return <LoadingScreen isLoading={true} />;
   }
 
-  // Determine if we're on mobile for simpler transitions
-  const isMobile = isMounted && window.innerWidth < 768;
-
   // Handle custom layout
   const getLayoutContent = () => {
     // Check if the component has a getLayout function
@@ -87,18 +84,12 @@ const MainContent = memo(({ Component, pageProps, pathname }: {
       {/* Always show loading screen when isLoading is true */}
       <LoadingScreen isLoading={isLoading} />
       
-      {/* Use different transition approaches for mobile vs desktop */}
-      {isMobile ? (
+      {/* PageTransition component handles mobile detection internally */}
+      <AnimatePresence mode="wait">
         <PageTransition key={pathname}>
           {content}
         </PageTransition>
-      ) : (
-        <AnimatePresence mode="wait">
-          <PageTransition key={pathname}>
-            {content}
-          </PageTransition>
-        </AnimatePresence>
-      )}
+      </AnimatePresence>
       
       <Toaster />
       {/* Firebase connection management */}

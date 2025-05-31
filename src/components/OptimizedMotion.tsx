@@ -2,7 +2,7 @@ import React from 'react';
 import { motion, MotionProps } from 'framer-motion';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 
-// Optimized motion component that applies performance enhancements for mobile devices
+// Optimized motion component that disables animations on mobile devices
 export function OptimizedMotion({
   children,
   className,
@@ -10,39 +10,33 @@ export function OptimizedMotion({
   ...props
 }: React.PropsWithChildren<MotionProps & { className?: string }>) {
   const isMobile = useMediaQuery("(max-width: 768px)");
-  const isOlderDevice = useMediaQuery("(max-width: 480px)");
   
-  // Apply performance optimizations for mobile devices
-  const optimizedStyle = {
-    willChange: isMobile ? "transform, opacity" : "auto",
-    backfaceVisibility: isMobile ? "hidden" : "visible",
-    WebkitBackfaceVisibility: isMobile ? "hidden" : "visible",
-    transform: isMobile ? "translateZ(0)" : "none",
-    // For older devices, simplify animations even further
-    ...(isOlderDevice && {
-      transition: {
-        duration: 0.15,
-        ease: "linear"
-      }
-    }),
-    ...style
-  };
+  // On mobile, render a simple div without any animations
+  if (isMobile) {
+    return (
+      <div
+        className={className}
+        style={style}
+        onClick={props.onClick}
+      >
+        {children}
+      </div>
+    );
+  }
   
-  // Add framer-motion-div class for global CSS optimizations
-  const optimizedClassName = `${className || ''} ${isMobile ? 'framer-motion-div' : ''}`.trim();
-  
+  // On desktop, render with full motion capabilities
   return (
     <motion.div
       {...props}
-      className={optimizedClassName}
-      style={optimizedStyle}
+      className={className}
+      style={style}
     >
       {children}
     </motion.div>
   );
 }
 
-// Optimized motion button for better touch interactions on mobile
+// Optimized motion button that disables animations on mobile
 export function OptimizedMotionButton({
   children,
   className,
@@ -51,25 +45,25 @@ export function OptimizedMotionButton({
 }: React.PropsWithChildren<MotionProps & { className?: string }>) {
   const isMobile = useMediaQuery("(max-width: 768px)");
   
-  // Apply performance optimizations for mobile devices
-  const optimizedStyle = {
-    willChange: isMobile ? "transform" : "auto",
-    backfaceVisibility: isMobile ? "hidden" : "visible",
-    WebkitBackfaceVisibility: isMobile ? "hidden" : "visible",
-    transform: isMobile ? "translateZ(0)" : "none",
-    // Increase touch target size on mobile
-    padding: isMobile ? "0.5rem" : undefined,
-    ...style
-  };
+  // On mobile, render a simple button without any animations
+  if (isMobile) {
+    return (
+      <button
+        className={className}
+        style={style}
+        onClick={props.onClick}
+      >
+        {children}
+      </button>
+    );
+  }
   
-  // Add framer-motion-div class for global CSS optimizations
-  const optimizedClassName = `${className || ''} ${isMobile ? 'framer-motion-div' : ''}`.trim();
-  
+  // On desktop, render with full motion capabilities
   return (
     <motion.button
       {...props}
-      className={optimizedClassName}
-      style={optimizedStyle}
+      className={className}
+      style={style}
     >
       {children}
     </motion.button>

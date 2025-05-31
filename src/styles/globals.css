@@ -33,41 +33,21 @@
     transform: translateZ(0);
   }
   
-  /* Disable heavy animations on mobile for better performance */
-  .framer-motion-div {
-    /* Reduce animation complexity */
-    animation-duration: 0.2s !important;
-    transition-duration: 0.2s !important;
-    /* Use simpler easing */
-    animation-timing-function: ease-out !important;
-    transition-timing-function: ease-out !important;
-  }
-  
-  /* Optimize motion components for mobile */
-  [data-framer-motion] {
-    will-change: transform, opacity !important;
-    backface-visibility: hidden !important;
-    -webkit-backface-visibility: hidden !important;
-    transform: translateZ(0) !important;
-  }
-  
-  /* Reduce complexity of spring animations on mobile */
+  /* Completely disable all Framer Motion animations on mobile */
+  .framer-motion-div,
+  [data-framer-motion],
   .motion-safe\:animate-spring {
     animation: none !important;
-    transition: all 0.2s ease-out !important;
+    transition: none !important;
+    transform: none !important;
+    will-change: auto !important;
   }
   
-  /* Optimize animations for mobile */
+  /* Disable all CSS animations except for the motion background */
   .float-animation,
   .motion-safe\:animate-float {
-    /* Reduce animation complexity on mobile */
-    animation-duration: 8s !important;
-    /* Use transform for better performance */
-    transform: translateZ(0);
-    /* Disable on low-end devices */
-    @media (prefers-reduced-motion: reduce) {
-      animation: none !important;
-    }
+    animation: none !important;
+    transform: none !important;
   }
   
   /* Preserve fade-in animation speed for title and subtitle to match desktop */
@@ -88,22 +68,32 @@
     transform: translateZ(0);
   }
   
-  /* Optimize menu transitions */
+  /* Disable menu transitions on mobile */
   .sheet-content {
-    will-change: transform;
-    transform: translateZ(0);
-    backface-visibility: hidden;
-    -webkit-backface-visibility: hidden;
-    perspective: 1000;
-    -webkit-perspective: 1000;
+    transition: none !important;
+    animation: none !important;
+    transform: none !important;
+    will-change: auto !important;
   }
   
-  /* Optimize framer-motion animations */
-  .framer-motion-div {
-    will-change: transform, opacity;
-    backface-visibility: hidden;
-    -webkit-backface-visibility: hidden;
-    transform: translateZ(0);
+  /* Disable all hover and tap animations on mobile */
+  *:hover,
+  *:active,
+  *:focus {
+    transform: none !important;
+    transition: none !important;
+    animation: none !important;
+  }
+  
+  /* Disable loading animations on mobile */
+  .animate-pulse {
+    animation: none !important;
+  }
+  
+  /* Disable fade animations on mobile */
+  .animate-fade-in-out {
+    animation: none !important;
+    opacity: 1 !important;
   }
   
   /* Optimize background animations for mobile */
