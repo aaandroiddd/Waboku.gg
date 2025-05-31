@@ -191,6 +191,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       status: 'pending',
       createdAt: FieldValue.serverTimestamp(),
       updatedAt: FieldValue.serverTimestamp(),
+      expiresAt: admin.firestore.Timestamp.fromDate(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)),
       listingSnapshot: {
         title: listingSnapshot.title || 'Unknown Listing',
         price: listingSnapshot.price || 0,
