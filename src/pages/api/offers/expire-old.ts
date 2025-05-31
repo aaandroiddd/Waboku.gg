@@ -6,16 +6,18 @@ import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 /**
  * Expires all pending offers that are past their expiresAt timestamp.
  * 
- * This route should be protected by a secret (e.g. CRON_SECRET) to prevent abuse.
+ * This route is protected by Vercel cron jobs or a manual secret.
  * 
- * Can be triggered by a cron job or manually.
+ * Can be triggered by a cron job or manually with the CRON_SECRET.
  */
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  // Optional: Protect with a secret
-  const cronSecret = process.env.CRON_SECRET;
-  const providedSecret = req.headers['x-cron-secret'] || req.query.secret;
-  if (!cronSecret || providedSecret !== cronSecret) {
-    return res.status(403).json({ error: 'Forbidden: Invalid or missing secret' });
+  // Check if this is a Vercel cron job (has authorization header) or manual call with secret
+  const isVercelCron = req.headers.authorization === `Bearer ${process.env.CRON_SECRET}`;
+  const manualSecret = req.headers['x-cron-secret'] || req.query.secret;
+  const isManualCall = manualSecret === process.env.CRON_SECRET;
+  
+  if (!isVercelCron && !isManualCall) {
+    return res.status(403).json({ error: 'Forbidden: Invalid or missing authorization' });
   }
 
   try {

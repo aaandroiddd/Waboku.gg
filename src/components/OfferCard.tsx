@@ -3,10 +3,10 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { formatPrice } from '@/lib/price';
-import { format } from 'date-fns';
+import { format, formatDistanceToNow, differenceInHours, isPast } from 'date-fns';
 import Image from 'next/image';
 import { UserNameLink } from '@/components/UserNameLink';
-import { Check, X, RefreshCw, Send, Trash2, XCircle, MapPin, Truck } from 'lucide-react';
+import { Check, X, RefreshCw, Send, Trash2, XCircle, MapPin, Truck, Clock, AlertTriangle } from 'lucide-react';
 import { useOffers } from '@/hooks/useOffers';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
@@ -121,8 +121,30 @@ export function OfferCard({ offer, type, onCounterOffer }: OfferCardProps) {
       imageUrl: offer.listingSnapshot?.imageUrl || '',
     },
     createdAt: offer.createdAt instanceof Date ? offer.createdAt : new Date(),
+    expiresAt: offer.expiresAt instanceof Date ? offer.expiresAt : null,
     status: offer.status || 'pending'
   };
+
+  // Calculate expiration status
+  const getExpirationInfo = () => {
+    if (!safeOffer.expiresAt || safeOffer.status !== 'pending') {
+      return null;
+    }
+
+    const now = new Date();
+    const isExpired = isPast(safeOffer.expiresAt);
+    const hoursUntilExpiry = differenceInHours(safeOffer.expiresAt, now);
+    const isExpiringSoon = hoursUntilExpiry <= 24 && hoursUntilExpiry > 0;
+
+    return {
+      isExpired,
+      isExpiringSoon,
+      hoursUntilExpiry,
+      timeUntilExpiry: formatDistanceToNow(safeOffer.expiresAt, { addSuffix: true })
+    };
+  };
+
+  const expirationInfo = getExpirationInfo();
 
   return (
     <Card className="mb-4">
@@ -157,6 +179,19 @@ export function OfferCard({ offer, type, onCounterOffer }: OfferCardProps) {
               <p className="text-muted-foreground">
                 Date: {format(safeOffer.createdAt, 'PPP')}
               </p>
+              {safeOffer.expiresAt && (
+                <p className="text-muted-foreground">
+                  <Clock className="inline mr-1 h-3 w-3" />
+                  Expires: {format(safeOffer.expiresAt, 'PPP')}
+                  {expirationInfo && (
+                    <span className={`ml-2 text-xs ${
+                      expirationInfo.isExpiringSoon ? 'text-orange-500' : 'text-muted-foreground'
+                    }`}>
+                      ({expirationInfo.timeUntilExpiry})
+                    </span>
+                  )}
+                </p>
+              )}
               <div className="flex flex-col sm:flex-row sm:items-center gap-2">
                 <div>
                   <span className="text-muted-foreground">Listing Price: </span>
@@ -173,6 +208,14 @@ export function OfferCard({ offer, type, onCounterOffer }: OfferCardProps) {
                 >
                   {safeOffer.status.charAt(0).toUpperCase() + safeOffer.status.slice(1)}
                 </Badge>
+                
+                {/* Show expiration warning badge */}
+                {expirationInfo?.isExpiringSoon && (
+                  <Badge variant="outline" className="border-orange-500 text-orange-500">
+                    <AlertTriangle className="mr-1 h-3 w-3" />
+                    Expires Soon
+                  </Badge>
+                )}
                 
                 {/* Show shipping info needed badge */}
                 {type === 'sent' && 

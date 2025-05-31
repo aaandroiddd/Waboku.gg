@@ -9,6 +9,7 @@ export interface Offer {
   cleared?: boolean;
   createdAt: Date;
   updatedAt: Date;
+  expiresAt?: Date; // When the offer expires (7 days from creation)
   listingSnapshot: {
     title: string;
     price: number;

@@ -24,6 +24,10 @@
     {
       "path": "/api/admin/sync-account-tiers",
       "schedule": "0 */6 * * *"
+    },
+    {
+      "path": "/api/offers/expire-old",
+      "schedule": "0 0 * * *"
     }
   ]
 }
