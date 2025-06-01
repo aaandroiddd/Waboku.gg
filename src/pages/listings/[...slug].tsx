@@ -1199,34 +1199,30 @@ export default function ListingPage() {
                     {/* Mobile navigation controls - only visible on mobile */}
                     {isMobile && listing.imageUrls.length > 1 && (
                       <>
-                        <Button 
-                          variant="outline" 
-                          size="icon" 
-                          className="absolute left-2 top-1/2 -translate-y-1/2 z-10 h-10 w-10 rounded-full bg-background/80 backdrop-blur-sm shadow-md border-white/10"
+                        <button 
+                          className="absolute left-2 top-1/2 -translate-y-1/2 z-10 h-10 w-10 rounded-full bg-background/80 backdrop-blur-sm shadow-md border border-white/10 flex items-center justify-center active:bg-background/90 touch-manipulation"
                           onClick={(e) => {
                             e.stopPropagation();
                             e.preventDefault();
                             const api = document.querySelector('.embla')?.['emblaApi'];
                             if (api) api.scrollPrev();
                           }}
+                          aria-label="Previous image"
                         >
                           <ArrowLeft className="h-5 w-5" />
-                          <span className="sr-only">Previous image</span>
-                        </Button>
-                        <Button 
-                          variant="outline" 
-                          size="icon" 
-                          className="absolute right-2 top-1/2 -translate-y-1/2 z-10 h-10 w-10 rounded-full bg-background/80 backdrop-blur-sm shadow-md border-white/10"
+                        </button>
+                        <button 
+                          className="absolute right-2 top-1/2 -translate-y-1/2 z-10 h-10 w-10 rounded-full bg-background/80 backdrop-blur-sm shadow-md border border-white/10 flex items-center justify-center active:bg-background/90 touch-manipulation"
                           onClick={(e) => {
                             e.stopPropagation();
                             e.preventDefault();
                             const api = document.querySelector('.embla')?.['emblaApi'];
                             if (api) api.scrollNext();
                           }}
+                          aria-label="Next image"
                         >
                           <ArrowLeft className="h-5 w-5 rotate-180" />
-                          <span className="sr-only">Next image</span>
-                        </Button>
+                        </button>
                       </>
                     )}
                     <CarouselContent>
