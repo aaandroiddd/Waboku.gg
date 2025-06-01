@@ -427,22 +427,22 @@ export default function Home() {
               <AnimatedBackground className="opacity-80" />
             </OptimizedMotion>
             
-            <div className="relative container mx-auto px-4 py-8 sm:py-10 md:py-12 lg:py-16">
+            <div className="relative container mx-auto px-6 sm:px-4 py-12 sm:py-10 md:py-12 lg:py-16">
               <OptimizedMotion
-                className="text-center max-w-3xl mx-auto space-y-4 sm:space-y-6"
+                className="text-center max-w-3xl mx-auto space-y-6 sm:space-y-6"
                 variants={animationVariants.container}
                 initial="hidden"
                 animate="visible"
                 shouldAnimate={shouldAnimate}
               >
-                <div className="space-y-2 sm:space-y-3">
+                <div className="space-y-4 sm:space-y-3">
                   {/* Optimized title with layout preservation */}
-                  <div className="relative">
-                    <div className="invisible h-[3.75rem] sm:h-[4.5rem] md:h-[6rem] lg:h-[7.5rem]" aria-hidden="true">
+                  <div className="relative px-2 sm:px-0">
+                    <div className="invisible h-[4.5rem] sm:h-[4.5rem] md:h-[6rem] lg:h-[7.5rem]" aria-hidden="true">
                       Your Local TCG Marketplace
                     </div>
                     <OptimizedMotion
-                      className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight glow-text absolute left-0 right-0 top-0"
+                      className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight glow-text absolute left-0 right-0 top-0 leading-tight"
                       variants={animationVariants.item}
                       shouldAnimate={shouldAnimate}
                       style={{ willChange: "transform, opacity" }}
@@ -451,12 +451,12 @@ export default function Home() {
                     </OptimizedMotion>
                   </div>
                   
-                  <div className="relative">
-                    <div className="invisible h-[1.5rem] sm:h-[1.75rem] md:h-[2rem]" aria-hidden="true">
+                  <div className="relative px-4 sm:px-0">
+                    <div className="invisible h-[2rem] sm:h-[1.75rem] md:h-[2rem]" aria-hidden="true">
                       {randomSubtitle}
                     </div>
                     <OptimizedMotion
-                      className="text-base sm:text-lg md:text-xl glow-text-subtle absolute left-0 right-0 top-0"
+                      className="text-base sm:text-lg md:text-xl glow-text-subtle absolute left-0 right-0 top-0 leading-relaxed"
                       variants={animationVariants.item}
                       shouldAnimate={shouldAnimate}
                       style={{ willChange: "transform, opacity" }}
