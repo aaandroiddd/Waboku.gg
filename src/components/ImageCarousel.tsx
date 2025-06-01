@@ -165,9 +165,11 @@ export default function ImageCarousel({ images }: ImageCarouselProps) {
             ))}
           </div>
 
-          {/* Thumbnails - show below carousel on mobile, dots on desktop */}
-          {isMobile && images.length > 1 ? (
-            <div className="flex justify-center mt-4 gap-2 overflow-x-auto pb-2">
+          {/* Thumbnails - show below carousel on both mobile and desktop */}
+          {images.length > 1 ? (
+            <div className={`flex mt-4 gap-2 overflow-x-auto pb-2 ${
+              isMobile ? 'justify-start' : 'justify-center'
+            }`}>
               {images.map((src, idx) => (
                 <button
                   key={idx}
@@ -175,7 +177,9 @@ export default function ImageCarousel({ images }: ImageCarouselProps) {
                     instanceRef.current?.moveToSlide(idx);
                     setCurrentSlide(idx);
                   }}
-                  className={`flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden border-2 transition-all duration-200 ${
+                  className={`flex-shrink-0 ${
+                    isMobile ? 'w-16 h-16' : 'w-20 h-20'
+                  } rounded-lg overflow-hidden border-2 transition-all duration-200 ${
                     currentSlide === idx 
                       ? "border-blue-500 ring-2 ring-blue-500/30" 
                       : "border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500"
@@ -192,18 +196,9 @@ export default function ImageCarousel({ images }: ImageCarouselProps) {
               ))}
             </div>
           ) : (
-            /* Dots for desktop or single image */
+            /* Single dot for single image */
             <div className="flex justify-center mt-4 gap-2">
-              {images.map((_, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => instanceRef.current?.moveToSlide(idx)}
-                  className={`${isMobile ? 'h-3 w-3' : 'h-2 w-2'} rounded-full ${
-                    currentSlide === idx ? "bg-black dark:bg-white" : "bg-gray-300 dark:bg-gray-700"
-                  }`}
-                  aria-label={`Go to image ${idx + 1}`}
-                />
-              ))}
+              <div className={`${isMobile ? 'h-3 w-3' : 'h-2 w-2'} rounded-full bg-black dark:bg-white`} />
             </div>
           )}
         </div>
