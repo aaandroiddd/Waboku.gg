@@ -16,6 +16,7 @@ import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { AcceptedOfferCheckout } from '@/components/AcceptedOfferCheckout';
+import { generateListingUrl } from '@/lib/listing-slug';
 
 interface OrderCardProps {
   order: Order;
@@ -81,7 +82,16 @@ export function OrderCard({ order, isSale = false }: OrderCardProps) {
   
   const handleViewListing = (e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent triggering the card click
-    if (order.listingId) {
+    if (order.listingId && order.listingSnapshot) {
+      // Use the new slug-based URL format
+      const listingUrl = generateListingUrl(
+        order.listingSnapshot.title || 'Unknown Listing',
+        order.listingSnapshot.game || 'other',
+        order.listingId
+      );
+      router.push(listingUrl);
+    } else if (order.listingId) {
+      // Fallback to old format if we don't have listing snapshot data
       router.push(`/listings/${order.listingId}`);
     }
   };
@@ -150,6 +160,7 @@ export function OrderCard({ order, isSale = false }: OrderCardProps) {
       title: order.listingSnapshot?.title || 'Unknown Listing',
       price: order.listingSnapshot?.price || 0,
       imageUrl: order.listingSnapshot?.imageUrl || '',
+      game: order.listingSnapshot?.game || 'other',
     },
     createdAt: order.createdAt instanceof Date ? order.createdAt : new Date(),
     // Default to pending if status is missing

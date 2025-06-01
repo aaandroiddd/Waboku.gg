@@ -25,6 +25,7 @@ import { TrackingStatusComponent } from '@/components/TrackingStatus';
 import { UserNameLink } from '@/components/UserNameLink';
 import { ReviewForm } from '@/components/ReviewForm';
 import { OrderShippingInfoDialog } from '@/components/OrderShippingInfoDialog';
+import { generateListingUrl } from '@/lib/listing-slug';
 
 export default function OrderDetailsPage() {
   const router = useRouter();
@@ -474,7 +475,20 @@ export default function OrderDetailsPage() {
             <div className="flex flex-col md:flex-row gap-6">
               <div 
                 className="relative w-full md:w-1/3 h-48 md:h-64 cursor-pointer"
-                onClick={() => order.listingId && router.push(`/listings/${order.listingId}`)}
+                onClick={() => {
+                  if (order.listingId && order.listingSnapshot) {
+                    // Use the new slug-based URL format
+                    const listingUrl = generateListingUrl(
+                      order.listingSnapshot.title || 'Unknown Listing',
+                      order.listingSnapshot.game || 'other',
+                      order.listingId
+                    );
+                    router.push(listingUrl);
+                  } else if (order.listingId) {
+                    // Fallback to old format if we don't have listing snapshot data
+                    router.push(`/listings/${order.listingId}`);
+                  }
+                }}
               >
                 {order.listingSnapshot?.imageUrl ? (
                   <Image
@@ -492,7 +506,20 @@ export default function OrderDetailsPage() {
               <div className="flex-1">
                 <h2 
                   className="text-xl font-semibold mb-4 hover:text-primary cursor-pointer"
-                  onClick={() => order.listingId && router.push(`/listings/${order.listingId}`)}
+                  onClick={() => {
+                    if (order.listingId && order.listingSnapshot) {
+                      // Use the new slug-based URL format
+                      const listingUrl = generateListingUrl(
+                        order.listingSnapshot.title || 'Unknown Listing',
+                        order.listingSnapshot.game || 'other',
+                        order.listingId
+                      );
+                      router.push(listingUrl);
+                    } else if (order.listingId) {
+                      // Fallback to old format if we don't have listing snapshot data
+                      router.push(`/listings/${order.listingId}`);
+                    }
+                  }}
                 >
                   {order.listingSnapshot?.title || `Order #${order.id.slice(0, 8)}`}
                 </h2>
