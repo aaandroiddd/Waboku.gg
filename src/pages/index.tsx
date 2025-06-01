@@ -414,7 +414,7 @@ export default function Home() {
           <GameCategories />
 
           {/* Hero Section with optimized animations */}
-          <div className="relative overflow-hidden min-h-screen">
+          <div className="relative overflow-hidden min-h-screen pt-16 sm:pt-20 md:pt-24">
             {/* Optimized Background Animation */}
             <OptimizedMotion 
               className="hero-background absolute inset-0"
