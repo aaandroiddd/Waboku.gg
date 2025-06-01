@@ -118,10 +118,10 @@ export default function ImageCarousel({ images }: ImageCarouselProps) {
         <div className={`relative w-full ${!isMobile ? 'mx-12' : ''} max-w-md mx-auto`}>
           {/* Navigation arrows - positioned differently for mobile vs desktop */}
           {isMobile ? (
-            // Mobile arrows - positioned inside the carousel area
+            // Mobile arrows - positioned inside the carousel area, no hover effects
             <>
               <button
-                className="absolute left-2 top-1/2 -translate-y-1/2 z-20 bg-black/50 hover:bg-black/70 p-2 rounded-full shadow-lg transition-all duration-200 border border-white/20 touch-manipulation"
+                className="absolute left-2 top-1/2 -translate-y-1/2 z-20 bg-black/60 active:bg-black/80 p-3 rounded-full shadow-lg border border-white/30 touch-manipulation"
                 onClick={() => instanceRef.current?.prev()}
                 aria-label="Previous image"
                 style={{ pointerEvents: 'auto' }}
@@ -129,7 +129,7 @@ export default function ImageCarousel({ images }: ImageCarouselProps) {
                 <ChevronLeft className="h-5 w-5 text-white" />
               </button>
               <button
-                className="absolute right-2 top-1/2 -translate-y-1/2 z-20 bg-black/50 hover:bg-black/70 p-2 rounded-full shadow-lg transition-all duration-200 border border-white/20 touch-manipulation"
+                className="absolute right-2 top-1/2 -translate-y-1/2 z-20 bg-black/60 active:bg-black/80 p-3 rounded-full shadow-lg border border-white/30 touch-manipulation"
                 onClick={() => instanceRef.current?.next()}
                 aria-label="Next image"
                 style={{ pointerEvents: 'auto' }}
