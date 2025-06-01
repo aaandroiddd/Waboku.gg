@@ -6,6 +6,7 @@ import { ListingGrid } from '@/components/ListingGrid';
 import { SearchListingList } from '@/components/SearchListingList';
 import Head from 'next/head';
 import Header from '@/components/Header';
+import { Footer } from '@/components/Footer';
 import Link from 'next/link';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useRouter } from 'next/router';
@@ -310,9 +311,9 @@ export default function ListingsPage() {
         />
       </Head>
 
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-background flex flex-col">
         <Header />
-        <main className="container mx-auto px-4 py-8">
+        <main className="flex-1 container mx-auto px-4 py-8">
           <div className="max-w-[1400px] mx-auto">
             {/* Firebase Connection Handler wraps the content */}
             <FirebaseConnectionHandler>
@@ -548,6 +549,7 @@ export default function ListingsPage() {
             </FirebaseConnectionHandler>
           </div>
         </main>
+        <Footer />
       </div>
     </>
   );
