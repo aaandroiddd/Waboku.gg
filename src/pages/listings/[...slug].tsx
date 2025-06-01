@@ -1396,9 +1396,11 @@ export default function ListingPage() {
                     <CarouselNext className="hidden md:flex -right-4 mx-[40px]" />
                   </Carousel>
                   
-                  {/* Thumbnails for mobile - show below carousel */}
-                  {isMobile && listing.imageUrls.length > 1 && (
-                    <div className="flex justify-center mt-4 gap-2 overflow-x-auto pb-2">
+                  {/* Thumbnails - show below carousel for both mobile and desktop */}
+                  {listing.imageUrls.length > 1 && (
+                    <div className={`flex mt-4 gap-2 overflow-x-auto pb-2 ${
+                      isMobile ? 'justify-start' : 'justify-center'
+                    }`}>
                       {listing.imageUrls.map((url, idx) => (
                         <button
                           key={idx}
@@ -1409,7 +1411,9 @@ export default function ListingPage() {
                               setCurrentImageIndex(idx);
                             }
                           }}
-                          className={`flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden border-2 transition-all duration-200 ${
+                          className={`flex-shrink-0 ${
+                            isMobile ? 'w-16 h-16' : 'w-20 h-20'
+                          } rounded-lg overflow-hidden border-2 transition-all duration-200 ${
                             currentImageIndex === idx 
                               ? "border-blue-500 ring-2 ring-blue-500/30" 
                               : "border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500"
@@ -1419,8 +1423,8 @@ export default function ListingPage() {
                           <Image
                             src={url}
                             alt={`Thumbnail ${idx + 1}`}
-                            width={64}
-                            height={64}
+                            width={isMobile ? 64 : 80}
+                            height={isMobile ? 64 : 80}
                             className="w-full h-full object-cover"
                             loading="lazy"
                           />
