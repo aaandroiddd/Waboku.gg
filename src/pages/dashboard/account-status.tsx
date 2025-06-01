@@ -1,5 +1,6 @@
 import { PricingPlans } from '@/components/PricingPlans';
 import { useAccount } from '@/contexts/AccountContext';
+import { useSimplifiedPremiumStatus } from '@/hooks/useSimplifiedPremiumStatus';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft } from 'lucide-react';
@@ -28,11 +29,16 @@ import { LoadingScreen } from '@/components/LoadingScreen';
 
 export default function AccountStatus() {
   // Move all hooks to the top of the component to ensure consistent hook calls
-  const { accountTier, subscription = {}, cancelSubscription, isLoading, refreshAccountData } = useAccount();
+  const { cancelSubscription, isLoading, refreshAccountData } = useAccount();
+  const { isPremium, tier, subscription: simplifiedSubscription, refreshStatus } = useSimplifiedPremiumStatus();
   const { user } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
   const { session_id, upgrade } = router.query;
+  
+  // Use simplified subscription data, fallback to AccountContext if needed
+  const accountTier = tier;
+  const subscription = simplifiedSubscription || {};
   
   // Track page initialization state
   const [pageState, setPageState] = useState<'initializing' | 'loading' | 'ready'>('initializing');
@@ -595,7 +601,13 @@ export default function AccountStatus() {
                         title: "Refreshing...",
                         description: "Updating your subscription status...",
                       });
-                      await refreshAccountData();
+                      
+                      // Use both refresh methods for comprehensive update
+                      await Promise.all([
+                        refreshStatus(),
+                        refreshAccountData()
+                      ]);
+                      
                       toast({
                         title: "Updated",
                         description: "Your subscription status has been refreshed.",

@@ -8,8 +8,7 @@ import { Logo } from '@/components/Logo';
 import { useState, useEffect } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { useUnread } from '@/contexts/UnreadContext';
-import { useAccountCache } from '@/hooks/useAccountCache';
-import { usePremiumStatus } from '@/hooks/usePremiumStatus';
+import { useSimplifiedPremiumStatus } from '@/hooks/useSimplifiedPremiumStatus';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { LogOut } from 'lucide-react';
@@ -23,50 +22,10 @@ interface DashboardSidebarProps {
 export function DashboardSidebar({ onNavigate }: DashboardSidebarProps) {
   const router = useRouter();
   const { user, isEmailVerified } = useAuth();
-  const { accountTier, features, isLoading: isAccountLoading } = useAccount();
   const { unreadCounts } = useUnread();
-  const [sidebarReady, setSidebarReady] = useState(false);
-  const { getCachedAccountTier, cacheAccountTier } = useAccountCache();
-  const [displayTier, setDisplayTier] = useState<string | null>(null);
   
-  // Use the more reliable premium status hook
-  const premiumStatus = usePremiumStatus();
-
-  // Initialize sidebar with cached data or wait for account data
-  useEffect(() => {
-    // Use the premium status hook as the primary source of truth
-    if (!premiumStatus.isLoading) {
-      const tier = premiumStatus.tier;
-      setDisplayTier(tier);
-      setSidebarReady(true);
-      
-      // Cache the result for faster subsequent loads
-      cacheAccountTier(tier);
-      
-      console.log('Dashboard sidebar tier updated:', {
-        tier,
-        source: premiumStatus.source,
-        lastChecked: new Date(premiumStatus.lastChecked).toISOString()
-      });
-    } else {
-      // While premium status is loading, try to use cached data
-      const cachedTier = getCachedAccountTier();
-      if (cachedTier) {
-        setDisplayTier(cachedTier);
-        setSidebarReady(true);
-      }
-    }
-  }, [premiumStatus, getCachedAccountTier, cacheAccountTier]);
-  
-  // Fallback to AccountContext if premium status hook fails
-  useEffect(() => {
-    if (!premiumStatus.isLoading && premiumStatus.source === 'fallback' && !isAccountLoading && accountTier) {
-      console.log('Using AccountContext as fallback for sidebar tier:', accountTier);
-      setDisplayTier(accountTier);
-      cacheAccountTier(accountTier);
-      setSidebarReady(true);
-    }
-  }, [accountTier, isAccountLoading, premiumStatus, cacheAccountTier]);
+  // Use the simplified premium status hook as the single source of truth
+  const { isPremium, tier, isLoading: isPremiumLoading, source } = useSimplifiedPremiumStatus();
 
   // Function to render unread badge
   const renderUnreadBadge = (count: number) => {
@@ -252,27 +211,20 @@ export function DashboardSidebar({ onNavigate }: DashboardSidebarProps) {
   // Combine navigation items based on premium status
   let navigation = [...baseNavigation];
   
-  // Use multiple sources to determine if user should see premium features
-  const shouldShowPremiumFeatures = 
-    premiumStatus.isPremium || 
-    displayTier === 'premium' || 
-    (!isAccountLoading && accountTier === 'premium');
-  
-  if (shouldShowPremiumFeatures) {
+  // Simplified premium feature visibility check
+  if (isPremium) {
     // Insert Analytics after Create Listing (index 2)
     navigation.splice(2, 0, ...premiumNavItems);
   }
   
   // Debug logging for premium feature visibility
   if (process.env.NODE_ENV === 'development') {
-    console.log('Premium features visibility check:', {
-      shouldShowPremiumFeatures,
-      premiumStatusIsPremium: premiumStatus.isPremium,
-      premiumStatusSource: premiumStatus.source,
-      displayTier,
-      accountTier,
-      isAccountLoading,
-      userId: user?.uid
+    console.log('[DashboardSidebar] Premium features visibility:', {
+      isPremium,
+      tier,
+      source,
+      userId: user?.uid,
+      showingPremiumFeatures: isPremium
     });
   }
 
@@ -335,7 +287,7 @@ export function DashboardSidebar({ onNavigate }: DashboardSidebarProps) {
       
       {/* Scrollable navigation area */}
       <div className="flex-1 flex flex-col py-6 overflow-y-auto">
-        {!sidebarReady && !displayTier ? (
+        {isPremiumLoading ? (
           // Show skeleton loader while loading
           <div className="px-4 space-y-1">
             {Array(10).fill(0).map((_, i) => (
