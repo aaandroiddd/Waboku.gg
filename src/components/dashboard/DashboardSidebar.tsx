@@ -9,6 +9,7 @@ import { useState, useEffect } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { useUnread } from '@/contexts/UnreadContext';
 import { useAccountCache } from '@/hooks/useAccountCache';
+import { usePremiumStatus } from '@/hooks/usePremiumStatus';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { LogOut } from 'lucide-react';
@@ -27,35 +28,45 @@ export function DashboardSidebar({ onNavigate }: DashboardSidebarProps) {
   const [sidebarReady, setSidebarReady] = useState(false);
   const { getCachedAccountTier, cacheAccountTier } = useAccountCache();
   const [displayTier, setDisplayTier] = useState<string | null>(null);
+  
+  // Use the more reliable premium status hook
+  const premiumStatus = usePremiumStatus();
 
   // Initialize sidebar with cached data or wait for account data
   useEffect(() => {
-    // First try to get from cache
-    const cachedTier = getCachedAccountTier();
-    
-    if (cachedTier) {
-      // If we have cached data, use it immediately
-      setDisplayTier(cachedTier);
+    // Use the premium status hook as the primary source of truth
+    if (!premiumStatus.isLoading) {
+      const tier = premiumStatus.tier;
+      setDisplayTier(tier);
       setSidebarReady(true);
-    } else if (!isAccountLoading && accountTier) {
-      // Once account data is loaded, use it and cache it
+      
+      // Cache the result for faster subsequent loads
+      cacheAccountTier(tier);
+      
+      console.log('Dashboard sidebar tier updated:', {
+        tier,
+        source: premiumStatus.source,
+        lastChecked: new Date(premiumStatus.lastChecked).toISOString()
+      });
+    } else {
+      // While premium status is loading, try to use cached data
+      const cachedTier = getCachedAccountTier();
+      if (cachedTier) {
+        setDisplayTier(cachedTier);
+        setSidebarReady(true);
+      }
+    }
+  }, [premiumStatus, getCachedAccountTier, cacheAccountTier]);
+  
+  // Fallback to AccountContext if premium status hook fails
+  useEffect(() => {
+    if (!premiumStatus.isLoading && premiumStatus.source === 'fallback' && !isAccountLoading && accountTier) {
+      console.log('Using AccountContext as fallback for sidebar tier:', accountTier);
       setDisplayTier(accountTier);
       cacheAccountTier(accountTier);
       setSidebarReady(true);
     }
-  }, [accountTier, isAccountLoading, getCachedAccountTier, cacheAccountTier]);
-  
-  // Update display tier whenever account tier changes
-  useEffect(() => {
-    if (!isAccountLoading && accountTier) {
-      // If the loaded account tier is different from what we're displaying, update it
-      if (displayTier !== accountTier) {
-        console.log('Account tier changed, updating display tier:', accountTier);
-        setDisplayTier(accountTier);
-        cacheAccountTier(accountTier);
-      }
-    }
-  }, [accountTier, isAccountLoading, displayTier, cacheAccountTier]);
+  }, [accountTier, isAccountLoading, premiumStatus, cacheAccountTier]);
 
 
 
@@ -240,15 +251,33 @@ export function DashboardSidebar({ onNavigate }: DashboardSidebarProps) {
     }
   ];
 
-  // Combine navigation items based on account tier
+  // Combine navigation items based on premium status
   let navigation = [...baseNavigation];
   
-  // Use cached/loaded tier if available, otherwise use the actual account tier
-  // This ensures premium items are shown even if the cache isn't set yet
-  if (displayTier === 'premium' || (!isAccountLoading && accountTier === 'premium')) {
+  // Use multiple sources to determine if user should see premium features
+  const shouldShowPremiumFeatures = 
+    premiumStatus.isPremium || 
+    displayTier === 'premium' || 
+    (!isAccountLoading && accountTier === 'premium');
+  
+  if (shouldShowPremiumFeatures) {
     // Insert Analytics after Create Listing (index 2)
     navigation.splice(2, 0, ...premiumNavItems);
   }
+  
+  // Debug logging for premium feature visibility
+  if (process.env.NODE_ENV === 'development') {
+    console.log('Premium features visibility check:', {
+      shouldShowPremiumFeatures,
+      premiumStatusIsPremium: premiumStatus.isPremium,
+      premiumStatusSource: premiumStatus.source,
+      displayTier,
+      accountTier,
+      isAccountLoading,
+      userId: user?.uid
+    });
+  }
+=======
 
   const handleNavigate = (href: string) => {
     router.push(href);

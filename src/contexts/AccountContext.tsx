@@ -3,6 +3,7 @@ import { useAuth } from './AuthContext';
 import { AccountTier, ACCOUNT_TIERS, AccountFeatures, SubscriptionDetails } from '@/types/account';
 import { getFirestore, doc, onSnapshot, setDoc, updateDoc, getDoc } from 'firebase/firestore';
 import { getFirebaseServices, registerListener, removeListener } from '@/lib/firebase';
+import { clearUserCaches, refreshPremiumCaches } from '@/lib/cache-manager';
 
 interface AccountContextType {
   accountTier: AccountTier;
@@ -369,13 +370,19 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
                 };
                 
                 setSubscription(subscriptionDetails);
-                setAccountTier(isActivePremium ? 'premium' : 'free');
+                const newTier = isActivePremium ? 'premium' : 'free';
+                setAccountTier(newTier);
+
+                // Clear and refresh caches when tier changes
+                if (data.accountTier !== newTier) {
+                  console.log('[AccountContext] Account tier changed, clearing caches and refreshing');
+                  clearUserCaches(user.uid);
+                  refreshPremiumCaches(user.uid, newTier);
+                }
 
                 // Update the database if needed
-                if (data.accountTier !== (isActivePremium ? 'premium' : 'free')) {
+                if (data.accountTier !== newTier) {
                   try {
-                    const newTier = isActivePremium ? 'premium' : 'free';
-                    
                     // Update user document with new tier
                     await updateDoc(userDocRef, {
                       accountTier: newTier,
