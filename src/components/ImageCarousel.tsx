@@ -116,8 +116,29 @@ export default function ImageCarousel({ images }: ImageCarouselProps) {
       <div className={`relative w-full ${isMobile ? 'max-w-md' : 'max-w-2xl'} mx-auto`}>
         {/* Carousel container with margin for arrows */}
         <div className={`relative w-full ${!isMobile ? 'mx-12' : ''} max-w-md mx-auto`}>
-          {/* Desktop arrows positioned right next to the carousel */}
-          {!isMobile && (
+          {/* Navigation arrows - positioned differently for mobile vs desktop */}
+          {isMobile ? (
+            // Mobile arrows - positioned inside the carousel area
+            <>
+              <button
+                className="absolute left-2 top-1/2 -translate-y-1/2 z-20 bg-black/50 hover:bg-black/70 p-2 rounded-full shadow-lg transition-all duration-200 border border-white/20 touch-manipulation"
+                onClick={() => instanceRef.current?.prev()}
+                aria-label="Previous image"
+                style={{ pointerEvents: 'auto' }}
+              >
+                <ChevronLeft className="h-5 w-5 text-white" />
+              </button>
+              <button
+                className="absolute right-2 top-1/2 -translate-y-1/2 z-20 bg-black/50 hover:bg-black/70 p-2 rounded-full shadow-lg transition-all duration-200 border border-white/20 touch-manipulation"
+                onClick={() => instanceRef.current?.next()}
+                aria-label="Next image"
+                style={{ pointerEvents: 'auto' }}
+              >
+                <ChevronRight className="h-5 w-5 text-white" />
+              </button>
+            </>
+          ) : (
+            // Desktop arrows - positioned outside the carousel
             <>
               <button
                 className="absolute -left-12 top-1/2 -translate-y-1/2 z-20 bg-white/90 hover:bg-white p-3 rounded-full shadow-lg transition-all duration-200 hover:scale-110 border border-gray-200 dark:bg-gray-800/90 dark:hover:bg-gray-800 dark:border-gray-600"
@@ -145,7 +166,7 @@ export default function ImageCarousel({ images }: ImageCarouselProps) {
             {images.map((src, idx) => (
               <motion.div
                 key={idx}
-                className="keen-slider__slide flex items-center justify-center bg-gray-100 dark:bg-gray-800"
+                className="keen-slider__slide flex items-center justify-center bg-gray-100 dark:bg-gray-800 relative"
                 onClick={() => openModal(idx)}
               >
                 <img
@@ -154,6 +175,12 @@ export default function ImageCarousel({ images }: ImageCarouselProps) {
                   className="object-contain w-full h-64 md:h-80 cursor-pointer"
                   loading="lazy"
                 />
+                {/* Mobile swipe indicator - only show if there are multiple images */}
+                {isMobile && images.length > 1 && (
+                  <div className="absolute bottom-2 left-1/2 -translate-x-1/2 text-white/70 text-xs bg-black/30 px-2 py-1 rounded">
+                    Swipe to view more images
+                  </div>
+                )}
               </motion.div>
             ))}
           </div>
