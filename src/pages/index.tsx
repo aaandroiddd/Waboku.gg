@@ -442,7 +442,7 @@ export default function Home() {
                       Your Local TCG Marketplace
                     </div>
                     <OptimizedMotion
-                      className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight glow-text animate-title absolute left-0 right-0 top-0"
+                      className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight glow-text absolute left-0 right-0 top-0"
                       variants={animationVariants.item}
                       shouldAnimate={shouldAnimate}
                       style={{ willChange: "transform, opacity" }}
@@ -456,7 +456,7 @@ export default function Home() {
                       {randomSubtitle}
                     </div>
                     <OptimizedMotion
-                      className="text-base sm:text-lg md:text-xl glow-text-subtle animate-subtitle absolute left-0 right-0 top-0"
+                      className="text-base sm:text-lg md:text-xl glow-text-subtle absolute left-0 right-0 top-0"
                       variants={animationVariants.item}
                       shouldAnimate={shouldAnimate}
                       style={{ willChange: "transform, opacity" }}
