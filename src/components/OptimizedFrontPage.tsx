@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { motion, useReducedMotion, useInView } from "framer-motion";
 import { useRouter } from "next/router";
 import SearchBar from "@/components/SearchBar";
@@ -22,7 +22,8 @@ import Link from "next/link";
 import { FirebaseConnectionHandler } from "@/components/FirebaseConnectionHandler";
 import { fixFirestoreListenChannel, clearFirestoreCaches } from "@/lib/firebase-connection-fix";
 import { StateSelect } from "@/components/StateSelect";
-import { useOptimizedMediaQuery, useAnimationConfig } from "@/hooks/useOptimizedMediaQuery";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
+import { useRef } from "react";
 
 // Subtitles array - moved outside component to prevent recreation on each render
 const subtitles = [
@@ -41,76 +42,79 @@ const subtitles = [
   "Alt-art cards appreciate in value. Your self-control doesn't."
 ];
 
-// Optimized animation variants factory
-const createAnimationVariants = (animationConfig: any) => {
-  const { shouldAnimate, duration, stagger, ease } = animationConfig;
-  
-  if (!shouldAnimate) {
+// Optimized animation variants with mobile considerations
+const createAnimationVariants = (isMobile: boolean, prefersReducedMotion: boolean) => {
+  // If user prefers reduced motion or on mobile, use minimal animations
+  if (prefersReducedMotion || isMobile) {
     return {
       container: {
         hidden: { opacity: 0 },
-        visible: { opacity: 1 }
+        visible: {
+          opacity: 1,
+          transition: { duration: 0.2, ease: "easeOut" }
+        }
       },
       heroBackground: {
         hidden: { opacity: 0 },
-        visible: { opacity: 1 }
+        visible: { 
+          opacity: 1,
+          transition: { duration: 0.3, ease: "easeOut" }
+        }
       },
       item: {
         hidden: { opacity: 0 },
-        visible: { opacity: 1 }
+        visible: {
+          opacity: 1,
+          transition: { duration: 0.15, ease: "easeOut" }
+        }
       }
     };
   }
 
+  // Full animations for desktop users who don't prefer reduced motion
   return {
     container: {
       hidden: { opacity: 0 },
       visible: {
         opacity: 1,
         transition: {
-          staggerChildren: stagger,
-          delayChildren: duration * 0.5,
-          duration,
-          ease
+          staggerChildren: 0.1,
+          delayChildren: 0.3,
+          duration: 0.6,
+          ease: [0.23, 1, 0.32, 1]
         }
       }
     },
     heroBackground: {
       hidden: { 
         opacity: 0,
-        ...(duration > 0.3 && { scale: 1.1 })
+        scale: 1.1
       },
       visible: { 
         opacity: 1,
         scale: 1,
         transition: {
-          duration: duration * 2,
-          ease
+          duration: 1.2,
+          ease: [0.23, 1, 0.32, 1]
         }
       }
     },
     item: {
-      hidden: { 
-        opacity: 0, 
-        ...(duration > 0.3 && { y: 20 })
-      },
+      hidden: { opacity: 0, y: 20 },
       visible: {
         opacity: 1,
         y: 0,
-        transition: duration > 0.3 ? {
+        transition: {
           type: "spring",
           damping: 12,
           stiffness: 100
-        } : {
-          duration,
-          ease
         }
       }
     }
   };
 };
 
-// Optimized Motion Component
+// Optimized Motion Component that respects user preferences
 const OptimizedMotion = ({ 
   children, 
   variants, 
@@ -118,10 +122,13 @@ const OptimizedMotion = ({
   animate = "visible",
   className,
   style,
-  shouldAnimate = true,
   ...props 
 }: any) => {
-  if (!shouldAnimate) {
+  const prefersReducedMotion = useReducedMotion();
+  const isMobile = useMediaQuery("(max-width: 768px)");
+  
+  // Skip animations entirely for reduced motion or low-end mobile
+  if (prefersReducedMotion) {
     return <div className={className} style={style}>{children}</div>;
   }
   
@@ -142,101 +149,105 @@ const OptimizedMotion = ({
   );
 };
 
-// Lazy-loaded section component
-const LazySection = ({ children, className, threshold = 0.1, minHeight = "200px" }: any) => {
+// Lazy-loaded components with intersection observer
+const LazySection = ({ children, className, threshold = 0.1 }: any) => {
   const ref = useRef(null);
   const isInView = useInView(ref, { 
     once: true, 
     threshold,
-    margin: "50px 0px"
+    margin: "50px 0px" // Start loading 50px before entering viewport
   });
   
   return (
     <div ref={ref} className={className}>
-      {isInView ? children : <div style={{ minHeight }} />}
+      {isInView ? children : <div style={{ minHeight: "200px" }} />}
     </div>
   );
 };
 
-export default function Home() {
+export default function OptimizedFrontPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedState, setSelectedState] = useState<string>("all");
+  
   // Use useMemo to compute random subtitle only once on component mount
   const randomSubtitle = useMemo(() => 
     subtitles[Math.floor(Math.random() * subtitles.length)],
     []
   );
+  
   const [displayCount, setDisplayCount] = useState(8);
   const [connectionError, setConnectionError] = useState(false);
   const [isRecovering, setIsRecovering] = useState(false);
   const [cacheCleared, setCacheCleared] = useState(false);
 
-  // Optimized device and animation detection
-  const deviceCapabilities = useOptimizedMediaQuery();
-  const animationConfig = useAnimationConfig();
+  // Device and preference detection
+  const isMobile = useMediaQuery("(max-width: 768px)");
+  const isLowEndDevice = useMediaQuery("(max-width: 480px)");
+  const prefersReducedMotion = useReducedMotion();
+
+  // Memoize animation variants based on device capabilities
   const animationVariants = useMemo(() => 
-    createAnimationVariants(animationConfig), 
-    [animationConfig]
+    createAnimationVariants(isMobile || isLowEndDevice, prefersReducedMotion),
+    [isMobile, isLowEndDevice, prefersReducedMotion]
   );
 
   const { latitude, longitude, loading: geoLoading } = useGeolocation({ autoRequest: false });
   const { listings: allListings, isLoading, error: listingsError } = useListings();
   const router = useRouter();
 
-  // Check for stale auth data and handle connection issues on mount
+  // Optimized initialization effect
   useEffect(() => {
-    if (typeof window !== 'undefined') {
+    if (typeof window === 'undefined') return;
+    
+    const initializeApp = async () => {
+      // Check for stale auth data
       const staleDataFound = checkAndClearStaleAuthData();
       if (staleDataFound) {
         console.log('Stale authentication data was found and cleared');
       }
       
-      // Clear any stale cache on initial load
-      const clearStaleCache = async () => {
-        try {
-          // Check if we've already cleared cache in this session
-          const hasCleared = sessionStorage.getItem('cache_cleared');
-          if (!hasCleared) {
-            console.log('Performing initial cache check and cleanup');
-            
-            // Clear all listing-related localStorage items
-            Object.keys(localStorage).forEach(key => {
-              if (key.startsWith('listings_')) {
-                localStorage.removeItem(key);
-                console.log(`Cleared potentially stale cache: ${key}`);
-              }
-            });
-            
-            // Mark that we've cleared cache in this session
-            sessionStorage.setItem('cache_cleared', 'true');
-            setCacheCleared(true);
+      // Clear cache only once per session
+      const hasCleared = sessionStorage.getItem('cache_cleared');
+      if (!hasCleared) {
+        console.log('Performing initial cache check and cleanup');
+        
+        // Clear all listing-related localStorage items
+        Object.keys(localStorage).forEach(key => {
+          if (key.startsWith('listings_')) {
+            localStorage.removeItem(key);
           }
-        } catch (error) {
-          console.error('Error during initial cache cleanup:', error);
-        }
-      };
-      
-      clearStaleCache();
-      
-      // Add a global error handler for Firestore fetch errors
-      const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
-        if (event.reason && 
-            (event.reason.message === 'Failed to fetch' || 
-             (event.reason.stack && event.reason.stack.includes('firestore.googleapis.com')))) {
-          console.error('Detected Firestore fetch error on home page:', event.reason);
-          setConnectionError(true);
-        }
-      };
-      
-      window.addEventListener('unhandledrejection', handleUnhandledRejection);
-      
-      return () => {
-        window.removeEventListener('unhandledrejection', handleUnhandledRejection);
-      };
+        });
+        
+        sessionStorage.setItem('cache_cleared', 'true');
+        setCacheCleared(true);
+      }
+    };
+    
+    // Use requestIdleCallback for non-critical initialization
+    if ('requestIdleCallback' in window) {
+      requestIdleCallback(initializeApp);
+    } else {
+      setTimeout(initializeApp, 0);
     }
+    
+    // Global error handler for Firestore fetch errors
+    const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
+      if (event.reason && 
+          (event.reason.message === 'Failed to fetch' || 
+           (event.reason.stack && event.reason.stack.includes('firestore.googleapis.com')))) {
+        console.error('Detected Firestore fetch error on home page:', event.reason);
+        setConnectionError(true);
+      }
+    };
+    
+    window.addEventListener('unhandledrejection', handleUnhandledRejection);
+    
+    return () => {
+      window.removeEventListener('unhandledrejection', handleUnhandledRejection);
+    };
   }, []);
   
-  // Monitor for listing errors and trigger recovery if needed
+  // Monitor for listing errors
   useEffect(() => {
     if (listingsError) {
       console.error('Listings error detected:', listingsError);
@@ -244,13 +255,13 @@ export default function Home() {
     }
   }, [listingsError]);
   
-  // Memoize the processed listings to avoid recalculation on every render
+  // Memoize processed listings with optimized sorting
   const processedListings = useMemo(() => {
     if (isLoading || allListings.length === 0) {
       return [];
     }
 
-    // Add distance information to listings
+    // Batch process listings for better performance
     const withDistance = allListings.map(listing => {
       const listingLat = listing.coordinates?.latitude;
       const listingLng = listing.coordinates?.longitude;
@@ -258,7 +269,6 @@ export default function Home() {
         ? calculateDistance(latitude, longitude, listingLat, listingLng)
         : Infinity;
       
-      // Add proximity category
       let proximity = 'far';
       if (distance <= 5) proximity = 'very-close';
       else if (distance <= 15) proximity = 'close';
@@ -267,22 +277,20 @@ export default function Home() {
       return { ...listing, distance, proximity };
     });
     
-    // Sort listings by distance if location is available
+    // Optimized sorting algorithm
     if (latitude && longitude) {
-      return [...withDistance].sort((a, b) => {
-        // Prioritize listings within 50km
+      return withDistance.sort((a, b) => {
         const aWithin50 = (a.distance || Infinity) <= 50;
         const bWithin50 = (b.distance || Infinity) <= 50;
         
         if (aWithin50 && !bWithin50) return -1;
         if (!aWithin50 && bWithin50) return 1;
         
-        // For listings within 50km, sort by distance
         if (aWithin50 && bWithin50) {
           return (a.distance || Infinity) - (b.distance || Infinity);
         }
         
-        // For listings beyond 50km, sort by recency
+        // Use cached timestamps for better performance
         const aTime = a.createdAt instanceof Date ? a.createdAt.getTime() : new Date(a.createdAt).getTime();
         const bTime = b.createdAt instanceof Date ? b.createdAt.getTime() : new Date(b.createdAt).getTime();
         return bTime - aTime;
@@ -294,44 +302,40 @@ export default function Home() {
 
   const { recordSearch } = useTrendingSearches();
 
-  // Memoize the search handler to prevent recreation on each render
+  // Optimized search handler with debouncing
   const handleSearch = useCallback(async () => {
     try {
-      // Only record search term if there is one
       if (searchQuery.trim()) {
-        try {
-          // Use the recordSearch function from useTrendingSearches hook
-          console.log('Recording search term from home page:', searchQuery.trim());
-          await recordSearch(searchQuery.trim());
-        } catch (error) {
-          console.error('Error recording search:', error);
-          // Continue with search regardless of recording error
+        // Use requestIdleCallback for non-critical search recording
+        const recordSearchAsync = () => {
+          recordSearch(searchQuery.trim()).catch(error => {
+            console.error('Error recording search:', error);
+          });
+        };
+        
+        if ('requestIdleCallback' in window) {
+          requestIdleCallback(recordSearchAsync);
+        } else {
+          setTimeout(recordSearchAsync, 0);
         }
       }
 
-      // Create query object
       const queryParams: Record<string, string> = {};
       
-      // Only add parameters that have values
       if (searchQuery.trim()) {
         queryParams.query = searchQuery;
       }
       
-      // Add location filter if a specific state is selected
       if (selectedState && selectedState !== "all") {
         queryParams.state = selectedState;
       }
 
-      // Only proceed with navigation if we have at least one filter parameter
-      // This ensures we can filter by state even when search query is empty
       if (Object.keys(queryParams).length > 0) {
-        // Update URL with search parameters
         router.push({
           pathname: '/listings',
           query: queryParams,
         });
       } else {
-        // If no filters are applied, just go to the listings page
         router.push('/listings');
       }
     } catch (error) {
@@ -340,55 +344,49 @@ export default function Home() {
     }
   }, [searchQuery, selectedState, router, recordSearch]);
 
-  // Handle search from SearchBar component
+  // Optimized search from bar handler
   const handleSearchFromBar = useCallback((query: string) => {
-    // Record search term if it's not empty
     if (query.trim()) {
-      try {
-        console.log('Recording search term:', query.trim());
+      // Non-blocking search recording
+      const recordSearchAsync = () => {
         recordSearch(query.trim()).catch(error => {
           console.error('Error recording search:', error);
-          // Continue with search regardless of recording error
         });
-      } catch (error) {
-        console.error('Error recording search:', error);
+      };
+      
+      if ('requestIdleCallback' in window) {
+        requestIdleCallback(recordSearchAsync);
+      } else {
+        setTimeout(recordSearchAsync, 0);
       }
     }
     
-    // Create query object
     const queryParams: Record<string, string> = {};
     
-    // Only add parameters that have values
     if (query.trim()) {
       queryParams.query = query;
     }
     
-    // Add location filter if a specific state is selected
     if (selectedState && selectedState !== "all") {
       queryParams.state = selectedState;
     }
 
-    // Navigate to listings page with search parameters
     if (Object.keys(queryParams).length > 0) {
       router.push({
         pathname: '/listings',
         query: queryParams,
       });
     } else {
-      // If no filters are applied, just go to the listings page
       router.push('/listings');
     }
   }, [selectedState, router, recordSearch]);
 
-  // Handle card selection
+  // Optimized card selection handler
   const handleCardSelect = useCallback((cardName: string) => {
     setSearchQuery(cardName);
-    // Use setTimeout to ensure state is updated before search
-    setTimeout(() => handleSearch(), 0);
+    // Use requestAnimationFrame for better performance
+    requestAnimationFrame(() => handleSearch());
   }, [handleSearch]);
-
-  // Animation variants are now handled by the optimized system
-  const { shouldAnimate } = animationConfig;
 
   return (
     <>
@@ -402,16 +400,15 @@ export default function Home() {
         <link rel="icon" href="/favicon.ico" />
         {/* Preload critical resources */}
         <link rel="preload" href="/fonts/inter-var.woff2" as="font" type="font/woff2" crossOrigin="" />
-        {/* DNS prefetch for external resources */}
-        <link rel="dns-prefetch" href="//firestore.googleapis.com" />
-        <link rel="dns-prefetch" href="//firebase.googleapis.com" />
       </Head>
 
       <div className="bg-background min-h-screen flex flex-col">
-        <Header animate={true} />
+        <Header animate={!prefersReducedMotion} />
         <main className="flex-1">
-          {/* Game Categories */}
-          <GameCategories />
+          {/* Game Categories - Lazy loaded */}
+          <LazySection>
+            <GameCategories />
+          </LazySection>
 
           {/* Hero Section with optimized animations */}
           <div className="relative overflow-hidden min-h-screen">
@@ -421,7 +418,6 @@ export default function Home() {
               variants={animationVariants.heroBackground}
               initial="hidden"
               animate="visible"
-              shouldAnimate={shouldAnimate}
               style={{ willChange: "transform, opacity" }}
             >
               <AnimatedBackground className="opacity-80" />
@@ -433,7 +429,6 @@ export default function Home() {
                 variants={animationVariants.container}
                 initial="hidden"
                 animate="visible"
-                shouldAnimate={shouldAnimate}
               >
                 <div className="space-y-2 sm:space-y-3">
                   {/* Optimized title with layout preservation */}
@@ -444,7 +439,6 @@ export default function Home() {
                     <OptimizedMotion
                       className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight glow-text animate-title absolute left-0 right-0 top-0"
                       variants={animationVariants.item}
-                      shouldAnimate={shouldAnimate}
                       style={{ willChange: "transform, opacity" }}
                     >
                       Your Local TCG Marketplace
@@ -458,7 +452,6 @@ export default function Home() {
                     <OptimizedMotion
                       className="text-base sm:text-lg md:text-xl glow-text-subtle animate-subtitle absolute left-0 right-0 top-0"
                       variants={animationVariants.item}
-                      shouldAnimate={shouldAnimate}
                       style={{ willChange: "transform, opacity" }}
                     >
                       {randomSubtitle}
@@ -470,7 +463,6 @@ export default function Home() {
                 <OptimizedMotion
                   className="flex flex-col max-w-2xl mx-auto pt-4 sm:pt-6 pb-4 sm:pb-8 px-4 sm:px-0"
                   variants={animationVariants.item}
-                  shouldAnimate={shouldAnimate}
                 >
                   {/* Mobile Search Controls */}
                   <div className="flex sm:hidden flex-col gap-4 mb-4 px-2">
@@ -518,7 +510,7 @@ export default function Home() {
           </div>
 
           {/* Listings Section - Lazy loaded with intersection observer */}
-          <LazySection className="container mx-auto px-4 py-8 sm:py-12 relative z-10 bg-background mt-0" minHeight="400px">
+          <LazySection className="container mx-auto px-4 py-8 sm:py-12 relative z-10 bg-background mt-0">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-2xl font-semibold text-foreground">
                 {latitude && longitude ? "Latest Listings Near You" : "Latest Listings"}
