@@ -179,19 +179,34 @@ export function OfferCard({ offer, type, onCounterOffer }: OfferCardProps) {
               <p className="text-muted-foreground">
                 Date: {format(safeOffer.createdAt, 'PPP')}
               </p>
-              {safeOffer.expiresAt && (
-                <p className="text-muted-foreground">
-                  <Clock className="inline mr-1 h-3 w-3" />
-                  Expires: {format(safeOffer.expiresAt, 'PPP')}
-                  {expirationInfo && (
-                    <span className={`ml-2 text-xs ${
-                      expirationInfo.isExpiringSoon ? 'text-orange-500' : 'text-muted-foreground'
-                    }`}>
-                      ({expirationInfo.timeUntilExpiry})
-                    </span>
-                  )}
-                </p>
+              
+              {/* Move expiration info to be more prominent */}
+              {safeOffer.expiresAt && safeOffer.status === 'pending' && (
+                <div className={`p-2 rounded-md border ${
+                  expirationInfo?.isExpiringSoon 
+                    ? 'bg-orange-50 border-orange-200 dark:bg-orange-950/20 dark:border-orange-800' 
+                    : 'bg-blue-50 border-blue-200 dark:bg-blue-950/20 dark:border-blue-800'
+                }`}>
+                  <div className="flex items-center gap-2">
+                    <Clock className={`h-4 w-4 ${
+                      expirationInfo?.isExpiringSoon ? 'text-orange-600 dark:text-orange-400' : 'text-blue-600 dark:text-blue-400'
+                    }`} />
+                    <div className="flex-1">
+                      <p className={`text-sm font-medium ${
+                        expirationInfo?.isExpiringSoon ? 'text-orange-800 dark:text-orange-200' : 'text-blue-800 dark:text-blue-200'
+                      }`}>
+                        {expirationInfo?.isExpiringSoon ? 'Expires Soon!' : 'Offer Expires'}
+                      </p>
+                      <p className={`text-xs ${
+                        expirationInfo?.isExpiringSoon ? 'text-orange-600 dark:text-orange-300' : 'text-blue-600 dark:text-blue-300'
+                      }`}>
+                        {format(safeOffer.expiresAt, 'PPP')} {expirationInfo && `(${expirationInfo.timeUntilExpiry})`}
+                      </p>
+                    </div>
+                  </div>
+                </div>
               )}
+              
               <div className="flex flex-col sm:flex-row sm:items-center gap-2">
                 <div>
                   <span className="text-muted-foreground">Listing Price: </span>
