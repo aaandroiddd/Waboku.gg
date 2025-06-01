@@ -1196,35 +1196,6 @@ export default function ListingPage() {
                         </Badge>
                       </div>
                     )}
-                    {/* Mobile navigation controls - only visible on mobile */}
-                    {isMobile && listing.imageUrls.length > 1 && (
-                      <>
-                        <button 
-                          className="absolute left-2 top-1/2 -translate-y-1/2 z-10 h-10 w-10 rounded-full bg-background/80 backdrop-blur-sm shadow-md border border-white/10 flex items-center justify-center active:bg-background/90 touch-manipulation"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            e.preventDefault();
-                            const api = document.querySelector('.embla')?.['emblaApi'];
-                            if (api) api.scrollPrev();
-                          }}
-                          aria-label="Previous image"
-                        >
-                          <ArrowLeft className="h-5 w-5" />
-                        </button>
-                        <button 
-                          className="absolute right-2 top-1/2 -translate-y-1/2 z-10 h-10 w-10 rounded-full bg-background/80 backdrop-blur-sm shadow-md border border-white/10 flex items-center justify-center active:bg-background/90 touch-manipulation"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            e.preventDefault();
-                            const api = document.querySelector('.embla')?.['emblaApi'];
-                            if (api) api.scrollNext();
-                          }}
-                          aria-label="Next image"
-                        >
-                          <ArrowLeft className="h-5 w-5 rotate-180" />
-                        </button>
-                      </>
-                    )}
                     <CarouselContent>
                       {listing.imageUrls.map((url, index) => (
                         <CarouselItem key={index} className="flex items-center justify-center h-full">
@@ -1424,6 +1395,39 @@ export default function ListingPage() {
                     <CarouselPrevious className="hidden md:flex -left-4 mx-[40px]" />
                     <CarouselNext className="hidden md:flex -right-4 mx-[40px]" />
                   </Carousel>
+                  
+                  {/* Thumbnails for mobile - show below carousel */}
+                  {isMobile && listing.imageUrls.length > 1 && (
+                    <div className="flex justify-center mt-4 gap-2 overflow-x-auto pb-2">
+                      {listing.imageUrls.map((url, idx) => (
+                        <button
+                          key={idx}
+                          onClick={() => {
+                            const api = document.querySelector('.embla')?.['emblaApi'];
+                            if (api) {
+                              api.scrollTo(idx);
+                              setCurrentImageIndex(idx);
+                            }
+                          }}
+                          className={`flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden border-2 transition-all duration-200 ${
+                            currentImageIndex === idx 
+                              ? "border-blue-500 ring-2 ring-blue-500/30" 
+                              : "border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500"
+                          }`}
+                          aria-label={`Go to image ${idx + 1}`}
+                        >
+                          <Image
+                            src={url}
+                            alt={`Thumbnail ${idx + 1}`}
+                            width={64}
+                            height={64}
+                            className="w-full h-full object-cover"
+                            loading="lazy"
+                          />
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 <div className="text-center">

@@ -116,29 +116,8 @@ export default function ImageCarousel({ images }: ImageCarouselProps) {
       <div className={`relative w-full ${isMobile ? 'max-w-md' : 'max-w-2xl'} mx-auto`}>
         {/* Carousel container with margin for arrows */}
         <div className={`relative w-full ${!isMobile ? 'mx-12' : ''} max-w-md mx-auto`}>
-          {/* Navigation arrows - positioned differently for mobile vs desktop */}
-          {isMobile ? (
-            // Mobile arrows - positioned inside the carousel area, no hover effects
-            <>
-              <button
-                className="absolute left-2 top-1/2 -translate-y-1/2 z-20 bg-black/60 active:bg-black/80 p-3 rounded-full shadow-lg border border-white/30 touch-manipulation"
-                onClick={() => instanceRef.current?.prev()}
-                aria-label="Previous image"
-                style={{ pointerEvents: 'auto' }}
-              >
-                <ChevronLeft className="h-5 w-5 text-white" />
-              </button>
-              <button
-                className="absolute right-2 top-1/2 -translate-y-1/2 z-20 bg-black/60 active:bg-black/80 p-3 rounded-full shadow-lg border border-white/30 touch-manipulation"
-                onClick={() => instanceRef.current?.next()}
-                aria-label="Next image"
-                style={{ pointerEvents: 'auto' }}
-              >
-                <ChevronRight className="h-5 w-5 text-white" />
-              </button>
-            </>
-          ) : (
-            // Desktop arrows - positioned outside the carousel
+          {/* Navigation arrows - only show on desktop */}
+          {!isMobile && (
             <>
               <button
                 className="absolute -left-12 top-1/2 -translate-y-1/2 z-20 bg-white/90 hover:bg-white p-3 rounded-full shadow-lg transition-all duration-200 hover:scale-110 border border-gray-200 dark:bg-gray-800/90 dark:hover:bg-gray-800 dark:border-gray-600"
@@ -158,6 +137,7 @@ export default function ImageCarousel({ images }: ImageCarouselProps) {
               </button>
             </>
           )}
+          
           {/* Carousel */}
           <div 
             ref={sliderRef} 
@@ -185,19 +165,47 @@ export default function ImageCarousel({ images }: ImageCarouselProps) {
             ))}
           </div>
 
-          {/* Dots - larger on mobile for better touch targets */}
-          <div className="flex justify-center mt-4 gap-2">
-            {images.map((_, idx) => (
-              <button
-                key={idx}
-                onClick={() => instanceRef.current?.moveToSlide(idx)}
-                className={`${isMobile ? 'h-3 w-3' : 'h-2 w-2'} rounded-full ${
-                  currentSlide === idx ? "bg-black dark:bg-white" : "bg-gray-300 dark:bg-gray-700"
-                }`}
-                aria-label={`Go to image ${idx + 1}`}
-              />
-            ))}
-          </div>
+          {/* Thumbnails - show below carousel on mobile, dots on desktop */}
+          {isMobile && images.length > 1 ? (
+            <div className="flex justify-center mt-4 gap-2 overflow-x-auto pb-2">
+              {images.map((src, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => {
+                    instanceRef.current?.moveToSlide(idx);
+                    setCurrentSlide(idx);
+                  }}
+                  className={`flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden border-2 transition-all duration-200 ${
+                    currentSlide === idx 
+                      ? "border-blue-500 ring-2 ring-blue-500/30" 
+                      : "border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500"
+                  }`}
+                  aria-label={`Go to image ${idx + 1}`}
+                >
+                  <img
+                    src={src}
+                    alt={`Thumbnail ${idx + 1}`}
+                    className="w-full h-full object-cover"
+                    loading="lazy"
+                  />
+                </button>
+              ))}
+            </div>
+          ) : (
+            /* Dots for desktop or single image */
+            <div className="flex justify-center mt-4 gap-2">
+              {images.map((_, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => instanceRef.current?.moveToSlide(idx)}
+                  className={`${isMobile ? 'h-3 w-3' : 'h-2 w-2'} rounded-full ${
+                    currentSlide === idx ? "bg-black dark:bg-white" : "bg-gray-300 dark:bg-gray-700"
+                  }`}
+                  aria-label={`Go to image ${idx + 1}`}
+                />
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
