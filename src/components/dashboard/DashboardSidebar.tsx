@@ -68,8 +68,6 @@ export function DashboardSidebar({ onNavigate }: DashboardSidebarProps) {
     }
   }, [accountTier, isAccountLoading, premiumStatus, cacheAccountTier]);
 
-
-
   // Function to render unread badge
   const renderUnreadBadge = (count: number) => {
     if (count <= 0) return null;
@@ -277,7 +275,6 @@ export function DashboardSidebar({ onNavigate }: DashboardSidebarProps) {
       userId: user?.uid
     });
   }
-=======
 
   const handleNavigate = (href: string) => {
     router.push(href);
