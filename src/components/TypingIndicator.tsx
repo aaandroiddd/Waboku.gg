@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { getDatabase, ref, onValue, set, onDisconnect } from 'firebase/database';
 import { useAuth } from '@/contexts/AuthContext';
 import { getFirebaseServices } from '@/lib/firebase';
+import { databaseOptimizer } from '@/lib/database-usage-optimizer';
 
 interface TypingIndicatorProps {
   chatId: string;
@@ -13,6 +14,7 @@ export function TypingIndicator({ chatId, receiverId, className = '' }: TypingIn
   const [isTyping, setIsTyping] = useState(false);
   const { user } = useAuth();
   const [database, setDatabase] = useState<any>(null);
+  const listenerRef = useRef<string>('');
   
   // Initialize database connection
   useEffect(() => {
@@ -28,36 +30,52 @@ export function TypingIndicator({ chatId, receiverId, className = '' }: TypingIn
     }
   }, []);
 
-  // Listen for typing status changes from the other user
+  // Listen for typing status changes from the other user using optimized listener
   useEffect(() => {
-    if (!chatId || !user || !database || !receiverId) return;
+    if (!chatId || !user || !database || !receiverId) {
+      // Clean up existing listener
+      if (listenerRef.current) {
+        databaseOptimizer.removeListener(listenerRef.current);
+        listenerRef.current = '';
+      }
+      return;
+    }
 
-    // Create a reference to the typing status node for the other user
-    const typingRef = ref(database, `typing/${chatId}/${receiverId}`);
-    
-    // Listen for changes to the typing status
-    const unsubscribe = onValue(typingRef, (snapshot) => {
-      const typingData = snapshot.val();
-      
-      // Check if the other user is typing and the timestamp is recent (within last 10 seconds)
-      if (typingData && typingData.isTyping) {
-        const now = Date.now();
-        const typingTimestamp = typingData.timestamp || 0;
-        const isRecent = now - typingTimestamp < 10000; // 10 seconds
-        
-        setIsTyping(isRecent);
-        
-        // If the timestamp is not recent, automatically clear the typing status
-        if (!isRecent) {
+    // Clean up previous listener
+    if (listenerRef.current) {
+      databaseOptimizer.removeListener(listenerRef.current);
+    }
+
+    // Create optimized listener for typing status
+    const listenerId = databaseOptimizer.createOptimizedListener({
+      path: `typing/${chatId}/${receiverId}`,
+      callback: (typingData) => {
+        // Check if the other user is typing and the timestamp is recent (within last 10 seconds)
+        if (typingData && typingData.isTyping) {
+          const now = Date.now();
+          const typingTimestamp = typingData.timestamp || 0;
+          const isRecent = now - typingTimestamp < 10000; // 10 seconds
+          
+          setIsTyping(isRecent);
+          
+          // If the timestamp is not recent, automatically clear the typing status
+          if (!isRecent) {
+            setIsTyping(false);
+          }
+        } else {
           setIsTyping(false);
         }
-      } else {
-        setIsTyping(false);
-      }
+      },
+      options: { once: false }
     });
     
+    listenerRef.current = listenerId;
+    
     return () => {
-      unsubscribe();
+      if (listenerRef.current) {
+        databaseOptimizer.removeListener(listenerRef.current);
+        listenerRef.current = '';
+      }
     };
   }, [chatId, user, database, receiverId]);
 

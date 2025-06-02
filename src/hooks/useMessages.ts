@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { getDatabase, ref, onValue, push, set, get, update, remove, query, limitToLast } from 'firebase/database';
 import { useAuth } from '@/contexts/AuthContext';
 import { getFirebaseServices, database as firebaseDatabase } from '@/lib/firebase';
+import { databaseOptimizer } from '@/lib/database-usage-optimizer';
 
 export interface Message {
   id: string;
@@ -29,6 +30,7 @@ export const useMessages = (chatId?: string) => {
   const [error, setError] = useState<string | null>(null);
   const { user } = useAuth();
   const [database, setDatabase] = useState<ReturnType<typeof getDatabase> | null>(null);
+  const listenersRef = useRef<string[]>([]);
   
   // Initialize database safely
   useEffect(() => {

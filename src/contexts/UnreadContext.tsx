@@ -1,8 +1,9 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { useAuth } from './AuthContext';
 import { getDatabase, ref, onValue, get, update } from 'firebase/database';
 import { getFirebaseServices } from '@/lib/firebase';
 import { collection, query, where, getDocs } from 'firebase/firestore';
+import { databaseOptimizer } from '@/lib/database-usage-optimizer';
 
 interface UnreadCounts {
   messages: number;
@@ -28,55 +29,72 @@ export const UnreadProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   // Track if a section is currently being viewed to prevent counting while user is viewing
   const [activeSection, setActiveSection] = useState<keyof UnreadCounts | null>(null);
+  const listenersRef = useRef<string[]>([]);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const lastFetchRef = useRef<Record<string, number>>({});
 
   useEffect(() => {
     if (!user) {
       setUnreadCounts({ messages: 0, offers: 0, orders: 0 });
+      // Clean up any existing listeners
+      listenersRef.current.forEach(id => databaseOptimizer.removeListener(id));
+      listenersRef.current = [];
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
       return;
     }
 
-    // Listen for unread messages
-    const database = getDatabase();
-    const chatsRef = ref(database, 'chats');
-    
-    const unsubscribeMessages = onValue(chatsRef, async (snapshot) => {
-      try {
-        const chatsData = snapshot.val();
-        if (!chatsData) {
-          setUnreadCounts(prev => ({ ...prev, messages: 0 }));
-          return;
-        }
+    // Clean up previous listeners
+    listenersRef.current.forEach(id => databaseOptimizer.removeListener(id));
+    listenersRef.current = [];
 
-        let unreadMessageCount = 0;
-        
-        // Process each chat
-        for (const [chatId, chat] of Object.entries<any>(chatsData)) {
-          // Skip if user is not a participant or chat is deleted by user
-          if (!chat.participants?.[user.uid] || chat.deletedBy?.[user.uid]) {
-            continue;
+    // Use optimized listener for messages - only listen to user's message threads instead of all chats
+    const messagesListenerId = databaseOptimizer.createOptimizedListener({
+      path: `users/${user.uid}/messageThreads`,
+      callback: async (threadsData) => {
+        try {
+          if (!threadsData || activeSection === 'messages') {
+            setUnreadCounts(prev => ({ ...prev, messages: 0 }));
+            return;
+          }
+
+          let unreadMessageCount = 0;
+          
+          // Count unread messages from user's message threads
+          for (const [chatId, thread] of Object.entries<any>(threadsData)) {
+            if (thread.unreadCount && thread.unreadCount > 0) {
+              unreadMessageCount++;
+            }
           }
           
-          // Check if there's a last message and it's unread
-          if (chat.lastMessage && 
-              chat.lastMessage.receiverId === user.uid && 
-              chat.lastMessage.read === false) {
-            unreadMessageCount++;
-          }
-        }
-        
-        // Only update if the messages section is not currently active
-        if (activeSection !== 'messages') {
           setUnreadCounts(prev => ({ ...prev, messages: unreadMessageCount }));
+        } catch (error) {
+          console.error('Error counting unread messages:', error);
         }
-      } catch (error) {
-        console.error('Error counting unread messages:', error);
-      }
+      },
+      options: { once: false }
     });
 
-    // Listen for unread offers
+    if (messagesListenerId) {
+      listenersRef.current.push(messagesListenerId);
+    }
+
+    // Optimized fetch functions with caching and rate limiting
     const fetchUnreadOffers = async () => {
       try {
         if (activeSection === 'offers') return;
+        
+        const now = Date.now();
+        const lastFetch = lastFetchRef.current.offers || 0;
+        
+        // Rate limit: only fetch every 30 seconds
+        if (now - lastFetch < 30000) {
+          return;
+        }
+        
+        lastFetchRef.current.offers = now;
         
         const { db } = getFirebaseServices();
         
@@ -97,66 +115,71 @@ export const UnreadProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       }
     };
 
-    // Listen for unread orders - with debounce to prevent excessive queries
-    let ordersDebounceTimer: NodeJS.Timeout | null = null;
-    
     const fetchUnreadOrders = async () => {
       try {
-        // Don't fetch if user is currently viewing orders section
         if (activeSection === 'orders') return;
         
-        // Clear any existing timer
-        if (ordersDebounceTimer) {
-          clearTimeout(ordersDebounceTimer);
+        const now = Date.now();
+        const lastFetch = lastFetchRef.current.orders || 0;
+        
+        // Rate limit: only fetch every 30 seconds
+        if (now - lastFetch < 30000) {
+          return;
         }
         
-        // Set a new timer to delay the actual fetch
-        ordersDebounceTimer = setTimeout(async () => {
-          console.log('[UnreadContext] Fetching unread orders count');
-          const { db } = getFirebaseServices();
-          
-          // Query for new orders (as seller)
-          const newOrdersQuery = query(
-            collection(db, 'orders'),
-            where('sellerId', '==', user.uid),
-            where('sellerRead', '==', false)
-          );
-          
-          // Query for updated orders (as buyer)
-          const updatedOrdersQuery = query(
-            collection(db, 'orders'),
-            where('buyerId', '==', user.uid),
-            where('buyerRead', '==', false)
-          );
-          
-          const [newOrdersSnapshot, updatedOrdersSnapshot] = await Promise.all([
-            getDocs(newOrdersQuery),
-            getDocs(updatedOrdersQuery)
-          ]);
-          
-          const unreadOrderCount = newOrdersSnapshot.size + updatedOrdersSnapshot.size;
-          console.log(`[UnreadContext] Found ${unreadOrderCount} unread orders`);
-          
-          setUnreadCounts(prev => ({ ...prev, orders: unreadOrderCount }));
-        }, 2000); // 2 second debounce
+        lastFetchRef.current.orders = now;
+        
+        const { db } = getFirebaseServices();
+        
+        // Query for new orders (as seller)
+        const newOrdersQuery = query(
+          collection(db, 'orders'),
+          where('sellerId', '==', user.uid),
+          where('sellerRead', '==', false)
+        );
+        
+        // Query for updated orders (as buyer)
+        const updatedOrdersQuery = query(
+          collection(db, 'orders'),
+          where('buyerId', '==', user.uid),
+          where('buyerRead', '==', false)
+        );
+        
+        const [newOrdersSnapshot, updatedOrdersSnapshot] = await Promise.all([
+          getDocs(newOrdersQuery),
+          getDocs(updatedOrdersQuery)
+        ]);
+        
+        const unreadOrderCount = newOrdersSnapshot.size + updatedOrdersSnapshot.size;
+        
+        setUnreadCounts(prev => ({ ...prev, orders: unreadOrderCount }));
       } catch (error) {
         console.error('Error counting unread orders:', error);
       }
     };
 
-    // Initial fetch
-    fetchUnreadOffers();
-    fetchUnreadOrders();
-
-    // Set up interval to periodically check for unread offers and orders
-    const intervalId = setInterval(() => {
+    // Initial fetch with delay to avoid overwhelming on mount
+    setTimeout(() => {
       fetchUnreadOffers();
       fetchUnreadOrders();
-    }, 60000); // Check every minute
+    }, 1000);
+
+    // Set up interval to periodically check for unread offers and orders (increased interval)
+    intervalRef.current = setInterval(() => {
+      fetchUnreadOffers();
+      fetchUnreadOrders();
+    }, 120000); // Check every 2 minutes instead of 1 minute
 
     return () => {
-      unsubscribeMessages();
-      clearInterval(intervalId);
+      // Clean up listeners
+      listenersRef.current.forEach(id => databaseOptimizer.removeListener(id));
+      listenersRef.current = [];
+      
+      // Clean up interval
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
     };
   }, [user, activeSection]);
 
