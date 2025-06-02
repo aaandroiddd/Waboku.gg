@@ -11,9 +11,16 @@ import { useUnread } from '@/contexts/UnreadContext';
 import { useSimplifiedPremiumStatus } from '@/hooks/useSimplifiedPremiumStatus';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ThemeToggle } from '@/components/ThemeToggle';
-import { LogOut } from 'lucide-react';
+import { LogOut, ChevronDown } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
+import { useTheme } from 'next-themes';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 interface DashboardSidebarProps {
   onNavigate?: () => void;
@@ -21,11 +28,40 @@ interface DashboardSidebarProps {
 
 export function DashboardSidebar({ onNavigate }: DashboardSidebarProps) {
   const router = useRouter();
-  const { user, isEmailVerified } = useAuth();
+  const { user, isEmailVerified, updateProfile } = useAuth();
   const { unreadCounts } = useUnread();
+  const { theme, setTheme } = useTheme();
   
   // Use the simplified premium status hook as the single source of truth
   const { isPremium, tier, isLoading: isPremiumLoading, source } = useSimplifiedPremiumStatus();
+
+  // Theme handling function
+  const handleThemeChange = async (newTheme: 'light' | 'dark' | 'midnight' | 'system') => {
+    setTheme(newTheme);
+    if (user) {
+      try {
+        await updateProfile({ theme: newTheme });
+      } catch (error) {
+        console.error('Failed to save theme preference:', error);
+      }
+    }
+  };
+
+  // Get theme display name
+  const getThemeDisplayName = (themeValue: string | undefined) => {
+    switch (themeValue) {
+      case 'light':
+        return 'Light';
+      case 'dark':
+        return 'Dark';
+      case 'midnight':
+        return 'Midnight';
+      case 'system':
+        return 'System';
+      default:
+        return 'Theme';
+    }
+  };
 
   // Function to render unread badge
   const renderUnreadBadge = (count: number) => {
@@ -316,6 +352,40 @@ export function DashboardSidebar({ onNavigate }: DashboardSidebarProps) {
                   {item.badge !== undefined && renderUnreadBadge(item.badge)}
                 </button>
               ))}
+              
+              {/* Theme Dropdown */}
+              <DropdownMenu modal={false}>
+                <DropdownMenuTrigger asChild>
+                  <button className="flex items-center w-full gap-3 text-sm font-medium rounded-md px-3 py-2.5 hover:bg-accent hover:text-accent-foreground transition-colors text-muted-foreground">
+                    <div className="h-5 w-5 flex items-center justify-center">
+                      🎨
+                    </div>
+                    <span className="flex-1">{getThemeDisplayName(theme)}</span>
+                    <ChevronDown className="h-4 w-4" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent 
+                  align="start" 
+                  side="right"
+                  className="w-32"
+                  avoidCollisions={true}
+                  collisionPadding={8}
+                  sideOffset={8}
+                >
+                  <DropdownMenuItem onClick={() => handleThemeChange('light')}>
+                    Light
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleThemeChange('dark')}>
+                    Dark
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleThemeChange('midnight')}>
+                    Midnight
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleThemeChange('system')}>
+                    System
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </nav>
         )}

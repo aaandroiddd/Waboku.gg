@@ -482,7 +482,7 @@ export default function Header({ animate = true }: HeaderProps) {
                           </button>
                           
                           {/* Theme Dropdown for logged in users */}
-                          <DropdownMenu>
+                          <DropdownMenu modal={false}>
                             <DropdownMenuTrigger asChild>
                               <button className="flex items-center w-full gap-3 text-sm font-medium rounded-md px-3 py-2.5 hover:bg-accent hover:text-accent-foreground transition-colors text-muted-foreground">
                                 <div className="h-5 w-5 flex items-center justify-center">
@@ -492,7 +492,14 @@ export default function Header({ animate = true }: HeaderProps) {
                                 <ChevronDown className="h-4 w-4" />
                               </button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-32">
+                            <DropdownMenuContent 
+                              align="start" 
+                              side="right"
+                              className="w-32"
+                              avoidCollisions={true}
+                              collisionPadding={8}
+                              sideOffset={8}
+                            >
                               <DropdownMenuItem onClick={() => handleThemeChange('light')}>
                                 Light
                               </DropdownMenuItem>
@@ -520,7 +527,7 @@ export default function Header({ animate = true }: HeaderProps) {
                           </div>
                           
                           {/* Theme Dropdown for logged out users */}
-                          <DropdownMenu>
+                          <DropdownMenu modal={false}>
                             <DropdownMenuTrigger asChild>
                               <button className="flex items-center w-full gap-3 text-sm font-medium rounded-md px-3 py-2.5 hover:bg-accent hover:text-accent-foreground transition-colors text-muted-foreground mt-4">
                                 <div className="h-5 w-5 flex items-center justify-center">
@@ -530,7 +537,14 @@ export default function Header({ animate = true }: HeaderProps) {
                                 <ChevronDown className="h-4 w-4" />
                               </button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-32">
+                            <DropdownMenuContent 
+                              align="start" 
+                              side="right"
+                              className="w-32"
+                              avoidCollisions={true}
+                              collisionPadding={8}
+                              sideOffset={8}
+                            >
                               <DropdownMenuItem onClick={() => handleThemeChange('light')}>
                                 Light
                               </DropdownMenuItem>
