@@ -49,19 +49,19 @@ export default async function handler(
   try {
     const database = initializeFirebaseAdmin();
     
-    // Calculate timestamp for data older than 24 hours
-    const twentyFourHoursAgo = Date.now() - (24 * 60 * 60 * 1000);
+    // Calculate timestamp for data older than 7 days (keep more data for better trending analysis)
+    const sevenDaysAgo = Date.now() - (7 * 24 * 60 * 60 * 1000);
     
-    // Get all search terms
+    // Get all search terms older than 7 days
     const snapshot = await database
       .ref('searchTerms')
       .orderByChild('lastUpdated')
-      .endAt(twentyFourHoursAgo)
+      .endAt(sevenDaysAgo)
       .once('value');
     
     if (!snapshot.exists()) {
       return res.status(200).json({ 
-        message: 'No old search data to clean up',
+        message: 'No old search data to clean up (older than 7 days)',
         cleanedCount: 0
       });
     }
