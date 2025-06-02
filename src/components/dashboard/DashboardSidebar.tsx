@@ -16,11 +16,10 @@ import { useToast } from '@/components/ui/use-toast';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { useTheme } from 'next-themes';
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
 
 interface DashboardSidebarProps {
   onNavigate?: () => void;
@@ -353,39 +352,52 @@ export function DashboardSidebar({ onNavigate }: DashboardSidebarProps) {
                 </button>
               ))}
               
-              {/* Theme Dropdown */}
-              <DropdownMenu modal={false}>
-                <DropdownMenuTrigger asChild>
+              {/* Theme Collapsible */}
+              <Collapsible>
+                <CollapsibleTrigger asChild>
                   <button className="flex items-center w-full gap-3 text-sm font-medium rounded-md px-3 py-2.5 hover:bg-accent hover:text-accent-foreground transition-colors text-muted-foreground">
                     <div className="h-5 w-5 flex items-center justify-center">
                       🎨
                     </div>
                     <span className="flex-1">{getThemeDisplayName(theme)}</span>
-                    <ChevronDown className="h-4 w-4" />
+                    <ChevronDown className="h-4 w-4 transition-transform duration-200 data-[state=open]:rotate-180" />
                   </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent 
-                  align="start" 
-                  side="right"
-                  className="w-32"
-                  avoidCollisions={true}
-                  collisionPadding={8}
-                  sideOffset={8}
-                >
-                  <DropdownMenuItem onClick={() => handleThemeChange('light')}>
-                    Light
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleThemeChange('dark')}>
-                    Dark
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleThemeChange('midnight')}>
-                    Midnight
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleThemeChange('system')}>
-                    System
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="space-y-1 mt-1">
+                  <button
+                    onClick={() => handleThemeChange('light')}
+                    className={`flex items-center w-full gap-3 text-sm rounded-md px-6 py-2 hover:bg-accent hover:text-accent-foreground transition-colors ${
+                      theme === 'light' ? 'bg-accent text-accent-foreground' : 'text-muted-foreground'
+                    }`}
+                  >
+                    ☀️ Light
+                  </button>
+                  <button
+                    onClick={() => handleThemeChange('dark')}
+                    className={`flex items-center w-full gap-3 text-sm rounded-md px-6 py-2 hover:bg-accent hover:text-accent-foreground transition-colors ${
+                      theme === 'dark' ? 'bg-accent text-accent-foreground' : 'text-muted-foreground'
+                    }`}
+                  >
+                    🌙 Dark
+                  </button>
+                  <button
+                    onClick={() => handleThemeChange('midnight')}
+                    className={`flex items-center w-full gap-3 text-sm rounded-md px-6 py-2 hover:bg-accent hover:text-accent-foreground transition-colors ${
+                      theme === 'midnight' ? 'bg-accent text-accent-foreground' : 'text-muted-foreground'
+                    }`}
+                  >
+                    🌌 Midnight
+                  </button>
+                  <button
+                    onClick={() => handleThemeChange('system')}
+                    className={`flex items-center w-full gap-3 text-sm rounded-md px-6 py-2 hover:bg-accent hover:text-accent-foreground transition-colors ${
+                      theme === 'system' ? 'bg-accent text-accent-foreground' : 'text-muted-foreground'
+                    }`}
+                  >
+                    💻 System
+                  </button>
+                </CollapsibleContent>
+              </Collapsible>
             </div>
           </nav>
         )}
