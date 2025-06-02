@@ -291,9 +291,12 @@ export default function Header({ animate = true }: HeaderProps) {
 
   // Add mouse movement detection to ensure header is visible when user is active
   useEffect(() => {
+    // Completely disable mouse move detection when mobile menu is open
+    if (isMobileMenuOpen) return;
+    
     const handleMouseMove = (e: MouseEvent) => {
-      // Only show header if mouse is near the top of the page and not over the sidebar overlay
-      if (window.scrollY < 100 && !isMobileMenuOpen) {
+      // Only show header if mouse is near the top of the page
+      if (window.scrollY < 100) {
         setShowHeader(true);
       }
     };
