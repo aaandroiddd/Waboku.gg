@@ -1,5 +1,5 @@
 import { useRouter } from 'next/router';
-import CardSearchInput from '@/components/CardSearchInput';
+import SearchInputWithSuggestions from '@/components/SearchInputWithSuggestions';
 import { useTrendingSearches } from '@/hooks/useTrendingSearches';
 
 interface PokemonCard {
@@ -151,11 +151,11 @@ export default function SearchBar({
   };
 
   return (
-    <CardSearchInput
-      onCardSelect={handleCardSelect}
+    <SearchInputWithSuggestions
       onSearch={handleSearch}
       showSearchButton={showSearchButton}
       initialValue={initialValue}
+      placeholder="Search for cards, sets, or players..."
     />
   );
 }
