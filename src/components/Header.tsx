@@ -444,16 +444,36 @@ export default function Header({ animate = true }: HeaderProps) {
                             <Settings className="h-5 w-5" />
                             Settings
                           </button>
+                          
+                          {/* Theme Toggle for logged in users */}
+                          <div className="flex items-center w-full gap-3 text-sm font-medium rounded-md px-3 py-2.5 text-muted-foreground">
+                            <div className="h-5 w-5 flex items-center justify-center">
+                              🎨
+                            </div>
+                            <span className="flex-1">Theme</span>
+                            <ThemeToggle />
+                          </div>
                         </>
                       ) : (
-                        <div className="flex flex-col gap-2 pt-4 px-3">
-                          <Link href="/auth/sign-in" prefetch={false} onClick={() => setIsMobileMenuOpen(false)}>
-                            <Button variant="outline" className="w-full">Sign In</Button>
-                          </Link>
-                          <Link href="/auth/sign-up" prefetch={false} onClick={() => setIsMobileMenuOpen(false)}>
-                            <Button className="w-full bg-sky-400 hover:bg-sky-500">Get Started</Button>
-                          </Link>
-                        </div>
+                        <>
+                          <div className="flex flex-col gap-2 pt-4 px-3">
+                            <Link href="/auth/sign-in" prefetch={false} onClick={() => setIsMobileMenuOpen(false)}>
+                              <Button variant="outline" className="w-full">Sign In</Button>
+                            </Link>
+                            <Link href="/auth/sign-up" prefetch={false} onClick={() => setIsMobileMenuOpen(false)}>
+                              <Button className="w-full bg-sky-400 hover:bg-sky-500">Get Started</Button>
+                            </Link>
+                          </div>
+                          
+                          {/* Theme Toggle for logged out users */}
+                          <div className="flex items-center w-full gap-3 text-sm font-medium rounded-md px-3 py-2.5 text-muted-foreground mt-4">
+                            <div className="h-5 w-5 flex items-center justify-center">
+                              🎨
+                            </div>
+                            <span className="flex-1">Theme</span>
+                            <ThemeToggle />
+                          </div>
+                        </>
                       )}
                     </div>
                   </nav>
