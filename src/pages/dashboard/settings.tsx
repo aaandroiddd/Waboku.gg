@@ -12,7 +12,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from 'next/router';
 import { Textarea } from "@/components/ui/textarea";
 import { useTheme } from "next-themes";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { ChevronDown } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
@@ -42,6 +43,57 @@ const SettingsPageContent = () => {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [deleteConfirmation, setDeleteConfirmation] = useState("");
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+  const [isThemeOpen, setIsThemeOpen] = useState(false);
+  
+  // Theme handling function
+  const handleThemeChange = async (newTheme: 'light' | 'dark' | 'midnight' | 'system') => {
+    try {
+      setTheme(newTheme);
+      
+      // Save to cookie for persistence across sessions
+      if (typeof window !== 'undefined') {
+        document.cookie = `theme=${newTheme}; path=/; max-age=${365 * 24 * 60 * 60}; SameSite=Lax`;
+      }
+      
+      // Update profile in Firestore (without page reload)
+      if (user && profile) {
+        const updatedProfile = {
+          ...profile,
+          theme: newTheme,
+          lastUpdated: new Date().toISOString()
+        };
+        
+        await setDoc(doc(db, 'users', user.uid), updatedProfile, { merge: true });
+      }
+      
+      setSuccess("Theme updated successfully!");
+      
+      // Clear success message after 3 seconds
+      setTimeout(() => setSuccess(""), 3000);
+    } catch (err) {
+      console.error('Failed to update theme:', err);
+      setError("Failed to update theme preference");
+      
+      // Clear error message after 5 seconds
+      setTimeout(() => setError(""), 5000);
+    }
+  };
+
+  // Get theme display name
+  const getThemeDisplayName = (themeValue: string | undefined) => {
+    switch (themeValue) {
+      case 'light':
+        return 'Light';
+      case 'dark':
+        return 'Dark';
+      case 'midnight':
+        return 'Midnight';
+      case 'system':
+        return 'System';
+      default:
+        return 'Theme';
+    }
+  };
   
   const handleDeleteAccount = async () => {
     if (!user || deleteConfirmation.toLowerCase() !== 'delete') {
@@ -911,56 +963,55 @@ const SettingsPageContent = () => {
               {/* Theme Section */}
               <div className="space-y-2">
                 <Label htmlFor="theme">Theme Preference</Label>
-                <Select
-                  value={theme || 'system'}
-                  onValueChange={async (value) => {
-                    try {
-                      // Set theme immediately for instant feedback
-                      setTheme(value);
-                      
-                      // Save to cookie for persistence across sessions
-                      if (typeof window !== 'undefined') {
-                        document.cookie = `theme=${value}; path=/; max-age=${365 * 24 * 60 * 60}; SameSite=Lax`;
-                      }
-                      
-                      // Update form data to include the new theme
-                      setFormData(prev => ({ ...prev, theme: value }));
-                      
-                      // Update profile in Firestore (without page reload)
-                      if (user && profile) {
-                        const updatedProfile = {
-                          ...profile,
-                          theme: value,
-                          lastUpdated: new Date().toISOString()
-                        };
-                        
-                        await setDoc(doc(db, 'users', user.uid), updatedProfile, { merge: true });
-                        setProfile(updatedProfile);
-                      }
-                      
-                      setSuccess("Theme updated successfully!");
-                      
-                      // Clear success message after 3 seconds
-                      setTimeout(() => setSuccess(""), 3000);
-                    } catch (err) {
-                      console.error('Failed to update theme:', err);
-                      setError("Failed to update theme preference");
-                      
-                      // Clear error message after 5 seconds
-                      setTimeout(() => setError(""), 5000);
-                    }
-                  }}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select your preferred theme" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="light">Light</SelectItem>
-                    <SelectItem value="dark">Dark</SelectItem>
-                    <SelectItem value="midnight">Midnight</SelectItem>
-                    <SelectItem value="system">System</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Collapsible open={isThemeOpen} onOpenChange={setIsThemeOpen}>
+                  <CollapsibleTrigger asChild>
+                    <button 
+                      type="button"
+                      className="flex items-center justify-between w-full px-3 py-2 text-sm border rounded-md hover:bg-accent hover:text-accent-foreground transition-colors"
+                    >
+                      <span>{getThemeDisplayName(theme)}</span>
+                      <ChevronDown className="h-4 w-4 transition-transform duration-200 data-[state=open]:rotate-180" />
+                    </button>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="space-y-1 mt-2">
+                    <button
+                      type="button"
+                      onClick={() => handleThemeChange('light')}
+                      className={`flex items-center w-full gap-3 text-sm rounded-md px-3 py-2 hover:bg-accent hover:text-accent-foreground transition-colors ${
+                        theme === 'light' ? 'bg-accent text-accent-foreground' : 'text-muted-foreground'
+                      }`}
+                    >
+                      ☀️ Light
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleThemeChange('dark')}
+                      className={`flex items-center w-full gap-3 text-sm rounded-md px-3 py-2 hover:bg-accent hover:text-accent-foreground transition-colors ${
+                        theme === 'dark' ? 'bg-accent text-accent-foreground' : 'text-muted-foreground'
+                      }`}
+                    >
+                      🌙 Dark
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleThemeChange('midnight')}
+                      className={`flex items-center w-full gap-3 text-sm rounded-md px-3 py-2 hover:bg-accent hover:text-accent-foreground transition-colors ${
+                        theme === 'midnight' ? 'bg-accent text-accent-foreground' : 'text-muted-foreground'
+                      }`}
+                    >
+                      🌌 Midnight
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleThemeChange('system')}
+                      className={`flex items-center w-full gap-3 text-sm rounded-md px-3 py-2 hover:bg-accent hover:text-accent-foreground transition-colors ${
+                        theme === 'system' ? 'bg-accent text-accent-foreground' : 'text-muted-foreground'
+                      }`}
+                    >
+                      💻 System
+                    </button>
+                  </CollapsibleContent>
+                </Collapsible>
                 <p className="text-xs text-muted-foreground">
                   Choose your preferred theme for the application
                 </p>
