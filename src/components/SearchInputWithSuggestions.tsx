@@ -273,7 +273,7 @@ const SearchInputWithSuggestions: React.FC<SearchInputWithSuggestionsProps> = ({
 
   return (
     <div className="relative flex-1">
-      <div className="relative flex items-center">
+      <div className="relative flex items-center shadow-lg rounded-lg bg-background/95 backdrop-blur-sm border border-border/50 hover:shadow-xl transition-shadow duration-300">
         {(isSearching || isLoading) ? (
           <Loader2 className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground animate-spin" />
         ) : null}
@@ -290,17 +290,17 @@ const SearchInputWithSuggestions: React.FC<SearchInputWithSuggestionsProps> = ({
             }
           }}
           value={searchTerm}
-          className={`${(isSearching || isLoading) ? 'pl-9' : 'pl-4'} pr-4 w-full ${showSearchButton ? 'rounded-r-none' : ''}`}
+          className={`${(isSearching || isLoading) ? 'pl-9' : 'pl-4'} pr-4 w-full border-0 bg-transparent focus:ring-0 focus:outline-none text-base h-12 ${showSearchButton ? 'rounded-r-none' : 'rounded-lg'} placeholder:text-muted-foreground/70`}
           disabled={isSearching || isLoading}
         />
         {showSearchButton && (
           <Button 
             type="button"
             onClick={() => handleSearch(searchTerm)}
-            className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground shadow hover:bg-primary/90 px-4 py-2 rounded-l-none h-12"
+            className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground shadow-md hover:bg-primary/90 hover:shadow-lg px-6 py-2 rounded-l-none h-12 border-l border-border/30"
             disabled={isSearching || isLoading}
           >
-            {(isSearching || isLoading) ? <Loader2 className="animate-spin" /> : <Search className="h-4 w-4" />}
+            {(isSearching || isLoading) ? <Loader2 className="animate-spin h-4 w-4" /> : <Search className="h-4 w-4" />}
           </Button>
         )}
       </div>
@@ -309,25 +309,25 @@ const SearchInputWithSuggestions: React.FC<SearchInputWithSuggestionsProps> = ({
       {showSuggestions && suggestions.length > 0 && (
         <div 
           ref={suggestionsRef}
-          className="absolute top-full left-0 right-0 z-50 mt-1 bg-popover border rounded-md shadow-lg max-h-60 overflow-y-auto"
+          className="absolute top-full left-0 right-0 z-50 mt-2 bg-popover/95 backdrop-blur-sm border border-border/50 rounded-lg shadow-xl max-h-60 overflow-y-auto"
         >
           {suggestions.map((suggestion, index) => (
             <div
               key={`${suggestion.type}-${suggestion.text}`}
-              className={`px-3 py-2 cursor-pointer hover:bg-accent flex items-center gap-2 ${
-                index === selectedIndex ? 'bg-accent' : ''
-              }`}
+              className={`px-4 py-3 cursor-pointer hover:bg-accent/80 flex items-center gap-3 transition-colors duration-150 ${
+                index === selectedIndex ? 'bg-accent/80' : ''
+              } ${index === 0 ? 'rounded-t-lg' : ''} ${index === suggestions.length - 1 ? 'rounded-b-lg' : ''}`}
               onClick={() => handleSuggestionClick(suggestion)}
               onMouseEnter={() => setSelectedIndex(index)}
             >
               <span className="text-sm">{getSuggestionIcon(suggestion)}</span>
               <div className="flex-1">
-                <span>{suggestion.text}</span>
+                <span className="text-sm font-medium">{suggestion.text}</span>
                 {suggestion.metadata?.clickRate && suggestion.metadata.clickRate > 3 && (
-                  <span className="ml-2 text-xs text-green-600">Popular</span>
+                  <span className="ml-2 text-xs text-green-600 font-medium">Popular</span>
                 )}
               </div>
-              <span className="text-xs text-muted-foreground capitalize">
+              <span className="text-xs text-muted-foreground/70 capitalize font-medium">
                 {suggestion.type}
               </span>
             </div>
