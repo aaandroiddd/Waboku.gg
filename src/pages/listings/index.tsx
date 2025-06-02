@@ -142,6 +142,10 @@ export default function ListingsPage() {
   // Use the enhanced useListings hook without automatic search
   const { listings: allListings, isLoading, error } = useListings();
   const { latitude, longitude } = useGeolocation();
+  
+  // Initialize analytics hooks early
+  const { recordSearch } = useTrendingSearches();
+  const { updateSearchSession } = useSearchAnalytics();
 
   // Function to calculate distances and add proximity categories
   const addDistanceInfo = (listings: Listing[]) => {
@@ -241,9 +245,6 @@ export default function ListingsPage() {
       updateSearchSession(searchQuery.trim(), filtered.length);
     }
   }, [allListings, searchQuery, selectedState, selectedGame, selectedCondition, priceRange, showGradedOnly, updateSearchSession]);
-
-  const { recordSearch } = useTrendingSearches();
-  const { updateSearchSession } = useSearchAnalytics();
 
   const handleSearch = async () => {
     try {
