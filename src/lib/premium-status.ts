@@ -177,6 +177,30 @@ export function clearAllPremiumStatusCache(): void {
 }
 
 /**
+ * Invalidate cache and update with new status immediately
+ */
+export function updatePremiumStatusCache(userId: string, newStatus: Partial<PremiumStatusResult>): void {
+  const existing = premiumStatusCache.get(userId);
+  const updated: PremiumStatusResult = {
+    isPremium: false,
+    tier: 'free',
+    status: 'none',
+    source: 'cache',
+    lastChecked: Date.now(),
+    ...existing?.data,
+    ...newStatus,
+    lastChecked: Date.now()
+  };
+  
+  premiumStatusCache.set(userId, { data: updated, timestamp: Date.now() });
+  
+  console.log('[Premium Status] Cache updated for user:', {
+    userId,
+    newStatus: updated
+  });
+}
+
+/**
  * Get cached premium status without making any API calls
  */
 export function getCachedPremiumStatus(userId: string): PremiumStatusResult | null {

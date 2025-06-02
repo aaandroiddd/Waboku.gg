@@ -1,12 +1,15 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useAccount } from '@/contexts/AccountContext';
 import { getPremiumStatus, clearPremiumStatusCache, PremiumStatusResult } from '@/lib/premium-status';
 
 /**
- * Simplified hook for premium status that uses a single source of truth
+ * Simplified hook for premium status that uses AccountContext as primary source
+ * and falls back to direct API calls when AccountContext is not available
  */
 export function useSimplifiedPremiumStatus() {
   const { user } = useAuth();
+  const { accountTier, subscription, isLoading: accountLoading } = useAccount();
   const [premiumStatus, setPremiumStatus] = useState<PremiumStatusResult>({
     isPremium: false,
     tier: 'free',
@@ -29,6 +32,39 @@ export function useSimplifiedPremiumStatus() {
       return;
     }
 
+    // If AccountContext is available and not loading, use it as the primary source
+    if (!accountLoading) {
+      const isPremium = accountTier === 'premium';
+      setPremiumStatus({
+        isPremium,
+        tier: accountTier,
+        status: subscription.status,
+        source: 'account-context',
+        lastChecked: Date.now(),
+        subscription: {
+          status: subscription.status,
+          stripeSubscriptionId: subscription.stripeSubscriptionId,
+          startDate: subscription.startDate,
+          endDate: subscription.endDate,
+          renewalDate: subscription.renewalDate
+        }
+      });
+      setIsLoading(false);
+      
+      // Clear any cached data since we have fresh data from AccountContext
+      clearPremiumStatusCache(user.uid);
+      
+      console.log('[useSimplifiedPremiumStatus] Using AccountContext data:', {
+        isPremium,
+        tier: accountTier,
+        status: subscription.status,
+        source: 'account-context'
+      });
+      
+      return;
+    }
+
+    // Fallback to direct API call if AccountContext is still loading
     let isMounted = true;
 
     const checkPremiumStatus = async () => {
@@ -55,16 +91,15 @@ export function useSimplifiedPremiumStatus() {
       }
     };
 
-    checkPremiumStatus();
-
-    // Set up periodic refresh every 5 minutes
-    const interval = setInterval(checkPremiumStatus, 5 * 60 * 1000);
+    // Only use fallback if AccountContext is still loading
+    if (accountLoading) {
+      checkPremiumStatus();
+    }
 
     return () => {
       isMounted = false;
-      clearInterval(interval);
     };
-  }, [user]);
+  }, [user, accountTier, subscription, accountLoading]);
 
   // Function to manually refresh status
   const refreshStatus = async () => {

@@ -4,6 +4,7 @@ import { AccountTier, ACCOUNT_TIERS, AccountFeatures, SubscriptionDetails } from
 import { getFirestore, doc, onSnapshot, setDoc, updateDoc, getDoc } from 'firebase/firestore';
 import { getFirebaseServices, registerListener, removeListener } from '@/lib/firebase';
 import { clearUserCaches, refreshPremiumCaches } from '@/lib/cache-manager';
+import { clearPremiumStatusCache, updatePremiumStatusCache } from '@/lib/premium-status';
 
 interface AccountContextType {
   accountTier: AccountTier;
@@ -378,6 +379,21 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
                   console.log('[AccountContext] Account tier changed, clearing caches and refreshing');
                   clearUserCaches(user.uid);
                   refreshPremiumCaches(user.uid, newTier);
+                  
+                  // Update premium status cache immediately
+                  updatePremiumStatusCache(user.uid, {
+                    isPremium: newTier === 'premium',
+                    tier: newTier,
+                    status: currentStatus,
+                    source: 'account-context',
+                    subscription: {
+                      status: currentStatus,
+                      stripeSubscriptionId: subscriptionData.stripeSubscriptionId,
+                      startDate: subscriptionData.startDate,
+                      endDate: subscriptionData.endDate,
+                      renewalDate: renewalDate
+                    }
+                  });
                 }
 
                 // Update the database if needed
