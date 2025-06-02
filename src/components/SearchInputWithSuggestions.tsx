@@ -8,6 +8,13 @@ import { Button } from "@/components/ui/button";
 interface SearchSuggestion {
   text: string;
   type: 'search' | 'card' | 'set';
+  score?: number;
+  metadata?: {
+    clickRate?: number;
+    avgPosition?: number;
+    refinementCount?: number;
+    recentPopularity?: number;
+  };
 }
 
 interface SearchInputWithSuggestionsProps {
@@ -51,23 +58,44 @@ const SearchInputWithSuggestions: React.FC<SearchInputWithSuggestionsProps> = ({
 
   const fetchSuggestions = async (query: string) => {
     try {
-      // Fetch both search history and card suggestions
-      const [searchSuggestions, cardSuggestions] = await Promise.all([
-        fetch(`/api/search/suggestions?q=${encodeURIComponent(query)}`).then(r => r.json()),
-        fetch(`/api/search/card-suggestions?q=${encodeURIComponent(query)}`).then(r => r.json())
-      ]);
+      // Use intelligent suggestions that incorporate user behavior analytics
+      const intelligentSuggestions = await fetch(
+        `/api/search/intelligent-suggestions?q=${encodeURIComponent(query)}&limit=8`
+      ).then(r => r.json());
 
-      const combined: SearchSuggestion[] = [
-        ...searchSuggestions.map((text: string) => ({ text, type: 'search' as const })),
-        ...cardSuggestions.map((text: string) => ({ text, type: 'card' as const }))
-      ];
+      const suggestions: SearchSuggestion[] = intelligentSuggestions.map((suggestion: any) => ({
+        text: suggestion.text,
+        type: suggestion.type === 'behavioral' ? 'search' : 
+              suggestion.type === 'popular' ? 'card' : 
+              suggestion.type === 'refinement' ? 'search' : 'card',
+        score: suggestion.score,
+        metadata: suggestion.metadata
+      }));
 
-      setSuggestions(combined.slice(0, 8));
-      setShowSuggestions(combined.length > 0);
+      setSuggestions(suggestions);
+      setShowSuggestions(suggestions.length > 0);
     } catch (error) {
-      console.error('Error fetching suggestions:', error);
-      setSuggestions([]);
-      setShowSuggestions(false);
+      console.error('Error fetching intelligent suggestions:', error);
+      
+      // Fallback to basic suggestions
+      try {
+        const [searchSuggestions, cardSuggestions] = await Promise.all([
+          fetch(`/api/search/suggestions?q=${encodeURIComponent(query)}`).then(r => r.json()),
+          fetch(`/api/search/card-suggestions?q=${encodeURIComponent(query)}`).then(r => r.json())
+        ]);
+
+        const combined: SearchSuggestion[] = [
+          ...searchSuggestions.map((text: string) => ({ text, type: 'search' as const })),
+          ...cardSuggestions.map((text: string) => ({ text, type: 'card' as const }))
+        ];
+
+        setSuggestions(combined.slice(0, 8));
+        setShowSuggestions(combined.length > 0);
+      } catch (fallbackError) {
+        console.error('Error fetching fallback suggestions:', fallbackError);
+        setSuggestions([]);
+        setShowSuggestions(false);
+      }
     }
   };
 
@@ -153,8 +181,16 @@ const SearchInputWithSuggestions: React.FC<SearchInputWithSuggestionsProps> = ({
     }, 150);
   };
 
-  const getSuggestionIcon = (type: SearchSuggestion['type']) => {
-    switch (type) {
+  const getSuggestionIcon = (suggestion: SearchSuggestion) => {
+    // Show different icons based on suggestion quality/type
+    if (suggestion.metadata?.clickRate && suggestion.metadata.clickRate > 5) {
+      return '⭐'; // High-performing suggestion
+    }
+    if (suggestion.metadata?.refinementCount && suggestion.metadata.refinementCount > 3) {
+      return '🎯'; // Popular refinement
+    }
+    
+    switch (suggestion.type) {
       case 'search':
         return '🔍';
       case 'card':
@@ -215,8 +251,13 @@ const SearchInputWithSuggestions: React.FC<SearchInputWithSuggestionsProps> = ({
               onClick={() => handleSuggestionClick(suggestion)}
               onMouseEnter={() => setSelectedIndex(index)}
             >
-              <span className="text-sm">{getSuggestionIcon(suggestion.type)}</span>
-              <span className="flex-1">{suggestion.text}</span>
+              <span className="text-sm">{getSuggestionIcon(suggestion)}</span>
+              <div className="flex-1">
+                <span>{suggestion.text}</span>
+                {suggestion.metadata?.clickRate && suggestion.metadata.clickRate > 3 && (
+                  <span className="ml-2 text-xs text-green-600">Popular</span>
+                )}
+              </div>
               <span className="text-xs text-muted-foreground capitalize">
                 {suggestion.type}
               </span>

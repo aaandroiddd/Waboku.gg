@@ -24,6 +24,7 @@ import { useFavoriteGroups } from '@/hooks/useFavoriteGroups';
 import { AddToGroupDialog } from './AddToGroupDialog';
 import { getListingUrl } from '@/lib/listing-slug';
 import { MobileAnimationWrapper, MobileMotionButton, MobileMotionSpan } from './MobileAnimationWrapper';
+import { useSearchAnalytics } from '@/hooks/useSearchAnalytics';
 
 const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
   const R = 3959; // Earth's radius in miles
@@ -44,6 +45,8 @@ interface ListingCardProps {
   onAddToGroup?: (listingId: string, groupId: string) => Promise<void>;
   onRemoveFromFavorites?: (listingId: string) => Promise<void>;
   getConditionColor: (condition: string) => { base: string; hover: string };
+  searchTerm?: string;
+  resultPosition?: number;
 }
 
 const cardVariants = {
@@ -166,13 +169,14 @@ const BuyNowButton = ({ listing, className }: BuyNowButtonProps) => {
   );
 };
 
-export const ListingCard = memo(({ listing, isFavorite, onFavoriteClick, onAddToGroup, onRemoveFromFavorites, getConditionColor }: ListingCardProps) => {
+export const ListingCard = memo(({ listing, isFavorite, onFavoriteClick, onAddToGroup, onRemoveFromFavorites, getConditionColor, searchTerm, resultPosition }: ListingCardProps) => {
   const { location } = useLocation({ autoRequest: false });
   const [calculatedDistance, setCalculatedDistance] = useState<number | null>(null);
   const [isCheckingExpiration, setIsCheckingExpiration] = useState(false);
   const [showGroupDialog, setShowGroupDialog] = useState(false);
   const { groups, addToGroup, createAndAddToGroup } = useFavoriteGroups();
   const { user } = useAuth();
+  const { trackSearchClick } = useSearchAnalytics();
 
   // Log listing details in development mode
   useEffect(() => {
@@ -330,7 +334,21 @@ export const ListingCard = memo(({ listing, isFavorite, onFavoriteClick, onAddTo
         onCreateAndAddToGroup={handleCreateAndAddToGroup}
       />
       <Card className="relative overflow-hidden group h-full">
-        <Link href={getListingUrl(listing)}>
+        <Link 
+          href={getListingUrl(listing)}
+          onClick={() => {
+            // Track search click if this is from a search result
+            if (searchTerm && resultPosition !== undefined) {
+              trackSearchClick(
+                searchTerm,
+                listing.id,
+                listing.title,
+                resultPosition,
+                location ? `${listing.city}, ${listing.state}` : undefined
+              );
+            }
+          }}
+        >
           <CardContent className="p-3 h-full flex flex-col" style={{ minHeight: '420px' }}>
             <div className="aspect-square bg-muted rounded-lg mb-4 relative overflow-hidden flex-shrink-0">
               {/* Price Badge or Offers Only Badge */}

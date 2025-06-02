@@ -3,6 +3,7 @@ import SearchBar from '@/components/SearchBar';
 import { useGeolocation, calculateDistance } from '@/hooks/useGeolocation';
 import { Listing } from '@/types/database';
 import { ListingGrid } from '@/components/ListingGrid';
+import { ListingGridWithAnalytics } from '@/components/ListingGridWithAnalytics';
 import { SearchListingList } from '@/components/SearchListingList';
 import Head from 'next/head';
 import Header from '@/components/Header';
@@ -16,6 +17,7 @@ import { Search, MapPin, Filter, Check, LayoutGrid, List, X } from 'lucide-react
 import { useListings } from '@/hooks/useListings';
 import { useTrendingSearches } from '@/hooks/useTrendingSearches';
 import { FirebaseConnectionHandler } from '@/components/FirebaseConnectionHandler';
+import { useSearchAnalytics } from '@/hooks/useSearchAnalytics';
 import {
   Select,
   SelectContent,
@@ -233,9 +235,15 @@ export default function ListingsPage() {
     // Add distance information to filtered listings
     filtered = addDistanceInfo(filtered);
     setFilteredListings(filtered);
-  }, [allListings, searchQuery, selectedState, selectedGame, selectedCondition, priceRange, showGradedOnly]);
+
+    // Update search session for analytics
+    if (searchQuery.trim()) {
+      updateSearchSession(searchQuery.trim(), filtered.length);
+    }
+  }, [allListings, searchQuery, selectedState, selectedGame, selectedCondition, priceRange, showGradedOnly, updateSearchSession]);
 
   const { recordSearch } = useTrendingSearches();
+  const { updateSearchSession } = useSearchAnalytics();
 
   const handleSearch = async () => {
     try {
@@ -542,7 +550,11 @@ export default function ListingsPage() {
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             ) : viewMode === 'grid' ? (
-              <ListingGrid listings={filteredListings} loading={isLoading} />
+              <ListingGridWithAnalytics 
+                listings={filteredListings} 
+                loading={isLoading} 
+                searchTerm={searchQuery.trim() || undefined}
+              />
             ) : (
               <SearchListingList listings={filteredListings} loading={isLoading} />
             )}
