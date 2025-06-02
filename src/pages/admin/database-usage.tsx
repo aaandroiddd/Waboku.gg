@@ -14,10 +14,12 @@ import {
   clearRecentOperations
 } from '@/lib/database-usage-monitor';
 import { ref, get, query, orderByChild, limitToLast } from 'firebase/database';
-import { database } from '@/lib/firebase';
+import { getFirebaseServices } from '@/lib/firebase';
 import DatabaseUsageOptimizer from '@/components/DatabaseUsageOptimizer';
 import DatabaseConnectionMonitor from '@/components/DatabaseConnectionMonitor';
 import ComponentDatabaseUsageAnalyzer from '@/components/ComponentDatabaseUsageAnalyzer';
+import { useRouter } from 'next/router';
+import Footer from '@/components/Footer';
 
 // Define types for our usage data
 interface PathUsage {
@@ -47,6 +49,7 @@ interface RecentOperation {
 }
 
 const DatabaseUsagePage = () => {
+  const router = useRouter();
   const [pathUsage, setPathUsage] = useState<PathUsage[]>([]);
   const [sourceUsage, setSourceUsage] = useState<SourceUsage[]>([]);
   const [recentOperations, setRecentOperations] = useState<RecentOperation[]>([]);
@@ -55,6 +58,54 @@ const DatabaseUsagePage = () => {
   const [activeTab, setActiveTab] = useState('paths');
   const [refreshInterval, setRefreshInterval] = useState<number | null>(null);
   const [realtimeStats, setRealtimeStats] = useState<any>(null);
+  const [isAuthorized, setIsAuthorized] = useState(false);
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+  const [firebaseInitialized, setFirebaseInitialized] = useState(false);
+
+  // Check admin authorization
+  const checkAdminAuth = async () => {
+    try {
+      const adminSecret = localStorage.getItem('admin_secret');
+      if (!adminSecret) {
+        router.push('/admin');
+        return;
+      }
+
+      const response = await fetch('/api/admin/verify', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ secret: adminSecret }),
+      });
+
+      if (response.ok) {
+        setIsAuthorized(true);
+      } else {
+        router.push('/admin');
+      }
+    } catch (error) {
+      console.error('Error verifying admin auth:', error);
+      router.push('/admin');
+    } finally {
+      setIsCheckingAuth(false);
+    }
+  };
+
+  // Initialize Firebase services
+  const initializeFirebaseServices = async () => {
+    try {
+      const services = await getFirebaseServices();
+      if (services.database) {
+        setFirebaseInitialized(true);
+        console.log('Firebase Realtime Database initialized successfully');
+      } else {
+        console.error('Firebase Realtime Database not available');
+      }
+    } catch (error) {
+      console.error('Error initializing Firebase services:', error);
+    }
+  };
 
   // Fetch Firebase Realtime Database usage statistics
   const fetchRealtimeStats = async () => {
@@ -113,15 +164,22 @@ const DatabaseUsagePage = () => {
 
   // Initialize and cleanup
   useEffect(() => {
-    fetchRealtimeStats();
-    updateUsageData();
+    checkAdminAuth();
+  }, []);
+
+  useEffect(() => {
+    if (isAuthorized) {
+      initializeFirebaseServices();
+      fetchRealtimeStats();
+      updateUsageData();
+    }
     
     return () => {
       if (refreshInterval) {
         window.clearInterval(refreshInterval);
       }
     };
-  }, []);
+  }, [isAuthorized]);
 
   // Format bytes to human-readable format
   const formatBytes = (bytes: number, decimals = 2) => {
@@ -141,9 +199,48 @@ const DatabaseUsagePage = () => {
     return new Date(timestamp).toLocaleString();
   };
 
+  // Show loading state while checking auth
+  if (isCheckingAuth) {
+    return (
+      <div className="container mx-auto py-8">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto mb-4"></div>
+            <p>Checking authorization...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show unauthorized state
+  if (!isAuthorized) {
+    return (
+      <div className="container mx-auto py-8">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <h1 className="text-2xl font-bold mb-4">Unauthorized Access</h1>
+            <p className="text-muted-foreground mb-4">You need admin privileges to access this page.</p>
+            <Button onClick={() => router.push('/admin')}>Go to Admin Login</Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="container mx-auto py-8">
-      <h1 className="text-3xl font-bold mb-6">Firebase Realtime Database Usage Monitor</h1>
+    <div className="min-h-screen bg-background">
+      <div className="container mx-auto py-8">
+        <div className="mb-6">
+          <Button 
+            variant="outline" 
+            onClick={() => router.push('/admin')}
+            className="mb-4"
+          >
+            ← Back to Admin Dashboard
+          </Button>
+          <h1 className="text-3xl font-bold">Firebase Realtime Database Usage Monitor</h1>
+        </div>
       
       {realtimeStats && (
         <Card className="p-6 mb-6">
@@ -356,6 +453,9 @@ const DatabaseUsagePage = () => {
           <li>Use shallow queries with <code className="bg-muted px-1 rounded">orderByKey()</code> and <code className="bg-muted px-1 rounded">orderByChild()</code></li>
         </ul>
       </div>
+      </div>
+      
+      <Footer />
     </div>
   );
 };

@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { database } from '@/lib/firebase';
+import { getFirebaseServices } from '@/lib/firebase';
 import { ref, onValue, off, serverTimestamp, set, get } from 'firebase/database';
 
 const DatabaseConnectionMonitor = () => {
@@ -14,31 +14,72 @@ const DatabaseConnectionMonitor = () => {
   const [isFixing, setIsFixing] = useState(false);
   const [fixAttempted, setFixAttempted] = useState(false);
   const [connectionLatency, setConnectionLatency] = useState<number | null>(null);
+  const [database, setDatabase] = useState<any>(null);
+  const [isInitialized, setIsInitialized] = useState(false);
+
+  // Initialize Firebase services
+  useEffect(() => {
+    const initializeFirebase = async () => {
+      try {
+        const services = await getFirebaseServices();
+        if (services.database) {
+          setDatabase(services.database);
+          setIsInitialized(true);
+        } else {
+          console.error('Firebase Realtime Database not available');
+        }
+      } catch (error) {
+        console.error('Error initializing Firebase services:', error);
+      }
+    };
+
+    initializeFirebase();
+  }, []);
 
   // Monitor connection status
   useEffect(() => {
-    const connectedRef = ref(database, '.info/connected');
-    
-    const unsubscribe = onValue(connectedRef, (snapshot) => {
-      const connected = snapshot.val();
-      setConnectionStatus(connected ? 'connected' : 'disconnected');
+    if (!database || !isInitialized) return;
+
+    let unsubscribe: (() => void) | null = null;
+
+    try {
+      const connectedRef = ref(database, '.info/connected');
       
-      if (connected) {
-        setLastActivity(new Date());
-      }
-    });
-    
-    // Measure latency
-    measureLatency();
+      unsubscribe = onValue(connectedRef, (snapshot) => {
+        const connected = snapshot.val();
+        setConnectionStatus(connected ? 'connected' : 'disconnected');
+        
+        if (connected) {
+          setLastActivity(new Date());
+        }
+      });
+      
+      // Measure latency
+      measureLatency();
+    } catch (error) {
+      console.error('Error setting up connection monitor:', error);
+      setConnectionStatus('disconnected');
+    }
     
     // Cleanup
     return () => {
-      off(connectedRef);
+      if (unsubscribe) {
+        try {
+          unsubscribe();
+        } catch (error) {
+          console.error('Error cleaning up connection monitor:', error);
+        }
+      }
     };
-  }, []);
+  }, [database, isInitialized]);
 
   // Measure database connection latency
   const measureLatency = async () => {
+    if (!database) {
+      console.warn('Database not initialized, cannot measure latency');
+      return;
+    }
+
     try {
       const testRef = ref(database, '.info/serverTimeOffset');
       
@@ -49,21 +90,33 @@ const DatabaseConnectionMonitor = () => {
       setConnectionLatency(endTime - startTime);
     } catch (error) {
       console.error('Error measuring latency:', error);
+      setConnectionLatency(null);
     }
   };
 
   // Fix connection issues
   const fixConnectionIssues = async () => {
+    if (!database) {
+      console.warn('Database not initialized, cannot fix connection');
+      return;
+    }
+
     setIsFixing(true);
     
     try {
-      // 1. Force disconnect and reconnect
-      await set(ref(database, '.info/connected'), null);
+      // 1. Clear any cached data
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('firebase:previous_websocket_failure');
+        
+        // Clear any Firebase-related cache
+        Object.keys(localStorage).forEach(key => {
+          if (key.includes('firebase') || key.includes('rtdb')) {
+            localStorage.removeItem(key);
+          }
+        });
+      }
       
-      // 2. Clear any cached data
-      localStorage.removeItem('firebase:previous_websocket_failure');
-      
-      // 3. Wait a moment and check connection again
+      // 2. Wait a moment and check connection again
       setTimeout(async () => {
         await measureLatency();
         setFixAttempted(true);
@@ -116,6 +169,26 @@ const DatabaseConnectionMonitor = () => {
       return 'bg-red-500';
     }
   };
+
+  // Show loading state if Firebase is not initialized
+  if (!isInitialized) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Database Connection Monitor</CardTitle>
+          <CardDescription>
+            Initializing Firebase Realtime Database...
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-center py-4">
+            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900"></div>
+            <span className="ml-2">Loading...</span>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card>
