@@ -76,6 +76,8 @@ export const ProfileContent = ({ userId }: { userId: string | null }) => {
   const router = useRouter();
   const { profile, isLoading, error, isOffline } = useProfile(userId);
   const [mounted, setMounted] = useState(false);
+  const [totalSales, setTotalSales] = useState<number | null>(null);
+  const [loadingSales, setLoadingSales] = useState(false);
   const [networkStatus, setNetworkStatus] = useState<'online' | 'offline'>(
     typeof navigator !== 'undefined' ? (navigator.onLine ? 'online' : 'offline') : 'online'
   );
@@ -103,6 +105,35 @@ export const ProfileContent = ({ userId }: { userId: string | null }) => {
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // Fetch accurate total sales from orders
+  useEffect(() => {
+    const fetchTotalSales = async () => {
+      if (!userId || !mounted) return;
+      
+      try {
+        setLoadingSales(true);
+        const response = await fetch(`/api/users/calculate-total-sales?userId=${userId}`);
+        
+        if (response.ok) {
+          const data = await response.json();
+          setTotalSales(data.totalSales);
+        } else {
+          console.error('Failed to fetch total sales:', response.statusText);
+          // Fall back to profile data if API fails
+          setTotalSales(profile?.totalSales || 0);
+        }
+      } catch (error) {
+        console.error('Error fetching total sales:', error);
+        // Fall back to profile data if API fails
+        setTotalSales(profile?.totalSales || 0);
+      } finally {
+        setLoadingSales(false);
+      }
+    };
+
+    fetchTotalSales();
+  }, [userId, mounted, profile?.totalSales]);
 
   if (!mounted) {
     return <LoadingProfile />;
@@ -267,7 +298,13 @@ export const ProfileContent = ({ userId }: { userId: string | null }) => {
                 
                 <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="text-center p-4 bg-secondary rounded-lg">
-                    <div className="text-2xl font-bold">{profile.totalSales || 0}</div>
+                    <div className="text-2xl font-bold">
+                      {loadingSales ? (
+                        <div className="animate-pulse bg-muted rounded w-8 h-8 mx-auto"></div>
+                      ) : (
+                        totalSales !== null ? totalSales : (profile.totalSales || 0)
+                      )}
+                    </div>
                     <div className="text-sm text-muted-foreground">Total Sales</div>
                   </div>
                   <div className="text-center p-4 bg-secondary rounded-lg">
