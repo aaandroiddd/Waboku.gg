@@ -10,9 +10,16 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { Menu, LayoutDashboard, Heart, MessageSquare, Settings, Store, LogOut, Home, Search, ClipboardList } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Menu, LayoutDashboard, Heart, MessageSquare, Settings, Store, LogOut, Home, Search, ClipboardList, ChevronDown } from "lucide-react";
 import { useState, useCallback, useEffect, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useTheme } from "next-themes";
 import { motion, useReducedMotion } from "framer-motion";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { useToast } from "@/components/ui/use-toast";
@@ -28,7 +35,8 @@ interface HeaderProps {
 
 export default function Header({ animate = true }: HeaderProps) {
   const router = useRouter();
-  const { user, profile, signOut } = useAuth();
+  const { user, profile, signOut, updateProfile } = useAuth();
+  const { theme, setTheme } = useTheme();
   const isAuthPage = router.pathname.startsWith("/auth/");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isMenuAnimating, setIsMenuAnimating] = useState(false);
@@ -161,6 +169,34 @@ export default function Header({ animate = true }: HeaderProps) {
   };
   
   const { toast } = useToast();
+  
+  // Theme handling function
+  const handleThemeChange = async (newTheme: 'light' | 'dark' | 'midnight' | 'system') => {
+    setTheme(newTheme);
+    if (user) {
+      try {
+        await updateProfile({ theme: newTheme });
+      } catch (error) {
+        console.error('Failed to save theme preference:', error);
+      }
+    }
+  };
+
+  // Get theme display name
+  const getThemeDisplayName = (themeValue: string | undefined) => {
+    switch (themeValue) {
+      case 'light':
+        return 'Light';
+      case 'dark':
+        return 'Dark';
+      case 'midnight':
+        return 'Midnight';
+      case 'system':
+        return 'System';
+      default:
+        return 'Theme';
+    }
+  };
   
   const handleSignOut = async () => {
     try {
@@ -445,14 +481,32 @@ export default function Header({ animate = true }: HeaderProps) {
                             Settings
                           </button>
                           
-                          {/* Theme Toggle for logged in users */}
-                          <div className="flex items-center w-full gap-3 text-sm font-medium rounded-md px-3 py-2.5 text-muted-foreground">
-                            <div className="h-5 w-5 flex items-center justify-center">
-                              🎨
-                            </div>
-                            <span className="flex-1">Theme</span>
-                            <ThemeToggle />
-                          </div>
+                          {/* Theme Dropdown for logged in users */}
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <button className="flex items-center w-full gap-3 text-sm font-medium rounded-md px-3 py-2.5 hover:bg-accent hover:text-accent-foreground transition-colors text-muted-foreground">
+                                <div className="h-5 w-5 flex items-center justify-center">
+                                  🎨
+                                </div>
+                                <span className="flex-1">{getThemeDisplayName(theme)}</span>
+                                <ChevronDown className="h-4 w-4" />
+                              </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-32">
+                              <DropdownMenuItem onClick={() => handleThemeChange('light')}>
+                                Light
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleThemeChange('dark')}>
+                                Dark
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleThemeChange('midnight')}>
+                                Midnight
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleThemeChange('system')}>
+                                System
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </>
                       ) : (
                         <>
@@ -465,14 +519,32 @@ export default function Header({ animate = true }: HeaderProps) {
                             </Link>
                           </div>
                           
-                          {/* Theme Toggle for logged out users */}
-                          <div className="flex items-center w-full gap-3 text-sm font-medium rounded-md px-3 py-2.5 text-muted-foreground mt-4">
-                            <div className="h-5 w-5 flex items-center justify-center">
-                              🎨
-                            </div>
-                            <span className="flex-1">Theme</span>
-                            <ThemeToggle />
-                          </div>
+                          {/* Theme Dropdown for logged out users */}
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <button className="flex items-center w-full gap-3 text-sm font-medium rounded-md px-3 py-2.5 hover:bg-accent hover:text-accent-foreground transition-colors text-muted-foreground mt-4">
+                                <div className="h-5 w-5 flex items-center justify-center">
+                                  🎨
+                                </div>
+                                <span className="flex-1">{getThemeDisplayName(theme)}</span>
+                                <ChevronDown className="h-4 w-4" />
+                              </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-32">
+                              <DropdownMenuItem onClick={() => handleThemeChange('light')}>
+                                Light
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleThemeChange('dark')}>
+                                Dark
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleThemeChange('midnight')}>
+                                Midnight
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleThemeChange('system')}>
+                                System
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </>
                       )}
                     </div>
