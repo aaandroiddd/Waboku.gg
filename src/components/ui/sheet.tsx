@@ -19,11 +19,12 @@ const SheetOverlay = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <SheetPrimitive.Overlay
     className={cn(
-      "fixed inset-0 z-[99] bg-black/80 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 will-change-auto",
+      "fixed inset-0 z-[99] bg-black/80 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 will-change-auto pointer-events-auto",
       className
     )}
     {...props}
     ref={ref}
+    style={{ pointerEvents: 'auto' }}
   />
 ))
 SheetOverlay.displayName = SheetPrimitive.Overlay.displayName
