@@ -1,19 +1,56 @@
 import { useState, useEffect } from 'react';
-import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
+import { useRouter } from 'next/router';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Footer } from '@/components/Footer';
 import { databaseOptimizer } from '@/lib/database-usage-optimizer';
 import { databaseCleanupManager } from '@/lib/database-cleanup';
-import { AlertTriangle, Database, Activity, Users, MessageSquare, Clock } from 'lucide-react';
+import { AlertTriangle, Database, Activity, Users, MessageSquare, Clock, ArrowLeft } from 'lucide-react';
 
 export default function DatabaseMonitorPage() {
+  const router = useRouter();
+  const [isAuthorized, setIsAuthorized] = useState(false);
+  const [adminSecret, setAdminSecret] = useState('');
   const [stats, setStats] = useState<any>(null);
   const [cleanupStats, setCleanupStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
+
+  useEffect(() => {
+    const secret = localStorage.getItem('admin_secret');
+    if (secret) {
+      setAdminSecret(secret);
+      verifyAdmin(secret);
+    }
+  }, []);
+
+  const verifyAdmin = async (secret: string) => {
+    try {
+      const response = await fetch('/api/admin/verify', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${secret}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        setIsAuthorized(true);
+        localStorage.setItem('admin_secret', secret);
+      } else {
+        setIsAuthorized(false);
+        localStorage.removeItem('admin_secret');
+        router.push('/admin');
+      }
+    } catch (error) {
+      console.error('Error verifying admin:', error);
+      setIsAuthorized(false);
+      router.push('/admin');
+    }
+  };
 
   const refreshStats = () => {
     try {
@@ -49,10 +86,37 @@ export default function DatabaseMonitorPage() {
     refreshStats();
   };
 
+  if (!isAuthorized) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <div className="container mx-auto p-8 flex-grow">
+          <Card className="p-6">
+            <h1 className="text-2xl font-bold mb-4">Admin Authentication Required</h1>
+            <div className="space-y-4">
+              <input
+                type="password"
+                placeholder="Enter admin secret"
+                className="w-full p-2 border rounded"
+                onChange={(e) => setAdminSecret(e.target.value)}
+              />
+              <Button 
+                onClick={() => verifyAdmin(adminSecret)}
+                disabled={!adminSecret}
+              >
+                Verify Admin Access
+              </Button>
+            </div>
+          </Card>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
+
   if (loading) {
     return (
-      <DashboardLayout>
-        <div className="container mx-auto p-6">
+      <div className="min-h-screen flex flex-col">
+        <div className="container mx-auto p-8 flex-grow">
           <div className="flex items-center justify-center h-64">
             <div className="text-center">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
@@ -60,7 +124,8 @@ export default function DatabaseMonitorPage() {
             </div>
           </div>
         </div>
-      </DashboardLayout>
+        <Footer />
+      </div>
     );
   }
 
@@ -69,24 +134,35 @@ export default function DatabaseMonitorPage() {
   const connectionPercentage = (connectionStatus / maxConnections) * 100;
 
   return (
-    <DashboardLayout>
-      <div className="container mx-auto p-6 space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold">Database Monitor</h1>
-            <p className="text-muted-foreground">
-              Monitor Firebase Realtime Database connections and usage
-            </p>
+    <div className="min-h-screen flex flex-col">
+      <div className="container mx-auto p-8 flex-grow">
+        <Card className="p-6">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-4">
+              <Button 
+                onClick={() => router.push('/admin')} 
+                variant="outline" 
+                size="sm"
+              >
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Back to Admin
+              </Button>
+              <div>
+                <h1 className="text-3xl font-bold">Database Monitor</h1>
+                <p className="text-muted-foreground">
+                  Monitor Firebase Realtime Database connections and usage
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <Button onClick={refreshStats} variant="outline">
+                Refresh
+              </Button>
+              <Button onClick={handleForceCleanup} variant="destructive">
+                Force Cleanup
+              </Button>
+            </div>
           </div>
-          <div className="flex gap-2">
-            <Button onClick={refreshStats} variant="outline">
-              Refresh
-            </Button>
-            <Button onClick={handleForceCleanup} variant="destructive">
-              Force Cleanup
-            </Button>
-          </div>
-        </div>
 
         {/* Connection Status Alert */}
         {connectionPercentage > 80 && (
@@ -311,7 +387,9 @@ export default function DatabaseMonitorPage() {
             </Card>
           </TabsContent>
         </Tabs>
+        </Card>
       </div>
-    </DashboardLayout>
+      <Footer />
+    </div>
   );
 }
