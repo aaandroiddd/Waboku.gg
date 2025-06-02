@@ -4,16 +4,19 @@ import { Search, Loader2 } from "lucide-react";
 import { validateSearchTerm, normalizeSearchTerm } from '@/lib/search-validation';
 import { useToast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
+import { addSearchTerm, getHistorySuggestions } from '@/lib/search-history';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface SearchSuggestion {
   text: string;
-  type: 'search' | 'card' | 'set';
+  type: 'search' | 'card' | 'set' | 'history';
   score?: number;
   metadata?: {
     clickRate?: number;
     avgPosition?: number;
     refinementCount?: number;
     recentPopularity?: number;
+    count?: number; // For history entries
   };
 }
 
@@ -41,6 +44,7 @@ const SearchInputWithSuggestions: React.FC<SearchInputWithSuggestionsProps> = ({
   const inputRef = useRef<HTMLInputElement>(null);
   const suggestionsRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
+  const { user } = useAuth();
 
   // Debounced search for suggestions
   useEffect(() => {
@@ -58,12 +62,21 @@ const SearchInputWithSuggestions: React.FC<SearchInputWithSuggestionsProps> = ({
 
   const fetchSuggestions = async (query: string) => {
     try {
+      // Get local search history first (fast)
+      const historySuggestions = getHistorySuggestions(query, user?.uid, 3);
+      const historyItems: SearchSuggestion[] = historySuggestions.map(item => ({
+        text: item.term,
+        type: 'history',
+        score: item.count * 10, // Boost history items
+        metadata: { count: item.count }
+      }));
+
       // Use intelligent suggestions that incorporate user behavior analytics
       const intelligentSuggestions = await fetch(
-        `/api/search/intelligent-suggestions?q=${encodeURIComponent(query)}&limit=8`
+        `/api/search/intelligent-suggestions?q=${encodeURIComponent(query)}&limit=6`
       ).then(r => r.json());
 
-      const suggestions: SearchSuggestion[] = intelligentSuggestions.map((suggestion: any) => ({
+      const apiSuggestions: SearchSuggestion[] = intelligentSuggestions.map((suggestion: any) => ({
         text: suggestion.text,
         type: suggestion.type === 'behavioral' ? 'search' : 
               suggestion.type === 'popular' ? 'card' : 
@@ -72,35 +85,71 @@ const SearchInputWithSuggestions: React.FC<SearchInputWithSuggestionsProps> = ({
         metadata: suggestion.metadata
       }));
 
-      setSuggestions(suggestions);
-      setShowSuggestions(suggestions.length > 0);
+      // Combine history and API suggestions, removing duplicates
+      const allSuggestions = [...historyItems, ...apiSuggestions];
+      const uniqueSuggestions = allSuggestions.filter((suggestion, index, self) => 
+        index === self.findIndex(s => s.text.toLowerCase() === suggestion.text.toLowerCase())
+      );
+
+      // Sort by score and limit to 8
+      const sortedSuggestions = uniqueSuggestions
+        .sort((a, b) => (b.score || 0) - (a.score || 0))
+        .slice(0, 8);
+
+      setSuggestions(sortedSuggestions);
+      setShowSuggestions(sortedSuggestions.length > 0);
     } catch (error) {
       console.error('Error fetching intelligent suggestions:', error);
       
-      // Fallback to basic suggestions
+      // Fallback to basic suggestions + history
       try {
+        const historySuggestions = getHistorySuggestions(query, user?.uid, 3);
+        const historyItems: SearchSuggestion[] = historySuggestions.map(item => ({
+          text: item.term,
+          type: 'history',
+          score: item.count * 10,
+          metadata: { count: item.count }
+        }));
+
         const [searchSuggestions, cardSuggestions] = await Promise.all([
           fetch(`/api/search/suggestions?q=${encodeURIComponent(query)}`).then(r => r.json()),
           fetch(`/api/search/card-suggestions?q=${encodeURIComponent(query)}`).then(r => r.json())
         ]);
 
-        const combined: SearchSuggestion[] = [
-          ...searchSuggestions.map((text: string) => ({ text, type: 'search' as const })),
-          ...cardSuggestions.map((text: string) => ({ text, type: 'card' as const }))
+        const apiSuggestions: SearchSuggestion[] = [
+          ...searchSuggestions.map((text: string) => ({ text, type: 'search' as const, score: 1 })),
+          ...cardSuggestions.map((text: string) => ({ text, type: 'card' as const, score: 1 }))
         ];
 
-        setSuggestions(combined.slice(0, 8));
-        setShowSuggestions(combined.length > 0);
+        // Combine and deduplicate
+        const allSuggestions = [...historyItems, ...apiSuggestions];
+        const uniqueSuggestions = allSuggestions.filter((suggestion, index, self) => 
+          index === self.findIndex(s => s.text.toLowerCase() === suggestion.text.toLowerCase())
+        );
+
+        setSuggestions(uniqueSuggestions.slice(0, 8));
+        setShowSuggestions(uniqueSuggestions.length > 0);
       } catch (fallbackError) {
         console.error('Error fetching fallback suggestions:', fallbackError);
-        setSuggestions([]);
-        setShowSuggestions(false);
+        
+        // Last resort: just show history
+        const historySuggestions = getHistorySuggestions(query, user?.uid, 8);
+        const historyItems: SearchSuggestion[] = historySuggestions.map(item => ({
+          text: item.term,
+          type: 'history',
+          score: item.count * 10,
+          metadata: { count: item.count }
+        }));
+        
+        setSuggestions(historyItems);
+        setShowSuggestions(historyItems.length > 0);
       }
     }
   };
 
   const handleSearch = async (term: string = searchTerm) => {
-    const normalizedTerm = normalizeSearchTerm(term);
+    const trimmedTerm = term.trim();
+    const normalizedTerm = normalizeSearchTerm(trimmedTerm);
     
     if (normalizedTerm && !validateSearchTerm(normalizedTerm)) {
       toast({
@@ -111,13 +160,31 @@ const SearchInputWithSuggestions: React.FC<SearchInputWithSuggestionsProps> = ({
       return;
     }
 
+    // Hide suggestions immediately
     setShowSuggestions(false);
     setSelectedIndex(-1);
+
+    // Record search term in local history if it's not empty
+    if (trimmedTerm) {
+      try {
+        addSearchTerm(trimmedTerm, user?.uid);
+        console.log(`[SearchInput] Recorded search term in local history: "${trimmedTerm}"`);
+      } catch (error) {
+        console.error('[SearchInput] Error recording search term in local history:', error);
+      }
+    }
 
     if (onSearch) {
       setIsSearching(true);
       try {
-        await onSearch(term.trim());
+        await onSearch(trimmedTerm);
+      } catch (error) {
+        console.error('[SearchInput] Error executing search:', error);
+        toast({
+          title: "Search Error",
+          description: "An error occurred while searching. Please try again.",
+          variant: "destructive"
+        });
       } finally {
         setIsSearching(false);
       }
@@ -191,6 +258,8 @@ const SearchInputWithSuggestions: React.FC<SearchInputWithSuggestionsProps> = ({
     }
     
     switch (suggestion.type) {
+      case 'history':
+        return '🕒'; // Clock icon for search history
       case 'search':
         return '🔍';
       case 'card':
