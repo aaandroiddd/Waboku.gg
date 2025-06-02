@@ -915,20 +915,39 @@ const SettingsPageContent = () => {
                   value={theme || 'system'}
                   onValueChange={async (value) => {
                     try {
+                      // Set theme immediately for instant feedback
                       setTheme(value);
-                      await updateProfile({
-                        ...formData,
-                        theme: value,
-                        social: {
-                          youtube: formData.youtube || '',
-                          twitter: formData.twitter || '',
-                          facebook: formData.facebook || ''
-                        }
-                      });
+                      
+                      // Save to cookie for persistence across sessions
+                      if (typeof window !== 'undefined') {
+                        document.cookie = `theme=${value}; path=/; max-age=${365 * 24 * 60 * 60}; SameSite=Lax`;
+                      }
+                      
+                      // Update form data to include the new theme
+                      setFormData(prev => ({ ...prev, theme: value }));
+                      
+                      // Update profile in Firestore (without page reload)
+                      if (user && profile) {
+                        const updatedProfile = {
+                          ...profile,
+                          theme: value,
+                          lastUpdated: new Date().toISOString()
+                        };
+                        
+                        await setDoc(doc(db, 'users', user.uid), updatedProfile, { merge: true });
+                        setProfile(updatedProfile);
+                      }
+                      
                       setSuccess("Theme updated successfully!");
+                      
+                      // Clear success message after 3 seconds
+                      setTimeout(() => setSuccess(""), 3000);
                     } catch (err) {
                       console.error('Failed to update theme:', err);
                       setError("Failed to update theme preference");
+                      
+                      // Clear error message after 5 seconds
+                      setTimeout(() => setError(""), 5000);
                     }
                   }}
                 >
@@ -946,6 +965,7 @@ const SettingsPageContent = () => {
                   Choose your preferred theme for the application
                 </p>
               </div>
+=======
 
               <Button type="submit" disabled={isLoading} className="w-full">
                 {isLoading ? (
