@@ -321,8 +321,9 @@ export default function SalesAnalytics() {
     }
 
     const totalRevenue = filteredSales.reduce((sum, sale) => sum + (sale.amount || 0), 0);
+    // Only count orders with status === 'completed' to match the profile page logic
     const completedOrders = filteredSales.filter(sale => 
-      ['completed', 'shipped'].includes(sale.status)
+      sale.status === 'completed'
     ).length;
     const pendingOrders = filteredSales.filter(sale => 
       ['pending', 'paid', 'awaiting_shipping'].includes(sale.status) || !sale.status || sale.status === ''
