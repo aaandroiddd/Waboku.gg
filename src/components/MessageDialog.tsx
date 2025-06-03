@@ -39,6 +39,13 @@ export function MessageDialog({ recipientId, recipientName, listingId: propListi
   const listingId = propListingId || (query.listingId as string)
   const listingTitle = propListingTitle || (query.listingTitle as string)
 
+  // Auto-fill subject line with listing title when dialog opens
+  useEffect(() => {
+    if (isOpen && listingTitle && !subject) {
+      setSubject(`Re: ${listingTitle}`);
+    }
+  }, [isOpen, listingTitle, subject]);
+
   // Check if user is trying to message themselves
   useEffect(() => {
     const checkSelfMessage = async () => {
