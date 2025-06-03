@@ -231,3 +231,17 @@ export function extractListingIdFromSlug(slug: string): string | null {
   
   return null;
 }
+
+/**
+ * Generates a profile URL from user data
+ * Prefers username over UID for better SEO and user experience
+ */
+export function getProfileUrl(user: { uid: string; username?: string; displayName?: string } | null): string {
+  if (!user) {
+    return '/profile/unknown';
+  }
+
+  // Prefer username if available, otherwise use UID
+  const identifier = user.username || user.uid;
+  return `/profile/${identifier}`;
+}

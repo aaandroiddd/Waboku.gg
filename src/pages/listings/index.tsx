@@ -366,6 +366,10 @@ export default function ListingsPage() {
                                   onSelect={() => {
                                     setSelectedState(state.value);
                                     setStateOpen(false);
+                                    // Automatically trigger search when state changes
+                                    setTimeout(() => {
+                                      handleSearch();
+                                    }, 100);
                                   }}
                                   className="cursor-pointer"
                                 >
@@ -400,7 +404,13 @@ export default function ListingsPage() {
                         <div className="py-4 space-y-4">
                           <div className="space-y-2">
                             <label className="text-sm font-medium">Category</label>
-                            <Select value={selectedGame} onValueChange={setSelectedGame}>
+                            <Select value={selectedGame} onValueChange={(value) => {
+                              setSelectedGame(value);
+                              // Automatically trigger search when game changes
+                              setTimeout(() => {
+                                handleSearch();
+                              }, 100);
+                            }}>
                               <SelectTrigger>
                                 <SelectValue placeholder="Select category" />
                               </SelectTrigger>
@@ -415,7 +425,13 @@ export default function ListingsPage() {
                           </div>
                           <div className="space-y-2">
                             <label className="text-sm font-medium">Condition</label>
-                            <Select value={selectedCondition} onValueChange={setSelectedCondition}>
+                            <Select value={selectedCondition} onValueChange={(value) => {
+                              setSelectedCondition(value);
+                              // Automatically trigger search when condition changes
+                              setTimeout(() => {
+                                handleSearch();
+                              }, 100);
+                            }}>
                               <SelectTrigger>
                                 <SelectValue placeholder="Select condition" />
                               </SelectTrigger>

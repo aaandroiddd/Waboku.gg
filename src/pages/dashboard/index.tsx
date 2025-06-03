@@ -37,7 +37,7 @@ import { FirebaseConnectionHandler } from '@/components/FirebaseConnectionHandle
 import { useLoading } from '@/hooks/useLoading';
 import { ViewCounter } from '@/components/ViewCounter';
 import { useDashboardListingsCache } from '@/hooks/useDashboardCache';
-import { getListingUrl } from '@/lib/listing-slug';
+import { getListingUrl, getProfileUrl } from '@/lib/listing-slug';
 
 const DashboardComponent = () => {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -770,7 +770,7 @@ const DashboardComponent = () => {
           {/* Use the new ProfileAvatar component for consistent avatar display */}
           <ProfileAvatar user={user} size="xl" />
           <div className="flex-1 pt-2">
-            <div className="group cursor-pointer" onClick={() => router.push(`/profile/${user.uid}`)}>
+            <div className="group cursor-pointer" onClick={() => router.push(getProfileUrl({ uid: user.uid, username: profile?.username }))}>
               <h1 className="text-3xl font-bold tracking-tight hover:text-primary transition-colors">
                 {/* Use the new ProfileName component for consistent name display */}
                 <ProfileName user={user} />
