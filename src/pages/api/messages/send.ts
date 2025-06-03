@@ -123,9 +123,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         [`chats/${chatId}/lastMessageTime`]: messageData.timestamp
       }
 
-      // Update unread counts
+      // Get current unread count for recipient before updating
       const unreadCountRef = admin.database.ref(`chats/${chatId}/unreadCount/${recipientId}`)
-      await unreadCountRef.transaction((current) => (current || 0) + 1)
+      const currentUnreadCount = await unreadCountRef.once('value').then(snap => snap.val() || 0)
+      const newUnreadCount = currentUnreadCount + 1
+
+      // Update unread counts and message threads in a single atomic operation
+      updates[`chats/${chatId}/unreadCount/${recipientId}`] = newUnreadCount
 
       // Ensure both users have the chat in their threads
       updates[`users/${senderId}/messageThreads/${chatId}`] = {
@@ -141,7 +145,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         recipientId: senderId,
         chatId,
         lastMessageTime: messageData.timestamp,
-        unreadCount: await unreadCountRef.once('value').then(snap => snap.val() || 0),
+        unreadCount: newUnreadCount,
         ...(subject ? { subject } : {}),
         ...(listingId ? { listingId, listingTitle } : {})
       }
