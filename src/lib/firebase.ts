@@ -397,7 +397,7 @@ if (typeof window !== 'undefined') {
     }
   });
   
-  // Also add a global fetch error handler
+  // Enhanced global fetch error handler with session ID management
   const originalFetch = window.fetch;
   window.fetch = async function(input, init) {
     try {
@@ -408,14 +408,26 @@ if (typeof window !== 'undefined') {
       if (url.includes('firestore.googleapis.com') && !response.ok) {
         console.error(`[Firebase] Firestore request failed with status ${response.status}:`, url);
         
+        // Special handling for 400 Bad Request errors with "Unknown SID"
+        if (response.status === 400) {
+          console.warn('[Firebase] Detected 400 Bad Request error - likely stale session ID');
+          
+          // For any 400 error on Firestore endpoints, force a complete reconnection
+          if (connectionManager) {
+            // Force immediate session reset for 400 errors
+            setTimeout(() => {
+              connectionManager.forceSessionReset();
+            }, 100);
+          }
+        }
         // Special handling for Write channel errors (common after Stripe checkout)
-        if (url.includes('/Write/channel') && response.status === 400) {
+        else if (url.includes('/Write/channel') && response.status === 400) {
           console.warn('[Firebase] Detected Firestore Write channel error, attempting immediate reconnection');
           
           if (connectionManager) {
             // Force immediate reconnection for Write channel errors
             setTimeout(() => {
-              connectionManager.reconnectFirebase();
+              connectionManager.forceSessionReset();
             }, 100);
           }
         }
@@ -434,6 +446,16 @@ if (typeof window !== 'undefined') {
                 // Clear any cached Firestore data that might be causing issues
                 if (typeof window !== 'undefined') {
                   try {
+                    // Clear IndexedDB for Firestore
+                    const deleteIDBRequest = indexedDB.deleteDatabase('firestore/[DEFAULT]/main');
+                    deleteIDBRequest.onsuccess = () => {
+                      console.log('[Firebase] Cleared Firestore IndexedDB cache');
+                    };
+                    deleteIDBRequest.onerror = (event) => {
+                      console.error('[Firebase] Error clearing Firestore IndexedDB cache:', event);
+                    };
+                    
+                    // Clear localStorage
                     Object.keys(localStorage).forEach(key => {
                       if (key.startsWith('firestore') || 
                           key.includes('firestore') || 
@@ -459,7 +481,7 @@ if (typeof window !== 'undefined') {
                   }).catch(err => {
                     console.error('[Firebase] Error re-enabling network after Listen channel error:', err);
                   });
-                }, 2000);
+                }, 3000); // Increased wait time for session reset
               }).catch(err => {
                 console.error('[Firebase] Error disabling network after Listen channel error:', err);
                 connectionManager.handleFetchError(url);
@@ -489,7 +511,7 @@ if (typeof window !== 'undefined') {
           if (connectionManager) {
             // Force immediate reconnection for Write channel errors
             setTimeout(() => {
-              connectionManager.reconnectFirebase();
+              connectionManager.forceSessionReset();
             }, 100);
           }
         }
@@ -526,6 +548,7 @@ class FirebaseConnectionManager {
   // Make these properties public to allow external access
   public reconnectFirebase: () => Promise<void>;
   public handleConnectionError: (reason: string) => void;
+  public forceSessionReset: () => Promise<void>;
 
   constructor() {
     if (typeof window !== 'undefined') {
@@ -926,6 +949,134 @@ class FirebaseConnectionManager {
         console.error('[Firebase] Error in connection listener:', error);
       }
     });
+  }
+
+  /**
+   * Force a complete session reset for Firestore
+   * This is more aggressive than reconnectFirebase and is used for 400 errors
+   */
+  forceSessionReset = async () => {
+    if (!this.isOnline) {
+      console.log('[Firebase] Cannot force session reset while offline');
+      return;
+    }
+
+    if (this.reconnectInProgress) {
+      console.log('[Firebase] Session reset already in progress, skipping');
+      return;
+    }
+
+    this.reconnectInProgress = true;
+    this.isReconnecting = true;
+    this.lastReconnectTime = Date.now();
+    
+    console.log('[Firebase] Forcing complete session reset due to stale session ID...');
+    
+    try {
+      // First, remove all listeners to prevent them from reconnecting automatically
+      removeAllListeners();
+      console.log('[Firebase] Removed all listeners for session reset');
+      
+      const { db } = getFirebaseServices();
+      if (db) {
+        try {
+          // Disable network to clear any hanging connections
+          await disableFirestoreNetwork(db);
+          console.log('[Firebase] Firestore network disabled for session reset');
+          
+          // Clear all Firestore-related cache aggressively
+          if (typeof window !== 'undefined') {
+            try {
+              // Clear IndexedDB for Firestore
+              const deleteIDBRequest = indexedDB.deleteDatabase('firestore/[DEFAULT]/main');
+              deleteIDBRequest.onsuccess = () => {
+                console.log('[Firebase] Cleared Firestore IndexedDB cache for session reset');
+              };
+              deleteIDBRequest.onerror = (event) => {
+                console.error('[Firebase] Error clearing Firestore IndexedDB cache:', event);
+              };
+              
+              // Clear all localStorage items related to Firebase/Firestore
+              Object.keys(localStorage).forEach(key => {
+                if (key.startsWith('firestore') || 
+                    key.includes('firestore') || 
+                    key.includes('firebase') || 
+                    key.includes('fs_') ||
+                    key.includes('gapi.') ||
+                    key.includes('google.')) {
+                  localStorage.removeItem(key);
+                }
+              });
+              
+              // Clear sessionStorage as well
+              Object.keys(sessionStorage).forEach(key => {
+                if (key.startsWith('firestore') || 
+                    key.includes('firestore') || 
+                    key.includes('firebase') || 
+                    key.includes('fs_')) {
+                  sessionStorage.removeItem(key);
+                }
+              });
+              
+              console.log('[Firebase] Cleared all Firebase-related cache for session reset');
+            } catch (error) {
+              console.error('[Firebase] Error clearing cache during session reset:', error);
+            }
+          }
+          
+          // Wait longer for session reset to ensure all connections are cleared
+          await new Promise(resolve => setTimeout(resolve, 5000));
+          
+          // Re-enable network with retry logic
+          let enableSuccess = false;
+          let retryCount = 0;
+          
+          while (!enableSuccess && retryCount < 5) { // More retries for session reset
+            try {
+              await enableFirestoreNetwork(db);
+              console.log('[Firebase] Firestore network re-enabled after session reset');
+              enableSuccess = true;
+              
+              // Reset all error counters on successful session reset
+              this.resetErrorState();
+              this.notifyListeners();
+            } catch (enableError) {
+              retryCount++;
+              console.warn(`[Firebase] Error enabling Firestore network after session reset (attempt ${retryCount}/5):`, enableError);
+              
+              if (retryCount < 5) {
+                // Wait longer between retries for session reset
+                await new Promise(resolve => setTimeout(resolve, 2000 * retryCount));
+              }
+            }
+          }
+          
+          if (!enableSuccess) {
+            console.error('[Firebase] Failed to re-enable Firestore network after session reset');
+            // Schedule a regular reconnect attempt as fallback
+            setTimeout(() => {
+              this.reconnectFirebase();
+            }, 10000);
+          }
+        } catch (error) {
+          console.error('[Firebase] Error during session reset:', error);
+          // Schedule a regular reconnect attempt as fallback
+          setTimeout(() => {
+            this.reconnectFirebase();
+          }, 5000);
+        }
+      }
+    } catch (error) {
+      console.error('[Firebase] Error during session reset process:', error);
+      // Schedule a regular reconnect attempt as fallback
+      this.handleConnectionError('Session reset failed');
+    } finally {
+      // Allow new operations after a longer delay for session reset
+      setTimeout(() => {
+        this.isReconnecting = false;
+        this.reconnectInProgress = false;
+      }, 15000); // Longer cooldown for session reset
+    }
   }
 
   public cleanup() {
