@@ -34,6 +34,7 @@ import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious
 import { Separator } from '@/components/ui/separator';
 import { Dialog, DialogContent, DialogTitle, DialogDescription, DialogTrigger, DialogClose } from '@/components/ui/dialog';
 import { Chat } from '@/components/Chat';
+import { MessageDialog } from '@/components/MessageDialog';
 import { MakeOfferDialog } from '@/components/MakeOfferDialog';
 import { ReportListingDialog } from '@/components/ReportListingDialog';
 import Image from 'next/image';
@@ -1620,16 +1621,12 @@ export default function ListingPage() {
                       <Heart className={`h-5 w-5 mr-2 ${isFavorited ? "fill-current" : ""}`} />
                       {isFavorited ? "Save" : "Save"}
                     </Button>
-                    <Button
-                      variant="default"
-                      size="lg"
-                      onClick={handleMessage}
-                      className="w-full"
-                      disabled={listing.soldTo || listing.archivedAt || listing.status === 'sold'}
-                    >
-                      <MessageCircle className="h-5 w-5 mr-2" />
-                      Message
-                    </Button>
+                    <MessageDialog
+                      recipientId={listing.userId}
+                      recipientName={listing.username}
+                      listingId={listing.id}
+                      listingTitle={listing.title}
+                    />
                   </div>
                   
                   {/* Bottom row: Buy Now and Make Offer buttons */}

@@ -16,13 +16,16 @@ import { useToast } from "./ui/use-toast"
 import { getFirebaseServices } from "@/lib/firebase"
 import { useAuthRedirect } from "@/contexts/AuthRedirectContext"
 import { useRouter } from "next/router"
+import { MessageCircle } from "lucide-react"
 
 interface MessageDialogProps {
   recipientId: string
   recipientName: string
+  listingId?: string
+  listingTitle?: string
 }
 
-export function MessageDialog({ recipientId, recipientName }: MessageDialogProps) {
+export function MessageDialog({ recipientId, recipientName, listingId: propListingId, listingTitle: propListingTitle }: MessageDialogProps) {
   const [subject, setSubject] = useState("")
   const [message, setMessage] = useState("")
   const [isOpen, setIsOpen] = useState(false)
@@ -31,10 +34,10 @@ export function MessageDialog({ recipientId, recipientName }: MessageDialogProps
   const { toast } = useToast()
   const { saveRedirectState } = useAuthRedirect()
   const router = useRouter()
-  // Get listingId and listingTitle from the URL if available
+  // Use props first, then fall back to URL query parameters
   const { query } = router
-  const listingId = query.listingId as string
-  const listingTitle = query.listingTitle as string
+  const listingId = propListingId || (query.listingId as string)
+  const listingTitle = propListingTitle || (query.listingTitle as string)
 
   // Check if user is trying to message themselves
   useEffect(() => {
@@ -249,7 +252,16 @@ export function MessageDialog({ recipientId, recipientName }: MessageDialogProps
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button variant="secondary" onClick={handleMessageButtonClick}>Send Message</Button>
+        <Button 
+          variant="default" 
+          size="lg" 
+          onClick={handleMessageButtonClick}
+          className="w-full"
+          disabled={false}
+        >
+          <MessageCircle className="h-5 w-5 mr-2" />
+          Message
+        </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
