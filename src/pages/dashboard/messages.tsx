@@ -134,6 +134,31 @@ export default function MessagesPage() {
     };
   }, [clearUnreadCount, resetUnreadCount]);
   
+  // Function to sync message threads when there's a mismatch
+  const syncMessageThreads = async () => {
+    if (!user) return;
+
+    try {
+      const token = await user.getIdToken();
+      const response = await fetch('/api/messages/sync-threads', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log('Message threads synced:', result);
+        return result.syncedThreads > 0;
+      }
+    } catch (error) {
+      console.error('Error syncing message threads:', error);
+    }
+    return false;
+  };
+
   useEffect(() => {
     if (!user) {
       setLoading(false);
@@ -152,57 +177,24 @@ export default function MessagesPage() {
     const userThreadsRef = ref(database, `users/${user.uid}/messageThreads`);
 
     const processUserThreads = async (threadsData: any) => {
-      // If no message threads exist, check if there are any chats where user is a participant
-      // and create message threads for them
+      // If no message threads exist, try to sync them from existing chats
       if (!threadsData) {
-        console.log('No message threads found, checking for existing chats...');
+        console.log('No message threads found, attempting to sync...');
         
         try {
-          // Check all chats where user is a participant
-          const chatsRef = ref(database, 'chats');
-          const chatsSnapshot = await get(chatsRef);
-          const allChats = chatsSnapshot.val() || {};
-          
-          const userChats = Object.entries(allChats).filter(([chatId, chatData]: [string, any]) => {
-            return chatData.participants?.[user.uid] && !chatData.deletedBy?.[user.uid];
-          });
-
-          if (userChats.length > 0) {
-            console.log(`Found ${userChats.length} existing chats, creating message threads...`);
+          const synced = await syncMessageThreads();
+          if (synced) {
+            // Reload after sync
+            const userThreadsRef = ref(database, `users/${user.uid}/messageThreads`);
+            const newThreadsSnapshot = await get(userThreadsRef);
+            const newThreadsData = newThreadsSnapshot.val();
             
-            // Create message threads for existing chats
-            const threadUpdates: Record<string, any> = {};
-            
-            for (const [chatId, chatData] of userChats) {
-              const otherParticipantId = Object.keys(chatData.participants).find(id => id !== user.uid);
-              if (otherParticipantId) {
-                threadUpdates[`users/${user.uid}/messageThreads/${chatId}`] = {
-                  recipientId: otherParticipantId,
-                  chatId: chatId,
-                  lastMessageTime: chatData.lastMessage?.timestamp || chatData.createdAt || Date.now(),
-                  unreadCount: 0, // Start with 0, will be updated when new messages arrive
-                  ...(chatData.listingId ? { listingId: chatData.listingId } : {}),
-                  ...(chatData.listingTitle ? { listingTitle: chatData.listingTitle } : {})
-                };
-              }
-            }
-
-            if (Object.keys(threadUpdates).length > 0) {
-              await update(ref(database), threadUpdates);
-              console.log('Message threads created successfully');
-              
-              // Reload with the newly created threads
-              const userThreadsRef = ref(database, `users/${user.uid}/messageThreads`);
-              const newThreadsSnapshot = await get(userThreadsRef);
-              const newThreadsData = newThreadsSnapshot.val();
-              
-              if (newThreadsData) {
-                return processUserThreads(newThreadsData);
-              }
+            if (newThreadsData) {
+              return processUserThreads(newThreadsData);
             }
           }
         } catch (error) {
-          console.error('Error checking for existing chats:', error);
+          console.error('Error syncing message threads:', error);
         }
         
         setChats([]);
@@ -460,12 +452,37 @@ export default function MessagesPage() {
                 <p className="text-sm text-muted-foreground mb-4">
                   Start a conversation by browsing listings
                 </p>
-                <Button
-                  onClick={() => router.push('/listings')}
-                  className="bg-primary text-primary-foreground hover:bg-primary/90"
-                >
-                  Browse Listings
-                </Button>
+                <div className="flex flex-col gap-2">
+                  <Button
+                    onClick={() => router.push('/listings')}
+                    className="bg-primary text-primary-foreground hover:bg-primary/90"
+                  >
+                    Browse Listings
+                  </Button>
+                  <Button
+                    onClick={async () => {
+                      setLoading(true);
+                      try {
+                        const synced = await syncMessageThreads();
+                        if (synced) {
+                          // Reload the page to show synced messages
+                          window.location.reload();
+                        } else {
+                          console.log('No messages to sync');
+                        }
+                      } catch (error) {
+                        console.error('Error syncing messages:', error);
+                      } finally {
+                        setLoading(false);
+                      }
+                    }}
+                    variant="outline"
+                    size="sm"
+                    disabled={loading}
+                  >
+                    {loading ? 'Syncing...' : 'Sync Messages'}
+                  </Button>
+                </div>
               </div>
             ) : (
               <ScrollArea className="flex-1">

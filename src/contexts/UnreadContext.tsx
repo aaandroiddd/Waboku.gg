@@ -50,7 +50,7 @@ export const UnreadProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     listenersRef.current.forEach(id => databaseOptimizer.removeListener(id));
     listenersRef.current = [];
 
-    // Use optimized listener for messages - only listen to user's message threads instead of all chats
+    // Use optimized listener for messages - check actual chat data for unread status
     const messagesListenerId = databaseOptimizer.createOptimizedListener({
       path: `users/${user.uid}/messageThreads`,
       callback: async (threadsData) => {
@@ -61,13 +61,38 @@ export const UnreadProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           }
 
           let unreadMessageCount = 0;
+          const { database } = getFirebaseServices();
           
-          // Count unread messages from user's message threads
-          for (const [chatId, thread] of Object.entries<any>(threadsData)) {
-            if (thread.unreadCount && thread.unreadCount > 0) {
-              unreadMessageCount++;
-            }
+          if (!database) {
+            console.error('Database not available for unread count');
+            return;
           }
+          
+          // Check each chat for actual unread status
+          const chatIds = Object.keys(threadsData);
+          const unreadPromises = chatIds.map(async (chatId) => {
+            try {
+              const chatRef = ref(database, `chats/${chatId}`);
+              const chatSnapshot = await get(chatRef);
+              const chatData = chatSnapshot.val();
+              
+              if (chatData && 
+                  chatData.participants?.[user.uid] && 
+                  !chatData.deletedBy?.[user.uid] &&
+                  chatData.lastMessage &&
+                  chatData.lastMessage.receiverId === user.uid &&
+                  chatData.lastMessage.read === false) {
+                return 1;
+              }
+              return 0;
+            } catch (error) {
+              console.error(`Error checking unread status for chat ${chatId}:`, error);
+              return 0;
+            }
+          });
+          
+          const unreadResults = await Promise.all(unreadPromises);
+          unreadMessageCount = unreadResults.reduce((sum, count) => sum + count, 0);
           
           setUnreadCounts(prev => ({ ...prev, messages: unreadMessageCount }));
         } catch (error) {
