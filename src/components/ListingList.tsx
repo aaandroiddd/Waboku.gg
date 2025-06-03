@@ -11,6 +11,7 @@ import { useListingVisibility } from "@/hooks/useListingVisibility";
 import { useEffect, useState } from "react";
 import { ViewCounter } from "./ViewCounter";
 import { useAccount } from "@/contexts/AccountContext";
+import { getListingUrl } from "@/lib/listing-slug";
 
 interface ListingListProps {
   listings: Listing[];
@@ -88,7 +89,7 @@ export const ListingList = ({
               key={listing.id} 
               className="p-3 sm:p-4 transition-colors duration-200 hover:bg-accent/50"
             >
-              <Link href={`/listings/${listing.id}`}>
+              <Link href={getListingUrl(listing)}>
                 <div className="flex flex-col sm:flex-row gap-4">
                   {/* Image Section */}
                   <div className="relative h-24 sm:h-20 sm:w-20 flex-shrink-0">

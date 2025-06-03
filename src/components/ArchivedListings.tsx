@@ -5,6 +5,7 @@ import { Listing } from "@/types/database";
 import { ExternalLink, Trash2 } from "lucide-react";
 import { ListingTimer } from "@/components/ListingTimer";
 import { EmptyStateCard } from "@/components/EmptyStateCard";
+import { getListingUrl } from "@/lib/listing-slug";
 
 interface ArchivedListingsProps {
   listings: Listing[];

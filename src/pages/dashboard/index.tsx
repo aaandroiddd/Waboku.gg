@@ -37,6 +37,7 @@ import { FirebaseConnectionHandler } from '@/components/FirebaseConnectionHandle
 import { useLoading } from '@/hooks/useLoading';
 import { ViewCounter } from '@/components/ViewCounter';
 import { useDashboardListingsCache } from '@/hooks/useDashboardCache';
+import { getListingUrl } from '@/lib/listing-slug';
 
 const DashboardComponent = () => {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -166,7 +167,18 @@ const DashboardComponent = () => {
   };
 
   const handleShare = (listingId: string) => {
-    const url = `${window.location.origin}/listings/${listingId}`;
+    // Find the listing to get its details for the new URL format
+    const listing = allListings.find(l => l.id === listingId);
+    let url: string;
+    
+    if (listing) {
+      // Use the new URL format
+      const listingUrl = getListingUrl(listing);
+      url = `${window.location.origin}${listingUrl}`;
+    } else {
+      // Fallback to old format if listing not found
+      url = `${window.location.origin}/listings/${listingId}`;
+    }
     
     // Try to use the Clipboard API with fallback
     try {
@@ -232,7 +244,17 @@ const DashboardComponent = () => {
   };
 
   const handleViewListing = (listingId: string) => {
-    router.push(`/listings/${listingId}`);
+    // Find the listing to get its details for the new URL format
+    const listing = allListings.find(l => l.id === listingId);
+    
+    if (listing) {
+      // Use the new URL format
+      const listingUrl = getListingUrl(listing);
+      router.push(listingUrl);
+    } else {
+      // Fallback to old format if listing not found
+      router.push(`/listings/${listingId}`);
+    }
   };
 
   // Add a retry mechanism for initial data loading
