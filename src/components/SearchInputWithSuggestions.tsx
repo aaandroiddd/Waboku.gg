@@ -46,6 +46,11 @@ const SearchInputWithSuggestions: React.FC<SearchInputWithSuggestionsProps> = ({
   const { toast } = useToast();
   const { user } = useAuth();
 
+  // Update searchTerm when initialValue changes
+  useEffect(() => {
+    setSearchTerm(initialValue);
+  }, [initialValue]);
+
   // Debounced search for suggestions
   useEffect(() => {
     const timer = setTimeout(() => {
