@@ -454,7 +454,7 @@ export default function AdminDashboard() {
               <p className="text-sm text-muted-foreground">
                 Monitor and optimize Firebase Realtime Database usage to reduce quota issues.
               </p>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-3 gap-2">
                 <Button 
                   onClick={() => router.push(`/admin/database-usage`)}
                   className="w-full bg-yellow-600 hover:bg-yellow-700"
@@ -466,6 +466,12 @@ export default function AdminDashboard() {
                   className="w-full bg-orange-600 hover:bg-orange-700"
                 >
                   Real-time Database Monitor
+                </Button>
+                <Button 
+                  onClick={() => router.push(`/admin/database-usage-audit`)}
+                  className="w-full bg-red-600 hover:bg-red-700"
+                >
+                  Database Usage Audit
                 </Button>
               </div>
             </div>

@@ -170,11 +170,10 @@ function initializeFirebase() {
         // Verify database connection
         console.log('[Firebase] Realtime Database initialized successfully');
         
-        // Add a test connection to verify database is working
+        // Add a test connection to verify database is working (one-time only)
         if (typeof window !== 'undefined') {
           try {
-            // Use .info/serverTimeOffset instead of .info/connected for initial test
-            // This is more reliable for testing actual data access
+            // Use .info/serverTimeOffset for initial test (one-time read only)
             const testRef = ref(firebaseDatabase, '.info/serverTimeOffset');
             onValue(testRef, (snapshot) => {
               if (snapshot.exists()) {
@@ -185,12 +184,10 @@ function initializeFirebase() {
               }
             }, { onlyOnce: true });
             
-            // Also set up the connected listener for ongoing connection status
-            const connectedRef = ref(firebaseDatabase, '.info/connected');
-            onValue(connectedRef, (snapshot) => {
-              const connected = snapshot.val();
-              console.log('[Firebase] Realtime Database connection status:', connected ? 'connected' : 'disconnected');
-            });
+            // DO NOT set up persistent .info/connected listener here
+            // This was causing continuous downloads even when no users were active
+            // Connection monitoring should only be enabled when users are authenticated
+            console.log('[Firebase] Skipping persistent connection monitoring to reduce database usage');
           } catch (connError) {
             console.error('[Firebase] Error testing database connection:', connError);
             // Log more details about the error
@@ -559,33 +556,11 @@ class FirebaseConnectionManager {
       // Initial connection check
       this.isOnline = navigator.onLine;
       
-      // Setup connection monitoring for Realtime Database
-      const { database } = getFirebaseServices();
-      if (database) {
-        try {
-          const connectedRef = ref(database, '.info/connected');
-          onValue(connectedRef, (snapshot) => {
-            const connected = snapshot.val();
-            console.log(`[Firebase] Realtime Database connection: ${connected ? 'connected' : 'disconnected'}`);
-            
-            if (connected) {
-              // Reset error counters on successful connection
-              this.resetErrorState();
-              this.notifyListeners();
-            } else if (this.isOnline) {
-              // We're online but database is disconnected
-              this.handleConnectionError('Database disconnected while browser is online');
-            }
-          });
-        } catch (error) {
-          console.error('[Firebase] Error setting up connection monitoring:', error);
-        }
-      }
+      // DO NOT setup persistent connection monitoring here
+      // This was causing continuous database downloads even when no users were active
+      // Connection monitoring will be enabled only when needed via enableConnectionMonitoring()
       
-      // Set up periodic connection check
-      this.connectionCheckIntervalId = setInterval(() => {
-        this.checkConnection();
-      }, 30000); // Check every 30 seconds
+      console.log('[Firebase] Connection manager initialized without persistent monitoring to reduce database usage');
     }
   }
 

@@ -43,14 +43,18 @@ export const UnreadProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         clearInterval(intervalRef.current);
         intervalRef.current = null;
       }
+      console.log('[UnreadContext] User not authenticated, stopping all unread monitoring to reduce database usage');
       return;
     }
+
+    console.log('[UnreadContext] User authenticated, starting optimized unread monitoring');
 
     // Clean up previous listeners
     listenersRef.current.forEach(id => databaseOptimizer.removeListener(id));
     listenersRef.current = [];
 
     // Use optimized listener for messages - check actual chat data for unread status
+    // Only create this listener when user is authenticated
     const messagesListenerId = databaseOptimizer.createOptimizedListener({
       path: `users/${user.uid}/messageThreads`,
       callback: async (threadsData) => {
@@ -70,29 +74,44 @@ export const UnreadProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           
           // Check each chat for actual unread status
           const chatIds = Object.keys(threadsData);
-          const unreadPromises = chatIds.map(async (chatId) => {
-            try {
-              const chatRef = ref(database, `chats/${chatId}`);
-              const chatSnapshot = await get(chatRef);
-              const chatData = chatSnapshot.val();
-              
-              if (chatData && 
-                  chatData.participants?.[user.uid] && 
-                  !chatData.deletedBy?.[user.uid] &&
-                  chatData.lastMessage &&
-                  chatData.lastMessage.receiverId === user.uid &&
-                  chatData.lastMessage.read === false) {
-                return 1;
-              }
-              return 0;
-            } catch (error) {
-              console.error(`Error checking unread status for chat ${chatId}:`, error);
-              return 0;
-            }
-          });
           
-          const unreadResults = await Promise.all(unreadPromises);
-          unreadMessageCount = unreadResults.reduce((sum, count) => sum + count, 0);
+          // Limit the number of concurrent checks to reduce database load
+          const maxConcurrentChecks = 5;
+          const chunks = [];
+          for (let i = 0; i < chatIds.length; i += maxConcurrentChecks) {
+            chunks.push(chatIds.slice(i, i + maxConcurrentChecks));
+          }
+          
+          for (const chunk of chunks) {
+            const unreadPromises = chunk.map(async (chatId) => {
+              try {
+                const chatRef = ref(database, `chats/${chatId}`);
+                const chatSnapshot = await get(chatRef);
+                const chatData = chatSnapshot.val();
+                
+                if (chatData && 
+                    chatData.participants?.[user.uid] && 
+                    !chatData.deletedBy?.[user.uid] &&
+                    chatData.lastMessage &&
+                    chatData.lastMessage.receiverId === user.uid &&
+                    chatData.lastMessage.read === false) {
+                  return 1;
+                }
+                return 0;
+              } catch (error) {
+                console.error(`Error checking unread status for chat ${chatId}:`, error);
+                return 0;
+              }
+            });
+            
+            const chunkResults = await Promise.all(unreadPromises);
+            unreadMessageCount += chunkResults.reduce((sum, count) => sum + count, 0);
+            
+            // Small delay between chunks to be respectful to the database
+            if (chunks.indexOf(chunk) < chunks.length - 1) {
+              await new Promise(resolve => setTimeout(resolve, 100));
+            }
+          }
           
           setUnreadCounts(prev => ({ ...prev, messages: unreadMessageCount }));
         } catch (error) {
@@ -114,8 +133,8 @@ export const UnreadProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         const now = Date.now();
         const lastFetch = lastFetchRef.current.offers || 0;
         
-        // Rate limit: only fetch every 30 seconds
-        if (now - lastFetch < 30000) {
+        // Increased rate limit: only fetch every 60 seconds (was 30)
+        if (now - lastFetch < 60000) {
           return;
         }
         
@@ -147,8 +166,8 @@ export const UnreadProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         const now = Date.now();
         const lastFetch = lastFetchRef.current.orders || 0;
         
-        // Rate limit: only fetch every 30 seconds
-        if (now - lastFetch < 30000) {
+        // Increased rate limit: only fetch every 60 seconds (was 30)
+        if (now - lastFetch < 60000) {
           return;
         }
         
@@ -183,17 +202,20 @@ export const UnreadProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       }
     };
 
-    // Initial fetch with delay to avoid overwhelming on mount
+    // Initial fetch with longer delay to avoid overwhelming on mount
     setTimeout(() => {
       fetchUnreadOffers();
       fetchUnreadOrders();
-    }, 1000);
+    }, 2000); // Increased from 1 second to 2 seconds
 
-    // Set up interval to periodically check for unread offers and orders (increased interval)
+    // Set up interval to periodically check for unread offers and orders (further increased interval)
     intervalRef.current = setInterval(() => {
-      fetchUnreadOffers();
-      fetchUnreadOrders();
-    }, 120000); // Check every 2 minutes instead of 1 minute
+      // Only fetch if user is still authenticated and page is visible
+      if (user && document.visibilityState === 'visible') {
+        fetchUnreadOffers();
+        fetchUnreadOrders();
+      }
+    }, 300000); // Check every 5 minutes instead of 2 minutes
 
     return () => {
       // Clean up listeners
@@ -205,6 +227,8 @@ export const UnreadProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         clearInterval(intervalRef.current);
         intervalRef.current = null;
       }
+      
+      console.log('[UnreadContext] Cleaned up all unread monitoring');
     };
   }, [user, activeSection]);
 
