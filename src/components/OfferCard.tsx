@@ -77,19 +77,29 @@ export function OfferCard({ offer, type, onCounterOffer }: OfferCardProps) {
 
   const handleAccept = async () => {
     setIsUpdating(true);
-    const success = await updateOfferStatus(offer.id, 'accepted');
-    setIsUpdating(false);
-    
-    // If this is a received offer and it was successfully accepted, show the mark as sold dialog
-    if (success && type === 'received') {
-      setMarkAsSoldDialogOpen(true);
+    try {
+      const success = await updateOfferStatus(offer.id, 'accepted');
+      
+      // If this is a received offer and it was successfully accepted, show the mark as sold dialog
+      if (success && type === 'received') {
+        setMarkAsSoldDialogOpen(true);
+      }
+    } catch (error) {
+      console.error('Error accepting offer:', error);
+    } finally {
+      setIsUpdating(false);
     }
   };
 
   const handleDecline = async () => {
     setIsUpdating(true);
-    await updateOfferStatus(offer.id, 'declined');
-    setIsUpdating(false);
+    try {
+      await updateOfferStatus(offer.id, 'declined');
+    } catch (error) {
+      console.error('Error declining offer:', error);
+    } finally {
+      setIsUpdating(false);
+    }
   };
 
   const handleViewListing = () => {

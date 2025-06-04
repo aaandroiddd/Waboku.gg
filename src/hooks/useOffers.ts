@@ -177,10 +177,22 @@ export function useOffers() {
       const { db } = getFirebaseServices();
       const offerRef = doc(db, 'offers', offerId);
       
+      // Update the offer status in Firestore
       await updateDoc(offerRef, {
         status,
         updatedAt: serverTimestamp()
       });
+
+      // Immediately update local state to reflect the change
+      const updateOfferInState = (offers: Offer[]) => 
+        offers.map(offer => 
+          offer.id === offerId 
+            ? { ...offer, status, updatedAt: new Date() }
+            : offer
+        );
+
+      setReceivedOffers(prev => updateOfferInState(prev));
+      setSentOffers(prev => updateOfferInState(prev));
 
       // Show appropriate toast message based on status
       if (status === 'accepted') {
@@ -189,7 +201,7 @@ export function useOffers() {
         });
       } else if (status === 'declined') {
         toast.success('Offer declined', {
-          description: 'The offer has been declined and removed from your dashboard'
+          description: 'The offer has been declined'
         });
       } else if (status === 'countered') {
         toast.success('Counter offer sent', {
@@ -199,8 +211,10 @@ export function useOffers() {
         toast.info('Offer marked as expired');
       }
 
-      // Refresh offers data to ensure UI is up to date
-      await fetchOffers();
+      // Refresh offers data in the background to ensure consistency
+      setTimeout(() => {
+        fetchOffers();
+      }, 1000);
       
       return true;
     } catch (err: any) {
@@ -234,13 +248,26 @@ export function useOffers() {
         status: 'countered',
         updatedAt: serverTimestamp()
       });
+
+      // Immediately update local state to reflect the change
+      const updateOfferInState = (offers: Offer[]) => 
+        offers.map(offer => 
+          offer.id === offerId 
+            ? { ...offer, counterOffer: counterAmount, status: 'countered', updatedAt: new Date() }
+            : offer
+        );
+
+      setReceivedOffers(prev => updateOfferInState(prev));
+      setSentOffers(prev => updateOfferInState(prev));
       
       toast.success('Counter offer sent', {
         description: 'Your counter offer has been sent to the buyer'
       });
 
-      // Refresh offers data to ensure UI is up to date
-      await fetchOffers();
+      // Refresh offers data in the background to ensure consistency
+      setTimeout(() => {
+        fetchOffers();
+      }, 1000);
       
       return true;
     } catch (err: any) {
@@ -283,14 +310,27 @@ export function useOffers() {
         status: 'cancelled',
         updatedAt: serverTimestamp()
       });
+
+      // Immediately update local state to reflect the change
+      const updateOfferInState = (offers: Offer[]) => 
+        offers.map(offer => 
+          offer.id === offerId 
+            ? { ...offer, status: 'cancelled', updatedAt: new Date() }
+            : offer
+        );
+
+      setReceivedOffers(prev => updateOfferInState(prev));
+      setSentOffers(prev => updateOfferInState(prev));
       
       // Show success toast
       toast.success('Offer cancelled successfully', {
-        description: 'The offer has been removed from your dashboard'
+        description: 'The offer has been cancelled'
       });
 
-      // Refresh offers data to ensure UI is up to date
-      await fetchOffers();
+      // Refresh offers data in the background to ensure consistency
+      setTimeout(() => {
+        fetchOffers();
+      }, 1000);
       
       return true;
     } catch (err: any) {
@@ -323,14 +363,20 @@ export function useOffers() {
         cleared: true,
         updatedAt: serverTimestamp()
       });
+
+      // Immediately remove the offer from local state
+      setReceivedOffers(prev => prev.filter(offer => offer.id !== offerId));
+      setSentOffers(prev => prev.filter(offer => offer.id !== offerId));
       
       // Show success toast
       toast.success('Offer cleared successfully', {
         description: 'The offer has been removed from your dashboard'
       });
 
-      // Refresh offers data to ensure UI is up to date
-      await fetchOffers();
+      // Refresh offers data in the background to ensure consistency
+      setTimeout(() => {
+        fetchOffers();
+      }, 1000);
       
       return true;
     } catch (err: any) {
@@ -452,6 +498,10 @@ export function useOffers() {
             cleared: true,
             updatedAt: serverTimestamp()
           });
+
+          // Immediately remove the offer from local state
+          setReceivedOffers(prev => prev.filter(offer => offer.id !== offerId));
+          setSentOffers(prev => prev.filter(offer => offer.id !== offerId));
           
           // If markAsSold is true, update the listing status to sold
           if (markAsSold) {
@@ -466,8 +516,10 @@ export function useOffers() {
           
           console.log('Order creation process completed successfully');
           
-          // Refresh offers data to ensure UI is up to date
-          await fetchOffers();
+          // Refresh offers data in the background to ensure consistency
+          setTimeout(() => {
+            fetchOffers();
+          }, 1000);
           
           return true;
         } catch (writeError: any) {
@@ -509,9 +561,15 @@ export function useOffers() {
           
           const data = await response.json();
           console.log('Order created via API:', data);
+
+          // Immediately remove the offer from local state
+          setReceivedOffers(prev => prev.filter(offer => offer.id !== offerId));
+          setSentOffers(prev => prev.filter(offer => offer.id !== offerId));
           
-          // Refresh offers data to ensure UI is up to date
-          await fetchOffers();
+          // Refresh offers data in the background to ensure consistency
+          setTimeout(() => {
+            fetchOffers();
+          }, 1000);
           
           return true;
         } catch (apiError: any) {
