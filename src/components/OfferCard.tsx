@@ -6,7 +6,7 @@ import { formatPrice } from '@/lib/price';
 import { format, formatDistanceToNow, differenceInHours, isPast } from 'date-fns';
 import Image from 'next/image';
 import { UserNameLink } from '@/components/UserNameLink';
-import { Check, X, RefreshCw, Send, Trash2, XCircle, MapPin, Truck, Clock, AlertTriangle } from 'lucide-react';
+import { Check, X, RefreshCw, Send, Trash2, XCircle, MapPin, Truck, Clock, AlertTriangle, MessageCircle } from 'lucide-react';
 import { useOffers } from '@/hooks/useOffers';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
@@ -14,6 +14,7 @@ import { CancelOfferDialog } from '@/components/CancelOfferDialog';
 import { ClearOfferDialog } from '@/components/ClearOfferDialog';
 import { MarkAsSoldDialog } from '@/components/MarkAsSoldDialog';
 import { ShippingInfoDialog } from '@/components/ShippingInfoDialog';
+import { OfferMessageDialog } from '@/components/OfferMessageDialog';
 import { toast } from 'sonner';
 import { getFirebaseServices } from '@/lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
@@ -32,6 +33,7 @@ export function OfferCard({ offer, type, onCounterOffer }: OfferCardProps) {
   const [clearDialogOpen, setClearDialogOpen] = useState(false);
   const [markAsSoldDialogOpen, setMarkAsSoldDialogOpen] = useState(false);
   const [shippingInfoDialogOpen, setShippingInfoDialogOpen] = useState(false);
+  const [messageDialogOpen, setMessageDialogOpen] = useState(false);
   const [hasStripeAccount, setHasStripeAccount] = useState(false);
 
   // Check if the seller has a Stripe account when the component mounts
@@ -299,6 +301,15 @@ export function OfferCard({ offer, type, onCounterOffer }: OfferCardProps) {
                 <RefreshCw className="mr-2 h-4 w-4" />
                 Counter
               </Button>
+              <Button 
+                variant="outline" 
+                className="flex-1"
+                onClick={() => setMessageDialogOpen(true)}
+                disabled={isUpdating}
+              >
+                <MessageCircle className="mr-2 h-4 w-4" />
+                Message
+              </Button>
             </div>
           )}
           
@@ -309,6 +320,14 @@ export function OfferCard({ offer, type, onCounterOffer }: OfferCardProps) {
                 onClick={handleViewListing}
               >
                 View Listing
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={() => setMessageDialogOpen(true)}
+                disabled={isUpdating}
+              >
+                <MessageCircle className="mr-2 h-4 w-4" />
+                Message Seller
               </Button>
               <Button 
                 variant="outline" 
@@ -348,6 +367,14 @@ export function OfferCard({ offer, type, onCounterOffer }: OfferCardProps) {
               >
                 View Listing
               </Button>
+              <Button 
+                variant="outline" 
+                onClick={() => setMessageDialogOpen(true)}
+                disabled={isUpdating}
+              >
+                <MessageCircle className="mr-2 h-4 w-4" />
+                Message Seller
+              </Button>
             </div>
           )}
           
@@ -358,6 +385,16 @@ export function OfferCard({ offer, type, onCounterOffer }: OfferCardProps) {
                 onClick={handleViewListing}
               >
                 View Listing
+              </Button>
+              
+              {/* Message button for all completed offers */}
+              <Button 
+                variant="outline" 
+                onClick={() => setMessageDialogOpen(true)}
+                disabled={isUpdating}
+              >
+                <MessageCircle className="mr-2 h-4 w-4" />
+                {type === 'received' ? 'Message Buyer' : 'Message Seller'}
               </Button>
               
               {/* For sent offers that are accepted and require shipping info */}
@@ -526,6 +563,16 @@ export function OfferCard({ offer, type, onCounterOffer }: OfferCardProps) {
               }}
             />
           )}
+          
+          {/* Message Dialog */}
+          <OfferMessageDialog
+            open={messageDialogOpen}
+            onOpenChange={setMessageDialogOpen}
+            recipientId={type === 'received' ? safeOffer.buyerId : safeOffer.sellerId}
+            recipientName={type === 'received' ? 'Buyer' : 'Seller'}
+            listingId={offer.listingId}
+            listingTitle={`${safeOffer.listingSnapshot.title} - Offer ${formatPrice(safeOffer.amount)}`}
+          />
         </div>
       </CardContent>
     </Card>
