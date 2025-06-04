@@ -171,7 +171,7 @@ export function useOffers() {
   }, [user]);
 
   const updateOfferStatus = async (offerId: string, status: 'accepted' | 'declined' | 'expired' | 'countered') => {
-    if (!user) return;
+    if (!user) return false;
 
     try {
       const { db } = getFirebaseServices();
@@ -182,46 +182,25 @@ export function useOffers() {
         updatedAt: serverTimestamp()
       });
 
-      // For declined offers, remove them from the dashboard
-      if (status === 'declined') {
-        setReceivedOffers(prev => 
-          prev.filter(offer => offer.id !== offerId)
-        );
-        
-        setSentOffers(prev => 
-          prev.filter(offer => offer.id !== offerId)
-        );
-        
+      // Show appropriate toast message based on status
+      if (status === 'accepted') {
+        toast.success('Offer accepted', {
+          description: 'The offer has been accepted successfully'
+        });
+      } else if (status === 'declined') {
         toast.success('Offer declined', {
           description: 'The offer has been declined and removed from your dashboard'
         });
-      } else {
-        // Update local state for both received and sent offers
-        setReceivedOffers(prev => 
-          prev.map(offer => 
-            offer.id === offerId ? { ...offer, status, updatedAt: new Date() } : offer
-          )
-        );
-        
-        setSentOffers(prev => 
-          prev.map(offer => 
-            offer.id === offerId ? { ...offer, status, updatedAt: new Date() } : offer
-          )
-        );
-        
-        // Show appropriate toast message based on status
-        if (status === 'accepted') {
-          toast.success('Offer accepted', {
-            description: 'The offer has been accepted successfully'
-          });
-        } else if (status === 'countered') {
-          toast.success('Counter offer sent', {
-            description: 'Your counter offer has been sent to the buyer'
-          });
-        } else if (status === 'expired') {
-          toast.info('Offer marked as expired');
-        }
+      } else if (status === 'countered') {
+        toast.success('Counter offer sent', {
+          description: 'Your counter offer has been sent to the buyer'
+        });
+      } else if (status === 'expired') {
+        toast.info('Offer marked as expired');
       }
+
+      // Refresh offers data to ensure UI is up to date
+      await fetchOffers();
       
       return true;
     } catch (err: any) {
@@ -232,7 +211,7 @@ export function useOffers() {
   };
   
   const makeCounterOffer = async (offerId: string, counterAmount: number) => {
-    if (!user) return;
+    if (!user) return false;
     
     try {
       const { db } = getFirebaseServices();
@@ -256,17 +235,12 @@ export function useOffers() {
         updatedAt: serverTimestamp()
       });
       
-      // Update local state
-      setReceivedOffers(prev => 
-        prev.map(offer => 
-          offer.id === offerId ? { 
-            ...offer, 
-            counterOffer: counterAmount, 
-            status: 'countered', 
-            updatedAt: new Date() 
-          } : offer
-        )
-      );
+      toast.success('Counter offer sent', {
+        description: 'Your counter offer has been sent to the buyer'
+      });
+
+      // Refresh offers data to ensure UI is up to date
+      await fetchOffers();
       
       return true;
     } catch (err: any) {
@@ -310,15 +284,13 @@ export function useOffers() {
         updatedAt: serverTimestamp()
       });
       
-      // Update local state
-      setSentOffers(prev => 
-        prev.filter(offer => offer.id !== offerId)
-      );
-      
       // Show success toast
       toast.success('Offer cancelled successfully', {
         description: 'The offer has been removed from your dashboard'
       });
+
+      // Refresh offers data to ensure UI is up to date
+      await fetchOffers();
       
       return true;
     } catch (err: any) {
@@ -352,21 +324,13 @@ export function useOffers() {
         updatedAt: serverTimestamp()
       });
       
-      // Update local state based on user role
-      if (offerData.buyerId === user.uid) {
-        setSentOffers(prev => 
-          prev.filter(offer => offer.id !== offerId)
-        );
-      } else {
-        setReceivedOffers(prev => 
-          prev.filter(offer => offer.id !== offerId)
-        );
-      }
-      
       // Show success toast
       toast.success('Offer cleared successfully', {
         description: 'The offer has been removed from your dashboard'
       });
+
+      // Refresh offers data to ensure UI is up to date
+      await fetchOffers();
       
       return true;
     } catch (err: any) {
@@ -500,12 +464,11 @@ export function useOffers() {
             });
           }
           
-          // Update local state
-          setReceivedOffers(prev => 
-            prev.filter(offer => offer.id !== offerId)
-          );
-          
           console.log('Order creation process completed successfully');
+          
+          // Refresh offers data to ensure UI is up to date
+          await fetchOffers();
+          
           return true;
         } catch (writeError: any) {
           console.error('Error writing to Firestore:', writeError);
@@ -547,10 +510,8 @@ export function useOffers() {
           const data = await response.json();
           console.log('Order created via API:', data);
           
-          // Update local state
-          setReceivedOffers(prev => 
-            prev.filter(offer => offer.id !== offerId)
-          );
+          // Refresh offers data to ensure UI is up to date
+          await fetchOffers();
           
           return true;
         } catch (apiError: any) {
