@@ -334,7 +334,23 @@ if (typeof window !== 'undefined') {
           }
         }
       } 
-      // Handle fetch errors which might be related to Firebase
+      // Handle fetch errors which might be related to Firebase Auth token service
+      else if (event.reason.name === 'TypeError' && 
+               event.reason.message === 'Failed to fetch' && 
+               event.reason.stack && 
+               event.reason.stack.includes('securetoken.googleapis.com')) {
+        
+        console.error('[Firebase] Unhandled fetch error for Firebase Auth token service:', event.reason);
+        
+        // This is specifically the error we're trying to fix
+        if (connectionManager) {
+          console.log('[Firebase] Auth token service fetch error detected, implementing auth session reset...');
+          setTimeout(() => {
+            connectionManager.forceAuthSessionReset();
+          }, 1000);
+        }
+      }
+      // Handle fetch errors which might be related to Firestore
       else if (event.reason.name === 'TypeError' && 
                event.reason.message === 'Failed to fetch' && 
                event.reason.stack && 
@@ -394,14 +410,38 @@ if (typeof window !== 'undefined') {
     }
   });
   
-  // Enhanced global fetch error handler with session ID management
+  // Enhanced global fetch error handler with session ID management and Firebase Auth token errors
   const originalFetch = window.fetch;
   window.fetch = async function(input, init) {
     try {
       const response = await originalFetch(input, init);
       
-      // Check if this is a Firestore-related fetch that failed
+      // Check if this is a Firebase-related fetch that failed
       const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : '';
+      
+      // Handle Firebase Auth token service errors
+      if (url.includes('securetoken.googleapis.com') && !response.ok) {
+        console.error(`[Firebase] Auth token service request failed with status ${response.status}:`, url);
+        
+        if (response.status === 400) {
+          console.warn('[Firebase] Detected 400 Bad Request error from token service - likely stale session');
+          
+          // For token service errors, force a complete auth session reset
+          if (connectionManager) {
+            setTimeout(() => {
+              connectionManager.forceAuthSessionReset();
+            }, 100);
+          }
+        } else if (response.status >= 500) {
+          console.warn('[Firebase] Token service server error, will retry with backoff');
+          
+          if (connectionManager) {
+            connectionManager.handleAuthTokenError(url, response.status);
+          }
+        }
+      }
+      
+      // Handle Firestore errors
       if (url.includes('firestore.googleapis.com') && !response.ok) {
         console.error(`[Firebase] Firestore request failed with status ${response.status}:`, url);
         
@@ -496,9 +536,19 @@ if (typeof window !== 'undefined') {
       
       return response;
     } catch (error) {
-      // Check if this is a Firestore-related fetch
+      // Check if this is a Firebase-related fetch
       const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : '';
-      if (url.includes('firestore.googleapis.com')) {
+      
+      // Handle Firebase Auth token service fetch errors
+      if (url.includes('securetoken.googleapis.com')) {
+        console.error('[Firebase] Fetch error for Auth token service request:', error);
+        
+        if (connectionManager) {
+          connectionManager.handleAuthTokenError(url, 0); // 0 indicates network error
+        }
+      }
+      // Handle Firestore fetch errors
+      else if (url.includes('firestore.googleapis.com')) {
         console.error('[Firebase] Fetch error for Firestore request:', error);
         
         // Special handling for Write channel errors
@@ -546,6 +596,8 @@ class FirebaseConnectionManager {
   public reconnectFirebase: () => Promise<void>;
   public handleConnectionError: (reason: string) => void;
   public forceSessionReset: () => Promise<void>;
+  public forceAuthSessionReset: () => Promise<void>;
+  public handleAuthTokenError: (url: string, status: number) => void;
 
   constructor() {
     if (typeof window !== 'undefined') {
@@ -1052,6 +1104,193 @@ class FirebaseConnectionManager {
         this.reconnectInProgress = false;
       }, 15000); // Longer cooldown for session reset
     }
+  }
+
+  /**
+   * Force a complete auth session reset for Firebase Auth token errors
+   * This is specifically for handling securetoken.googleapis.com errors
+   */
+  forceAuthSessionReset = async () => {
+    if (!this.isOnline) {
+      console.log('[Firebase] Cannot force auth session reset while offline');
+      return;
+    }
+
+    if (this.reconnectInProgress) {
+      console.log('[Firebase] Auth session reset already in progress, skipping');
+      return;
+    }
+
+    this.reconnectInProgress = true;
+    this.isReconnecting = true;
+    this.lastReconnectTime = Date.now();
+    
+    console.log('[Firebase] Forcing complete auth session reset due to token service errors...');
+    
+    try {
+      // Clear all Firebase Auth-related cache aggressively
+      if (typeof window !== 'undefined') {
+        try {
+          // Clear all localStorage items related to Firebase Auth
+          Object.keys(localStorage).forEach(key => {
+            if (key.startsWith('firebase:') || 
+                key.includes('firebase') || 
+                key.includes('auth') ||
+                key.includes('gapi.') ||
+                key.includes('google.') ||
+                key.startsWith('waboku_')) {
+              localStorage.removeItem(key);
+            }
+          });
+          
+          // Clear sessionStorage as well
+          Object.keys(sessionStorage).forEach(key => {
+            if (key.startsWith('firebase:') || 
+                key.includes('firebase') || 
+                key.includes('auth')) {
+              sessionStorage.removeItem(key);
+            }
+          });
+          
+          // Clear IndexedDB for Firebase Auth
+          const deleteAuthIDBRequest = indexedDB.deleteDatabase('firebase-auth-state');
+          deleteAuthIDBRequest.onsuccess = () => {
+            console.log('[Firebase] Cleared Firebase Auth IndexedDB cache');
+          };
+          deleteAuthIDBRequest.onerror = (event) => {
+            console.error('[Firebase] Error clearing Firebase Auth IndexedDB cache:', event);
+          };
+          
+          console.log('[Firebase] Cleared all Firebase Auth-related cache for session reset');
+        } catch (error) {
+          console.error('[Firebase] Error clearing auth cache during session reset:', error);
+        }
+      }
+      
+      // Get Firebase services
+      const { auth, db } = getFirebaseServices();
+      
+      // If we have an authenticated user, try to refresh their token
+      if (auth && auth.currentUser) {
+        try {
+          console.log('[Firebase] Attempting to refresh user token after auth session reset');
+          
+          // Force token refresh with retry logic
+          let tokenRefreshSuccess = false;
+          let retryCount = 0;
+          
+          while (!tokenRefreshSuccess && retryCount < 3) {
+            try {
+              await auth.currentUser.getIdToken(true);
+              console.log('[Firebase] User token refreshed successfully after auth session reset');
+              tokenRefreshSuccess = true;
+            } catch (tokenError) {
+              retryCount++;
+              console.warn(`[Firebase] Token refresh failed after auth session reset (attempt ${retryCount}/3):`, tokenError);
+              
+              if (retryCount < 3) {
+                // Wait before retrying
+                await new Promise(resolve => setTimeout(resolve, 2000 * retryCount));
+              }
+            }
+          }
+          
+          if (!tokenRefreshSuccess) {
+            console.error('[Firebase] Failed to refresh token after auth session reset');
+            // Don't throw here, as the user might still be able to continue
+          }
+        } catch (error) {
+          console.error('[Firebase] Error refreshing token during auth session reset:', error);
+        }
+      }
+      
+      // Also reset Firestore connections if available
+      if (db) {
+        try {
+          // Disable and re-enable Firestore network to reset connections
+          await disableFirestoreNetwork(db);
+          console.log('[Firebase] Firestore network disabled for auth session reset');
+          
+          // Wait before re-enabling
+          await new Promise(resolve => setTimeout(resolve, 3000));
+          
+          await enableFirestoreNetwork(db);
+          console.log('[Firebase] Firestore network re-enabled after auth session reset');
+        } catch (firestoreError) {
+          console.error('[Firebase] Error resetting Firestore network during auth session reset:', firestoreError);
+        }
+      }
+      
+      // Reset all error counters on successful auth session reset
+      this.resetErrorState();
+      this.notifyListeners();
+      
+      console.log('[Firebase] Auth session reset completed successfully');
+    } catch (error) {
+      console.error('[Firebase] Error during auth session reset process:', error);
+      // Schedule a regular reconnect attempt as fallback
+      this.handleConnectionError('Auth session reset failed');
+    } finally {
+      // Allow new operations after a delay
+      setTimeout(() => {
+        this.isReconnecting = false;
+        this.reconnectInProgress = false;
+      }, 10000);
+    }
+  }
+
+  /**
+   * Handle Firebase Auth token service errors
+   * This implements specific handling for securetoken.googleapis.com errors
+   */
+  handleAuthTokenError = (url: string, status: number) => {
+    console.warn(`[Firebase] Auth token error for URL: ${url}, status: ${status}`);
+    
+    // For network errors (status 0) or server errors (5xx), implement backoff
+    if (status === 0 || status >= 500) {
+      // Implement exponential backoff for auth token errors
+      const now = Date.now();
+      const timeSinceLastError = now - this.lastFetchErrorTime;
+      
+      // If we've had recent errors, increase the backoff
+      if (timeSinceLastError < 60000) { // Within last minute
+        this.fetchErrorCount++;
+        
+        if (this.fetchErrorCount > 3) {
+          console.warn(`[Firebase] Multiple auth token errors detected, implementing backoff`);
+          
+          // Disable auth operations temporarily
+          const backoffTime = Math.min(30000 * Math.pow(2, this.fetchErrorCount - 3), 300000); // Max 5 minutes
+          
+          console.log(`[Firebase] Auth token operations backed off for ${backoffTime / 1000} seconds`);
+          
+          // Schedule a retry after backoff
+          setTimeout(() => {
+            console.log('[Firebase] Auth token backoff period ended, operations resumed');
+            this.fetchErrorCount = 0;
+          }, backoffTime);
+          
+          return;
+        }
+      } else {
+        // Reset error count if it's been a while since last error
+        this.fetchErrorCount = 1;
+      }
+      
+      this.lastFetchErrorTime = now;
+    }
+    
+    // For 4xx errors (except 401 which is expected), force auth session reset
+    if (status >= 400 && status < 500 && status !== 401) {
+      console.warn('[Firebase] Client error in auth token service, forcing auth session reset');
+      
+      setTimeout(() => {
+        this.forceAuthSessionReset();
+      }, 1000);
+    }
+    
+    // Also trigger general connection error handling
+    this.handleConnectionError(`Auth token error: ${url} (${status})`);
   }
 
   public cleanup() {
