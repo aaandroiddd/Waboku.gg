@@ -340,8 +340,18 @@ export default function Home() {
     }
   }, [searchQuery, selectedState, router, recordSearch]);
 
+  // On mount, set searchQuery from router.query if present
+  useEffect(() => {
+    if (router && typeof router.query?.query === "string") {
+      setSearchQuery(router.query.query);
+    }
+  }, [router.query?.query]);
+
   // Handle search from SearchBar component
   const handleSearchFromBar = useCallback((query: string) => {
+    // Update searchQuery state so the search bar value persists
+    setSearchQuery(query);
+
     // Record search term if it's not empty
     if (query.trim()) {
       try {
