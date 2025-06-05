@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Select,
   SelectContent,
@@ -7,11 +7,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
-
-function isMobileDevice() {
-  if (typeof navigator === "undefined") return false;
-  return /Mobi|Android|iPhone|iPad|iPod|Opera Mini|IEMobile|WPDesktop/i.test(navigator.userAgent);
-}
 
 const US_STATES = [
   { code: "all", name: "All locations" },
@@ -73,36 +68,128 @@ interface StateSelectProps {
 }
 
 export function StateSelect({ value = "all", onValueChange }: StateSelectProps) {
-  // Find the selected state object
-  const selectedState = US_STATES.find((state) => state.code.toLowerCase() === value.toLowerCase());
+  const [isMobile, setIsMobile] = useState(false);
+  const [internalValue, setInternalValue] = useState(value);
+  const selectRef = useRef<HTMLSelectElement>(null);
 
-  if (isMobileDevice()) {
+  // Detect mobile device and screen size
+  useEffect(() => {
+    const checkMobile = () => {
+      if (typeof window === "undefined") return false;
+      
+      // Check user agent
+      const userAgent = navigator.userAgent;
+      const isMobileUserAgent = /Mobi|Android|iPhone|iPad|iPod|Opera Mini|IEMobile|WPDesktop/i.test(userAgent);
+      
+      // Check screen size
+      const isSmallScreen = window.innerWidth <= 768;
+      
+      // Check touch capability
+      const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+      
+      return isMobileUserAgent || (isSmallScreen && isTouchDevice);
+    };
+
+    setIsMobile(checkMobile());
+    
+    // Listen for resize events
+    const handleResize = () => {
+      setIsMobile(checkMobile());
+    };
+    
+    window.addEventListener('resize', handleResize);
+    window.addEventListener('orientationchange', handleResize);
+    
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('orientationchange', handleResize);
+    };
+  }, []);
+
+  // Sync internal value with prop value
+  useEffect(() => {
+    setInternalValue(value);
+  }, [value]);
+
+  // Find the selected state object
+  const selectedState = US_STATES.find((state) => state.code.toLowerCase() === internalValue.toLowerCase());
+
+  // Handle value changes for native select
+  const handleNativeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    const newValue = e.target.value;
+    setInternalValue(newValue);
+    
+    // Call the parent's onChange handler
+    if (onValueChange) {
+      onValueChange(newValue);
+    }
+  };
+
+  // Handle value changes for custom select
+  const handleCustomChange = (newValue: string) => {
+    setInternalValue(newValue);
+    
+    // Call the parent's onChange handler
+    if (onValueChange) {
+      onValueChange(newValue);
+    }
+  };
+
+  // Handle focus events to prevent glitches
+  const handleFocus = (e: React.FocusEvent<HTMLSelectElement>) => {
+    e.stopPropagation();
+  };
+
+  // Handle click events to prevent glitches
+  const handleClick = (e: React.MouseEvent<HTMLSelectElement>) => {
+    e.stopPropagation();
+  };
+
+  if (isMobile) {
     // Use native select for mobile devices
     return (
-      <select
-        className="block w-full h-12 rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
-        value={value}
-        onChange={e => onValueChange?.(e.target.value)}
-        style={{ minWidth: 0 }}
-      >
-        {US_STATES.map((state) => (
-          <option key={state.code} value={state.code.toLowerCase()}>
-            {state.name}
-          </option>
-        ))}
-      </select>
+      <div className="relative w-full">
+        <select
+          ref={selectRef}
+          className="block w-full h-12 rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring appearance-none cursor-pointer text-foreground"
+          value={internalValue}
+          onChange={handleNativeChange}
+          onFocus={handleFocus}
+          onClick={handleClick}
+          style={{
+            WebkitAppearance: 'none',
+            MozAppearance: 'none',
+            backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e")`,
+            backgroundRepeat: 'no-repeat',
+            backgroundPosition: 'right 12px center',
+            backgroundSize: '16px',
+            paddingRight: '40px',
+            minWidth: 0,
+            touchAction: 'manipulation'
+          }}
+        >
+          {US_STATES.map((state) => (
+            <option key={state.code} value={state.code.toLowerCase()}>
+              {state.name}
+            </option>
+          ))}
+        </select>
+      </div>
     );
   }
 
   // Use custom Select for desktop
   return (
-    <Select value={value} onValueChange={onValueChange}>
+    <Select value={internalValue} onValueChange={handleCustomChange}>
       <SelectTrigger className="h-12 w-full">
         <SelectValue placeholder="All locations">
           {selectedState?.name || "All locations"}
         </SelectValue>
       </SelectTrigger>
-      <SelectContent className="max-h-[300px]">
+      <SelectContent className="max-h-[300px] z-[200]">
         <ScrollArea className="h-[300px]">
           {US_STATES.map((state) => (
             <SelectItem
