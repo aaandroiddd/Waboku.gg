@@ -1,19 +1,11 @@
 import React from "react";
 import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-} from "@/components/ui/command";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { Button } from "@/components/ui/button";
-import { ChevronsUpDown } from "lucide-react";
-import { cn } from "@/lib/utils";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 const US_STATES = [
@@ -76,66 +68,29 @@ interface StateSelectProps {
 }
 
 export function StateSelect({ value = "all", onValueChange }: StateSelectProps) {
-  const [open, setOpen] = React.useState(false);
-  const [searchValue, setSearchValue] = React.useState("");
-  
   // Find the selected state object
   const selectedState = US_STATES.find((state) => state.code.toLowerCase() === value.toLowerCase());
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button
-          variant="outline"
-          role="combobox"
-          aria-expanded={open}
-          className="h-12 w-full justify-between text-center relative px-8"
-        >
+    <Select value={value} onValueChange={onValueChange}>
+      <SelectTrigger className="h-12 w-full">
+        <SelectValue placeholder="All locations">
           {selectedState?.name || "All locations"}
-          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent 
-        className="w-full max-w-[calc(100vw-2rem)] sm:w-[300px] p-0" 
-        align="start"
-        side="bottom"
-        sideOffset={4}
-        avoidCollisions={true}
-        collisionPadding={16}
-        style={{
-          maxWidth: 'calc(100vw - 2rem)',
-          width: 'max-content',
-          minWidth: '200px'
-        }}
-      >
-        <Command value={searchValue} onValueChange={setSearchValue}>
-          <CommandInput placeholder="Search state..." className="h-9" />
-          <CommandEmpty>No state found.</CommandEmpty>
-          <ScrollArea className="h-[300px]">
-            <CommandGroup>
-              {US_STATES.map((state) => (
-                <CommandItem
-                  key={state.code}
-                  value={state.name}
-                  onSelect={() => {
-                    onValueChange?.(state.code.toLowerCase());
-                    setOpen(false);
-                    setSearchValue("");
-                  }}
-                  className="cursor-pointer"
-                >
-                  <span className={cn(
-                    "flex w-full",
-                    value.toLowerCase() === state.code.toLowerCase() && "font-bold"
-                  )}>
-                    {state.name}
-                  </span>
-                </CommandItem>
-              ))}
-            </CommandGroup>
-          </ScrollArea>
-        </Command>
-      </PopoverContent>
-    </Popover>
+        </SelectValue>
+      </SelectTrigger>
+      <SelectContent className="max-h-[300px]">
+        <ScrollArea className="h-[300px]">
+          {US_STATES.map((state) => (
+            <SelectItem
+              key={state.code}
+              value={state.code.toLowerCase()}
+              className="cursor-pointer"
+            >
+              {state.name}
+            </SelectItem>
+          ))}
+        </ScrollArea>
+      </SelectContent>
+    </Select>
   );
 }
