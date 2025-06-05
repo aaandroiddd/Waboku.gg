@@ -8,6 +8,11 @@ import {
 } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
+function isMobileDevice() {
+  if (typeof navigator === "undefined") return false;
+  return /Mobi|Android|iPhone|iPad|iPod|Opera Mini|IEMobile|WPDesktop/i.test(navigator.userAgent);
+}
+
 const US_STATES = [
   { code: "all", name: "All locations" },
   { code: "AL", name: "Alabama" },
@@ -71,6 +76,25 @@ export function StateSelect({ value = "all", onValueChange }: StateSelectProps) 
   // Find the selected state object
   const selectedState = US_STATES.find((state) => state.code.toLowerCase() === value.toLowerCase());
 
+  if (isMobileDevice()) {
+    // Use native select for mobile devices
+    return (
+      <select
+        className="block w-full h-12 rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+        value={value}
+        onChange={e => onValueChange?.(e.target.value)}
+        style={{ minWidth: 0 }}
+      >
+        {US_STATES.map((state) => (
+          <option key={state.code} value={state.code.toLowerCase()}>
+            {state.name}
+          </option>
+        ))}
+      </select>
+    );
+  }
+
+  // Use custom Select for desktop
   return (
     <Select value={value} onValueChange={onValueChange}>
       <SelectTrigger className="h-12 w-full">
