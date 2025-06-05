@@ -22,7 +22,7 @@ import Link from "next/link";
 import { FirebaseConnectionHandler } from "@/components/FirebaseConnectionHandler";
 import { fixFirestoreListenChannel, clearFirestoreCaches } from "@/lib/firebase-connection-fix";
 import { StateSelect } from "@/components/StateSelect";
-import { useOptimizedMediaQuery, useAnimationConfig } from "@/hooks/useOptimizedMediaQuery";
+import { useAnimationConfig } from "@/hooks/useOptimizedMediaQuery";
 
 // Subtitles array - moved outside component to prevent recreation on each render
 const subtitles = [
@@ -171,8 +171,7 @@ export default function Home() {
   const [isRecovering, setIsRecovering] = useState(false);
   const [cacheCleared, setCacheCleared] = useState(false);
 
-  // Optimized device and animation detection
-  const deviceCapabilities = useOptimizedMediaQuery();
+  // Optimized animation detection
   const animationConfig = useAnimationConfig();
   const animationVariants = useMemo(() => 
     createAnimationVariants(animationConfig), 

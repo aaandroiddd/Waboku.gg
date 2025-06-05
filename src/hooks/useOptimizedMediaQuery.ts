@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useReducedMotion } from 'framer-motion';
 
 // Global cache to prevent multiple observers for the same query
 const mediaQueryCache = new Map<string, boolean>();
@@ -92,4 +93,30 @@ export function useOptimizedMediaQuery(query: string): boolean {
   }, [query]);
 
   return matches;
+}
+
+// Animation configuration hook
+export function useAnimationConfig() {
+  const isMobile = useOptimizedMediaQuery("(max-width: 768px)");
+  const prefersReducedMotion = useReducedMotion();
+  
+  // Determine if animations should be enabled
+  const shouldAnimate = !isMobile && !prefersReducedMotion;
+  
+  // Configure animation parameters based on device capabilities
+  const animationConfig = {
+    shouldAnimate,
+    duration: shouldAnimate ? 0.6 : 0.1,
+    stagger: shouldAnimate ? 0.1 : 0,
+    ease: shouldAnimate ? "easeOut" : "linear",
+    // Additional performance optimizations
+    reducedMotion: prefersReducedMotion,
+    isMobile,
+    // GPU acceleration hints
+    willChange: shouldAnimate ? "transform, opacity" : "auto",
+    // Layout optimization
+    layoutOptimization: !shouldAnimate
+  };
+  
+  return animationConfig;
 }
