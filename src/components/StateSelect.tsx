@@ -95,7 +95,19 @@ export function StateSelect({ value = "all", onValueChange }: StateSelectProps) 
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[200px] p-0">
+      <PopoverContent 
+        className="w-full max-w-[calc(100vw-2rem)] sm:w-[300px] p-0" 
+        align="start"
+        side="bottom"
+        sideOffset={4}
+        avoidCollisions={true}
+        collisionPadding={16}
+        style={{
+          maxWidth: 'calc(100vw - 2rem)',
+          width: 'max-content',
+          minWidth: '200px'
+        }}
+      >
         <Command value={searchValue} onValueChange={setSearchValue}>
           <CommandInput placeholder="Search state..." className="h-9" />
           <CommandEmpty>No state found.</CommandEmpty>
