@@ -134,12 +134,7 @@ export default function App({ Component, pageProps }: AppProps) {
           }
         `}</style>
       </Head>
-      <ThemeProvider
-        attribute="class"
-        defaultTheme="system"
-        enableSystem
-        disableTransitionOnChange
-      >
+      <ThemeProvider>
         <LoadingProvider>
           <AuthProvider>
             <AuthRedirectProvider>

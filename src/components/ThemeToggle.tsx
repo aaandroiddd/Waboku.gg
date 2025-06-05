@@ -9,13 +9,13 @@ export function ThemeToggle() {
   const { user, updateProfile } = useAuth()
 
   const handleThemeChange = async (newTheme: 'light' | 'dark' | 'midnight' | 'system') => {
-    setTheme(newTheme)
-    if (user) {
-      try {
+    try {
+      setTheme(newTheme)
+      if (user) {
         await updateProfile({ theme: newTheme })
-      } catch (error) {
-        console.error('Failed to save theme preference:', error)
       }
+    } catch (error) {
+      console.error('Failed to save theme preference:', error)
     }
   }
 
