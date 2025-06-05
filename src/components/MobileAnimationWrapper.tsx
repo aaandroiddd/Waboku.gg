@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, MotionProps } from 'framer-motion';
-import { useMediaQuery } from '@/hooks/useMediaQuery';
+import { useOptimizedMediaQuery } from '@/hooks/useOptimizedMediaQuery';
 
 interface MobileAnimationWrapperProps extends MotionProps {
   children: React.ReactNode;
@@ -22,7 +22,7 @@ export function MobileAnimationWrapper({
   preserveLayout = false,
   ...motionProps
 }: MobileAnimationWrapperProps) {
-  const isMobile = useMediaQuery("(max-width: 768px)");
+  const isMobile = useOptimizedMediaQuery("(max-width: 768px)");
   
   // On mobile, render a simple element without animations
   if (isMobile) {
@@ -58,7 +58,7 @@ export function MobileMotionButton({
   className,
   ...motionProps
 }: MobileAnimationWrapperProps & { onClick?: () => void }) {
-  const isMobile = useMediaQuery("(max-width: 768px)");
+  const isMobile = useOptimizedMediaQuery("(max-width: 768px)");
   
   if (isMobile) {
     return (
@@ -90,7 +90,7 @@ export function MobileMotionSpan({
   className,
   ...motionProps
 }: MobileAnimationWrapperProps) {
-  const isMobile = useMediaQuery("(max-width: 768px)");
+  const isMobile = useOptimizedMediaQuery("(max-width: 768px)");
   
   if (isMobile) {
     return (

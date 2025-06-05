@@ -52,21 +52,18 @@ interface ListingCardProps {
 const cardVariants = {
   hidden: { 
     opacity: 0,
-    y: 20,
-    scale: 0.95
+    y: 20
   },
   visible: { 
     opacity: 1,
     y: 0,
-    scale: 1,
     transition: {
-      duration: 0.5,
-      ease: [0.23, 1, 0.32, 1]
+      duration: 0.3,
+      ease: "easeOut"
     }
   },
   hover: {
-    y: -8,
-    scale: 1.02,
+    y: -4,
     transition: {
       duration: 0.2,
       ease: "easeInOut"
@@ -76,9 +73,9 @@ const cardVariants = {
 
 const imageVariants = {
   hover: {
-    scale: 1.05,
+    scale: 1.02,
     transition: {
-      duration: 0.3,
+      duration: 0.2,
       ease: "easeInOut"
     }
   }
@@ -86,14 +83,14 @@ const imageVariants = {
 
 const buttonVariants = {
   hover: {
-    scale: 1.1,
+    scale: 1.05,
     transition: {
-      duration: 0.2,
+      duration: 0.15,
       ease: "easeInOut"
     }
   },
   tap: {
-    scale: 0.95
+    scale: 0.98
   }
 };
 

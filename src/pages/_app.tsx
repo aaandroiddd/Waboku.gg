@@ -22,6 +22,7 @@ import { FirestoreListenerDebugger } from '@/components/FirestoreListenerDebugge
 import { getFirebaseServices } from '@/lib/firebase';
 import { useCallback } from 'react';
 import { useThemeSync } from '@/hooks/useThemeSync';
+import { installResizeObserverErrorHandler } from '@/lib/resize-observer-error-handler';
 
 const LoadingScreen = dynamic(() => import('@/components/LoadingScreen').then(mod => ({ default: mod.LoadingScreen })), {
   ssr: false
@@ -59,6 +60,9 @@ const MainContent = memo(({ Component, pageProps, pathname }: {
     
     // Initialize Firebase services
     getFirebaseServices();
+    
+    // Install ResizeObserver error handler to suppress benign errors
+    installResizeObserverErrorHandler();
   }, []);
 
   // Show loading screen while auth or account is initializing
