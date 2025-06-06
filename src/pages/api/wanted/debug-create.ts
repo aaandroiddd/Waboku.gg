@@ -95,23 +95,36 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Create timestamp
     const timestamp = Date.now();
     
-    // Create the new post object
-    const newPost = {
+    // Create the new post object - only include fields that have values
+    const newPost: any = {
       title: postData.title,
       description: postData.description || '',
       game: postData.game,
-      cardName: postData.cardName || undefined,
       condition: postData.condition || 'any',
       isPriceNegotiable: postData.isPriceNegotiable !== false, // Default to true
-      priceRange: postData.priceRange || undefined,
       location: postData.location,
-      detailedDescription: postData.detailedDescription || undefined,
       createdAt: timestamp,
       userId: userId,
       userName: userName,
-      userAvatar: userAvatar,
       viewCount: 0
     };
+    
+    // Only add optional fields if they have values
+    if (postData.cardName && postData.cardName.trim()) {
+      newPost.cardName = postData.cardName.trim();
+    }
+    
+    if (postData.priceRange && typeof postData.priceRange === 'object') {
+      newPost.priceRange = postData.priceRange;
+    }
+    
+    if (postData.detailedDescription && postData.detailedDescription.trim()) {
+      newPost.detailedDescription = postData.detailedDescription.trim();
+    }
+    
+    if (userAvatar) {
+      newPost.userAvatar = userAvatar;
+    }
     
     console.log('Post object to save:', JSON.stringify(newPost, null, 2));
     

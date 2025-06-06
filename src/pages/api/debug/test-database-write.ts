@@ -49,7 +49,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const wantedPostsRef = adminDb.ref('wantedPosts');
     const newPostRef = wantedPostsRef.push();
     
-    await newPostRef.set({
+    // Create test post object without undefined values
+    const testPost = {
       title: 'Test Wanted Post',
       description: 'This is a test post',
       game: 'pokemon',
@@ -58,8 +59,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       location: 'Test Location',
       createdAt: Date.now(),
       userId: 'test-user',
-      userName: 'Test User'
-    });
+      userName: 'Test User',
+      viewCount: 0
+    };
+    
+    await newPostRef.set(testPost);
     
     console.log('Wanted post test write successful with admin SDK');
     

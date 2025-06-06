@@ -87,14 +87,36 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Create timestamp
     const timestamp = Date.now();
     
-    // Create the new post object
-    const newPost = {
-      ...postData,
+    // Create the new post object - only include fields that have values
+    const newPost: any = {
+      title: postData.title,
+      description: postData.description || '',
+      game: postData.game,
+      condition: postData.condition || 'any',
+      isPriceNegotiable: postData.isPriceNegotiable !== false, // Default to true
+      location: postData.location,
       createdAt: timestamp,
       userId: user.uid,
       userName: user.displayName || 'Anonymous User',
-      userAvatar: user.photoURL || undefined,
+      viewCount: 0
     };
+    
+    // Only add optional fields if they have values
+    if (postData.cardName && postData.cardName.trim()) {
+      newPost.cardName = postData.cardName.trim();
+    }
+    
+    if (postData.priceRange && typeof postData.priceRange === 'object') {
+      newPost.priceRange = postData.priceRange;
+    }
+    
+    if (postData.detailedDescription && postData.detailedDescription.trim()) {
+      newPost.detailedDescription = postData.detailedDescription.trim();
+    }
+    
+    if (user.photoURL) {
+      newPost.userAvatar = user.photoURL;
+    }
     
     // Save to Firebase using admin SDK (to both paths for backward compatibility)
     console.log('Saving post to Firebase with admin SDK...');
