@@ -52,33 +52,45 @@ export function useWantedPosts(options: WantedPostsOptions = {}) {
     // Track if this effect is still the most recent one
     const effectId = Date.now();
     
-    // Store the current effect ID to prevent race conditions
+    // Store the current effect ID to prevent race conditions (only if sessionStorage is available)
     const currentEffectIdKey = 'current_wanted_posts_effect_id';
-    sessionStorage.setItem(currentEffectIdKey, effectId.toString());
+    if (typeof window !== 'undefined' && window.sessionStorage) {
+      try {
+        sessionStorage.setItem(currentEffectIdKey, effectId.toString());
+      } catch (e) {
+        console.error("Error setting effect ID in sessionStorage:", e);
+      }
+    }
     
-    // Check if we have cached data in sessionStorage
-    const cachedData = sessionStorage.getItem(cacheKey);
+    // Check if we have cached data in sessionStorage (only if available)
     let cachedPosts: WantedPost[] | null = null;
     
-    if (cachedData) {
+    if (typeof window !== 'undefined' && window.sessionStorage) {
       try {
-        cachedPosts = JSON.parse(cachedData);
-        // Set posts from cache immediately to improve perceived performance
-        setPosts(cachedPosts);
-        // If we have recent cached data (less than 60 seconds old), don't refetch
-        const cacheTimestamp = sessionStorage.getItem(`${cacheKey}_timestamp`);
-        if (cacheTimestamp) {
-          const cacheAge = Date.now() - parseInt(cacheTimestamp);
-          if (cacheAge < 60000) { // 60 seconds
-            setIsLoading(false);
-            return; // Skip fetching if cache is recent
+        const cachedData = sessionStorage.getItem(cacheKey);
+        if (cachedData) {
+          cachedPosts = JSON.parse(cachedData);
+          // Set posts from cache immediately to improve perceived performance
+          setPosts(cachedPosts);
+          // If we have recent cached data (less than 60 seconds old), don't refetch
+          const cacheTimestamp = sessionStorage.getItem(`${cacheKey}_timestamp`);
+          if (cacheTimestamp) {
+            const cacheAge = Date.now() - parseInt(cacheTimestamp);
+            if (cacheAge < 60000) { // 60 seconds
+              setIsLoading(false);
+              return; // Skip fetching if cache is recent
+            }
           }
         }
       } catch (e) {
         console.error("Error parsing cached posts:", e);
         // Clear invalid cache
-        sessionStorage.removeItem(cacheKey);
-        sessionStorage.removeItem(`${cacheKey}_timestamp`);
+        try {
+          sessionStorage.removeItem(cacheKey);
+          sessionStorage.removeItem(`${cacheKey}_timestamp`);
+        } catch (clearError) {
+          console.error("Error clearing cache:", clearError);
+        }
       }
     }
     
@@ -221,13 +233,15 @@ export function useWantedPosts(options: WantedPostsOptions = {}) {
         
         console.log("Final posts to display:", filteredPosts.length);
         
-        // Cache the results in sessionStorage for faster loading next time
-        try {
-          sessionStorage.setItem(cacheKey, JSON.stringify(filteredPosts));
-          sessionStorage.setItem(`${cacheKey}_timestamp`, Date.now().toString());
-          console.log("Cached wanted posts data for future use");
-        } catch (cacheError) {
-          console.error("Error caching posts:", cacheError);
+        // Cache the results in sessionStorage for faster loading next time (only if available)
+        if (typeof window !== 'undefined' && window.sessionStorage) {
+          try {
+            sessionStorage.setItem(cacheKey, JSON.stringify(filteredPosts));
+            sessionStorage.setItem(`${cacheKey}_timestamp`, Date.now().toString());
+            console.log("Cached wanted posts data for future use");
+          } catch (cacheError) {
+            console.error("Error caching posts:", cacheError);
+          }
         }
         
         setPosts(filteredPosts);
