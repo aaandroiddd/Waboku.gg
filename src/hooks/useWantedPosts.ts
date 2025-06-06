@@ -107,93 +107,109 @@ export function useWantedPosts(options: WantedPostsOptions = {}) {
       try {
         console.log(`Fetching wanted posts with options (fetchId: ${fetchId}):`, options);
         
-        // Log Firebase database status and connection details
-        console.log("Database initialized:", !!database);
+        // Use API endpoint instead of direct Firebase client access
+        // This ensures we can fetch data even if client-side Firebase database isn't properly initialized
+        console.log('Using API endpoint to fetch wanted posts...');
         
-        // Verify database connection
-        if (!database) {
-          await logToServer('Database not initialized when fetching wanted posts', {
-            databaseExists: !!database,
-            databaseURL: !!process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL
-          }, 'error');
-          throw new Error('Database not initialized');
-        }
+        const response = await fetch('/api/wanted/fetch-all');
+        const apiResult = await response.json();
         
-        // Try paths in order of preference: wantedPosts (where data actually exists), wanted/posts, wanted
-        const pathsToTry = ['wantedPosts', 'wanted/posts', 'wanted'];
-        let postsRef = null;
-        let snapshot = null;
-        let usedPath = '';
+        let fetchedPosts: WantedPost[] = [];
         
-        for (const path of pathsToTry) {
-          try {
-            console.log(`Trying path: ${path}`);
-            postsRef = ref(database, path);
-            snapshot = await get(postsRef);
-            
-            if (snapshot.exists()) {
-              console.log(`Found data at path: ${path}`);
-              usedPath = path;
-              break;
-            } else {
-              console.log(`No data found at path: ${path}`);
-            }
-          } catch (pathError) {
-            console.error(`Error checking path ${path}:`, pathError);
-            continue;
+        if (response.ok && apiResult.success && apiResult.posts) {
+          fetchedPosts = apiResult.posts;
+          console.log(`Successfully fetched ${fetchedPosts.length} posts from API (path: ${apiResult.path})`);
+        } else {
+          // Fallback: try direct Firebase access if API fails
+          console.log('API fetch failed, falling back to direct Firebase access...');
+          
+          // Log Firebase database status and connection details
+          console.log("Database initialized:", !!database);
+          
+          // Verify database connection
+          if (!database) {
+            await logToServer('Database not initialized when fetching wanted posts', {
+              databaseExists: !!database,
+              databaseURL: !!process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL
+            }, 'error');
+            throw new Error('Database not initialized and API fetch failed');
           }
-        }
-        
-        if (!snapshot || !snapshot.exists()) {
-          console.log("No posts found in any path");
-          setPosts([]);
-          return;
-        }
-        
-        console.log(`Using data from path: ${usedPath}`);
-        
-        // Process the data
-        const fetchedPosts: WantedPost[] = [];
-        const data = snapshot.val();
-        
-        // Handle different data structures
-        if (typeof data === 'object' && data !== null) {
-          Object.entries(data).forEach(([key, value]) => {
+          
+          // Try paths in order of preference: wantedPosts (where data actually exists), wanted/posts, wanted
+          const pathsToTry = ['wantedPosts', 'wanted/posts', 'wanted'];
+          let postsRef = null;
+          let snapshot = null;
+          let usedPath = '';
+          
+          for (const path of pathsToTry) {
             try {
-              const postData = value as any;
+              console.log(`Trying path: ${path}`);
+              postsRef = ref(database, path);
+              snapshot = await get(postsRef);
               
-              // Validate post data has required fields
-              if (!postData || typeof postData !== 'object' || !postData.title || !postData.game) {
-                console.warn('Skipping invalid post data:', key, postData);
-                return;
+              if (snapshot.exists()) {
+                console.log(`Found data at path: ${path}`);
+                usedPath = path;
+                break;
+              } else {
+                console.log(`No data found at path: ${path}`);
               }
-              
-              const post: WantedPost = {
-                id: key,
-                title: postData.title,
-                description: postData.description || '',
-                game: postData.game,
-                condition: postData.condition || 'any',
-                isPriceNegotiable: postData.isPriceNegotiable !== false,
-                location: postData.location || 'Unknown',
-                createdAt: postData.createdAt || Date.now(),
-                userId: postData.userId || 'unknown',
-                userName: postData.userName || 'Anonymous User',
-                userAvatar: postData.userAvatar,
-                cardName: postData.cardName,
-                priceRange: postData.priceRange,
-                detailedDescription: postData.detailedDescription,
-                viewCount: postData.viewCount || 0
-              };
-              
-              fetchedPosts.push(post);
-            } catch (postError) {
-              console.error('Error processing post:', key, postError);
+            } catch (pathError) {
+              console.error(`Error checking path ${path}:`, pathError);
+              continue;
             }
-          });
+          }
+          
+          if (!snapshot || !snapshot.exists()) {
+            console.log("No posts found in any path");
+            setPosts([]);
+            return;
+          }
+          
+          console.log(`Using data from path: ${usedPath}`);
+          
+          // Process the data
+          const data = snapshot.val();
+          
+          // Handle different data structures
+          if (typeof data === 'object' && data !== null) {
+            Object.entries(data).forEach(([key, value]) => {
+              try {
+                const postData = value as any;
+                
+                // Validate post data has required fields
+                if (!postData || typeof postData !== 'object' || !postData.title || !postData.game) {
+                  console.warn('Skipping invalid post data:', key, postData);
+                  return;
+                }
+                
+                const post: WantedPost = {
+                  id: key,
+                  title: postData.title,
+                  description: postData.description || '',
+                  game: postData.game,
+                  condition: postData.condition || 'any',
+                  isPriceNegotiable: postData.isPriceNegotiable !== false,
+                  location: postData.location || 'Unknown',
+                  createdAt: postData.createdAt || Date.now(),
+                  userId: postData.userId || 'unknown',
+                  userName: postData.userName || 'Anonymous User',
+                  userAvatar: postData.userAvatar,
+                  cardName: postData.cardName,
+                  priceRange: postData.priceRange,
+                  detailedDescription: postData.detailedDescription,
+                  viewCount: postData.viewCount || 0
+                };
+                
+                fetchedPosts.push(post);
+              } catch (postError) {
+                console.error('Error processing post:', key, postError);
+              }
+            });
+          }
+          
+          console.log(`Processed ${fetchedPosts.length} posts from database fallback`);
         }
-        
-        console.log(`Processed ${fetchedPosts.length} posts from database`);
 
         // Apply filters
         let filteredPosts = [...fetchedPosts];
