@@ -90,8 +90,13 @@ export function SearchListingList({ listings, loading }: SearchListingListProps)
       fallback={<ListingsSkeleton />}
     >
       {!listings?.length ? (
-        <Card className="p-4">
+        <Card className="p-4 flex flex-col items-center gap-3">
           <p className="text-muted-foreground">No listings found.</p>
+          <Link href="/listings" passHref legacyBehavior>
+            <Button as="a" variant="outline" className="mt-2">
+              Browse All Listings
+            </Button>
+          </Link>
         </Card>
       ) : (
         <div className="space-y-4">
