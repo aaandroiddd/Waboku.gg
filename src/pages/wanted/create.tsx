@@ -201,6 +201,9 @@ export default function CreateWantedPostPage() {
         if (debugResult.success && debugResult.postId) {
           console.log("Post created successfully via debug API with ID:", debugResult.postId);
           
+          // Add a small delay to ensure the database write is fully committed
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          
           // Redirect to the newly created post with success parameter
           router.push({
             pathname: `/wanted/${debugResult.postId}`,
@@ -219,6 +222,9 @@ export default function CreateWantedPostPage() {
           console.log("Falling back to hook method...");
           const postId = await createWantedPost(postData);
           console.log("Post created successfully with hook, ID:", postId);
+          
+          // Add a small delay to ensure the database write is fully committed
+          await new Promise(resolve => setTimeout(resolve, 1000));
           
           // Redirect to the newly created post with success parameter
           router.push({
@@ -253,6 +259,9 @@ export default function CreateWantedPostPage() {
             
             if (simpleResult.success && simpleResult.postId) {
               console.log("Post created successfully via simple API with ID:", simpleResult.postId);
+              
+              // Add a small delay to ensure the database write is fully committed
+              await new Promise(resolve => setTimeout(resolve, 1000));
               
               // Redirect to the newly created post with success parameter
               router.push({
