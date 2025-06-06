@@ -1,78 +1,47 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { getFirebaseServices } from '@/lib/firebase';
-import { ref, push, set } from 'firebase/database';
-import admin from 'firebase-admin';
-import { getAuth } from 'firebase-admin/auth';
-import { getDatabase } from 'firebase-admin/database';
-
-// Initialize Firebase Admin if not already initialized
-let firebaseAdmin: admin.app.App;
-try {
-  firebaseAdmin = admin.app();
-} catch (error) {
-  const serviceAccount = {
-    projectId: process.env.FIREBASE_PROJECT_ID,
-    clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-    privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n')
-  };
-
-  firebaseAdmin = admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount as admin.ServiceAccount),
-    databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL
-  });
-}
+import { getFirebaseAdminServices } from '@/lib/firebase-admin';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  // Set a timeout for the entire operation
+  const timeoutPromise = new Promise((_, reject) => {
+    setTimeout(() => reject(new Error('Operation timed out')), 25000); // 25 second timeout
+  });
+
   try {
     console.log('Testing database write with admin credentials...');
     
-    // Use admin SDK to write to the database
-    const adminDb = getDatabase(firebaseAdmin);
-    
-    if (!adminDb) {
-      console.error('Admin database not initialized');
-      return res.status(500).json({ error: 'Admin database not initialized' });
-    }
-    
-    // Try to write to a test location using admin SDK
-    const testRef = adminDb.ref('test');
-    const newTestRef = testRef.push();
-    
-    await newTestRef.set({
-      message: 'Test write with admin SDK',
-      timestamp: Date.now()
-    });
-    
-    console.log('Test write successful with admin SDK');
-    
-    // Try to write to wantedPosts using admin SDK
-    const wantedPostsRef = adminDb.ref('wantedPosts');
-    const newPostRef = wantedPostsRef.push();
-    
-    // Create test post object without undefined values
-    const testPost = {
-      title: 'Test Wanted Post',
-      description: 'This is a test post',
-      game: 'pokemon',
-      condition: 'any',
-      isPriceNegotiable: true,
-      location: 'Test Location',
-      createdAt: Date.now(),
-      userId: 'test-user',
-      userName: 'Test User',
-      viewCount: 0
+    const operationPromise = async () => {
+      // Get Firebase Admin services
+      const { database } = await getFirebaseAdminServices();
+      
+      if (!database) {
+        throw new Error('Admin database not initialized');
+      }
+      
+      // Simple test write to verify connection
+      const testRef = database.ref('debug/test-write');
+      const timestamp = Date.now();
+      
+      await testRef.set({
+        message: 'Test write successful',
+        timestamp,
+        testId: `test-${timestamp}`
+      });
+      
+      console.log('Test write successful with admin SDK');
+      
+      return {
+        success: true,
+        message: 'Database write test successful',
+        timestamp,
+        testId: `test-${timestamp}`
+      };
     };
+
+    // Race between the operation and timeout
+    const result = await Promise.race([operationPromise(), timeoutPromise]);
     
-    await newPostRef.set(testPost);
-    
-    console.log('Wanted post test write successful with admin SDK');
-    
-    return res.status(200).json({ 
-      success: true, 
-      message: 'Database write test successful with admin SDK',
-      testId: newTestRef.key,
-      postId: newPostRef.key
-    });
+    return res.status(200).json(result);
   } catch (error) {
     console.error('Error testing database write:', error);
     
@@ -87,7 +56,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     
     return res.status(500).json({ 
       error: 'Failed to write to database',
-      message: error instanceof Error ? error.message : 'Unknown error'
+      message: error instanceof Error ? error.message : 'Unknown error',
+      timestamp: Date.now()
     });
   }
 }
