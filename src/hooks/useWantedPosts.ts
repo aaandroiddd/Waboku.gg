@@ -310,8 +310,8 @@ export function useWantedPosts(options: WantedPostsOptions = {}) {
       }, 'info');
 
       // Create a reference to the wanted posts collection
-      const postsRef = ref(database, 'wanted/posts');
-      await logToServer('Created posts reference', { path: 'wanted/posts' }, 'info');
+      const postsRef = ref(database, 'wantedPosts');
+      await logToServer('Created posts reference', { path: 'wantedPosts' }, 'info');
       
       // Generate a new post ID
       const newPostRef = push(postsRef);
