@@ -1,6 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { ref, get } from 'firebase/database';
-import { firebaseDatabase } from '@/lib/firebase';
+import { getFirebaseAdmin } from '@/lib/firebase-admin';
 
 export default async function handler(
   req: NextApiRequest,
@@ -9,10 +8,12 @@ export default async function handler(
   try {
     console.log('Starting debug fetch for wanted posts...');
     
-    if (!firebaseDatabase) {
+    const { database } = getFirebaseAdmin();
+    
+    if (!database) {
       return res.status(500).json({ 
         error: 'Database not initialized',
-        databaseExists: !!firebaseDatabase
+        databaseExists: !!database
       });
     }
 
@@ -31,8 +32,7 @@ export default async function handler(
     for (const path of pathsToCheck) {
       try {
         console.log(`Checking path: ${path}`);
-        const pathRef = ref(firebaseDatabase, path);
-        const snapshot = await get(pathRef);
+        const snapshot = await database.ref(path).once('value');
         
         if (snapshot.exists()) {
           const data = snapshot.val();
