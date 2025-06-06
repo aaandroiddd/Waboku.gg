@@ -160,7 +160,6 @@ export default function CreateWantedPostPage() {
     setIsSubmitting(true);
     
     try {
-      // Log submission attempt
       console.log("Attempting to create wanted post...");
       
       // Prepare the data for submission
@@ -179,123 +178,115 @@ export default function CreateWantedPostPage() {
         detailedDescription: formData.detailedDescription || undefined
       };
       
+      console.log("Post data to submit:", postData);
+      
+      // Try the debug API endpoint first for better error reporting
       try {
-        // First try using our hook to create the post
-        console.log("Using hook to create post...");
-        const postId = await createWantedPost(postData);
-        console.log("Post created successfully with ID:", postId);
+        console.log("Trying debug API endpoint...");
         
-        // Redirect to the newly created post with success parameter
-        router.push({
-          pathname: `/wanted/${postId}`,
-          query: { success: "created" }
+        const token = user ? await user.getIdToken() : null;
+        
+        const debugResponse = await fetch('/api/wanted/debug-create', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token && { 'Authorization': `Bearer ${token}` })
+          },
+          body: JSON.stringify(postData)
         });
-      } catch (hookError) {
-        console.error("Error using hook to create post:", hookError);
         
-        // If the hook fails, try using the API endpoint
-        console.log("Trying alternative method via API...");
+        const debugResult = await debugResponse.json();
+        console.log("Debug API result:", debugResult);
         
+        if (debugResult.success && debugResult.postId) {
+          console.log("Post created successfully via debug API with ID:", debugResult.postId);
+          
+          // Redirect to the newly created post with success parameter
+          router.push({
+            pathname: `/wanted/${debugResult.postId}`,
+            query: { success: "created" }
+          });
+          return;
+        } else {
+          console.error("Debug API failed:", debugResult);
+          throw new Error(debugResult.message || debugResult.error || "Debug API failed");
+        }
+      } catch (debugError) {
+        console.error("Debug API error:", debugError);
+        
+        // Fall back to the hook method
         try {
-          // Try the simple API endpoint first
-          console.log("Trying simple API endpoint...");
+          console.log("Falling back to hook method...");
+          const postId = await createWantedPost(postData);
+          console.log("Post created successfully with hook, ID:", postId);
           
-          // Add user info to the post data
-          const enhancedPostData = {
-            ...postData,
-            userId: user?.uid || 'anonymous',
-            userName: user?.displayName || 'Anonymous User',
-            userAvatar: user?.photoURL || undefined
-          };
-          
-          // Call the simple API endpoint
-          const simpleResponse = await fetch('/api/wanted/create-simple', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(enhancedPostData)
+          // Redirect to the newly created post with success parameter
+          router.push({
+            pathname: `/wanted/${postId}`,
+            query: { success: "created" }
           });
+          return;
+        } catch (hookError) {
+          console.error("Hook method also failed:", hookError);
           
-          const simpleResult = await simpleResponse.json();
-          console.log("Simple API result:", simpleResult);
-          
-          if (simpleResult.success && simpleResult.postId) {
-            console.log("Post created successfully via simple API with ID:", simpleResult.postId);
-            
-            // Redirect to the newly created post with success parameter
-            router.push({
-              pathname: `/wanted/${simpleResult.postId}`,
-              query: { success: "created" }
-            });
-            return;
-          }
-          
-          // If simple API fails, try the authenticated API
-          console.log("Simple API failed, trying authenticated API...");
-          
-          // Get the user's ID token
-          const token = await user?.getIdToken();
-          
-          if (!token) {
-            throw new Error("Not authenticated");
-          }
-          
-          // Call the authenticated API endpoint
-          const response = await fetch('/api/wanted/create', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify(postData)
-          });
-          
-          const result = await response.json();
-          console.log("Authenticated API result:", result);
-          
-          if (result.success && result.postId) {
-            console.log("Post created successfully via authenticated API with ID:", result.postId);
-            
-            // Redirect to the newly created post with success parameter
-            router.push({
-              pathname: `/wanted/${result.postId}`,
-              query: { success: "created" }
-            });
-          } else {
-            throw new Error(result.message || "Failed to create post via API");
-          }
-        } catch (apiError) {
-          console.error("Error creating post via API:", apiError);
-          
-          // If all API methods fail, try the test endpoint as a last resort
+          // Try the simple API as final fallback
           try {
-            const testResponse = await fetch('/api/debug/test-database-write', {
-              method: 'GET'
+            console.log("Trying simple API as final fallback...");
+            
+            const enhancedPostData = {
+              ...postData,
+              userId: user?.uid || 'anonymous',
+              userName: user?.displayName || 'Anonymous User',
+              userAvatar: user?.photoURL || undefined
+            };
+            
+            const simpleResponse = await fetch('/api/wanted/create-simple', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify(enhancedPostData)
             });
             
-            const testResult = await testResponse.json();
-            console.log("Database write test result:", testResult);
+            const simpleResult = await simpleResponse.json();
+            console.log("Simple API result:", simpleResult);
             
-            if (testResult.success) {
-              // If the test was successful, we know the database is working
-              // but there might be an issue with the hook and API
-              setError("There was an issue with the form submission. Please try again later.");
+            if (simpleResult.success && simpleResult.postId) {
+              console.log("Post created successfully via simple API with ID:", simpleResult.postId);
+              
+              // Redirect to the newly created post with success parameter
+              router.push({
+                pathname: `/wanted/${simpleResult.postId}`,
+                query: { success: "created" }
+              });
+              return;
             } else {
-              // If the test failed, there's a database connection issue
-              setError("Database connection error. Please try again later.");
+              throw new Error(simpleResult.message || simpleResult.error || "Simple API failed");
             }
-          } catch (testError) {
-            console.error("Error testing database:", testError);
-            setError("Failed to create wanted post. Please try again later.");
+          } catch (simpleError) {
+            console.error("All methods failed:", simpleError);
+            
+            // Show a more helpful error message
+            if (simpleError instanceof Error) {
+              if (simpleError.message.includes('permission') || simpleError.message.includes('auth')) {
+                setError("Authentication error. Please sign out and sign back in, then try again.");
+              } else if (simpleError.message.includes('network') || simpleError.message.includes('fetch')) {
+                setError("Network error. Please check your internet connection and try again.");
+              } else if (simpleError.message.includes('database') || simpleError.message.includes('Firebase')) {
+                setError("Database error. Please try again in a few moments.");
+              } else {
+                setError(`Failed to create wanted post: ${simpleError.message}`);
+              }
+            } else {
+              setError("Failed to create wanted post. Please try again later.");
+            }
           }
-          
-          setIsSubmitting(false);
         }
       }
     } catch (err) {
-      console.error("Error creating wanted post:", err);
-      setError("Failed to create wanted post. Please try again.");
+      console.error("Unexpected error creating wanted post:", err);
+      setError("An unexpected error occurred. Please try again.");
+    } finally {
       setIsSubmitting(false);
     }
   };
