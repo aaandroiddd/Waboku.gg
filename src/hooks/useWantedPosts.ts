@@ -107,102 +107,102 @@ export function useWantedPosts(options: WantedPostsOptions = {}) {
           throw new Error('Database not initialized');
         }
         
-        // Skip fix-paths API call if we have cached data to speed up loading
-        if (!cachedPosts) {
-          // First, call the fix-paths API to ensure the database structure is correct
-          // We'll only do this once per session to avoid multiple calls
-          const fixPathsCalled = sessionStorage.getItem('fix_paths_called');
-          if (!fixPathsCalled) {
-            try {
-              console.log("Calling fix-paths API to ensure database structure...");
-              const fixPathsResponse = await fetch('/api/wanted/fix-paths');
-              if (!fixPathsResponse.ok) {
-                throw new Error(`Fix paths API returned status ${fixPathsResponse.status}`);
-              }
-              
-              const fixPathsResult = await fixPathsResponse.json();
-              console.log("Fix paths API result:", fixPathsResult);
-              
-              // Mark that we've called fix-paths this session
-              sessionStorage.setItem('fix_paths_called', 'true');
-              
-              // If a test post was created, wait for database to update
-              if (fixPathsResult.testPostCreated) {
-                await new Promise(resolve => setTimeout(resolve, 300));
-              }
-            } catch (fixPathsError) {
-              console.error("Error calling fix-paths API:", fixPathsError);
-              // Continue with fetch attempt even if fix-paths fails
+        // Try paths in order of preference: wantedPosts (where data actually exists), wanted/posts, wanted
+        const pathsToTry = ['wantedPosts', 'wanted/posts', 'wanted'];
+        let postsRef = null;
+        let snapshot = null;
+        let usedPath = '';
+        
+        for (const path of pathsToTry) {
+          try {
+            console.log(`Trying path: ${path}`);
+            postsRef = ref(database, path);
+            snapshot = await get(postsRef);
+            
+            if (snapshot.exists()) {
+              console.log(`Found data at path: ${path}`);
+              usedPath = path;
+              break;
+            } else {
+              console.log(`No data found at path: ${path}`);
             }
-          } else {
-            console.log("Skipping fix-paths API call (already called this session)");
+          } catch (pathError) {
+            console.error(`Error checking path ${path}:`, pathError);
+            continue;
           }
         }
         
-        // Create reference to wanted/posts collection (primary path)
-        let postsRef = ref(database, 'wanted/posts');
-        
-        // Check if the path exists by doing a direct get first
-        const pathCheckSnapshot = await get(postsRef);
-        
-        // If primary path doesn't exist, try the old path as fallback
-        if (!pathCheckSnapshot.exists()) {
-          console.log("Path 'wanted/posts' doesn't exist, trying fallback path...");
-          
-          // Try the old path as fallback
-          postsRef = ref(database, 'wantedPosts');
-          const fallbackSnapshot = await get(postsRef);
-          
-          // If neither path exists, try direct 'wanted' path
-          if (!fallbackSnapshot.exists()) {
-            console.log("Neither 'wanted/posts' nor 'wantedPosts' paths exist in the database");
-            postsRef = ref(database, 'wanted');
-          }
+        if (!snapshot || !snapshot.exists()) {
+          console.log("No posts found in any path");
+          setPosts([]);
+          return;
         }
         
-        let postsQuery = postsRef;
-
-        // Apply filters based on options
-        if (options.userId) {
-          postsQuery = query(postsRef, orderByChild('userId'), equalTo(options.userId));
-        } else if (options.game) {
-          postsQuery = query(postsRef, orderByChild('game'), equalTo(options.game));
-        }
-
-        console.log("Executing database query...");
+        console.log(`Using data from path: ${usedPath}`);
         
-        const snapshot = await get(postsQuery);
-        console.log("Query completed, snapshot exists:", snapshot.exists());
-        
+        // Process the data
         const fetchedPosts: WantedPost[] = [];
-
-        if (snapshot.exists()) {
-          snapshot.forEach((childSnapshot) => {
+        const data = snapshot.val();
+        
+        // Handle different data structures
+        if (typeof data === 'object' && data !== null) {
+          Object.entries(data).forEach(([key, value]) => {
             try {
-              const postData = childSnapshot.val();
+              const postData = value as any;
+              
               // Validate post data has required fields
-              if (!postData || !postData.title || !postData.game || !postData.location) {
-                console.warn('Skipping invalid post data:', childSnapshot.key);
-                return; // Skip this post
+              if (!postData || typeof postData !== 'object' || !postData.title || !postData.game) {
+                console.warn('Skipping invalid post data:', key, postData);
+                return;
               }
               
-              const post = {
-                id: childSnapshot.key as string,
-                ...postData
+              const post: WantedPost = {
+                id: key,
+                title: postData.title,
+                description: postData.description || '',
+                game: postData.game,
+                condition: postData.condition || 'any',
+                isPriceNegotiable: postData.isPriceNegotiable !== false,
+                location: postData.location || 'Unknown',
+                createdAt: postData.createdAt || Date.now(),
+                userId: postData.userId || 'unknown',
+                userName: postData.userName || 'Anonymous User',
+                userAvatar: postData.userAvatar,
+                cardName: postData.cardName,
+                priceRange: postData.priceRange,
+                detailedDescription: postData.detailedDescription,
+                viewCount: postData.viewCount || 0
               };
+              
               fetchedPosts.push(post);
             } catch (postError) {
-              console.error('Error processing post:', childSnapshot.key, postError);
+              console.error('Error processing post:', key, postError);
             }
           });
-          console.log(`Found ${fetchedPosts.length} posts in database`);
-        } else {
-          console.log("No posts found in database");
         }
+        
+        console.log(`Processed ${fetchedPosts.length} posts from database`);
 
-        // Apply additional filters that can't be done at the database level
+        // Apply filters
         let filteredPosts = [...fetchedPosts];
         
+        // Filter by game if specified
+        if (options.game) {
+          filteredPosts = filteredPosts.filter(post => 
+            post.game === options.game
+          );
+          console.log(`After game filter (${options.game}): ${filteredPosts.length} posts`);
+        }
+        
+        // Filter by user if specified
+        if (options.userId) {
+          filteredPosts = filteredPosts.filter(post => 
+            post.userId === options.userId
+          );
+          console.log(`After user filter: ${filteredPosts.length} posts`);
+        }
+        
+        // Filter by state if specified
         if (options.state) {
           filteredPosts = filteredPosts.filter(post => 
             post.location.toLowerCase().includes(options.state!.toLowerCase())
@@ -224,6 +224,7 @@ export function useWantedPosts(options: WantedPostsOptions = {}) {
         // Cache the results in sessionStorage for faster loading next time
         try {
           sessionStorage.setItem(cacheKey, JSON.stringify(filteredPosts));
+          sessionStorage.setItem(`${cacheKey}_timestamp`, Date.now().toString());
           console.log("Cached wanted posts data for future use");
         } catch (cacheError) {
           console.error("Error caching posts:", cacheError);
@@ -241,6 +242,7 @@ export function useWantedPosts(options: WantedPostsOptions = {}) {
         // If we have cached data and encounter an error, keep using the cached data
         if (cachedPosts) {
           console.log("Using cached data due to fetch error");
+          setPosts(cachedPosts);
         }
       } finally {
         setIsLoading(false);
