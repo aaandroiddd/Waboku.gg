@@ -327,17 +327,17 @@ export function useWantedPosts(options: WantedPostsOptions = {}) {
       // Create timestamp
       const timestamp = Date.now();
       
-      // Create the new post object - only include fields that have values
+      // Create the new post object - always include all required fields with correct types
       const newPost: any = {
         title: postData.title,
-        description: postData.description || '',
+        description: typeof postData.description === 'string' ? postData.description : '',
         game: postData.game,
         condition: postData.condition || 'any',
-        isPriceNegotiable: postData.isPriceNegotiable !== false, // Default to true
+        isPriceNegotiable: typeof postData.isPriceNegotiable === 'boolean' ? postData.isPriceNegotiable : true,
         location: postData.location,
         createdAt: timestamp,
         userId: user.uid,
-        userName: user.displayName || 'Anonymous User',
+        userName: typeof user.displayName === 'string' && user.displayName.length > 0 ? user.displayName : 'Anonymous User',
         viewCount: 0
       };
       
