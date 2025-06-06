@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { getFirebaseAdminServices } from '@/lib/firebase-admin';
+import { getFirebaseAdmin } from '@/lib/firebase-admin';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   // Set a timeout for the entire operation
@@ -12,7 +12,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     
     const operationPromise = async () => {
       // Get Firebase Admin services
-      const { database } = await getFirebaseAdminServices();
+      const { database } = getFirebaseAdmin();
       
       if (!database) {
         throw new Error('Admin database not initialized');
