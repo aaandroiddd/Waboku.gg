@@ -20,6 +20,7 @@ import { MarkdownEditor } from "@/components/MarkdownEditor";
 import { AlertCircle, ArrowLeft } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { RouteGuard } from "@/components/RouteGuard";
+import { generateWantedPostUrl } from "@/lib/wanted-posts-slug";
 
 // Combine all game categories for the dropdown
 const ALL_GAME_CATEGORIES = [
@@ -183,8 +184,15 @@ export default function CreateWantedPostPage() {
       const postId = await createWantedPost(postData);
       console.log("Post created successfully with hook, ID:", postId);
 
-      // Redirect to the newly created post
-      router.push(`/wanted/${postId}`);
+      // Generate the new URL format for the created post
+      const newPostUrl = generateWantedPostUrl(
+        formData.title.trim(),
+        formData.game,
+        postId
+      );
+
+      // Redirect to the newly created post with success parameter
+      router.push(`${newPostUrl}?success=created`);
     } catch (err) {
       console.error("Error creating wanted post:", err);
       if (err instanceof Error) {

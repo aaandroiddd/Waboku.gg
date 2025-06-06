@@ -8,6 +8,7 @@ import { WantedPost } from '@/hooks/useWantedPosts';
 import { Calendar, MapPin, MessageSquare, Eye } from 'lucide-react';
 import Link from 'next/link';
 import { useAccount } from '@/contexts/AccountContext';
+import { getWantedPostUrl } from '@/lib/wanted-posts-slug';
 
 interface WantedPostCardProps {
   post: WantedPost;
@@ -18,12 +19,15 @@ export const WantedPostCard: React.FC<WantedPostCardProps> = ({ post, onContact 
   const { accountTier } = useAccount();
   const isPremium = accountTier === 'premium';
   
+  // Generate the new URL format for the wanted post
+  const postUrl = getWantedPostUrl(post);
+  
   return (
     <Card className="overflow-hidden transition-all duration-200 hover:shadow-md">
       <CardContent className="p-4">
         <div className="flex justify-between items-start mb-3">
           <div className="flex-1">
-            <Link href={`/wanted/${post.id}`} className="hover:underline">
+            <Link href={postUrl} className="hover:underline">
               <h3 className="font-semibold text-lg line-clamp-1">{post.title}</h3>
             </Link>
             <div className="flex flex-wrap items-center gap-2 mt-1">

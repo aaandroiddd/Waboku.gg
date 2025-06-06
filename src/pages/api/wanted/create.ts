@@ -1,6 +1,26 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { getFirebaseAdmin } from '@/lib/firebase-admin';
 
+/**
+ * Generates a 6-digit numeric ID from a Firebase document ID
+ * This must match the algorithm in wanted-posts-slug.ts
+ */
+function generateNumericShortId(postId: string): string {
+  // Create a hash from the post ID and convert to numeric
+  let hash = 0;
+  for (let i = 0; i < postId.length; i++) {
+    const char = postId.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32-bit integer
+  }
+  
+  // Convert to positive number and ensure it's 6 digits
+  const positiveHash = Math.abs(hash);
+  const shortId = (positiveHash % 900000) + 100000; // Ensures 6-digit number between 100000-999999
+  
+  return shortId.toString();
+}
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -94,6 +114,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       await newPostRef.set(newPost);
       
       console.log('Post saved successfully to wantedPosts');
+      
+      // Create short ID mapping for the new URL structure
+      try {
+        const shortId = generateNumericShortId(newPostId);
+        const mappingRef = database.ref(`wantedPostMappings/${shortId}`);
+        await mappingRef.set(newPostId);
+        console.log(`Created mapping: ${shortId} -> ${newPostId}`);
+      } catch (mappingError) {
+        console.error('Error creating short ID mapping:', mappingError);
+        // Don't fail the entire operation if mapping creation fails
+      }
       
       return {
         success: true,
