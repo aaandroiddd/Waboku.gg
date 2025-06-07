@@ -59,6 +59,26 @@ export default function TestRoutingPage() {
     }
   };
 
+  const createSpecificTestPost = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch('/api/wanted/create-specific-test', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ shortId: '599756' }),
+      });
+      const data = await response.json();
+      setResults({ specificTestPostCreated: data });
+    } catch (error) {
+      console.error('Error creating specific test post:', error);
+      setResults({ error: error.message });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const navigateToUrl = () => {
     router.push(testUrl);
   };
@@ -93,12 +113,15 @@ export default function TestRoutingPage() {
                 <CardTitle>Test Functions</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="flex gap-4">
+                <div className="flex gap-4 flex-wrap">
                   <Button onClick={testUrlParsing} disabled={loading}>
                     Test URL Parsing & Database
                   </Button>
                   <Button onClick={createTestPost} disabled={loading}>
                     Create Test Post
+                  </Button>
+                  <Button onClick={createSpecificTestPost} disabled={loading}>
+                    Create Post with ID 599756
                   </Button>
                 </div>
               </CardContent>
