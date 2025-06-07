@@ -25,6 +25,7 @@ import { useState, useEffect } from "react";
 import { ContentLoader } from "@/components/ContentLoader";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { useLoading } from "@/contexts/LoadingContext";
+import { getWantedPostUrl } from "@/lib/wanted-posts-slug";
 
 // Helper function to get the display name for a game category
 const getGameDisplayName = (gameKey: string): string => {
@@ -305,12 +306,16 @@ function WantedPostCard({ post }: { post: WantedPost }) {
   const router = useRouter();
   
   const handleClick = () => {
-    router.push(`/wanted/${post.id}`);
+    // Use the new SEO-friendly URL format
+    const newUrl = getWantedPostUrl(post);
+    router.push(newUrl);
   };
   
   const handleContactClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    router.push(`/wanted/${post.id}?action=contact`);
+    // Use the new SEO-friendly URL format with action parameter
+    const newUrl = getWantedPostUrl(post);
+    router.push(`${newUrl}?action=contact`);
   };
   
   // Format condition for display

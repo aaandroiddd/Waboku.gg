@@ -17,12 +17,17 @@ export default function WantedPostRedirectPage() {
 
     const redirectToNewUrl = async () => {
       try {
+        console.log(`Attempting to redirect old wanted post URL: /wanted/${id}`);
+        
         // Try to fetch the wanted post to get its details
         const post = await getWantedPost(id as string);
         
         if (post) {
+          console.log(`Found post: ${post.title}, generating new URL...`);
+          
           // Generate the new URL format
           const newUrl = getWantedPostUrl(post);
+          console.log(`Generated new URL: ${newUrl}`);
           
           // Preserve any query parameters (like success=created)
           const queryParams = new URLSearchParams();
@@ -36,15 +41,48 @@ export default function WantedPostRedirectPage() {
             ? `${newUrl}?${queryParams.toString()}`
             : newUrl;
           
+          console.log(`Redirecting to: ${finalUrl}`);
+          
           // Redirect to the new URL format
           router.replace(finalUrl);
         } else {
+          console.log(`Post not found for ID: ${id}, redirecting to wanted posts page`);
           // If post not found, redirect to wanted posts page
           router.replace('/wanted/posts');
         }
       } catch (error) {
         console.error('Error redirecting to new URL:', error);
+        
+        // Try to create a short ID mapping if the post exists but mapping is missing
+        try {
+          console.log('Attempting to create short ID mapping for existing post...');
+          const response = await fetch('/api/wanted/create-short-id-mapping', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ postId: id }),
+          });
+          
+          if (response.ok) {
+            const result = await response.json();
+            console.log('Short ID mapping created:', result);
+            
+            // Try to fetch the post again
+            const post = await getWantedPost(id as string);
+            if (post) {
+              const newUrl = getWantedPostUrl(post);
+              console.log(`Redirecting to newly mapped URL: ${newUrl}`);
+              router.replace(newUrl);
+              return;
+            }
+          }
+        } catch (mappingError) {
+          console.error('Error creating short ID mapping:', mappingError);
+        }
+        
         // Fallback to wanted posts page
+        console.log('Falling back to wanted posts page');
         router.replace('/wanted/posts');
       }
     };
