@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { getFirebaseAdminServices } from '@/lib/firebase-admin';
+import { getFirebaseAdmin } from '@/lib/firebase-admin';
 import { generateNumericShortId } from '@/lib/wanted-posts-slug';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -19,7 +19,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const { database } = getFirebaseAdminServices();
+    const { database } = getFirebaseAdmin();
     
     if (!database) {
       console.error('Firebase Admin database not initialized');
