@@ -58,30 +58,43 @@ export default function WantedPostDetailPage() {
 
     const resolvePostId = async () => {
       try {
+        console.log('Resolving post ID from slug:', slug);
+        
         // Handle the new URL format: /wanted/gameCategory/slug-6digitid
         if (Array.isArray(slug) && slug.length === 2) {
           const [gameCategory, slugWithId] = slug;
+          console.log('Game category:', gameCategory, 'Slug with ID:', slugWithId);
           
-          // Extract the 6-digit numeric ID from the slug
+          // Extract the numeric ID from the slug
           const shortId = extractWantedPostIdFromSlug(slugWithId);
+          console.log('Extracted short ID:', shortId);
           
-          if (shortId && /^\d{6}$/.test(shortId)) {
-            // Try to resolve the 6-digit ID to a full Firebase document ID
+          if (shortId && /^\d+$/.test(shortId)) {
+            // Try to resolve the ID to a full Firebase document ID
             try {
+              console.log('Attempting to resolve short ID:', shortId);
               const response = await fetch(`/api/wanted/resolve-short-id?shortId=${shortId}`);
               
               if (response.ok) {
                 const data = await response.json();
+                console.log('Resolve response:', data);
                 if (data.success && data.fullId) {
+                  console.log('Successfully resolved to full ID:', data.fullId);
                   setPostId(data.fullId);
                   return;
                 }
+              } else {
+                console.log('Resolve API response not OK:', response.status, response.statusText);
+                const errorData = await response.text();
+                console.log('Error response body:', errorData);
               }
               
               console.log('Failed to resolve short ID:', shortId);
             } catch (error) {
               console.error('Error resolving short ID:', error);
             }
+          } else {
+            console.log('Invalid short ID format:', shortId);
           }
         }
         
