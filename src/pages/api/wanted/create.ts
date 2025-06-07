@@ -1,25 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { getFirebaseAdmin } from '@/lib/firebase-admin';
-
-/**
- * Generates a 6-digit numeric ID from a Firebase document ID
- * This must match the algorithm in wanted-posts-slug.ts
- */
-function generateNumericShortId(postId: string): string {
-  // Create a hash from the post ID and convert to numeric
-  let hash = 0;
-  for (let i = 0; i < postId.length; i++) {
-    const char = postId.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
-    hash = hash & hash; // Convert to 32-bit integer
-  }
-  
-  // Convert to positive number and ensure it's 6 digits
-  const positiveHash = Math.abs(hash);
-  const shortId = (positiveHash % 900000) + 100000; // Ensures 6-digit number between 100000-999999
-  
-  return shortId.toString();
-}
+import { generateNumericShortId } from '@/lib/wanted-posts-slug';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {

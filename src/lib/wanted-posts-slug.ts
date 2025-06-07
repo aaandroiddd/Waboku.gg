@@ -140,7 +140,7 @@ export function generateWantedPostSlug(title: string): string {
 /**
  * Generates a 6-digit numeric ID from a Firebase document ID
  */
-function generateNumericShortId(postId: string): string {
+export function generateNumericShortId(postId: string): string {
   // Create a hash from the post ID and convert to numeric
   let hash = 0;
   for (let i = 0; i < postId.length; i++) {
