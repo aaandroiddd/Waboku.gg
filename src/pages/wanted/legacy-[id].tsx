@@ -17,7 +17,7 @@ export default function WantedPostRedirectPage() {
 
     const redirectToNewUrl = async () => {
       try {
-        console.log(`Attempting to redirect old wanted post URL: /wanted/${id}`);
+        console.log(`Attempting to redirect old wanted post URL: /wanted/legacy-${id}`);
         
         // Only handle Firebase-style IDs (starting with - and containing alphanumeric)
         // This prevents conflicts with the new URL structure
