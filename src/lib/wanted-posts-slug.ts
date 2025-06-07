@@ -216,18 +216,27 @@ export function createShortIdMapping(postId: string): { shortId: string; fullId:
 
 /**
  * Extract post ID from a slug
- * Expects format: "slug-text-123456"
+ * Expects format: "slug-text-123456" but can handle various numeric ID lengths
  */
 export function extractWantedPostIdFromSlug(slug: string): string | null {
   if (!slug) return null;
   
-  // Split by hyphens and look for the last part that looks like a 6-digit numeric ID
+  // Split by hyphens and look for the last part that looks like a numeric ID
   const parts = slug.split('-');
   const lastPart = parts[parts.length - 1];
   
-  // Check if the last part is a 6-digit number
-  if (lastPart && /^\d{6}$/.test(lastPart)) {
-    return lastPart;
+  // Check if the last part is a numeric ID (flexible length, but prefer 6 digits)
+  if (lastPart && /^\d+$/.test(lastPart)) {
+    // If it's exactly 6 digits, it's the new format
+    if (lastPart.length === 6) {
+      return lastPart;
+    }
+    
+    // For shorter numeric IDs, we might need to handle legacy formats
+    // For now, return the numeric part and let the resolver handle it
+    if (lastPart.length >= 1) {
+      return lastPart;
+    }
   }
   
   return null;

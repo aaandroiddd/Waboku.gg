@@ -13,8 +13,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(400).json({ error: 'Short ID is required' });
   }
 
-  // Validate that shortId is a 6-digit number
-  if (!/^\d{6}$/.test(shortId)) {
+  // Validate that shortId is a numeric ID (flexible length for legacy support)
+  if (!/^\d+$/.test(shortId)) {
     return res.status(400).json({ error: 'Invalid short ID format' });
   }
 
@@ -70,6 +70,48 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }
         
         return res.status(200).json({ success: true, fullId: postId });
+      }
+    }
+
+    // If no 6-digit match found and shortId is shorter, try legacy matching
+    if (shortId.length < 6) {
+      console.log(`Trying legacy matching for short ID: ${shortId}`);
+      
+      // For legacy posts, try matching against the end of Firebase document IDs
+      // or other patterns that might have been used
+      for (const [postId, postData] of Object.entries(posts)) {
+        if (!postData || typeof postData !== 'object') continue;
+        
+        // Check if the shortId appears at the end of the Firebase document ID
+        if (postId.endsWith(shortId)) {
+          console.log(`Found legacy match: ${postId} ends with ${shortId}`);
+          
+          // Store this mapping for future use
+          try {
+            await mappingRef.set(postId);
+            console.log(`Stored legacy mapping: ${shortId} -> ${postId}`);
+          } catch (mappingError) {
+            console.error('Error storing legacy mapping:', mappingError);
+          }
+          
+          return res.status(200).json({ success: true, fullId: postId });
+        }
+        
+        // Check if the shortId matches any numeric part of the Firebase ID
+        const numericParts = postId.match(/\d+/g);
+        if (numericParts && numericParts.includes(shortId)) {
+          console.log(`Found legacy numeric match: ${postId} contains ${shortId}`);
+          
+          // Store this mapping for future use
+          try {
+            await mappingRef.set(postId);
+            console.log(`Stored legacy numeric mapping: ${shortId} -> ${postId}`);
+          } catch (mappingError) {
+            console.error('Error storing legacy numeric mapping:', mappingError);
+          }
+          
+          return res.status(200).json({ success: true, fullId: postId });
+        }
       }
     }
 
