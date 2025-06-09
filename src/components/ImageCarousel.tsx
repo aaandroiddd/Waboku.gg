@@ -182,7 +182,7 @@ export default function ImageCarousel({ images }: ImageCarouselProps) {
               <motion.div
                 key={idx}
                 className="keen-slider__slide flex items-center justify-center bg-gray-100 dark:bg-gray-800 relative"
-                onClick={() => openModal(currentSlide)}
+                onClick={() => openModal(idx)} // FIXED: Pass the actual slide index instead of currentSlide
               >
                 <img
                   src={src}
