@@ -21,6 +21,7 @@ export default function ImageCarousel({ images }: ImageCarouselProps) {
   const [startY, setStartY] = useState(0);
   const [pinchDistance, setPinchDistance] = useState<number | null>(null);
   const [initialZoom, setInitialZoom] = useState(1);
+  const [isUpdatingFromThumbnail, setIsUpdatingFromThumbnail] = useState(false);
 
   // Configure slider with drag mode for mobile
   const [sliderRef, instanceRef] = useKeenSlider<HTMLDivElement>({
@@ -31,7 +32,13 @@ export default function ImageCarousel({ images }: ImageCarouselProps) {
     },
     dragSpeed: 1.5,
     slideChanged(slider) {
-      setCurrentSlide(slider.track.details.rel);
+      // Only update React state if the change didn't come from a thumbnail click
+      if (!isUpdatingFromThumbnail) {
+        const newSlide = slider.track.details.rel;
+        setCurrentSlide(newSlide);
+      }
+      // Reset the flag after the slide change
+      setIsUpdatingFromThumbnail(false);
     },
     created() {
       setCurrentSlide(0);
@@ -191,6 +198,8 @@ export default function ImageCarousel({ images }: ImageCarouselProps) {
                 <button
                   key={idx}
                   onClick={() => {
+                    // Set flag to prevent slideChanged callback from overriding our state
+                    setIsUpdatingFromThumbnail(true);
                     // Update React state immediately
                     setCurrentSlide(idx);
                     // Move the keen-slider to the correct slide
