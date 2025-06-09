@@ -190,7 +190,10 @@ export default function WantedPostDetailPage() {
         setFetchAttempted(true); // Mark that we've attempted to fetch
         
         try {
+          console.log("=== LOADING WANTED POST ===");
           console.log("Loading wanted post with ID:", postId);
+          console.log("PostId type:", typeof postId);
+          console.log("PostId length:", postId.length);
           
           // Try to directly fetch the post from the database
           if (database) {
