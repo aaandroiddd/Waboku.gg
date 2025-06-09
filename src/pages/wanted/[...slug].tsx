@@ -58,7 +58,10 @@ export default function WantedPostDetailPage() {
 
     const resolvePostId = async () => {
       try {
-        console.log('Resolving post ID from slug:', slug);
+        console.log('=== FRONTEND DEBUG ===');
+        console.log('Router ready:', router.isReady);
+        console.log('Slug from router:', slug);
+        console.log('Slug type:', typeof slug, Array.isArray(slug));
         
         // Handle the new URL format: /wanted/gameCategory/slug-6digitid
         if (Array.isArray(slug) && slug.length === 2) {
@@ -68,20 +71,30 @@ export default function WantedPostDetailPage() {
           // Extract the numeric ID from the slug
           const shortId = extractWantedPostIdFromSlug(slugWithId);
           console.log('Extracted short ID:', shortId);
+          console.log('Short ID type:', typeof shortId);
+          console.log('Short ID regex test:', shortId ? /^\d+$/.test(shortId) : 'shortId is null');
           
           if (shortId && /^\d+$/.test(shortId)) {
             // Try to resolve the ID to a full Firebase document ID
             try {
               console.log('Attempting to resolve short ID:', shortId);
-              const response = await fetch(`/api/wanted/resolve-short-id?shortId=${shortId}`);
+              const apiUrl = `/api/wanted/resolve-short-id?shortId=${shortId}`;
+              console.log('API URL:', apiUrl);
+              
+              const response = await fetch(apiUrl);
+              console.log('Response status:', response.status);
+              console.log('Response ok:', response.ok);
               
               if (response.ok) {
                 const data = await response.json();
-                console.log('Resolve response:', data);
+                console.log('Resolve response data:', data);
                 if (data.success && data.fullId) {
                   console.log('Successfully resolved to full ID:', data.fullId);
+                  console.log('Setting postId state to:', data.fullId);
                   setPostId(data.fullId);
                   return;
+                } else {
+                  console.log('Resolve response indicates failure:', data);
                 }
               } else {
                 console.log('Resolve API response not OK:', response.status, response.statusText);
@@ -94,8 +107,10 @@ export default function WantedPostDetailPage() {
               console.error('Error resolving short ID:', error);
             }
           } else {
-            console.log('Invalid short ID format:', shortId);
+            console.log('Invalid short ID format or null:', shortId);
           }
+        } else {
+          console.log('Slug format not recognized. Length:', Array.isArray(slug) ? slug.length : 'not array');
         }
         
         // Handle category-only URLs: /wanted/gameCategory/
