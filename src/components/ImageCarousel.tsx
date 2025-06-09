@@ -45,20 +45,6 @@ export default function ImageCarousel({ images }: ImageCarouselProps) {
     setIsModalOpen(true);
     setZoom(1);
   };
-=======
-
-<<<<<<< SEARCH
-              <motion.div
-                key={idx}
-                className="keen-slider__slide flex items-center justify-center bg-gray-100 dark:bg-gray-800 relative"
-                onClick={() => openModal(idx)}
-              >
-=======
-              <motion.div
-                key={idx}
-                className="keen-slider__slide flex items-center justify-center bg-gray-100 dark:bg-gray-800 relative"
-                onClick={() => openModal()}
-              >
 
   const closeModal = () => {
     setIsModalOpen(false);
@@ -167,7 +153,7 @@ export default function ImageCarousel({ images }: ImageCarouselProps) {
               <motion.div
                 key={idx}
                 className="keen-slider__slide flex items-center justify-center bg-gray-100 dark:bg-gray-800 relative"
-                onClick={() => openModal(idx)}
+                onClick={() => openModal()}
               >
                 <img
                   src={src}
