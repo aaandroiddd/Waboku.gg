@@ -49,14 +49,9 @@ export default function ImageCarousel({ images }: ImageCarouselProps) {
   }, [isModalOpen, currentSlide]);
 
   const openModal = (index?: number) => {
-    // If index provided, use it; otherwise get current slide from keen-slider instance
-    let slideIndex;
-    if (index !== undefined) {
-      slideIndex = index;
-    } else {
-      // Get the actual current slide from keen-slider instance
-      slideIndex = instanceRef.current?.track?.details?.rel ?? currentSlide;
-    }
+    // If index provided, use it; otherwise use the current React state
+    // The React state should be the source of truth, not the keen-slider instance
+    const slideIndex = index !== undefined ? index : currentSlide;
     setCurrentSlide(slideIndex);
     setIsModalOpen(true);
     setZoom(1);
@@ -169,7 +164,7 @@ export default function ImageCarousel({ images }: ImageCarouselProps) {
               <motion.div
                 key={idx}
                 className="keen-slider__slide flex items-center justify-center bg-gray-100 dark:bg-gray-800 relative"
-                onClick={() => openModal()}
+                onClick={() => openModal(idx)}
               >
                 <img
                   src={src}
@@ -196,8 +191,12 @@ export default function ImageCarousel({ images }: ImageCarouselProps) {
                 <button
                   key={idx}
                   onClick={() => {
+                    // Update React state immediately
                     setCurrentSlide(idx);
-                    instanceRef.current?.moveToSlide(idx);
+                    // Move the keen-slider to the correct slide
+                    if (instanceRef.current) {
+                      instanceRef.current.moveToSlide(idx);
+                    }
                   }}
                   className={`flex-shrink-0 ${
                     isMobile ? 'w-16 h-16' : 'w-20 h-20'
