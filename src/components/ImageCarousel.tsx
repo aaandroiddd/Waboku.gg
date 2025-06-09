@@ -38,11 +38,27 @@ export default function ImageCarousel({ images }: ImageCarouselProps) {
     },
   });
 
-  const openModal = (index: number) => {
-    setCurrentSlide(index);
+  const openModal = (index?: number) => {
+    // If index provided, use it; otherwise use current slide from the carousel
+    const slideIndex = index !== undefined ? index : currentSlide;
+    setCurrentSlide(slideIndex);
     setIsModalOpen(true);
     setZoom(1);
   };
+=======
+
+<<<<<<< SEARCH
+              <motion.div
+                key={idx}
+                className="keen-slider__slide flex items-center justify-center bg-gray-100 dark:bg-gray-800 relative"
+                onClick={() => openModal(idx)}
+              >
+=======
+              <motion.div
+                key={idx}
+                className="keen-slider__slide flex items-center justify-center bg-gray-100 dark:bg-gray-800 relative"
+                onClick={() => openModal()}
+              >
 
   const closeModal = () => {
     setIsModalOpen(false);
@@ -98,10 +114,14 @@ export default function ImageCarousel({ images }: ImageCarouselProps) {
       if (Math.abs(deltaX) > 50 && Math.abs(deltaX) > Math.abs(deltaY)) {
         if (deltaX > 0) {
           // Swipe right - go to previous slide
-          setCurrentSlide((prev) => (prev - 1 + images.length) % images.length);
+          const newSlide = (currentSlide - 1 + images.length) % images.length;
+          setCurrentSlide(newSlide);
+          instanceRef.current?.moveToSlide(newSlide);
         } else {
           // Swipe left - go to next slide
-          setCurrentSlide((prev) => (prev + 1) % images.length);
+          const newSlide = (currentSlide + 1) % images.length;
+          setCurrentSlide(newSlide);
+          instanceRef.current?.moveToSlide(newSlide);
         }
       }
     }
@@ -174,8 +194,8 @@ export default function ImageCarousel({ images }: ImageCarouselProps) {
                 <button
                   key={idx}
                   onClick={() => {
-                    instanceRef.current?.moveToSlide(idx);
                     setCurrentSlide(idx);
+                    instanceRef.current?.moveToSlide(idx);
                   }}
                   className={`flex-shrink-0 ${
                     isMobile ? 'w-16 h-16' : 'w-20 h-20'
@@ -258,14 +278,22 @@ export default function ImageCarousel({ images }: ImageCarouselProps) {
               {/* Left/Right Arrows inside Modal - visible on all devices */}
               <button
                 className={`absolute left-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/30 ${isMobile ? 'p-3' : 'p-2'} rounded-full transition-all duration-200 hover:scale-110`}
-                onClick={() => setCurrentSlide((prev) => (prev - 1 + images.length) % images.length)}
+                onClick={() => {
+                  const newSlide = (currentSlide - 1 + images.length) % images.length;
+                  setCurrentSlide(newSlide);
+                  instanceRef.current?.moveToSlide(newSlide);
+                }}
                 aria-label="Previous image"
               >
                 <ChevronLeft className={`${isMobile ? 'h-7 w-7' : 'h-6 w-6'} text-white`} />
               </button>
               <button
                 className={`absolute right-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/30 ${isMobile ? 'p-3' : 'p-2'} rounded-full transition-all duration-200 hover:scale-110`}
-                onClick={() => setCurrentSlide((prev) => (prev + 1) % images.length)}
+                onClick={() => {
+                  const newSlide = (currentSlide + 1) % images.length;
+                  setCurrentSlide(newSlide);
+                  instanceRef.current?.moveToSlide(newSlide);
+                }}
                 aria-label="Next image"
               >
                 <ChevronRight className={`${isMobile ? 'h-7 w-7' : 'h-6 w-6'} text-white`} />
