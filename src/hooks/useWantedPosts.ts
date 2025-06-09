@@ -669,6 +669,22 @@ export function useWantedPosts(options: WantedPostsOptions = {}) {
     try {
       console.log(`Fetching wanted post with ID: ${postId}`);
       
+      // First try using the API endpoint since we know it works
+      try {
+        console.log('Trying API endpoint first...');
+        const response = await fetch(`/api/wanted/get-post?postId=${postId}`);
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.post) {
+            console.log('Successfully fetched post via API');
+            return data.post;
+          }
+        }
+        console.log('API fetch failed, falling back to direct database access...');
+      } catch (apiError) {
+        console.error('API fetch error:', apiError);
+      }
+      
       // Validate database connection
       if (!database) {
         console.error('Database not initialized when fetching specific wanted post');
@@ -680,44 +696,53 @@ export function useWantedPosts(options: WantedPostsOptions = {}) {
         throw new Error('Database not initialized');
       }
       
-      // First try the wantedPosts path (where data actually exists)
-      const postRef = ref(database, `wantedPosts/${postId}`);
-      console.log(`Trying wantedPosts path: wantedPosts/${postId}`);
+      // Try all possible paths where the post might be stored (prioritize wantedPosts since that's where data exists)
+      const paths = [
+        `wantedPosts/${postId}`,
+        `wanted/posts/${postId}`,
+        `wanted/${postId}`
+      ];
       
-      // Fetch the post data
-      console.log('Executing get() for post data...');
-      let snapshot = await get(postRef);
-      console.log(`Post data fetch complete, exists: ${snapshot.exists()}`);
+      let postData = null;
+      let usedPath = '';
       
-      // If not found, try the wanted/posts path structure
-      if (!snapshot.exists()) {
-        console.log(`Post not found at wantedPosts path, trying wanted/posts path: wanted/posts/${postId}`);
-        await logToServer('Post not found at wantedPosts path, trying wanted/posts path', { 
-          postId, 
-          wantedPostsPath: `wantedPosts/${postId}`,
-          wantedPath: `wanted/posts/${postId}`
-        }, 'info');
-        
-        const wantedPostsRef = ref(database, `wanted/posts/${postId}`);
-        snapshot = await get(wantedPostsRef);
-        console.log(`wanted/posts path fetch complete, exists: ${snapshot.exists()}`);
-        
-        // If still not found, try direct path without subfolder
-        if (!snapshot.exists()) {
-          console.log(`Post not found at wanted/posts path, trying direct path: wanted/${postId}`);
-          await logToServer('Post not found at wanted/posts path, trying direct path', { 
-            postId, 
-            directPath: `wanted/${postId}`
-          }, 'info');
+      // Try each path until we find the post
+      for (const path of paths) {
+        console.log(`Checking path: ${path}`);
+        try {
+          const postRef = ref(database, path);
+          const snapshot = await get(postRef);
           
-          const directPostRef = ref(database, `wanted/${postId}`);
-          snapshot = await get(directPostRef);
-          console.log(`Direct path fetch complete, exists: ${snapshot.exists()}`);
+          if (snapshot.exists()) {
+            console.log(`Found post at path: ${path}`);
+            const rawData = snapshot.val();
+            
+            // Ensure the post data has all required fields
+            postData = {
+              id: postId,
+              title: rawData.title || "Untitled Post",
+              description: rawData.description || "No description provided",
+              game: rawData.game || "Unknown Game",
+              condition: rawData.condition || "any",
+              isPriceNegotiable: rawData.isPriceNegotiable || true,
+              location: rawData.location || "Unknown Location",
+              createdAt: rawData.createdAt || Date.now(),
+              userId: rawData.userId || "unknown",
+              userName: rawData.userName || "Anonymous User",
+              ...rawData
+            };
+            
+            usedPath = path;
+            break;
+          }
+        } catch (pathError) {
+          console.error(`Error checking path ${path}:`, pathError);
+          // Continue to the next path
         }
       }
       
       // If still not found after trying all paths
-      if (!snapshot.exists()) {
+      if (!postData) {
         console.log(`No post found with ID: ${postId} after trying all path variations`);
         await logToServer('Wanted post not found in any path location', { 
           postId,
@@ -728,68 +753,13 @@ export function useWantedPosts(options: WantedPostsOptions = {}) {
           ]
         }, 'warn');
         
-        // Try to fetch all wanted posts to see what's available
-        try {
-          console.log('Attempting to list all wanted posts to debug...');
-          const allPostsRef = ref(database, 'wantedPosts');
-          const allPostsSnapshot = await get(allPostsRef);
-          
-          if (allPostsSnapshot.exists()) {
-            const postKeys = Object.keys(allPostsSnapshot.val());
-            console.log(`Found ${postKeys.length} posts in wantedPosts path`);
-            await logToServer('Found posts in wantedPosts path', { 
-              count: postKeys.length,
-              firstFewKeys: postKeys.slice(0, 3),
-              searchingFor: postId
-            }, 'info');
-            
-            // Check if our specific post ID exists in the list
-            if (postKeys.includes(postId)) {
-              console.log(`Post ID ${postId} exists in wantedPosts but get() failed - possible permissions issue`);
-              await logToServer('Post exists in list but get() failed', { 
-                postId,
-                totalPosts: postKeys.length
-              }, 'error');
-            } else {
-              console.log(`Post ID ${postId} not found in list of ${postKeys.length} posts`);
-              await logToServer('Post ID not in wantedPosts list', { 
-                postId,
-                totalPosts: postKeys.length,
-                sampleKeys: postKeys.slice(0, 5)
-              }, 'info');
-            }
-          } else {
-            console.log('No posts found in wantedPosts path');
-            
-            // Check wanted/posts path
-            const wantedPostsRef = ref(database, 'wanted/posts');
-            const wantedPostsSnapshot = await get(wantedPostsRef);
-            
-            if (wantedPostsSnapshot.exists()) {
-              const postKeys = Object.keys(wantedPostsSnapshot.val());
-              console.log(`Found ${postKeys.length} posts in wanted/posts path`);
-              await logToServer('Found posts in wanted/posts path', { 
-                count: postKeys.length,
-                firstFewKeys: postKeys.slice(0, 3)
-              }, 'info');
-            } else {
-              console.log('No posts found in wanted/posts path either');
-              await logToServer('No posts found in any path', {}, 'warn');
-            }
-          }
-        } catch (listError) {
-          console.error('Error listing all posts:', listError);
-        }
-        
         return null;
       }
       
-      // Get the post data
-      const postData = snapshot.val();
-      console.log('Post data retrieved successfully');
+      console.log(`Post data retrieved successfully from path: ${usedPath}`);
       
       // Validate required fields
-      if (!postData || !postData.title || !postData.game) {
+      if (!postData.title || !postData.game) {
         console.error('Invalid post data structure:', postData);
         await logToServer('Invalid post data structure', { 
           postId,
@@ -797,36 +767,11 @@ export function useWantedPosts(options: WantedPostsOptions = {}) {
           hasGame: !!postData?.game,
           hasLocation: !!postData?.location
         }, 'error');
-        
-        // Try to return partial data if possible
-        if (postData) {
-          return {
-            id: postId,
-            title: postData.title || 'Untitled Post',
-            description: postData.description || 'No description provided',
-            game: postData.game || 'Unknown Game',
-            condition: postData.condition || 'any',
-            isPriceNegotiable: postData.isPriceNegotiable || true,
-            location: postData.location || 'Unknown Location',
-            createdAt: postData.createdAt || Date.now(),
-            userId: postData.userId || 'unknown',
-            userName: postData.userName || 'Anonymous User',
-            userAvatar: postData.userAvatar,
-            ...postData
-          };
-        }
-        
-        return null;
       }
       
       // Return the complete post data
-      const completePost: WantedPost = {
-        id: postId,
-        ...postData
-      };
-      
       console.log('Returning complete post data');
-      return completePost;
+      return postData;
     } catch (err) {
       console.error('Error fetching wanted post:', err);
       
