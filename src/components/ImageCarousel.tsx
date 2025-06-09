@@ -38,20 +38,20 @@ export default function ImageCarousel({ images }: ImageCarouselProps) {
     },
   });
 
-  // Ensure modal opens with the correct slide when keen-slider state changes
-  useEffect(() => {
-    if (isModalOpen && instanceRef.current) {
-      const actualSlide = instanceRef.current.track.details.rel;
-      if (actualSlide !== currentSlide) {
-        setCurrentSlide(actualSlide);
-      }
-    }
-  }, [isModalOpen, currentSlide]);
-
   const openModal = (index?: number) => {
-    // If index provided, use it; otherwise use the current React state
-    // The React state should be the source of truth, not the keen-slider instance
-    const slideIndex = index !== undefined ? index : currentSlide;
+    // If index is provided, use it; otherwise get the current slide from keen-slider instance
+    let slideIndex: number;
+    
+    if (index !== undefined) {
+      slideIndex = index;
+    } else if (instanceRef.current) {
+      // Get the actual current slide from keen-slider instance
+      slideIndex = instanceRef.current.track.details.rel;
+    } else {
+      // Fallback to React state
+      slideIndex = currentSlide;
+    }
+    
     setCurrentSlide(slideIndex);
     setIsModalOpen(true);
     setZoom(1);
