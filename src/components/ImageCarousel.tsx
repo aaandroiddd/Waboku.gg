@@ -49,10 +49,15 @@ export default function ImageCarousel({ images }: ImageCarouselProps) {
   };
 
   const handleThumbnailClick = (index: number) => {
-    // Update carousel position
-    setCurrentSlide(index);
-    if (instanceRef.current) {
-      instanceRef.current.moveToSlide(index);
+    // On mobile, open modal directly to the tapped thumbnail
+    if (isMobile) {
+      openModal(index);
+    } else {
+      // On desktop, just update carousel position
+      setCurrentSlide(index);
+      if (instanceRef.current) {
+        instanceRef.current.moveToSlide(index);
+      }
     }
   };
 
@@ -177,7 +182,7 @@ export default function ImageCarousel({ images }: ImageCarouselProps) {
               <motion.div
                 key={idx}
                 className="keen-slider__slide flex items-center justify-center bg-gray-100 dark:bg-gray-800 relative"
-                onClick={() => openModal()}
+                onClick={() => openModal(currentSlide)}
               >
                 <img
                   src={src}
