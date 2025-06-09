@@ -14,6 +14,7 @@ interface ImageCarouselProps {
 export default function ImageCarousel({ images }: ImageCarouselProps) {
   const isMobile = useMediaQuery('(max-width: 768px)');
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [modalSlide, setModalSlide] = useState(0);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [zoom, setZoom] = useState(1);
   const [isDragging, setIsDragging] = useState(false);
@@ -21,7 +22,6 @@ export default function ImageCarousel({ images }: ImageCarouselProps) {
   const [startY, setStartY] = useState(0);
   const [pinchDistance, setPinchDistance] = useState<number | null>(null);
   const [initialZoom, setInitialZoom] = useState(1);
-  const [isUpdatingFromThumbnail, setIsUpdatingFromThumbnail] = useState(false);
 
   // Configure slider with drag mode for mobile
   const [sliderRef, instanceRef] = useKeenSlider<HTMLDivElement>({
@@ -32,13 +32,8 @@ export default function ImageCarousel({ images }: ImageCarouselProps) {
     },
     dragSpeed: 1.5,
     slideChanged(slider) {
-      // Only update React state if the change didn't come from a thumbnail click
-      if (!isUpdatingFromThumbnail) {
-        const newSlide = slider.track.details.rel;
-        setCurrentSlide(newSlide);
-      }
-      // Reset the flag after the slide change
-      setIsUpdatingFromThumbnail(false);
+      const newSlide = slider.track.details.rel;
+      setCurrentSlide(newSlide);
     },
     created() {
       setCurrentSlide(0);
@@ -46,22 +41,19 @@ export default function ImageCarousel({ images }: ImageCarouselProps) {
   });
 
   const openModal = (index?: number) => {
-    // If index is provided, use it; otherwise get the current slide from keen-slider instance
-    let slideIndex: number;
-    
-    if (index !== undefined) {
-      slideIndex = index;
-    } else if (instanceRef.current) {
-      // Get the actual current slide from keen-slider instance
-      slideIndex = instanceRef.current.track.details.rel;
-    } else {
-      // Fallback to React state
-      slideIndex = currentSlide;
-    }
-    
-    setCurrentSlide(slideIndex);
+    // Use the provided index, or fall back to current slide
+    const slideIndex = index !== undefined ? index : currentSlide;
+    setModalSlide(slideIndex);
     setIsModalOpen(true);
     setZoom(1);
+  };
+
+  const handleThumbnailClick = (index: number) => {
+    // Update carousel position
+    setCurrentSlide(index);
+    if (instanceRef.current) {
+      instanceRef.current.moveToSlide(index);
+    }
   };
 
   const closeModal = () => {
@@ -116,16 +108,30 @@ export default function ImageCarousel({ images }: ImageCarouselProps) {
       
       // Only handle horizontal swipes if they're significant and more horizontal than vertical
       if (Math.abs(deltaX) > 50 && Math.abs(deltaX) > Math.abs(deltaY)) {
-        if (deltaX > 0) {
-          // Swipe right - go to previous slide
-          const newSlide = (currentSlide - 1 + images.length) % images.length;
-          setCurrentSlide(newSlide);
-          instanceRef.current?.moveToSlide(newSlide);
+        if (isModalOpen) {
+          // Modal is open - navigate modal images
+          if (deltaX > 0) {
+            // Swipe right - go to previous slide
+            const newSlide = (modalSlide - 1 + images.length) % images.length;
+            setModalSlide(newSlide);
+          } else {
+            // Swipe left - go to next slide
+            const newSlide = (modalSlide + 1) % images.length;
+            setModalSlide(newSlide);
+          }
         } else {
-          // Swipe left - go to next slide
-          const newSlide = (currentSlide + 1) % images.length;
-          setCurrentSlide(newSlide);
-          instanceRef.current?.moveToSlide(newSlide);
+          // Modal is closed - navigate carousel
+          if (deltaX > 0) {
+            // Swipe right - go to previous slide
+            const newSlide = (currentSlide - 1 + images.length) % images.length;
+            setCurrentSlide(newSlide);
+            instanceRef.current?.moveToSlide(newSlide);
+          } else {
+            // Swipe left - go to next slide
+            const newSlide = (currentSlide + 1) % images.length;
+            setCurrentSlide(newSlide);
+            instanceRef.current?.moveToSlide(newSlide);
+          }
         }
       }
     }
@@ -171,7 +177,7 @@ export default function ImageCarousel({ images }: ImageCarouselProps) {
               <motion.div
                 key={idx}
                 className="keen-slider__slide flex items-center justify-center bg-gray-100 dark:bg-gray-800 relative"
-                onClick={() => openModal(idx)}
+                onClick={() => openModal()}
               >
                 <img
                   src={src}
@@ -197,16 +203,7 @@ export default function ImageCarousel({ images }: ImageCarouselProps) {
               {images.map((src, idx) => (
                 <button
                   key={idx}
-                  onClick={() => {
-                    // Set flag to prevent slideChanged callback from overriding our state
-                    setIsUpdatingFromThumbnail(true);
-                    // Update React state immediately
-                    setCurrentSlide(idx);
-                    // Move the keen-slider to the correct slide
-                    if (instanceRef.current) {
-                      instanceRef.current.moveToSlide(idx);
-                    }
-                  }}
+                  onClick={() => handleThumbnailClick(idx)}
                   className={`flex-shrink-0 ${
                     isMobile ? 'w-16 h-16' : 'w-20 h-20'
                   } rounded-lg overflow-hidden border-2 transition-all duration-200 ${
@@ -278,8 +275,8 @@ export default function ImageCarousel({ images }: ImageCarouselProps) {
               onTouchEnd={handleTouchEnd}
             >
               <img
-                src={images[currentSlide]}
-                alt={`Image ${currentSlide + 1}`}
+                src={images[modalSlide]}
+                alt={`Image ${modalSlide + 1}`}
                 className="object-contain max-h-full max-w-full touch-none"
                 style={{ transform: `scale(${zoom})` }}
                 draggable="false"
@@ -289,9 +286,8 @@ export default function ImageCarousel({ images }: ImageCarouselProps) {
               <button
                 className={`absolute left-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/30 ${isMobile ? 'p-3' : 'p-2'} rounded-full transition-all duration-200 hover:scale-110`}
                 onClick={() => {
-                  const newSlide = (currentSlide - 1 + images.length) % images.length;
-                  setCurrentSlide(newSlide);
-                  instanceRef.current?.moveToSlide(newSlide);
+                  const newSlide = (modalSlide - 1 + images.length) % images.length;
+                  setModalSlide(newSlide);
                 }}
                 aria-label="Previous image"
               >
@@ -300,9 +296,8 @@ export default function ImageCarousel({ images }: ImageCarouselProps) {
               <button
                 className={`absolute right-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/30 ${isMobile ? 'p-3' : 'p-2'} rounded-full transition-all duration-200 hover:scale-110`}
                 onClick={() => {
-                  const newSlide = (currentSlide + 1) % images.length;
-                  setCurrentSlide(newSlide);
-                  instanceRef.current?.moveToSlide(newSlide);
+                  const newSlide = (modalSlide + 1) % images.length;
+                  setModalSlide(newSlide);
                 }}
                 aria-label="Next image"
               >
