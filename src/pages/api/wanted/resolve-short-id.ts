@@ -26,19 +26,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(500).json({ error: 'Database not initialized' });
     }
 
-    // Check if we have a mapping stored for this short ID
-    const mappingRef = database.ref(`wantedPostMappings/${shortId}`);
-    const mappingSnapshot = await mappingRef.once('value');
-    
-    if (mappingSnapshot.exists()) {
-      const fullId = mappingSnapshot.val();
-      console.log(`Found mapping for short ID ${shortId}: ${fullId}`);
-      return res.status(200).json({ success: true, fullId });
-    }
-
-    // If no mapping exists, we need to search through all wanted posts
-    // This is less efficient but necessary for posts created before the mapping system
-    console.log(`No mapping found for short ID ${shortId}, searching through posts...`);
+    // First, search through all wanted posts to find the actual hash-generated match
+    // This ensures we get the correct post even if there are mapping conflicts
+    console.log(`Searching for post with short ID ${shortId}...`);
     
     const postsRef = database.ref('wantedPosts');
     const postsSnapshot = await postsRef.once('value');
@@ -60,16 +50,39 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (generatedShortId === shortId) {
         console.log(`Found matching post: ${postId} -> ${shortId}`);
         
-        // Store this mapping for future use
+        // Update/create the mapping to ensure consistency
         try {
+          const mappingRef = database.ref(`wantedPostMappings/${shortId}`);
           await mappingRef.set(postId);
-          console.log(`Stored mapping: ${shortId} -> ${postId}`);
+          console.log(`Updated mapping: ${shortId} -> ${postId}`);
         } catch (mappingError) {
-          console.error('Error storing mapping:', mappingError);
+          console.error('Error updating mapping:', mappingError);
           // Continue even if mapping storage fails
         }
         
         return res.status(200).json({ success: true, fullId: postId });
+      }
+    }
+
+    // If no hash-generated match found, check stored mappings as fallback
+    console.log(`No hash-generated match found for short ID ${shortId}, checking stored mappings...`);
+    
+    const mappingRef = database.ref(`wantedPostMappings/${shortId}`);
+    const mappingSnapshot = await mappingRef.once('value');
+    
+    if (mappingSnapshot.exists()) {
+      const fullId = mappingSnapshot.val();
+      console.log(`Found stored mapping for short ID ${shortId}: ${fullId}`);
+      
+      // Verify the mapped post still exists
+      const mappedPostRef = database.ref(`wantedPosts/${fullId}`);
+      const mappedPostSnapshot = await mappedPostRef.once('value');
+      
+      if (mappedPostSnapshot.exists()) {
+        return res.status(200).json({ success: true, fullId });
+      } else {
+        console.log(`Mapped post ${fullId} no longer exists, removing mapping`);
+        await mappingRef.remove();
       }
     }
 
