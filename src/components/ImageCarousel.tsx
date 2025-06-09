@@ -1,7 +1,5 @@
 "use client";
 
-import { useKeenSlider } from "keen-slider/react";
-import "keen-slider/keen-slider.min.css";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, ChevronRight, ZoomIn, ZoomOut, X } from "lucide-react";
 import { useState, useEffect } from "react";
@@ -14,226 +12,181 @@ interface ImageCarouselProps {
 export default function ImageCarousel({ images }: ImageCarouselProps) {
   const isMobile = useMediaQuery('(max-width: 768px)');
   const [currentSlide, setCurrentSlide] = useState(0);
-  const [modalSlide, setModalSlide] = useState(0);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalSlide, setModalSlide] = useState(0);
   const [zoom, setZoom] = useState(1);
-  const [isDragging, setIsDragging] = useState(false);
-  const [startX, setStartX] = useState(0);
-  const [startY, setStartY] = useState(0);
-  const [pinchDistance, setPinchDistance] = useState<number | null>(null);
-  const [initialZoom, setInitialZoom] = useState(1);
+  const [touchStart, setTouchStart] = useState<number | null>(null);
+  const [touchEnd, setTouchEnd] = useState<number | null>(null);
 
-  // Configure slider with drag mode for mobile
-  const [sliderRef, instanceRef] = useKeenSlider<HTMLDivElement>({
-    loop: true,
-    slides: {
-      perView: 1,
-      spacing: 10,
-    },
-    dragSpeed: 1.5,
-    slideChanged(slider) {
-      const newSlide = slider.track.details.rel;
-      setCurrentSlide(newSlide);
-    },
-    created() {
-      setCurrentSlide(0);
-    },
-  });
+  // Minimum swipe distance (in px)
+  const minSwipeDistance = 50;
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    setTouchEnd(null);
+    setTouchStart(e.targetTouches[0].clientX);
+  };
+
+  const onTouchMove = (e: React.TouchEvent) => {
+    setTouchEnd(e.targetTouches[0].clientX);
+  };
+
+  const onTouchEnd = () => {
+    if (!touchStart || !touchEnd) return;
+    
+    const distance = touchStart - touchEnd;
+    const isLeftSwipe = distance > minSwipeDistance;
+    const isRightSwipe = distance < -minSwipeDistance;
+
+    if (isModalOpen) {
+      // Handle modal swipes
+      if (isLeftSwipe && modalSlide < images.length - 1) {
+        setModalSlide(modalSlide + 1);
+      }
+      if (isRightSwipe && modalSlide > 0) {
+        setModalSlide(modalSlide - 1);
+      }
+    } else {
+      // Handle main carousel swipes
+      if (isLeftSwipe && currentSlide < images.length - 1) {
+        setCurrentSlide(currentSlide + 1);
+      }
+      if (isRightSwipe && currentSlide > 0) {
+        setCurrentSlide(currentSlide - 1);
+      }
+    }
+  };
+
+  const goToSlide = (index: number) => {
+    setCurrentSlide(index);
+  };
 
   const openModal = (index?: number) => {
-    // Use the provided index, or fall back to current slide
     const slideIndex = index !== undefined ? index : currentSlide;
     setModalSlide(slideIndex);
     setIsModalOpen(true);
     setZoom(1);
   };
 
-  const handleThumbnailClick = (index: number) => {
-    // On mobile, open modal directly to the tapped thumbnail
-    if (isMobile) {
-      openModal(index);
-    } else {
-      // On desktop, just update carousel position
-      setCurrentSlide(index);
-      if (instanceRef.current) {
-        instanceRef.current.moveToSlide(index);
-      }
-    }
-  };
-
   const closeModal = () => {
     setIsModalOpen(false);
     setZoom(1);
-    setIsDragging(false);
-    setPinchDistance(null);
+  };
+
+  const nextSlide = () => {
+    setCurrentSlide((prev) => (prev + 1) % images.length);
+  };
+
+  const prevSlide = () => {
+    setCurrentSlide((prev) => (prev - 1 + images.length) % images.length);
+  };
+
+  const nextModalSlide = () => {
+    setModalSlide((prev) => (prev + 1) % images.length);
+  };
+
+  const prevModalSlide = () => {
+    setModalSlide((prev) => (prev - 1 + images.length) % images.length);
   };
 
   const zoomIn = () => setZoom((prev) => Math.min(prev + 0.5, 3));
   const zoomOut = () => setZoom((prev) => Math.max(prev - 0.5, 1));
 
-  // Touch event handlers for mobile pinch zoom and swipe
-  const handleTouchStart = (e: React.TouchEvent) => {
-    if (e.touches.length === 1) {
-      // Single touch - prepare for swipe
-      setIsDragging(true);
-      setStartX(e.touches[0].clientX);
-      setStartY(e.touches[0].clientY);
-    } else if (e.touches.length === 2) {
-      // Two touches - prepare for pinch zoom
-      const distance = Math.hypot(
-        e.touches[0].clientX - e.touches[1].clientX,
-        e.touches[0].clientY - e.touches[1].clientY
-      );
-      setPinchDistance(distance);
-      setInitialZoom(zoom);
-    }
-  };
-
-  const handleTouchMove = (e: React.TouchEvent) => {
-    if (e.touches.length === 2 && pinchDistance !== null) {
-      // Handle pinch zoom
-      e.preventDefault(); // Prevent default to avoid page scrolling
-      const newDistance = Math.hypot(
-        e.touches[0].clientX - e.touches[1].clientX,
-        e.touches[0].clientY - e.touches[1].clientY
-      );
-      const scale = newDistance / pinchDistance;
-      const newZoom = Math.max(1, Math.min(3, initialZoom * scale));
-      setZoom(newZoom);
-    }
-  };
-
-  const handleTouchEnd = (e: React.TouchEvent) => {
-    if (isDragging && e.changedTouches.length === 1) {
-      const endX = e.changedTouches[0].clientX;
-      const endY = e.changedTouches[0].clientY;
-      
-      const deltaX = endX - startX;
-      const deltaY = endY - startY;
-      
-      // Only handle horizontal swipes if they're significant and more horizontal than vertical
-      if (Math.abs(deltaX) > 50 && Math.abs(deltaX) > Math.abs(deltaY)) {
-        if (isModalOpen) {
-          // Modal is open - navigate modal images
-          if (deltaX > 0) {
-            // Swipe right - go to previous slide
-            const newSlide = (modalSlide - 1 + images.length) % images.length;
-            setModalSlide(newSlide);
-          } else {
-            // Swipe left - go to next slide
-            const newSlide = (modalSlide + 1) % images.length;
-            setModalSlide(newSlide);
-          }
-        } else {
-          // Modal is closed - navigate carousel
-          if (deltaX > 0) {
-            // Swipe right - go to previous slide
-            const newSlide = (currentSlide - 1 + images.length) % images.length;
-            setCurrentSlide(newSlide);
-            instanceRef.current?.moveToSlide(newSlide);
-          } else {
-            // Swipe left - go to next slide
-            const newSlide = (currentSlide + 1) % images.length;
-            setCurrentSlide(newSlide);
-            instanceRef.current?.moveToSlide(newSlide);
-          }
-        }
-      }
-    }
-    
-    setIsDragging(false);
-    setPinchDistance(null);
-  };
-
   return (
     <>
-      {/* Main container with proper spacing for arrows */}
+      {/* Main Carousel Container */}
       <div className={`relative w-full ${isMobile ? 'max-w-md' : 'max-w-2xl'} mx-auto`}>
-        {/* Carousel container with margin for arrows */}
-        <div className={`relative w-full ${!isMobile ? 'mx-12' : ''} max-w-md mx-auto`}>
-          {/* Navigation arrows - only show on desktop */}
-          {!isMobile && (
+        {/* Main Image Display */}
+        <div className="relative">
+          {/* Desktop Navigation Arrows */}
+          {!isMobile && images.length > 1 && (
             <>
               <button
-                className="absolute -left-12 top-1/2 -translate-y-1/2 z-20 bg-white/90 hover:bg-white p-3 rounded-full shadow-lg transition-all duration-200 hover:scale-110 border border-gray-200 dark:bg-gray-800/90 dark:hover:bg-gray-800 dark:border-gray-600"
-                onClick={() => instanceRef.current?.prev()}
+                className="absolute left-4 top-1/2 -translate-y-1/2 z-20 bg-white/90 hover:bg-white p-3 rounded-full shadow-lg transition-all duration-200 hover:scale-110 border border-gray-200 dark:bg-gray-800/90 dark:hover:bg-gray-800 dark:border-gray-600"
+                onClick={prevSlide}
                 aria-label="Previous image"
-                style={{ pointerEvents: 'auto' }}
               >
                 <ChevronLeft className="h-5 w-5 dark:text-white" />
               </button>
               <button
-                className="absolute -right-12 top-1/2 -translate-y-1/2 z-20 bg-white/90 hover:bg-white p-3 rounded-full shadow-lg transition-all duration-200 hover:scale-110 border border-gray-200 dark:bg-gray-800/90 dark:hover:bg-gray-800 dark:border-gray-600"
-                onClick={() => instanceRef.current?.next()}
+                className="absolute right-4 top-1/2 -translate-y-1/2 z-20 bg-white/90 hover:bg-white p-3 rounded-full shadow-lg transition-all duration-200 hover:scale-110 border border-gray-200 dark:bg-gray-800/90 dark:hover:bg-gray-800 dark:border-gray-600"
+                onClick={nextSlide}
                 aria-label="Next image"
-                style={{ pointerEvents: 'auto' }}
               >
                 <ChevronRight className="h-5 w-5 dark:text-white" />
               </button>
             </>
           )}
-          
-          {/* Carousel */}
+
+          {/* Main Image */}
           <div 
-            ref={sliderRef} 
-            className="keen-slider rounded-2xl overflow-hidden touch-manipulation"
+            className="relative bg-gray-100 dark:bg-gray-800 rounded-2xl overflow-hidden cursor-pointer"
+            onClick={() => openModal(currentSlide)}
+            onTouchStart={onTouchStart}
+            onTouchMove={onTouchMove}
+            onTouchEnd={onTouchEnd}
           >
+            <motion.img
+              key={currentSlide}
+              src={images[currentSlide]}
+              alt={`Image ${currentSlide + 1}`}
+              className="w-full h-64 md:h-80 object-contain"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.3 }}
+              loading="lazy"
+            />
+            
+            {/* Mobile swipe indicator */}
+            {isMobile && images.length > 1 && (
+              <div className="absolute bottom-2 left-1/2 -translate-x-1/2 text-white/70 text-xs bg-black/30 px-2 py-1 rounded">
+                Swipe to view more images
+              </div>
+            )}
+
+            {/* Image counter */}
+            {images.length > 1 && (
+              <div className="absolute top-2 right-2 bg-black/50 text-white text-sm px-2 py-1 rounded">
+                {currentSlide + 1} of {images.length}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Thumbnails */}
+        {images.length > 1 && (
+          <div className={`flex mt-4 gap-2 overflow-x-auto pb-2 ${
+            isMobile ? 'justify-start' : 'justify-center'
+          }`}>
             {images.map((src, idx) => (
-              <motion.div
+              <button
                 key={idx}
-                className="keen-slider__slide flex items-center justify-center bg-gray-100 dark:bg-gray-800 relative"
-                onClick={() => openModal(idx)} // FIXED: Pass the actual slide index instead of currentSlide
+                onClick={() => isMobile ? openModal(idx) : goToSlide(idx)}
+                className={`flex-shrink-0 ${
+                  isMobile ? 'w-16 h-16' : 'w-20 h-20'
+                } rounded-lg overflow-hidden border-2 transition-all duration-200 ${
+                  currentSlide === idx 
+                    ? "border-blue-500 ring-2 ring-blue-500/30" 
+                    : "border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500"
+                }`}
+                aria-label={`${isMobile ? 'View' : 'Go to'} image ${idx + 1}`}
               >
                 <img
                   src={src}
-                  alt={`Image ${idx + 1}`}
-                  className="object-contain w-full h-64 md:h-80 cursor-pointer"
+                  alt={`Thumbnail ${idx + 1}`}
+                  className="w-full h-full object-cover"
                   loading="lazy"
                 />
-                {/* Mobile swipe indicator - only show if there are multiple images */}
-                {isMobile && images.length > 1 && (
-                  <div className="absolute bottom-2 left-1/2 -translate-x-1/2 text-white/70 text-xs bg-black/30 px-2 py-1 rounded">
-                    Swipe to view more images
-                  </div>
-                )}
-              </motion.div>
+              </button>
             ))}
           </div>
+        )}
 
-          {/* Thumbnails - show below carousel on both mobile and desktop */}
-          {images.length > 1 ? (
-            <div className={`flex mt-4 gap-2 overflow-x-auto pb-2 ${
-              isMobile ? 'justify-start' : 'justify-center'
-            }`}>
-              {images.map((src, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => handleThumbnailClick(idx)}
-                  className={`flex-shrink-0 ${
-                    isMobile ? 'w-16 h-16' : 'w-20 h-20'
-                  } rounded-lg overflow-hidden border-2 transition-all duration-200 ${
-                    currentSlide === idx 
-                      ? "border-blue-500 ring-2 ring-blue-500/30" 
-                      : "border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500"
-                  }`}
-                  aria-label={`Go to image ${idx + 1}`}
-                >
-                  <img
-                    src={src}
-                    alt={`Thumbnail ${idx + 1}`}
-                    className="w-full h-full object-cover"
-                    loading="lazy"
-                  />
-                </button>
-              ))}
-            </div>
-          ) : (
-            /* Single dot for single image */
-            <div className="flex justify-center mt-4 gap-2">
-              <div className={`${isMobile ? 'h-3 w-3' : 'h-2 w-2'} rounded-full bg-black dark:bg-white`} />
-            </div>
-          )}
-        </div>
+        {/* Single image indicator */}
+        {images.length === 1 && (
+          <div className="flex justify-center mt-4">
+            <div className={`${isMobile ? 'h-3 w-3' : 'h-2 w-2'} rounded-full bg-black dark:bg-white`} />
+          </div>
+        )}
       </div>
 
       {/* Fullscreen Modal */}
@@ -244,18 +197,26 @@ export default function ImageCarousel({ images }: ImageCarouselProps) {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-50 bg-black bg-opacity-90 flex flex-col items-center justify-center p-4"
+            onTouchStart={onTouchStart}
+            onTouchMove={onTouchMove}
+            onTouchEnd={onTouchEnd}
           >
-            {/* Close Button - larger on mobile */}
+            {/* Close Button */}
             <button
               onClick={closeModal}
-              className={`absolute top-4 right-4 bg-white/20 hover:bg-white/30 ${isMobile ? 'p-3' : 'p-2'} rounded-full`}
+              className={`absolute top-4 right-4 bg-white/20 hover:bg-white/30 ${isMobile ? 'p-3' : 'p-2'} rounded-full z-60`}
               aria-label="Close fullscreen view"
             >
               <X className={`${isMobile ? 'h-7 w-7' : 'h-6 w-6'} text-white`} />
             </button>
 
-            {/* Zoom Controls - conditionally shown based on device */}
-            <div className={`absolute bottom-8 flex gap-4 ${isMobile ? 'opacity-50' : ''}`}>
+            {/* Image counter in modal */}
+            <div className="absolute top-4 left-4 bg-black/50 text-white text-sm px-3 py-1 rounded">
+              {modalSlide + 1} of {images.length}
+            </div>
+
+            {/* Zoom Controls */}
+            <div className={`absolute bottom-8 flex gap-4 z-60 ${isMobile ? 'opacity-70' : ''}`}>
               <button
                 onClick={zoomOut}
                 className={`bg-white/20 hover:bg-white/30 ${isMobile ? 'p-3' : 'p-2'} rounded-full`}
@@ -272,46 +233,43 @@ export default function ImageCarousel({ images }: ImageCarouselProps) {
               </button>
             </div>
 
-            {/* Image Viewer with touch events for mobile */}
-            <div 
-              className="relative w-full max-w-3xl h-full flex items-center justify-center"
-              onTouchStart={handleTouchStart}
-              onTouchMove={handleTouchMove}
-              onTouchEnd={handleTouchEnd}
-            >
-              <img
+            {/* Modal Image Container */}
+            <div className="relative w-full max-w-4xl h-full flex items-center justify-center">
+              <motion.img
+                key={modalSlide}
                 src={images[modalSlide]}
                 alt={`Image ${modalSlide + 1}`}
-                className="object-contain max-h-full max-w-full touch-none"
+                className="object-contain max-h-full max-w-full touch-none select-none"
                 style={{ transform: `scale(${zoom})` }}
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.3 }}
                 draggable="false"
               />
 
-              {/* Left/Right Arrows inside Modal - visible on all devices */}
-              <button
-                className={`absolute left-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/30 ${isMobile ? 'p-3' : 'p-2'} rounded-full transition-all duration-200 hover:scale-110`}
-                onClick={() => {
-                  const newSlide = (modalSlide - 1 + images.length) % images.length;
-                  setModalSlide(newSlide);
-                }}
-                aria-label="Previous image"
-              >
-                <ChevronLeft className={`${isMobile ? 'h-7 w-7' : 'h-6 w-6'} text-white`} />
-              </button>
-              <button
-                className={`absolute right-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/30 ${isMobile ? 'p-3' : 'p-2'} rounded-full transition-all duration-200 hover:scale-110`}
-                onClick={() => {
-                  const newSlide = (modalSlide + 1) % images.length;
-                  setModalSlide(newSlide);
-                }}
-                aria-label="Next image"
-              >
-                <ChevronRight className={`${isMobile ? 'h-7 w-7' : 'h-6 w-6'} text-white`} />
-              </button>
-              
-              {/* Mobile indicator text */}
+              {/* Modal Navigation Arrows */}
+              {images.length > 1 && (
+                <>
+                  <button
+                    className={`absolute left-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/30 ${isMobile ? 'p-3' : 'p-2'} rounded-full transition-all duration-200 hover:scale-110 z-60`}
+                    onClick={prevModalSlide}
+                    aria-label="Previous image"
+                  >
+                    <ChevronLeft className={`${isMobile ? 'h-7 w-7' : 'h-6 w-6'} text-white`} />
+                  </button>
+                  <button
+                    className={`absolute right-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/30 ${isMobile ? 'p-3' : 'p-2'} rounded-full transition-all duration-200 hover:scale-110 z-60`}
+                    onClick={nextModalSlide}
+                    aria-label="Next image"
+                  >
+                    <ChevronRight className={`${isMobile ? 'h-7 w-7' : 'h-6 w-6'} text-white`} />
+                  </button>
+                </>
+              )}
+
+              {/* Mobile instructions */}
               {isMobile && (
-                <div className="absolute bottom-20 text-white/70 text-sm">
+                <div className="absolute bottom-20 text-white/70 text-sm text-center">
                   <p>Swipe to navigate • Pinch to zoom</p>
                 </div>
               )}
