@@ -48,7 +48,23 @@ export default function DirectWantedPostPage() {
             router.replace(finalUrl);
             return;
           } else {
-            console.log(`Post not found for Firebase ID: ${id}`);
+            console.log(`Post not found for Firebase ID: ${id}, trying API fallback...`);
+            
+            // Try using the API as a fallback
+            try {
+              const response = await fetch(`/api/wanted/debug-fetch?postId=${id}`);
+              if (response.ok) {
+                const data = await response.json();
+                if (data.success && data.post) {
+                  console.log(`Found post via API: ${data.post.title}`);
+                  const newUrl = getWantedPostUrl(data.post);
+                  router.replace(newUrl);
+                  return;
+                }
+              }
+            } catch (apiError) {
+              console.error('API fallback failed:', apiError);
+            }
           }
         } else {
           console.log(`ID "${id}" doesn't look like a Firebase ID, redirecting to wanted posts`);

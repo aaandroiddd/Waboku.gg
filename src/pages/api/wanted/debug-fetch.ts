@@ -1,93 +1,104 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { getFirebaseAdmin } from '@/lib/firebase-admin';
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  if (req.method !== 'GET') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  const { postId } = req.query;
+
+  if (!postId || typeof postId !== 'string') {
+    return res.status(400).json({ error: 'Post ID is required' });
+  }
+
   try {
-    console.log('Starting debug fetch for wanted posts...');
-    
     const { database } = getFirebaseAdmin();
     
     if (!database) {
-      return res.status(500).json({ 
-        error: 'Database not initialized',
-        databaseExists: !!database
-      });
+      console.error('Firebase Admin database not initialized');
+      return res.status(500).json({ error: 'Database not initialized' });
     }
 
-    const results: any = {
-      paths: {},
-      summary: {}
-    };
+    console.log(`=== DEBUG FETCH POST ===`);
+    console.log(`Looking for post ID: ${postId}`);
 
-    // Check all possible paths
-    const pathsToCheck = [
-      'wanted/posts',
-      'wantedPosts', 
-      'wanted'
+    // Try all possible paths where the post might be stored
+    const paths = [
+      `wantedPosts/${postId}`,
+      `wanted/posts/${postId}`,
+      `wanted/${postId}`
     ];
-
-    for (const path of pathsToCheck) {
+    
+    let postData = null;
+    let usedPath = '';
+    
+    // Try each path until we find the post
+    for (const path of paths) {
+      console.log(`Checking path: ${path}`);
       try {
-        console.log(`Checking path: ${path}`);
-        const snapshot = await database.ref(path).once('value');
+        const postRef = database.ref(path);
+        const snapshot = await postRef.once('value');
         
         if (snapshot.exists()) {
-          const data = snapshot.val();
-          const keys = Object.keys(data);
+          console.log(`Found post at path: ${path}`);
+          const rawData = snapshot.val();
           
-          results.paths[path] = {
-            exists: true,
-            count: keys.length,
-            firstKey: keys[0] || null,
-            samplePost: data[keys[0]] || null
+          // Ensure the post data has all required fields
+          postData = {
+            id: postId,
+            title: rawData.title || "Untitled Post",
+            description: rawData.description || "No description provided",
+            game: rawData.game || "Unknown Game",
+            condition: rawData.condition || "any",
+            isPriceNegotiable: rawData.isPriceNegotiable || true,
+            location: rawData.location || "Unknown Location",
+            createdAt: rawData.createdAt || Date.now(),
+            userId: rawData.userId || "unknown",
+            userName: rawData.userName || "Anonymous User",
+            ...rawData
           };
           
-          console.log(`Path ${path}: Found ${keys.length} items`);
-        } else {
-          results.paths[path] = {
-            exists: false,
-            count: 0,
-            firstKey: null,
-            samplePost: null
-          };
-          
-          console.log(`Path ${path}: No data found`);
+          usedPath = path;
+          break;
         }
       } catch (pathError) {
         console.error(`Error checking path ${path}:`, pathError);
-        results.paths[path] = {
-          error: pathError instanceof Error ? pathError.message : 'Unknown error'
-        };
+        // Continue to the next path
       }
     }
-
-    // Determine which path has the most posts
-    let bestPath = null;
-    let maxCount = 0;
     
-    for (const [path, data] of Object.entries(results.paths)) {
-      if ((data as any).exists && (data as any).count > maxCount) {
-        maxCount = (data as any).count;
-        bestPath = path;
-      }
+    if (!postData) {
+      console.log(`No post found with ID: ${postId} after trying all paths`);
+      return res.status(404).json({ 
+        error: 'Post not found',
+        debug: {
+          postId,
+          pathsChecked: paths
+        }
+      });
     }
 
-    results.summary = {
-      bestPath,
-      maxCount,
-      recommendation: bestPath ? `Use path: ${bestPath}` : 'No posts found in any path'
-    };
-
-    console.log('Debug fetch complete:', results.summary);
+    console.log(`Successfully found post: ${postData.title} at path: ${usedPath}`);
     
-    return res.status(200).json(results);
+    return res.status(200).json({
+      success: true,
+      post: postData,
+      debug: {
+        postId,
+        usedPath,
+        pathsChecked: paths
+      }
+    });
+
   } catch (error) {
-    console.error('Error in debug fetch:', error);
+    console.error('Error fetching post:', error);
     return res.status(500).json({ 
-      error: error instanceof Error ? error.message : 'Unknown error'
+      error: 'Internal server error',
+      debug: {
+        postId,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      }
     });
   }
 }

@@ -199,8 +199,8 @@ export default function WantedPostDetailPage() {
           if (database) {
             // Try all possible paths where the post might be stored
             const paths = [
-              `wanted/posts/${postId}`,
               `wantedPosts/${postId}`,
+              `wanted/posts/${postId}`,
               `wanted/${postId}`
             ];
             
