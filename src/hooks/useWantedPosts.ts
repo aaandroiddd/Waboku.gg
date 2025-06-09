@@ -680,32 +680,32 @@ export function useWantedPosts(options: WantedPostsOptions = {}) {
         throw new Error('Database not initialized');
       }
       
-      // First try the new path structure
-      const postRef = ref(database, `wanted/posts/${postId}`);
-      console.log(`Trying new path structure: wanted/posts/${postId}`);
+      // First try the wantedPosts path (where data actually exists)
+      const postRef = ref(database, `wantedPosts/${postId}`);
+      console.log(`Trying wantedPosts path: wantedPosts/${postId}`);
       
       // Fetch the post data
       console.log('Executing get() for post data...');
       let snapshot = await get(postRef);
       console.log(`Post data fetch complete, exists: ${snapshot.exists()}`);
       
-      // If not found, try the old path structure
+      // If not found, try the wanted/posts path structure
       if (!snapshot.exists()) {
-        console.log(`Post not found at new path, trying legacy path: wantedPosts/${postId}`);
-        await logToServer('Post not found at new path, trying legacy path', { 
+        console.log(`Post not found at wantedPosts path, trying wanted/posts path: wanted/posts/${postId}`);
+        await logToServer('Post not found at wantedPosts path, trying wanted/posts path', { 
           postId, 
-          newPath: `wanted/posts/${postId}`,
-          legacyPath: `wantedPosts/${postId}`
+          wantedPostsPath: `wantedPosts/${postId}`,
+          wantedPath: `wanted/posts/${postId}`
         }, 'info');
         
-        const legacyPostRef = ref(database, `wantedPosts/${postId}`);
-        snapshot = await get(legacyPostRef);
-        console.log(`Legacy path fetch complete, exists: ${snapshot.exists()}`);
+        const wantedPostsRef = ref(database, `wanted/posts/${postId}`);
+        snapshot = await get(wantedPostsRef);
+        console.log(`wanted/posts path fetch complete, exists: ${snapshot.exists()}`);
         
         // If still not found, try direct path without subfolder
         if (!snapshot.exists()) {
-          console.log(`Post not found at legacy path, trying direct path: wanted/${postId}`);
-          await logToServer('Post not found at legacy path, trying direct path', { 
+          console.log(`Post not found at wanted/posts path, trying direct path: wanted/${postId}`);
+          await logToServer('Post not found at wanted/posts path, trying direct path', { 
             postId, 
             directPath: `wanted/${postId}`
           }, 'info');
@@ -722,8 +722,8 @@ export function useWantedPosts(options: WantedPostsOptions = {}) {
         await logToServer('Wanted post not found in any path location', { 
           postId,
           pathsChecked: [
-            `wanted/posts/${postId}`,
             `wantedPosts/${postId}`,
+            `wanted/posts/${postId}`,
             `wanted/${postId}`
           ]
         }, 'warn');
@@ -731,32 +731,49 @@ export function useWantedPosts(options: WantedPostsOptions = {}) {
         // Try to fetch all wanted posts to see what's available
         try {
           console.log('Attempting to list all wanted posts to debug...');
-          const allPostsRef = ref(database, 'wanted/posts');
+          const allPostsRef = ref(database, 'wantedPosts');
           const allPostsSnapshot = await get(allPostsRef);
           
           if (allPostsSnapshot.exists()) {
             const postKeys = Object.keys(allPostsSnapshot.val());
-            console.log(`Found ${postKeys.length} posts in wanted/posts path`);
-            await logToServer('Found posts in wanted/posts path', { 
+            console.log(`Found ${postKeys.length} posts in wantedPosts path`);
+            await logToServer('Found posts in wantedPosts path', { 
               count: postKeys.length,
-              firstFewKeys: postKeys.slice(0, 3)
+              firstFewKeys: postKeys.slice(0, 3),
+              searchingFor: postId
             }, 'info');
+            
+            // Check if our specific post ID exists in the list
+            if (postKeys.includes(postId)) {
+              console.log(`Post ID ${postId} exists in wantedPosts but get() failed - possible permissions issue`);
+              await logToServer('Post exists in list but get() failed', { 
+                postId,
+                totalPosts: postKeys.length
+              }, 'error');
+            } else {
+              console.log(`Post ID ${postId} not found in list of ${postKeys.length} posts`);
+              await logToServer('Post ID not in wantedPosts list', { 
+                postId,
+                totalPosts: postKeys.length,
+                sampleKeys: postKeys.slice(0, 5)
+              }, 'info');
+            }
           } else {
-            console.log('No posts found in wanted/posts path');
+            console.log('No posts found in wantedPosts path');
             
-            // Check legacy path
-            const legacyAllPostsRef = ref(database, 'wantedPosts');
-            const legacyAllPostsSnapshot = await get(legacyAllPostsRef);
+            // Check wanted/posts path
+            const wantedPostsRef = ref(database, 'wanted/posts');
+            const wantedPostsSnapshot = await get(wantedPostsRef);
             
-            if (legacyAllPostsSnapshot.exists()) {
-              const postKeys = Object.keys(legacyAllPostsSnapshot.val());
-              console.log(`Found ${postKeys.length} posts in wantedPosts path`);
-              await logToServer('Found posts in wantedPosts path', { 
+            if (wantedPostsSnapshot.exists()) {
+              const postKeys = Object.keys(wantedPostsSnapshot.val());
+              console.log(`Found ${postKeys.length} posts in wanted/posts path`);
+              await logToServer('Found posts in wanted/posts path', { 
                 count: postKeys.length,
                 firstFewKeys: postKeys.slice(0, 3)
               }, 'info');
             } else {
-              console.log('No posts found in wantedPosts path either');
+              console.log('No posts found in wanted/posts path either');
               await logToServer('No posts found in any path', {}, 'warn');
             }
           }
