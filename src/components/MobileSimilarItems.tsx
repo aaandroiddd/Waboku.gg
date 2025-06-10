@@ -1,22 +1,12 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Listing } from '@/types/database';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious, CarouselApi } from '@/components/ui/carousel';
-import { Heart, MapPin, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useRouter } from 'next/router';
-import { getFirebaseServices, registerListener, removeListenersByPrefix } from '@/lib/firebase';
+import { getFirebaseServices, removeListenersByPrefix } from '@/lib/firebase';
 import { collection, query, where, limit, documentId, getDocs } from 'firebase/firestore';
+import { ListingCard } from '@/components/ListingCard';
 import { useFavorites } from '@/hooks/useFavorites';
 import { useAuth } from '@/contexts/AuthContext';
-import { formatPrice } from '@/lib/price';
-import { getListingUrl } from '@/lib/listing-slug';
-import { GameCategoryBadge } from '@/components/GameCategoryBadge';
-import { UserNameLink } from '@/components/UserNameLink';
-import { StripeSellerBadge } from '@/components/StripeSellerBadge';
-import Image from 'next/image';
-import Link from 'next/link';
 
 interface MobileSimilarItemsProps {
   currentListing: Listing;
@@ -29,14 +19,8 @@ export const MobileSimilarItems = ({ currentListing, maxListings = 6 }: MobileSi
   const router = useRouter();
   const fetchedRef = useRef(false);
 
-  // Carousel API for mobile navigation
-  const [api, setApi] = useState<CarouselApi>();
-  const [canScrollPrev, setCanScrollPrev] = useState(false);
-  const [canScrollNext, setCanScrollNext] = useState(false);
-  const carouselRef = useRef<HTMLDivElement>(null);
-
   // Add favorites functionality
-  const { toggleFavorite, isFavorite } = useFavorites();
+  const { toggleFavorite, isFavorite, addFavoriteToGroup } = useFavorites();
   const { user } = useAuth();
 
   // Create a memoized fetch function
@@ -125,23 +109,6 @@ export const MobileSimilarItems = ({ currentListing, maxListings = 6 }: MobileSi
     };
   }, [currentListing?.id, fetchSimilarListings]);
 
-  // Update scroll state when API changes
-  useEffect(() => {
-    if (!api) return;
-
-    const updateScrollState = () => {
-      setCanScrollPrev(api.canScrollPrev());
-      setCanScrollNext(api.canScrollNext());
-    };
-
-    updateScrollState();
-    api.on('select', updateScrollState);
-
-    return () => {
-      api.off('select', updateScrollState);
-    };
-  }, [api]);
-
   // Handle favorite click
   const handleFavoriteClick = useCallback((e: React.MouseEvent, listing: Listing) => {
     e.preventDefault();
@@ -155,26 +122,54 @@ export const MobileSimilarItems = ({ currentListing, maxListings = 6 }: MobileSi
     toggleFavorite(listing, e);
   }, [user, toggleFavorite, router]);
 
-  // Prevent carousel from resetting when interacting with listing cards
-  const handleCarouselInteraction = useCallback((e: React.MouseEvent) => {
-    // Don't prevent default for links and buttons
-    if ((e.target as HTMLElement).closest('a, button')) {
-      return;
-    }
-    e.stopPropagation();
+  // Condition color function for ListingCard
+  const getConditionColor = useCallback((condition: string) => {
+    const conditionColors: Record<string, { base: string; hover: string }> = {
+      'poor': {
+        base: 'bg-[#e51f1f]/20 text-[#e51f1f] border border-[#e51f1f]/30',
+        hover: 'hover:bg-[#e51f1f]/30'
+      },
+      'played': {
+        base: 'bg-[#e85f2a]/20 text-[#e85f2a] border border-[#e85f2a]/30',
+        hover: 'hover:bg-[#e85f2a]/30'
+      },
+      'light played': {
+        base: 'bg-[#f2a134]/20 text-[#f2a134] border border-[#f2a134]/30',
+        hover: 'hover:bg-[#f2a134]/30'
+      },
+      'light-played': {
+        base: 'bg-[#f2a134]/20 text-[#f2a134] border border-[#f2a134]/30',
+        hover: 'hover:bg-[#f2a134]/30'
+      },
+      'good': {
+        base: 'bg-[#f2a134]/20 text-[#f2a134] border border-[#f2a134]/30',
+        hover: 'hover:bg-[#f2a134]/30'
+      },
+      'excellent': {
+        base: 'bg-[#f7e379]/20 text-[#f7e379] border border-[#f7e379]/30',
+        hover: 'hover:bg-[#f7e379]/30'
+      },
+      'near mint': {
+        base: 'bg-[#7bce2a]/20 text-[#7bce2a] border border-[#7bce2a]/30',
+        hover: 'hover:bg-[#7bce2a]/30'
+      },
+      'near-mint': {
+        base: 'bg-[#7bce2a]/20 text-[#7bce2a] border border-[#7bce2a]/30',
+        hover: 'hover:bg-[#7bce2a]/30'
+      },
+      'near_mint': {
+        base: 'bg-[#7bce2a]/20 text-[#7bce2a] border border-[#7bce2a]/30',
+        hover: 'hover:bg-[#7bce2a]/30'
+      },
+      'mint': {
+        base: 'bg-[#44ce1b]/20 text-[#44ce1b] border border-[#44ce1b]/30',
+        hover: 'hover:bg-[#44ce1b]/30'
+      }
+    };
+
+    const defaultColor = { base: 'bg-gray-500/20 text-gray-500 border border-gray-500/30', hover: 'hover:bg-gray-500/30' };
+    return conditionColors[condition?.toLowerCase()] || defaultColor;
   }, []);
-
-  const handlePrevious = useCallback(() => {
-    if (api && canScrollPrev) {
-      api.scrollPrev();
-    }
-  }, [api, canScrollPrev]);
-
-  const handleNext = useCallback(() => {
-    if (api && canScrollNext) {
-      api.scrollNext();
-    }
-  }, [api, canScrollNext]);
 
   if (isLoading) {
     return (
@@ -183,9 +178,9 @@ export const MobileSimilarItems = ({ currentListing, maxListings = 6 }: MobileSi
           <h2 className="text-xl font-bold">Similar Items</h2>
           <div className="h-4 bg-muted rounded w-16 animate-pulse"></div>
         </div>
-        <div className="flex gap-3 overflow-x-auto pb-2">
-          {[...Array(3)].map((_, i) => (
-            <div key={i} className="flex-shrink-0 w-48 animate-pulse">
+        <div className="grid grid-cols-2 sm:grid-cols-2 gap-3">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="animate-pulse">
               <div className="aspect-square bg-muted rounded-lg mb-2"></div>
               <div className="h-4 bg-muted rounded w-3/4 mb-1"></div>
               <div className="h-3 bg-muted rounded w-1/2 mb-1"></div>
@@ -214,136 +209,18 @@ export const MobileSimilarItems = ({ currentListing, maxListings = 6 }: MobileSi
         </Button>
       </div>
       
-      <div ref={carouselRef} onMouseDown={handleCarouselInteraction}>
-        <Carousel 
-          className="w-full" 
-          setApi={setApi}
-          opts={{
-            align: "start",
-            loop: false,
-            skipSnaps: false,
-            dragFree: false,
-          }}
-        >
-          <CarouselContent className="-ml-3">
-            {similarListings.map((listing, index) => (
-              <CarouselItem key={`mobile-similar-${listing.id}-${index}`} className="pl-3 basis-48">
-                <div 
-                  onMouseEnter={(e) => e.stopPropagation()}
-                  onMouseLeave={(e) => e.stopPropagation()}
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <Link href={getListingUrl(listing)}>
-                    <Card className="overflow-hidden hover:shadow-md transition-shadow">
-                      <CardContent className="p-0">
-                        {/* Image */}
-                        <div className="aspect-square relative bg-muted">
-                          {listing.imageUrls && listing.imageUrls.length > 0 ? (
-                            <Image
-                              src={listing.imageUrls[listing.coverImageIndex || 0]}
-                              alt={listing.title}
-                              fill
-                              className="object-cover"
-                              sizes="192px"
-                              loading="lazy"
-                              onError={(e) => {
-                                const target = e.target as HTMLImageElement;
-                                target.src = '/images/rect.png';
-                              }}
-                            />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center bg-muted">
-                              <span className="text-muted-foreground text-sm">No image</span>
-                            </div>
-                          )}
-                          
-                          {/* Favorite button */}
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className={`absolute top-2 right-2 bg-black/50 hover:bg-black/75 rounded-full ${
-                              user && isFavorite(listing.id) ? 'text-red-500' : 'text-white'
-                            }`}
-                            onClick={(e) => handleFavoriteClick(e, listing)}
-                          >
-                            <Heart 
-                              className={`h-4 w-4 ${user && isFavorite(listing.id) ? 'fill-current' : ''}`}
-                            />
-                          </Button>
-                        </div>
-                        
-                        {/* Content */}
-                        <div className="p-3 space-y-2">
-                          <h3 className="font-medium text-sm line-clamp-2 leading-tight">
-                            {listing.title}
-                          </h3>
-                          
-                          <div className="text-xs text-muted-foreground">
-                            by <UserNameLink userId={listing.userId} initialUsername={listing.username} />
-                          </div>
-                          
-                          <div className="flex items-center gap-1 flex-wrap">
-                            {listing.game && (
-                              <GameCategoryBadge 
-                                game={listing.game} 
-                                variant="outline" 
-                                className="text-xs"
-                              />
-                            )}
-                            <Badge variant="secondary" className="text-xs">
-                              {listing.condition}
-                            </Badge>
-                            <StripeSellerBadge userId={listing.userId} className="text-xs" />
-                            {listing.isGraded && (
-                              <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
-                                {listing.gradingCompany} {listing.gradeLevel}
-                              </Badge>
-                            )}
-                          </div>
-                          
-                          <div className="space-y-1">
-                            <div className="text-lg font-bold">
-                              {listing.offersOnly ? "Offers Only" : formatPrice(listing.price)}
-                            </div>
-                            
-                            <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                              <MapPin className="h-3 w-3" />
-                              <span>{listing.city}, {listing.state}</span>
-                            </div>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </Link>
-                </div>
-            </CarouselItem>
-          ))}
-        </CarouselContent>
-        </Carousel>
-      </div>
-      
-      {/* Mobile navigation buttons */}
-      <div className="flex justify-center gap-4 mt-4">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handlePrevious}
-          disabled={!canScrollPrev}
-          className="flex items-center gap-2"
-        >
-          <ChevronLeft className="h-4 w-4" />
-          Previous
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleNext}
-          disabled={!canScrollNext}
-          className="flex items-center gap-2"
-        >
-          Next
-          <ChevronRight className="h-4 w-4" />
-        </Button>
+      {/* Grid layout similar to /listings/ page */}
+      <div className="grid grid-cols-2 sm:grid-cols-2 gap-3 auto-rows-fr">
+        {similarListings.map((listing) => (
+          <ListingCard
+            key={listing.id}
+            listing={listing}
+            isFavorite={user ? isFavorite(listing.id) : false}
+            onFavoriteClick={handleFavoriteClick}
+            onAddToGroup={(listingId, groupId) => addFavoriteToGroup(listing, groupId)}
+            getConditionColor={getConditionColor}
+          />
+        ))}
       </div>
     </div>
   );
