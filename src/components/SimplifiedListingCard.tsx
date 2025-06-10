@@ -28,12 +28,15 @@ export const SimplifiedListingCard = ({ listing }: SimplifiedListingCardProps) =
           <div className="aspect-square bg-muted rounded-lg mb-2 relative overflow-hidden flex-shrink-0">
             <div className="absolute inset-0 bg-gradient-to-br from-muted/80 to-muted animate-pulse" />
             <Image
+              key={`${listing.id}-${imageUrl}`} // Add unique key to prevent caching issues
               src={imageUrl}
               alt={listing.title}
               className="rounded-lg object-cover"
               fill
               sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
               loading="lazy"
+              priority={false}
+              unoptimized={imageUrl.includes('/api/images/')} // Disable optimization for proxy URLs
               onError={(e) => {
                 const target = e.target as HTMLImageElement;
                 target.src = '/images/rect.png';

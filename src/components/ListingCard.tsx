@@ -539,6 +539,7 @@ export const ListingCard = memo(({ listing, isFavorite, onFavoriteClick, onAddTo
                     
                     return (
                       <Image
+                        key={`${listing.id}-${imageUrl}`} // Add unique key to prevent caching issues
                         src={imageUrl}
                         alt={listing.title}
                         className="rounded-lg object-cover"
@@ -547,6 +548,7 @@ export const ListingCard = memo(({ listing, isFavorite, onFavoriteClick, onAddTo
                         priority={false}
                         quality={80}
                         loading="lazy"
+                        unoptimized={imageUrl.includes('/api/images/')} // Disable optimization for proxy URLs
                         onError={(e) => {
                           console.error(`Image load error for listing ${listing.id}:`, imageUrl);
                           const target = e.target as HTMLImageElement;
