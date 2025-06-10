@@ -3,7 +3,7 @@ import { Listing } from '@/types/database';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Heart, Star } from 'lucide-react';
+import { Heart, MapPin } from 'lucide-react';
 import { useRouter } from 'next/router';
 import { getFirebaseServices, registerListener, removeListenersByPrefix } from '@/lib/firebase';
 import { collection, query, where, limit, documentId, getDocs } from 'firebase/firestore';
@@ -11,6 +11,9 @@ import { useFavorites } from '@/hooks/useFavorites';
 import { useAuth } from '@/contexts/AuthContext';
 import { formatPrice } from '@/lib/price';
 import { getListingUrl } from '@/lib/listing-slug';
+import { GameCategoryBadge } from '@/components/GameCategoryBadge';
+import { UserNameLink } from '@/components/UserNameLink';
+import { StripeSellerBadge } from '@/components/StripeSellerBadge';
 import Image from 'next/image';
 import Link from 'next/link';
 
@@ -132,10 +135,7 @@ export const MobileSimilarItems = ({ currentListing, maxListings = 6 }: MobileSi
     return (
       <div className="px-4 py-6 bg-background">
         <div className="flex justify-between items-center mb-4">
-          <div>
-            <h2 className="text-xl font-bold">Similar Items</h2>
-            <p className="text-sm text-muted-foreground">Sponsored</p>
-          </div>
+          <h2 className="text-xl font-bold">Similar Items</h2>
           <div className="h-4 bg-muted rounded w-16 animate-pulse"></div>
         </div>
         <div className="flex gap-3 overflow-x-auto pb-2">
@@ -159,10 +159,7 @@ export const MobileSimilarItems = ({ currentListing, maxListings = 6 }: MobileSi
   return (
     <div className="px-4 py-6 bg-background border-t border-border">
       <div className="flex justify-between items-center mb-4">
-        <div>
-          <h2 className="text-xl font-bold">Similar Items</h2>
-          <p className="text-sm text-muted-foreground">Sponsored</p>
-        </div>
+        <h2 className="text-xl font-bold">Similar Items</h2>
         <Button 
           variant="ghost" 
           onClick={() => router.push(`/listings?game=${currentListing.game}`)}
@@ -220,10 +217,27 @@ export const MobileSimilarItems = ({ currentListing, maxListings = 6 }: MobileSi
                       {listing.title}
                     </h3>
                     
-                    <div className="flex items-center gap-1">
+                    <div className="text-xs text-muted-foreground">
+                      by <UserNameLink userId={listing.userId} initialUsername={listing.username} />
+                    </div>
+                    
+                    <div className="flex items-center gap-1 flex-wrap">
+                      {listing.game && (
+                        <GameCategoryBadge 
+                          game={listing.game} 
+                          variant="outline" 
+                          className="text-xs"
+                        />
+                      )}
                       <Badge variant="secondary" className="text-xs">
                         {listing.condition}
                       </Badge>
+                      <StripeSellerBadge userId={listing.userId} className="text-xs" />
+                      {listing.isGraded && (
+                        <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
+                          {listing.gradingCompany} {listing.gradeLevel}
+                        </Badge>
+                      )}
                     </div>
                     
                     <div className="space-y-1">
@@ -231,26 +245,11 @@ export const MobileSimilarItems = ({ currentListing, maxListings = 6 }: MobileSi
                         {listing.offersOnly ? "Offers Only" : formatPrice(listing.price)}
                       </div>
                       
-                      {!listing.offersOnly && (
-                        <div className="text-xs text-muted-foreground">
-                          Free shipping
-                        </div>
-                      )}
-                      
                       <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                        <span>Seller with 99.4% positive feedback</span>
+                        <MapPin className="h-3 w-3" />
+                        <span>{listing.city}, {listing.state}</span>
                       </div>
                     </div>
-                    
-                    {/* Authenticity Guarantee badge for graded items */}
-                    {listing.isGraded && (
-                      <div className="flex items-center gap-1 text-xs">
-                        <div className="flex items-center gap-1 text-blue-600">
-                          <Star className="h-3 w-3 fill-current" />
-                          <span className="font-medium">Authenticity Guarantee</span>
-                        </div>
-                      </div>
-                    )}
                   </div>
                 </CardContent>
               </Card>
