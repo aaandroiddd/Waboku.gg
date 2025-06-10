@@ -3,7 +3,8 @@ import { Listing } from '@/types/database';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Heart, MapPin } from 'lucide-react';
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious, CarouselApi } from '@/components/ui/carousel';
+import { Heart, MapPin, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useRouter } from 'next/router';
 import { getFirebaseServices, registerListener, removeListenersByPrefix } from '@/lib/firebase';
 import { collection, query, where, limit, documentId, getDocs } from 'firebase/firestore';
@@ -27,6 +28,11 @@ export const MobileSimilarItems = ({ currentListing, maxListings = 6 }: MobileSi
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
   const fetchedRef = useRef(false);
+
+  // Carousel API for mobile navigation
+  const [api, setApi] = useState<CarouselApi>();
+  const [canScrollPrev, setCanScrollPrev] = useState(false);
+  const [canScrollNext, setCanScrollNext] = useState(false);
 
   // Add favorites functionality
   const { toggleFavorite, isFavorite } = useFavorites();
@@ -118,6 +124,23 @@ export const MobileSimilarItems = ({ currentListing, maxListings = 6 }: MobileSi
     };
   }, [currentListing?.id, fetchSimilarListings]);
 
+  // Update scroll state when API changes
+  useEffect(() => {
+    if (!api) return;
+
+    const updateScrollState = () => {
+      setCanScrollPrev(api.canScrollPrev());
+      setCanScrollNext(api.canScrollNext());
+    };
+
+    updateScrollState();
+    api.on('select', updateScrollState);
+
+    return () => {
+      api.off('select', updateScrollState);
+    };
+  }, [api]);
+
   // Handle favorite click
   const handleFavoriteClick = useCallback((e: React.MouseEvent, listing: Listing) => {
     e.preventDefault();
@@ -169,93 +192,119 @@ export const MobileSimilarItems = ({ currentListing, maxListings = 6 }: MobileSi
         </Button>
       </div>
       
-      <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
-        {similarListings.map((listing) => (
-          <div key={listing.id} className="flex-shrink-0 w-48">
-            <Link href={getListingUrl(listing)}>
-              <Card className="overflow-hidden hover:shadow-md transition-shadow">
-                <CardContent className="p-0">
-                  {/* Image */}
-                  <div className="aspect-square relative bg-muted">
-                    {listing.imageUrls && listing.imageUrls.length > 0 ? (
-                      <Image
-                        src={listing.imageUrls[listing.coverImageIndex || 0]}
-                        alt={listing.title}
-                        fill
-                        className="object-cover"
-                        sizes="192px"
-                        loading="lazy"
-                        onError={(e) => {
-                          const target = e.target as HTMLImageElement;
-                          target.src = '/images/rect.png';
-                        }}
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center bg-muted">
-                        <span className="text-muted-foreground text-sm">No image</span>
-                      </div>
-                    )}
-                    
-                    {/* Favorite button */}
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className={`absolute top-2 right-2 bg-black/50 hover:bg-black/75 rounded-full ${
-                        user && isFavorite(listing.id) ? 'text-red-500' : 'text-white'
-                      }`}
-                      onClick={(e) => handleFavoriteClick(e, listing)}
-                    >
-                      <Heart 
-                        className={`h-4 w-4 ${user && isFavorite(listing.id) ? 'fill-current' : ''}`}
-                      />
-                    </Button>
-                  </div>
-                  
-                  {/* Content */}
-                  <div className="p-3 space-y-2">
-                    <h3 className="font-medium text-sm line-clamp-2 leading-tight">
-                      {listing.title}
-                    </h3>
-                    
-                    <div className="text-xs text-muted-foreground">
-                      by <UserNameLink userId={listing.userId} initialUsername={listing.username} />
-                    </div>
-                    
-                    <div className="flex items-center gap-1 flex-wrap">
-                      {listing.game && (
-                        <GameCategoryBadge 
-                          game={listing.game} 
-                          variant="outline" 
-                          className="text-xs"
+      <Carousel className="w-full" setApi={setApi}>
+        <CarouselContent className="-ml-3">
+          {similarListings.map((listing) => (
+            <CarouselItem key={`mobile-similar-${listing.id}`} className="pl-3 basis-48">
+              <Link href={getListingUrl(listing)}>
+                <Card className="overflow-hidden hover:shadow-md transition-shadow">
+                  <CardContent className="p-0">
+                    {/* Image */}
+                    <div className="aspect-square relative bg-muted">
+                      {listing.imageUrls && listing.imageUrls.length > 0 ? (
+                        <Image
+                          src={listing.imageUrls[listing.coverImageIndex || 0]}
+                          alt={listing.title}
+                          fill
+                          className="object-cover"
+                          sizes="192px"
+                          loading="lazy"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            target.src = '/images/rect.png';
+                          }}
                         />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-muted">
+                          <span className="text-muted-foreground text-sm">No image</span>
+                        </div>
                       )}
-                      <Badge variant="secondary" className="text-xs">
-                        {listing.condition}
-                      </Badge>
-                      <StripeSellerBadge userId={listing.userId} className="text-xs" />
-                      {listing.isGraded && (
-                        <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
-                          {listing.gradingCompany} {listing.gradeLevel}
-                        </Badge>
-                      )}
+                      
+                      {/* Favorite button */}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className={`absolute top-2 right-2 bg-black/50 hover:bg-black/75 rounded-full ${
+                          user && isFavorite(listing.id) ? 'text-red-500' : 'text-white'
+                        }`}
+                        onClick={(e) => handleFavoriteClick(e, listing)}
+                      >
+                        <Heart 
+                          className={`h-4 w-4 ${user && isFavorite(listing.id) ? 'fill-current' : ''}`}
+                        />
+                      </Button>
                     </div>
                     
-                    <div className="space-y-1">
-                      <div className="text-lg font-bold">
-                        {listing.offersOnly ? "Offers Only" : formatPrice(listing.price)}
+                    {/* Content */}
+                    <div className="p-3 space-y-2">
+                      <h3 className="font-medium text-sm line-clamp-2 leading-tight">
+                        {listing.title}
+                      </h3>
+                      
+                      <div className="text-xs text-muted-foreground">
+                        by <UserNameLink userId={listing.userId} initialUsername={listing.username} />
                       </div>
                       
-                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                        <MapPin className="h-3 w-3" />
-                        <span>{listing.city}, {listing.state}</span>
+                      <div className="flex items-center gap-1 flex-wrap">
+                        {listing.game && (
+                          <GameCategoryBadge 
+                            game={listing.game} 
+                            variant="outline" 
+                            className="text-xs"
+                          />
+                        )}
+                        <Badge variant="secondary" className="text-xs">
+                          {listing.condition}
+                        </Badge>
+                        <StripeSellerBadge userId={listing.userId} className="text-xs" />
+                        {listing.isGraded && (
+                          <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
+                            {listing.gradingCompany} {listing.gradeLevel}
+                          </Badge>
+                        )}
+                      </div>
+                      
+                      <div className="space-y-1">
+                        <div className="text-lg font-bold">
+                          {listing.offersOnly ? "Offers Only" : formatPrice(listing.price)}
+                        </div>
+                        
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                          <MapPin className="h-3 w-3" />
+                          <span>{listing.city}, {listing.state}</span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
-          </div>
-        ))}
+                  </CardContent>
+                </Card>
+              </Link>
+            </CarouselItem>
+          ))}
+        </CarouselContent>
+      </Carousel>
+      
+      {/* Mobile navigation buttons */}
+      <div className="flex justify-center gap-4 mt-4">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => api?.scrollPrev()}
+          disabled={!canScrollPrev}
+          className="flex items-center gap-2"
+        >
+          <ChevronLeft className="h-4 w-4" />
+          Previous
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => api?.scrollNext()}
+          disabled={!canScrollNext}
+          className="flex items-center gap-2"
+        >
+          Next
+          <ChevronRight className="h-4 w-4" />
+        </Button>
       </div>
     </div>
   );
