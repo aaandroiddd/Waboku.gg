@@ -368,7 +368,7 @@ export const OptimizedSimilarListings = ({ currentListing, maxListings = 8 }: Op
       <Carousel className="w-full" setApi={setApi}>
         <CarouselContent className="-ml-4">
           {similarListings.map((listing) => (
-            <CarouselItem key={listing.id} className="pl-4 md:basis-1/4 lg:basis-1/4">
+            <CarouselItem key={`similar-${listing.id}`} className="pl-4 md:basis-1/4 lg:basis-1/4">
               <ListingCard
                 listing={listing}
                 isFavorite={user ? isFavorite(listing.id) : false}

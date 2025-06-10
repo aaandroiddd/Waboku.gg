@@ -140,8 +140,8 @@ export const SimilarListings = ({ currentListing, maxListings = 6 }: SimilarList
         <>
           <Carousel className="w-full" setApi={setApi}>
             <CarouselContent className="-ml-4">
-              {similarListings.map((listing, index) => (
-                <CarouselItem key={`${listing.id}-${index}-${listing.imageUrls?.[0] || 'no-image'}`} className="pl-4 md:basis-1/2 lg:basis-1/3" style={{ height: '100%' }}>
+              {similarListings.map((listing) => (
+                <CarouselItem key={`similar-alt-${listing.id}`} className="pl-4 md:basis-1/2 lg:basis-1/3" style={{ height: '100%' }}>
                   <ListingCard
                     listing={listing}
                     isFavorite={initialized ? isFavorite(listing.id) : false}

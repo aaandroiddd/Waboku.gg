@@ -373,8 +373,8 @@ export const OwnerListings = ({ ownerId, currentListingId, maxListings = 8, owne
       
       <Carousel className="w-full relative" setApi={setApi}>
         <CarouselContent className="-ml-4">
-          {ownerListings.map((listing, index) => (
-            <CarouselItem key={`${listing.id}-${index}-${listing.imageUrls?.[0] || 'no-image'}`} className="pl-4 md:basis-1/4 lg:basis-1/4">
+          {ownerListings.map((listing) => (
+            <CarouselItem key={`owner-${listing.id}`} className="pl-4 md:basis-1/4 lg:basis-1/4">
               <ListingCard
                 listing={listing}
                 isFavorite={user ? isFavorite(listing.id) : false}

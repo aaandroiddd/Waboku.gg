@@ -539,7 +539,7 @@ export const ListingCard = memo(({ listing, isFavorite, onFavoriteClick, onAddTo
                     
                     return (
                       <Image
-                        key={`${listing.id}-${imageUrl}`} // Add unique key to prevent caching issues
+                        key={`listing-image-${listing.id}-${safeIndex}-${imageUrl.split('/').pop()?.split('?')[0] || 'default'}`} // More stable key
                         src={imageUrl}
                         alt={listing.title}
                         className="rounded-lg object-cover"
