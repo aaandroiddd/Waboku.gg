@@ -2,9 +2,9 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Listing } from '@/types/database';
 import { SimplifiedListingCard } from './SimplifiedListingCard';
 import { Button } from '@/components/ui/button';
-import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious, CarouselApi } from '@/components/ui/carousel';
 import { Card, CardContent } from '@/components/ui/card';
-import { AlertCircle, ArrowRight, RefreshCw } from 'lucide-react';
+import { AlertCircle, ArrowRight, RefreshCw, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useRouter } from 'next/router';
 import { getFirebaseServices, registerListener, removeListenersByPrefix } from '@/lib/firebase';
 import { collection, query, where, limit, documentId, getDocs } from 'firebase/firestore';
@@ -24,6 +24,28 @@ export const OptimizedSimilarListings = ({ currentListing, maxListings = 8 }: Op
   const [error, setError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
   const maxRetries = 3;
+
+  // Carousel API for mobile navigation
+  const [api, setApi] = useState<CarouselApi>();
+  const [canScrollPrev, setCanScrollPrev] = useState(false);
+  const [canScrollNext, setCanScrollNext] = useState(false);
+
+  // Update scroll state when API changes
+  useEffect(() => {
+    if (!api) return;
+
+    const updateScrollState = () => {
+      setCanScrollPrev(api.canScrollPrev());
+      setCanScrollNext(api.canScrollNext());
+    };
+
+    updateScrollState();
+    api.on('select', updateScrollState);
+
+    return () => {
+      api.off('select', updateScrollState);
+    };
+  }, [api]);
 
   // Create a memoized fetch function that we can call for initial load and retries
   const fetchSimilarListings = useCallback(async () => {
@@ -277,7 +299,7 @@ export const OptimizedSimilarListings = ({ currentListing, maxListings = 8 }: Op
         </Button>
       </div>
       
-      <Carousel className="w-full">
+      <Carousel className="w-full" setApi={setApi}>
         <CarouselContent className="-ml-4">
           {similarListings.map((listing) => (
             <CarouselItem key={listing.id} className="pl-4 md:basis-1/4 lg:basis-1/4">
@@ -285,8 +307,9 @@ export const OptimizedSimilarListings = ({ currentListing, maxListings = 8 }: Op
             </CarouselItem>
           ))}
         </CarouselContent>
+        {/* Desktop arrows - hidden on mobile */}
         <CarouselPrevious 
-          className="hover:bg-background/90 active:bg-background/90 transition-colors"
+          className="hidden md:flex hover:bg-background/90 active:bg-background/90 transition-colors"
           style={{ 
             position: 'absolute',
             top: '50%',
@@ -307,7 +330,7 @@ export const OptimizedSimilarListings = ({ currentListing, maxListings = 8 }: Op
           }}
         />
         <CarouselNext 
-          className="hover:bg-background/90 active:bg-background/90 transition-colors"
+          className="hidden md:flex hover:bg-background/90 active:bg-background/90 transition-colors"
           style={{ 
             position: 'absolute',
             top: '50%',
@@ -328,6 +351,30 @@ export const OptimizedSimilarListings = ({ currentListing, maxListings = 8 }: Op
           }}
         />
       </Carousel>
+      
+      {/* Mobile navigation arrows - shown only on mobile */}
+      <div className="flex justify-center gap-4 mt-4 md:hidden">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => api?.scrollPrev()}
+          disabled={!canScrollPrev}
+          className="flex items-center gap-2"
+        >
+          <ChevronLeft className="h-4 w-4" />
+          Previous
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => api?.scrollNext()}
+          disabled={!canScrollNext}
+          className="flex items-center gap-2"
+        >
+          Next
+          <ChevronRight className="h-4 w-4" />
+        </Button>
+      </div>
     </div>
   );
 };

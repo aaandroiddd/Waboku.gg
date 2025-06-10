@@ -2,9 +2,9 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Listing } from '@/types/database';
 import { SimplifiedListingCard } from './SimplifiedListingCard';
 import { Button } from '@/components/ui/button';
-import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious, CarouselApi } from '@/components/ui/carousel';
 import { Card, CardContent } from '@/components/ui/card';
-import { AlertCircle, ArrowRight, RefreshCw } from 'lucide-react';
+import { AlertCircle, ArrowRight, RefreshCw, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useRouter } from 'next/router';
 import { getFirebaseServices, registerListener, removeListenersByPrefix } from '@/lib/firebase';
 import { collection, query, where, limit, documentId, getDocs } from 'firebase/firestore';
@@ -26,6 +26,28 @@ export const OwnerListings = ({ ownerId, currentListingId, maxListings = 8, owne
   const [error, setError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
   const maxRetries = 3;
+
+  // Carousel API for mobile navigation
+  const [api, setApi] = useState<CarouselApi>();
+  const [canScrollPrev, setCanScrollPrev] = useState(false);
+  const [canScrollNext, setCanScrollNext] = useState(false);
+
+  // Update scroll state when API changes
+  useEffect(() => {
+    if (!api) return;
+
+    const updateScrollState = () => {
+      setCanScrollPrev(api.canScrollPrev());
+      setCanScrollNext(api.canScrollNext());
+    };
+
+    updateScrollState();
+    api.on('select', updateScrollState);
+
+    return () => {
+      api.off('select', updateScrollState);
+    };
+  }, [api]);
 
   // Create a memoized fetch function that we can call for initial load and retries
   const fetchOwnerListings = useCallback(async () => {
@@ -283,7 +305,7 @@ export const OwnerListings = ({ ownerId, currentListingId, maxListings = 8, owne
         </Button>
       </div>
       
-      <Carousel className="w-full relative">
+      <Carousel className="w-full relative" setApi={setApi}>
         <CarouselContent className="-ml-4">
           {ownerListings.map((listing, index) => (
             <CarouselItem key={`${listing.id}-${index}-${listing.imageUrls?.[0] || 'no-image'}`} className="pl-4 md:basis-1/4 lg:basis-1/4">
@@ -291,9 +313,34 @@ export const OwnerListings = ({ ownerId, currentListingId, maxListings = 8, owne
             </CarouselItem>
           ))}
         </CarouselContent>
-        <CarouselPrevious className="h-8 w-8 md:h-8 md:w-8" />
-        <CarouselNext className="h-8 w-8 md:h-8 md:w-8" />
+        {/* Desktop arrows - hidden on mobile */}
+        <CarouselPrevious className="hidden md:flex h-8 w-8" />
+        <CarouselNext className="hidden md:flex h-8 w-8" />
       </Carousel>
+      
+      {/* Mobile navigation arrows - shown only on mobile */}
+      <div className="flex justify-center gap-4 mt-4 md:hidden">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => api?.scrollPrev()}
+          disabled={!canScrollPrev}
+          className="flex items-center gap-2"
+        >
+          <ChevronLeft className="h-4 w-4" />
+          Previous
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => api?.scrollNext()}
+          disabled={!canScrollNext}
+          className="flex items-center gap-2"
+        >
+          Next
+          <ChevronRight className="h-4 w-4" />
+        </Button>
+      </div>
     </div>
   );
 };
