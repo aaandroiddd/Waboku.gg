@@ -8,6 +8,7 @@ import { registerListener } from '@/lib/firebase-service';
 declare global {
   interface Window {
     __transformInstances?: Record<string, any>;
+    __carouselApi?: any;
     __firestoreCache?: {
       sellerStatus?: Record<string, { hasStripeAccount: boolean; timestamp: number }>;
       users?: Record<string, any>;
@@ -194,12 +195,9 @@ export default function ListingPage() {
     const index = api.selectedScrollSnap();
     setCurrentImageIndex(index);
     
-    // Store the API reference in a DOM element for mobile navigation
-    if (typeof document !== 'undefined') {
-      const carouselElement = document.querySelector('.embla');
-      if (carouselElement && !carouselElement['emblaApi']) {
-        carouselElement['emblaApi'] = api;
-      }
+    // Store the API reference globally for better access
+    if (typeof window !== 'undefined') {
+      window.__carouselApi = api;
     }
   };
   const [isFavorited, setIsFavorited] = useState(false);
@@ -1191,7 +1189,7 @@ export default function ListingPage() {
                     </div>
                     {/* Mobile swipe hint - only shown if there are multiple images */}
                     {isMobile && listing.imageUrls.length > 1 && (
-                      <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 z-10 animate-fade-in-out">
+                      <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 z-10 pointer-events-none select-none">
                         <Badge variant="secondary" className="bg-background/80 backdrop-blur-sm px-3 py-1.5">
                           Swipe to view more images
                         </Badge>
@@ -1230,6 +1228,19 @@ export default function ListingPage() {
                     <CarouselNext className="hidden md:flex -right-4 mx-[40px]" />
                   </Carousel>
                   
+                  {/* View Image Link - moved above thumbnails */}
+                  <div className="mt-3 text-center">
+                    <a
+                      href={listing.imageUrls[currentImageIndex]}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm text-primary hover:text-primary/80 underline transition-colors inline-flex items-center gap-1"
+                    >
+                      <ZoomIn className="w-4 h-4" />
+                      View full image
+                    </a>
+                  </div>
+
                   {/* Thumbnails - show below carousel for both mobile and desktop */}
                   {listing.imageUrls.length > 1 && (
                     <div className={`flex mt-4 gap-2 overflow-x-auto pb-2 ${
@@ -1240,7 +1251,7 @@ export default function ListingPage() {
                           key={idx}
                           onClick={() => {
                             // Navigate the carousel to the selected image
-                            const api = document.querySelector('.embla')?.['emblaApi'];
+                            const api = window.__carouselApi;
                             if (api) {
                               api.scrollTo(idx);
                               setCurrentImageIndex(idx);
@@ -1267,19 +1278,6 @@ export default function ListingPage() {
                       ))}
                     </div>
                   )}
-
-                  {/* View Image Link */}
-                  <div className="mt-3 text-center">
-                    <a
-                      href={listing.imageUrls[currentImageIndex]}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-sm text-primary hover:text-primary/80 underline transition-colors inline-flex items-center gap-1"
-                    >
-                      <ZoomIn className="w-4 h-4" />
-                      View full image
-                    </a>
-                  </div>
                 </div>
 
                 <div className="text-center">
