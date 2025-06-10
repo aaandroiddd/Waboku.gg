@@ -1200,196 +1200,30 @@ export default function ListingPage() {
                     <CarouselContent>
                       {listing.imageUrls.map((url, index) => (
                         <CarouselItem key={index} className="flex items-center justify-center h-full">
-                          <Dialog>
-                            <DialogTrigger asChild>
-                              <div 
-                                className="relative w-full h-full group flex items-center justify-center p-4 cursor-pointer" 
-                                onClick={(e) => {
-                                  if (isMobile) {
-                                    e.preventDefault(); // Prevent dialog from opening on mobile
-                                    // Open the full resolution image in a new tab for mobile users
-                                    window.open(url, '_blank');
-                                  }
-                                }}
-                              >
-                                <div className="relative w-full h-full flex items-center justify-center">
-                                  <div className="relative w-full h-full">
-                                    <div className="relative w-full h-full">
-                                      <div className="absolute inset-0 rounded-lg animate-pulse bg-gradient-to-r from-gray-200/20 via-gray-100/20 to-gray-200/20 dark:from-gray-800/20 dark:via-gray-700/20 dark:to-gray-800/20 bg-[length:200%_100%]" />
-                                      <Image
-                                        src={url}
-                                        alt={`${listing.title} - Image ${index + 1}`}
-                                        fill
-                                        className="object-contain rounded-lg"
-                                        sizes="(max-width: 640px) 90vw, (max-width: 768px) 70vw, (max-width: 1024px) 50vw, 600px"
-                                        priority={index === 0}
-                                        loading={index === 0 ? "eager" : "lazy"}
-                                        quality={85}
-                                        onError={(e) => {
-                                          const target = e.target as HTMLImageElement;
-                                          target.src = '/images/rect.png';
-                                        }}
-                                      />
-                                    </div>
-                                  </div>
-                                  {/* Show zoom icon only on desktop */}
-                                  {!isMobile && (
-                                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/20 rounded-lg">
-                                      <ZoomIn className="w-8 h-8 text-white" />
-                                    </div>
-                                  )}
-                                  {/* Show a visual indicator for mobile users */}
-                                  {isMobile && (
-                                    <div className="absolute bottom-2 right-2 bg-black/60 text-white rounded-full p-1.5">
-                                      <ZoomIn className="w-4 h-4" />
-                                    </div>
-                                  )}
+                          <div className="relative w-full h-full group flex items-center justify-center p-4">
+                            <div className="relative w-full h-full flex items-center justify-center">
+                              <div className="relative w-full h-full">
+                                <div className="relative w-full h-full">
+                                  <div className="absolute inset-0 rounded-lg animate-pulse bg-gradient-to-r from-gray-200/20 via-gray-100/20 to-gray-200/20 dark:from-gray-800/20 dark:via-gray-700/20 dark:to-gray-800/20 bg-[length:200%_100%]" />
+                                  <Image
+                                    src={url}
+                                    alt={`${listing.title} - Image ${index + 1}`}
+                                    fill
+                                    className="object-contain rounded-lg"
+                                    sizes="(max-width: 640px) 90vw, (max-width: 768px) 70vw, (max-width: 1024px) 50vw, 600px"
+                                    priority={index === 0}
+                                    loading={index === 0 ? "eager" : "lazy"}
+                                    quality={85}
+                                    onError={(e) => {
+                                      const target = e.target as HTMLImageElement;
+                                      target.src = '/images/rect.png';
+                                    }}
+                                  />
                                 </div>
                               </div>
-                            </DialogTrigger>
-                            <DialogContent 
-                              className="max-w-[95vw] w-full h-auto p-0 overflow-hidden max-h-[70vh] sm:max-h-[75vh] md:max-h-[80vh] mobile-image-dialog"
-                              style={{
-                                transform: "translate(-50%, -50%) translateZ(0)",
-                                backfaceVisibility: "hidden",
-                                WebkitBackfaceVisibility: "hidden",
-                                perspective: "1000px",
-                                WebkitPerspective: "1000px",
-                                willChange: "transform"
-                              }}
-                              onOpenAutoFocus={(e) => {
-                                e.preventDefault();
-                                setCurrentImageIndex(index);
-                              }}
-                            >
-                              <DialogTitle className="sr-only">Image Viewer</DialogTitle>
-                              <DialogDescription className="sr-only">
-                                Detailed view of {listing.title} image {index + 1} of {listing.imageUrls.length}. Use zoom controls to examine details.
-                              </DialogDescription>
-                              <DialogClose asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="absolute top-2 right-2 z-20 bg-background/80 backdrop-blur-sm hover:bg-background/90"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                  }}
-                                >
-                                  <X className={`${isMobile ? 'h-5 w-5' : 'h-4 w-4'}`} />
-                                </Button>
-                              </DialogClose>
-                              <div className="relative w-full h-full flex items-center justify-center overflow-auto">
-                                <div className="absolute top-2 left-2 z-20">
-                                  <Badge variant="secondary" className="bg-background/80 backdrop-blur-sm">
-                                    {index + 1} of {listing.imageUrls.length}
-                                  </Badge>
-                                </div>
-                                <TransformWrapper
-                                  initialScale={1}
-                                  minScale={0.5}
-                                  maxScale={4}
-                                  centerOnInit={true}
-                                  alignmentAnimation={{ sizeX: 0, sizeY: 0 }}
-                                  limitToBounds={true}
-                                  centerZoomedOut={true}
-                                  doubleClick={{ mode: "reset" }}
-                                  initialPositionX={0}
-                                  initialPositionY={0}
-                                  panning={{ disabled: false }}
-                                >
-                                  {({ zoomIn, zoomOut, resetTransform }) => {
-                                    // Store zoom controls in ref when component mounts
-                                    React.useEffect(() => {
-                                      if (zoomControlsRef.current) {
-                                        zoomControlsRef.current[index] = {
-                                          zoomIn,
-                                          zoomOut,
-                                          resetTransform
-                                        };
-                                        
-                                        // Also store in window for debugging
-                                        if (typeof window !== 'undefined') {
-                                          window.__transformInstances = window.__transformInstances || {};
-                                          window.__transformInstances[`image-${index}`] = {
-                                            zoomIn,
-                                            zoomOut,
-                                            resetTransform
-                                          };
-                                        }
-                                      }
-                                      
-                                      return () => {
-                                        // Clean up when unmounting
-                                        if (zoomControlsRef.current && zoomControlsRef.current[index]) {
-                                          delete zoomControlsRef.current[index];
-                                        }
-                                        
-                                        if (typeof window !== 'undefined' && 
-                                            window.__transformInstances && 
-                                            window.__transformInstances[`image-${index}`]) {
-                                          delete window.__transformInstances[`image-${index}`];
-                                        }
-                                      };
-                                    }, []);
-                                    
-                                    return (
-                                      <>
-                                        <TransformComponent 
-                                          wrapperClass="!w-full !h-full !flex !items-center !justify-center !overflow-hidden" 
-                                          contentClass="!w-full !h-full !flex !items-center !justify-center !overflow-visible"
-                                        >
-                                          <div className="relative w-full h-full flex items-center justify-center p-1 sm:p-2">
-                                            <img
-                                              src={url}
-                                              alt={`${listing.title} - Image ${index + 1}`}
-                                              className="max-w-[90%] max-h-[50vh] sm:max-h-[55vh] md:max-h-[60vh] w-auto h-auto object-contain"
-                                              loading="eager"
-                                            />
-                                          </div>
-                                        </TransformComponent>
-                                        {/* Zoom controls - larger on mobile */}
-                                        <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 flex items-center gap-1 sm:gap-2 z-20 bg-background/80 backdrop-blur-sm p-1 rounded-full zoom-controls">
-                                          <Button
-                                            variant="outline"
-                                            size="icon"
-                                            className={`${isMobile ? 'h-8 w-8' : 'h-6 w-6 sm:h-7 sm:w-7'} rounded-full`}
-                                            onClick={() => zoomOut()}
-                                          >
-                                            <Minus className={`${isMobile ? 'h-4 w-4' : 'h-3 w-3'}`} />
-                                          </Button>
-                                          <Button
-                                            variant="outline"
-                                            size="icon"
-                                            className={`${isMobile ? 'h-8 w-8' : 'h-6 w-6 sm:h-7 sm:w-7'} rounded-full`}
-                                            onClick={() => resetTransform()}
-                                          >
-                                            <RotateCw className={`${isMobile ? 'h-4 w-4' : 'h-3 w-3'}`} />
-                                          </Button>
-                                          <Button
-                                            variant="outline"
-                                            size="icon"
-                                            className={`${isMobile ? 'h-8 w-8' : 'h-6 w-6 sm:h-7 sm:w-7'} rounded-full`}
-                                            onClick={() => zoomIn()}
-                                          >
-                                            <Plus className={`${isMobile ? 'h-4 w-4' : 'h-3 w-3'}`} />
-                                          </Button>
-                                        </div>
-                                        
-                                        {/* Mobile instructions */}
-                                        {isMobile && (
-                                          <div className="absolute top-12 left-0 right-0 text-center">
-                                            <Badge variant="secondary" className="bg-background/60 backdrop-blur-sm px-3 py-1">
-                                              Pinch to zoom • Swipe to navigate
-                                            </Badge>
-                                          </div>
-                                        )}
-                                      </>
-                                    );
-                                  }}
-                                </TransformWrapper>
-                              </div>
-                            </DialogContent>
-                          </Dialog>
+                            </div>
+                          </div>
+                        </CarouselItem>
                         </CarouselItem>
                       ))}
                     </CarouselContent>
@@ -1403,151 +1237,50 @@ export default function ListingPage() {
                       isMobile ? 'justify-start' : 'justify-center'
                     }`}>
                       {listing.imageUrls.map((url, idx) => (
-                        <Dialog key={idx}>
-                          <DialogTrigger asChild>
-                            <button
-                              onClick={() => {
-                                // For mobile, open the dialog directly to the selected image
-                                if (isMobile) {
-                                  setCurrentImageIndex(idx);
-                                } else {
-                                  // For desktop, navigate the carousel first
-                                  const api = document.querySelector('.embla')?.['emblaApi'];
-                                  if (api) {
-                                    api.scrollTo(idx);
-                                    setCurrentImageIndex(idx);
-                                  }
-                                }
-                              }}
-                              className={`flex-shrink-0 ${
-                                isMobile ? 'w-16 h-16' : 'w-20 h-20'
-                              } rounded-lg overflow-hidden border-2 transition-all duration-200 ${
-                                currentImageIndex === idx 
-                                  ? "border-blue-500 ring-2 ring-blue-500/30" 
-                                  : "border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500"
-                              }`}
-                              aria-label={`${isMobile ? 'View' : 'Go to'} image ${idx + 1}`}
-                            >
-                              <Image
-                                src={url}
-                                alt={`Thumbnail ${idx + 1}`}
-                                width={isMobile ? 64 : 80}
-                                height={isMobile ? 64 : 80}
-                                className="w-full h-full object-cover"
-                                loading="lazy"
-                              />
-                            </button>
-                          </DialogTrigger>
-                          {isMobile && (
-                            <DialogContent 
-                              className="max-w-[95vw] w-full h-auto p-0 overflow-hidden max-h-[70vh] sm:max-h-[75vh] md:max-h-[80vh] mobile-image-dialog"
-                              style={{
-                                transform: "translate(-50%, -50%) translateZ(0)",
-                                backfaceVisibility: "hidden",
-                                WebkitBackfaceVisibility: "hidden",
-                                perspective: "1000px",
-                                WebkitPerspective: "1000px",
-                                willChange: "transform"
-                              }}
-                              onOpenAutoFocus={(e) => {
-                                e.preventDefault();
-                                setCurrentImageIndex(idx);
-                              }}
-                            >
-                              <DialogTitle className="sr-only">Image Viewer</DialogTitle>
-                              <DialogDescription className="sr-only">
-                                Detailed view of {listing.title} image {idx + 1} of {listing.imageUrls.length}. Use zoom controls to examine details.
-                              </DialogDescription>
-                              <DialogClose asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="absolute top-2 right-2 z-20 bg-background/80 backdrop-blur-sm hover:bg-background/90"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                  }}
-                                >
-                                  <X className="h-5 w-5" />
-                                </Button>
-                              </DialogClose>
-                              <div className="relative w-full h-full flex items-center justify-center overflow-auto">
-                                <div className="absolute top-2 left-2 z-20">
-                                  <Badge variant="secondary" className="bg-background/80 backdrop-blur-sm">
-                                    {idx + 1} of {listing.imageUrls.length}
-                                  </Badge>
-                                </div>
-                                <TransformWrapper
-                                  initialScale={1}
-                                  minScale={0.5}
-                                  maxScale={4}
-                                  centerOnInit={true}
-                                  alignmentAnimation={{ sizeX: 0, sizeY: 0 }}
-                                  limitToBounds={true}
-                                  centerZoomedOut={true}
-                                  doubleClick={{ mode: "reset" }}
-                                  initialPositionX={0}
-                                  initialPositionY={0}
-                                  panning={{ disabled: false }}
-                                >
-                                  {({ zoomIn, zoomOut, resetTransform }) => (
-                                    <>
-                                      <TransformComponent 
-                                        wrapperClass="!w-full !h-full !flex !items-center !justify-center !overflow-hidden" 
-                                        contentClass="!w-full !h-full !flex !items-center !justify-center !overflow-visible"
-                                      >
-                                        <div className="relative w-full h-full flex items-center justify-center p-1 sm:p-2">
-                                          <img
-                                            src={url}
-                                            alt={`${listing.title} - Image ${idx + 1}`}
-                                            className="max-w-[90%] max-h-[50vh] sm:max-h-[55vh] md:max-h-[60vh] w-auto h-auto object-contain"
-                                            loading="eager"
-                                          />
-                                        </div>
-                                      </TransformComponent>
-                                      {/* Zoom controls */}
-                                      <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 flex items-center gap-2 z-20 bg-background/80 backdrop-blur-sm p-1 rounded-full">
-                                        <Button
-                                          variant="outline"
-                                          size="icon"
-                                          className="h-8 w-8 rounded-full"
-                                          onClick={() => zoomOut()}
-                                        >
-                                          <Minus className="h-4 w-4" />
-                                        </Button>
-                                        <Button
-                                          variant="outline"
-                                          size="icon"
-                                          className="h-8 w-8 rounded-full"
-                                          onClick={() => resetTransform()}
-                                        >
-                                          <RotateCw className="h-4 w-4" />
-                                        </Button>
-                                        <Button
-                                          variant="outline"
-                                          size="icon"
-                                          className="h-8 w-8 rounded-full"
-                                          onClick={() => zoomIn()}
-                                        >
-                                          <Plus className="h-4 w-4" />
-                                        </Button>
-                                      </div>
-                                      
-                                      {/* Mobile instructions */}
-                                      <div className="absolute top-12 left-0 right-0 text-center">
-                                        <Badge variant="secondary" className="bg-background/60 backdrop-blur-sm px-3 py-1">
-                                          Pinch to zoom • Swipe to navigate
-                                        </Badge>
-                                      </div>
-                                    </>
-                                  )}
-                                </TransformWrapper>
-                              </div>
-                            </DialogContent>
-                          )}
-                        </Dialog>
+                        <button
+                          key={idx}
+                          onClick={() => {
+                            // Navigate the carousel to the selected image
+                            const api = document.querySelector('.embla')?.['emblaApi'];
+                            if (api) {
+                              api.scrollTo(idx);
+                              setCurrentImageIndex(idx);
+                            }
+                          }}
+                          className={`flex-shrink-0 ${
+                            isMobile ? 'w-16 h-16' : 'w-20 h-20'
+                          } rounded-lg overflow-hidden border-2 transition-all duration-200 ${
+                            currentImageIndex === idx 
+                              ? "border-blue-500 ring-2 ring-blue-500/30" 
+                              : "border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500"
+                          }`}
+                          aria-label={`Go to image ${idx + 1}`}
+                        >
+                          <Image
+                            src={url}
+                            alt={`Thumbnail ${idx + 1}`}
+                            width={isMobile ? 64 : 80}
+                            height={isMobile ? 64 : 80}
+                            className="w-full h-full object-cover"
+                            loading="lazy"
+                          />
+                        </button>
                       ))}
                     </div>
                   )}
+
+                  {/* View Image Link */}
+                  <div className="mt-3 text-center">
+                    <a
+                      href={listing.imageUrls[currentImageIndex]}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm text-primary hover:text-primary/80 underline transition-colors inline-flex items-center gap-1"
+                    >
+                      <ZoomIn className="w-4 h-4" />
+                      View full image
+                    </a>
+                  </div>
                 </div>
 
                 <div className="text-center">
