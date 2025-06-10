@@ -285,8 +285,48 @@ export const OptimizedSimilarListings = ({ currentListing, maxListings = 8 }: Op
             </CarouselItem>
           ))}
         </CarouselContent>
-        <CarouselPrevious />
-        <CarouselNext />
+        <CarouselPrevious 
+          className="hover:bg-background/90 active:bg-background/90 transition-colors"
+          style={{ 
+            position: 'absolute',
+            top: '50%',
+            transform: 'translateY(-50%)',
+            transition: 'background-color 0.2s ease'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.transform = 'translateY(-50%)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = 'translateY(-50%)';
+          }}
+          onMouseDown={(e) => {
+            e.currentTarget.style.transform = 'translateY(-50%)';
+          }}
+          onMouseUp={(e) => {
+            e.currentTarget.style.transform = 'translateY(-50%)';
+          }}
+        />
+        <CarouselNext 
+          className="hover:bg-background/90 active:bg-background/90 transition-colors"
+          style={{ 
+            position: 'absolute',
+            top: '50%',
+            transform: 'translateY(-50%)',
+            transition: 'background-color 0.2s ease'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.transform = 'translateY(-50%)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = 'translateY(-50%)';
+          }}
+          onMouseDown={(e) => {
+            e.currentTarget.style.transform = 'translateY(-50%)';
+          }}
+          onMouseUp={(e) => {
+            e.currentTarget.style.transform = 'translateY(-50%)';
+          }}
+        />
       </Carousel>
     </div>
   );
