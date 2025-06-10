@@ -710,6 +710,16 @@
     display: none;  /* Chrome, Safari and Opera */
   }
 
+  /* Hide scrollbar for horizontal scroll containers */
+  .scrollbar-hide {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+  }
+  
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;  /* Chrome, Safari and Opera */
+  }
+
   .glow-text {
     @apply dark:text-white text-foreground;
     text-shadow: none;

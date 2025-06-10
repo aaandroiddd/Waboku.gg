@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { OptimizedSimilarListings } from '@/components/OptimizedSimilarListings';
 import { OwnerListings } from '@/components/OwnerListings';
+import { MobileSimilarItems } from '@/components/MobileSimilarItems';
 import { useListingPageCleanup } from '@/hooks/useFirestoreListener';
 import { registerListener } from '@/lib/firebase-service';
 
@@ -1543,6 +1544,11 @@ export default function ListingPage() {
             ownerName={listing.username} 
           />
         </div>
+      )}
+
+      {/* Mobile Similar Items Section - Only shown on mobile */}
+      {listing && isMobile && (
+        <MobileSimilarItems currentListing={listing} />
       )}
 
       <Footer />
