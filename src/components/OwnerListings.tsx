@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Listing } from '@/types/database';
-import { SimplifiedListingCard } from './SimplifiedListingCard';
+import { ListingCard } from './ListingCard';
 import { Button } from '@/components/ui/button';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious, CarouselApi } from '@/components/ui/carousel';
 import { Card, CardContent } from '@/components/ui/card';
@@ -9,6 +9,8 @@ import { useRouter } from 'next/router';
 import { getFirebaseServices, registerListener, removeListenersByPrefix } from '@/lib/firebase';
 import { collection, query, where, limit, documentId, getDocs } from 'firebase/firestore';
 import { fixFirestoreListenChannel } from '@/lib/firebase-connection-fix';
+import { useFavorites } from '@/hooks/useFavorites';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface OwnerListingsProps {
   ownerId: string;
@@ -31,6 +33,70 @@ export const OwnerListings = ({ ownerId, currentListingId, maxListings = 8, owne
   const [api, setApi] = useState<CarouselApi>();
   const [canScrollPrev, setCanScrollPrev] = useState(false);
   const [canScrollNext, setCanScrollNext] = useState(false);
+
+  // Add favorites functionality
+  const { toggleFavorite, addFavoriteToGroup, isFavorite } = useFavorites();
+  const { user } = useAuth();
+
+  // Condition color mapping for ListingCard
+  const getConditionColor = (condition: string) => {
+    const colors: Record<string, { base: string; hover: string }> = {
+      'poor': {
+        base: 'bg-[#e51f1f]/20 text-[#e51f1f] border border-[#e51f1f]/30',
+        hover: 'hover:bg-[#e51f1f]/30'
+      },
+      'played': {
+        base: 'bg-[#e85f2a]/20 text-[#e85f2a] border border-[#e85f2a]/30',
+        hover: 'hover:bg-[#e85f2a]/30'
+      },
+      'light played': {
+        base: 'bg-[#f2a134]/20 text-[#f2a134] border border-[#f2a134]/30',
+        hover: 'hover:bg-[#f2a134]/30'
+      },
+      'light-played': {
+        base: 'bg-[#f2a134]/20 text-[#f2a134] border border-[#f2a134]/30',
+        hover: 'hover:bg-[#f2a134]/30'
+      },
+      'good': {
+        base: 'bg-[#f2a134]/20 text-[#f2a134] border border-[#f2a134]/30',
+        hover: 'hover:bg-[#f2a134]/30'
+      },
+      'excellent': {
+        base: 'bg-[#f7e379]/20 text-[#f7e379] border border-[#f7e379]/30',
+        hover: 'hover:bg-[#f7e379]/30'
+      },
+      'near mint': {
+        base: 'bg-[#7bce2a]/20 text-[#7bce2a] border border-[#7bce2a]/30',
+        hover: 'hover:bg-[#7bce2a]/30'
+      },
+      'near-mint': {
+        base: 'bg-[#7bce2a]/20 text-[#7bce2a] border border-[#7bce2a]/30',
+        hover: 'hover:bg-[#7bce2a]/30'
+      },
+      'near_mint': {
+        base: 'bg-[#7bce2a]/20 text-[#7bce2a] border border-[#7bce2a]/30',
+        hover: 'hover:bg-[#7bce2a]/30'
+      },
+      'mint': {
+        base: 'bg-[#44ce1b]/20 text-[#44ce1b] border border-[#44ce1b]/30',
+        hover: 'hover:bg-[#44ce1b]/30'
+      }
+    };
+    return colors[condition?.toLowerCase()] || { base: 'bg-gray-500/20 text-gray-500 border border-gray-500/30', hover: 'hover:bg-gray-500/30' };
+  };
+
+  // Handle favorite click
+  const handleFavoriteClick = useCallback((e: React.MouseEvent, listing: Listing) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (!user) {
+      router.push('/auth/sign-in');
+      return;
+    }
+
+    toggleFavorite(listing, e);
+  }, [user, toggleFavorite, router]);
 
   // Update scroll state when API changes
   useEffect(() => {
@@ -309,7 +375,13 @@ export const OwnerListings = ({ ownerId, currentListingId, maxListings = 8, owne
         <CarouselContent className="-ml-4">
           {ownerListings.map((listing, index) => (
             <CarouselItem key={`${listing.id}-${index}-${listing.imageUrls?.[0] || 'no-image'}`} className="pl-4 md:basis-1/4 lg:basis-1/4">
-              <SimplifiedListingCard listing={listing} />
+              <ListingCard
+                listing={listing}
+                isFavorite={user ? isFavorite(listing.id) : false}
+                onFavoriteClick={handleFavoriteClick}
+                onAddToGroup={(listingId, groupId) => addFavoriteToGroup(listing, groupId)}
+                getConditionColor={getConditionColor}
+              />
             </CarouselItem>
           ))}
         </CarouselContent>
