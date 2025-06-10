@@ -137,47 +137,49 @@ export const SimilarListings = ({ currentListing, maxListings = 6 }: SimilarList
           </CardContent>
         </Card>
       ) : (
-        <Carousel className="w-full" setApi={setApi}>
-          <CarouselContent className="-ml-4">
-            {similarListings.map((listing, index) => (
-              <CarouselItem key={`${listing.id}-${index}-${listing.imageUrls?.[0] || 'no-image'}`} className="pl-4 md:basis-1/2 lg:basis-1/3" style={{ height: '100%' }}>
-                <ListingCard
-                  listing={listing}
-                  isFavorite={initialized ? isFavorite(listing.id) : false}
-                  onFavoriteClick={(e) => handleFavoriteClick(e, listing)}
-                  getConditionColor={getConditionColor}
-                />
-              </CarouselItem>
-            ))}
-          </CarouselContent>
-          {/* Desktop arrows - hidden on mobile */}
-          <CarouselPrevious className="hidden md:flex" />
-          <CarouselNext className="hidden md:flex" />
-        </Carousel>
-        
-        {/* Mobile navigation arrows - shown only on mobile */}
-        <div className="flex justify-center gap-4 mt-4 md:hidden">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => api?.scrollPrev()}
-            disabled={!canScrollPrev}
-            className="flex items-center gap-2"
-          >
-            <ChevronLeft className="h-4 w-4" />
-            Previous
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => api?.scrollNext()}
-            disabled={!canScrollNext}
-            className="flex items-center gap-2"
-          >
-            Next
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-        </div>
+        <>
+          <Carousel className="w-full" setApi={setApi}>
+            <CarouselContent className="-ml-4">
+              {similarListings.map((listing, index) => (
+                <CarouselItem key={`${listing.id}-${index}-${listing.imageUrls?.[0] || 'no-image'}`} className="pl-4 md:basis-1/2 lg:basis-1/3" style={{ height: '100%' }}>
+                  <ListingCard
+                    listing={listing}
+                    isFavorite={initialized ? isFavorite(listing.id) : false}
+                    onFavoriteClick={(e) => handleFavoriteClick(e, listing)}
+                    getConditionColor={getConditionColor}
+                  />
+                </CarouselItem>
+              ))}
+            </CarouselContent>
+            {/* Desktop arrows - hidden on mobile */}
+            <CarouselPrevious className="hidden md:flex" />
+            <CarouselNext className="hidden md:flex" />
+          </Carousel>
+          
+          {/* Mobile navigation arrows - shown only on mobile */}
+          <div className="flex justify-center gap-4 mt-4 md:hidden">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => api?.scrollPrev()}
+              disabled={!canScrollPrev}
+              className="flex items-center gap-2"
+            >
+              <ChevronLeft className="h-4 w-4" />
+              Previous
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => api?.scrollNext()}
+              disabled={!canScrollNext}
+              className="flex items-center gap-2"
+            >
+              Next
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </>
       )}
     </div>
   );
