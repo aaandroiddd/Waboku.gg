@@ -54,6 +54,7 @@ import { useLoading } from '@/contexts/LoadingContext';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { FirestoreRequestCounter } from '@/components/FirestoreRequestCounter';
 import { extractListingIdFromSlug } from '@/lib/listing-slug';
+import { getCleanImageUrl, getImageFilename } from '@/lib/image-utils';
 
 const getConditionColor = (condition: string) => {
   const colors: Record<string, string> = {
@@ -1231,10 +1232,11 @@ export default function ListingPage() {
                   {/* View Image Link - moved above thumbnails */}
                   <div className="mt-3 text-center">
                     <a
-                      href={listing.imageUrls[currentImageIndex]}
+                      href={getCleanImageUrl(listing.imageUrls[currentImageIndex])}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-sm text-primary hover:text-primary/80 underline transition-colors inline-flex items-center gap-1"
+                      download={getImageFilename(listing.imageUrls[currentImageIndex])}
                     >
                       <ZoomIn className="w-4 h-4" />
                       View full image
