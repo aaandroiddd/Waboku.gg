@@ -1533,8 +1533,8 @@ export default function ListingPage() {
         </Card>
       </div>
       
-      {/* Similar Listings Section */}
-      {listing && (
+      {/* Similar Listings Section - Hidden on mobile */}
+      {listing && !isMobile && (
         <div className="container mx-auto px-4">
           <OptimizedSimilarListings currentListing={listing} />
           <OwnerListings 
