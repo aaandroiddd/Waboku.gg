@@ -1403,33 +1403,148 @@ export default function ListingPage() {
                       isMobile ? 'justify-start' : 'justify-center'
                     }`}>
                       {listing.imageUrls.map((url, idx) => (
-                        <button
-                          key={idx}
-                          onClick={() => {
-                            const api = document.querySelector('.embla')?.['emblaApi'];
-                            if (api) {
-                              api.scrollTo(idx);
-                              setCurrentImageIndex(idx);
-                            }
-                          }}
-                          className={`flex-shrink-0 ${
-                            isMobile ? 'w-16 h-16' : 'w-20 h-20'
-                          } rounded-lg overflow-hidden border-2 transition-all duration-200 ${
-                            currentImageIndex === idx 
-                              ? "border-blue-500 ring-2 ring-blue-500/30" 
-                              : "border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500"
-                          }`}
-                          aria-label={`Go to image ${idx + 1}`}
-                        >
-                          <Image
-                            src={url}
-                            alt={`Thumbnail ${idx + 1}`}
-                            width={isMobile ? 64 : 80}
-                            height={isMobile ? 64 : 80}
-                            className="w-full h-full object-cover"
-                            loading="lazy"
-                          />
-                        </button>
+                        <Dialog key={idx}>
+                          <DialogTrigger asChild>
+                            <button
+                              onClick={() => {
+                                // For mobile, open the dialog directly to the selected image
+                                if (isMobile) {
+                                  setCurrentImageIndex(idx);
+                                } else {
+                                  // For desktop, navigate the carousel first
+                                  const api = document.querySelector('.embla')?.['emblaApi'];
+                                  if (api) {
+                                    api.scrollTo(idx);
+                                    setCurrentImageIndex(idx);
+                                  }
+                                }
+                              }}
+                              className={`flex-shrink-0 ${
+                                isMobile ? 'w-16 h-16' : 'w-20 h-20'
+                              } rounded-lg overflow-hidden border-2 transition-all duration-200 ${
+                                currentImageIndex === idx 
+                                  ? "border-blue-500 ring-2 ring-blue-500/30" 
+                                  : "border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500"
+                              }`}
+                              aria-label={`${isMobile ? 'View' : 'Go to'} image ${idx + 1}`}
+                            >
+                              <Image
+                                src={url}
+                                alt={`Thumbnail ${idx + 1}`}
+                                width={isMobile ? 64 : 80}
+                                height={isMobile ? 64 : 80}
+                                className="w-full h-full object-cover"
+                                loading="lazy"
+                              />
+                            </button>
+                          </DialogTrigger>
+                          {isMobile && (
+                            <DialogContent 
+                              className="max-w-[95vw] w-full h-auto p-0 overflow-hidden max-h-[70vh] sm:max-h-[75vh] md:max-h-[80vh] mobile-image-dialog"
+                              style={{
+                                transform: "translate(-50%, -50%) translateZ(0)",
+                                backfaceVisibility: "hidden",
+                                WebkitBackfaceVisibility: "hidden",
+                                perspective: "1000px",
+                                WebkitPerspective: "1000px",
+                                willChange: "transform"
+                              }}
+                              onOpenAutoFocus={(e) => {
+                                e.preventDefault();
+                                setCurrentImageIndex(idx);
+                              }}
+                            >
+                              <DialogTitle className="sr-only">Image Viewer</DialogTitle>
+                              <DialogDescription className="sr-only">
+                                Detailed view of {listing.title} image {idx + 1} of {listing.imageUrls.length}. Use zoom controls to examine details.
+                              </DialogDescription>
+                              <DialogClose asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="absolute top-2 right-2 z-20 bg-background/80 backdrop-blur-sm hover:bg-background/90"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                  }}
+                                >
+                                  <X className="h-5 w-5" />
+                                </Button>
+                              </DialogClose>
+                              <div className="relative w-full h-full flex items-center justify-center overflow-auto">
+                                <div className="absolute top-2 left-2 z-20">
+                                  <Badge variant="secondary" className="bg-background/80 backdrop-blur-sm">
+                                    {idx + 1} of {listing.imageUrls.length}
+                                  </Badge>
+                                </div>
+                                <TransformWrapper
+                                  initialScale={1}
+                                  minScale={0.5}
+                                  maxScale={4}
+                                  centerOnInit={true}
+                                  alignmentAnimation={{ sizeX: 0, sizeY: 0 }}
+                                  limitToBounds={true}
+                                  centerZoomedOut={true}
+                                  doubleClick={{ mode: "reset" }}
+                                  initialPositionX={0}
+                                  initialPositionY={0}
+                                  panning={{ disabled: false }}
+                                >
+                                  {({ zoomIn, zoomOut, resetTransform }) => (
+                                    <>
+                                      <TransformComponent 
+                                        wrapperClass="!w-full !h-full !flex !items-center !justify-center !overflow-hidden" 
+                                        contentClass="!w-full !h-full !flex !items-center !justify-center !overflow-visible"
+                                      >
+                                        <div className="relative w-full h-full flex items-center justify-center p-1 sm:p-2">
+                                          <img
+                                            src={url}
+                                            alt={`${listing.title} - Image ${idx + 1}`}
+                                            className="max-w-[90%] max-h-[50vh] sm:max-h-[55vh] md:max-h-[60vh] w-auto h-auto object-contain"
+                                            loading="eager"
+                                          />
+                                        </div>
+                                      </TransformComponent>
+                                      {/* Zoom controls */}
+                                      <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 flex items-center gap-2 z-20 bg-background/80 backdrop-blur-sm p-1 rounded-full">
+                                        <Button
+                                          variant="outline"
+                                          size="icon"
+                                          className="h-8 w-8 rounded-full"
+                                          onClick={() => zoomOut()}
+                                        >
+                                          <Minus className="h-4 w-4" />
+                                        </Button>
+                                        <Button
+                                          variant="outline"
+                                          size="icon"
+                                          className="h-8 w-8 rounded-full"
+                                          onClick={() => resetTransform()}
+                                        >
+                                          <RotateCw className="h-4 w-4" />
+                                        </Button>
+                                        <Button
+                                          variant="outline"
+                                          size="icon"
+                                          className="h-8 w-8 rounded-full"
+                                          onClick={() => zoomIn()}
+                                        >
+                                          <Plus className="h-4 w-4" />
+                                        </Button>
+                                      </div>
+                                      
+                                      {/* Mobile instructions */}
+                                      <div className="absolute top-12 left-0 right-0 text-center">
+                                        <Badge variant="secondary" className="bg-background/60 backdrop-blur-sm px-3 py-1">
+                                          Pinch to zoom • Swipe to navigate
+                                        </Badge>
+                                      </div>
+                                    </>
+                                  )}
+                                </TransformWrapper>
+                              </div>
+                            </DialogContent>
+                          )}
+                        </Dialog>
                       ))}
                     </div>
                   )}
