@@ -15,25 +15,42 @@ export function getCleanImageUrl(firebaseUrl: string): string {
       return firebaseUrl; // Return original if we can't parse it
     }
     
-    // Decode the path - handle both single and double encoding
+    // Get the encoded path from the URL
     const encodedPath = pathMatch[1];
-    let decodedPath = decodeURIComponent(encodedPath);
     
-    // Sometimes Firebase URLs are double-encoded, try decoding again if needed
+    // Try to decode the path carefully
+    let decodedPath;
     try {
-      const testDecode = decodeURIComponent(decodedPath);
-      if (testDecode !== decodedPath && testDecode.includes('/')) {
-        decodedPath = testDecode;
+      // First attempt: standard decode
+      decodedPath = decodeURIComponent(encodedPath);
+      
+      // Check if it needs another decode (double-encoded case)
+      if (decodedPath.includes('%') && decodedPath.includes('/')) {
+        try {
+          const doubleDecoded = decodeURIComponent(decodedPath);
+          if (doubleDecoded !== decodedPath) {
+            decodedPath = doubleDecoded;
+          }
+        } catch (e) {
+          // Keep the single decode if double decode fails
+        }
       }
-    } catch (e) {
-      // If second decode fails, use the first decode
+    } catch (error) {
+      // If decoding fails, use the encoded path as-is
+      console.warn('Failed to decode path, using encoded version:', encodedPath);
+      decodedPath = encodedPath;
     }
     
     // Create our clean proxy URL
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || '';
     const cleanUrl = `${baseUrl}/api/images/${decodedPath}`;
     
-    console.log('Converted Firebase URL:', firebaseUrl, 'to clean URL:', cleanUrl);
+    console.log('Converting Firebase URL to clean URL:');
+    console.log('  Original:', firebaseUrl);
+    console.log('  Encoded path:', encodedPath);
+    console.log('  Decoded path:', decodedPath);
+    console.log('  Clean URL:', cleanUrl);
+    
     return cleanUrl;
     
   } catch (error) {
