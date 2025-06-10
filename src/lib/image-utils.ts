@@ -11,16 +11,30 @@ export function getCleanImageUrl(firebaseUrl: string): string {
     // Extract the path from the Firebase URL
     const pathMatch = url.pathname.match(/\/o\/(.+)$/);
     if (!pathMatch) {
+      console.warn('Could not parse Firebase URL path:', firebaseUrl);
       return firebaseUrl; // Return original if we can't parse it
     }
     
-    // Decode the path
+    // Decode the path - handle both single and double encoding
     const encodedPath = pathMatch[1];
-    const decodedPath = decodeURIComponent(encodedPath);
+    let decodedPath = decodeURIComponent(encodedPath);
+    
+    // Sometimes Firebase URLs are double-encoded, try decoding again if needed
+    try {
+      const testDecode = decodeURIComponent(decodedPath);
+      if (testDecode !== decodedPath && testDecode.includes('/')) {
+        decodedPath = testDecode;
+      }
+    } catch (e) {
+      // If second decode fails, use the first decode
+    }
     
     // Create our clean proxy URL
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || '';
-    return `${baseUrl}/api/images/${decodedPath}`;
+    const cleanUrl = `${baseUrl}/api/images/${decodedPath}`;
+    
+    console.log('Converted Firebase URL:', firebaseUrl, 'to clean URL:', cleanUrl);
+    return cleanUrl;
     
   } catch (error) {
     console.error('Error converting Firebase URL to clean URL:', error);
