@@ -1,13 +1,13 @@
-import React, { useMemo, useEffect, useRef } from 'react';
+import React, { useMemo, useEffect, useRef, useState } from 'react';
 import { removeListenersByPrefix } from '@/lib/firebaseConnectionManager';
 import { Listing } from '@/types/database';
 import { ListingCard } from './ListingCard';
 import { Button } from '@/components/ui/button';
-import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious, CarouselApi } from '@/components/ui/carousel';
 import { Card, CardContent } from '@/components/ui/card';
 import { useFavorites } from '@/hooks/useFavorites';
 import { useRouter } from 'next/router';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useOptimizedSimilarListings } from '@/hooks/useFirestoreOptimizer';
 
 // Define the game name mapping object that was missing
@@ -42,6 +42,28 @@ const getConditionColor = (condition: string) => {
 export const SimilarListings = ({ currentListing, maxListings = 6 }: SimilarListingsProps) => {
   const { toggleFavorite, isFavorite, initialized } = useFavorites();
   const router = useRouter();
+  
+  // Carousel API for mobile navigation
+  const [api, setApi] = useState<CarouselApi>();
+  const [canScrollPrev, setCanScrollPrev] = useState(false);
+  const [canScrollNext, setCanScrollNext] = useState(false);
+
+  // Update scroll state when API changes
+  useEffect(() => {
+    if (!api) return;
+
+    const updateScrollState = () => {
+      setCanScrollPrev(api.canScrollPrev());
+      setCanScrollNext(api.canScrollNext());
+    };
+
+    updateScrollState();
+    api.on('select', updateScrollState);
+
+    return () => {
+      api.off('select', updateScrollState);
+    };
+  }, [api]);
   
   // Create a stable options object that only changes when truly necessary
   const listingOptions = useMemo(() => 
@@ -115,7 +137,7 @@ export const SimilarListings = ({ currentListing, maxListings = 6 }: SimilarList
           </CardContent>
         </Card>
       ) : (
-        <Carousel className="w-full">
+        <Carousel className="w-full" setApi={setApi}>
           <CarouselContent className="-ml-4">
             {similarListings.map((listing, index) => (
               <CarouselItem key={`${listing.id}-${index}-${listing.imageUrls?.[0] || 'no-image'}`} className="pl-4 md:basis-1/2 lg:basis-1/3" style={{ height: '100%' }}>
@@ -128,9 +150,34 @@ export const SimilarListings = ({ currentListing, maxListings = 6 }: SimilarList
               </CarouselItem>
             ))}
           </CarouselContent>
-          <CarouselPrevious />
-          <CarouselNext />
+          {/* Desktop arrows - hidden on mobile */}
+          <CarouselPrevious className="hidden md:flex" />
+          <CarouselNext className="hidden md:flex" />
         </Carousel>
+        
+        {/* Mobile navigation arrows - shown only on mobile */}
+        <div className="flex justify-center gap-4 mt-4 md:hidden">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => api?.scrollPrev()}
+            disabled={!canScrollPrev}
+            className="flex items-center gap-2"
+          >
+            <ChevronLeft className="h-4 w-4" />
+            Previous
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => api?.scrollNext()}
+            disabled={!canScrollNext}
+            className="flex items-center gap-2"
+          >
+            Next
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
       )}
     </div>
   );
