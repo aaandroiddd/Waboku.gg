@@ -82,15 +82,6 @@ export const SimilarListings = ({ currentListing, maxListings = 6 }: SimilarList
     e.stopPropagation();
     toggleFavorite(listing, e);
   };
-  
-  // Use React Router's navigate function with options
-  const navigateToListing = (listingId: string) => {
-    // Prevent the default behavior
-    router.push(`/listings/${listingId}`, undefined, { 
-      shallow: false, // Force full page data fetch
-      scroll: true    // Scroll to top
-    });
-  };
 
   return (
     <div className="mt-8">
@@ -128,14 +119,12 @@ export const SimilarListings = ({ currentListing, maxListings = 6 }: SimilarList
           <CarouselContent className="-ml-4">
             {similarListings.map((listing) => (
               <CarouselItem key={listing.id} className="pl-4 md:basis-1/2 lg:basis-1/3" style={{ height: '100%' }}>
-                <div onClick={() => navigateToListing(listing.id)}>
-                  <ListingCard
-                    listing={listing}
-                    isFavorite={initialized ? isFavorite(listing.id) : false}
-                    onFavoriteClick={(e) => handleFavoriteClick(e, listing)}
-                    getConditionColor={getConditionColor}
-                  />
-                </div>
+                <ListingCard
+                  listing={listing}
+                  isFavorite={initialized ? isFavorite(listing.id) : false}
+                  onFavoriteClick={(e) => handleFavoriteClick(e, listing)}
+                  getConditionColor={getConditionColor}
+                />
               </CarouselItem>
             ))}
           </CarouselContent>
