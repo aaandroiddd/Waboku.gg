@@ -132,10 +132,6 @@ export function FavoriteGroupsManager({
             <Button 
               size="sm" 
               className="flex items-center gap-1"
-              onClick={() => {
-                console.log("New Group button clicked");
-                setIsCreateDialogOpen(true);
-              }}
             >
               <Plus className="h-4 w-4" />
               <span>New Group</span>
