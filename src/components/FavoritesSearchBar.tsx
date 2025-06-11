@@ -37,7 +37,7 @@ export function FavoritesSearchBar({
   const [activeFilters, setActiveFilters] = useState<string[]>([]);
 
   // Check if any filters are active
-  const hasActiveFilters = selectedGame || minPrice || maxPrice || searchValue;
+  const hasActiveFilters = (selectedGame !== undefined && selectedGame !== "all-games") || minPrice !== "" || maxPrice !== "" || searchValue !== "";
 
   // Update filters when selections change
   useEffect(() => {
@@ -73,6 +73,11 @@ export function FavoritesSearchBar({
     onFilterChange(filters);
   }, [selectedGame, minPrice, maxPrice, onFilterChange]);
 
+  // Update search when searchValue changes
+  useEffect(() => {
+    onSearch(searchValue);
+  }, [searchValue, onSearch]);
+
   const handleSearch = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     onSearch(searchValue);
@@ -93,6 +98,8 @@ export function FavoritesSearchBar({
     setMinPrice("");
     setMaxPrice("");
     setSearchValue("");
+    // Immediately trigger the filter change to show all favorites
+    onFilterChange({});
     onSearch("");
   };
 
