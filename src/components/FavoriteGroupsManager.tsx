@@ -49,29 +49,14 @@ export function FavoriteGroupsManager({
   const [isLoading, setIsLoading] = useState(false);
 
   const handleCreateGroup = async () => {
-    console.log("handleCreateGroup called with name:", newGroupName);
-    console.log("onCreateGroup function:", onCreateGroup);
-    console.log("onCreateGroup type:", typeof onCreateGroup);
-    
     if (!newGroupName.trim()) {
-      console.log("No group name provided");
       toast.error("Please enter a group name");
       return;
     }
 
     try {
-      console.log("Starting group creation process...");
       setIsLoading(true);
-      
-      if (typeof onCreateGroup !== 'function') {
-        console.error("onCreateGroup is not a function:", onCreateGroup);
-        toast.error("Group creation function is not available");
-        return;
-      }
-      
-      console.log("Calling onCreateGroup with:", newGroupName.trim());
       await onCreateGroup(newGroupName.trim());
-      console.log("Group creation successful");
       setNewGroupName("");
       setIsCreateDialogOpen(false);
       toast.success("Group created successfully");
@@ -165,27 +150,17 @@ export function FavoriteGroupsManager({
             <DialogFooter>
               <Button
                 variant="outline"
-                onClick={() => {
-                  console.log("Cancel button clicked!");
-                  setIsCreateDialogOpen(false);
-                }}
+                onClick={() => setIsCreateDialogOpen(false)}
                 disabled={isLoading}
               >
                 Cancel
               </Button>
-              <button 
-                type="button"
-                className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground shadow hover:bg-primary/90 h-9 px-4 py-2"
-                onClick={(e) => {
-                  console.log("Create Group button clicked!", e);
-                  console.log("Button element:", e.target);
-                  console.log("Event type:", e.type);
-                  handleCreateGroup();
-                }} 
+              <Button 
+                onClick={handleCreateGroup}
                 disabled={isLoading}
               >
                 {isLoading ? "Creating..." : "Create Group"}
-              </button>
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
