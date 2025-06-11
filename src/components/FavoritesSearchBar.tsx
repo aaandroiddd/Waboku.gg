@@ -21,9 +21,6 @@ import { X } from "lucide-react";
 interface FavoritesSearchBarProps {
   onSearch: (value: string) => void;
   onFilterChange: (filters: FavoriteFilters) => void;
-  onGroupChange?: (groupId: string | null) => void;
-  groups?: FavoriteGroup[];
-  selectedGroup?: string | null;
 }
 
 export interface FavoriteFilters {
@@ -34,18 +31,9 @@ export interface FavoriteFilters {
   };
 }
 
-export interface FavoriteGroup {
-  id: string;
-  name: string;
-  count?: number;
-}
-
 export function FavoritesSearchBar({ 
   onSearch, 
-  onFilterChange,
-  onGroupChange,
-  groups = [],
-  selectedGroup
+  onFilterChange
 }: FavoritesSearchBarProps) {
   const [searchValue, setSearchValue] = useState("");
   const [selectedGame, setSelectedGame] = useState<string | undefined>(undefined);
@@ -212,25 +200,7 @@ export function FavoritesSearchBar({
           </PopoverContent>
         </Popover>
 
-        {/* Group selector */}
-        {onGroupChange && groups.length > 0 && (
-          <Select 
-            value={selectedGroup || "all-groups"} 
-            onValueChange={(value) => onGroupChange(value === "all-groups" ? null : value)}
-          >
-            <SelectTrigger className="w-full sm:w-[200px]">
-              <SelectValue placeholder="All Groups" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all-groups">All Groups</SelectItem>
-              {groups.map((group) => (
-                <SelectItem key={group.id} value={group.id}>
-                  {group.name} {group.count !== undefined && `(${group.count})`}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        )}
+
       </div>
 
       {/* Active filters */}

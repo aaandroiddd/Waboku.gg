@@ -2,7 +2,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { GameCategoryBadge } from '@/components/GameCategoryBadge';
 import { Button } from '@/components/ui/button';
-import { Heart, FolderPlus } from 'lucide-react';
+import { Heart } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { DistanceIndicator } from './DistanceIndicator';
@@ -32,9 +32,7 @@ interface FavoriteListingCardProps {
   listing: Listing;
   isFavorite: boolean;
   onFavoriteClick: (e: React.MouseEvent, listing: Listing) => void;
-  onAddToGroupClick?: (e: React.MouseEvent, listing: Listing) => void;
   getConditionColor: (condition: string) => { base: string; hover: string };
-  groupName?: string;
 }
 
 // Detect if we're on a mobile device to simplify animations
@@ -103,9 +101,7 @@ export const FavoriteListingCard = memo(({
   listing, 
   isFavorite, 
   onFavoriteClick, 
-  onAddToGroupClick,
-  getConditionColor,
-  groupName
+  getConditionColor
 }: FavoriteListingCardProps) => {
   const { location } = useLocation({ autoRequest: false });
   const [calculatedDistance, setCalculatedDistance] = useState<number | null>(null);
@@ -175,54 +171,7 @@ export const FavoriteListingCard = memo(({
                       </Button>
                     </motion.div>
                     
-                    {/* Add to Group Button */}
-                    {isFavorite && onAddToGroupClick && (
-                      <motion.div
-                        variants={buttonVariants}
-                        whileHover="hover"
-                        whileTap="tap"
-                      >
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          type="button"
-                          className="bg-black/50 hover:bg-black/75 transition-colors duration-200 rounded-full text-white hover:text-blue-400"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            onAddToGroupClick(e, listing);
-                          }}
-                        >
-                          <FolderPlus 
-                            className="h-5 w-5"
-                            aria-label="Add to group"
-                          />
-                        </Button>
-                      </motion.div>
-                    )}
-                    
-                    {/* Group Badge */}
-                    {groupName && (
-                      <motion.div 
-                        className="flex-shrink-0"
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: 0.3 }}
-                      >
-                        <span className="px-2 py-1 bg-blue-500/90 text-white rounded-md font-semibold flex items-center gap-1 text-xs sm:text-sm whitespace-nowrap">
-                          <svg 
-                            viewBox="0 0 24 24" 
-                            className="w-3 h-3 sm:w-4 sm:h-4" 
-                            fill="none" 
-                            stroke="currentColor" 
-                            strokeWidth="2"
-                          >
-                            <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z" />
-                          </svg>
-                          <span>{groupName}</span>
-                        </span>
-                      </motion.div>
-                    )}
+
                     
                     {/* Archived Badge */}
                     {listing.status === 'archived' && (

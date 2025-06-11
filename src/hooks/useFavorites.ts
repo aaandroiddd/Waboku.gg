@@ -8,11 +8,8 @@ import {
   doc, 
   getDoc, 
   getDocs, 
-  query, 
-  where, 
   setDoc, 
-  deleteDoc, 
-  updateDoc 
+  deleteDoc
 } from 'firebase/firestore';
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { toast } from 'sonner';
@@ -25,11 +22,9 @@ export interface FavoriteFilters {
     min?: number;
     max?: number;
   };
-  groupId?: string | null;
 }
 
 export interface FavoriteListing extends Listing {
-  groupId?: string | null;
 }
 
 export function useFavorites() {
@@ -72,14 +67,12 @@ export function useFavorites() {
           
           if (listingDoc.exists()) {
             const data = listingDoc.data();
-            const favoriteData = favoriteDoc.data();
             
             return {
               id: listingDoc.id,
               ...data,
               createdAt: data.createdAt?.toDate(),
-              archivedAt: data.archivedAt?.toDate(),
-              groupId: favoriteData.groupId || null
+              archivedAt: data.archivedAt?.toDate()
             } as FavoriteListing;
           }
         } catch (err) {
@@ -103,8 +96,7 @@ export function useFavorites() {
     }
   }, [user]);
 
-  // UPDATED: Modified toggleFavorite function to show dialog when adding a new favorite
-  const toggleFavorite = async (listing: Listing, event?: React.MouseEvent, defaultGroupId?: string | null) => {
+  const toggleFavorite = async (listing: Listing, event?: React.MouseEvent) => {
     // Prevent event propagation if event is provided
     if (event) {
       event.preventDefault();
@@ -127,11 +119,12 @@ export function useFavorites() {
 
     const isFav = favoriteIds.has(listing.id);
 
-    if (isFav) {
-      // If it's already a favorite, remove it
-      try {
-        // Mark operation as pending
-        setPendingOperations(prev => new Set([...prev, listing.id]));
+    try {
+      // Mark operation as pending
+      setPendingOperations(prev => new Set([...prev, listing.id]));
+      
+      if (isFav) {
+        // If it's already a favorite, remove it
         console.log('Removing from favorites:', listing.id);
         
         // Optimistically remove from favorites
@@ -148,175 +141,61 @@ export function useFavorites() {
         
         // Show success toast
         toast.success('Removed from favorites');
-      } catch (err) {
-        console.error('Error removing favorite:', err);
-        setError(err instanceof Error ? err.message : 'Failed to update favorite');
-        toast.error('Failed to update favorites');
+      } else {
+        // Add to favorites
+        console.log('Adding to favorites:', listing.id);
         
-        // Revert optimistic updates on error
+        // Optimistically add to favorites
         setFavoriteIds(prev => new Set([...prev, listing.id]));
-        setFavorites(prev => [...prev, listing]);
-      } finally {
-        // Remove from pending operations
-        setPendingOperations(prev => {
-          const newSet = new Set(prev);
-          newSet.delete(listing.id);
-          return newSet;
-        });
-      }
-    } else {
-      // If it's not a favorite yet, we don't add it directly
-      // Instead, we return a function that will show the Add to Group dialog
-      return { showAddToGroupDialog: true, listing };
-    }
-  };
-
-  // NEW: Add a function to handle save button clicks
-  const handleSaveButtonClick = (listing: Listing, event?: React.MouseEvent) => {
-    if (event) {
-      event.preventDefault();
-      event.stopPropagation();
-    }
-    
-    if (!user) {
-      toast.error('Please sign in to save favorites');
-      saveRedirectState('toggle_favorite', { listingId: listing.id });
-      router.push('/auth/sign-in');
-      return;
-    }
-    
-    // Always return { showAddToGroupDialog: true, listing } for the save button
-    return { showAddToGroupDialog: true, listing };
-  };
-  
-  // Add a favorite directly to a specific group
-  const addFavoriteToGroup = async (listingId: string, groupId: string | null) => {
-    if (!user) {
-      toast.error('Please sign in to save favorites');
-      saveRedirectState('add_favorite_to_group', { listingId: listingId, groupId });
-      router.push('/auth/sign-in');
-      return;
-    }
-
-    // Prevent duplicate operations on the same listing
-    if (pendingOperations.has(listingId)) {
-      console.log('Operation already in progress for listing:', listingId);
-      return;
-    }
-
-    const favoriteRef = doc(db, 'users', user.uid, 'favorites', listingId);
-    const isFav = favoriteIds.has(listingId);
-
-    try {
-      // Mark operation as pending
-      setPendingOperations(prev => new Set([...prev, listingId]));
-      
-      if (isFav) {
-        // If already a favorite, just update the group
-        await updateDoc(favoriteRef, { groupId });
         
-        // Update local state
-        setFavorites(prev => 
-          prev.map(fav => 
-            fav.id === listingId ? { ...fav, groupId } : fav
-          )
-        );
+        // Then perform the actual operation
+        const favoriteRef = doc(db, 'users', user.uid, 'favorites', listing.id);
+        await setDoc(favoriteRef, {
+          listingId: listing.id,
+          createdAt: new Date()
+        });
+        
+        // Add to local state
+        const newFavorite = {
+          id: listing.id,
+          ...listing
+        } as FavoriteListing;
+        
+        setFavorites(prev => [...prev, newFavorite]);
         
         // Show success toast with action to view favorites
-        toast.success('Updated favorite group', {
+        toast.success('Added to favorites', {
           action: {
             label: "View Favorites",
             onClick: () => router.push("/dashboard/favorites")
           },
           duration: 5000
         });
-      } else {
-        // Optimistically add to favorites
-        setFavoriteIds(prev => new Set([...prev, listingId]));
-        
-        // Then perform the actual operation
-        await setDoc(favoriteRef, {
-          listingId: listingId,
-          createdAt: new Date(),
-          groupId
-        });
-        
-        // Fetch the listing to add to local state
-        const listingDoc = await getDoc(doc(db, 'listings', listingId));
-        if (listingDoc.exists()) {
-          const data = listingDoc.data();
-          
-          const newFavorite = {
-            id: listingId,
-            ...data,
-            createdAt: data.createdAt?.toDate(),
-            archivedAt: data.archivedAt?.toDate(),
-            groupId
-          } as FavoriteListing;
-          
-          setFavorites(prev => [...prev, newFavorite]);
-          
-          // Show success toast with action to view favorites
-          toast.success('Added to favorites', {
-            action: {
-              label: "View Favorites",
-              onClick: () => router.push("/dashboard/favorites")
-            },
-            duration: 5000
-          });
-        }
       }
-      
-      return true;
     } catch (err) {
-      console.error('Error adding favorite to group:', err);
+      console.error('Error updating favorite:', err);
       setError(err instanceof Error ? err.message : 'Failed to update favorite');
-      toast.error('Failed to add to favorites');
+      toast.error('Failed to update favorites');
       
-      // Revert optimistic updates if not already a favorite
-      if (!isFav) {
+      // Revert optimistic updates on error
+      if (isFav) {
+        setFavoriteIds(prev => new Set([...prev, listing.id]));
+        setFavorites(prev => [...prev, listing]);
+      } else {
         setFavoriteIds(prev => {
           const newSet = new Set(prev);
-          newSet.delete(listingId);
+          newSet.delete(listing.id);
           return newSet;
         });
-        setFavorites(prev => prev.filter(f => f.id !== listingId));
+        setFavorites(prev => prev.filter(f => f.id !== listing.id));
       }
-      
-      return false;
     } finally {
       // Remove from pending operations
       setPendingOperations(prev => {
         const newSet = new Set(prev);
-        newSet.delete(listingId);
+        newSet.delete(listing.id);
         return newSet;
       });
-    }
-  };
-
-  const updateFavoriteGroup = async (listingId: string, groupId: string | null) => {
-    if (!user) {
-      toast.error('Please sign in to update favorites');
-      return false;
-    }
-
-    try {
-      const favoriteRef = doc(db, 'users', user.uid, 'favorites', listingId);
-      
-      // Update in Firestore
-      await updateDoc(favoriteRef, { groupId });
-      
-      // Update local state
-      setFavorites(prev => 
-        prev.map(fav => 
-          fav.id === listingId ? { ...fav, groupId } : fav
-        )
-      );
-      
-      return true;
-    } catch (err) {
-      console.error('Error updating favorite group:', err);
-      throw err;
     }
   };
 
@@ -361,11 +240,6 @@ export function useFavorites() {
       }
     }
     
-    // Filter by group
-    if (filters.groupId !== undefined) {
-      result = result.filter(listing => listing.groupId === filters.groupId);
-    }
-    
     return result;
   }, [favorites, filters]);
 
@@ -381,14 +255,11 @@ export function useFavorites() {
     isLoading,
     error,
     toggleFavorite,
-    addFavoriteToGroup,
-    updateFavoriteGroup,
     isFavorite,
     isPending,
     setFilters,
     filters,
     refresh: fetchFavorites,
-    initialized,
-    handleSaveButtonClick  // NEW: Added this to the returned object
+    initialized
   };
 }
