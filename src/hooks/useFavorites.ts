@@ -231,7 +231,7 @@ export function useFavorites() {
     }
     
     // Filter by game
-    if (filters.game) {
+    if (filters.game !== undefined) {
       result = result.filter(listing => listing.game === filters.game);
     }
     

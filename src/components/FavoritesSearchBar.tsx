@@ -46,6 +46,7 @@ export function FavoritesSearchBar({
     const filters: FavoriteFilters = {};
     const newActiveFilters: string[] = [];
     
+=======
     if (selectedGame && selectedGame !== "all-games") {
       filters.game = selectedGame;
       
@@ -56,6 +57,7 @@ export function FavoritesSearchBar({
       
       newActiveFilters.push(`Game: ${gameName}`);
     }
+=======
     
     if (minPrice || maxPrice) {
       filters.priceRange = {};
@@ -82,7 +84,7 @@ export function FavoritesSearchBar({
 
   const clearFilter = (filter: string) => {
     if (filter.startsWith("Game:")) {
-      setSelectedGame("all-games");
+      setSelectedGame(undefined);
     } else if (filter.startsWith("Min:")) {
       setMinPrice("");
     } else if (filter.startsWith("Max:")) {
@@ -91,7 +93,7 @@ export function FavoritesSearchBar({
   };
 
   const clearAllFilters = () => {
-    setSelectedGame("all-games");
+    setSelectedGame(undefined);
     setMinPrice("");
     setMaxPrice("");
   };
