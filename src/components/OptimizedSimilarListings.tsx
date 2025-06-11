@@ -33,7 +33,7 @@ export const OptimizedSimilarListings = ({ currentListing, maxListings = 8 }: Op
   const [canScrollNext, setCanScrollNext] = useState(false);
 
   // Add favorites functionality
-  const { toggleFavorite, addFavoriteToGroup, isFavorite } = useFavorites();
+  const { toggleFavorite, isFavorite } = useFavorites();
   const { user } = useAuth();
 
   // Condition color mapping for ListingCard
@@ -373,7 +373,6 @@ export const OptimizedSimilarListings = ({ currentListing, maxListings = 8 }: Op
                 listing={listing}
                 isFavorite={user ? isFavorite(listing.id) : false}
                 onFavoriteClick={handleFavoriteClick}
-                onAddToGroup={(listingId, groupId) => addFavoriteToGroup(listing, groupId)}
                 getConditionColor={getConditionColor}
               />
             </CarouselItem>

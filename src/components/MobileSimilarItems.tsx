@@ -20,7 +20,7 @@ export const MobileSimilarItems = ({ currentListing, maxListings = 6 }: MobileSi
   const fetchedRef = useRef(false);
 
   // Add favorites functionality
-  const { toggleFavorite, isFavorite, addFavoriteToGroup } = useFavorites();
+  const { toggleFavorite, isFavorite } = useFavorites();
   const { user } = useAuth();
 
   // Create a memoized fetch function
@@ -217,7 +217,6 @@ export const MobileSimilarItems = ({ currentListing, maxListings = 6 }: MobileSi
             listing={listing}
             isFavorite={user ? isFavorite(listing.id) : false}
             onFavoriteClick={handleFavoriteClick}
-            onAddToGroup={(listingId, groupId) => addFavoriteToGroup(listing, groupId)}
             getConditionColor={getConditionColor}
           />
         ))}
