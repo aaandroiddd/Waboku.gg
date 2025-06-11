@@ -11,18 +11,9 @@ import {
   setDoc, 
   deleteDoc
 } from 'firebase/firestore';
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { toast } from 'sonner';
 import { useRouter } from 'next/router';
-
-export interface FavoriteFilters {
-  search?: string;
-  game?: string;
-  priceRange?: {
-    min?: number;
-    max?: number;
-  };
-}
 
 export interface FavoriteListing extends Listing {
 }
@@ -36,7 +27,6 @@ export function useFavorites() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [pendingOperations, setPendingOperations] = useState<Set<string>>(new Set());
-  const [filters, setFilters] = useState<FavoriteFilters>({});
   
   // Add a state to track if the hook has been initialized
   const [initialized, setInitialized] = useState(false);
@@ -217,42 +207,6 @@ export function useFavorites() {
     return pendingOperations.has(listingId);
   }, [pendingOperations]);
 
-  // Apply filters to favorites
-  const filteredFavorites = useMemo(() => {
-    let result = [...favorites];
-    
-    // Filter by search term
-    if (filters.search) {
-      const searchTerm = filters.search.toLowerCase();
-      result = result.filter(listing => 
-        listing.title.toLowerCase().includes(searchTerm) ||
-        (listing.description && listing.description.toLowerCase().includes(searchTerm))
-      );
-    }
-    
-    // Filter by game
-    if (filters.game !== undefined) {
-      result = result.filter(listing => listing.game === filters.game);
-    }
-    
-    // Filter by price range
-    if (filters.priceRange) {
-      if (filters.priceRange.min !== undefined) {
-        result = result.filter(listing => 
-          (listing.price !== undefined && listing.price >= filters.priceRange!.min!)
-        );
-      }
-      
-      if (filters.priceRange.max !== undefined) {
-        result = result.filter(listing => 
-          (listing.price !== undefined && listing.price <= filters.priceRange!.max!)
-        );
-      }
-    }
-    
-    return result;
-  }, [favorites, filters]);
-
   useEffect(() => {
     fetchFavorites().then(() => {
       setInitialized(true);
@@ -260,15 +214,12 @@ export function useFavorites() {
   }, [user, fetchFavorites]);
 
   return {
-    favorites: filteredFavorites,
-    allFavorites: favorites,
+    favorites,
     isLoading,
     error,
     toggleFavorite,
     isFavorite,
     isPending,
-    setFilters,
-    filters,
     refresh: fetchFavorites,
     initialized
   };

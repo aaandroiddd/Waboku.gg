@@ -1,7 +1,7 @@
 import { RouteGuard } from '@/components/RouteGuard';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { useFavorites, FavoriteFilters, FavoriteListing } from '@/hooks/useFavorites';
+import { useFavorites, FavoriteListing } from '@/hooks/useFavorites';
 import { FavoritesSearchBar } from '@/components/FavoritesSearchBar';
 import { Separator } from '@/components/ui/separator';
 import Link from 'next/link';
@@ -24,18 +24,19 @@ const containerVariants = {
 
 export default function FavoritesPage() {
   const { 
-    favorites, 
-    allFavorites,
+    favorites: allFavorites,
     isLoading, 
     refresh, 
     initialized, 
     toggleFavorite, 
-    isFavorite,
-    setFilters,
-    filters
+    isFavorite
   } = useFavorites();
   
-  const [searchTerm, setSearchTerm] = useState<string>('');
+  // Local filter state - same approach as dashboard
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [gameFilter, setGameFilter] = useState<string>('all');
+  const [minPrice, setMinPrice] = useState<string>('');
+  const [maxPrice, setMaxPrice] = useState<string>('');
   
   // Force refresh when the component mounts
   useEffect(() => {
@@ -44,16 +45,65 @@ export default function FavoritesPage() {
     }
   }, [initialized, refresh]);
   
-  // Handle search
-  const handleSearch = useCallback((value: string) => {
-    setSearchTerm(value);
-    setFilters(prev => ({ ...prev, search: value }));
-  }, [setFilters]);
-  
-  // Handle filter changes
-  const handleFilterChange = useCallback((newFilters: FavoriteFilters) => {
-    setFilters(prev => ({ ...prev, ...newFilters }));
-  }, [setFilters]);
+  // Apply filters to favorites - same logic as dashboard
+  const filteredFavorites = useMemo(() => {
+    let result = [...allFavorites];
+    
+    // Filter by game - same logic as dashboard
+    if (gameFilter !== 'all') {
+      result = result.filter(listing => {
+        if (!listing.game) return false;
+        
+        const listingGame = listing.game.toLowerCase();
+        
+        // Use the same game matching logic as dashboard
+        return (
+          listingGame === gameFilter.toLowerCase() ||
+          (gameFilter === 'mtg' && listingGame.includes('magic')) ||
+          (gameFilter === 'yugioh' && (
+            listingGame.includes('yu-gi-oh') || 
+            listingGame.includes('yugioh')
+          )) ||
+          (gameFilter === 'pokemon' && listingGame.includes('pokemon')) ||
+          (gameFilter === 'onepiece' && listingGame.includes('one piece')) ||
+          (gameFilter === 'lorcana' && listingGame.includes('lorcana')) ||
+          (gameFilter === 'dbs' && (
+            listingGame.includes('dragon ball') || 
+            listingGame.includes('dbs')
+          )) ||
+          (gameFilter === 'flesh-and-blood' && listingGame.includes('flesh')) ||
+          (gameFilter === 'star-wars' && listingGame.includes('star wars')) ||
+          (gameFilter === 'digimon' && listingGame.includes('digimon'))
+        );
+      });
+    }
+    
+    // Filter by search query - same logic as dashboard
+    if (searchQuery) {
+      const searchLower = searchQuery.toLowerCase();
+      result = result.filter(listing => 
+        (listing.title && listing.title.toLowerCase().includes(searchLower)) ||
+        (listing.description && listing.description.toLowerCase().includes(searchLower))
+      );
+    }
+    
+    // Filter by price range
+    if (minPrice) {
+      const min = parseFloat(minPrice);
+      if (!isNaN(min)) {
+        result = result.filter(listing => listing.price >= min);
+      }
+    }
+    
+    if (maxPrice) {
+      const max = parseFloat(maxPrice);
+      if (!isNaN(max)) {
+        result = result.filter(listing => listing.price <= max);
+      }
+    }
+    
+    return result;
+  }, [allFavorites, gameFilter, searchQuery, minPrice, maxPrice]);
   
   // Handle favorite toggle
   const handleFavoriteToggle = useCallback((e: React.MouseEvent, listing: Listing) => {
@@ -61,6 +111,14 @@ export default function FavoritesPage() {
     e.stopPropagation();
     toggleFavorite(listing);
   }, [toggleFavorite]);
+  
+  // Clear all filters
+  const handleClearFilters = useCallback(() => {
+    setSearchQuery('');
+    setGameFilter('all');
+    setMinPrice('');
+    setMaxPrice('');
+  }, []);
   
   // Render listings grid
   const renderListings = useCallback(() => {
@@ -78,7 +136,7 @@ export default function FavoritesPage() {
       );
     }
     
-    if (favorites.length === 0) {
+    if (filteredFavorites.length === 0) {
       return (
         <motion.div 
           className="text-center py-8"
@@ -107,7 +165,7 @@ export default function FavoritesPage() {
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
       >
-        {favorites.map((listing) => (
+        {filteredFavorites.map((listing) => (
           <FavoriteListingCard
             key={listing.id}
             listing={listing}
@@ -118,7 +176,7 @@ export default function FavoritesPage() {
         ))}
       </motion.div>
     );
-  }, [favorites, allFavorites, isLoading, isFavorite, handleFavoriteToggle]);
+  }, [filteredFavorites, allFavorites, isLoading, isFavorite, handleFavoriteToggle]);
 
   return (
     <RouteGuard requireAuth>
@@ -133,7 +191,7 @@ export default function FavoritesPage() {
             <div>
               <h1 className="text-2xl font-bold tracking-tight">My Favorites</h1>
               <p className="text-muted-foreground">
-                Browse and filter your favorite listings
+                Browse and filter your favorite listings ({filteredFavorites.length} of {allFavorites.length})
               </p>
             </div>
           </div>
@@ -147,8 +205,15 @@ export default function FavoritesPage() {
             </CardHeader>
             <CardContent className="space-y-6">
               <FavoritesSearchBar
-                onSearch={handleSearch}
-                onFilterChange={handleFilterChange}
+                searchValue={searchQuery}
+                onSearchChange={setSearchQuery}
+                gameFilter={gameFilter}
+                onGameFilterChange={setGameFilter}
+                minPrice={minPrice}
+                onMinPriceChange={setMinPrice}
+                maxPrice={maxPrice}
+                onMaxPriceChange={setMaxPrice}
+                onClearFilters={handleClearFilters}
               />
               
               <Separator />
