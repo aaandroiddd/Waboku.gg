@@ -1397,17 +1397,13 @@ export default function ListingPage() {
                     <Button
                       variant="outline"
                       size="lg"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        handleFavoriteToggle(e);
-                      }}
+                      onClick={handleFavoriteToggle}
                       className={`w-full ${isFavorited ? "text-red-500" : ""}`}
                       type="button"
                       disabled={listing.soldTo || listing.archivedAt || listing.status === 'sold'}
                     >
                       <Heart className={`h-5 w-5 mr-2 ${isFavorited ? "fill-current" : ""}`} />
-                      {isFavorited ? "Save" : "Save"}
+                      {isFavorited ? "Saved" : "Save"}
                     </Button>
                     <MessageDialog
                       recipientId={listing.userId}
