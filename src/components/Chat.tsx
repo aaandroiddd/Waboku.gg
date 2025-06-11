@@ -35,6 +35,7 @@ import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from 'fire
 import { getDatabase, ref as dbRef, remove, set } from 'firebase/database';
 import { getDoc, doc } from 'firebase/firestore';
 import { firebaseDb, getFirebaseServices } from '@/lib/firebase';
+import { getListingUrl } from '@/lib/listing-slug';
 
 
 interface ChatProps {
@@ -156,6 +157,7 @@ export function Chat({
   }, [messagesLoading, error]);
   const [isAtBottom, setIsAtBottom] = useState(true);
   const [displayedListingTitle, setDisplayedListingTitle] = useState(listingTitle);
+  const [listingData, setListingData] = useState<{ title: string; game: string } | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const observerRef = useRef<IntersectionObserver | null>(null);
@@ -166,7 +168,7 @@ export function Chat({
       setDisplayedListingTitle(listingTitle);
     }
 
-    // Check if the listing is archived when the component mounts
+    // Check if the listing is archived and fetch listing data when the component mounts
     if (listingId) {
       const checkListingStatus = async () => {
         try {
@@ -176,13 +178,31 @@ export function Chat({
           const listingDoc = await getDoc(doc(db, 'listings', listingId));
           if (listingDoc.exists()) {
             const data = listingDoc.data();
+            
+            // Store listing data for URL generation
+            setListingData({
+              title: data.title || listingTitle || 'Unknown Listing',
+              game: data.game || 'other'
+            });
+            
             if (data.status === 'archived' || data.archivedAt) {
               setError('This listing has been archived and is no longer available for messaging.');
               setNewMessage('');
             }
+          } else {
+            // Fallback if listing doesn't exist
+            setListingData({
+              title: listingTitle || 'Unknown Listing',
+              game: 'other'
+            });
           }
         } catch (err) {
           console.error('Error checking listing status:', err);
+          // Fallback on error
+          setListingData({
+            title: listingTitle || 'Unknown Listing',
+            game: 'other'
+          });
         }
       };
       
@@ -651,9 +671,20 @@ export function Chat({
                 {listingTitle && (
                   <div className="flex items-center gap-2 mt-1">
                     <div className="h-4 w-1 bg-primary rounded-full"></div>
-                    {listingId ? (
+                    {listingId && listingData ? (
                       <a 
-                        href={`/listings/${listingId}`}
+                        href={getListingUrl({ 
+                          id: listingId, 
+                          title: listingData.title, 
+                          game: listingData.game 
+                        })}
+                        className="text-sm font-medium hover:underline hover:text-primary transition-colors"
+                      >
+                        {listingTitle}
+                      </a>
+                    ) : listingId ? (
+                      <a 
+                        href={getListingUrl({ id: listingId, title: listingTitle, game: 'other' })}
                         className="text-sm font-medium hover:underline hover:text-primary transition-colors"
                       >
                         {listingTitle}
