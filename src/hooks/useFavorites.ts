@@ -1,5 +1,5 @@
 // useFavorites.ts
-import { firebaseDb as db } from '@/lib/firebase';
+import { getFirebaseServices } from '@/lib/firebase';
 import { Listing } from '@/types/database';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAuthRedirect } from '@/contexts/AuthRedirectContext';
@@ -52,6 +52,11 @@ export function useFavorites() {
     try {
       setIsLoading(true);
       setError(null);
+      
+      const { db } = getFirebaseServices();
+      if (!db) {
+        throw new Error('Database not initialized');
+      }
       
       const favoritesRef = collection(db, 'users', user.uid, 'favorites');
       const favoritesSnapshot = await getDocs(favoritesRef);
@@ -122,6 +127,11 @@ export function useFavorites() {
     try {
       // Mark operation as pending
       setPendingOperations(prev => new Set([...prev, listing.id]));
+      
+      const { db } = getFirebaseServices();
+      if (!db) {
+        throw new Error('Database not initialized');
+      }
       
       if (isFav) {
         // If it's already a favorite, remove it
