@@ -49,14 +49,19 @@ export function FavoriteGroupsManager({
   const [isLoading, setIsLoading] = useState(false);
 
   const handleCreateGroup = async () => {
+    console.log("handleCreateGroup called with name:", newGroupName);
+    
     if (!newGroupName.trim()) {
+      console.log("No group name provided");
       toast.error("Please enter a group name");
       return;
     }
 
     try {
+      console.log("Starting group creation process...");
       setIsLoading(true);
       await onCreateGroup(newGroupName.trim());
+      console.log("Group creation successful");
       setNewGroupName("");
       setIsCreateDialogOpen(false);
       toast.success("Group created successfully");
@@ -124,7 +129,14 @@ export function FavoriteGroupsManager({
         <h3 className="text-lg font-medium">Favorite Groups</h3>
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
           <DialogTrigger asChild>
-            <Button size="sm" className="flex items-center gap-1">
+            <Button 
+              size="sm" 
+              className="flex items-center gap-1"
+              onClick={() => {
+                console.log("New Group button clicked");
+                setIsCreateDialogOpen(true);
+              }}
+            >
               <Plus className="h-4 w-4" />
               <span>New Group</span>
             </Button>
