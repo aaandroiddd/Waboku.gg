@@ -829,22 +829,29 @@ export default function ListingPage() {
   // We already have the favorites functionality from above
 
   const handleFavoriteToggle = (e: React.MouseEvent) => {
+    console.log('handleFavoriteToggle called', { user: !!user, listing: !!listing, isFavorited });
+    
     // Prevent any default form submission or event propagation
     e.preventDefault();
     e.stopPropagation();
     
     if (!user) {
+      console.log('No user, redirecting to sign up');
       toast.error('Please sign up to save favorites');
       router.push('/auth/sign-up');
       return;
     }
 
-    if (!listing) return;
+    if (!listing) {
+      console.log('No listing available');
+      return;
+    }
     
     try {
+      console.log('Calling toggleFavorite with listing:', listing.id);
       // Use the simplified toggleFavorite function
       toggleFavorite(listing, e);
-      setIsFavorited(!isFavorited);
+      // Don't manually update isFavorited here - let the hook handle it
     } catch (error) {
       console.error('Error toggling favorite:', error);
       toast.error('Failed to update favorites');
