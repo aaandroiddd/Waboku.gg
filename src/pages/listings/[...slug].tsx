@@ -44,8 +44,6 @@ import { ArrowLeft, Calendar, Heart, MapPin, MessageCircle, User, ZoomIn, Minus,
 import { useAuth } from '@/contexts/AuthContext';
 import { useAuthRedirect } from '@/contexts/AuthRedirectContext';
 import { useFavorites } from '@/hooks/useFavorites';
-import { useFavoriteGroups } from '@/hooks/useFavoriteGroups';
-import { AddToGroupDialog } from '@/components/AddToGroupDialog';
 import { toast } from 'sonner';
 import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
 import { Footer } from '@/components/Footer';
@@ -829,9 +827,6 @@ export default function ListingPage() {
   // Dialog is now handled directly in each carousel item
 
   // We already have the favorites functionality from above
-  
-  const [showGroupDialog, setShowGroupDialog] = useState(false);
-  const { groups, addToGroup, createAndAddToGroup } = useFavoriteGroups();
 
   const handleFavoriteToggle = (e: React.MouseEvent) => {
     // Prevent any default form submission or event propagation
@@ -847,67 +842,12 @@ export default function ListingPage() {
     if (!listing) return;
     
     try {
-      if (isFavorited) {
-        // If already a favorite, remove it
-        // Use a local state update to prevent full page refresh
-        setIsFavorited(false);
-        
-        // Then update the backend without triggering a refresh
-        toggleFavorite(listing, e);
-      } else {
-        // If not a favorite, show the group selection dialog
-        setShowGroupDialog(true);
-      }
+      // Use the simplified toggleFavorite function
+      toggleFavorite(listing, e);
+      setIsFavorited(!isFavorited);
     } catch (error) {
       console.error('Error toggling favorite:', error);
       toast.error('Failed to update favorites');
-    }
-  };
-  
-  // Handle adding to a group
-  const handleAddToGroup = async (listingId: string, groupId: string) => {
-    if (!listing) return;
-    
-    try {
-      // Use the addFavoriteToGroup function from the useFavorites hook
-      const { addFavoriteToGroup } = useFavorites();
-      await addFavoriteToGroup(listing, groupId);
-      setIsFavorited(true);
-      return Promise.resolve();
-    } catch (error) {
-      console.error('Error adding to group:', error);
-      toast.error('Failed to add to group');
-      return Promise.reject(error);
-    }
-  };
-
-  // Handle creating and adding to a new group
-  const handleCreateAndAddToGroup = async (listingId: string, groupName: string) => {
-    if (!listing) return Promise.reject(new Error('No listing available'));
-    
-    try {
-      console.log(`Creating new group "${groupName}" and adding listing ${listingId}`);
-      
-      // Use the hook directly instead of dynamically importing it
-      // This ensures we're using the same instance with the proper state
-      const result = await createAndAddToGroup(listingId, groupName);
-      
-      // Only update favorite status if the operation was successful
-      if (result) {
-        setIsFavorited(true);
-        console.log(`Successfully added listing to new group with ID: ${result}`);
-        
-        // Update favorite status without triggering a full refresh
-        // This prevents the similar listings section from reloading
-        return Promise.resolve(result);
-      } else {
-        console.log('No group ID returned, but operation did not throw an error');
-        return Promise.reject(new Error('Failed to create group or add listing'));
-      }
-    } catch (error) {
-      console.error('Error creating group:', error);
-      toast.error('Failed to create group');
-      return Promise.reject(error);
     }
   };
 
@@ -1555,16 +1495,6 @@ export default function ListingPage() {
       
       {/* Firestore Request Counter */}
       {process.env.NODE_ENV === 'development' && <FirestoreRequestCounter />}
-      
-      {/* Add to Group Dialog */}
-      <AddToGroupDialog
-        isOpen={showGroupDialog}
-        onClose={() => setShowGroupDialog(false)}
-        listing={listing}
-        groups={groups}
-        onAddToGroup={handleAddToGroup}
-        onCreateAndAddToGroup={handleCreateAndAddToGroup}
-      />
 
       <Dialog open={isChatOpen} onOpenChange={setIsChatOpen}>
         <DialogContent 

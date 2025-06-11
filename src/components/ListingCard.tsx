@@ -20,8 +20,6 @@ import { loadStripe } from '@stripe/stripe-js';
 import { toast } from 'sonner';
 import { parseDate, isExpired } from '@/lib/date-utils';
 import { useStripeSellerStatus } from '@/hooks/useStripeSellerStatus';
-import { useFavoriteGroups } from '@/hooks/useFavoriteGroups';
-import { AddToGroupDialog } from './AddToGroupDialog';
 import { getListingUrl } from '@/lib/listing-slug';
 import { MobileAnimationWrapper, MobileMotionButton, MobileMotionSpan } from './MobileAnimationWrapper';
 import { useSearchAnalytics } from '@/hooks/useSearchAnalytics';
@@ -42,8 +40,6 @@ interface ListingCardProps {
   listing: Listing;
   isFavorite: boolean;
   onFavoriteClick: (e: React.MouseEvent, listing: Listing) => void;
-  onAddToGroup?: (listingId: string, groupId: string) => Promise<void>;
-  onRemoveFromFavorites?: (listingId: string) => Promise<void>;
   getConditionColor: (condition: string) => { base: string; hover: string };
   searchTerm?: string;
   resultPosition?: number;
@@ -166,12 +162,10 @@ const BuyNowButton = ({ listing, className }: BuyNowButtonProps) => {
   );
 };
 
-export const ListingCard = memo(({ listing, isFavorite, onFavoriteClick, onAddToGroup, onRemoveFromFavorites, getConditionColor, searchTerm, resultPosition }: ListingCardProps) => {
+export const ListingCard = memo(({ listing, isFavorite, onFavoriteClick, getConditionColor, searchTerm, resultPosition }: ListingCardProps) => {
   const { location } = useLocation({ autoRequest: false });
   const [calculatedDistance, setCalculatedDistance] = useState<number | null>(null);
   const [isCheckingExpiration, setIsCheckingExpiration] = useState(false);
-  const [showGroupDialog, setShowGroupDialog] = useState(false);
-  const { groups, addToGroup, createAndAddToGroup } = useFavoriteGroups();
   const { user } = useAuth();
   const { trackSearchClick } = useSearchAnalytics();
 
@@ -300,19 +294,6 @@ export const ListingCard = memo(({ listing, isFavorite, onFavoriteClick, onAddTo
     }
   }, [location, listing]);
 
-  // Handle adding to a group
-  const handleAddToGroup = async (listingId: string, groupId: string) => {
-    if (onAddToGroup) {
-      return onAddToGroup(listingId, groupId);
-    }
-    return addToGroup(listingId, groupId);
-  };
-
-  // Handle creating and adding to a new group
-  const handleCreateAndAddToGroup = async (listingId: string, groupName: string) => {
-    return createAndAddToGroup(listingId, groupName);
-  };
-
   return (
     <MobileAnimationWrapper
       variants={cardVariants}
@@ -321,15 +302,6 @@ export const ListingCard = memo(({ listing, isFavorite, onFavoriteClick, onAddTo
       whileHover="hover"
       layout
     >
-      {/* Add to Group Dialog */}
-      <AddToGroupDialog
-        isOpen={showGroupDialog}
-        onClose={() => setShowGroupDialog(false)}
-        listing={listing}
-        groups={groups}
-        onAddToGroup={handleAddToGroup}
-        onCreateAndAddToGroup={handleCreateAndAddToGroup}
-      />
       <Card className="relative overflow-hidden group h-full">
         <Link 
           href={getListingUrl(listing)}
@@ -377,21 +349,7 @@ export const ListingCard = memo(({ listing, isFavorite, onFavoriteClick, onAddTo
                           bg-black/50 hover:bg-black/75 transition-colors duration-200 rounded-full
                           ${isFavorite ? 'text-red-500 hover:text-red-600' : 'text-white hover:text-red-500'}
                         `}
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          
-                          if (isFavorite) {
-                            // If already a favorite, remove it
-                            onFavoriteClick(e, listing);
-                          } else if (user) {
-                            // If not a favorite and user is logged in, show group selection dialog
-                            setShowGroupDialog(true);
-                          } else {
-                            // If not logged in, use the regular handler which will redirect to login
-                            onFavoriteClick(e, listing);
-                          }
-                        }}
+                        onClick={(e) => onFavoriteClick(e, listing)}
                       >
                         <Heart 
                           className={`h-5 w-5 ${isFavorite ? 'fill-current' : ''}`}
