@@ -31,23 +31,29 @@ export function useFavoriteGroups() {
 
   const fetchGroups = useCallback(async () => {
     if (!user) {
+      console.log('No user found, clearing groups');
       setGroups([]);
       setIsLoading(false);
       return;
     }
 
     try {
+      console.log('Fetching favorite groups for user:', user.uid);
       setIsLoading(true);
       setError(null);
       
       const groupsRef = collection(db, 'users', user.uid, 'favoriteGroups');
+      console.log('Groups collection path:', groupsRef.path);
+      
       const groupsSnapshot = await getDocs(groupsRef);
+      console.log('Found', groupsSnapshot.size, 'groups in database');
       
       const groupsData: FavoriteGroup[] = [];
       let defaultGroup: FavoriteGroup | null = null;
       
       for (const groupDoc of groupsSnapshot.docs) {
         const groupData = groupDoc.data();
+        console.log('Processing group:', groupDoc.id, groupData);
         
         // Get count of favorites in this group
         const favoritesRef = collection(db, 'users', user.uid, 'favorites');
@@ -65,6 +71,7 @@ export function useFavoriteGroups() {
         if (groupData.name === 'Default') {
           defaultGroup = group;
           setDefaultGroupId(groupDoc.id);
+          console.log('Found default group with ID:', groupDoc.id);
         }
         
         groupsData.push(group);
@@ -73,10 +80,11 @@ export function useFavoriteGroups() {
       // Create default group if it doesn't exist
       if (!defaultGroup && user) {
         try {
-          console.log('Creating default favorite group');
+          console.log('No default group found, creating one...');
           
           // Generate a new document reference
           const defaultGroupRef = doc(groupsRef);
+          console.log('Creating default group with path:', defaultGroupRef.path);
           
           // Create the document with the group data
           await setDoc(defaultGroupRef, {
@@ -99,6 +107,11 @@ export function useFavoriteGroups() {
           setDefaultGroupId(defaultGroupRef.id);
         } catch (err) {
           console.error('Error creating default group:', err);
+          console.error('Error details:', {
+            message: err instanceof Error ? err.message : 'Unknown error',
+            code: (err as any)?.code,
+            stack: err instanceof Error ? err.stack : undefined
+          });
         }
       }
       
@@ -109,9 +122,15 @@ export function useFavoriteGroups() {
         return a.name.localeCompare(b.name);
       });
       
+      console.log('Final groups data:', groupsData);
       setGroups(groupsData);
     } catch (err) {
       console.error('Error fetching favorite groups:', err);
+      console.error('Error details:', {
+        message: err instanceof Error ? err.message : 'Unknown error',
+        code: (err as any)?.code,
+        stack: err instanceof Error ? err.stack : undefined
+      });
       setError(err instanceof Error ? err.message : 'Failed to fetch favorite groups');
     } finally {
       setIsLoading(false);
