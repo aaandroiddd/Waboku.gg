@@ -200,7 +200,7 @@ export default function ListingPage() {
       window.__carouselApi = api;
     }
   };
-  const [isFavorited, setIsFavorited] = useState(false);
+
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isOfferDialogOpen, setIsOfferDialogOpen] = useState(false);
   const [isReportDialogOpen, setIsReportDialogOpen] = useState(false);
@@ -792,12 +792,7 @@ export default function ListingPage() {
     };
   }, [listingId, user, startLoading, stopLoading]);
   
-  // Add a separate effect to update the favorite status when the listing or favorites change
-  useEffect(() => {
-    if (listing && initialized && user) {
-      setIsFavorited(isFavorite(listing.id));
-    }
-  }, [listing, isFavorite, initialized, user]);
+
 
   // Effect to handle URL parameters for post-login actions
   useEffect(() => {
@@ -829,7 +824,8 @@ export default function ListingPage() {
   // We already have the favorites functionality from above
 
   const handleFavoriteToggle = (e: React.MouseEvent) => {
-    console.log('handleFavoriteToggle called', { user: !!user, listing: !!listing, isFavorited });
+    const currentlyFavorited = listing ? isFavorite(listing.id) : false;
+    console.log('handleFavoriteToggle called', { user: !!user, listing: !!listing, currentlyFavorited });
     
     // Prevent any default form submission or event propagation
     e.preventDefault();
@@ -851,7 +847,6 @@ export default function ListingPage() {
       console.log('Calling toggleFavorite with listing:', listing.id);
       // Use the simplified toggleFavorite function
       toggleFavorite(listing, e);
-      // Don't manually update isFavorited here - let the hook handle it
     } catch (error) {
       console.error('Error toggling favorite:', error);
       toast.error('Failed to update favorites');
@@ -1404,13 +1399,16 @@ export default function ListingPage() {
                     <Button
                       variant="outline"
                       size="lg"
-                      onClick={handleFavoriteToggle}
-                      className={`w-full ${isFavorited ? "text-red-500" : ""}`}
+                      onClick={(e) => {
+                        console.log('Save button clicked');
+                        handleFavoriteToggle(e);
+                      }}
+                      className={`w-full ${user && listing && isFavorite(listing.id) ? "text-red-500" : ""}`}
                       type="button"
                       disabled={listing.soldTo || listing.archivedAt || listing.status === 'sold'}
                     >
-                      <Heart className={`h-5 w-5 mr-2 ${isFavorited ? "fill-current" : ""}`} />
-                      {isFavorited ? "Saved" : "Save"}
+                      <Heart className={`h-5 w-5 mr-2 ${user && listing && isFavorite(listing.id) ? "fill-current" : ""}`} />
+                      {user && listing && isFavorite(listing.id) ? "Saved" : "Save"}
                     </Button>
                     <MessageDialog
                       recipientId={listing.userId}
