@@ -18,7 +18,7 @@ export function ListingGridWithAnalytics({
   loading = false, 
   searchTerm 
 }: ListingGridWithAnalyticsProps) {
-  const { favorites, addToFavorites, removeFromFavorites } = useFavorites();
+  const { toggleFavorite, isFavorite } = useFavorites();
   const { user } = useAuth();
   const { saveRedirectState } = useAuthRedirect();
   const router = useRouter();
@@ -47,13 +47,7 @@ export function ListingGridWithAnalytics({
       return;
     }
 
-    const isFavorite = favorites.some(fav => fav.id === listing.id);
-    
-    if (isFavorite) {
-      await removeFromFavorites(listing.id);
-    } else {
-      await addToFavorites(listing);
-    }
+    await toggleFavorite(listing, e);
   };
 
   if (loading) {
@@ -86,7 +80,7 @@ export function ListingGridWithAnalytics({
         <ListingCard
           key={listing.id}
           listing={listing}
-          isFavorite={favorites.some(fav => fav.id === listing.id)}
+          isFavorite={user ? isFavorite(listing.id) : false}
           onFavoriteClick={handleFavoriteClick}
           getConditionColor={getConditionColor}
           searchTerm={searchTerm}

@@ -163,7 +163,7 @@ export function ListingGrid({
   
   const loading = propLoading || (userId ? isLoading : false);
   
-  const { toggleFavorite, addFavoriteToGroup, isFavorite } = useFavorites();
+  const { toggleFavorite, isFavorite } = useFavorites();
   const { user } = useAuth();
   const [selectedListing, setSelectedListing] = useState<Listing | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -328,7 +328,6 @@ export function ListingGrid({
                     listing={listing}
                     isFavorite={user ? isFavorite(listing.id) : false}
                     onFavoriteClick={handleFavoriteClick}
-                    onAddToGroup={(listingId, groupId) => addFavoriteToGroup(listing, groupId)}
                     getConditionColor={memoizedGetConditionColor}
                     distance={(listing as any).distance}
                   />
