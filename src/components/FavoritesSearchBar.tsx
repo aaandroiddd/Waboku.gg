@@ -46,7 +46,6 @@ export function FavoritesSearchBar({
     const filters: FavoriteFilters = {};
     const newActiveFilters: string[] = [];
     
-=======
     if (selectedGame && selectedGame !== "all-games") {
       filters.game = selectedGame;
       
@@ -57,7 +56,6 @@ export function FavoritesSearchBar({
       
       newActiveFilters.push(`Game: ${gameName}`);
     }
-=======
     
     if (minPrice || maxPrice) {
       filters.priceRange = {};
@@ -201,8 +199,6 @@ export function FavoritesSearchBar({
             </div>
           </PopoverContent>
         </Popover>
-
-
       </div>
 
       {/* Active filters */}
