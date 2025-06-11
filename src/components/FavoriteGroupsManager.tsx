@@ -50,6 +50,8 @@ export function FavoriteGroupsManager({
 
   const handleCreateGroup = async () => {
     console.log("handleCreateGroup called with name:", newGroupName);
+    console.log("onCreateGroup function:", onCreateGroup);
+    console.log("onCreateGroup type:", typeof onCreateGroup);
     
     if (!newGroupName.trim()) {
       console.log("No group name provided");
@@ -60,6 +62,14 @@ export function FavoriteGroupsManager({
     try {
       console.log("Starting group creation process...");
       setIsLoading(true);
+      
+      if (typeof onCreateGroup !== 'function') {
+        console.error("onCreateGroup is not a function:", onCreateGroup);
+        toast.error("Group creation function is not available");
+        return;
+      }
+      
+      console.log("Calling onCreateGroup with:", newGroupName.trim());
       await onCreateGroup(newGroupName.trim());
       console.log("Group creation successful");
       setNewGroupName("");
@@ -160,7 +170,13 @@ export function FavoriteGroupsManager({
               >
                 Cancel
               </Button>
-              <Button onClick={handleCreateGroup} disabled={isLoading}>
+              <Button 
+                onClick={(e) => {
+                  console.log("Create Group button clicked!", e);
+                  handleCreateGroup();
+                }} 
+                disabled={isLoading}
+              >
                 {isLoading ? "Creating..." : "Create Group"}
               </Button>
             </DialogFooter>
