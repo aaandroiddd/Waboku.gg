@@ -165,20 +165,27 @@ export function FavoriteGroupsManager({
             <DialogFooter>
               <Button
                 variant="outline"
-                onClick={() => setIsCreateDialogOpen(false)}
+                onClick={() => {
+                  console.log("Cancel button clicked!");
+                  setIsCreateDialogOpen(false);
+                }}
                 disabled={isLoading}
               >
                 Cancel
               </Button>
-              <Button 
+              <button 
+                type="button"
+                className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground shadow hover:bg-primary/90 h-9 px-4 py-2"
                 onClick={(e) => {
                   console.log("Create Group button clicked!", e);
+                  console.log("Button element:", e.target);
+                  console.log("Event type:", e.type);
                   handleCreateGroup();
                 }} 
                 disabled={isLoading}
               >
                 {isLoading ? "Creating..." : "Create Group"}
-              </Button>
+              </button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
