@@ -211,10 +211,15 @@ export function MessageDialog({ recipientId, recipientName, listingId: propListi
       toast({
         title: "Message sent",
         description: "Your message has been sent successfully.",
-        action: {
-          label: "View Messages",
-          onClick: () => router.push("/dashboard/messages")
-        },
+        action: (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => router.push("/dashboard/messages")}
+          >
+            View Messages
+          </Button>
+        ),
         duration: 5000
       })
       setIsOpen(false)
