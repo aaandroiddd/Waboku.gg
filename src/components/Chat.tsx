@@ -517,17 +517,13 @@ export function Chat({
       // Only show toast for initial messages (when there's no existing chatId)
       if (!chatId) {
         toast({
-          title: "Success",
-          description: "Message sent successfully",
-          action: (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => router.push('/dashboard/messages')}
-            >
-              View Messages
-            </Button>
-          )
+          title: "Message sent",
+          description: "Your message has been sent successfully.",
+          action: {
+            label: "View Messages",
+            onClick: () => router.push("/dashboard/messages")
+          },
+          duration: 5000
         });
         setShowSuccessDialog(true);
       }

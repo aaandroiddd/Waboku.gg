@@ -175,6 +175,11 @@ export default function SendMessagePage() {
       toast({
         title: "Message sent",
         description: "Your message has been sent successfully.",
+        action: {
+          label: "View Messages",
+          onClick: () => router.push("/dashboard/messages")
+        },
+        duration: 5000
       });
       
       // Navigate back to the previous page or to messages dashboard
