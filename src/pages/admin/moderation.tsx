@@ -17,6 +17,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Footer } from '@/components/Footer';
 import { GlobalLoading } from '@/components/GlobalLoading';
+import { ListingModerationTool } from '@/components/admin/ListingModerationTool';
 import { Listing } from '@/types/database';
 import Image from 'next/image';
 import { formatPrice } from '@/lib/price';
@@ -439,6 +440,7 @@ export default function ModerationDashboard() {
               <TabsTrigger value="approved" data-value="approved">Approved</TabsTrigger>
               <TabsTrigger value="rejected" data-value="rejected">Rejected</TabsTrigger>
               <TabsTrigger value="reports" data-value="reports">Reports</TabsTrigger>
+              <TabsTrigger value="listing-actions" data-value="listing-actions">Listing Actions</TabsTrigger>
               <TabsTrigger value="info" data-value="info">Guidelines</TabsTrigger>
             </TabsList>
 
@@ -860,6 +862,14 @@ export default function ModerationDashboard() {
                   )}
                 </CardContent>
               </Card>
+            </TabsContent>
+
+            <TabsContent value="listing-actions" className="space-y-4">
+              <ListingModerationTool 
+                adminSecret={adminSecret}
+                userToken={user ? user.accessToken : undefined}
+                userId={user?.uid}
+              />
             </TabsContent>
 
             <TabsContent value="info">

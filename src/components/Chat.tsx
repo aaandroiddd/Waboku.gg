@@ -496,6 +496,12 @@ export function Chat({
       return;
     }
 
+    // Check if this is a system chat (prevent replies to system messages)
+    if (receiverId === 'system_moderation') {
+      setError('You cannot reply to system messages');
+      return;
+    }
+
     if (!newMessage.trim()) return;
 
     try {
@@ -859,74 +865,80 @@ export function Chat({
 
         {/* Message Input - Now properly fixed to bottom */}
         <div className="flex-none border-t bg-card">
-          <form onSubmit={handleSend} className="p-4">
-            <div className="flex gap-2">
-              <div className="flex-1 flex gap-2">
-                <Input
-                  value={newMessage}
-                  onChange={handleInputChange}
-                  placeholder="Type your message..."
-                  className="text-sm"
-                  disabled={isUploading}
-                />
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  className="hidden"
-                  accept="image/*"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) {
-                      handleImageUpload(file);
-                    }
-                    e.target.value = '';
-                  }}
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  disabled={isUploading}
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  <Image className="h-4 w-4" />
-                </Button>
-                <Popover open={showEmojiPicker} onOpenChange={setShowEmojiPicker}>
-                  <PopoverTrigger asChild>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      disabled={isUploading}
-                    >
-                      <Smile className="h-4 w-4" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-full p-0" align="end">
-                    <Picker
-                      data={data}
-                      onEmojiSelect={(emoji: any) => {
-                        const updatedMessage = newMessage + emoji.native;
-                        setNewMessage(updatedMessage);
-                        setShowEmojiPicker(false);
-                        
-                        // Update typing status when adding emoji
-                        if (chatId && updatedMessage.trim().length > 0) {
-                          setTypingStatus(true);
-                        }
-                      }}
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-              <Button 
-                type="submit"
-                disabled={!newMessage.trim() || isUploading}
-              >
-                Send
-              </Button>
+          {receiverId === 'system_moderation' ? (
+            <div className="p-4 text-center text-muted-foreground">
+              <p className="text-sm">This is a system message. You cannot reply to this conversation.</p>
             </div>
-          </form>
+          ) : (
+            <form onSubmit={handleSend} className="p-4">
+              <div className="flex gap-2">
+                <div className="flex-1 flex gap-2">
+                  <Input
+                    value={newMessage}
+                    onChange={handleInputChange}
+                    placeholder="Type your message..."
+                    className="text-sm"
+                    disabled={isUploading}
+                  />
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    className="hidden"
+                    accept="image/*"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        handleImageUpload(file);
+                      }
+                      e.target.value = '';
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    disabled={isUploading}
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    <Image className="h-4 w-4" />
+                  </Button>
+                  <Popover open={showEmojiPicker} onOpenChange={setShowEmojiPicker}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        disabled={isUploading}
+                      >
+                        <Smile className="h-4 w-4" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-full p-0" align="end">
+                      <Picker
+                        data={data}
+                        onEmojiSelect={(emoji: any) => {
+                          const updatedMessage = newMessage + emoji.native;
+                          setNewMessage(updatedMessage);
+                          setShowEmojiPicker(false);
+                          
+                          // Update typing status when adding emoji
+                          if (chatId && updatedMessage.trim().length > 0) {
+                            setTypingStatus(true);
+                          }
+                        }}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+                <Button 
+                  type="submit"
+                  disabled={!newMessage.trim() || isUploading}
+                >
+                  Send
+                </Button>
+              </div>
+            </form>
+          )}
         </div>
       </Card>
 
