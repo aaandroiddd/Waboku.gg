@@ -865,7 +865,7 @@ export function Chat({
 
         {/* Message Input - Now properly fixed to bottom */}
         <div className="flex-none border-t bg-card">
-          {receiverId === 'system_moderation' ? (
+          {(receiverId === 'system_moderation' || messages.some(msg => msg.canReply === false || msg.isSystemMessage)) ? (
             <div className="p-4 text-center text-muted-foreground">
               <p className="text-sm">This is a system message. You cannot reply to this conversation.</p>
             </div>

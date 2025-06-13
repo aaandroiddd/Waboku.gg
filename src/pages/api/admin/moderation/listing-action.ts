@@ -124,6 +124,7 @@ async function sendSystemMessage(
 
     // Create system user ID (consistent system identifier)
     const systemUserId = 'system_moderation';
+    const systemDisplayName = 'Waboku.gg Team';
 
     // Prepare message content based on action
     let messageContent = '';
@@ -149,7 +150,7 @@ If you believe this action was taken in error, please contact our support team w
 Thank you for your understanding.
 
 Best regards,
-The Moderation Team`;
+Waboku.gg Team`;
         break;
 
       case 'restore':
@@ -168,7 +169,7 @@ Your listing "${listingTitle}" has been restored and is now visible to other use
 Thank you for your patience.
 
 Best regards,
-The Moderation Team`;
+Waboku.gg Team`;
         break;
 
       case 'delete':
@@ -188,7 +189,7 @@ Your listing "${listingTitle}" has been permanently removed from our platform.
 If you believe this action was taken in error, please contact our support team immediately with your listing details.
 
 Best regards,
-The Moderation Team`;
+Waboku.gg Team`;
         break;
     }
 
@@ -220,7 +221,7 @@ The Moderation Team`;
           [userId]: true
         },
         participantNames: {
-          [systemUserId]: 'Moderation Team',
+          [systemUserId]: systemDisplayName,
           [userId]: userName
         },
         createdAt: Date.now(),
