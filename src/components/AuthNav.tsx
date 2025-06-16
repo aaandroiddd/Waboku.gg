@@ -1,7 +1,7 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "./ui/button";
 import Link from "next/link";
-import { LayoutDashboard } from "lucide-react";
+import { LayoutDashboard, Plus } from "lucide-react";
 import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
 
@@ -33,6 +33,12 @@ export default function AuthNav() {
               <Button variant="ghost" size="sm" className="gap-2">
                 <LayoutDashboard className="h-4 w-4" />
                 Dashboard
+              </Button>
+            </Link>
+            <Link href="/dashboard/create-listing">
+              <Button variant="outline" size="sm" className="gap-2">
+                <Plus className="h-4 w-4" />
+                Create Listing
               </Button>
             </Link>
           </div>
