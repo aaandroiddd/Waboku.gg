@@ -37,7 +37,7 @@ import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { useNotifications } from '@/hooks/useNotifications';
 import { Notification, NotificationType } from '@/types/notification';
 import { cn } from '@/lib/utils';
-import { NotificationDebugger } from '@/components/NotificationDebugger';
+
 import { useUnread } from '@/contexts/UnreadContext';
 import { useToast } from '@/components/ui/use-toast';
 
@@ -251,8 +251,7 @@ export default function NotificationsPage() {
           </Select>
         </div>
 
-        {/* Debug Component - Remove this after testing */}
-        <NotificationDebugger />
+
 
         {/* Notifications List */}
         <Card>
