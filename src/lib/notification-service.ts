@@ -47,7 +47,11 @@ export class NotificationService {
    */
   async createNotification(data: CreateNotificationData): Promise<string> {
     try {
+      console.log('NotificationService: Creating notification with data:', data);
+      
       const db = this.getDb();
+      console.log('NotificationService: Database instance obtained:', !!db);
+      
       const notificationData = {
         ...data,
         read: false,
@@ -55,11 +59,19 @@ export class NotificationService {
         updatedAt: Timestamp.now()
       };
 
+      console.log('NotificationService: Prepared notification data:', notificationData);
+
       const docRef = await addDoc(collection(db, 'notifications'), notificationData);
-      console.log('Notification created:', docRef.id);
+      console.log('NotificationService: Notification created successfully with ID:', docRef.id);
       return docRef.id;
     } catch (error) {
-      console.error('Error creating notification:', error);
+      console.error('NotificationService: Error creating notification:', error);
+      console.error('NotificationService: Error details:', {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        name: error instanceof Error ? error.name : 'Unknown error type',
+        code: (error as any)?.code || 'No error code',
+        stack: error instanceof Error ? error.stack : 'No stack trace'
+      });
       throw error;
     }
   }

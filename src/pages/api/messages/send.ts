@@ -155,16 +155,27 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       // Create notification for the recipient
       try {
+        console.log('Creating message notification for recipient:', recipientId);
         const senderData = await admin.auth.getUser(senderId);
         const senderName = senderData.displayName || 'Someone';
         
-        await notificationService.createMessageNotification(
+        console.log('Sender data retrieved:', { senderName, senderId });
+        
+        const notificationId = await notificationService.createMessageNotification(
           recipientId,
           senderName,
           chatId
         );
+        
+        console.log('Message notification created successfully:', notificationId);
       } catch (notificationError) {
         console.error('Error creating message notification:', notificationError);
+        console.error('Notification error details:', {
+          message: notificationError instanceof Error ? notificationError.message : 'Unknown error',
+          stack: notificationError instanceof Error ? notificationError.stack : 'No stack trace',
+          recipientId,
+          chatId
+        });
         // Don't fail the message send if notification creation fails
       }
 
