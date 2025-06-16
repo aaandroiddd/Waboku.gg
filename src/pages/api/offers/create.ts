@@ -3,6 +3,7 @@ import { getFirebaseAdmin } from '@/lib/firebase-admin';
 import * as admin from 'firebase-admin';
 import { getAuth } from 'firebase-admin/auth';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
+import { notificationService } from '@/lib/notification-service';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   console.log('POST /api/offers/create START');
@@ -222,6 +223,51 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       console.log('Adding offer document to Firestore...');
       const offerRef = await db.collection('offers').add(offerData);
       console.log(`Successfully created offer with ID: ${offerRef.id}`);
+
+      // Create notification for the seller
+      try {
+        console.log('Creating offer notification for seller:', sellerId);
+        const buyerData = await auth.getUser(userId);
+        const buyerName = buyerData.displayName || 'Someone';
+        
+        console.log('Buyer data retrieved:', { buyerName, buyerId: userId });
+        
+        // Use the notification API endpoint instead of calling the service directly
+        const notificationResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/notifications/create`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            userId: sellerId,
+            type: 'offer',
+            title: '💰 New Offer Received',
+            message: `${buyerName} made an offer of $${numericAmount.toFixed(2)} on "${listingSnapshot.title || 'Unknown Listing'}"`,
+            data: {
+              offerId: offerRef.id,
+              listingId: listingId,
+              actionUrl: `/dashboard/offers`
+            }
+          })
+        });
+        
+        if (notificationResponse.ok) {
+          const result = await notificationResponse.json();
+          console.log('Offer notification created successfully:', result.notificationId);
+        } else {
+          const errorData = await notificationResponse.json();
+          console.error('Failed to create offer notification:', errorData);
+        }
+      } catch (notificationError) {
+        console.error('Error creating offer notification:', notificationError);
+        console.error('Notification error details:', {
+          message: notificationError instanceof Error ? notificationError.message : 'Unknown error',
+          stack: notificationError instanceof Error ? notificationError.stack : 'No stack trace',
+          sellerId,
+          offerId: offerRef.id
+        });
+        // Don't fail the offer creation if notification creation fails
+      }
 
       return res.status(201).json({ 
         success: true, 

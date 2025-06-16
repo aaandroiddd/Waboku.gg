@@ -161,13 +161,31 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         
         console.log('Sender data retrieved:', { senderName, senderId });
         
-        const notificationId = await notificationService.createMessageNotification(
-          recipientId,
-          senderName,
-          chatId
-        );
+        // Use the notification API endpoint instead of calling the service directly
+        const notificationResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/notifications/create`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            userId: recipientId,
+            type: 'message',
+            title: '💬 New Message',
+            message: `${senderName} sent you a message`,
+            data: {
+              messageThreadId: chatId,
+              actionUrl: `/dashboard/messages`
+            }
+          })
+        });
         
-        console.log('Message notification created successfully:', notificationId);
+        if (notificationResponse.ok) {
+          const result = await notificationResponse.json();
+          console.log('Message notification created successfully:', result.notificationId);
+        } else {
+          const errorData = await notificationResponse.json();
+          console.error('Failed to create message notification:', errorData);
+        }
       } catch (notificationError) {
         console.error('Error creating message notification:', notificationError);
         console.error('Notification error details:', {

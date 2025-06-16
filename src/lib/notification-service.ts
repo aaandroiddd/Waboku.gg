@@ -21,6 +21,25 @@ import {
   NotificationType 
 } from '@/types/notification';
 
+// Server-side imports (only available in Node.js environment)
+let adminFirestore: any = null;
+let adminTimestamp: any = null;
+
+// Dynamically import Firebase Admin SDK only on server side
+if (typeof window === 'undefined') {
+  try {
+    const { getFirebaseAdmin } = require('@/lib/firebase-admin');
+    const { getFirestore, Timestamp: AdminTimestamp } = require('firebase-admin/firestore');
+    
+    // Initialize admin services
+    const admin = getFirebaseAdmin();
+    adminFirestore = getFirestore();
+    adminTimestamp = AdminTimestamp;
+  } catch (error) {
+    console.warn('[NotificationService] Firebase Admin SDK not available:', error);
+  }
+}
+
 export class NotificationService {
   private static instance: NotificationService;
   
@@ -49,21 +68,42 @@ export class NotificationService {
     try {
       console.log('NotificationService: Creating notification with data:', data);
       
-      const db = this.getDb();
-      console.log('NotificationService: Database instance obtained:', !!db);
-      
-      const notificationData = {
-        ...data,
-        read: false,
-        createdAt: Timestamp.now(),
-        updatedAt: Timestamp.now()
-      };
+      // Check if we're running on server side and have admin SDK available
+      if (typeof window === 'undefined' && adminFirestore && adminTimestamp) {
+        console.log('NotificationService: Using Firebase Admin SDK for server-side notification creation');
+        
+        const notificationData = {
+          ...data,
+          read: false,
+          createdAt: adminTimestamp.now(),
+          updatedAt: adminTimestamp.now()
+        };
 
-      console.log('NotificationService: Prepared notification data:', notificationData);
+        console.log('NotificationService: Prepared notification data (admin):', notificationData);
 
-      const docRef = await addDoc(collection(db, 'notifications'), notificationData);
-      console.log('NotificationService: Notification created successfully with ID:', docRef.id);
-      return docRef.id;
+        const docRef = await adminFirestore.collection('notifications').add(notificationData);
+        console.log('NotificationService: Notification created successfully with ID (admin):', docRef.id);
+        return docRef.id;
+      } else {
+        // Use client-side Firebase SDK
+        console.log('NotificationService: Using client-side Firebase SDK for notification creation');
+        
+        const db = this.getDb();
+        console.log('NotificationService: Database instance obtained:', !!db);
+        
+        const notificationData = {
+          ...data,
+          read: false,
+          createdAt: Timestamp.now(),
+          updatedAt: Timestamp.now()
+        };
+
+        console.log('NotificationService: Prepared notification data (client):', notificationData);
+
+        const docRef = await addDoc(collection(db, 'notifications'), notificationData);
+        console.log('NotificationService: Notification created successfully with ID (client):', docRef.id);
+        return docRef.id;
+      }
     } catch (error) {
       console.error('NotificationService: Error creating notification:', error);
       console.error('NotificationService: Error details:', {
