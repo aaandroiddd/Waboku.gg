@@ -35,6 +35,7 @@ import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { useNotifications } from '@/hooks/useNotifications';
 import { Notification, NotificationType } from '@/types/notification';
 import { cn } from '@/lib/utils';
+import { NotificationDebugger } from '@/components/NotificationDebugger';
 
 export default function NotificationsPage() {
   const router = useRouter();
@@ -191,6 +192,9 @@ export default function NotificationsPage() {
             </SelectContent>
           </Select>
         </div>
+
+        {/* Debug Component - Remove this after testing */}
+        <NotificationDebugger />
 
         {/* Notifications List */}
         <Card>
