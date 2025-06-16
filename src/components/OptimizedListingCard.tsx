@@ -525,6 +525,23 @@ export const OptimizedListingCard = memo(({
                         </span>
                       </OptimizedMotion>
                     )}
+
+                    {/* Final Sale Badge */}
+                    {listing.finalSale && listing.status === 'active' && (
+                      <OptimizedMotion 
+                        className="flex-shrink-0"
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: 0.4 }}
+                      >
+                        <span className="px-2 py-1 bg-orange-500/90 text-white rounded-md font-semibold flex items-center gap-1 text-xs sm:text-sm whitespace-nowrap">
+                          <svg viewBox="0 0 24 24" className="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                          </svg>
+                          <span>Final Sale</span>
+                        </span>
+                      </OptimizedMotion>
+                    )}
                   </div>
                 </div>
               </div>
