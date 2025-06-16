@@ -26,6 +26,7 @@ export interface Listing {
   longitude?: number;
   distance?: number;
   offersOnly?: boolean;
+  finalSale?: boolean;
   location?: {
     latitude?: number;
     longitude?: number;
@@ -59,6 +60,7 @@ export interface CreateListingData {
   city: string;
   state: string;
   offersOnly?: boolean;
+  finalSale?: boolean;
 }
 
 export interface UserFavorite {

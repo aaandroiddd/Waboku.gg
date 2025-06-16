@@ -67,6 +67,7 @@ const CreateListingPage = () => {
     quantity: "" as string,
     termsAccepted: false,
     offersOnly: false,
+    finalSale: false,
   });
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -589,6 +590,31 @@ const CreateListingPage = () => {
                   initialState={formData.state}
                   error={errors.location}
                 />
+
+                <div className="space-y-4">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id="finalSale" 
+                      checked={formData.finalSale}
+                      onCheckedChange={(checked) => {
+                        if (typeof checked === 'boolean') {
+                          setFormData(prev => ({ ...prev, finalSale: checked }));
+                        }
+                      }}
+                    />
+                    <div className="space-y-1">
+                      <label
+                        htmlFor="finalSale"
+                        className="text-sm font-medium leading-none cursor-pointer"
+                      >
+                        Final Sale
+                      </label>
+                      <p className="text-xs text-muted-foreground">
+                        Mark this item as final sale (no returns or refunds accepted)
+                      </p>
+                    </div>
+                  </div>
+                </div>
 
                 <div className="space-y-2">
                   <div className="flex items-center space-x-2">
