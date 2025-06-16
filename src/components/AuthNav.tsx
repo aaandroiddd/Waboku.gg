@@ -36,7 +36,7 @@ export default function AuthNav() {
               </Button>
             </Link>
             <Link href="/dashboard/create-listing">
-              <Button variant="outline" size="sm" className="gap-2">
+              <Button size="sm" className="gap-2 bg-blue-600 hover:bg-blue-700 text-white border-blue-600 hover:border-blue-700">
                 <Plus className="h-4 w-4" />
                 Create Listing
               </Button>
