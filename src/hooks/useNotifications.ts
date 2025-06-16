@@ -67,6 +67,40 @@ export function useNotifications() {
     }
   }, [user?.uid]);
 
+  // Delete notification
+  const deleteNotification = useCallback(async (notificationId: string) => {
+    try {
+      await notificationService.deleteNotification(notificationId);
+    } catch (error) {
+      console.error('Error deleting notification:', error);
+      setError('Failed to delete notification');
+    }
+  }, []);
+
+  // Delete all notifications
+  const deleteAllNotifications = useCallback(async () => {
+    if (!user?.uid) return;
+
+    try {
+      await notificationService.deleteAllNotifications(user.uid);
+    } catch (error) {
+      console.error('Error deleting all notifications:', error);
+      setError('Failed to delete all notifications');
+    }
+  }, [user?.uid]);
+
+  // Clear read notifications
+  const clearReadNotifications = useCallback(async () => {
+    if (!user?.uid) return;
+
+    try {
+      await notificationService.clearReadNotifications(user.uid);
+    } catch (error) {
+      console.error('Error clearing read notifications:', error);
+      setError('Failed to clear read notifications');
+    }
+  }, [user?.uid]);
+
   // Get more notifications (for pagination)
   const loadMoreNotifications = useCallback(async (limitCount: number = 20) => {
     if (!user?.uid) return;
@@ -93,6 +127,9 @@ export function useNotifications() {
     error,
     markAsRead,
     markAllAsRead,
+    deleteNotification,
+    deleteAllNotifications,
+    clearReadNotifications,
     loadMoreNotifications,
   };
 }

@@ -176,6 +176,7 @@ export class NotificationService {
           
           let query = adminFirestore.collection('notifications')
             .where('userId', '==', userId)
+            .where('deleted', '!=', true)
             .orderBy('createdAt', 'desc')
             .limit(limitCount);
 
@@ -183,6 +184,7 @@ export class NotificationService {
             query = adminFirestore.collection('notifications')
               .where('userId', '==', userId)
               .where('read', '==', false)
+              .where('deleted', '!=', true)
               .orderBy('createdAt', 'desc')
               .limit(limitCount);
           }
@@ -192,12 +194,15 @@ export class NotificationService {
 
           querySnapshot.forEach((doc: any) => {
             const data = doc.data();
-            notifications.push({
-              id: doc.id,
-              ...data,
-              createdAt: data.createdAt?.toDate() || new Date(),
-              updatedAt: data.updatedAt?.toDate() || new Date(),
-            } as Notification);
+            // Double-check that notification is not deleted
+            if (!data.deleted) {
+              notifications.push({
+                id: doc.id,
+                ...data,
+                createdAt: data.createdAt?.toDate() || new Date(),
+                updatedAt: data.updatedAt?.toDate() || new Date(),
+              } as Notification);
+            }
           });
 
           return notifications;
@@ -210,6 +215,7 @@ export class NotificationService {
         let q = query(
           collection(db, 'notifications'),
           where('userId', '==', userId),
+          where('deleted', '!=', true),
           orderBy('createdAt', 'desc'),
           limit(limitCount)
         );
@@ -219,6 +225,7 @@ export class NotificationService {
             collection(db, 'notifications'),
             where('userId', '==', userId),
             where('read', '==', false),
+            where('deleted', '!=', true),
             orderBy('createdAt', 'desc'),
             limit(limitCount)
           );
@@ -229,12 +236,15 @@ export class NotificationService {
 
         querySnapshot.forEach((doc) => {
           const data = doc.data();
-          notifications.push({
-            id: doc.id,
-            ...data,
-            createdAt: data.createdAt?.toDate() || new Date(),
-            updatedAt: data.updatedAt?.toDate() || new Date(),
-          } as Notification);
+          // Double-check that notification is not deleted
+          if (!data.deleted) {
+            notifications.push({
+              id: doc.id,
+              ...data,
+              createdAt: data.createdAt?.toDate() || new Date(),
+              updatedAt: data.updatedAt?.toDate() || new Date(),
+            } as Notification);
+          }
         });
 
         return notifications;
@@ -275,7 +285,8 @@ export class NotificationService {
           
           const query = adminFirestore.collection('notifications')
             .where('userId', '==', userId)
-            .where('read', '==', false);
+            .where('read', '==', false)
+            .where('deleted', '!=', true);
 
           const querySnapshot = await query.get();
           return querySnapshot.size;
@@ -289,7 +300,8 @@ export class NotificationService {
         const q = query(
           collection(db, 'notifications'),
           where('userId', '==', userId),
-          where('read', '==', false)
+          where('read', '==', false),
+          where('deleted', '!=', true)
         );
 
         const querySnapshot = await getDocs(q);
@@ -348,6 +360,80 @@ export class NotificationService {
   }
 
   /**
+   * Delete a notification
+   */
+  async deleteNotification(notificationId: string): Promise<void> {
+    try {
+      const db = this.getDb();
+      const notificationRef = doc(db, 'notifications', notificationId);
+      await updateDoc(notificationRef, {
+        deleted: true,
+        updatedAt: Timestamp.now()
+      });
+    } catch (error) {
+      console.error('Error deleting notification:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Delete all notifications for a user
+   */
+  async deleteAllNotifications(userId: string): Promise<void> {
+    try {
+      const db = this.getDb();
+      const q = query(
+        collection(db, 'notifications'),
+        where('userId', '==', userId)
+      );
+
+      const querySnapshot = await getDocs(q);
+      const batch = writeBatch(db);
+
+      querySnapshot.forEach((doc) => {
+        batch.update(doc.ref, {
+          deleted: true,
+          updatedAt: Timestamp.now()
+        });
+      });
+
+      await batch.commit();
+    } catch (error) {
+      console.error('Error deleting all notifications:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Clear read notifications (soft delete)
+   */
+  async clearReadNotifications(userId: string): Promise<void> {
+    try {
+      const db = this.getDb();
+      const q = query(
+        collection(db, 'notifications'),
+        where('userId', '==', userId),
+        where('read', '==', true)
+      );
+
+      const querySnapshot = await getDocs(q);
+      const batch = writeBatch(db);
+
+      querySnapshot.forEach((doc) => {
+        batch.update(doc.ref, {
+          deleted: true,
+          updatedAt: Timestamp.now()
+        });
+      });
+
+      await batch.commit();
+    } catch (error) {
+      console.error('Error clearing read notifications:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Subscribe to real-time notifications for a user
    */
   subscribeToNotifications(
@@ -360,6 +446,7 @@ export class NotificationService {
       const q = query(
         collection(db, 'notifications'),
         where('userId', '==', userId),
+        where('deleted', '!=', true),
         orderBy('createdAt', 'desc'),
         limit(limitCount)
       );
@@ -369,12 +456,15 @@ export class NotificationService {
         
         querySnapshot.forEach((doc) => {
           const data = doc.data();
-          notifications.push({
-            id: doc.id,
-            ...data,
-            createdAt: data.createdAt?.toDate() || new Date(),
-            updatedAt: data.updatedAt?.toDate() || new Date(),
-          } as Notification);
+          // Double-check that notification is not deleted
+          if (!data.deleted) {
+            notifications.push({
+              id: doc.id,
+              ...data,
+              createdAt: data.createdAt?.toDate() || new Date(),
+              updatedAt: data.updatedAt?.toDate() || new Date(),
+            } as Notification);
+          }
         });
 
         callback(notifications);
@@ -400,11 +490,20 @@ export class NotificationService {
       const q = query(
         collection(db, 'notifications'),
         where('userId', '==', userId),
-        where('read', '==', false)
+        where('read', '==', false),
+        where('deleted', '!=', true)
       );
 
       return onSnapshot(q, (querySnapshot) => {
-        callback(querySnapshot.size);
+        let count = 0;
+        querySnapshot.forEach((doc) => {
+          const data = doc.data();
+          // Double-check that notification is not deleted
+          if (!data.deleted) {
+            count++;
+          }
+        });
+        callback(count);
       }, (error) => {
         console.error('Error in unread count subscription:', error);
       });

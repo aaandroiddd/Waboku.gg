@@ -220,15 +220,24 @@ export const UnreadProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         
         const { db } = getFirebaseServices();
         
-        // Query for unread notifications
+        // Query for unread notifications that are not deleted
         const unreadNotificationsQuery = query(
           collection(db, 'notifications'),
           where('userId', '==', user.uid),
-          where('read', '==', false)
+          where('read', '==', false),
+          where('deleted', '!=', true)
         );
         
         const notificationsSnapshot = await getDocs(unreadNotificationsQuery);
-        const unreadNotificationCount = notificationsSnapshot.size;
+        let unreadNotificationCount = 0;
+        
+        // Double-check that notifications are not deleted
+        notificationsSnapshot.forEach((doc) => {
+          const data = doc.data();
+          if (!data.deleted) {
+            unreadNotificationCount++;
+          }
+        });
         
         setUnreadCounts(prev => ({ ...prev, notifications: unreadNotificationCount }));
       } catch (error) {

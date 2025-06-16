@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { formatDistanceToNow } from 'date-fns';
 import { 
@@ -12,7 +12,9 @@ import {
   Shield,
   Bell,
   Filter,
-  MoreVertical
+  MoreVertical,
+  Trash2,
+  X
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -36,11 +38,20 @@ import { useNotifications } from '@/hooks/useNotifications';
 import { Notification, NotificationType } from '@/types/notification';
 import { cn } from '@/lib/utils';
 import { NotificationDebugger } from '@/components/NotificationDebugger';
+import { useUnread } from '@/contexts/UnreadContext';
+import { useToast } from '@/components/ui/use-toast';
 
 export default function NotificationsPage() {
   const router = useRouter();
-  const { notifications, isLoading, markAsRead, markAllAsRead } = useNotifications();
+  const { notifications, isLoading, markAsRead, markAllAsRead, deleteNotification, deleteAllNotifications, clearReadNotifications } = useNotifications();
   const [filter, setFilter] = useState<'all' | 'unread' | NotificationType>('all');
+  const { clearUnreadCount } = useUnread();
+  const { toast } = useToast();
+
+  // Clear the sidebar notification badge when this page is viewed
+  useEffect(() => {
+    clearUnreadCount('notifications');
+  }, [clearUnreadCount]);
 
   const getNotificationIcon = (type: NotificationType) => {
     switch (type) {
@@ -109,6 +120,39 @@ export default function NotificationsPage() {
   });
 
   const unreadCount = notifications.filter(n => !n.read).length;
+  const readCount = notifications.filter(n => n.read).length;
+
+  const handleClearReadNotifications = async () => {
+    try {
+      await clearReadNotifications();
+      toast({
+        title: "Success",
+        description: "Read notifications have been cleared",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to clear read notifications",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteAllNotifications = async () => {
+    try {
+      await deleteAllNotifications();
+      toast({
+        title: "Success",
+        description: "All notifications have been deleted",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete all notifications",
+        variant: "destructive",
+      });
+    }
+  };
 
   return (
     <DashboardLayout>
@@ -121,12 +165,26 @@ export default function NotificationsPage() {
               Stay updated with your marketplace activity
             </p>
           </div>
-          {unreadCount > 0 && (
-            <Button onClick={markAllAsRead} variant="outline" size="sm">
-              <CheckCheck className="h-4 w-4 mr-2" />
-              Mark all as read ({unreadCount})
-            </Button>
-          )}
+          <div className="flex items-center gap-2">
+            {unreadCount > 0 && (
+              <Button onClick={markAllAsRead} variant="outline" size="sm">
+                <CheckCheck className="h-4 w-4 mr-2" />
+                Mark all as read ({unreadCount})
+              </Button>
+            )}
+            {readCount > 0 && (
+              <Button onClick={handleClearReadNotifications} variant="outline" size="sm">
+                <X className="h-4 w-4 mr-2" />
+                Clear read ({readCount})
+              </Button>
+            )}
+            {notifications.length > 0 && (
+              <Button onClick={handleDeleteAllNotifications} variant="destructive" size="sm">
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete all
+              </Button>
+            )}
+          </div>
         </div>
 
         {/* Stats Cards */}
@@ -311,6 +369,20 @@ export default function NotificationsPage() {
                                     View Details
                                   </DropdownMenuItem>
                                 )}
+                                <DropdownMenuItem
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    deleteNotification(notification.id);
+                                    toast({
+                                      title: "Success",
+                                      description: "Notification deleted",
+                                    });
+                                  }}
+                                  className="text-red-600 focus:text-red-600"
+                                >
+                                  <Trash2 className="h-4 w-4 mr-2" />
+                                  Delete
+                                </DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>
                           </div>
