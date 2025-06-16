@@ -218,6 +218,26 @@ service cloud.firestore {
       allow delete: if false; // Don't allow deletion of mappings
     }
 
+    // Notifications collection rules
+    match /notifications/{notificationId} {
+      // Users can read their own notifications
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      // Allow server-side creation of notifications
+      allow create: if true;
+      // Users can update their own notifications (mark as read, etc.)
+      allow update: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      // Users can delete their own notifications
+      allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+    }
+
+    // Notification preferences collection rules
+    match /notificationPreferences/{userId} {
+      allow read: if isAuthenticated() && request.auth.uid == userId;
+      allow create: if isAuthenticated() && request.auth.uid == userId;
+      allow update: if isAuthenticated() && request.auth.uid == userId;
+      allow delete: if isAuthenticated() && request.auth.uid == userId;
+    }
+
     // Default rule - deny everything else
     match /{document=**} {
       allow read, write: if false;
