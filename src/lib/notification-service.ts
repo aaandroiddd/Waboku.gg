@@ -13,7 +13,7 @@ import {
   Timestamp,
   getDoc
 } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { getFirebaseServices } from '@/lib/firebase';
 import { 
   Notification, 
   NotificationPreferences, 
@@ -32,10 +32,22 @@ export class NotificationService {
   }
 
   /**
+   * Get the Firestore database instance
+   */
+  private getDb() {
+    const services = getFirebaseServices();
+    if (!services.db) {
+      throw new Error('Firestore database is not initialized');
+    }
+    return services.db;
+  }
+
+  /**
    * Create a new notification
    */
   async createNotification(data: CreateNotificationData): Promise<string> {
     try {
+      const db = this.getDb();
       const notificationData = {
         ...data,
         read: false,
@@ -61,6 +73,7 @@ export class NotificationService {
     unreadOnly: boolean = false
   ): Promise<Notification[]> {
     try {
+      const db = this.getDb();
       let q = query(
         collection(db, 'notifications'),
         where('userId', '==', userId),
@@ -103,6 +116,7 @@ export class NotificationService {
    */
   async getUnreadCount(userId: string): Promise<number> {
     try {
+      const db = this.getDb();
       const q = query(
         collection(db, 'notifications'),
         where('userId', '==', userId),
@@ -122,6 +136,7 @@ export class NotificationService {
    */
   async markAsRead(notificationId: string): Promise<void> {
     try {
+      const db = this.getDb();
       const notificationRef = doc(db, 'notifications', notificationId);
       await updateDoc(notificationRef, {
         read: true,
@@ -138,6 +153,7 @@ export class NotificationService {
    */
   async markAllAsRead(userId: string): Promise<void> {
     try {
+      const db = this.getDb();
       const q = query(
         collection(db, 'notifications'),
         where('userId', '==', userId),
@@ -169,30 +185,37 @@ export class NotificationService {
     callback: (notifications: Notification[]) => void,
     limitCount: number = 20
   ): () => void {
-    const q = query(
-      collection(db, 'notifications'),
-      where('userId', '==', userId),
-      orderBy('createdAt', 'desc'),
-      limit(limitCount)
-    );
+    try {
+      const db = this.getDb();
+      const q = query(
+        collection(db, 'notifications'),
+        where('userId', '==', userId),
+        orderBy('createdAt', 'desc'),
+        limit(limitCount)
+      );
 
-    return onSnapshot(q, (querySnapshot) => {
-      const notifications: Notification[] = [];
-      
-      querySnapshot.forEach((doc) => {
-        const data = doc.data();
-        notifications.push({
-          id: doc.id,
-          ...data,
-          createdAt: data.createdAt?.toDate() || new Date(),
-          updatedAt: data.updatedAt?.toDate() || new Date(),
-        } as Notification);
+      return onSnapshot(q, (querySnapshot) => {
+        const notifications: Notification[] = [];
+        
+        querySnapshot.forEach((doc) => {
+          const data = doc.data();
+          notifications.push({
+            id: doc.id,
+            ...data,
+            createdAt: data.createdAt?.toDate() || new Date(),
+            updatedAt: data.updatedAt?.toDate() || new Date(),
+          } as Notification);
+        });
+
+        callback(notifications);
+      }, (error) => {
+        console.error('Error in notifications subscription:', error);
       });
-
-      callback(notifications);
-    }, (error) => {
-      console.error('Error in notifications subscription:', error);
-    });
+    } catch (error) {
+      console.error('Error setting up notifications subscription:', error);
+      // Return a no-op unsubscribe function
+      return () => {};
+    }
   }
 
   /**
@@ -202,17 +225,24 @@ export class NotificationService {
     userId: string,
     callback: (count: number) => void
   ): () => void {
-    const q = query(
-      collection(db, 'notifications'),
-      where('userId', '==', userId),
-      where('read', '==', false)
-    );
+    try {
+      const db = this.getDb();
+      const q = query(
+        collection(db, 'notifications'),
+        where('userId', '==', userId),
+        where('read', '==', false)
+      );
 
-    return onSnapshot(q, (querySnapshot) => {
-      callback(querySnapshot.size);
-    }, (error) => {
-      console.error('Error in unread count subscription:', error);
-    });
+      return onSnapshot(q, (querySnapshot) => {
+        callback(querySnapshot.size);
+      }, (error) => {
+        console.error('Error in unread count subscription:', error);
+      });
+    } catch (error) {
+      console.error('Error setting up unread count subscription:', error);
+      // Return a no-op unsubscribe function
+      return () => {};
+    }
   }
 
   /**
@@ -220,6 +250,7 @@ export class NotificationService {
    */
   async getUserPreferences(userId: string): Promise<NotificationPreferences | null> {
     try {
+      const db = this.getDb();
       const docRef = doc(db, 'notificationPreferences', userId);
       const docSnap = await getDoc(docRef);
       
@@ -243,6 +274,7 @@ export class NotificationService {
    */
   async updateUserPreferences(preferences: NotificationPreferences): Promise<void> {
     try {
+      const db = this.getDb();
       const docRef = doc(db, 'notificationPreferences', preferences.userId);
       await updateDoc(docRef, {
         ...preferences,
@@ -259,6 +291,7 @@ export class NotificationService {
    */
   async createDefaultPreferences(userId: string): Promise<void> {
     try {
+      const db = this.getDb();
       const defaultPreferences: NotificationPreferences = {
         userId,
         email: {
@@ -288,30 +321,36 @@ export class NotificationService {
       });
     } catch (error) {
       // If document doesn't exist, create it
-      const docRef = doc(db, 'notificationPreferences', userId);
-      const defaultPreferences = {
-        userId,
-        email: {
-          sales: true,
-          messages: true,
-          offers: true,
-          orderUpdates: true,
-          listingUpdates: true,
-          marketing: false,
-          system: true,
-        },
-        push: {
-          sales: true,
-          messages: true,
-          offers: true,
-          orderUpdates: true,
-          listingUpdates: true,
-          system: true,
-        },
-        updatedAt: Timestamp.now()
-      };
+      try {
+        const db = this.getDb();
+        const docRef = doc(db, 'notificationPreferences', userId);
+        const defaultPreferences = {
+          userId,
+          email: {
+            sales: true,
+            messages: true,
+            offers: true,
+            orderUpdates: true,
+            listingUpdates: true,
+            marketing: false,
+            system: true,
+          },
+          push: {
+            sales: true,
+            messages: true,
+            offers: true,
+            orderUpdates: true,
+            listingUpdates: true,
+            system: true,
+          },
+          updatedAt: Timestamp.now()
+        };
 
-      await addDoc(collection(db, 'notificationPreferences'), defaultPreferences);
+        await addDoc(collection(db, 'notificationPreferences'), defaultPreferences);
+      } catch (createError) {
+        console.error('Error creating default notification preferences:', createError);
+        throw createError;
+      }
     }
   }
 

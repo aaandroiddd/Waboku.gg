@@ -1803,3 +1803,13 @@ if (typeof window !== 'undefined') {
     cleanupStaleListeners();
   }, 3600000); // 1 hour
 }
+
+// Export individual services for direct access
+export const { app, auth, db, storage, database } = (() => {
+  if (typeof window !== 'undefined') {
+    const services = getFirebaseServices();
+    return services;
+  }
+  // Return empty objects for server-side rendering
+  return { app: null, auth: null, db: null, storage: null, database: null };
+})();
