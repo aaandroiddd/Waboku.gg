@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { doc, getDoc } from 'firebase/firestore';
 import { getFirebaseServices } from '@/lib/firebase';
@@ -8,9 +8,9 @@ export const useSellerAccount = () => {
   const [sellerStatus, setSellerStatus] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
-  // Define fetchSellerStatus before it's used
-  const fetchSellerStatus = async (userId: string) => {
+
+  // Create a shared fetchSellerStatus function using useCallback
+  const fetchSellerStatus = useCallback(async (userId: string) => {
     try {
       const { db } = await getFirebaseServices();
       if (!db) {
@@ -45,7 +45,7 @@ export const useSellerAccount = () => {
       console.error("Error in fetchSellerStatus:", err);
       throw err;
     }
-  };
+  }, []);
 
   useEffect(() => {
     const waitForUserFetch = async () => {
@@ -68,9 +68,9 @@ export const useSellerAccount = () => {
     };
 
     waitForUserFetch();
-  }, [user]);
+  }, [user, fetchSellerStatus]);
 
-  const refreshSellerStatus = async () => {
+  const refreshSellerStatus = useCallback(async () => {
     if (!user) return;
     
     setLoading(true);
@@ -83,7 +83,7 @@ export const useSellerAccount = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user, fetchSellerStatus]);
 
   return {
     sellerStatus,

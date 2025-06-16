@@ -800,48 +800,7 @@ export const useOptimizedSellerStatus = (userId: string) => {
       }
     }
     
-    // If this user is already being fetched via user data, wait for it
-    if (fetchingUserIds.has(userId)) {
-      const waitForUserFetch = async () => {
-        let attempts = 0;
-        const maxAttempts = 50; // Maximum wait time: 5 seconds
-        
-        while (attempts < maxAttempts && fetchingUserIds.has(userId)) {
-          await new Promise(resolve => setTimeout(resolve, 100)); // Wait 100ms
-          attempts++;
-          
-          // Check if we have the data now
-          if (globalCache.sellerStatus[userId] && 
-              now - globalCache.sellerStatus[userId].timestamp < CACHE_EXPIRY.sellerStatus) {
-            if (isMounted) {
-              setHasStripeAccount(globalCache.sellerStatus[userId].hasStripeAccount);
-              setIsLoading(false);
-            }
-            return;
-          }
-        }
-        
-        // Check one more time after the wait
-        if (globalCache.sellerStatus[userId] && 
-            now - globalCache.sellerStatus[userId].timestamp < CACHE_EXPIRY.sellerStatus) {
-          if (isMounted) {
-            setHasStripeAccount(globalCache.sellerStatus[userId].hasStripeAccount);
-            setIsLoading(false);
-          }
-          return;
-        }
-        
-        // If still no data, proceed with fetch
-        if (isMounted) {
-          fetchSellerStatus();
-        }
-      };
-      
-      waitForUserFetch();
-      return;
-    }
-    
-    // Fetch seller status
+    // Define fetchSellerStatus function first
     const fetchSellerStatus = async () => {
       try {
         const { db } = getFirebaseServices();
@@ -900,7 +859,49 @@ export const useOptimizedSellerStatus = (userId: string) => {
         }
       }
     };
+
+    // If this user is already being fetched via user data, wait for it
+    if (fetchingUserIds.has(userId)) {
+      const waitForUserFetch = async () => {
+        let attempts = 0;
+        const maxAttempts = 50; // Maximum wait time: 5 seconds
+        
+        while (attempts < maxAttempts && fetchingUserIds.has(userId)) {
+          await new Promise(resolve => setTimeout(resolve, 100)); // Wait 100ms
+          attempts++;
+          
+          // Check if we have the data now
+          if (globalCache.sellerStatus[userId] && 
+              now - globalCache.sellerStatus[userId].timestamp < CACHE_EXPIRY.sellerStatus) {
+            if (isMounted) {
+              setHasStripeAccount(globalCache.sellerStatus[userId].hasStripeAccount);
+              setIsLoading(false);
+            }
+            return;
+          }
+        }
+        
+        // Check one more time after the wait
+        if (globalCache.sellerStatus[userId] && 
+            now - globalCache.sellerStatus[userId].timestamp < CACHE_EXPIRY.sellerStatus) {
+          if (isMounted) {
+            setHasStripeAccount(globalCache.sellerStatus[userId].hasStripeAccount);
+            setIsLoading(false);
+          }
+          return;
+        }
+        
+        // If still no data, proceed with fetch
+        if (isMounted) {
+          fetchSellerStatus();
+        }
+      };
+      
+      waitForUserFetch();
+      return;
+    }
     
+    // Call fetchSellerStatus directly
     fetchSellerStatus();
     
     // Cleanup function
