@@ -22,6 +22,7 @@ import { useTheme } from "next-themes";
 import { motion, useReducedMotion } from "framer-motion";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { useToast } from "@/components/ui/use-toast";
+import { NotificationBell } from "./NotificationBell";
 
 // Dynamically import the auth-dependent navigation component
 const AuthNav = dynamic(() => import("./AuthNav"), {
@@ -330,7 +331,8 @@ export default function Header({ animate = true }: HeaderProps) {
         {/* Desktop Navigation */}
         <nav className="hidden md:flex items-center space-x-4">
           {/* Desktop navigation links removed as requested */}
-          <div className="flex items-center">
+          <div className="flex items-center space-x-2">
+            {user && <NotificationBell />}
             <ThemeToggle />
           </div>
           {!isAuthPage && (
