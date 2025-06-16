@@ -70,22 +70,46 @@ export class NotificationService {
     try {
       console.log('NotificationService: Creating notification with data:', data);
       
-      // Check if we're running on server side and have admin SDK available
-      if (typeof window === 'undefined' && adminFirestore && adminTimestamp) {
-        console.log('NotificationService: Using Firebase Admin SDK for server-side notification creation');
+      // Check if we're running on server side
+      if (typeof window === 'undefined') {
+        console.log('NotificationService: Server-side environment detected');
         
-        const notificationData = {
-          ...data,
-          read: false,
-          createdAt: adminTimestamp.now(),
-          updatedAt: adminTimestamp.now()
-        };
+        // Try to initialize admin SDK if not already done
+        if (!adminFirestore || !adminTimestamp) {
+          console.log('NotificationService: Admin SDK not initialized, attempting to initialize...');
+          try {
+            const { getFirebaseAdmin } = require('@/lib/firebase-admin');
+            const { Timestamp: AdminTimestamp } = require('firebase-admin/firestore');
+            
+            const { db } = getFirebaseAdmin();
+            adminFirestore = db;
+            adminTimestamp = AdminTimestamp;
+            
+            console.log('NotificationService: Admin SDK initialized successfully');
+          } catch (initError) {
+            console.error('NotificationService: Failed to initialize admin SDK:', initError);
+            throw new Error('Failed to initialize Firebase Admin SDK for notifications');
+          }
+        }
+        
+        if (adminFirestore && adminTimestamp) {
+          console.log('NotificationService: Using Firebase Admin SDK for server-side notification creation');
+          
+          const notificationData = {
+            ...data,
+            read: false,
+            createdAt: adminTimestamp.now(),
+            updatedAt: adminTimestamp.now()
+          };
 
-        console.log('NotificationService: Prepared notification data (admin):', notificationData);
+          console.log('NotificationService: Prepared notification data (admin):', notificationData);
 
-        const docRef = await adminFirestore.collection('notifications').add(notificationData);
-        console.log('NotificationService: Notification created successfully with ID (admin):', docRef.id);
-        return docRef.id;
+          const docRef = await adminFirestore.collection('notifications').add(notificationData);
+          console.log('NotificationService: Notification created successfully with ID (admin):', docRef.id);
+          return docRef.id;
+        } else {
+          throw new Error('Firebase Admin SDK is not properly initialized');
+        }
       } else {
         // Use client-side Firebase SDK
         console.log('NotificationService: Using client-side Firebase SDK for notification creation');
@@ -127,38 +151,94 @@ export class NotificationService {
     unreadOnly: boolean = false
   ): Promise<Notification[]> {
     try {
-      const db = this.getDb();
-      let q = query(
-        collection(db, 'notifications'),
-        where('userId', '==', userId),
-        orderBy('createdAt', 'desc'),
-        limit(limitCount)
-      );
+      // Check if we're running on server side
+      if (typeof window === 'undefined') {
+        // Try to initialize admin SDK if not already done
+        if (!adminFirestore || !adminTimestamp) {
+          console.log('NotificationService: Admin SDK not initialized for getUserNotifications, attempting to initialize...');
+          try {
+            const { getFirebaseAdmin } = require('@/lib/firebase-admin');
+            const { Timestamp: AdminTimestamp } = require('firebase-admin/firestore');
+            
+            const { db } = getFirebaseAdmin();
+            adminFirestore = db;
+            adminTimestamp = AdminTimestamp;
+            
+            console.log('NotificationService: Admin SDK initialized successfully for getUserNotifications');
+          } catch (initError) {
+            console.error('NotificationService: Failed to initialize admin SDK for getUserNotifications:', initError);
+            throw new Error('Failed to initialize Firebase Admin SDK for notifications');
+          }
+        }
 
-      if (unreadOnly) {
-        q = query(
+        if (adminFirestore) {
+          console.log('NotificationService: Using Firebase Admin SDK for getUserNotifications');
+          
+          let query = adminFirestore.collection('notifications')
+            .where('userId', '==', userId)
+            .orderBy('createdAt', 'desc')
+            .limit(limitCount);
+
+          if (unreadOnly) {
+            query = adminFirestore.collection('notifications')
+              .where('userId', '==', userId)
+              .where('read', '==', false)
+              .orderBy('createdAt', 'desc')
+              .limit(limitCount);
+          }
+
+          const querySnapshot = await query.get();
+          const notifications: Notification[] = [];
+
+          querySnapshot.forEach((doc: any) => {
+            const data = doc.data();
+            notifications.push({
+              id: doc.id,
+              ...data,
+              createdAt: data.createdAt?.toDate() || new Date(),
+              updatedAt: data.updatedAt?.toDate() || new Date(),
+            } as Notification);
+          });
+
+          return notifications;
+        } else {
+          throw new Error('Firebase Admin SDK is not properly initialized for getUserNotifications');
+        }
+      } else {
+        // Client-side code
+        const db = this.getDb();
+        let q = query(
           collection(db, 'notifications'),
           where('userId', '==', userId),
-          where('read', '==', false),
           orderBy('createdAt', 'desc'),
           limit(limitCount)
         );
+
+        if (unreadOnly) {
+          q = query(
+            collection(db, 'notifications'),
+            where('userId', '==', userId),
+            where('read', '==', false),
+            orderBy('createdAt', 'desc'),
+            limit(limitCount)
+          );
+        }
+
+        const querySnapshot = await getDocs(q);
+        const notifications: Notification[] = [];
+
+        querySnapshot.forEach((doc) => {
+          const data = doc.data();
+          notifications.push({
+            id: doc.id,
+            ...data,
+            createdAt: data.createdAt?.toDate() || new Date(),
+            updatedAt: data.updatedAt?.toDate() || new Date(),
+          } as Notification);
+        });
+
+        return notifications;
       }
-
-      const querySnapshot = await getDocs(q);
-      const notifications: Notification[] = [];
-
-      querySnapshot.forEach((doc) => {
-        const data = doc.data();
-        notifications.push({
-          id: doc.id,
-          ...data,
-          createdAt: data.createdAt?.toDate() || new Date(),
-          updatedAt: data.updatedAt?.toDate() || new Date(),
-        } as Notification);
-      });
-
-      return notifications;
     } catch (error) {
       console.error('Error fetching notifications:', error);
       throw error;
@@ -170,15 +250,51 @@ export class NotificationService {
    */
   async getUnreadCount(userId: string): Promise<number> {
     try {
-      const db = this.getDb();
-      const q = query(
-        collection(db, 'notifications'),
-        where('userId', '==', userId),
-        where('read', '==', false)
-      );
+      // Check if we're running on server side
+      if (typeof window === 'undefined') {
+        // Try to initialize admin SDK if not already done
+        if (!adminFirestore || !adminTimestamp) {
+          console.log('NotificationService: Admin SDK not initialized for getUnreadCount, attempting to initialize...');
+          try {
+            const { getFirebaseAdmin } = require('@/lib/firebase-admin');
+            const { Timestamp: AdminTimestamp } = require('firebase-admin/firestore');
+            
+            const { db } = getFirebaseAdmin();
+            adminFirestore = db;
+            adminTimestamp = AdminTimestamp;
+            
+            console.log('NotificationService: Admin SDK initialized successfully for getUnreadCount');
+          } catch (initError) {
+            console.error('NotificationService: Failed to initialize admin SDK for getUnreadCount:', initError);
+            return 0;
+          }
+        }
 
-      const querySnapshot = await getDocs(q);
-      return querySnapshot.size;
+        if (adminFirestore) {
+          console.log('NotificationService: Using Firebase Admin SDK for getUnreadCount');
+          
+          const query = adminFirestore.collection('notifications')
+            .where('userId', '==', userId)
+            .where('read', '==', false);
+
+          const querySnapshot = await query.get();
+          return querySnapshot.size;
+        } else {
+          console.error('Firebase Admin SDK is not properly initialized for getUnreadCount');
+          return 0;
+        }
+      } else {
+        // Client-side code
+        const db = this.getDb();
+        const q = query(
+          collection(db, 'notifications'),
+          where('userId', '==', userId),
+          where('read', '==', false)
+        );
+
+        const querySnapshot = await getDocs(q);
+        return querySnapshot.size;
+      }
     } catch (error) {
       console.error('Error getting unread count:', error);
       return 0;
