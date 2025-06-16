@@ -9,6 +9,7 @@ interface UnreadCounts {
   messages: number;
   offers: number;
   orders: number;
+  notifications: number;
 }
 
 interface UnreadContextType {
@@ -25,6 +26,7 @@ export const UnreadProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     messages: 0,
     offers: 0,
     orders: 0,
+    notifications: 0,
   });
 
   // Track if a section is currently being viewed to prevent counting while user is viewing
@@ -35,7 +37,7 @@ export const UnreadProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   useEffect(() => {
     if (!user) {
-      setUnreadCounts({ messages: 0, offers: 0, orders: 0 });
+      setUnreadCounts({ messages: 0, offers: 0, orders: 0, notifications: 0 });
       // Clean up any existing listeners
       listenersRef.current.forEach(id => databaseOptimizer.removeListener(id));
       listenersRef.current = [];
@@ -202,18 +204,52 @@ export const UnreadProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       }
     };
 
+    const fetchUnreadNotifications = async () => {
+      try {
+        if (activeSection === 'notifications') return;
+        
+        const now = Date.now();
+        const lastFetch = lastFetchRef.current.notifications || 0;
+        
+        // Rate limit: only fetch every 60 seconds
+        if (now - lastFetch < 60000) {
+          return;
+        }
+        
+        lastFetchRef.current.notifications = now;
+        
+        const { db } = getFirebaseServices();
+        
+        // Query for unread notifications
+        const unreadNotificationsQuery = query(
+          collection(db, 'notifications'),
+          where('userId', '==', user.uid),
+          where('read', '==', false)
+        );
+        
+        const notificationsSnapshot = await getDocs(unreadNotificationsQuery);
+        const unreadNotificationCount = notificationsSnapshot.size;
+        
+        setUnreadCounts(prev => ({ ...prev, notifications: unreadNotificationCount }));
+      } catch (error) {
+        console.error('Error counting unread notifications:', error);
+      }
+    };
+
     // Initial fetch with longer delay to avoid overwhelming on mount
     setTimeout(() => {
       fetchUnreadOffers();
       fetchUnreadOrders();
+      fetchUnreadNotifications();
     }, 2000); // Increased from 1 second to 2 seconds
 
-    // Set up interval to periodically check for unread offers and orders (further increased interval)
+    // Set up interval to periodically check for unread offers, orders, and notifications (further increased interval)
     intervalRef.current = setInterval(() => {
       // Only fetch if user is still authenticated and page is visible
       if (user && document.visibilityState === 'visible') {
         fetchUnreadOffers();
         fetchUnreadOrders();
+        fetchUnreadNotifications();
       }
     }, 300000); // Check every 5 minutes instead of 2 minutes
 

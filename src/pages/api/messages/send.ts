@@ -2,6 +2,7 @@ import { NextApiRequest, NextApiResponse } from 'next'
 import { getAuth } from 'firebase-admin/auth'
 import { getDatabase } from 'firebase-admin/database'
 import { getFirebaseAdmin } from '@/lib/firebase-admin'
+import { notificationService } from '@/lib/notification-service'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -151,6 +152,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
 
       await admin.database.ref().update(updates)
+
+      // Create notification for the recipient
+      try {
+        const senderData = await admin.auth.getUser(senderId);
+        const senderName = senderData.displayName || 'Someone';
+        
+        await notificationService.createMessageNotification(
+          recipientId,
+          senderName,
+          chatId
+        );
+      } catch (notificationError) {
+        console.error('Error creating message notification:', notificationError);
+        // Don't fail the message send if notification creation fails
+      }
 
       return res.status(200).json({ success: true, chatId, messageId: newMessageRef.key })
     } catch (error) {

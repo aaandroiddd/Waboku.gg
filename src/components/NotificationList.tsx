@@ -27,13 +27,6 @@ export function NotificationList({ onNotificationClick }: NotificationListProps)
   const router = useRouter();
   const { notifications, isLoading, markAsRead, markAllAsRead } = useNotifications();
 
-  // Debug logging
-  console.log('NotificationList render:', { 
-    notifications, 
-    notificationsLength: notifications?.length, 
-    isLoading 
-  });
-
   const getNotificationIcon = (type: NotificationType) => {
     switch (type) {
       case 'sale':
