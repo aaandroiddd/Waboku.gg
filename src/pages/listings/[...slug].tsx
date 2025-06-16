@@ -657,7 +657,9 @@ export default function ListingPage() {
                   soldTo: updatedData.soldTo || null,
                   archivedAt: updatedData.archivedAt ? convertTimestamp(updatedData.archivedAt) : null,
                   // Explicitly include offersOnly property with default value
-                  offersOnly: updatedData.offersOnly === true
+                  offersOnly: updatedData.offersOnly === true,
+                  // Explicitly include finalSale property with default value
+                  finalSale: updatedData.finalSale === true
                 };
                 
                 // Update the listing state
@@ -762,7 +764,9 @@ export default function ListingPage() {
           soldTo: data.soldTo || null,
           archivedAt: data.archivedAt ? convertTimestamp(data.archivedAt) : null,
           // Explicitly include offersOnly property with default value
-          offersOnly: data.offersOnly === true
+          offersOnly: data.offersOnly === true,
+          // Explicitly include finalSale property with default value
+          finalSale: data.finalSale === true
         };
         
         // Make expiresAt available to the client-side code
