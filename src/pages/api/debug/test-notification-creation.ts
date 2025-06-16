@@ -1,7 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { notificationService } from '@/lib/notification-service';
 import { getFirebaseAdmin } from '@/lib/firebase-admin';
-import { getAuth } from 'firebase-admin/auth';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -15,10 +14,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     // Initialize Firebase Admin
-    const admin = getFirebaseAdmin();
+    const { auth } = getFirebaseAdmin();
     const token = authHeader.split('Bearer ')[1];
     
-    const decodedToken = await admin.auth.verifyIdToken(token);
+    const decodedToken = await auth.verifyIdToken(token);
     const userId = decodedToken.uid;
     
     console.log(`Testing notification creation for user: ${userId}`);

@@ -32,9 +32,11 @@ if (typeof window === 'undefined') {
     const { getFirestore, Timestamp: AdminTimestamp } = require('firebase-admin/firestore');
     
     // Initialize admin services
-    const admin = getFirebaseAdmin();
-    adminFirestore = getFirestore();
+    const { admin, db } = getFirebaseAdmin();
+    adminFirestore = db; // Use the db instance from getFirebaseAdmin
     adminTimestamp = AdminTimestamp;
+    
+    console.log('[NotificationService] Firebase Admin SDK initialized successfully');
   } catch (error) {
     console.warn('[NotificationService] Firebase Admin SDK not available:', error);
   }
