@@ -25,6 +25,7 @@ import { WantedPostsDebugger } from '@/components/dashboard/WantedPostsDebugger'
 import { WebhookFixTrigger } from '@/components/WebhookFixTrigger';
 import { ApiTestPanel } from '@/components/ApiTestPanel';
 import { NotificationDebugger } from '@/components/NotificationDebugger';
+import { EmailNotificationTester } from '@/components/EmailNotificationTester';
 
 interface ApiResponse {
   success?: boolean;
@@ -534,6 +535,17 @@ export default function AdminDashboard() {
                 Test and debug the notification system functionality, including creation, delivery, and API endpoints.
               </p>
               <NotificationDebugger />
+            </div>
+          </Card>
+
+          {/* Email Notification Testing Section */}
+          <Card className="p-6 mb-8">
+            <h2 className="text-xl font-semibold mb-4">Email Notification Testing</h2>
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Test email notifications using Resend. Send welcome emails, notification emails, or test the full notification system.
+              </p>
+              <EmailNotificationTester adminSecret={adminSecret} />
             </div>
           </Card>
           

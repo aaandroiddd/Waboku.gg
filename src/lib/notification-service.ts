@@ -20,6 +20,7 @@ import {
   CreateNotificationData, 
   NotificationType 
 } from '@/types/notification';
+import { emailService, EmailNotificationData } from '@/lib/email-service';
 
 // Server-side imports (only available in Node.js environment)
 let adminFirestore: any = null;
@@ -64,11 +65,47 @@ export class NotificationService {
   }
 
   /**
-   * Create a new notification
+   * Get user data for email notifications
    */
-  async createNotification(data: CreateNotificationData): Promise<string> {
+  private async getUserData(userId: string): Promise<{ email: string; displayName: string } | null> {
+    try {
+      if (typeof window === 'undefined' && adminFirestore) {
+        // Server-side: use admin SDK
+        const userDoc = await adminFirestore.collection('users').doc(userId).get();
+        if (userDoc.exists) {
+          const userData = userDoc.data();
+          return {
+            email: userData.email || '',
+            displayName: userData.displayName || userData.username || 'User'
+          };
+        }
+      } else {
+        // Client-side: use regular SDK
+        const db = this.getDb();
+        const userDoc = await getDoc(doc(db, 'users', userId));
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+          return {
+            email: userData.email || '',
+            displayName: userData.displayName || userData.username || 'User'
+          };
+        }
+      }
+      return null;
+    } catch (error) {
+      console.error('Error fetching user data for email:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Create a new notification (with optional email)
+   */
+  async createNotification(data: CreateNotificationData, sendEmail: boolean = true): Promise<string> {
     try {
       console.log('NotificationService: Creating notification with data:', data);
+      
+      let notificationId: string;
       
       // Check if we're running on server side
       if (typeof window === 'undefined') {
@@ -106,7 +143,7 @@ export class NotificationService {
 
           const docRef = await adminFirestore.collection('notifications').add(notificationData);
           console.log('NotificationService: Notification created successfully with ID (admin):', docRef.id);
-          return docRef.id;
+          notificationId = docRef.id;
         } else {
           throw new Error('Firebase Admin SDK is not properly initialized');
         }
@@ -128,8 +165,49 @@ export class NotificationService {
 
         const docRef = await addDoc(collection(db, 'notifications'), notificationData);
         console.log('NotificationService: Notification created successfully with ID (client):', docRef.id);
-        return docRef.id;
+        notificationId = docRef.id;
       }
+
+      // Send email notification if requested and we're on server side
+      if (sendEmail && typeof window === 'undefined') {
+        try {
+          console.log('NotificationService: Attempting to send email notification');
+          
+          // Get user data for email
+          const userData = await this.getUserData(data.userId);
+          if (userData && userData.email) {
+            // Get user preferences
+            const preferences = await this.getUserPreferences(data.userId);
+            
+            // Prepare email data
+            const emailData: EmailNotificationData = {
+              userId: data.userId,
+              userEmail: userData.email,
+              userName: userData.displayName,
+              type: data.type,
+              title: data.title,
+              message: data.message,
+              actionUrl: data.data?.actionUrl,
+              data: data.data
+            };
+
+            // Send email
+            const emailSent = await emailService.sendEmailNotification(emailData, preferences);
+            if (emailSent) {
+              console.log('NotificationService: Email notification sent successfully');
+            } else {
+              console.log('NotificationService: Email notification was skipped or failed');
+            }
+          } else {
+            console.log('NotificationService: No user email found, skipping email notification');
+          }
+        } catch (emailError) {
+          console.error('NotificationService: Error sending email notification:', emailError);
+          // Don't throw error for email failures - the in-app notification was created successfully
+        }
+      }
+
+      return notificationId;
     } catch (error) {
       console.error('NotificationService: Error creating notification:', error);
       console.error('NotificationService: Error details:', {
@@ -519,16 +597,31 @@ export class NotificationService {
    */
   async getUserPreferences(userId: string): Promise<NotificationPreferences | null> {
     try {
-      const db = this.getDb();
-      const docRef = doc(db, 'notificationPreferences', userId);
-      const docSnap = await getDoc(docRef);
-      
-      if (docSnap.exists()) {
-        const data = docSnap.data();
-        return {
-          ...data,
-          updatedAt: data.updatedAt?.toDate() || new Date(),
-        } as NotificationPreferences;
+      if (typeof window === 'undefined' && adminFirestore) {
+        // Server-side: use admin SDK
+        const docRef = adminFirestore.collection('notificationPreferences').doc(userId);
+        const docSnap = await docRef.get();
+        
+        if (docSnap.exists) {
+          const data = docSnap.data();
+          return {
+            ...data,
+            updatedAt: data.updatedAt?.toDate() || new Date(),
+          } as NotificationPreferences;
+        }
+      } else {
+        // Client-side: use regular SDK
+        const db = this.getDb();
+        const docRef = doc(db, 'notificationPreferences', userId);
+        const docSnap = await getDoc(docRef);
+        
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          return {
+            ...data,
+            updatedAt: data.updatedAt?.toDate() || new Date(),
+          } as NotificationPreferences;
+        }
       }
       
       return null;
