@@ -41,6 +41,41 @@ const subtitles = [
   "Alt-art cards appreciate in value. Your self-control doesn't."
 ];
 
+// Simple error boundary component
+class ErrorBoundary extends React.Component<
+  { children: React.ReactNode; fallback?: React.ReactNode },
+  { hasError: boolean; error?: Error }
+> {
+  constructor(props: any) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: any) {
+    console.error('ErrorBoundary caught an error:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return this.props.fallback || (
+        <div className="flex flex-col items-center justify-center min-h-screen p-8">
+          <h2 className="text-xl font-semibold mb-4">Something went wrong</h2>
+          <p className="text-muted-foreground mb-4">Please refresh the page to try again.</p>
+          <Button onClick={() => window.location.reload()}>
+            Refresh Page
+          </Button>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
 // Optimized animation variants factory
 const createAnimationVariants = (animationConfig: any) => {
   const { shouldAnimate, duration, stagger, ease } = animationConfig;
@@ -161,18 +196,27 @@ const LazySection = ({ children, className, threshold = 0.1, minHeight = "200px"
 export default function Home() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedState, setSelectedState] = useState<string>("all");
+  const [displayCount, setDisplayCount] = useState(8);
+  const [connectionError, setConnectionError] = useState(false);
+  const [isRecovering, setIsRecovering] = useState(false);
+  const [cacheCleared, setCacheCleared] = useState(false);
+  const [hasInitialized, setHasInitialized] = useState(false);
+
   // Use useMemo to compute random subtitle only once on component mount
   const randomSubtitle = useMemo(() => 
     subtitles[Math.floor(Math.random() * subtitles.length)],
     []
   );
-  const [displayCount, setDisplayCount] = useState(8);
-  const [connectionError, setConnectionError] = useState(false);
-  const [isRecovering, setIsRecovering] = useState(false);
-  const [cacheCleared, setCacheCleared] = useState(false);
 
-  // Optimized animation detection
-  const animationConfig = useAnimationConfig();
+  // Optimized animation detection with error handling
+  let animationConfig;
+  try {
+    animationConfig = useAnimationConfig();
+  } catch (error) {
+    console.error('Error getting animation config:', error);
+    animationConfig = { shouldAnimate: false, duration: 0, stagger: 0, ease: 'linear' };
+  }
+
   const animationVariants = useMemo(() => 
     createAnimationVariants(animationConfig), 
     [animationConfig]
@@ -180,100 +224,69 @@ export default function Home() {
 
   const { latitude, longitude, loading: geoLoading } = useGeolocation({ autoRequest: false });
   
-  // Call useListings hook normally - let React handle any errors
-  const { listings: allListings = [], isLoading = false, error: listingsError = null } = useListings() || {};
+  // Call useListings hook directly at the top level with error handling
+  let listingsResult;
+  try {
+    listingsResult = useListings();
+  } catch (error) {
+    console.error('Error calling useListings hook:', error);
+    listingsResult = { listings: [], isLoading: false, error: 'Failed to load listings' };
+  }
+
+  const allListings = listingsResult?.listings || [];
+  const isLoading = listingsResult?.isLoading || false;
+  const listingsError = listingsResult?.error || null;
   
   const router = useRouter();
 
-  // Check for stale auth data and handle connection issues on mount
+  // Simplified initialization effect
   useEffect(() => {
-    if (typeof window !== 'undefined') {
+    if (hasInitialized) return;
+    
+    const initializeApp = async () => {
       try {
-        const staleDataFound = checkAndClearStaleAuthData();
-        if (staleDataFound) {
-          console.log('Stale authentication data was found and cleared');
-        }
-        
-        // Clear any stale cache on initial load
-        const clearStaleCache = async () => {
+        if (typeof window !== 'undefined') {
+          // Clear stale auth data
           try {
-            // Check if we've already cleared cache in this session
+            const staleDataFound = checkAndClearStaleAuthData();
+            if (staleDataFound) {
+              console.log('Stale authentication data was found and cleared');
+            }
+          } catch (authError) {
+            console.error('Error clearing stale auth data:', authError);
+          }
+          
+          // Clear stale cache
+          try {
             const hasCleared = sessionStorage.getItem('cache_cleared');
             if (!hasCleared) {
               console.log('Performing initial cache check and cleanup');
               
-              // Clear all listing-related localStorage items
               Object.keys(localStorage).forEach(key => {
                 if (key.startsWith('listings_')) {
                   localStorage.removeItem(key);
-                  console.log(`Cleared potentially stale cache: ${key}`);
                 }
               });
               
-              // Mark that we've cleared cache in this session
               sessionStorage.setItem('cache_cleared', 'true');
               setCacheCleared(true);
             }
-          } catch (error) {
-            console.error('Error during initial cache cleanup:', error);
+          } catch (cacheError) {
+            console.error('Error during initial cache cleanup:', cacheError);
           }
-        };
+        }
         
-        clearStaleCache();
-        
-        // Add a global error handler for various errors
-        const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
-          // Prevent the error from being logged to console if it's a known issue
-          if (event.reason && typeof event.reason === 'object') {
-            const errorMessage = event.reason.message || '';
-            const errorStack = event.reason.stack || '';
-            
-            // Handle Firebase/Firestore errors
-            if (errorMessage === 'Failed to fetch' || errorStack.includes('firestore.googleapis.com')) {
-              console.error('Detected Firestore fetch error on home page:', event.reason);
-              setConnectionError(true);
-              event.preventDefault(); // Prevent default error handling
-              return;
-            }
-            
-            // Handle postMessage origin errors (common in development)
-            if (errorMessage.includes('postMessage') && errorMessage.includes('origin')) {
-              console.warn('PostMessage origin mismatch (development environment):', errorMessage);
-              event.preventDefault(); // Prevent default error handling
-              return;
-            }
-          }
-        };
-        
-        const handleError = (event: ErrorEvent) => {
-          // Handle general JavaScript errors
-          if (event.error && typeof event.error === 'object') {
-            const errorMessage = event.error.message || event.message || '';
-            
-            // Handle postMessage origin errors
-            if (errorMessage.includes('postMessage') && errorMessage.includes('origin')) {
-              console.warn('PostMessage origin mismatch (development environment):', errorMessage);
-              event.preventDefault();
-              return;
-            }
-          }
-        };
-        
-        window.addEventListener('unhandledrejection', handleUnhandledRejection);
-        window.addEventListener('error', handleError);
-        
-        return () => {
-          window.removeEventListener('unhandledrejection', handleUnhandledRejection);
-          window.removeEventListener('error', handleError);
-        };
-      } catch (initError) {
-        console.error('Error during home page initialization:', initError);
-        // Don't let initialization errors crash the page
+        setHasInitialized(true);
+      } catch (error) {
+        console.error('Error during app initialization:', error);
+        setHasInitialized(true); // Still mark as initialized to prevent infinite loops
       }
-    }
-  }, []);
+    };
+
+    initializeApp();
+  }, [hasInitialized]);
   
-  // Monitor for listing errors and trigger recovery if needed
+  // Monitor for listing errors
   useEffect(() => {
     if (listingsError) {
       console.error('Listings error detected:', listingsError);
@@ -287,49 +300,62 @@ export default function Home() {
       return [];
     }
 
-    // Add distance information to listings
-    const withDistance = allListings.map(listing => {
-      const listingLat = listing.coordinates?.latitude;
-      const listingLng = listing.coordinates?.longitude;
-      const distance = (latitude && longitude && listingLat && listingLng)
-        ? calculateDistance(latitude, longitude, listingLat, listingLng)
-        : Infinity;
-      
-      // Add proximity category
-      let proximity = 'far';
-      if (distance <= 5) proximity = 'very-close';
-      else if (distance <= 15) proximity = 'close';
-      else if (distance <= 30) proximity = 'medium';
-      
-      return { ...listing, distance, proximity };
-    });
-    
-    // Sort listings by distance if location is available
-    if (latitude && longitude) {
-      return [...withDistance].sort((a, b) => {
-        // Prioritize listings within 50km
-        const aWithin50 = (a.distance || Infinity) <= 50;
-        const bWithin50 = (b.distance || Infinity) <= 50;
+    try {
+      // Add distance information to listings
+      const withDistance = allListings.map(listing => {
+        const listingLat = listing.coordinates?.latitude;
+        const listingLng = listing.coordinates?.longitude;
+        const distance = (latitude && longitude && listingLat && listingLng)
+          ? calculateDistance(latitude, longitude, listingLat, listingLng)
+          : Infinity;
         
-        if (aWithin50 && !bWithin50) return -1;
-        if (!aWithin50 && bWithin50) return 1;
+        // Add proximity category
+        let proximity = 'far';
+        if (distance <= 5) proximity = 'very-close';
+        else if (distance <= 15) proximity = 'close';
+        else if (distance <= 30) proximity = 'medium';
         
-        // For listings within 50km, sort by distance
-        if (aWithin50 && bWithin50) {
-          return (a.distance || Infinity) - (b.distance || Infinity);
-        }
-        
-        // For listings beyond 50km, sort by recency
-        const aTime = a.createdAt instanceof Date ? a.createdAt.getTime() : new Date(a.createdAt).getTime();
-        const bTime = b.createdAt instanceof Date ? b.createdAt.getTime() : new Date(b.createdAt).getTime();
-        return bTime - aTime;
+        return { ...listing, distance, proximity };
       });
+      
+      // Sort listings by distance if location is available
+      if (latitude && longitude) {
+        return [...withDistance].sort((a, b) => {
+          // Prioritize listings within 50km
+          const aWithin50 = (a.distance || Infinity) <= 50;
+          const bWithin50 = (b.distance || Infinity) <= 50;
+          
+          if (aWithin50 && !bWithin50) return -1;
+          if (!aWithin50 && bWithin50) return 1;
+          
+          // For listings within 50km, sort by distance
+          if (aWithin50 && bWithin50) {
+            return (a.distance || Infinity) - (b.distance || Infinity);
+          }
+          
+          // For listings beyond 50km, sort by recency
+          const aTime = a.createdAt instanceof Date ? a.createdAt.getTime() : new Date(a.createdAt).getTime();
+          const bTime = b.createdAt instanceof Date ? b.createdAt.getTime() : new Date(b.createdAt).getTime();
+          return bTime - aTime;
+        });
+      }
+      
+      return withDistance;
+    } catch (error) {
+      console.error('Error processing listings:', error);
+      return allListings; // Return unprocessed listings as fallback
     }
-    
-    return withDistance;
   }, [allListings, isLoading, latitude, longitude]);
 
-  const { recordSearch } = useTrendingSearches();
+  // Trending searches hook with error handling
+  let recordSearch;
+  try {
+    const trendingSearches = useTrendingSearches();
+    recordSearch = trendingSearches.recordSearch;
+  } catch (error) {
+    console.error('Error getting trending searches hook:', error);
+    recordSearch = async () => {}; // No-op fallback
+  }
 
   // Memoize the search handler to prevent recreation on each render
   const handleSearch = useCallback(async () => {
@@ -337,7 +363,6 @@ export default function Home() {
       // Only record search term if there is one
       if (searchQuery.trim()) {
         try {
-          // Use the recordSearch function from useTrendingSearches hook
           console.log('Recording search term from home page:', searchQuery.trim());
           await recordSearch(searchQuery.trim());
         } catch (error) {
@@ -360,15 +385,12 @@ export default function Home() {
       }
 
       // Only proceed with navigation if we have at least one filter parameter
-      // This ensures we can filter by state even when search query is empty
       if (Object.keys(queryParams).length > 0) {
-        // Update URL with search parameters
         router.push({
           pathname: '/listings',
           query: queryParams,
         });
       } else {
-        // If no filters are applied, just go to the listings page
         router.push('/listings');
       }
     } catch (error) {
@@ -386,43 +408,35 @@ export default function Home() {
 
   // Handle search from SearchBar component
   const handleSearchFromBar = useCallback((query: string) => {
-    // Update searchQuery state so the search bar value persists
     setSearchQuery(query);
 
-    // Record search term if it's not empty
     if (query.trim()) {
       try {
         console.log('Recording search term:', query.trim());
         recordSearch(query.trim()).catch(error => {
           console.error('Error recording search:', error);
-          // Continue with search regardless of recording error
         });
       } catch (error) {
         console.error('Error recording search:', error);
       }
     }
     
-    // Create query object
     const queryParams: Record<string, string> = {};
     
-    // Only add parameters that have values
     if (query.trim()) {
       queryParams.query = query;
     }
     
-    // Add location filter if a specific state is selected
     if (selectedState && selectedState !== "all") {
       queryParams.state = selectedState;
     }
 
-    // Navigate to listings page with search parameters
     if (Object.keys(queryParams).length > 0) {
       router.push({
         pathname: '/listings',
         query: queryParams,
       });
     } else {
-      // If no filters are applied, just go to the listings page
       router.push('/listings');
     }
   }, [selectedState, router, recordSearch]);
@@ -430,15 +444,13 @@ export default function Home() {
   // Handle card selection
   const handleCardSelect = useCallback((cardName: string) => {
     setSearchQuery(cardName);
-    // Use setTimeout to ensure state is updated before search
     setTimeout(() => handleSearch(), 0);
   }, [handleSearch]);
 
-  // Animation variants are now handled by the optimized system
   const { shouldAnimate } = animationConfig;
 
   return (
-    <>
+    <ErrorBoundary>
       <Head>
         <title>Waboku.gg - Local Trading Card Game Marketplace</title>
         <meta
@@ -447,32 +459,35 @@ export default function Home() {
         />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <link rel="icon" href="/favicon.ico" />
-        {/* Preload critical resources */}
         <link rel="preload" href="/fonts/inter-var.woff2" as="font" type="font/woff2" crossOrigin="" />
-        {/* DNS prefetch for external resources */}
         <link rel="dns-prefetch" href="//firestore.googleapis.com" />
         <link rel="dns-prefetch" href="//firebase.googleapis.com" />
       </Head>
 
       <div className="bg-background min-h-screen flex flex-col">
-        <Header animate={true} />
+        <ErrorBoundary fallback={<div className="h-16 bg-background" />}>
+          <Header animate={true} />
+        </ErrorBoundary>
+        
         <main className="flex-1">
-          {/* Game Categories */}
-          <GameCategories />
+          <ErrorBoundary fallback={<div className="h-16 bg-background" />}>
+            <GameCategories />
+          </ErrorBoundary>
 
           {/* Hero Section with optimized animations */}
           <div className="relative overflow-hidden min-h-screen pt-16 sm:pt-20 md:pt-24">
-            {/* Optimized Background Animation */}
-            <OptimizedMotion 
-              className="hero-background absolute inset-0"
-              variants={animationVariants.heroBackground}
-              initial="hidden"
-              animate="visible"
-              shouldAnimate={shouldAnimate}
-              style={{ willChange: "transform, opacity" }}
-            >
-              <AnimatedBackground className="opacity-80" />
-            </OptimizedMotion>
+            <ErrorBoundary fallback={<div className="absolute inset-0 bg-background" />}>
+              <OptimizedMotion 
+                className="hero-background absolute inset-0"
+                variants={animationVariants.heroBackground}
+                initial="hidden"
+                animate="visible"
+                shouldAnimate={shouldAnimate}
+                style={{ willChange: "transform, opacity" }}
+              >
+                <AnimatedBackground className="opacity-80" />
+              </OptimizedMotion>
+            </ErrorBoundary>
             
             <div className="relative container mx-auto px-6 sm:px-4 py-12 sm:py-10 md:py-12 lg:py-16">
               <OptimizedMotion
@@ -483,7 +498,6 @@ export default function Home() {
                 shouldAnimate={shouldAnimate}
               >
                 <div className="space-y-4 sm:space-y-3">
-                  {/* Optimized title with layout preservation */}
                   <div className="relative px-2 sm:px-0">
                     <div className="invisible h-[4.5rem] sm:h-[4.5rem] md:h-[6rem] lg:h-[7.5rem]" aria-hidden="true">
                       Your Local TCG Marketplace
@@ -513,7 +527,7 @@ export default function Home() {
                   </div>
                 </div>
 
-                {/* Search Section with lazy loading */}
+                {/* Search Section */}
                 <OptimizedMotion
                   className="flex flex-col max-w-2xl mx-auto pt-4 sm:pt-6 pb-4 sm:pb-8 px-4 sm:px-0"
                   variants={animationVariants.item}
@@ -522,49 +536,59 @@ export default function Home() {
                   {/* Mobile Search Controls */}
                   <div className="flex sm:hidden flex-col gap-4 mb-4 px-2">
                     <div className="relative w-full">
-                      <SearchBar
-                        onSelect={handleCardSelect}
-                        onSearch={handleSearchFromBar}
-                        initialValue={searchQuery}
-                        showSearchButton={true}
-                      />
+                      <ErrorBoundary fallback={<div className="h-10 bg-muted rounded" />}>
+                        <SearchBar
+                          onSelect={handleCardSelect}
+                          onSearch={handleSearchFromBar}
+                          initialValue={searchQuery}
+                          showSearchButton={true}
+                        />
+                      </ErrorBoundary>
                     </div>
                     <div className="relative w-full">
-                      <StateSelect 
-                        value={selectedState || "all"} 
-                        onValueChange={(value) => setSelectedState(value)}
-                      />
+                      <ErrorBoundary fallback={<div className="h-10 bg-muted rounded" />}>
+                        <StateSelect 
+                          value={selectedState || "all"} 
+                          onValueChange={(value) => setSelectedState(value)}
+                        />
+                      </ErrorBoundary>
                     </div>
                   </div>
 
                   {/* Desktop Search Controls */}
                   <div className="hidden sm:flex gap-4">
                     <div className="relative w-full">
-                      <SearchBar
-                        onSelect={handleCardSelect}
-                        onSearch={handleSearchFromBar}
-                        initialValue={searchQuery}
-                        showSearchButton={true}
-                      />
+                      <ErrorBoundary fallback={<div className="h-10 bg-muted rounded" />}>
+                        <SearchBar
+                          onSelect={handleCardSelect}
+                          onSearch={handleSearchFromBar}
+                          initialValue={searchQuery}
+                          showSearchButton={true}
+                        />
+                      </ErrorBoundary>
                     </div>
                     <div className="relative w-[200px]">
-                      <StateSelect 
-                        value={selectedState || "all"} 
-                        onValueChange={(value) => setSelectedState(value)}
-                      />
+                      <ErrorBoundary fallback={<div className="h-10 bg-muted rounded" />}>
+                        <StateSelect 
+                          value={selectedState || "all"} 
+                          onValueChange={(value) => setSelectedState(value)}
+                        />
+                      </ErrorBoundary>
                     </div>
                   </div>
 
-                  {/* Trending Searches - Lazy loaded */}
+                  {/* Trending Searches */}
                   <LazySection className="mt-4 rounded-lg p-2 bg-transparent" threshold={0.3}>
-                    <TrendingSearches />
+                    <ErrorBoundary fallback={<div className="h-8 bg-muted rounded" />}>
+                      <TrendingSearches />
+                    </ErrorBoundary>
                   </LazySection>
                 </OptimizedMotion>
               </OptimizedMotion>
             </div>
           </div>
 
-          {/* Listings Section - Lazy loaded with intersection observer */}
+          {/* Listings Section */}
           <LazySection className="container mx-auto px-4 py-8 sm:py-12 relative z-10 bg-background mt-0" minHeight="400px">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-2xl font-semibold text-foreground">
@@ -576,88 +600,99 @@ export default function Home() {
             </div>
             
             <div className="max-w-[1400px] mx-auto">
-              <FirebaseConnectionHandler>
-                {connectionError ? (
-                  <div className="flex flex-col items-center justify-center p-8 space-y-4">
-                    <div className="text-center space-y-2">
-                      <h3 className="text-lg font-semibold">Connection Issue Detected</h3>
-                      <p className="text-sm text-muted-foreground">
-                        We're having trouble loading the latest listings. This might be due to a temporary connection issue.
-                      </p>
-                    </div>
-                    <Button 
-                      onClick={async () => {
-                        setIsRecovering(true);
-                        try {
-                          await clearFirestoreCaches();
-                          console.log('Cleared all Firestore caches');
-                          
-                          Object.keys(localStorage).forEach(key => {
-                            if (key.startsWith('listings_')) {
-                              localStorage.removeItem(key);
-                            }
-                          });
-                          
-                          await fixFirestoreListenChannel();
-                          console.log('Fixed Firestore Listen channel');
-                          
-                          setConnectionError(false);
-                          window.location.reload();
-                        } catch (error) {
-                          console.error('Error recovering connection:', error);
-                          alert('Unable to automatically fix the connection. Please try refreshing the page manually.');
-                        } finally {
-                          setIsRecovering(false);
-                        }
-                      }}
-                      disabled={isRecovering}
-                      className="flex items-center gap-2"
-                    >
-                      {isRecovering ? (
-                        <>
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                          Fixing Connection...
-                        </>
-                      ) : (
-                        <>Fix Connection</>
-                      )}
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      onClick={() => window.location.reload()}
-                      className="mt-2"
-                    >
-                      Refresh Page
-                    </Button>
-                  </div>
-                ) : (
-                  <ContentLoader 
-                    isLoading={isLoading} 
-                    loadingMessage="Loading listings..."
-                    minHeight="400px"
-                    fallback={
-                      <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                        {[...Array(8)].map((_, i) => (
-                          <Skeleton key={i} className="h-64 w-full" />
-                        ))}
+              <ErrorBoundary fallback={
+                <div className="flex flex-col items-center justify-center p-8 space-y-4">
+                  <h3 className="text-lg font-semibold">Unable to load listings</h3>
+                  <p className="text-sm text-muted-foreground">Please refresh the page to try again.</p>
+                  <Button onClick={() => window.location.reload()}>Refresh Page</Button>
+                </div>
+              }>
+                <FirebaseConnectionHandler>
+                  {connectionError ? (
+                    <div className="flex flex-col items-center justify-center p-8 space-y-4">
+                      <div className="text-center space-y-2">
+                        <h3 className="text-lg font-semibold">Connection Issue Detected</h3>
+                        <p className="text-sm text-muted-foreground">
+                          We're having trouble loading the latest listings. This might be due to a temporary connection issue.
+                        </p>
                       </div>
-                    }
-                  >
-                    <ListingGrid 
-                      listings={processedListings} 
-                      loading={false}
-                      displayCount={displayCount}
-                      hasMore={processedListings.length > displayCount}
-                      onLoadMore={() => setDisplayCount(prev => prev + 8)}
-                    />
-                  </ContentLoader>
-                )}
-              </FirebaseConnectionHandler>
+                      <Button 
+                        onClick={async () => {
+                          setIsRecovering(true);
+                          try {
+                            await clearFirestoreCaches();
+                            console.log('Cleared all Firestore caches');
+                            
+                            Object.keys(localStorage).forEach(key => {
+                              if (key.startsWith('listings_')) {
+                                localStorage.removeItem(key);
+                              }
+                            });
+                            
+                            await fixFirestoreListenChannel();
+                            console.log('Fixed Firestore Listen channel');
+                            
+                            setConnectionError(false);
+                            window.location.reload();
+                          } catch (error) {
+                            console.error('Error recovering connection:', error);
+                            alert('Unable to automatically fix the connection. Please try refreshing the page manually.');
+                          } finally {
+                            setIsRecovering(false);
+                          }
+                        }}
+                        disabled={isRecovering}
+                        className="flex items-center gap-2"
+                      >
+                        {isRecovering ? (
+                          <>
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            Fixing Connection...
+                          </>
+                        ) : (
+                          <>Fix Connection</>
+                        )}
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        onClick={() => window.location.reload()}
+                        className="mt-2"
+                      >
+                        Refresh Page
+                      </Button>
+                    </div>
+                  ) : (
+                    <ContentLoader 
+                      isLoading={isLoading} 
+                      loadingMessage="Loading listings..."
+                      minHeight="400px"
+                      fallback={
+                        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                          {[...Array(8)].map((_, i) => (
+                            <Skeleton key={i} className="h-64 w-full" />
+                          ))}
+                        </div>
+                      }
+                    >
+                      <ListingGrid 
+                        listings={processedListings} 
+                        loading={false}
+                        displayCount={displayCount}
+                        hasMore={processedListings.length > displayCount}
+                        onLoadMore={() => setDisplayCount(prev => prev + 8)}
+                      />
+                    </ContentLoader>
+                  )}
+                </FirebaseConnectionHandler>
+              </ErrorBoundary>
             </div>
           </LazySection>
         </main>
-        <Footer />
+        
+        <ErrorBoundary fallback={<div className="h-16 bg-background" />}>
+          <Footer />
+        </ErrorBoundary>
       </div>
-    </>
+    </ErrorBoundary>
   );
 }
