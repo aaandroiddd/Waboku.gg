@@ -197,7 +197,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           }
         };
         
-        success = await emailService.sendNotificationEmail(saleNotificationData);
+        success = await emailService.sendEmailNotification(saleNotificationData);
         message = success ? 'Marketplace sale notification email sent successfully' : 'Failed to send marketplace sale notification email';
         break;
 
@@ -245,7 +245,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           }
         };
         
-        success = await emailService.sendNotificationEmail(offerNotificationData);
+        success = await emailService.sendEmailNotification(offerNotificationData);
         message = success ? 'Marketplace offer notification email sent successfully' : 'Failed to send marketplace offer notification email';
         break;
 
@@ -268,7 +268,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           }
         };
         
-        success = await emailService.sendNotificationEmail(paymentNotificationData);
+        success = await emailService.sendEmailNotification(paymentNotificationData);
         message = success ? 'Marketplace payment received notification email sent successfully' : 'Failed to send marketplace payment received notification email';
         break;
 
