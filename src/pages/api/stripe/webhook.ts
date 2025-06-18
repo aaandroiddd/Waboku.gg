@@ -274,6 +274,115 @@ export default async function handler(
                   paymentStatus: 'paid'
                 });
                 
+                // Send notifications for the updated pending order
+                try {
+                  // Get buyer and seller data for notifications
+                  const [buyerDoc, sellerDoc] = await Promise.all([
+                    firestoreDb.collection('users').doc(buyerId).get(),
+                    firestoreDb.collection('users').doc(sellerId).get()
+                  ]);
+
+                  const buyerData = buyerDoc.data();
+                  const sellerData = sellerDoc.data();
+
+                  if (buyerData && sellerData) {
+                    const orderNumber = session.metadata.orderId.substring(0, 8).toUpperCase();
+                    const orderDate = new Date().toLocaleDateString();
+                    const shippingAddressFormatted = session.shipping?.address ? 
+                      `${session.shipping.name}\n${session.shipping.address.line1}${session.shipping.address.line2 ? '\n' + session.shipping.address.line2 : ''}\n${session.shipping.address.city}, ${session.shipping.address.state} ${session.shipping.address.postal_code}\n${session.shipping.address.country}` : 
+                      'No shipping address provided';
+
+                    // Send order confirmation email to buyer
+                    if (buyerData.email) {
+                      await emailService.sendOrderConfirmationEmail({
+                        userName: buyerData.displayName || buyerData.username || 'User',
+                        userEmail: buyerData.email,
+                        orderNumber: orderNumber,
+                        orderDate: orderDate,
+                        cardName: listingData.title || 'Trading Card',
+                        setName: listingData.game || 'Unknown Set',
+                        condition: listingData.condition || 'Unknown',
+                        quantity: 1,
+                        price: (session.amount_total ? (session.amount_total / 100) - (session.metadata.platformFee ? parseInt(session.metadata.platformFee) / 100 : 0) : 0).toFixed(2),
+                        sellerName: sellerData.displayName || sellerData.username || 'Seller',
+                        sellerLocation: sellerData.location || 'Unknown Location',
+                        subtotal: (session.amount_total ? (session.amount_total / 100) - (session.metadata.platformFee ? parseInt(session.metadata.platformFee) / 100 : 0) : 0).toFixed(2),
+                        shipping: '0.00', // Assuming free shipping for now
+                        fee: (session.metadata.platformFee ? parseInt(session.metadata.platformFee) / 100 : 0).toFixed(2),
+                        total: (session.amount_total ? session.amount_total / 100 : 0).toFixed(2),
+                        shippingAddress: shippingAddressFormatted,
+                        orderId: session.metadata.orderId
+                      });
+                      console.log('[Stripe Webhook] Order confirmation email sent to buyer for pending order:', buyerData.email);
+                    }
+
+                    // Send payment confirmation email to buyer
+                    if (buyerData.email && paymentMethod) {
+                      await emailService.sendPaymentConfirmationEmail({
+                        userName: buyerData.displayName || buyerData.username || 'User',
+                        userEmail: buyerData.email,
+                        transactionId: paymentIntentId || session.id,
+                        paymentMethod: `${paymentMethod.brand?.toUpperCase()} ending in ${paymentMethod.last4}`,
+                        amount: (session.amount_total ? session.amount_total / 100 : 0).toFixed(2),
+                        paymentDate: orderDate,
+                        orderId: session.metadata.orderId
+                      });
+                      console.log('[Stripe Webhook] Payment confirmation email sent to buyer for pending order:', buyerData.email);
+                    }
+
+                    // Create in-app notification for buyer about order payment
+                    const { notificationService } = await import('@/lib/notification-service');
+                    await notificationService.createNotification({
+                      userId: buyerId,
+                      type: 'order_update',
+                      title: '🛒 Payment Confirmed!',
+                      message: `Your payment for "${listingData.title}" has been processed and the order is awaiting shipment.`,
+                      data: {
+                        orderId: session.metadata.orderId,
+                        actionUrl: `/dashboard/orders/${session.metadata.orderId}`
+                      }
+                    });
+                    console.log('[Stripe Webhook] In-app notification created for buyer (pending order):', buyerId);
+
+                    // Create in-app notification for seller about new sale
+                    await notificationService.createNotification({
+                      userId: sellerId,
+                      type: 'sale',
+                      title: '🎉 Payment Received!',
+                      message: `${buyerData.displayName || buyerData.username || 'A buyer'} completed payment for your "${listingData.title}" - $${(session.amount_total ? session.amount_total / 100 : 0).toFixed(2)}`,
+                      data: {
+                        orderId: session.metadata.orderId,
+                        listingId: listingId,
+                        actionUrl: `/dashboard/orders/${session.metadata.orderId}`
+                      }
+                    });
+                    console.log('[Stripe Webhook] In-app notification created for seller (pending order):', sellerId);
+
+                    // Send sale notification email to seller
+                    if (sellerData.email) {
+                      await emailService.sendEmailNotification({
+                        userId: sellerId,
+                        userEmail: sellerData.email,
+                        userName: sellerData.displayName || sellerData.username || 'User',
+                        type: 'sale',
+                        title: '🎉 Payment Received!',
+                        message: `${buyerData.displayName || buyerData.username || 'A buyer'} completed payment for your "${listingData.title}" - $${(session.amount_total ? session.amount_total / 100 : 0).toFixed(2)}. Please prepare the item for shipment.`,
+                        actionUrl: `/dashboard/orders/${session.metadata.orderId}`,
+                        data: {
+                          orderId: session.metadata.orderId,
+                          listingId: listingId,
+                          buyerName: buyerData.displayName || buyerData.username || 'Buyer',
+                          amount: session.amount_total ? session.amount_total / 100 : 0
+                        }
+                      });
+                      console.log('[Stripe Webhook] Sale notification email sent to seller for pending order:', sellerData.email);
+                    }
+                  }
+                } catch (notificationError) {
+                  console.error('[Stripe Webhook] Error sending notifications for pending order:', notificationError);
+                  // Don't throw error - order was updated successfully, notifications are secondary
+                }
+                
                 // No need to create a new order since we're updating an existing one
                 break;
               } catch (err) {
@@ -440,6 +549,115 @@ export default async function handler(
               buyerId,
               sellerId
             });
+
+            // Send email notifications and create in-app notifications
+            try {
+              // Get buyer and seller data for notifications
+              const [buyerDoc, sellerDoc] = await Promise.all([
+                firestoreDb.collection('users').doc(buyerId).get(),
+                firestoreDb.collection('users').doc(sellerId).get()
+              ]);
+
+              const buyerData = buyerDoc.data();
+              const sellerData = sellerDoc.data();
+
+              if (buyerData && sellerData) {
+                const orderNumber = orderRef.id.substring(0, 8).toUpperCase();
+                const orderDate = new Date().toLocaleDateString();
+                const shippingAddressFormatted = orderData.shippingAddress ? 
+                  `${orderData.shippingAddress.name}\n${orderData.shippingAddress.line1}${orderData.shippingAddress.line2 ? '\n' + orderData.shippingAddress.line2 : ''}\n${orderData.shippingAddress.city}, ${orderData.shippingAddress.state} ${orderData.shippingAddress.postal_code}\n${orderData.shippingAddress.country}` : 
+                  'No shipping address provided';
+
+                // Send order confirmation email to buyer
+                if (buyerData.email) {
+                  await emailService.sendOrderConfirmationEmail({
+                    userName: buyerData.displayName || buyerData.username || 'User',
+                    userEmail: buyerData.email,
+                    orderNumber: orderNumber,
+                    orderDate: orderDate,
+                    cardName: listingData.title || 'Trading Card',
+                    setName: listingData.game || 'Unknown Set',
+                    condition: listingData.condition || 'Unknown',
+                    quantity: 1,
+                    price: (orderData.amount - (orderData.platformFee || 0)).toFixed(2),
+                    sellerName: sellerData.displayName || sellerData.username || 'Seller',
+                    sellerLocation: sellerData.location || 'Unknown Location',
+                    subtotal: (orderData.amount - (orderData.platformFee || 0)).toFixed(2),
+                    shipping: '0.00', // Assuming free shipping for now
+                    fee: (orderData.platformFee || 0).toFixed(2),
+                    total: orderData.amount.toFixed(2),
+                    shippingAddress: shippingAddressFormatted,
+                    orderId: orderRef.id
+                  });
+                  console.log('[Stripe Webhook] Order confirmation email sent to buyer:', buyerData.email);
+                }
+
+                // Send payment confirmation email to buyer
+                if (buyerData.email && orderData.paymentMethod) {
+                  await emailService.sendPaymentConfirmationEmail({
+                    userName: buyerData.displayName || buyerData.username || 'User',
+                    userEmail: buyerData.email,
+                    transactionId: orderData.paymentIntentId || orderData.paymentSessionId,
+                    paymentMethod: `${orderData.paymentMethod.brand?.toUpperCase()} ending in ${orderData.paymentMethod.last4}`,
+                    amount: orderData.amount.toFixed(2),
+                    paymentDate: orderDate,
+                    orderId: orderRef.id
+                  });
+                  console.log('[Stripe Webhook] Payment confirmation email sent to buyer:', buyerData.email);
+                }
+
+                // Create in-app notification for buyer about new order
+                const { notificationService } = await import('@/lib/notification-service');
+                await notificationService.createNotification({
+                  userId: buyerId,
+                  type: 'order_update',
+                  title: '🛒 Order Confirmed!',
+                  message: `Your order for "${listingData.title}" has been confirmed and is awaiting shipment.`,
+                  data: {
+                    orderId: orderRef.id,
+                    actionUrl: `/dashboard/orders/${orderRef.id}`
+                  }
+                });
+                console.log('[Stripe Webhook] In-app notification created for buyer:', buyerId);
+
+                // Create in-app notification for seller about new sale
+                await notificationService.createNotification({
+                  userId: sellerId,
+                  type: 'sale',
+                  title: '🎉 New Sale!',
+                  message: `${buyerData.displayName || buyerData.username || 'A buyer'} purchased your "${listingData.title}" for $${orderData.amount.toFixed(2)}`,
+                  data: {
+                    orderId: orderRef.id,
+                    listingId: listingId,
+                    actionUrl: `/dashboard/orders/${orderRef.id}`
+                  }
+                });
+                console.log('[Stripe Webhook] In-app notification created for seller:', sellerId);
+
+                // Send sale notification email to seller
+                if (sellerData.email) {
+                  await emailService.sendEmailNotification({
+                    userId: sellerId,
+                    userEmail: sellerData.email,
+                    userName: sellerData.displayName || sellerData.username || 'User',
+                    type: 'sale',
+                    title: '🎉 New Sale!',
+                    message: `${buyerData.displayName || buyerData.username || 'A buyer'} purchased your "${listingData.title}" for $${orderData.amount.toFixed(2)}. Please prepare the item for shipment.`,
+                    actionUrl: `/dashboard/orders/${orderRef.id}`,
+                    data: {
+                      orderId: orderRef.id,
+                      listingId: listingId,
+                      buyerName: buyerData.displayName || buyerData.username || 'Buyer',
+                      amount: orderData.amount
+                    }
+                  });
+                  console.log('[Stripe Webhook] Sale notification email sent to seller:', sellerData.email);
+                }
+              }
+            } catch (notificationError) {
+              console.error('[Stripe Webhook] Error sending notifications:', notificationError);
+              // Don't throw error - order was created successfully, notifications are secondary
+            }
           } catch (error) {
             console.error('[Stripe Webhook] Error processing marketplace purchase:', error);
             throw error; // Re-throw to be caught by the outer try/catch
