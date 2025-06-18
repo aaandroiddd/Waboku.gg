@@ -2,6 +2,9 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import { initializeFirebaseAdmin } from '@/lib/firebase-admin';
 import { serverTimestamp } from 'firebase/firestore';
 
+// Import email service for sending order confirmation emails
+import { emailService } from '@/lib/email-service';
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   // Only allow POST requests
   if (req.method !== 'POST') {
@@ -175,6 +178,54 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         soldTo: offerData.buyerId,
         updatedAt: admin.firestore.FieldValue.serverTimestamp()
       });
+    }
+
+    // Send order confirmation emails to both buyer and seller
+    try {
+      // Fetch buyer and seller user data
+      const buyerUser = await admin.auth().getUser(offerData.buyerId);
+      const sellerUser = await admin.auth().getUser(offerData.sellerId);
+
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://waboku.gg';
+      const orderUrl = `${baseUrl}/dashboard/orders/${orderId}`;
+
+      // Email to buyer
+      if (buyerUser.email) {
+        await emailService.sendOrderConfirmationEmail({
+          userName: buyerUser.displayName || 'Buyer',
+          userEmail: buyerUser.email,
+          orderId: orderId,
+          listingTitle: orderData.listingSnapshot?.title || 'Unknown Listing',
+          listingImage: orderData.listingSnapshot?.imageUrl || '',
+          amount: orderData.amount,
+          role: 'buyer',
+          actionUrl: orderUrl,
+          sellerName: sellerUser.displayName || 'Seller',
+          shippingAddress: orderData.shippingAddress,
+          isPickup: orderData.isPickup,
+        });
+        console.log(`Order confirmation email sent to buyer: ${buyerUser.email}`);
+      }
+
+      // Email to seller
+      if (sellerUser.email) {
+        await emailService.sendOrderConfirmationEmail({
+          userName: sellerUser.displayName || 'Seller',
+          userEmail: sellerUser.email,
+          orderId: orderId,
+          listingTitle: orderData.listingSnapshot?.title || 'Unknown Listing',
+          listingImage: orderData.listingSnapshot?.imageUrl || '',
+          amount: orderData.amount,
+          role: 'seller',
+          actionUrl: orderUrl,
+          buyerName: buyerUser.displayName || 'Buyer',
+          shippingAddress: orderData.shippingAddress,
+          isPickup: orderData.isPickup,
+        });
+        console.log(`Order confirmation email sent to seller: ${sellerUser.email}`);
+      }
+    } catch (emailError) {
+      console.error('Error sending order confirmation emails:', emailError);
     }
     
     return res.status(200).json({ 
