@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic'
 import { LocationInput } from '@/components/LocationInput';
-import { AccountFeatures } from '@/components/AccountFeatures';
 import { AlertDialog, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,10 +12,11 @@ import { useRouter } from 'next/router';
 import { Textarea } from "@/components/ui/textarea";
 import { useTheme } from "next-themes";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Mail, Bell, Shield, Settings, Trash2, User, Palette } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { Switch } from "@/components/ui/switch";
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { doc, getDoc, deleteDoc, collection, query, where, getDocs, setDoc } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase';
@@ -25,6 +25,7 @@ import { AccountLinkingButton } from '@/components/AccountLinkingButton';
 import { Toaster } from '@/components/ui/toaster';
 import { ProfileAvatar } from '@/components/ProfileAvatar';
 import MfaEnrollment from '@/components/MfaEnrollment';
+import { NotificationPreferences } from '@/types/notification';
 
 const DashboardLayout = dynamic(
   () => import('@/components/dashboard/DashboardLayout').then(mod => mod.DashboardLayout),
@@ -43,8 +44,125 @@ const SettingsPageContent = () => {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [deleteConfirmation, setDeleteConfirmation] = useState("");
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
-  const [isThemeOpen, setIsThemeOpen] = useState(false);
   
+  // Collapsible states for different sections
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [isAppearanceOpen, setIsAppearanceOpen] = useState(false);
+  const [isSecurityOpen, setIsSecurityOpen] = useState(false);
+  const [isTroubleshootingOpen, setIsTroubleshootingOpen] = useState(false);
+  const [isDangerZoneOpen, setIsDangerZoneOpen] = useState(false);
+  
+  // Notification preferences state
+  const [notificationPreferences, setNotificationPreferences] = useState<NotificationPreferences>({
+    userId: '',
+    email: {
+      sales: true,
+      messages: true,
+      offers: true,
+      orderUpdates: true,
+      listingUpdates: true,
+      marketing: false,
+      system: true,
+    },
+    push: {
+      sales: true,
+      messages: true,
+      offers: true,
+      orderUpdates: true,
+      listingUpdates: true,
+      system: true,
+    },
+    updatedAt: new Date()
+  });
+  const [isLoadingPreferences, setIsLoadingPreferences] = useState(false);
+  
+  const { user, profile, updateProfile, deleteAccount } = useAuth();
+  const [formData, setFormData] = useState({
+    username: user?.displayName || "",
+    bio: "",
+    contact: "",
+    location: "",
+    youtube: "",
+    twitter: "",
+    facebook: "",
+    locationData: {
+      city: "",
+      state: ""
+    }
+  });
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState(user?.photoURL || "");
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const router = useRouter();
+
+  // Load notification preferences
+  const loadNotificationPreferences = async () => {
+    if (!user?.uid) return;
+    
+    setIsLoadingPreferences(true);
+    try {
+      const preferencesDoc = await getDoc(doc(db, 'notificationPreferences', user.uid));
+      if (preferencesDoc.exists()) {
+        const data = preferencesDoc.data() as NotificationPreferences;
+        setNotificationPreferences(data);
+      } else {
+        // Create default preferences
+        const defaultPreferences: NotificationPreferences = {
+          userId: user.uid,
+          email: {
+            sales: true,
+            messages: true,
+            offers: true,
+            orderUpdates: true,
+            listingUpdates: true,
+            marketing: false,
+            system: true,
+          },
+          push: {
+            sales: true,
+            messages: true,
+            offers: true,
+            orderUpdates: true,
+            listingUpdates: true,
+            system: true,
+          },
+          updatedAt: new Date()
+        };
+        
+        await setDoc(doc(db, 'notificationPreferences', user.uid), defaultPreferences);
+        setNotificationPreferences(defaultPreferences);
+      }
+    } catch (error) {
+      console.error('Error loading notification preferences:', error);
+    } finally {
+      setIsLoadingPreferences(false);
+    }
+  };
+
+  // Save notification preferences
+  const saveNotificationPreferences = async (newPreferences: NotificationPreferences) => {
+    if (!user?.uid) return;
+    
+    try {
+      const updatedPreferences = {
+        ...newPreferences,
+        userId: user.uid,
+        updatedAt: new Date()
+      };
+      
+      await setDoc(doc(db, 'notificationPreferences', user.uid), updatedPreferences);
+      setNotificationPreferences(updatedPreferences);
+      setSuccess("Notification preferences updated successfully!");
+      setTimeout(() => setSuccess(""), 3000);
+    } catch (error) {
+      console.error('Error saving notification preferences:', error);
+      setError("Failed to save notification preferences");
+      setTimeout(() => setError(""), 5000);
+    }
+  };
+
   // Theme handling function
   const handleThemeChange = async (newTheme: 'light' | 'dark' | 'midnight' | 'system') => {
     try {
@@ -104,14 +222,7 @@ const SettingsPageContent = () => {
     setError("");
     
     try {
-      // Use the deleteAccount method from AuthContext which handles:
-      // 1. Subscription cancellation for premium users
-      // 2. Reauthentication for Google OAuth users
-      // 3. Deletion of all user data (listings, profile, messages, etc.)
-      // 4. Proper error handling
       await deleteAccount();
-      
-      // Redirect to home page on success
       router.push('/');
     } catch (err: any) {
       console.error('Error deleting account:', err);
@@ -121,72 +232,11 @@ const SettingsPageContent = () => {
       setIsDeletingAccount(false);
     }
   };
-  const { user, profile, updateProfile, deleteAccount } = useAuth();
-  const [formData, setFormData] = useState({
-    username: user?.displayName || "",
-    bio: "",
-    contact: "",
-    location: "",
-    youtube: "",
-    twitter: "",
-    facebook: "",
-    locationData: {
-      city: "",
-      state: ""
-    }
-  });
-  const [avatarFile, setAvatarFile] = useState<File | null>(null);
-  const [avatarPreview, setAvatarPreview] = useState(user?.photoURL || "");
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const router = useRouter();
 
   // Load user data when component mounts
   useEffect(() => {
-    // Import the token manager functions
-    const loadTokenManager = async () => {
-      const { refreshAuthToken, validateUserSession, storeAuthState } = await import('@/lib/auth-token-manager');
-      return { refreshAuthToken, validateUserSession, storeAuthState };
-    };
-
-    // Setup periodic token refresh to prevent expiration
-    let tokenRefreshInterval: NodeJS.Timeout | null = null;
-    
-    const setupTokenRefresh = async (userId: string) => {
-      if (tokenRefreshInterval) {
-        clearInterval(tokenRefreshInterval);
-      }
-      
-      // Store current auth state
-      const { storeAuthState } = await loadTokenManager();
-      storeAuthState(userId);
-      
-      // Set up a token refresh every 25 minutes (token expires in 60 minutes)
-      tokenRefreshInterval = setInterval(async () => {
-        if (auth.currentUser) {
-          try {
-            const { refreshAuthToken } = await loadTokenManager();
-            console.log('Performing scheduled token refresh...');
-            await refreshAuthToken(auth.currentUser);
-          } catch (refreshError) {
-            console.error('Error during scheduled token refresh:', refreshError);
-            // Don't show error to user for background refresh failures
-            // The next user action will trigger another refresh attempt
-          }
-        } else {
-          // Clear interval if user is no longer authenticated
-          if (tokenRefreshInterval) {
-            clearInterval(tokenRefreshInterval);
-            tokenRefreshInterval = null;
-          }
-        }
-      }, 25 * 60 * 1000); // 25 minutes
-    };
-
-    const loadUserData = async (retryCount = 0) => {
+    const loadUserData = async () => {
       if (!user?.uid) {
-        console.log('No user UID found, redirecting to sign-in');
         router.push('/auth/sign-in');
         return;
       }
@@ -195,289 +245,44 @@ const SettingsPageContent = () => {
         setIsLoading(true);
         setError("");
         
-        console.log(`Attempting to load user data (attempt ${retryCount + 1}/5)...`);
+        const userDoc = await getDoc(doc(db, 'users', user.uid));
         
-        // Load token manager functions
-        const { refreshAuthToken, validateUserSession } = await loadTokenManager();
-        
-        // Setup token refresh interval
-        await setupTokenRefresh(user.uid);
-        
-        // Validate user session first
-        const isSessionValid = await validateUserSession(user);
-        if (!isSessionValid && retryCount < 2) {
-          console.log('User session invalid, attempting to refresh...');
-          // Try to refresh the token before giving up
-          await refreshAuthToken(user);
-          
-          // Wait a moment and retry
-          const delay = Math.min(1000 * Math.pow(2, retryCount), 5000);
-          await new Promise(resolve => setTimeout(resolve, delay));
-          
-          return loadUserData(retryCount + 1);
-        } else if (!isSessionValid) {
-          console.error('User session invalid after multiple attempts');
-          setError("Your session has expired. Please sign in again.");
-          router.push('/auth/sign-in');
-          return;
-        }
-        
-        // Get current auth state
-        const currentUser = auth.currentUser;
-        
-        // If user is not authenticated, redirect to sign in
-        if (!currentUser) {
-          console.error('User not authenticated after validation');
-          setError("Your session has expired. Please sign in again.");
-          router.push('/auth/sign-in');
-          return;
-        }
-        
-        // Get a fresh token before fetching data, but don't force refresh if not needed
-        // This helps prevent rate limiting issues with Firebase Auth
-        await refreshAuthToken(currentUser);
-        
-        try {
-          console.log('Fetching user document from Firestore...');
-          // Try to get user document with retries
-          let userDoc = null;
-          let fetchError = null;
-          
-          for (let i = 0; i < 3; i++) {
-            try {
-              userDoc = await getDoc(doc(db, 'users', currentUser.uid));
-              fetchError = null;
-              break;
-            } catch (error) {
-              console.error(`Firestore fetch attempt ${i + 1} failed:`, error);
-              fetchError = error;
-              
-              // Only force token refresh if we get a permission error
-              if (error.code === 'permission-denied') {
-                await refreshAuthToken(currentUser);
-              }
-              
-              // Add jitter to prevent thundering herd
-              const baseDelay = 1000 * Math.pow(2, i);
-              const jitter = Math.random() * 500;
-              await new Promise(resolve => setTimeout(resolve, baseDelay + jitter));
+        if (userDoc && userDoc.exists()) {
+          const userData = userDoc.data();
+          setFormData({
+            username: user.displayName || "",
+            bio: userData.bio || "",
+            contact: userData.contact || "",
+            location: userData.location || "",
+            youtube: userData.social?.youtube || "",
+            twitter: userData.social?.twitter || "",
+            facebook: userData.social?.facebook || "",
+            locationData: {
+              city: userData.locationData?.city || "",
+              state: userData.locationData?.state || ""
             }
-          }
-          
-          // If all retries failed, throw the last error
-          if (fetchError) {
-            throw fetchError;
-          }
-          
-          if (userDoc && userDoc.exists()) {
-            console.log('User document found in Firestore');
-            const userData = userDoc.data();
-            setFormData({
-              username: currentUser.displayName || "",
-              bio: userData.bio || "",
-              contact: userData.contact || "",
-              location: userData.location || "",
-              youtube: userData.social?.youtube || "",
-              twitter: userData.social?.twitter || "",
-              facebook: userData.social?.facebook || "",
-              locationData: {
-                city: userData.locationData?.city || "",
-                state: userData.locationData?.state || ""
-              }
-            });
+          });
 
-            // Set theme from user preferences if it exists
-            if (userData.theme) {
-              setTheme(userData.theme);
-            }
-            
-            // Set avatar preview if available
-            if (currentUser.photoURL) {
-              setAvatarPreview(currentUser.photoURL);
-            }
-          } else {
-            console.log('No user document found, creating new profile for:', currentUser.uid);
-            // If no user document exists, create one with basic data
-            const basicProfile = {
-              uid: currentUser.uid,
-              email: currentUser.email,
-              username: currentUser.displayName || currentUser.email?.split('@')[0] || "",
-              displayName: currentUser.displayName || currentUser.email?.split('@')[0] || "",
-              joinDate: new Date().toISOString(),
-              bio: "",
-              contact: "",
-              location: "",
-              avatarUrl: currentUser.photoURL || "",
-              photoURL: currentUser.photoURL || "",
-              isEmailVerified: currentUser.emailVerified || false,
-              social: {
-                youtube: "",
-                twitter: "",
-                facebook: ""
-              },
-              accountTier: 'free',
-              tier: 'free',
-              subscription: {
-                status: 'inactive',
-                currentPlan: 'free',
-                startDate: new Date().toISOString()
-              }
-            };
-            
-            // Try to create the user document with retries
-            let createSuccess = false;
-            for (let i = 0; i < 3; i++) {
-              try {
-                await setDoc(doc(db, 'users', currentUser.uid), basicProfile);
-                createSuccess = true;
-                break;
-              } catch (error) {
-                console.error(`Profile creation attempt ${i + 1} failed:`, error);
-                
-                // Only force token refresh if we get a permission error
-                if (error.code === 'permission-denied') {
-                  await refreshAuthToken(currentUser);
-                }
-                
-                await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, i)));
-              }
-            }
-            
-            if (!createSuccess) {
-              throw new Error('Failed to create user profile after multiple attempts');
-            }
-            
-            setFormData({
-              username: currentUser.displayName || "",
-              bio: "",
-              contact: "",
-              location: "",
-              youtube: "",
-              twitter: "",
-              facebook: "",
-              locationData: {
-                city: "",
-                state: ""
-              }
-            });
-          }
-        } catch (firestoreError: any) {
-          console.error('Firestore error:', firestoreError);
-          
-          // If this is a permission error or not found, we might need to retry
-          if (retryCount < 4 && 
-              (firestoreError.code === 'permission-denied' || 
-               firestoreError.code === 'not-found' ||
-               firestoreError.code === 'unavailable' ||
-               firestoreError.code === 'resource-exhausted' ||
-               firestoreError.code === 'deadline-exceeded')) {
-            
-            console.log(`Retrying data load after Firestore error (attempt ${retryCount + 1}/5)...`);
-            setIsLoading(false);
-            
-            // Exponential backoff for retries with jitter
-            const baseDelay = Math.min(1500 * Math.pow(2, retryCount), 15000);
-            const jitter = Math.random() * 1000;
-            await new Promise(resolve => setTimeout(resolve, baseDelay + jitter));
-            
-            // Try to get a fresh token before retrying, but only if permission-denied
-            if (firestoreError.code === 'permission-denied') {
-              await refreshAuthToken(currentUser);
-            }
-            
-            // Retry with incremented count
-            return loadUserData(retryCount + 1);
+          if (userData.theme) {
+            setTheme(userData.theme);
           }
           
-          // Handle specific Firestore errors
-          if (firestoreError.code === 'permission-denied') {
-            setError("You don't have permission to access this data. Please sign in again.");
-          } else if (firestoreError.code === 'not-found') {
-            setError("Your profile data could not be found. Please try signing out and back in.");
-          } else {
-            setError(`Database error: ${firestoreError.message || 'Unknown error'}`);
+          if (user.photoURL) {
+            setAvatarPreview(user.photoURL);
           }
         }
+        
+        // Load notification preferences
+        await loadNotificationPreferences();
       } catch (err: any) {
         console.error('Error loading user data:', err);
-        
-        // If we've already retried several times, give up
-        if (retryCount >= 4) {
-          console.error('Maximum retries reached, giving up');
-          // Don't show the error message to the user automatically
-          // Instead, we'll silently retry when they interact with the page
-          return;
-        }
-        
-        // More specific error messages based on the error type
-        if (err.message === 'auth/user-not-authenticated' || 
-            err.code === 'auth/user-not-authenticated') {
-          // Don't show error or redirect automatically
-          console.error('User not authenticated, but not redirecting automatically');
-          return;
-        }
-        
-        if (err.code === 'permission-denied') {
-          // Don't show error automatically
-          console.error('Permission denied, but not showing error automatically');
-        } else if (err.code === 'not-found') {
-          // Don't show error automatically
-          console.error('Profile not found, but not showing error automatically');
-        } else if (err.name === 'FirebaseError' || err.code?.startsWith('auth/')) {
-          switch (err.code) {
-            case 'auth/network-request-failed':
-              // Don't show network errors automatically
-              console.error('Network error, but not showing error automatically');
-              break;
-            case 'auth/user-token-expired':
-            case 'auth/user-not-found':
-            case 'auth/invalid-user-token':
-              // Don't redirect automatically
-              console.error('Auth token issue, but not redirecting automatically');
-              break;
-            default:
-              console.error('Unhandled Firebase error:', err);
-              // Don't show error automatically
-          }
-        } else {
-          console.error('Unknown error:', err);
-          
-          // For unknown errors, retry after a delay
-          console.log(`Retrying data load after unknown error (attempt ${retryCount + 1}/5)...`);
-          setIsLoading(false);
-          
-          // Exponential backoff for retries with jitter
-          const baseDelay = Math.min(2000 * Math.pow(2, retryCount), 20000);
-          const jitter = Math.random() * 1000;
-          await new Promise(resolve => setTimeout(resolve, baseDelay + jitter));
-          
-          // Retry with incremented count
-          return loadUserData(retryCount + 1);
-        }
+        setError("Failed to load user data");
       } finally {
         setIsLoading(false);
       }
     };
 
     loadUserData();
-    
-    // Set up a periodic refresh of user data to prevent stale data
-    const userDataRefreshInterval = setInterval(() => {
-      if (user?.uid) {
-        // Silently try to refresh data without showing errors
-        loadUserData();
-      }
-    }, 10 * 60 * 1000); // Refresh every 10 minutes
-    
-    // Clean up intervals on unmount
-    return () => {
-      if (tokenRefreshInterval) {
-        clearInterval(tokenRefreshInterval);
-      }
-      if (userDataRefreshInterval) {
-        clearInterval(userDataRefreshInterval);
-      }
-    };
   }, [user?.uid, setTheme, router]);
 
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -505,7 +310,6 @@ const SettingsPageContent = () => {
   const uploadAvatar = async (file: File): Promise<string> => {
     const storage = getStorage();
     
-    // Get file extension from mime type
     const mimeToExt: { [key: string]: string } = {
       'image/jpeg': 'jpg',
       'image/png': 'png',
@@ -517,7 +321,6 @@ const SettingsPageContent = () => {
     const fileName = `avatars/${user!.uid}/profile.${fileExtension}`;
     const storageRef = ref(storage, fileName);
     
-    // Add metadata to indicate file ownership
     const metadata = {
       contentType: file.type,
       customMetadata: {
@@ -526,20 +329,8 @@ const SettingsPageContent = () => {
       }
     };
     
-    try {
-      console.log('Uploading avatar:', {
-        fileName,
-        contentType: file.type,
-        size: file.size,
-        userId: user!.uid
-      });
-      
-      const snapshot = await uploadBytes(storageRef, file, metadata);
-      return await getDownloadURL(snapshot.ref);
-    } catch (error: any) {
-      console.error('Storage error details:', error);
-      throw error;
-    }
+    const snapshot = await uploadBytes(storageRef, file, metadata);
+    return await getDownloadURL(snapshot.ref);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -549,9 +340,6 @@ const SettingsPageContent = () => {
     setIsLoading(true);
 
     try {
-      // Import token manager for token refresh
-      const { refreshAuthToken } = await import('@/lib/auth-token-manager');
-      
       // Basic validation
       if (formData.username.length < 3 || formData.username.length > 20) {
         throw new Error("Username must be between 3 and 20 characters");
@@ -561,195 +349,30 @@ const SettingsPageContent = () => {
         throw new Error("Username can only contain letters, numbers, and underscores");
       }
 
-      // Refresh token before making any changes
-      if (user) {
-        await refreshAuthToken(user);
-      }
-
       let photoURL = user?.photoURL;
       if (avatarFile) {
-        try {
-          photoURL = await uploadAvatar(avatarFile);
-        } catch (error: any) {
-          console.error('Avatar upload error:', error);
-          
-          // Try to refresh token and retry upload once
-          if (user) {
-            try {
-              console.log('Refreshing token and retrying avatar upload...');
-              await refreshAuthToken(user);
-              photoURL = await uploadAvatar(avatarFile);
-            } catch (retryError) {
-              console.error('Avatar upload retry failed:', retryError);
-              throw new Error("Failed to upload profile picture. Please try again.");
-            }
-          } else {
-            throw new Error("Failed to upload profile picture. Please try again.");
-          }
-        }
+        photoURL = await uploadAvatar(avatarFile);
       }
 
-      // Check if we have a profile, if not create a basic one first
-      if (!profile && user) {
-        console.log('No profile found, creating a basic profile before updating');
-        try {
-          const { db } = await import('@/lib/firebase');
-          
-          // Generate a safe username
-          let safeUsername = formData.username || user.displayName || '';
-          if (!safeUsername && user.email) {
-            safeUsername = user.email.split('@')[0];
-          }
-          
-          // Ensure username is valid
-          if (!safeUsername || safeUsername.length < 3) {
-            safeUsername = `user_${Math.floor(Math.random() * 10000)}`;
-          }
-          
-          // Replace any invalid characters
-          safeUsername = safeUsername.replace(/[^a-zA-Z0-9_]/g, '_');
-          
-          // Create a basic profile with default values
-          const basicProfile = {
-            uid: user.uid,
-            email: user.email,
-            username: safeUsername,
-            displayName: safeUsername,
-            joinDate: new Date().toISOString(),
-            bio: formData.bio || "",
-            contact: formData.contact || "",
-            location: formData.location || "",
-            avatarUrl: photoURL || "",
-            photoURL: photoURL || "",
-            isEmailVerified: user.emailVerified || false,
-            social: {
-              youtube: formData.youtube || '',
-              twitter: formData.twitter || '',
-              facebook: formData.facebook || ''
-            },
-            accountTier: 'free',
-            tier: 'free',
-            subscription: {
-              status: 'inactive',
-              currentPlan: 'free',
-              startDate: new Date().toISOString()
-            },
-            profileCompleted: true
-          };
-          
-          // Check if username already exists
-          const usernameDoc = await getDoc(doc(db, 'usernames', safeUsername));
-          
-          if (!usernameDoc.exists()) {
-            // Create username document
-            await setDoc(doc(db, 'usernames', safeUsername), {
-              uid: user.uid,
-              username: safeUsername,
-              status: 'active',
-              createdAt: new Date().toISOString()
-            });
-          } else {
-            // If username exists, generate a unique one
-            const uniqueUsername = `${safeUsername}_${Math.floor(Math.random() * 10000)}`;
-            
-            // Update the profile with the unique username
-            basicProfile.username = uniqueUsername;
-            
-            // Create username document with unique name
-            await setDoc(doc(db, 'usernames', uniqueUsername), {
-              uid: user.uid,
-              username: uniqueUsername,
-              status: 'active',
-              createdAt: new Date().toISOString()
-            });
-          }
-          
-          await setDoc(doc(db, 'users', user.uid), basicProfile);
-          console.log('Basic profile created successfully');
-          
-          // No need to update local state here, the page will reload
-          
-          // Force reload the page after creating the profile
-          window.location.reload();
-          return;
-        } catch (createError) {
-          console.error('Error creating basic profile:', createError);
-          throw new Error("Failed to create profile. Please try refreshing the page.");
+      await updateProfile({
+        username: formData.username,
+        photoURL,
+        bio: formData.bio,
+        contact: formData.contact,
+        location: formData.location,
+        theme: theme,
+        social: {
+          youtube: formData.youtube || '',
+          twitter: formData.twitter || '',
+          facebook: formData.facebook || ''
         }
-      }
-
-      // Update profile with all user data
-      try {
-        await updateProfile({
-          username: formData.username,
-          photoURL,
-          bio: formData.bio,
-          contact: formData.contact,
-          location: formData.location,
-          theme: theme,
-          social: {
-            youtube: formData.youtube || '',
-            twitter: formData.twitter || '',
-            facebook: formData.facebook || ''
-          }
-        });
-      } catch (profileError: any) {
-        console.error('Profile update error:', profileError);
-        
-        // If this looks like an auth error, try refreshing token and retrying
-        if (profileError.message?.includes('auth') || 
-            profileError.code?.includes('auth') || 
-            profileError.message?.includes('permission') ||
-            profileError.message?.includes('No profile found')) {
-          
-          if (user) {
-            console.log('Refreshing token and retrying profile update...');
-            await refreshAuthToken(user);
-            
-            // Retry the update
-            await updateProfile({
-              username: formData.username,
-              photoURL,
-              bio: formData.bio,
-              contact: formData.contact,
-              location: formData.location,
-              theme: theme,
-              social: {
-                youtube: formData.youtube || '',
-                twitter: formData.twitter || '',
-                facebook: formData.facebook || ''
-              }
-            });
-          } else {
-            throw profileError;
-          }
-        } else {
-          throw profileError;
-        }
-      }
+      });
 
       setSuccess("Profile updated successfully!");
-      
-      // Reset avatar file after successful upload
       setAvatarFile(null);
-      
-      // Force reload the page after successful update to ensure fresh data
-      window.location.reload();
     } catch (err: any) {
       console.error('Profile update error:', err);
-      
-      // Provide more specific error messages
-      if (err.code === 'storage/unauthorized' || err.message?.includes('permission')) {
-        setError("You don't have permission to update your profile. Please try signing out and back in.");
-      } else if (err.code === 'auth/requires-recent-login' || err.message?.includes('recent')) {
-        setError("For security reasons, please sign out and sign back in to update your profile.");
-      } else if (err.code?.includes('network') || err.message?.includes('network')) {
-        setError("Network error. Please check your internet connection and try again.");
-      } else if (err.message?.includes('No profile found')) {
-        setError("Profile not found. Please refresh the page to create your profile.");
-      } else {
-        setError(err.message || "An unexpected error occurred. Please try again.");
-      }
+      setError(err.message || "An unexpected error occurred. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -763,12 +386,16 @@ const SettingsPageContent = () => {
     <DashboardLayout>
       <Toaster />
 
-      <div className="container mx-auto p-6">
+      <div className="container mx-auto p-6 space-y-6">
+        {/* Main Profile Settings Card */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-2xl font-bold tracking-tight">Profile Settings</CardTitle>
+            <CardTitle className="text-2xl font-bold tracking-tight flex items-center gap-2">
+              <User className="h-6 w-6" />
+              Profile Settings
+            </CardTitle>
             <CardDescription>
-              Manage your profile information and preferences
+              Manage your profile information and public display
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -849,174 +476,7 @@ const SettingsPageContent = () => {
                 <p className="text-xs text-muted-foreground">
                   {formData.bio.length}/1000 characters
                 </p>
-                {profile?.bio && (
-                  <div className="mt-2 p-3 bg-muted/50 rounded-md">
-                    <p className="text-xs font-medium text-muted-foreground mb-1">Current Bio:</p>
-                    <p className="text-sm">{profile.bio}</p>
-                  </div>
-                )}
               </div>
-
-              {/* Social Media Links */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-medium">Social Media Links</h3>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="youtube">YouTube Channel</Label>
-                  <Input
-                    id="youtube"
-                    value={formData.youtube}
-                    onChange={(e) => setFormData(prev => ({ ...prev, youtube: e.target.value }))}
-                    placeholder="https://youtube.com/@yourchannel"
-                    type="url"
-                  />
-                  {profile?.social?.youtube && (
-                    <div className="mt-1 text-xs text-muted-foreground">
-                      Current: <a href={profile.social.youtube} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">{profile.social.youtube}</a>
-                    </div>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="twitter">X (Twitter) Profile</Label>
-                  <Input
-                    id="twitter"
-                    value={formData.twitter}
-                    onChange={(e) => setFormData(prev => ({ ...prev, twitter: e.target.value }))}
-                    placeholder="https://x.com/yourusername"
-                    type="url"
-                  />
-                  {profile?.social?.twitter && (
-                    <div className="mt-1 text-xs text-muted-foreground">
-                      Current: <a href={profile.social.twitter} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">{profile.social.twitter}</a>
-                    </div>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="facebook">Facebook Profile</Label>
-                  <Input
-                    id="facebook"
-                    value={formData.facebook}
-                    onChange={(e) => setFormData(prev => ({ ...prev, facebook: e.target.value }))}
-                    placeholder="https://facebook.com/yourusername"
-                    type="url"
-                  />
-                  {profile?.social?.facebook && (
-                    <div className="mt-1 text-xs text-muted-foreground">
-                      Current: <a href={profile.social.facebook} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">{profile.social.facebook}</a>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <Separator />
-
-              {/* Contact Section */}
-              <div className="space-y-2">
-                <Label htmlFor="contact">Contact Information</Label>
-                <Input
-                  id="contact"
-                  value={formData.contact}
-                  onChange={(e) => setFormData(prev => ({ ...prev, contact: e.target.value }))}
-                  placeholder="How others can contact you"
-                />
-                <p className="text-xs text-muted-foreground">
-                  This will be visible to other users
-                </p>
-                {profile?.contact && (
-                  <div className="mt-1 text-xs text-muted-foreground">
-                    Current contact information: <span className="font-medium">{profile.contact}</span>
-                  </div>
-                )}
-              </div>
-
-              {/* Location Section */}
-              <div className="space-y-2">
-                <LocationInput
-                  onLocationSelect={(city, state) => {
-                    setFormData(prev => ({
-                      ...prev,
-                      location: `${city}, ${state}`,
-                      locationData: {
-                        city,
-                        state
-                      }
-                    }));
-                  }}
-                  initialCity={formData.locationData?.city}
-                  initialState={formData.locationData?.state}
-                  error={error && error.includes('location') ? error : undefined}
-                />
-                <p className="text-xs text-muted-foreground">
-                  Help others find local trades. Search for your city or use the current location option.
-                </p>
-                {profile?.location && (
-                  <div className="mt-1 text-xs text-muted-foreground">
-                    Current location: <span className="font-medium">{profile.location}</span>
-                  </div>
-                )}
-              </div>
-
-              <Separator />
-
-              {/* Theme Section */}
-              <div className="space-y-2">
-                <Label htmlFor="theme">Theme Preference</Label>
-                <Collapsible open={isThemeOpen} onOpenChange={setIsThemeOpen}>
-                  <CollapsibleTrigger asChild>
-                    <button 
-                      type="button"
-                      className="flex items-center justify-between w-full px-3 py-2 text-sm border rounded-md hover:bg-accent hover:text-accent-foreground transition-colors"
-                    >
-                      <span>{getThemeDisplayName(theme)}</span>
-                      <ChevronDown className="h-4 w-4 transition-transform duration-200 data-[state=open]:rotate-180" />
-                    </button>
-                  </CollapsibleTrigger>
-                  <CollapsibleContent className="space-y-1 mt-2">
-                    <button
-                      type="button"
-                      onClick={() => handleThemeChange('light')}
-                      className={`flex items-center w-full gap-3 text-sm rounded-md px-3 py-2 hover:bg-accent hover:text-accent-foreground transition-colors ${
-                        theme === 'light' ? 'bg-accent text-accent-foreground' : 'text-muted-foreground'
-                      }`}
-                    >
-                      ☀️ Light
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleThemeChange('dark')}
-                      className={`flex items-center w-full gap-3 text-sm rounded-md px-3 py-2 hover:bg-accent hover:text-accent-foreground transition-colors ${
-                        theme === 'dark' ? 'bg-accent text-accent-foreground' : 'text-muted-foreground'
-                      }`}
-                    >
-                      🌙 Dark
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleThemeChange('midnight')}
-                      className={`flex items-center w-full gap-3 text-sm rounded-md px-3 py-2 hover:bg-accent hover:text-accent-foreground transition-colors ${
-                        theme === 'midnight' ? 'bg-accent text-accent-foreground' : 'text-muted-foreground'
-                      }`}
-                    >
-                      🌌 Midnight
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleThemeChange('system')}
-                      className={`flex items-center w-full gap-3 text-sm rounded-md px-3 py-2 hover:bg-accent hover:text-accent-foreground transition-colors ${
-                        theme === 'system' ? 'bg-accent text-accent-foreground' : 'text-muted-foreground'
-                      }`}
-                    >
-                      💻 System
-                    </button>
-                  </CollapsibleContent>
-                </Collapsible>
-                <p className="text-xs text-muted-foreground">
-                  Choose your preferred theme for the application
-                </p>
-              </div>
-=======
 
               <Button type="submit" disabled={isLoading} className="w-full">
                 {isLoading ? (
@@ -1025,151 +485,506 @@ const SettingsPageContent = () => {
                     Updating Profile...
                   </div>
                 ) : (
-                  "Save Changes"
+                  "Save Profile Changes"
                 )}
               </Button>
             </form>
           </CardContent>
         </Card>
-      </div>
 
-      {/* Security Section */}
-      <div className="container mx-auto p-6">
+        {/* Notification Preferences */}
         <Card>
-          <CardHeader>
-            <CardTitle>Security</CardTitle>
-            <CardDescription>
-              Enhance your account security with additional verification methods
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-6">
-              <div>
-                <h3 className="text-lg font-medium mb-2">Two-Factor Authentication</h3>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Add an extra layer of security to your account by enabling two-factor authentication.
-                </p>
-                <MfaEnrollment />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Troubleshooting Section */}
-      <div className="container mx-auto p-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Troubleshooting</CardTitle>
-            <CardDescription>
-              Tools to help resolve common issues with your account
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-6">
-              <div>
-                <h3 className="text-lg font-medium mb-2">Fix Browser Data</h3>
-                <p className="text-sm text-muted-foreground mb-4">
-                  If you're experiencing login issues or other unexpected behavior, clearing your browser's authentication data may help. This will sign you out and clear any cached authentication information.
-                </p>
-                <ClearBrowserDataButton variant="outline" size="default" className="w-full sm:w-auto" />
-              </div>
-              
-              <Separator />
-              
-              <div>
-                <h3 className="text-lg font-medium mb-2">Link Accounts</h3>
-                <p className="text-sm text-muted-foreground mb-4">
-                  If you've signed up with both email and Google using the same email address, you can link these accounts to ensure your profile data is consistent.
-                </p>
-                <div className="flex items-center gap-2">
-                  <AccountLinkingButton />
+          <Collapsible open={isNotificationsOpen} onOpenChange={setIsNotificationsOpen}>
+            <CollapsibleTrigger asChild>
+              <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Mail className="h-5 w-5" />
+                    <div>
+                      <CardTitle>Email Notifications</CardTitle>
+                      <CardDescription>
+                        Control which email notifications you receive
+                      </CardDescription>
+                    </div>
+                  </div>
+                  <ChevronDown className="h-4 w-4 transition-transform duration-200 data-[state=open]:rotate-180" />
                 </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+              </CardHeader>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <CardContent className="space-y-6">
+                {isLoadingPreferences ? (
+                  <div className="space-y-4">
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-full" />
+                  </div>
+                ) : (
+                  <>
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div className="space-y-0.5">
+                          <Label>Sales Notifications</Label>
+                          <p className="text-sm text-muted-foreground">
+                            Get notified when someone purchases your items
+                          </p>
+                        </div>
+                        <Switch
+                          checked={notificationPreferences.email.sales}
+                          onCheckedChange={(checked) => {
+                            const newPreferences = {
+                              ...notificationPreferences,
+                              email: { ...notificationPreferences.email, sales: checked }
+                            };
+                            saveNotificationPreferences(newPreferences);
+                          }}
+                        />
+                      </div>
 
-      {/* Delete Account Section */}
-      <div className="container mx-auto p-6">
+                      <div className="flex items-center justify-between">
+                        <div className="space-y-0.5">
+                          <Label>Message Notifications</Label>
+                          <p className="text-sm text-muted-foreground">
+                            Get notified when you receive new messages
+                          </p>
+                        </div>
+                        <Switch
+                          checked={notificationPreferences.email.messages}
+                          onCheckedChange={(checked) => {
+                            const newPreferences = {
+                              ...notificationPreferences,
+                              email: { ...notificationPreferences.email, messages: checked }
+                            };
+                            saveNotificationPreferences(newPreferences);
+                          }}
+                        />
+                      </div>
+
+                      <div className="flex items-center justify-between">
+                        <div className="space-y-0.5">
+                          <Label>Offer Notifications</Label>
+                          <p className="text-sm text-muted-foreground">
+                            Get notified about offers on your listings
+                          </p>
+                        </div>
+                        <Switch
+                          checked={notificationPreferences.email.offers}
+                          onCheckedChange={(checked) => {
+                            const newPreferences = {
+                              ...notificationPreferences,
+                              email: { ...notificationPreferences.email, offers: checked }
+                            };
+                            saveNotificationPreferences(newPreferences);
+                          }}
+                        />
+                      </div>
+
+                      <div className="flex items-center justify-between">
+                        <div className="space-y-0.5">
+                          <Label>Order Updates</Label>
+                          <p className="text-sm text-muted-foreground">
+                            Get notified about shipping and order status changes
+                          </p>
+                        </div>
+                        <Switch
+                          checked={notificationPreferences.email.orderUpdates}
+                          onCheckedChange={(checked) => {
+                            const newPreferences = {
+                              ...notificationPreferences,
+                              email: { ...notificationPreferences.email, orderUpdates: checked }
+                            };
+                            saveNotificationPreferences(newPreferences);
+                          }}
+                        />
+                      </div>
+
+                      <div className="flex items-center justify-between">
+                        <div className="space-y-0.5">
+                          <Label>Listing Updates</Label>
+                          <p className="text-sm text-muted-foreground">
+                            Get notified when your listings expire or need attention
+                          </p>
+                        </div>
+                        <Switch
+                          checked={notificationPreferences.email.listingUpdates}
+                          onCheckedChange={(checked) => {
+                            const newPreferences = {
+                              ...notificationPreferences,
+                              email: { ...notificationPreferences.email, listingUpdates: checked }
+                            };
+                            saveNotificationPreferences(newPreferences);
+                          }}
+                        />
+                      </div>
+
+                      <div className="flex items-center justify-between">
+                        <div className="space-y-0.5">
+                          <Label>System Notifications</Label>
+                          <p className="text-sm text-muted-foreground">
+                            Get notified about important system updates and security alerts
+                          </p>
+                        </div>
+                        <Switch
+                          checked={notificationPreferences.email.system}
+                          onCheckedChange={(checked) => {
+                            const newPreferences = {
+                              ...notificationPreferences,
+                              email: { ...notificationPreferences.email, system: checked }
+                            };
+                            saveNotificationPreferences(newPreferences);
+                          }}
+                        />
+                      </div>
+
+                      <div className="flex items-center justify-between">
+                        <div className="space-y-0.5">
+                          <Label>Marketing Emails</Label>
+                          <p className="text-sm text-muted-foreground">
+                            Receive promotional emails and platform updates
+                          </p>
+                        </div>
+                        <Switch
+                          checked={notificationPreferences.email.marketing}
+                          onCheckedChange={(checked) => {
+                            const newPreferences = {
+                              ...notificationPreferences,
+                              email: { ...notificationPreferences.email, marketing: checked }
+                            };
+                            saveNotificationPreferences(newPreferences);
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </>
+                )}
+              </CardContent>
+            </CollapsibleContent>
+          </Collapsible>
+        </Card>
+
+        {/* Appearance Settings */}
+        <Card>
+          <Collapsible open={isAppearanceOpen} onOpenChange={setIsAppearanceOpen}>
+            <CollapsibleTrigger asChild>
+              <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Palette className="h-5 w-5" />
+                    <div>
+                      <CardTitle>Appearance & Contact</CardTitle>
+                      <CardDescription>
+                        Customize your theme and contact information
+                      </CardDescription>
+                    </div>
+                  </div>
+                  <ChevronDown className="h-4 w-4 transition-transform duration-200 data-[state=open]:rotate-180" />
+                </div>
+              </CardHeader>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <CardContent className="space-y-6">
+                {/* Theme Section */}
+                <div className="space-y-4">
+                  <div>
+                    <Label>Theme Preference</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Choose your preferred theme for the application
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleThemeChange('light')}
+                      className={`flex items-center gap-3 text-sm rounded-md px-3 py-2 border hover:bg-accent hover:text-accent-foreground transition-colors ${
+                        theme === 'light' ? 'bg-accent text-accent-foreground border-primary' : 'text-muted-foreground'
+                      }`}
+                    >
+                      ☀️ Light
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleThemeChange('dark')}
+                      className={`flex items-center gap-3 text-sm rounded-md px-3 py-2 border hover:bg-accent hover:text-accent-foreground transition-colors ${
+                        theme === 'dark' ? 'bg-accent text-accent-foreground border-primary' : 'text-muted-foreground'
+                      }`}
+                    >
+                      🌙 Dark
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleThemeChange('midnight')}
+                      className={`flex items-center gap-3 text-sm rounded-md px-3 py-2 border hover:bg-accent hover:text-accent-foreground transition-colors ${
+                        theme === 'midnight' ? 'bg-accent text-accent-foreground border-primary' : 'text-muted-foreground'
+                      }`}
+                    >
+                      🌌 Midnight
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleThemeChange('system')}
+                      className={`flex items-center gap-3 text-sm rounded-md px-3 py-2 border hover:bg-accent hover:text-accent-foreground transition-colors ${
+                        theme === 'system' ? 'bg-accent text-accent-foreground border-primary' : 'text-muted-foreground'
+                      }`}
+                    >
+                      💻 System
+                    </button>
+                  </div>
+                </div>
+
+                <Separator />
+
+                {/* Contact Information */}
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="contact">Contact Information</Label>
+                    <Input
+                      id="contact"
+                      value={formData.contact}
+                      onChange={(e) => setFormData(prev => ({ ...prev, contact: e.target.value }))}
+                      placeholder="How others can contact you"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      This will be visible to other users
+                    </p>
+                  </div>
+
+                  {/* Location Section */}
+                  <div className="space-y-2">
+                    <LocationInput
+                      onLocationSelect={(city, state) => {
+                        setFormData(prev => ({
+                          ...prev,
+                          location: `${city}, ${state}`,
+                          locationData: {
+                            city,
+                            state
+                          }
+                        }));
+                      }}
+                      initialCity={formData.locationData?.city}
+                      initialState={formData.locationData?.state}
+                      error={error && error.includes('location') ? error : undefined}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Help others find local trades
+                    </p>
+                  </div>
+
+                  {/* Social Media Links */}
+                  <div className="space-y-4">
+                    <h4 className="font-medium">Social Media Links</h4>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="youtube">YouTube Channel</Label>
+                      <Input
+                        id="youtube"
+                        value={formData.youtube}
+                        onChange={(e) => setFormData(prev => ({ ...prev, youtube: e.target.value }))}
+                        placeholder="https://youtube.com/@yourchannel"
+                        type="url"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="twitter">X (Twitter) Profile</Label>
+                      <Input
+                        id="twitter"
+                        value={formData.twitter}
+                        onChange={(e) => setFormData(prev => ({ ...prev, twitter: e.target.value }))}
+                        placeholder="https://x.com/yourusername"
+                        type="url"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="facebook">Facebook Profile</Label>
+                      <Input
+                        id="facebook"
+                        value={formData.facebook}
+                        onChange={(e) => setFormData(prev => ({ ...prev, facebook: e.target.value }))}
+                        placeholder="https://facebook.com/yourusername"
+                        type="url"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </CollapsibleContent>
+          </Collapsible>
+        </Card>
+
+        {/* Security Settings */}
+        <Card>
+          <Collapsible open={isSecurityOpen} onOpenChange={setIsSecurityOpen}>
+            <CollapsibleTrigger asChild>
+              <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Shield className="h-5 w-5" />
+                    <div>
+                      <CardTitle>Security</CardTitle>
+                      <CardDescription>
+                        Enhance your account security
+                      </CardDescription>
+                    </div>
+                  </div>
+                  <ChevronDown className="h-4 w-4 transition-transform duration-200 data-[state=open]:rotate-180" />
+                </div>
+              </CardHeader>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <CardContent>
+                <div className="space-y-6">
+                  <div>
+                    <h3 className="text-lg font-medium mb-2">Two-Factor Authentication</h3>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Add an extra layer of security to your account by enabling two-factor authentication.
+                    </p>
+                    <MfaEnrollment />
+                  </div>
+                </div>
+              </CardContent>
+            </CollapsibleContent>
+          </Collapsible>
+        </Card>
+
+        {/* Troubleshooting */}
+        <Card>
+          <Collapsible open={isTroubleshootingOpen} onOpenChange={setIsTroubleshootingOpen}>
+            <CollapsibleTrigger asChild>
+              <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Settings className="h-5 w-5" />
+                    <div>
+                      <CardTitle>Troubleshooting</CardTitle>
+                      <CardDescription>
+                        Tools to help resolve common issues
+                      </CardDescription>
+                    </div>
+                  </div>
+                  <ChevronDown className="h-4 w-4 transition-transform duration-200 data-[state=open]:rotate-180" />
+                </div>
+              </CardHeader>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <CardContent>
+                <div className="space-y-6">
+                  <div>
+                    <h3 className="text-lg font-medium mb-2">Fix Browser Data</h3>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      If you're experiencing login issues or other unexpected behavior, clearing your browser's authentication data may help.
+                    </p>
+                    <ClearBrowserDataButton variant="outline" size="default" className="w-full sm:w-auto" />
+                  </div>
+                  
+                  <Separator />
+                  
+                  <div>
+                    <h3 className="text-lg font-medium mb-2">Link Accounts</h3>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      If you've signed up with both email and Google using the same email address, you can link these accounts.
+                    </p>
+                    <AccountLinkingButton />
+                  </div>
+                </div>
+              </CardContent>
+            </CollapsibleContent>
+          </Collapsible>
+        </Card>
+
+        {/* Danger Zone */}
         <Card className="border-red-200">
-          <CardHeader>
-            <CardTitle className="text-red-600">Delete Account</CardTitle>
-            <CardDescription>
-              Permanently delete your account and all associated data
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <p className="text-sm text-muted-foreground">
-                This action cannot be undone. This will permanently delete your account, profile information, and all your listings.
-              </p>
+          <Collapsible open={isDangerZoneOpen} onOpenChange={setIsDangerZoneOpen}>
+            <CollapsibleTrigger asChild>
+              <CardHeader className="cursor-pointer hover:bg-red-50 transition-colors">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Trash2 className="h-5 w-5 text-red-600" />
+                    <div>
+                      <CardTitle className="text-red-600">Danger Zone</CardTitle>
+                      <CardDescription>
+                        Irreversible and destructive actions
+                      </CardDescription>
+                    </div>
+                  </div>
+                  <ChevronDown className="h-4 w-4 transition-transform duration-200 data-[state=open]:rotate-180" />
+                </div>
+              </CardHeader>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <CardContent>
+                <div className="space-y-4">
+                  <p className="text-sm text-muted-foreground">
+                    This action cannot be undone. This will permanently delete your account, profile information, and all your listings.
+                  </p>
+                  <Button
+                    variant="destructive"
+                    onClick={() => setShowDeleteDialog(true)}
+                    className="w-full"
+                  >
+                    Delete Account
+                  </Button>
+                </div>
+              </CardContent>
+            </CollapsibleContent>
+          </Collapsible>
+        </Card>
+
+        {/* Delete Confirmation Dialog */}
+        <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+              <AlertDialogDescription>
+                <div className="space-y-4">
+                  <p>
+                    This action cannot be undone. This will permanently delete your account
+                    and remove all of your data from our servers, including:
+                  </p>
+                  <ul className="list-disc list-inside space-y-1">
+                    <li>Your profile information</li>
+                    <li>All your listings</li>
+                    <li>Your saved preferences</li>
+                  </ul>
+                  <div className="space-y-2">
+                    <p className="font-medium">Type "delete" to confirm:</p>
+                    <Input
+                      value={deleteConfirmation}
+                      onChange={(e) => setDeleteConfirmation(e.target.value)}
+                      placeholder="Type 'delete' here"
+                      className="max-w-[300px]"
+                    />
+                  </div>
+                </div>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setShowDeleteDialog(false)}
+                disabled={isDeletingAccount}
+              >
+                Cancel
+              </Button>
               <Button
                 variant="destructive"
-                onClick={() => setShowDeleteDialog(true)}
-                className="w-full"
+                onClick={handleDeleteAccount}
+                disabled={deleteConfirmation.toLowerCase() !== 'delete' || isDeletingAccount}
               >
-                Delete Account
+                {isDeletingAccount ? (
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    Deleting...
+                  </div>
+                ) : (
+                  "Delete Account"
+                )}
               </Button>
-            </div>
-          </CardContent>
-        </Card>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
-
-      {/* Delete Confirmation Dialog */}
-      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              <div className="space-y-4">
-                <p>
-                  This action cannot be undone. This will permanently delete your account
-                  and remove all of your data from our servers, including:
-                </p>
-                <ul className="list-disc list-inside space-y-1">
-                  <li>Your profile information</li>
-                  <li>All your listings</li>
-                  <li>Your saved preferences</li>
-                </ul>
-                <div className="space-y-2">
-                  <p className="font-medium">Type &quot;delete&quot; to confirm:</p>
-                  <Input
-                    value={deleteConfirmation}
-                    onChange={(e) => setDeleteConfirmation(e.target.value)}
-                    placeholder="Type 'delete' here"
-                    className="max-w-[300px]"
-                  />
-                </div>
-              </div>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setShowDeleteDialog(false)}
-              disabled={isDeletingAccount}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleDeleteAccount}
-              disabled={deleteConfirmation.toLowerCase() !== 'delete' || isDeletingAccount}
-            >
-              {isDeletingAccount ? (
-                <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                  Deleting...
-                </div>
-              ) : (
-                "Delete Account"
-              )}
-            </Button>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </DashboardLayout>
   );
 };
