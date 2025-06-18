@@ -306,7 +306,6 @@ export class NotificationService {
           
           let query = adminFirestore.collection('notifications')
             .where('userId', '==', userId)
-            .where('deleted', '!=', true)
             .orderBy('createdAt', 'desc')
             .limit(limitCount);
 
@@ -314,7 +313,6 @@ export class NotificationService {
             query = adminFirestore.collection('notifications')
               .where('userId', '==', userId)
               .where('read', '==', false)
-              .where('deleted', '!=', true)
               .orderBy('createdAt', 'desc')
               .limit(limitCount);
           }
@@ -345,7 +343,6 @@ export class NotificationService {
         let q = query(
           collection(db, 'notifications'),
           where('userId', '==', userId),
-          where('deleted', '!=', true),
           orderBy('createdAt', 'desc'),
           limit(limitCount)
         );
@@ -355,7 +352,6 @@ export class NotificationService {
             collection(db, 'notifications'),
             where('userId', '==', userId),
             where('read', '==', false),
-            where('deleted', '!=', true),
             orderBy('createdAt', 'desc'),
             limit(limitCount)
           );
@@ -415,8 +411,7 @@ export class NotificationService {
           
           const query = adminFirestore.collection('notifications')
             .where('userId', '==', userId)
-            .where('read', '==', false)
-            .where('deleted', '!=', true);
+            .where('read', '==', false);
 
           const querySnapshot = await query.get();
           return querySnapshot.size;
@@ -430,8 +425,7 @@ export class NotificationService {
         const q = query(
           collection(db, 'notifications'),
           where('userId', '==', userId),
-          where('read', '==', false),
-          where('deleted', '!=', true)
+          where('read', '==', false)
         );
 
         const querySnapshot = await getDocs(q);
@@ -612,7 +606,6 @@ export class NotificationService {
       const q = query(
         collection(db, 'notifications'),
         where('userId', '==', userId),
-        where('deleted', '!=', true),
         orderBy('createdAt', 'desc'),
         limit(limitCount)
       );
@@ -656,8 +649,7 @@ export class NotificationService {
       const q = query(
         collection(db, 'notifications'),
         where('userId', '==', userId),
-        where('read', '==', false),
-        where('deleted', '!=', true)
+        where('read', '==', false)
       );
 
       return onSnapshot(q, (querySnapshot) => {
