@@ -191,12 +191,21 @@ export const UnreadProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           where('buyerRead', '==', false)
         );
         
-        const [newOrdersSnapshot, updatedOrdersSnapshot] = await Promise.all([
+        // Query for unshipped orders (as buyer) - orders that are paid or awaiting shipping
+        const unshippedOrdersQuery = query(
+          collection(db, 'orders'),
+          where('buyerId', '==', user.uid),
+          where('status', 'in', ['paid', 'awaiting_shipping'])
+        );
+        
+        const [newOrdersSnapshot, updatedOrdersSnapshot, unshippedOrdersSnapshot] = await Promise.all([
           getDocs(newOrdersQuery),
-          getDocs(updatedOrdersQuery)
+          getDocs(updatedOrdersQuery),
+          getDocs(unshippedOrdersQuery)
         ]);
         
-        const unreadOrderCount = newOrdersSnapshot.size + updatedOrdersSnapshot.size;
+        // Count unread orders (new/updated) plus unshipped orders
+        const unreadOrderCount = newOrdersSnapshot.size + updatedOrdersSnapshot.size + unshippedOrdersSnapshot.size;
         
         setUnreadCounts(prev => ({ ...prev, orders: unreadOrderCount }));
       } catch (error) {
