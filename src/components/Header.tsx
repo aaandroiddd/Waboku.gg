@@ -355,6 +355,7 @@ export default function Header({ animate = true }: HeaderProps) {
 
         {/* Mobile Navigation */}
         <div className="md:hidden flex items-center space-x-2"> {/* Added space-x-2 for spacing */}
+          {user && <NotificationBell />}
           {user && (
             <span 
               className="h-2.5 w-2.5 rounded-full bg-green-500" 

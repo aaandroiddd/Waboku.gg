@@ -436,6 +436,7 @@ export default async function handler(
               updatedAt: new Date(),
               // Include offer price if available
               ...(offerPrice && { offerPrice }),
+              // Always include shipping address from Stripe checkout for Buy Now orders
               shippingAddress: session.shipping?.address ? {
                 name: session.shipping.name,
                 line1: session.shipping.address.line1,
@@ -452,6 +453,16 @@ export default async function handler(
                 imageUrl: listingData.imageUrls && listingData.imageUrls.length > 0 ? listingData.imageUrls[0] : null
               }
             };
+
+            console.log('[Stripe Webhook] Order data prepared with shipping address:', {
+              listingId,
+              buyerId,
+              sellerId,
+              hasShippingAddress: !!orderData.shippingAddress,
+              shippingName: orderData.shippingAddress?.name,
+              shippingCity: orderData.shippingAddress?.city,
+              shippingState: orderData.shippingAddress?.state
+            });
 
             // Create the order in Firestore
             console.log('[Stripe Webhook] Attempting to create order in main collection with data:', {
