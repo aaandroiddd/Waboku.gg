@@ -1,6 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { ref, get, set, remove } from 'firebase/database';
-import { firebaseDatabase } from '@/lib/firebase';
+import { database } from '@/lib/firebase';
 
 export default async function handler(
   req: NextApiRequest,
@@ -19,11 +19,11 @@ export default async function handler(
     console.log('Starting wanted posts migration...');
     
     // Check if database is initialized
-    if (!firebaseDatabase) {
+    if (!database) {
       console.error('Database not initialized');
       return res.status(500).json({ 
         error: 'Database not initialized',
-        databaseExists: !!firebaseDatabase,
+        databaseExists: !!database,
         databaseURL: !!process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL
       });
     }
@@ -46,7 +46,7 @@ export default async function handler(
     // Check each path for posts
     for (const path of paths) {
       console.log(`Checking path: ${path}`);
-      const pathRef = ref(firebaseDatabase, path);
+      const pathRef = ref(database, path);
       const snapshot = await get(pathRef);
       
       if (snapshot.exists()) {
@@ -81,7 +81,7 @@ export default async function handler(
               }
               
               // Create reference to the target post
-              const targetPostRef = ref(firebaseDatabase, `wanted/posts/${postId}`);
+              const targetPostRef = ref(database, `wanted/posts/${postId}`);
               
               // Check if post already exists at target location
               const existingPostSnapshot = await get(targetPostRef);
@@ -97,7 +97,7 @@ export default async function handler(
               migrationResults.postsMigrated++;
               
               // Don't remove from old location for safety
-              // await remove(ref(firebaseDatabase, `${path}/${postId}`));
+              // await remove(ref(database, `${path}/${postId}`));
             } catch (postError) {
               console.error(`Error migrating post ${postId}:`, postError);
               migrationResults.errors++;
@@ -146,7 +146,7 @@ export default async function handler(
         const testPostId = `test-post-${Date.now()}`;
         
         // Create reference to the test post
-        const testPostRef = ref(firebaseDatabase, `wanted/posts/${testPostId}`);
+        const testPostRef = ref(database, `wanted/posts/${testPostId}`);
         
         // Save the test post
         await set(testPostRef, testPost);

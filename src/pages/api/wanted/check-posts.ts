@@ -1,6 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { ref, get, set, push } from 'firebase/database';
-import { firebaseDatabase } from '@/lib/firebase';
+import { database } from '@/lib/firebase';
 
 // Helper function to log detailed information
 const logDetails = (message: string, data: any = {}) => {
@@ -15,23 +15,23 @@ export default async function handler(
     logDetails('Starting check-posts API handler');
     
     // Check if database is initialized
-    if (!firebaseDatabase) {
+    if (!database) {
       logDetails('Database not initialized in check-posts API', {
-        databaseExists: !!firebaseDatabase,
+        databaseExists: !!database,
         databaseURL: !!process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL,
         projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID
       });
       
       return res.status(500).json({ 
         error: 'Database not initialized',
-        databaseExists: !!firebaseDatabase,
+        databaseExists: !!database,
         databaseURL: !!process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL
       });
     }
     
     // Log Firebase configuration status
     logDetails('Firebase configuration status', {
-      databaseInitialized: !!firebaseDatabase,
+      databaseInitialized: !!database,
       databaseURLExists: !!process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL,
       apiKeyExists: !!process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
       projectIdExists: !!process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID
@@ -39,7 +39,7 @@ export default async function handler(
 
     // First check the new path structure
     logDetails('Checking wanted/posts path');
-    const postsRef = ref(firebaseDatabase, 'wanted/posts');
+    const postsRef = ref(database, 'wanted/posts');
     
     try {
       let snapshot = await get(postsRef);
@@ -57,7 +57,7 @@ export default async function handler(
       if (!postsExist || postsCount === 0) {
         logDetails('No posts found in wanted/posts, checking wantedPosts path');
         
-        const oldPostsRef = ref(firebaseDatabase, 'wantedPosts');
+        const oldPostsRef = ref(database, 'wantedPosts');
         const oldSnapshot = await get(oldPostsRef);
         const oldPostsExist = oldSnapshot.exists();
         const oldPostsCount = oldPostsExist ? Object.keys(oldSnapshot.val()).length : 0;
@@ -85,7 +85,7 @@ export default async function handler(
       if (!postsExist || postsCount === 0) {
         logDetails('No posts found in either standard path, checking direct wanted path');
         
-        const directRef = ref(firebaseDatabase, 'wanted');
+        const directRef = ref(database, 'wanted');
         const directSnapshot = await get(directRef);
         
         if (directSnapshot.exists()) {
@@ -142,7 +142,7 @@ export default async function handler(
           
           return res.status(500).json({
             error: 'Failed to create post reference',
-            databaseInitialized: !!firebaseDatabase
+            databaseInitialized: !!database
           });
         }
         
@@ -181,7 +181,7 @@ export default async function handler(
           
           // Verify the post was actually saved
           try {
-            const verifyRef = ref(firebaseDatabase, `wanted/posts/${newPostRef.key}`);
+            const verifyRef = ref(database, `wanted/posts/${newPostRef.key}`);
             const verifySnapshot = await get(verifyRef);
             
             if (verifySnapshot.exists()) {

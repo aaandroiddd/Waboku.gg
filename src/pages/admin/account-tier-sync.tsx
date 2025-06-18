@@ -1,15 +1,9 @@
 import React, { useState } from 'react';
-import { GetServerSideProps } from 'next';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Loader2, AlertCircle, CheckCircle } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { verifyAdminAuth } from '@/middleware/adminAuth';
-
-export const getServerSideProps: GetServerSideProps = async (context) => {
-  return verifyAdminAuth(context);
-};
 
 export default function AccountTierSyncPage() {
   const { user } = useAuth();
