@@ -124,7 +124,7 @@ export function NotificationList({ onNotificationClick }: NotificationListProps)
                   onClick={() => handleNotificationClick(notification)}
                   className={cn(
                     "w-full text-left p-3 rounded-lg hover:bg-muted/50 transition-colors",
-                    !notification.read && "bg-blue-50/50 dark:bg-blue-950/20"
+                    !notification.read && "bg-primary/10 border border-primary/20 dark:bg-primary/10 dark:border-primary/30"
                   )}
                 >
                   <div className="flex items-start space-x-3">
@@ -153,7 +153,7 @@ export function NotificationList({ onNotificationClick }: NotificationListProps)
 
                         {/* Unread indicator */}
                         {!notification.read && (
-                          <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0 mt-2" />
+                          <div className="w-2 h-2 bg-primary rounded-full flex-shrink-0 mt-2" />
                         )}
                       </div>
                     </div>

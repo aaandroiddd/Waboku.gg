@@ -203,7 +203,7 @@ export default function NotificationsPage() {
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center space-x-2">
-                <div className="w-3 h-3 bg-blue-500 rounded-full" />
+                <div className="w-3 h-3 bg-primary rounded-full" />
                 <div>
                   <p className="text-sm font-medium">Unread</p>
                   <p className="text-2xl font-bold">{unreadCount}</p>
@@ -302,7 +302,7 @@ export default function NotificationsPage() {
                     key={notification.id}
                     className={cn(
                       "p-4 hover:bg-muted/50 transition-colors cursor-pointer",
-                      !notification.read && "bg-blue-50/50 dark:bg-blue-950/20"
+                      !notification.read && "bg-primary/10 border-l-4 border-primary/30 dark:bg-primary/10 dark:border-primary/40"
                     )}
                     onClick={() => handleNotificationClick(notification)}
                   >
@@ -338,7 +338,7 @@ export default function NotificationsPage() {
                           {/* Actions */}
                           <div className="flex items-center space-x-2">
                             {!notification.read && (
-                              <div className="w-2 h-2 bg-blue-500 rounded-full" />
+                              <div className="w-2 h-2 bg-primary rounded-full" />
                             )}
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
