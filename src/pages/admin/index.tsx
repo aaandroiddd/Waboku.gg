@@ -56,8 +56,10 @@ const SECTIONS = [
   { id: "review-system", label: "Review System Debug" },
   { id: "notification-debug", label: "Notification System Debugger" },
   { id: "email-test", label: "Email Notification Testing" },
+  { id: "webhook-notification-test", label: "Webhook & Notification Testing" },
   { id: "wanted-posts", label: "Wanted Posts Debugging Tools" },
 ];
+=======
 
 export default function AdminDashboard() {
   const router = useRouter();
@@ -627,6 +629,175 @@ export default function AdminDashboard() {
                     Test email notifications using Resend. Send welcome emails, notification emails, or test the full notification system.
                   </p>
                   <EmailNotificationTester adminSecret={adminSecret} />
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+
+            {/* Webhook & Notification Testing */}
+            <AccordionItem value="webhook-notification-test" id="webhook-notification-test" ref={el => (sectionRefs.current["webhook-notification-test"] = el)}>
+              <AccordionTrigger>Webhook & Notification Testing</AccordionTrigger>
+              <AccordionContent>
+                <div className="space-y-4 py-4">
+                  <p className="text-sm text-muted-foreground">
+                    Comprehensive testing for webhook processing, notification creation, email sending, and badge system functionality.
+                  </p>
+                  
+                  <div className="grid gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="testUserId">Test User ID</Label>
+                      <Input
+                        id="testUserId"
+                        placeholder="Enter Firebase User ID for testing"
+                        value={userId}
+                        onChange={(e) => setUserId(e.target.value)}
+                      />
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button 
+                        onClick={async () => {
+                          if (!userId) {
+                            setApiResponse({ error: 'User ID is required for testing' });
+                            setResponseDialog(true);
+                            return;
+                          }
+                          setLoading(true);
+                          try {
+                            const response = await fetch('/api/debug/test-webhook-and-notifications', {
+                              method: 'POST',
+                              headers: {
+                                'Content-Type': 'application/json'
+                              },
+                              body: JSON.stringify({
+                                testType: 'webhook_simulation',
+                                userId: userId
+                              })
+                            });
+                            const data = await response.json();
+                            setApiResponse(data);
+                            setResponseDialog(true);
+                          } catch (error) {
+                            setApiResponse({ error: 'Failed to run webhook simulation test' });
+                            setResponseDialog(true);
+                          }
+                          setLoading(false);
+                        }}
+                        disabled={loading || !userId}
+                        className="bg-blue-600 hover:bg-blue-700"
+                      >
+                        {loading ? 'Testing...' : 'Test Webhook Simulation'}
+                      </Button>
+                      
+                      <Button 
+                        onClick={async () => {
+                          if (!userId) {
+                            setApiResponse({ error: 'User ID is required for testing' });
+                            setResponseDialog(true);
+                            return;
+                          }
+                          setLoading(true);
+                          try {
+                            const response = await fetch('/api/debug/test-webhook-and-notifications', {
+                              method: 'POST',
+                              headers: {
+                                'Content-Type': 'application/json'
+                              },
+                              body: JSON.stringify({
+                                testType: 'notification_system',
+                                userId: userId
+                              })
+                            });
+                            const data = await response.json();
+                            setApiResponse(data);
+                            setResponseDialog(true);
+                          } catch (error) {
+                            setApiResponse({ error: 'Failed to run notification system test' });
+                            setResponseDialog(true);
+                          }
+                          setLoading(false);
+                        }}
+                        disabled={loading || !userId}
+                        className="bg-green-600 hover:bg-green-700"
+                      >
+                        {loading ? 'Testing...' : 'Test Notification System'}
+                      </Button>
+                      
+                      <Button 
+                        onClick={async () => {
+                          if (!userId) {
+                            setApiResponse({ error: 'User ID is required for testing' });
+                            setResponseDialog(true);
+                            return;
+                          }
+                          setLoading(true);
+                          try {
+                            const response = await fetch('/api/debug/test-webhook-and-notifications', {
+                              method: 'POST',
+                              headers: {
+                                'Content-Type': 'application/json'
+                              },
+                              body: JSON.stringify({
+                                testType: 'message_notification',
+                                userId: userId
+                              })
+                            });
+                            const data = await response.json();
+                            setApiResponse(data);
+                            setResponseDialog(true);
+                          } catch (error) {
+                            setApiResponse({ error: 'Failed to run message notification test' });
+                            setResponseDialog(true);
+                          }
+                          setLoading(false);
+                        }}
+                        disabled={loading || !userId}
+                        className="bg-purple-600 hover:bg-purple-700"
+                      >
+                        {loading ? 'Testing...' : 'Test Message Notifications'}
+                      </Button>
+                      
+                      <Button 
+                        onClick={async () => {
+                          if (!userId) {
+                            setApiResponse({ error: 'User ID is required for testing' });
+                            setResponseDialog(true);
+                            return;
+                          }
+                          setLoading(true);
+                          try {
+                            const response = await fetch('/api/debug/test-webhook-and-notifications', {
+                              method: 'POST',
+                              headers: {
+                                'Content-Type': 'application/json'
+                              },
+                              body: JSON.stringify({
+                                testType: 'unread_context_test',
+                                userId: userId
+                              })
+                            });
+                            const data = await response.json();
+                            setApiResponse(data);
+                            setResponseDialog(true);
+                          } catch (error) {
+                            setApiResponse({ error: 'Failed to run unread context test' });
+                            setResponseDialog(true);
+                          }
+                          setLoading(false);
+                        }}
+                        disabled={loading || !userId}
+                        className="bg-orange-600 hover:bg-orange-700"
+                      >
+                        {loading ? 'Testing...' : 'Test Badge System'}
+                      </Button>
+                    </div>
+                    
+                    <div className="text-xs text-muted-foreground space-y-1">
+                      <p><strong>Webhook Simulation:</strong> Tests order creation, notification creation, and email sending</p>
+                      <p><strong>Notification System:</strong> Tests Firebase Admin, notification CRUD operations</p>
+                      <p><strong>Message Notifications:</strong> Tests message notification creation and email delivery</p>
+                      <p><strong>Badge System:</strong> Tests UnreadContext data sources and badge counting logic</p>
+                    </div>
+                  </div>
                 </div>
               </AccordionContent>
             </AccordionItem>
