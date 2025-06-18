@@ -1,7 +1,15 @@
 // Export all email templates from a central location
-export { getBaseEmailTemplate, EmailTemplateData } from './base-template';
-export { getWelcomeEmailTemplate, WelcomeEmailData } from './welcome-template';
-export { getNotificationEmailTemplate, NotificationEmailData } from './notification-templates';
-export { getOrderConfirmationTemplate, getPaymentConfirmationTemplate, OrderConfirmationData, PaymentConfirmationData } from './order-templates';
-export { getShippingNotificationTemplate, ShippingNotificationData } from './shipping-templates';
-export { getVerificationEmailTemplate, getPasswordResetTemplate, VerificationEmailData, PasswordResetData } from './auth-templates';
+export { getBaseEmailTemplate } from './base-template';
+export { getWelcomeEmailTemplate } from './welcome-template';
+export { getNotificationEmailTemplate } from './notification-templates';
+export { getOrderConfirmationTemplate, getPaymentConfirmationTemplate } from './order-templates';
+export { getShippingNotificationTemplate } from './shipping-templates';
+export { getVerificationEmailTemplate, getPasswordResetTemplate } from './auth-templates';
+
+// Export types
+export type { EmailTemplateData } from './base-template';
+export type { WelcomeEmailData } from './welcome-template';
+export type { NotificationEmailData } from './notification-templates';
+export type { OrderConfirmationData, PaymentConfirmationData } from './order-templates';
+export type { ShippingNotificationData } from './shipping-templates';
+export type { VerificationEmailData, PasswordResetData } from './auth-templates';
