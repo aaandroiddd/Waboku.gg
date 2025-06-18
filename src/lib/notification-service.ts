@@ -57,11 +57,16 @@ export class NotificationService {
    * Get the Firestore database instance
    */
   private getDb() {
-    const services = getFirebaseServices();
-    if (!services.db) {
+    try {
+      const services = getFirebaseServices();
+      if (!services.db) {
+        throw new Error('Firestore database is not initialized');
+      }
+      return services.db;
+    } catch (error) {
+      console.error('NotificationService: Error getting Firestore database:', error);
       throw new Error('Firestore database is not initialized');
     }
-    return services.db;
   }
 
   /**
@@ -69,18 +74,63 @@ export class NotificationService {
    */
   private async getUserData(userId: string): Promise<{ email: string; displayName: string } | null> {
     try {
-      if (typeof window === 'undefined' && adminFirestore) {
+      if (typeof window === 'undefined') {
         // Server-side: use admin SDK
-        const userDoc = await adminFirestore.collection('users').doc(userId).get();
-        if (userDoc.exists) {
-          const userData = userDoc.data();
-          return {
-            email: userData.email || '',
-            displayName: userData.displayName || userData.username || 'User'
-          };
+        console.log('NotificationService: Fetching user data for email (server-side)');
+        
+        // Try to initialize admin SDK if not already done
+        if (!adminFirestore) {
+          console.log('NotificationService: Admin SDK not initialized for getUserData, attempting to initialize...');
+          try {
+            const { getFirebaseAdmin } = require('@/lib/firebase-admin');
+            const { db } = getFirebaseAdmin();
+            adminFirestore = db;
+            console.log('NotificationService: Admin SDK initialized successfully for getUserData');
+          } catch (initError) {
+            console.error('NotificationService: Failed to initialize admin SDK for getUserData:', initError);
+            return null;
+          }
+        }
+
+        if (adminFirestore) {
+          const userDoc = await adminFirestore.collection('users').doc(userId).get();
+          if (userDoc.exists) {
+            const userData = userDoc.data();
+            console.log('NotificationService: User data found:', {
+              hasEmail: !!userData.email,
+              hasDisplayName: !!userData.displayName,
+              hasUsername: !!userData.username,
+              authProvider: userData.authProvider || 'unknown'
+            });
+            
+            return {
+              email: userData.email || '',
+              displayName: userData.displayName || userData.username || 'User'
+            };
+          } else {
+            console.log('NotificationService: User document not found in Firestore');
+            
+            // Try to get user data from Firebase Auth as fallback
+            try {
+              const { getFirebaseAdmin } = require('@/lib/firebase-admin');
+              const { auth } = getFirebaseAdmin();
+              const authUser = await auth.getUser(userId);
+              
+              if (authUser && authUser.email) {
+                console.log('NotificationService: Found user data in Firebase Auth as fallback');
+                return {
+                  email: authUser.email,
+                  displayName: authUser.displayName || authUser.email.split('@')[0] || 'User'
+                };
+              }
+            } catch (authError) {
+              console.error('NotificationService: Failed to get user from Firebase Auth:', authError);
+            }
+          }
         }
       } else {
         // Client-side: use regular SDK
+        console.log('NotificationService: Fetching user data for email (client-side)');
         const db = this.getDb();
         const userDoc = await getDoc(doc(db, 'users', userId));
         if (userDoc.exists()) {
@@ -91,9 +141,11 @@ export class NotificationService {
           };
         }
       }
+      
+      console.log('NotificationService: No user data found for userId:', userId);
       return null;
     } catch (error) {
-      console.error('Error fetching user data for email:', error);
+      console.error('NotificationService: Error fetching user data for email:', error);
       return null;
     }
   }
@@ -442,12 +494,48 @@ export class NotificationService {
    */
   async deleteNotification(notificationId: string): Promise<void> {
     try {
-      const db = this.getDb();
-      const notificationRef = doc(db, 'notifications', notificationId);
-      await updateDoc(notificationRef, {
-        deleted: true,
-        updatedAt: Timestamp.now()
-      });
+      // Check if we're running on server side
+      if (typeof window === 'undefined') {
+        // Try to initialize admin SDK if not already done
+        if (!adminFirestore || !adminTimestamp) {
+          console.log('NotificationService: Admin SDK not initialized for deleteNotification, attempting to initialize...');
+          try {
+            const { getFirebaseAdmin } = require('@/lib/firebase-admin');
+            const { Timestamp: AdminTimestamp } = require('firebase-admin/firestore');
+            
+            const { db } = getFirebaseAdmin();
+            adminFirestore = db;
+            adminTimestamp = AdminTimestamp;
+            
+            console.log('NotificationService: Admin SDK initialized successfully for deleteNotification');
+          } catch (initError) {
+            console.error('NotificationService: Failed to initialize admin SDK for deleteNotification:', initError);
+            throw new Error('Failed to initialize Firebase Admin SDK for notifications');
+          }
+        }
+
+        if (adminFirestore && adminTimestamp) {
+          console.log('NotificationService: Using Firebase Admin SDK for deleteNotification');
+          
+          const notificationRef = adminFirestore.collection('notifications').doc(notificationId);
+          await notificationRef.update({
+            deleted: true,
+            updatedAt: adminTimestamp.now()
+          });
+          
+          console.log('NotificationService: Notification deleted successfully (admin):', notificationId);
+        } else {
+          throw new Error('Firebase Admin SDK is not properly initialized for deleteNotification');
+        }
+      } else {
+        // Client-side code
+        const db = this.getDb();
+        const notificationRef = doc(db, 'notifications', notificationId);
+        await updateDoc(notificationRef, {
+          deleted: true,
+          updatedAt: Timestamp.now()
+        });
+      }
     } catch (error) {
       console.error('Error deleting notification:', error);
       throw error;
