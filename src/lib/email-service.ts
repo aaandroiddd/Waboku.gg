@@ -9,11 +9,29 @@ import {
   getShippingNotificationTemplate,
   getVerificationEmailTemplate,
   getPasswordResetTemplate,
+  getOfferReceivedTemplate,
+  getOfferAcceptedTemplate,
+  getOfferDeclinedTemplate,
+  getOfferCounterTemplate,
+  getSubscriptionChargeTemplate,
+  getSubscriptionSuccessTemplate,
+  getSubscriptionCanceledTemplate,
+  getSubscriptionFailedTemplate,
+  getSubscriptionRenewalReminderTemplate,
   OrderConfirmationData,
   PaymentConfirmationData,
   ShippingNotificationData,
   VerificationEmailData,
-  PasswordResetData
+  PasswordResetData,
+  OfferReceivedData,
+  OfferAcceptedData,
+  OfferDeclinedData,
+  OfferCounterData,
+  SubscriptionChargeData,
+  SubscriptionSuccessData,
+  SubscriptionCanceledData,
+  SubscriptionFailedData,
+  SubscriptionRenewalReminderData
 } from './email-templates';
 
 // Conditionally import and initialize Resend only on server-side
@@ -400,6 +418,366 @@ export class EmailService {
       return true;
     } catch (error) {
       console.error('Error sending password reset email:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Send offer received email
+   */
+  async sendOfferReceivedEmail(data: OfferReceivedData): Promise<boolean> {
+    try {
+      // Only send emails on server-side
+      if (typeof window !== 'undefined') {
+        console.log('Email service called on client-side, skipping offer received email send');
+        return false;
+      }
+
+      // Check if Resend is available
+      if (!resend) {
+        console.error('Resend service not initialized');
+        return false;
+      }
+
+      const { subject, html, text } = getOfferReceivedTemplate(data);
+
+      const result = await resend.emails.send({
+        from: 'Waboku.gg <offers@waboku.gg>',
+        to: [data.userEmail],
+        subject,
+        html,
+        text,
+      });
+
+      if (result.error) {
+        console.error('Error sending offer received email:', result.error);
+        return false;
+      }
+
+      console.log(`Offer received email sent successfully to ${data.userEmail} (ID: ${result.data?.id})`);
+      return true;
+    } catch (error) {
+      console.error('Error sending offer received email:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Send offer accepted email
+   */
+  async sendOfferAcceptedEmail(data: OfferAcceptedData): Promise<boolean> {
+    try {
+      // Only send emails on server-side
+      if (typeof window !== 'undefined') {
+        console.log('Email service called on client-side, skipping offer accepted email send');
+        return false;
+      }
+
+      // Check if Resend is available
+      if (!resend) {
+        console.error('Resend service not initialized');
+        return false;
+      }
+
+      const { subject, html, text } = getOfferAcceptedTemplate(data);
+
+      const result = await resend.emails.send({
+        from: 'Waboku.gg <offers@waboku.gg>',
+        to: [data.userEmail],
+        subject,
+        html,
+        text,
+      });
+
+      if (result.error) {
+        console.error('Error sending offer accepted email:', result.error);
+        return false;
+      }
+
+      console.log(`Offer accepted email sent successfully to ${data.userEmail} (ID: ${result.data?.id})`);
+      return true;
+    } catch (error) {
+      console.error('Error sending offer accepted email:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Send offer declined email
+   */
+  async sendOfferDeclinedEmail(data: OfferDeclinedData): Promise<boolean> {
+    try {
+      // Only send emails on server-side
+      if (typeof window !== 'undefined') {
+        console.log('Email service called on client-side, skipping offer declined email send');
+        return false;
+      }
+
+      // Check if Resend is available
+      if (!resend) {
+        console.error('Resend service not initialized');
+        return false;
+      }
+
+      const { subject, html, text } = getOfferDeclinedTemplate(data);
+
+      const result = await resend.emails.send({
+        from: 'Waboku.gg <offers@waboku.gg>',
+        to: [data.userEmail],
+        subject,
+        html,
+        text,
+      });
+
+      if (result.error) {
+        console.error('Error sending offer declined email:', result.error);
+        return false;
+      }
+
+      console.log(`Offer declined email sent successfully to ${data.userEmail} (ID: ${result.data?.id})`);
+      return true;
+    } catch (error) {
+      console.error('Error sending offer declined email:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Send offer counter email
+   */
+  async sendOfferCounterEmail(data: OfferCounterData): Promise<boolean> {
+    try {
+      // Only send emails on server-side
+      if (typeof window !== 'undefined') {
+        console.log('Email service called on client-side, skipping offer counter email send');
+        return false;
+      }
+
+      // Check if Resend is available
+      if (!resend) {
+        console.error('Resend service not initialized');
+        return false;
+      }
+
+      const { subject, html, text } = getOfferCounterTemplate(data);
+
+      const result = await resend.emails.send({
+        from: 'Waboku.gg <offers@waboku.gg>',
+        to: [data.userEmail],
+        subject,
+        html,
+        text,
+      });
+
+      if (result.error) {
+        console.error('Error sending offer counter email:', result.error);
+        return false;
+      }
+
+      console.log(`Offer counter email sent successfully to ${data.userEmail} (ID: ${result.data?.id})`);
+      return true;
+    } catch (error) {
+      console.error('Error sending offer counter email:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Send subscription charge email
+   */
+  async sendSubscriptionChargeEmail(data: SubscriptionChargeData): Promise<boolean> {
+    try {
+      // Only send emails on server-side
+      if (typeof window !== 'undefined') {
+        console.log('Email service called on client-side, skipping subscription charge email send');
+        return false;
+      }
+
+      // Check if Resend is available
+      if (!resend) {
+        console.error('Resend service not initialized');
+        return false;
+      }
+
+      const { subject, html, text } = getSubscriptionChargeTemplate(data);
+
+      const result = await resend.emails.send({
+        from: 'Waboku.gg <billing@waboku.gg>',
+        to: [data.userEmail],
+        subject,
+        html,
+        text,
+      });
+
+      if (result.error) {
+        console.error('Error sending subscription charge email:', result.error);
+        return false;
+      }
+
+      console.log(`Subscription charge email sent successfully to ${data.userEmail} (ID: ${result.data?.id})`);
+      return true;
+    } catch (error) {
+      console.error('Error sending subscription charge email:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Send subscription success email
+   */
+  async sendSubscriptionSuccessEmail(data: SubscriptionSuccessData): Promise<boolean> {
+    try {
+      // Only send emails on server-side
+      if (typeof window !== 'undefined') {
+        console.log('Email service called on client-side, skipping subscription success email send');
+        return false;
+      }
+
+      // Check if Resend is available
+      if (!resend) {
+        console.error('Resend service not initialized');
+        return false;
+      }
+
+      const { subject, html, text } = getSubscriptionSuccessTemplate(data);
+
+      const result = await resend.emails.send({
+        from: 'Waboku.gg <billing@waboku.gg>',
+        to: [data.userEmail],
+        subject,
+        html,
+        text,
+      });
+
+      if (result.error) {
+        console.error('Error sending subscription success email:', result.error);
+        return false;
+      }
+
+      console.log(`Subscription success email sent successfully to ${data.userEmail} (ID: ${result.data?.id})`);
+      return true;
+    } catch (error) {
+      console.error('Error sending subscription success email:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Send subscription canceled email
+   */
+  async sendSubscriptionCanceledEmail(data: SubscriptionCanceledData): Promise<boolean> {
+    try {
+      // Only send emails on server-side
+      if (typeof window !== 'undefined') {
+        console.log('Email service called on client-side, skipping subscription canceled email send');
+        return false;
+      }
+
+      // Check if Resend is available
+      if (!resend) {
+        console.error('Resend service not initialized');
+        return false;
+      }
+
+      const { subject, html, text } = getSubscriptionCanceledTemplate(data);
+
+      const result = await resend.emails.send({
+        from: 'Waboku.gg <billing@waboku.gg>',
+        to: [data.userEmail],
+        subject,
+        html,
+        text,
+      });
+
+      if (result.error) {
+        console.error('Error sending subscription canceled email:', result.error);
+        return false;
+      }
+
+      console.log(`Subscription canceled email sent successfully to ${data.userEmail} (ID: ${result.data?.id})`);
+      return true;
+    } catch (error) {
+      console.error('Error sending subscription canceled email:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Send subscription failed email
+   */
+  async sendSubscriptionFailedEmail(data: SubscriptionFailedData): Promise<boolean> {
+    try {
+      // Only send emails on server-side
+      if (typeof window !== 'undefined') {
+        console.log('Email service called on client-side, skipping subscription failed email send');
+        return false;
+      }
+
+      // Check if Resend is available
+      if (!resend) {
+        console.error('Resend service not initialized');
+        return false;
+      }
+
+      const { subject, html, text } = getSubscriptionFailedTemplate(data);
+
+      const result = await resend.emails.send({
+        from: 'Waboku.gg <billing@waboku.gg>',
+        to: [data.userEmail],
+        subject,
+        html,
+        text,
+      });
+
+      if (result.error) {
+        console.error('Error sending subscription failed email:', result.error);
+        return false;
+      }
+
+      console.log(`Subscription failed email sent successfully to ${data.userEmail} (ID: ${result.data?.id})`);
+      return true;
+    } catch (error) {
+      console.error('Error sending subscription failed email:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Send subscription renewal reminder email
+   */
+  async sendSubscriptionRenewalReminderEmail(data: SubscriptionRenewalReminderData): Promise<boolean> {
+    try {
+      // Only send emails on server-side
+      if (typeof window !== 'undefined') {
+        console.log('Email service called on client-side, skipping subscription renewal reminder email send');
+        return false;
+      }
+
+      // Check if Resend is available
+      if (!resend) {
+        console.error('Resend service not initialized');
+        return false;
+      }
+
+      const { subject, html, text } = getSubscriptionRenewalReminderTemplate(data);
+
+      const result = await resend.emails.send({
+        from: 'Waboku.gg <billing@waboku.gg>',
+        to: [data.userEmail],
+        subject,
+        html,
+        text,
+      });
+
+      if (result.error) {
+        console.error('Error sending subscription renewal reminder email:', result.error);
+        return false;
+      }
+
+      console.log(`Subscription renewal reminder email sent successfully to ${data.userEmail} (ID: ${result.data?.id})`);
+      return true;
+    } catch (error) {
+      console.error('Error sending subscription renewal reminder email:', error);
       return false;
     }
   }

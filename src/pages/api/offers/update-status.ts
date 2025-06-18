@@ -2,6 +2,7 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import { getFirebaseServices } from '@/lib/firebase';
 import { doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { getAuth } from 'firebase-admin/auth';
+import { emailService } from '@/lib/email-service';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   console.log('POST /api/offers/update-status START');
@@ -110,6 +111,44 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     await updateDoc(offerRef, updateData);
 
     console.log(`Successfully updated offer ${offerId} status to ${status}`);
+    
+    // Send email notifications for accepted/declined offers
+    if (status === 'accepted' || status === 'declined') {
+      try {
+        // Get buyer and seller information
+        const buyerData = await getAuth(admin).getUser(offerData.buyerId);
+        const sellerData = await getAuth(admin).getUser(offerData.sellerId);
+        
+        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://waboku.gg';
+        
+        if (status === 'accepted') {
+          // Send offer accepted email to buyer
+          await emailService.sendOfferAcceptedEmail({
+            userName: buyerData.displayName || 'User',
+            userEmail: buyerData.email || '',
+            sellerName: sellerData.displayName || 'Seller',
+            listingTitle: offerData.listingSnapshot?.title || 'Unknown Item',
+            offerAmount: offerData.amount,
+            actionUrl: `${baseUrl}/dashboard/orders`
+          });
+          console.log('Offer accepted email sent to buyer:', buyerData.email);
+        } else if (status === 'declined') {
+          // Send offer declined email to buyer
+          await emailService.sendOfferDeclinedEmail({
+            userName: buyerData.displayName || 'User',
+            userEmail: buyerData.email || '',
+            sellerName: sellerData.displayName || 'Seller',
+            listingTitle: offerData.listingSnapshot?.title || 'Unknown Item',
+            offerAmount: offerData.amount,
+            actionUrl: `${baseUrl}/listings`
+          });
+          console.log('Offer declined email sent to buyer:', buyerData.email);
+        }
+      } catch (emailError) {
+        console.error('Error sending offer status email:', emailError);
+        // Don't fail the API call if email fails
+      }
+    }
     
     // Prepare success message based on status
     let successMessage = '';

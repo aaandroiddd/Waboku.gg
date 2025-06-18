@@ -269,6 +269,32 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         // Don't fail the offer creation if notification creation fails
       }
 
+      // Send email notification for new offer
+      try {
+        console.log('Sending offer received email to seller:', sellerId);
+        const sellerData = await auth.getUser(sellerId);
+        const buyerData = await auth.getUser(userId);
+        
+        if (sellerData.email) {
+          const { emailService } = require('@/lib/email-service');
+          const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://waboku.gg';
+          
+          await emailService.sendOfferReceivedEmail({
+            userName: sellerData.displayName || 'User',
+            userEmail: sellerData.email,
+            buyerName: buyerData.displayName || 'Someone',
+            listingTitle: listingSnapshot.title || 'Unknown Listing',
+            offerAmount: numericAmount,
+            listingPrice: listingSnapshot.price || 0,
+            actionUrl: `${baseUrl}/dashboard/offers`
+          });
+          console.log('Offer received email sent successfully to:', sellerData.email);
+        }
+      } catch (emailError) {
+        console.error('Error sending offer received email:', emailError);
+        // Don't fail the offer creation if email fails
+      }
+
       return res.status(201).json({ 
         success: true, 
         offerId: offerRef.id,

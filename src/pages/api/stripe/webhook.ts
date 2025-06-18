@@ -4,6 +4,7 @@ import Stripe from 'stripe';
 import { getFirestore } from 'firebase-admin/firestore';
 import { getDatabase } from 'firebase-admin/database';
 import { getFirebaseAdmin } from '@/lib/firebase-admin';
+import { emailService } from '@/lib/email-service';
 
 // Initialize Stripe
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
@@ -141,6 +142,28 @@ export default async function handler(
             startDate: currentDate.toISOString(),
             renewalDate: renewalDate.toISOString()
           });
+
+          // Send subscription success email
+          try {
+            const userDoc = await firestoreDb.collection('users').doc(userId).get();
+            const userData = userDoc.data();
+            
+            if (userData && userData.email) {
+              const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://waboku.gg';
+              await emailService.sendSubscriptionSuccessEmail({
+                userName: userData.displayName || userData.username || 'User',
+                userEmail: userData.email,
+                amount: session.amount_total ? session.amount_total / 100 : 9.99,
+                planName: 'Premium',
+                billingPeriod: 'Monthly',
+                nextBillingDate: renewalDate.toLocaleDateString(),
+                actionUrl: `${baseUrl}/dashboard/settings`
+              });
+              console.log('[Stripe Webhook] Subscription success email sent to:', userData.email);
+            }
+          } catch (emailError) {
+            console.error('[Stripe Webhook] Error sending subscription success email:', emailError);
+          }
         } 
         // Handle marketplace purchase
         else if (session.metadata?.listingId && session.metadata?.buyerId && session.metadata?.sellerId) {
@@ -675,6 +698,26 @@ export default async function handler(
             userId,
             endDate: endDateIso
           });
+
+          // Send subscription canceled email
+          try {
+            const userDoc = await firestoreDb.collection('users').doc(userId).get();
+            const userData = userDoc.data();
+            
+            if (userData && userData.email) {
+              const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://waboku.gg';
+              await emailService.sendSubscriptionCanceledEmail({
+                userName: userData.displayName || userData.username || 'User',
+                userEmail: userData.email,
+                planName: 'Premium',
+                endDate: endDate.toLocaleDateString(),
+                actionUrl: `${baseUrl}/dashboard/settings`
+              });
+              console.log('[Stripe Webhook] Subscription canceled email sent to:', userData.email);
+            }
+          } catch (emailError) {
+            console.error('[Stripe Webhook] Error sending subscription canceled email:', emailError);
+          }
         } else {
           // If already past the end date, downgrade immediately
           // Update Firestore
@@ -729,6 +772,81 @@ export default async function handler(
           userId,
           subscriptionId: subscription
         });
+
+        // Send subscription payment failed email
+        try {
+          const userDoc = await firestoreDb.collection('users').doc(userId).get();
+          const userData = userDoc.data();
+          
+          if (userData && userData.email) {
+            const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://waboku.gg';
+            const retryDate = new Date();
+            retryDate.setDate(retryDate.getDate() + 3); // Retry in 3 days
+            
+            await emailService.sendSubscriptionFailedEmail({
+              userName: userData.displayName || userData.username || 'User',
+              userEmail: userData.email,
+              planName: 'Premium',
+              amount: invoice.amount_due ? invoice.amount_due / 100 : 9.99,
+              retryDate: retryDate.toLocaleDateString(),
+              actionUrl: `${baseUrl}/dashboard/settings`
+            });
+            console.log('[Stripe Webhook] Subscription payment failed email sent to:', userData.email);
+          }
+        } catch (emailError) {
+          console.error('[Stripe Webhook] Error sending subscription payment failed email:', emailError);
+        }
+        break;
+      }
+
+      case 'invoice.payment_succeeded': {
+        const invoice = event.data.object as Stripe.Invoice;
+        const subscription = invoice.subscription as string;
+        
+        // Only process subscription invoices (not one-time payments)
+        if (subscription) {
+          // Get the subscription to find the user ID
+          const subDetails = await stripe.subscriptions.retrieve(subscription);
+          const userId = subDetails.metadata.userId;
+
+          if (!userId) {
+            console.log('[Stripe Webhook] No userId found in subscription metadata for payment succeeded');
+            break;
+          }
+
+          // Only send email for recurring charges (not the initial payment)
+          if (invoice.billing_reason === 'subscription_cycle') {
+            console.log('[Stripe Webhook] Processing recurring subscription charge:', {
+              userId,
+              subscriptionId: subscription,
+              amount: invoice.amount_paid / 100
+            });
+
+            // Send subscription charge email
+            try {
+              const userDoc = await firestoreDb.collection('users').doc(userId).get();
+              const userData = userDoc.data();
+              
+              if (userData && userData.email) {
+                const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://waboku.gg';
+                const nextBillingDate = new Date(subDetails.current_period_end * 1000);
+                
+                await emailService.sendSubscriptionChargeEmail({
+                  userName: userData.displayName || userData.username || 'User',
+                  userEmail: userData.email,
+                  amount: invoice.amount_paid / 100,
+                  planName: 'Premium',
+                  billingPeriod: 'Monthly',
+                  nextBillingDate: nextBillingDate.toLocaleDateString(),
+                  actionUrl: `${baseUrl}/dashboard/settings`
+                });
+                console.log('[Stripe Webhook] Subscription charge email sent to:', userData.email);
+              }
+            } catch (emailError) {
+              console.error('[Stripe Webhook] Error sending subscription charge email:', emailError);
+            }
+          }
+        }
         break;
       }
     }
