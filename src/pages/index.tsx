@@ -179,59 +179,97 @@ export default function Home() {
   );
 
   const { latitude, longitude, loading: geoLoading } = useGeolocation({ autoRequest: false });
-  const { listings: allListings, isLoading, error: listingsError } = useListings();
+  
+  // Call useListings hook normally - let React handle any errors
+  const { listings: allListings = [], isLoading = false, error: listingsError = null } = useListings() || {};
+  
   const router = useRouter();
 
   // Check for stale auth data and handle connection issues on mount
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const staleDataFound = checkAndClearStaleAuthData();
-      if (staleDataFound) {
-        console.log('Stale authentication data was found and cleared');
-      }
-      
-      // Clear any stale cache on initial load
-      const clearStaleCache = async () => {
-        try {
-          // Check if we've already cleared cache in this session
-          const hasCleared = sessionStorage.getItem('cache_cleared');
-          if (!hasCleared) {
-            console.log('Performing initial cache check and cleanup');
-            
-            // Clear all listing-related localStorage items
-            Object.keys(localStorage).forEach(key => {
-              if (key.startsWith('listings_')) {
-                localStorage.removeItem(key);
-                console.log(`Cleared potentially stale cache: ${key}`);
-              }
-            });
-            
-            // Mark that we've cleared cache in this session
-            sessionStorage.setItem('cache_cleared', 'true');
-            setCacheCleared(true);
+      try {
+        const staleDataFound = checkAndClearStaleAuthData();
+        if (staleDataFound) {
+          console.log('Stale authentication data was found and cleared');
+        }
+        
+        // Clear any stale cache on initial load
+        const clearStaleCache = async () => {
+          try {
+            // Check if we've already cleared cache in this session
+            const hasCleared = sessionStorage.getItem('cache_cleared');
+            if (!hasCleared) {
+              console.log('Performing initial cache check and cleanup');
+              
+              // Clear all listing-related localStorage items
+              Object.keys(localStorage).forEach(key => {
+                if (key.startsWith('listings_')) {
+                  localStorage.removeItem(key);
+                  console.log(`Cleared potentially stale cache: ${key}`);
+                }
+              });
+              
+              // Mark that we've cleared cache in this session
+              sessionStorage.setItem('cache_cleared', 'true');
+              setCacheCleared(true);
+            }
+          } catch (error) {
+            console.error('Error during initial cache cleanup:', error);
           }
-        } catch (error) {
-          console.error('Error during initial cache cleanup:', error);
-        }
-      };
-      
-      clearStaleCache();
-      
-      // Add a global error handler for Firestore fetch errors
-      const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
-        if (event.reason && 
-            (event.reason.message === 'Failed to fetch' || 
-             (event.reason.stack && event.reason.stack.includes('firestore.googleapis.com')))) {
-          console.error('Detected Firestore fetch error on home page:', event.reason);
-          setConnectionError(true);
-        }
-      };
-      
-      window.addEventListener('unhandledrejection', handleUnhandledRejection);
-      
-      return () => {
-        window.removeEventListener('unhandledrejection', handleUnhandledRejection);
-      };
+        };
+        
+        clearStaleCache();
+        
+        // Add a global error handler for various errors
+        const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
+          // Prevent the error from being logged to console if it's a known issue
+          if (event.reason && typeof event.reason === 'object') {
+            const errorMessage = event.reason.message || '';
+            const errorStack = event.reason.stack || '';
+            
+            // Handle Firebase/Firestore errors
+            if (errorMessage === 'Failed to fetch' || errorStack.includes('firestore.googleapis.com')) {
+              console.error('Detected Firestore fetch error on home page:', event.reason);
+              setConnectionError(true);
+              event.preventDefault(); // Prevent default error handling
+              return;
+            }
+            
+            // Handle postMessage origin errors (common in development)
+            if (errorMessage.includes('postMessage') && errorMessage.includes('origin')) {
+              console.warn('PostMessage origin mismatch (development environment):', errorMessage);
+              event.preventDefault(); // Prevent default error handling
+              return;
+            }
+          }
+        };
+        
+        const handleError = (event: ErrorEvent) => {
+          // Handle general JavaScript errors
+          if (event.error && typeof event.error === 'object') {
+            const errorMessage = event.error.message || event.message || '';
+            
+            // Handle postMessage origin errors
+            if (errorMessage.includes('postMessage') && errorMessage.includes('origin')) {
+              console.warn('PostMessage origin mismatch (development environment):', errorMessage);
+              event.preventDefault();
+              return;
+            }
+          }
+        };
+        
+        window.addEventListener('unhandledrejection', handleUnhandledRejection);
+        window.addEventListener('error', handleError);
+        
+        return () => {
+          window.removeEventListener('unhandledrejection', handleUnhandledRejection);
+          window.removeEventListener('error', handleError);
+        };
+      } catch (initError) {
+        console.error('Error during home page initialization:', initError);
+        // Don't let initialization errors crash the page
+      }
     }
   }, []);
   
