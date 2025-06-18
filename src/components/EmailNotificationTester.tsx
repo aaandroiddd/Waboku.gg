@@ -111,9 +111,14 @@ export function EmailNotificationTester({ adminSecret }: EmailNotificationTester
             <SelectValue placeholder="Select email type to test" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="welcome">Welcome Email</SelectItem>
-            <SelectItem value="notification">Test Notification Email</SelectItem>
-            <SelectItem value="full-notification">Full Notification System Test</SelectItem>
+            <SelectItem value="welcome">🎴 Welcome Email</SelectItem>
+            <SelectItem value="order-confirmation">⚡ Order Confirmation</SelectItem>
+            <SelectItem value="payment-confirmation">💳 Payment Confirmation</SelectItem>
+            <SelectItem value="shipping">📦 Shipping Notification</SelectItem>
+            <SelectItem value="verification">🔐 Account Verification</SelectItem>
+            <SelectItem value="password-reset">🔑 Password Reset</SelectItem>
+            <SelectItem value="notification">🔔 Test Notification Email</SelectItem>
+            <SelectItem value="full-notification">🧪 Full Notification System Test</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -158,9 +163,14 @@ export function EmailNotificationTester({ adminSecret }: EmailNotificationTester
       <Card className="p-4 bg-blue-50 border-blue-200">
         <h4 className="font-medium text-blue-900 mb-2">Email Type Descriptions:</h4>
         <ul className="text-sm text-blue-800 space-y-1">
-          <li><strong>Welcome Email:</strong> Sends a welcome email with platform features and getting started information</li>
-          <li><strong>Test Notification Email:</strong> Sends a simple test notification email to verify email delivery</li>
-          <li><strong>Full Notification System Test:</strong> Creates an in-app notification and attempts to send an email (tests the complete flow)</li>
+          <li><strong>🎴 Welcome Email:</strong> Sends a welcome email with platform features and getting started information</li>
+          <li><strong>⚡ Order Confirmation:</strong> Sends an order confirmation email with purchase details and seller information</li>
+          <li><strong>💳 Payment Confirmation:</strong> Sends a payment confirmation email with transaction details and buyer protection info</li>
+          <li><strong>📦 Shipping Notification:</strong> Sends a shipping notification email with tracking information and delivery details</li>
+          <li><strong>🔐 Account Verification:</strong> Sends an email verification email with verification code and link</li>
+          <li><strong>🔑 Password Reset:</strong> Sends a password reset email with secure reset link and security information</li>
+          <li><strong>🔔 Test Notification Email:</strong> Sends a simple test notification email to verify email delivery</li>
+          <li><strong>🧪 Full Notification System Test:</strong> Creates an in-app notification and attempts to send an email (tests the complete flow)</li>
         </ul>
       </Card>
 

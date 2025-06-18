@@ -7,33 +7,7 @@ export function getWelcomeEmailTemplate(data: WelcomeEmailData): { subject: stri
   const { userName } = data;
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://waboku.gg';
 
-  const subject = '🎉 Welcome to Waboku.gg - Your Trading Card Journey Begins!';
-
-  // Theme colors matching your application
-  const colors = {
-    light: {
-      background: '#ffffff',
-      cardBackground: '#ffffff',
-      foreground: '#1c2937',
-      muted: '#f1f5f9',
-      mutedForeground: '#64748b',
-      primary: '#3b82f6',
-      primaryForeground: '#ffffff',
-      border: '#e2e8f0',
-      accent: '#f1f5f9',
-    },
-    dark: {
-      background: '#0f172a',
-      cardBackground: '#1e293b',
-      foreground: '#f8fafc',
-      muted: '#334155',
-      mutedForeground: '#94a3b8',
-      primary: '#0ea5e9',
-      primaryForeground: '#f8fafc',
-      border: '#334155',
-      accent: '#1e293b',
-    }
-  };
+  const subject = '🎴 Welcome to the community!';
 
   const html = `
 <!DOCTYPE html>
@@ -41,11 +15,9 @@ export function getWelcomeEmailTemplate(data: WelcomeEmailData): { subject: stri
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="color-scheme" content="light dark">
-    <meta name="supported-color-schemes" content="light dark">
-    <title>Welcome to Waboku.gg</title>
+    <title>Welcome to Waboku</title>
     <style>
-        /* Reset and base styles */
+        /* Reset and base styles for email clients */
         * {
             margin: 0;
             padding: 0;
@@ -53,381 +25,266 @@ export function getWelcomeEmailTemplate(data: WelcomeEmailData): { subject: stri
         }
         
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
             line-height: 1.6;
-            color: ${colors.light.foreground};
-            background-color: ${colors.light.background};
-            margin: 0;
-            padding: 0;
-            width: 100% !important;
-            min-width: 100%;
-            -webkit-text-size-adjust: 100%;
-            -ms-text-size-adjust: 100%;
-        }
-        
-        /* Dark mode support */
-        @media (prefers-color-scheme: dark) {
-            body {
-                background-color: ${colors.dark.background} !important;
-                color: ${colors.dark.foreground} !important;
-            }
-            
-            .email-container {
-                background-color: ${colors.dark.cardBackground} !important;
-                border-color: ${colors.dark.border} !important;
-            }
-            
-            .welcome-title {
-                color: ${colors.dark.foreground} !important;
-            }
-            
-            .welcome-message {
-                color: ${colors.dark.mutedForeground} !important;
-            }
-            
-            .feature-card {
-                background-color: ${colors.dark.accent} !important;
-                border-color: ${colors.dark.border} !important;
-            }
-            
-            .feature-title {
-                color: ${colors.dark.foreground} !important;
-            }
-            
-            .feature-description {
-                color: ${colors.dark.mutedForeground} !important;
-            }
-            
-            .cta-button {
-                background-color: ${colors.dark.primary} !important;
-                color: ${colors.dark.primaryForeground} !important;
-            }
-            
-            .footer-text {
-                color: ${colors.dark.mutedForeground} !important;
-            }
-            
-            .footer-link {
-                color: ${colors.dark.primary} !important;
-            }
-        }
-        
-        .email-wrapper {
-            width: 100%;
-            background-color: ${colors.light.background};
-            padding: 20px 0;
+            background-color: #0f1419;
+            color: #ffffff;
+            padding: 20px;
         }
         
         .email-container {
             max-width: 600px;
             margin: 0 auto;
-            background-color: ${colors.light.cardBackground};
-            border-radius: 16px;
-            border: 1px solid ${colors.light.border};
+            background: #1e2328;
+            border-radius: 8px;
             overflow: hidden;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+            border: 1px solid #2a3441;
         }
         
-        .email-header {
-            background: linear-gradient(135deg, ${colors.light.primary} 0%, #1d4ed8 100%);
-            padding: 40px 24px;
+        .header {
+            background: linear-gradient(135deg, #1e2328 0%, #2a3441 100%);
+            padding: 40px;
             text-align: center;
-            position: relative;
-            overflow: hidden;
+            border-bottom: 1px solid #2a3441;
         }
         
-        .email-header::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse"><path d="M 10 0 L 0 0 0 10" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="0.5"/></pattern></defs><rect width="100" height="100" fill="url(%23grid)"/></svg>');
-            opacity: 0.3;
-        }
-        
-        .header-content {
-            position: relative;
-            z-index: 1;
-        }
-        
-        .header-logo {
+        .logo {
             font-size: 32px;
-            font-weight: 800;
-            color: white;
+            font-weight: 600;
+            color: #ffffff;
             margin-bottom: 8px;
-            letter-spacing: -0.025em;
         }
         
-        .header-tagline {
+        .logo .gg {
+            color: #00bcd4;
+        }
+        
+        .tagline {
+            color: #8c9aad;
             font-size: 16px;
-            color: rgba(255, 255, 255, 0.9);
-            margin-bottom: 20px;
+            font-weight: 400;
         }
         
-        .welcome-icon {
-            font-size: 64px;
-            margin-bottom: 16px;
-            display: block;
+        .content {
+            padding: 40px;
+            background: #1e2328;
         }
         
-        .email-content {
-            padding: 40px 32px;
-        }
-        
-        .welcome-title {
+        .content h1 {
+            color: #ffffff;
             font-size: 28px;
-            font-weight: 700;
-            color: ${colors.light.foreground};
-            margin-bottom: 16px;
+            font-weight: 600;
+            margin-bottom: 24px;
             text-align: center;
-            line-height: 1.3;
         }
         
-        .welcome-message {
+        .content h2 {
+            color: #00bcd4;
+            font-size: 20px;
+            font-weight: 600;
+            margin: 32px 0 16px 0;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #2a3441;
+        }
+        
+        .content p {
+            margin-bottom: 20px;
+            color: #c9d1d9;
             font-size: 16px;
-            color: ${colors.light.mutedForeground};
-            margin-bottom: 32px;
-            text-align: center;
             line-height: 1.6;
-        }
-        
-        .greeting {
-            font-weight: 600;
-            color: ${colors.light.foreground};
-        }
-        
-        .features-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
-            margin: 32px 0;
-        }
-        
-        .feature-card {
-            background-color: ${colors.light.accent};
-            border: 1px solid ${colors.light.border};
-            border-radius: 12px;
-            padding: 24px;
-            text-align: center;
-            transition: transform 0.2s ease;
-        }
-        
-        .feature-card:hover {
-            transform: translateY(-2px);
-        }
-        
-        .feature-icon {
-            font-size: 32px;
-            margin-bottom: 12px;
-            display: block;
-        }
-        
-        .feature-title {
-            font-size: 18px;
-            font-weight: 600;
-            color: ${colors.light.foreground};
-            margin-bottom: 8px;
-        }
-        
-        .feature-description {
-            font-size: 14px;
-            color: ${colors.light.mutedForeground};
-            line-height: 1.5;
-        }
-        
-        .cta-container {
-            text-align: center;
-            margin: 40px 0;
         }
         
         .cta-button {
             display: inline-block;
-            background: linear-gradient(135deg, ${colors.light.primary} 0%, #1d4ed8 100%);
-            color: ${colors.light.primaryForeground};
-            padding: 18px 36px;
+            background: #00bcd4;
+            color: #ffffff;
+            padding: 14px 28px;
             text-decoration: none;
-            border-radius: 12px;
+            border-radius: 6px;
             font-weight: 600;
             font-size: 16px;
+            margin: 20px 0;
+            text-align: center;
             transition: all 0.2s ease;
-            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
         }
         
         .cta-button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(59, 130, 246, 0.4);
+            background: #00acc1;
+            transform: translateY(-1px);
         }
         
-        .email-footer {
-            background-color: ${colors.light.muted};
-            padding: 32px;
-            text-align: center;
-            border-top: 1px solid ${colors.light.border};
+        .cta-button.secondary {
+            background: transparent;
+            border: 2px solid #00bcd4;
+            color: #00bcd4;
         }
         
-        .footer-text {
+        .cta-button.secondary:hover {
+            background: #00bcd4;
+            color: #ffffff;
+        }
+        
+        .info-box {
+            background: rgba(0, 188, 212, 0.1);
+            border: 1px solid rgba(0, 188, 212, 0.3);
+            border-radius: 6px;
+            padding: 16px;
+            margin: 20px 0;
+        }
+        
+        .info-box-title {
+            color: #00bcd4;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        
+        .info-box-content {
+            color: #c9d1d9;
             font-size: 14px;
-            color: ${colors.light.mutedForeground};
-            margin-bottom: 16px;
-            line-height: 1.5;
         }
         
-        .footer-link {
-            color: ${colors.light.primary};
+        .protection-notice {
+            background: rgba(34, 197, 94, 0.1);
+            border: 1px solid rgba(34, 197, 94, 0.3);
+            border-radius: 6px;
+            padding: 16px;
+            margin: 20px 0;
+        }
+        
+        .protection-notice-title {
+            color: #22c55e;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        
+        .footer {
+            background: #0f1419;
+            padding: 32px 40px;
+            text-align: center;
+            border-top: 1px solid #2a3441;
+        }
+        
+        .footer p {
+            margin: 8px 0;
+            color: #8c9aad;
+            font-size: 14px;
+        }
+        
+        .social-links {
+            margin: 20px 0;
+        }
+        
+        .social-links a {
+            color: #00bcd4;
             text-decoration: none;
-            font-weight: 500;
-        }
-        
-        .footer-link:hover {
-            text-decoration: underline;
-        }
-        
-        .divider {
-            height: 1px;
-            background-color: ${colors.light.border};
-            margin: 24px 0;
-            border: none;
+            margin: 0 12px;
+            font-size: 14px;
         }
         
         @media only screen and (max-width: 600px) {
             .email-container {
-                margin: 0 16px;
-                border-radius: 12px;
+                margin: 0;
+                border-radius: 0;
             }
             
-            .email-header {
-                padding: 32px 20px;
-            }
-            
-            .email-content {
-                padding: 32px 24px;
-            }
-            
-            .email-footer {
+            .header, .content, .footer {
                 padding: 24px 20px;
             }
             
-            .welcome-title {
+            .logo {
+                font-size: 28px;
+            }
+            
+            .content h1 {
                 font-size: 24px;
             }
             
-            .features-grid {
-                grid-template-columns: 1fr;
-                gap: 16px;
-            }
-            
-            .feature-card {
-                padding: 20px;
-            }
-            
-            .cta-button {
-                padding: 16px 28px;
-                font-size: 15px;
-            }
-        }
-        
-        @media (prefers-reduced-motion: reduce) {
-            .cta-button, .feature-card {
-                transition: none;
-            }
-            
-            .cta-button:hover, .feature-card:hover {
-                transform: none;
+            .content h2 {
+                font-size: 18px;
             }
         }
     </style>
 </head>
 <body>
-    <div class="email-wrapper">
-        <div class="email-container">
-            <!-- Header -->
-            <div class="email-header">
-                <div class="header-content">
-                    <div class="header-logo">Waboku.gg</div>
-                    <div class="header-tagline">Your Premier Trading Card Marketplace</div>
-                    <span class="welcome-icon">🎉</span>
-                </div>
+    <div class="email-container">
+        <div class="header">
+            <div class="logo">waboku<span class="gg">.gg</span></div>
+            <div class="tagline">Your Local TCG Marketplace</div>
+        </div>
+        <div class="content">
+            <h1>Welcome to the community! 🎴</h1>
+            <p>Hey ${userName},</p>
+            <p>Welcome to <strong>Waboku</strong> - where collectors connect to buy, sell, and trade their favorite TCG cards! You've just joined a thriving community of passionate collectors and players.</p>
+            
+            <div class="info-box">
+                <div class="info-box-title">🌟 How Waboku Works</div>
+                <div class="info-box-content">Waboku connects buyers and sellers directly. Browse listings from verified community members, make offers, and discover rare cards from fellow collectors near you.</div>
             </div>
             
-            <!-- Content -->
-            <div class="email-content">
-                <h1 class="welcome-title">Welcome to Waboku.gg!</h1>
-                <div class="welcome-message">
-                    <span class="greeting">Hi ${userName},</span><br><br>
-                    Welcome to the premier trading card marketplace! We're excited to have you join our community of collectors and traders. Your journey into the world of trading cards starts here.
-                </div>
-                
-                <!-- Features Grid -->
-                <div class="features-grid">
-                    <div class="feature-card">
-                        <span class="feature-icon">🃏</span>
-                        <div class="feature-title">Buy & Sell Cards</div>
-                        <div class="feature-description">Discover rare cards from popular games like Pokémon, Yu-Gi-Oh!, and more</div>
-                    </div>
-                    
-                    <div class="feature-card">
-                        <span class="feature-icon">💰</span>
-                        <div class="feature-title">Make Offers</div>
-                        <div class="feature-description">Negotiate prices and make deals with other collectors</div>
-                    </div>
-                    
-                    <div class="feature-card">
-                        <span class="feature-icon">💬</span>
-                        <div class="feature-title">Chat & Connect</div>
-                        <div class="feature-description">Message other collectors and build lasting relationships</div>
-                    </div>
-                    
-                    <div class="feature-card">
-                        <span class="feature-icon">⭐</span>
-                        <div class="feature-title">Build Reputation</div>
-                        <div class="feature-description">Earn reviews and establish trust in the community</div>
-                    </div>
-                </div>
-                
-                <div class="cta-container">
-                    <a href="${baseUrl}/dashboard" class="cta-button">Explore Your Dashboard</a>
-                </div>
+            <p>Here's what you can do right now:</p>
+            <p>• <strong>Browse listings</strong> from verified sellers in your area<br>
+            • <strong>Save favorites</strong> and get notifications when similar cards are listed<br>
+            • <strong>Create your first listing</strong> to sell cards from your collection<br>
+            • <strong>Message sellers</strong> directly to ask questions or negotiate prices</p>
+            
+            <div style="text-align: center;">
+                <a href="${baseUrl}" class="cta-button">Start Browsing</a>
+                <a href="${baseUrl}/dashboard/create-listing" class="cta-button secondary">Create Your First Listing</a>
             </div>
             
-            <!-- Footer -->
-            <div class="email-footer">
-                <div class="footer-text">
-                    Ready to start trading? <a href="${baseUrl}/dashboard/create-listing" class="footer-link">Create your first listing</a>
-                </div>
-                <hr class="divider">
-                <div class="footer-text">
-                    <a href="${baseUrl}/faq" class="footer-link">Help & FAQ</a> • 
-                    <a href="${baseUrl}/dashboard/settings" class="footer-link">Notification Settings</a> • 
-                    <a href="${baseUrl}/about" class="footer-link">About Us</a>
-                </div>
+            <div class="protection-notice">
+                <div class="protection-notice-title">🛡️ Safe Trading</div>
+                <div class="info-box-content">All transactions are protected by our secure payment system and buyer protection policies. Trade with confidence!</div>
             </div>
+            
+            <p>Questions? Our community support team is here to help you get started.</p>
+            
+            <p>Happy collecting!<br>
+            <strong>The Waboku Team</strong></p>
+        </div>
+        <div class="footer">
+            <div class="social-links">
+                <a href="#">Discord</a>
+                <a href="#">Twitter</a>
+                <a href="#">Instagram</a>
+            </div>
+            <p>© 2025 Waboku. All rights reserved.</p>
+            <p>Questions? Contact us at support@waboku.gg</p>
         </div>
     </div>
 </body>
 </html>`;
 
   const text = `
-Welcome to Waboku.gg!
+Welcome to the community! 🎴
 
-Hi ${userName},
+Hey ${userName},
 
-Welcome to the premier trading card marketplace! We're excited to have you join our community of collectors and traders. Your journey into the world of trading cards starts here.
+Welcome to Waboku - where collectors connect to buy, sell, and trade their favorite TCG cards! You've just joined a thriving community of passionate collectors and players.
 
-What you can do on Waboku.gg:
-🃏 Buy & Sell Cards - Discover rare cards from popular games like Pokémon, Yu-Gi-Oh!, and more
-💰 Make Offers - Negotiate prices and make deals with other collectors  
-💬 Chat & Connect - Message other collectors and build lasting relationships
-⭐ Build Reputation - Earn reviews and establish trust in the community
+🌟 How Waboku Works
+Waboku connects buyers and sellers directly. Browse listings from verified community members, make offers, and discover rare cards from fellow collectors near you.
 
-Get started: ${baseUrl}/dashboard
+Here's what you can do right now:
+• Browse listings from verified sellers in your area
+• Save favorites and get notifications when similar cards are listed
+• Create your first listing to sell cards from your collection
+• Message sellers directly to ask questions or negotiate prices
 
-Ready to start trading? Create your first listing: ${baseUrl}/dashboard/create-listing
+Start Browsing: ${baseUrl}
+Create Your First Listing: ${baseUrl}/dashboard/create-listing
 
-Help & FAQ: ${baseUrl}/faq
-Notification Settings: ${baseUrl}/dashboard/settings
-About Us: ${baseUrl}/about
+🛡️ Safe Trading
+All transactions are protected by our secure payment system and buyer protection policies. Trade with confidence!
+
+Questions? Our community support team is here to help you get started.
+
+Happy collecting!
+The Waboku Team
+
+© 2025 Waboku. All rights reserved.
+Questions? Contact us at support@waboku.gg
 `;
 
   return { subject, html, text };

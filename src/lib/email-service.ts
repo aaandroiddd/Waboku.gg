@@ -1,6 +1,20 @@
 import { NotificationType, NotificationPreferences } from '@/types/notification';
-import { getNotificationEmailTemplate, NotificationEmailData } from './email-templates/notification-templates';
-import { getWelcomeEmailTemplate, WelcomeEmailData } from './email-templates/welcome-template';
+import { 
+  getNotificationEmailTemplate, 
+  NotificationEmailData,
+  getWelcomeEmailTemplate, 
+  WelcomeEmailData,
+  getOrderConfirmationTemplate,
+  getPaymentConfirmationTemplate,
+  getShippingNotificationTemplate,
+  getVerificationEmailTemplate,
+  getPasswordResetTemplate,
+  OrderConfirmationData,
+  PaymentConfirmationData,
+  ShippingNotificationData,
+  VerificationEmailData,
+  PasswordResetData
+} from './email-templates';
 
 // Conditionally import and initialize Resend only on server-side
 let Resend: any = null;
@@ -186,6 +200,206 @@ export class EmailService {
       return true;
     } catch (error) {
       console.error('Error sending welcome email:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Send order confirmation email
+   */
+  async sendOrderConfirmationEmail(data: OrderConfirmationData): Promise<boolean> {
+    try {
+      // Only send emails on server-side
+      if (typeof window !== 'undefined') {
+        console.log('Email service called on client-side, skipping order confirmation email send');
+        return false;
+      }
+
+      // Check if Resend is available
+      if (!resend) {
+        console.error('Resend service not initialized');
+        return false;
+      }
+
+      const { subject, html, text } = getOrderConfirmationTemplate(data);
+
+      const result = await resend.emails.send({
+        from: 'Waboku.gg <orders@waboku.gg>',
+        to: [data.userEmail],
+        subject,
+        html,
+        text,
+      });
+
+      if (result.error) {
+        console.error('Error sending order confirmation email:', result.error);
+        return false;
+      }
+
+      console.log(`Order confirmation email sent successfully to ${data.userEmail} (ID: ${result.data?.id})`);
+      return true;
+    } catch (error) {
+      console.error('Error sending order confirmation email:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Send payment confirmation email
+   */
+  async sendPaymentConfirmationEmail(data: PaymentConfirmationData): Promise<boolean> {
+    try {
+      // Only send emails on server-side
+      if (typeof window !== 'undefined') {
+        console.log('Email service called on client-side, skipping payment confirmation email send');
+        return false;
+      }
+
+      // Check if Resend is available
+      if (!resend) {
+        console.error('Resend service not initialized');
+        return false;
+      }
+
+      const { subject, html, text } = getPaymentConfirmationTemplate(data);
+
+      const result = await resend.emails.send({
+        from: 'Waboku.gg <payments@waboku.gg>',
+        to: [data.userEmail],
+        subject,
+        html,
+        text,
+      });
+
+      if (result.error) {
+        console.error('Error sending payment confirmation email:', result.error);
+        return false;
+      }
+
+      console.log(`Payment confirmation email sent successfully to ${data.userEmail} (ID: ${result.data?.id})`);
+      return true;
+    } catch (error) {
+      console.error('Error sending payment confirmation email:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Send shipping notification email
+   */
+  async sendShippingNotificationEmail(data: ShippingNotificationData): Promise<boolean> {
+    try {
+      // Only send emails on server-side
+      if (typeof window !== 'undefined') {
+        console.log('Email service called on client-side, skipping shipping notification email send');
+        return false;
+      }
+
+      // Check if Resend is available
+      if (!resend) {
+        console.error('Resend service not initialized');
+        return false;
+      }
+
+      const { subject, html, text } = getShippingNotificationTemplate(data);
+
+      const result = await resend.emails.send({
+        from: 'Waboku.gg <shipping@waboku.gg>',
+        to: [data.userEmail],
+        subject,
+        html,
+        text,
+      });
+
+      if (result.error) {
+        console.error('Error sending shipping notification email:', result.error);
+        return false;
+      }
+
+      console.log(`Shipping notification email sent successfully to ${data.userEmail} (ID: ${result.data?.id})`);
+      return true;
+    } catch (error) {
+      console.error('Error sending shipping notification email:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Send verification email
+   */
+  async sendVerificationEmail(data: VerificationEmailData): Promise<boolean> {
+    try {
+      // Only send emails on server-side
+      if (typeof window !== 'undefined') {
+        console.log('Email service called on client-side, skipping verification email send');
+        return false;
+      }
+
+      // Check if Resend is available
+      if (!resend) {
+        console.error('Resend service not initialized');
+        return false;
+      }
+
+      const { subject, html, text } = getVerificationEmailTemplate(data);
+
+      const result = await resend.emails.send({
+        from: 'Waboku.gg <verify@waboku.gg>',
+        to: [data.userEmail],
+        subject,
+        html,
+        text,
+      });
+
+      if (result.error) {
+        console.error('Error sending verification email:', result.error);
+        return false;
+      }
+
+      console.log(`Verification email sent successfully to ${data.userEmail} (ID: ${result.data?.id})`);
+      return true;
+    } catch (error) {
+      console.error('Error sending verification email:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Send password reset email
+   */
+  async sendPasswordResetEmail(data: PasswordResetData): Promise<boolean> {
+    try {
+      // Only send emails on server-side
+      if (typeof window !== 'undefined') {
+        console.log('Email service called on client-side, skipping password reset email send');
+        return false;
+      }
+
+      // Check if Resend is available
+      if (!resend) {
+        console.error('Resend service not initialized');
+        return false;
+      }
+
+      const { subject, html, text } = getPasswordResetTemplate(data);
+
+      const result = await resend.emails.send({
+        from: 'Waboku.gg <security@waboku.gg>',
+        to: [data.userEmail],
+        subject,
+        html,
+        text,
+      });
+
+      if (result.error) {
+        console.error('Error sending password reset email:', result.error);
+        return false;
+      }
+
+      console.log(`Password reset email sent successfully to ${data.userEmail} (ID: ${result.data?.id})`);
+      return true;
+    } catch (error) {
+      console.error('Error sending password reset email:', error);
       return false;
     }
   }
