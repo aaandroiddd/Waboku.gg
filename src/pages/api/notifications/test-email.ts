@@ -8,7 +8,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const { userEmail, userName, type = 'test' } = req.body;
+    const { userEmail, userName, type = 'test', listingData } = req.body;
 
     if (!userEmail || !userName) {
       return res.status(400).json({ error: 'userEmail and userName are required' });
@@ -16,6 +16,51 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     let success = false;
     let message = '';
+
+    // Helper function to generate realistic Stripe mock data
+    const generateStripeData = (amount: string) => {
+      const numAmount = parseFloat(amount);
+      const fee = (numAmount * 0.031 + 0.30).toFixed(2);
+      const total = (numAmount + parseFloat(fee) + 5.99).toFixed(2); // Add shipping
+      
+      return {
+        transactionId: `pi_test_${Math.random().toString(36).substr(2, 16)}`,
+        paymentMethod: 'Visa ending in 4242',
+        fee,
+        total,
+        subtotal: amount,
+        shipping: '5.99'
+      };
+    };
+
+    // Helper function to generate order data from listing
+    const generateOrderData = (listing: any, buyer: { name: string; email: string }) => {
+      const stripeData = generateStripeData(listing.price);
+      const orderNumber = `ORD-${Math.random().toString(36).substr(2, 7).toUpperCase()}`;
+      const orderId = `test-order-${Math.random().toString(36).substr(2, 9)}`;
+      
+      return {
+        userName: buyer.name,
+        userEmail: buyer.email,
+        orderNumber,
+        orderDate: new Date().toLocaleDateString(),
+        cardName: listing.cardName,
+        setName: listing.setName,
+        condition: listing.condition,
+        quantity: listing.quantity,
+        price: listing.price,
+        sellerName: listing.sellerName,
+        sellerLocation: listing.sellerLocation,
+        subtotal: stripeData.subtotal,
+        shipping: stripeData.shipping,
+        fee: stripeData.fee,
+        total: stripeData.total,
+        shippingAddress: '123 Main St\nAnytown, CA 12345\nUnited States',
+        orderId,
+        transactionId: stripeData.transactionId,
+        paymentMethod: stripeData.paymentMethod
+      };
+    };
 
     // Test different types of emails
     switch (type) {
@@ -122,9 +167,138 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         message = success ? 'Full notification test completed (in-app notification created, email sending attempted)' : 'Failed to create full notification test';
         break;
 
+      // New marketplace-specific email types
+      case 'marketplace-purchase':
+        if (!listingData) {
+          return res.status(400).json({ error: 'listingData is required for marketplace-purchase type' });
+        }
+        
+        const buyerOrderData = generateOrderData(listingData, { name: userName, email: userEmail });
+        success = await emailService.sendOrderConfirmationEmail(buyerOrderData);
+        message = success ? 'Marketplace purchase confirmation email sent successfully' : 'Failed to send marketplace purchase confirmation email';
+        break;
+
+      case 'marketplace-sale':
+        if (!listingData) {
+          return res.status(400).json({ error: 'listingData is required for marketplace-sale type' });
+        }
+        
+        const saleOrderData = generateOrderData(listingData, { name: listingData.buyerName, email: listingData.buyerEmail });
+        const saleNotificationData = {
+          userName: listingData.sellerName,
+          userEmail: userEmail, // Admin testing email
+          type: 'sale' as const,
+          title: 'New Sale!',
+          message: `Congratulations! ${listingData.buyerName} just purchased your ${listingData.cardName} - ${listingData.setName} for $${listingData.price}. Please prepare the item for shipment.`,
+          actionUrl: `/dashboard/orders/${saleOrderData.orderId}`,
+          data: {
+            orderId: saleOrderData.orderId,
+            listingId: listingData.listingId
+          }
+        };
+        
+        success = await emailService.sendNotificationEmail(saleNotificationData);
+        message = success ? 'Marketplace sale notification email sent successfully' : 'Failed to send marketplace sale notification email';
+        break;
+
+      case 'marketplace-shipping':
+        if (!listingData) {
+          return res.status(400).json({ error: 'listingData is required for marketplace-shipping type' });
+        }
+        
+        const trackingNumber = `1Z999AA${Math.random().toString().substr(2, 9)}`;
+        const marketplaceShippingData = {
+          userName,
+          userEmail,
+          sellerName: listingData.sellerName,
+          sellerLocation: listingData.sellerLocation,
+          orderNumber: `ORD-${Math.random().toString(36).substr(2, 7).toUpperCase()}`,
+          trackingNumber,
+          shippingCarrier: 'UPS',
+          estimatedDelivery: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toLocaleDateString(),
+          shippingAddress: '123 Main St, Anytown, CA 12345',
+          trackingUrl: `https://www.ups.com/track?tracknum=${trackingNumber}`,
+          orderId: `test-order-${Math.random().toString(36).substr(2, 9)}`
+        };
+        
+        success = await emailService.sendShippingNotificationEmail(marketplaceShippingData);
+        message = success ? 'Marketplace shipping notification email sent successfully' : 'Failed to send marketplace shipping notification email';
+        break;
+
+      case 'marketplace-offer':
+        if (!listingData) {
+          return res.status(400).json({ error: 'listingData is required for marketplace-offer type' });
+        }
+        
+        const offerAmount = (parseFloat(listingData.price) * 0.85).toFixed(2); // 15% below asking price
+        const offerNotificationData = {
+          userName: listingData.sellerName,
+          userEmail: userEmail, // Admin testing email
+          type: 'offer' as const,
+          title: 'New Offer Received!',
+          message: `${userName} has made an offer of $${offerAmount} on your ${listingData.cardName} - ${listingData.setName} listing. Review and respond to this offer in your dashboard.`,
+          actionUrl: `/dashboard/offers`,
+          data: {
+            listingId: listingData.listingId,
+            offerAmount,
+            buyerName: userName
+          }
+        };
+        
+        success = await emailService.sendNotificationEmail(offerNotificationData);
+        message = success ? 'Marketplace offer notification email sent successfully' : 'Failed to send marketplace offer notification email';
+        break;
+
+      case 'marketplace-payment-received':
+        if (!listingData) {
+          return res.status(400).json({ error: 'listingData is required for marketplace-payment-received type' });
+        }
+        
+        const sellerPaymentData = generateOrderData(listingData, { name: listingData.buyerName, email: listingData.buyerEmail });
+        const paymentNotificationData = {
+          userName: listingData.sellerName,
+          userEmail: userEmail, // Admin testing email
+          type: 'order_update' as const,
+          title: 'Payment Received!',
+          message: `Payment of $${sellerPaymentData.total} has been received for your ${listingData.cardName} - ${listingData.setName} sale. Please prepare the item for shipment and add tracking information.`,
+          actionUrl: `/dashboard/orders/${sellerPaymentData.orderId}`,
+          data: {
+            orderId: sellerPaymentData.orderId,
+            amount: sellerPaymentData.total
+          }
+        };
+        
+        success = await emailService.sendNotificationEmail(paymentNotificationData);
+        message = success ? 'Marketplace payment received notification email sent successfully' : 'Failed to send marketplace payment received notification email';
+        break;
+
+      case 'marketplace-order-shipped':
+        if (!listingData) {
+          return res.status(400).json({ error: 'listingData is required for marketplace-order-shipped type' });
+        }
+        
+        const shipTrackingNumber = `1Z999AA${Math.random().toString().substr(2, 9)}`;
+        const orderShippedData = {
+          userName,
+          userEmail,
+          sellerName: listingData.sellerName,
+          sellerLocation: listingData.sellerLocation,
+          orderNumber: `ORD-${Math.random().toString(36).substr(2, 7).toUpperCase()}`,
+          trackingNumber: shipTrackingNumber,
+          shippingCarrier: 'UPS',
+          estimatedDelivery: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toLocaleDateString(),
+          shippingAddress: '123 Main St, Anytown, CA 12345',
+          trackingUrl: `https://www.ups.com/track?tracknum=${shipTrackingNumber}`,
+          orderId: `test-order-${Math.random().toString(36).substr(2, 9)}`
+        };
+        
+        success = await emailService.sendShippingNotificationEmail(orderShippedData);
+        message = success ? 'Marketplace order shipped notification email sent successfully' : 'Failed to send marketplace order shipped notification email';
+        break;
+
       default:
         return res.status(400).json({ 
-          error: 'Invalid type. Supported types: welcome, order-confirmation, payment-confirmation, shipping, verification, password-reset, notification, full-notification' 
+          error: 'Invalid type. Supported types: welcome, order-confirmation, payment-confirmation, shipping, verification, password-reset, notification, full-notification, marketplace-purchase, marketplace-sale, marketplace-shipping, marketplace-offer, marketplace-payment-received, marketplace-order-shipped' 
         });
     }
 
@@ -133,7 +307,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       message,
       type,
       userEmail,
-      userName
+      userName,
+      listingData: listingData || null
     });
   } catch (error) {
     console.error('Error testing email:', error);
