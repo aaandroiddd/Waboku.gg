@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle, CheckCircle2, Info } from 'lucide-react';
 import { sendPasswordResetEmail } from 'firebase/auth';
-import { firebaseAuth } from '@/lib/firebase';
+import { auth } from '@/lib/firebase';
 
 export default function PasswordResetForm() {
   const [email, setEmail] = useState('');
@@ -69,7 +69,7 @@ export default function PasswordResetForm() {
         handleCodeInApp: false
       };
 
-      await sendPasswordResetEmail(firebaseAuth, email, actionCodeSettings);
+      await sendPasswordResetEmail(auth, email, actionCodeSettings);
       setSuccess(true);
     } catch (err: any) {
       console.error('Password reset error:', err);

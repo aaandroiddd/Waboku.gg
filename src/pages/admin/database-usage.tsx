@@ -19,7 +19,7 @@ import DatabaseUsageOptimizer from '@/components/DatabaseUsageOptimizer';
 import DatabaseConnectionMonitor from '@/components/DatabaseConnectionMonitor';
 import ComponentDatabaseUsageAnalyzer from '@/components/ComponentDatabaseUsageAnalyzer';
 import { useRouter } from 'next/router';
-import Footer from '@/components/Footer';
+import { Footer } from '@/components/Footer';
 
 // Define types for our usage data
 interface PathUsage {

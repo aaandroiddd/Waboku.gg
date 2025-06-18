@@ -13,7 +13,7 @@ import {
   GoogleAuthProvider,
   signInWithPopup,
   MultiFactorError,
-  MultiFactorResolver
+  getMultiFactorResolver
 } from 'firebase/auth';
 import { doc, setDoc, getDoc, deleteDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { ref, get, update, remove } from 'firebase/database';
@@ -32,7 +32,7 @@ interface AuthContextType {
   isLoading: boolean;
   error: string | null;
   signUp: (email: string, password: string, username: string) => Promise<void>;
-  signIn: (email: string, password: string) => Promise<{ mfaResolver?: MultiFactorResolver }>;
+  signIn: (email: string, password: string) => Promise<{ mfaResolver?: any }>;
   signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
   updateProfile: (data: Partial<UserProfile>) => Promise<void>;
@@ -605,7 +605,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (err.code === 'auth/multi-factor-auth-required') {
           console.log('Multi-factor authentication required');
           // Get the resolver from the error
-          const resolver = MultiFactorResolver.fromError(err);
+          const resolver = getMultiFactorResolver(auth, err);
           return { mfaResolver: resolver };
         }
         

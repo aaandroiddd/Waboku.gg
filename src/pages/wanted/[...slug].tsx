@@ -19,7 +19,7 @@ import { ArrowLeft, Calendar, MapPin, MessageSquare, Flag, Share2 } from "lucide
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/use-toast";
 import { get, ref } from "firebase/database";
-import { firebaseDatabase as database } from "@/lib/firebase";
+import { database } from "@/lib/firebase";
 import { extractWantedPostIdFromSlug, getGameDisplayName } from "@/lib/wanted-posts-slug";
 
 export default function WantedPostDetailPage() {

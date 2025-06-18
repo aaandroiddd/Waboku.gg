@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { doc, getDoc } from 'firebase/firestore';
-import { firebaseDb } from '@/lib/firebase';
+import { db } from '@/lib/firebase';
 
 interface Location {
   latitude: number;
@@ -23,7 +23,7 @@ export const useLocation = (options: LocationOptions = { autoRequest: false }) =
     try {
       // First try to get location from user settings if logged in
       if (user?.uid) {
-        const userDoc = await getDoc(doc(firebaseDb, 'users', user.uid));
+        const userDoc = await getDoc(doc(db, 'users', user.uid));
         const userData = userDoc.data();
         
         if (userData?.location?.latitude && userData?.location?.longitude) {
