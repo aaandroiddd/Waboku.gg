@@ -139,7 +139,7 @@ export default function PasswordResetForm() {
           )}
 
           {isGoogleAccount && (
-            <Alert variant="default" className="bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800">
+            <Alert variant="default" className="dark:bg-blue-900/20 dark:border-blue-800 bg-yellow-600 border-primary">
               <Info className="h-4 w-4 text-blue-500 dark:text-blue-400" />
               <AlertTitle>Google Account Detected</AlertTitle>
               <AlertDescription>
