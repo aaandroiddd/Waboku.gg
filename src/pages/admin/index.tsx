@@ -59,7 +59,6 @@ const SECTIONS = [
   { id: "webhook-notification-test", label: "Webhook & Notification Testing" },
   { id: "wanted-posts", label: "Wanted Posts Debugging Tools" },
 ];
-=======
 
 export default function AdminDashboard() {
   const router = useRouter();
