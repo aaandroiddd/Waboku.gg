@@ -1,8 +1,18 @@
-import { Resend } from 'resend';
 import { NotificationType, NotificationPreferences } from '@/types/notification';
 
-// Initialize Resend
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Conditionally import and initialize Resend only on server-side
+let Resend: any = null;
+let resend: any = null;
+
+// Only initialize Resend on server-side
+if (typeof window === 'undefined') {
+  try {
+    Resend = require('resend').Resend;
+    resend = new Resend(process.env.RESEND_API_KEY);
+  } catch (error) {
+    console.warn('Resend not available:', error);
+  }
+}
 
 export interface EmailNotificationData {
   userId: string;
@@ -217,6 +227,18 @@ Manage your notification preferences: ${baseUrl}/dashboard/settings
     preferences: NotificationPreferences | null = null
   ): Promise<boolean> {
     try {
+      // Only send emails on server-side
+      if (typeof window !== 'undefined') {
+        console.log('Email service called on client-side, skipping email send');
+        return false;
+      }
+
+      // Check if Resend is available
+      if (!resend) {
+        console.error('Resend service not initialized');
+        return false;
+      }
+
       // Check if user wants to receive this type of email
       if (!this.shouldSendEmail(preferences, data.type)) {
         console.log(`Email notification skipped for user ${data.userId} - type ${data.type} disabled in preferences`);
@@ -253,6 +275,18 @@ Manage your notification preferences: ${baseUrl}/dashboard/settings
    */
   async sendWelcomeEmail(userEmail: string, userName: string): Promise<boolean> {
     try {
+      // Only send emails on server-side
+      if (typeof window !== 'undefined') {
+        console.log('Email service called on client-side, skipping welcome email send');
+        return false;
+      }
+
+      // Check if Resend is available
+      if (!resend) {
+        console.error('Resend service not initialized');
+        return false;
+      }
+
       const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://waboku.gg';
       
       const html = `
