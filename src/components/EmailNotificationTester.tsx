@@ -80,7 +80,7 @@ export function EmailNotificationTester({ adminSecret }: EmailNotificationTester
       };
 
       // Add listing data for marketplace-specific email types
-      if (['marketplace-purchase', 'marketplace-sale', 'marketplace-shipping', 'marketplace-offer'].includes(emailType)) {
+      if (['marketplace-purchase', 'marketplace-sale', 'marketplace-shipping', 'marketplace-offer', 'marketplace-payment-received', 'marketplace-order-shipped'].includes(emailType)) {
         requestBody.listingData = {
           ...listingData,
           buyerName: userName,
