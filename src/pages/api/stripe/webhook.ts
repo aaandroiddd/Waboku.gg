@@ -779,6 +779,13 @@ export default async function handler(
       case 'account.updated': {
         const account = event.data.object as Stripe.Account;
         
+        console.log('[Stripe Webhook] Account updated event received:', {
+          accountId: account.id,
+          detailsSubmitted: account.details_submitted,
+          chargesEnabled: account.charges_enabled,
+          payoutsEnabled: account.payouts_enabled
+        });
+        
         // Find the user with this Connect account ID
         const usersSnapshot = await firestoreDb.collection('users')
           .where('stripeConnectAccountId', '==', account.id)
@@ -793,21 +800,28 @@ export default async function handler(
           let status = 'pending';
           if (account.details_submitted && account.charges_enabled && account.payouts_enabled) {
             status = 'active';
+          } else if (account.details_submitted) {
+            status = 'pending';
           }
           
-          await userDoc.ref.update({
+          const updateData = {
             stripeConnectStatus: status,
-            stripeConnectDetailsSubmitted: account.details_submitted,
-            stripeConnectChargesEnabled: account.charges_enabled,
-            stripeConnectPayoutsEnabled: account.payouts_enabled,
+            stripeConnectDetailsSubmitted: account.details_submitted || false,
+            stripeConnectChargesEnabled: account.charges_enabled || false,
+            stripeConnectPayoutsEnabled: account.payouts_enabled || false,
             stripeConnectUpdatedAt: new Date()
-          });
+          };
+          
+          await userDoc.ref.update(updateData);
           
           console.log('[Stripe Webhook] User Connect account updated:', {
             userId,
             accountId: account.id,
-            status
+            status,
+            updateData
           });
+        } else {
+          console.log('[Stripe Webhook] No user found for Connect account:', account.id);
         }
         break;
       }

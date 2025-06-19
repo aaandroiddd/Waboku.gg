@@ -1,7 +1,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { CheckCircle, AlertCircle, ArrowRight, ExternalLink } from 'lucide-react';
+import { CheckCircle, AlertCircle, ArrowRight, ExternalLink, RefreshCw } from 'lucide-react';
 
 interface SellerAccountGuideProps {
   accountStatus: {
@@ -12,6 +12,7 @@ interface SellerAccountGuideProps {
   isLoading: boolean;
   onCreateAccount: () => void;
   onUpdateAccount: () => void;
+  onRefreshStatus?: () => void;
 }
 
 const SellerAccountGuide: React.FC<SellerAccountGuideProps> = ({
@@ -19,6 +20,7 @@ const SellerAccountGuide: React.FC<SellerAccountGuideProps> = ({
   isLoading,
   onCreateAccount,
   onUpdateAccount,
+  onRefreshStatus,
 }) => {
   return (
     <Card>
@@ -79,7 +81,7 @@ const SellerAccountGuide: React.FC<SellerAccountGuideProps> = ({
           </div>
         </div>
       </CardContent>
-      <CardFooter>
+      <CardFooter className="flex flex-col gap-2">
         {!accountStatus.isConnected ? (
           <Button 
             onClick={onCreateAccount} 
@@ -107,6 +109,19 @@ const SellerAccountGuide: React.FC<SellerAccountGuideProps> = ({
           >
             {isLoading ? "Loading..." : "Update Account Information"}
             <ExternalLink className="ml-2 h-4 w-4" />
+          </Button>
+        )}
+        
+        {onRefreshStatus && (
+          <Button 
+            onClick={onRefreshStatus}
+            variant="ghost"
+            size="sm"
+            disabled={isLoading}
+            className="w-full"
+          >
+            <RefreshCw className={`mr-2 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+            {isLoading ? "Refreshing..." : "Refresh Status"}
           </Button>
         )}
       </CardFooter>

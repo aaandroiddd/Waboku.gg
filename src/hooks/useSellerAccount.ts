@@ -74,12 +74,45 @@ export const useSellerAccount = () => {
     if (!user) return;
     
     setLoading(true);
+    setError(null);
     try {
-      const status = await fetchSellerStatus(user.uid);
+      // Use the API endpoint that checks with Stripe directly for the most up-to-date status
+      const token = await user.getIdToken(true);
+      const response = await fetch('/api/stripe/connect/account-status', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch account status from API');
+      }
+      
+      const apiStatus = await response.json();
+      
+      // Convert API response to our expected format
+      const status = {
+        status: apiStatus.status,
+        accountId: apiStatus.accountId,
+        detailsSubmitted: apiStatus.detailsSubmitted,
+        chargesEnabled: apiStatus.chargesEnabled,
+        payoutsEnabled: apiStatus.payoutsEnabled,
+        hasListings: apiStatus.hasListings
+      };
+      
       setSellerStatus(status);
+      console.log('Seller status refreshed from API:', status);
     } catch (err) {
-      console.error("Error refreshing seller status:", err);
-      setError("Failed to refresh seller account information");
+      console.error("Error refreshing seller status from API:", err);
+      // Fallback to local fetch if API fails
+      try {
+        const status = await fetchSellerStatus(user.uid);
+        setSellerStatus(status);
+      } catch (fallbackErr) {
+        console.error("Error in fallback seller status fetch:", fallbackErr);
+        setError("Failed to refresh seller account information");
+      }
     } finally {
       setLoading(false);
     }
