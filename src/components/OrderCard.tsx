@@ -3,10 +3,10 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { formatPrice } from '@/lib/price';
-import { format } from 'date-fns';
+import { format, addDays } from 'date-fns';
 import Image from 'next/image';
 import { UserNameLink } from '@/components/UserNameLink';
-import { Package, ExternalLink, MapPin } from 'lucide-react';
+import { Package, ExternalLink, MapPin, RefreshCw } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { getFirebaseServices } from '@/lib/firebase';
@@ -17,6 +17,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { AcceptedOfferCheckout } from '@/components/AcceptedOfferCheckout';
 import { generateListingUrl } from '@/lib/listing-slug';
+import { RefundRequestDialog } from '@/components/RefundRequestDialog';
 
 interface OrderCardProps {
   order: Order;
@@ -31,6 +32,7 @@ export function OrderCard({ order, isSale = false }: OrderCardProps) {
   const [isLoadingUser, setIsLoadingUser] = useState<boolean>(false);
   const [isCompletingPickup, setIsCompletingPickup] = useState(false);
   const [showCompletePickupDialog, setShowCompletePickupDialog] = useState(false);
+  const [showRefundDialog, setShowRefundDialog] = useState(false);
   
   // Fetch user information when component mounts
   useEffect(() => {
@@ -144,6 +146,44 @@ export function OrderCard({ order, isSale = false }: OrderCardProps) {
     }
   };
   
+  // Function to handle refund request
+  const handleRefundRequest = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent triggering the card click
+    setShowRefundDialog(true);
+  };
+
+  // Function to handle when refund is requested
+  const handleRefundRequested = () => {
+    // Refresh the page to show updated status
+    router.reload();
+  };
+
+  // Check if order is eligible for refund (for buyers only)
+  const isRefundEligible = () => {
+    if (isSale) return false; // Sellers can't request refunds
+    
+    // Check if order has been paid
+    if (!order.paymentIntentId && !order.paymentSessionId) return false;
+    
+    // Check if order is already refunded
+    if (order.status === 'refunded' || order.status === 'partially_refunded') return false;
+    
+    // Check if order is cancelled
+    if (order.status === 'cancelled') return false;
+    
+    // Check if this is a pickup order that has been completed
+    if (order.isPickup && order.pickupCompleted) return false;
+    
+    // Check if refund already requested
+    if (order.refundStatus && order.refundStatus !== 'none') return false;
+    
+    // Check refund deadline (30 days from order creation)
+    const refundDeadline = addDays(order.createdAt, 30);
+    if (new Date() > refundDeadline) return false;
+    
+    return true;
+  };
+
   // Safety check for order
   if (!order || !order.id) {
     console.warn('OrderCard received invalid order data:', order);
@@ -349,6 +389,21 @@ export function OrderCard({ order, isSale = false }: OrderCardProps) {
                 Leave Review
               </Button>
             )}
+
+            {/* Request Refund Button - Only visible for buyers with eligible orders */}
+            {isRefundEligible() && (
+              <Button 
+                variant="outline" 
+                className="border-orange-600 text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-900/20"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleRefundRequest(e);
+                }}
+              >
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Request Refund
+              </Button>
+            )}
           </div>
           
           {safeOrder.isPickup ? (
@@ -411,6 +466,14 @@ export function OrderCard({ order, isSale = false }: OrderCardProps) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Refund Request Dialog */}
+      <RefundRequestDialog
+        open={showRefundDialog}
+        onOpenChange={setShowRefundDialog}
+        order={safeOrder}
+        onRefundRequested={handleRefundRequested}
+      />
     </Card>
   );
 }

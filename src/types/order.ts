@@ -4,7 +4,7 @@ export interface Order {
   buyerId: string;
   sellerId: string;
   amount: number;
-  status: 'pending' | 'completed' | 'cancelled' | 'paid' | 'awaiting_shipping' | 'shipped';
+  status: 'pending' | 'completed' | 'cancelled' | 'paid' | 'awaiting_shipping' | 'shipped' | 'refunded' | 'partially_refunded';
   paymentSessionId?: string;
   paymentIntentId?: string;
   transferId?: string;
@@ -56,6 +56,16 @@ export interface Order {
   noTrackingConfirmed?: boolean;
   trackingRequired?: boolean; // Flag to indicate if tracking is required
   deliveryConfirmed?: boolean; // Flag to indicate if delivery has been confirmed by buyer
+  // Refund-related fields
+  refundStatus?: 'none' | 'requested' | 'processing' | 'completed' | 'failed' | 'cancelled';
+  refundAmount?: number; // Amount refunded (may be partial)
+  refundReason?: string; // Buyer's reason for refund
+  refundRequestedAt?: Date; // When refund was requested
+  refundProcessedAt?: Date; // When refund was processed
+  refundId?: string; // Stripe refund ID
+  refundNotes?: string; // Admin/seller notes about the refund
+  isRefundEligible?: boolean; // Whether the order is eligible for refund
+  refundDeadline?: Date; // Deadline for requesting refund
   createdAt: Date;
   updatedAt: Date;
   listingSnapshot?: {
