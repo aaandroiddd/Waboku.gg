@@ -219,7 +219,7 @@ export default async function handler(
               }
             }
             
-            // Check if this is a payment for an existing pending order
+            // Check if this is a payment for an existing pending order (from accepted offers)
             if (session.metadata?.isPendingOrderPayment === 'true' && session.metadata?.orderId) {
               console.log('[Stripe Webhook] Processing payment for existing pending order:', {
                 orderId: session.metadata.orderId,
@@ -256,22 +256,47 @@ export default async function handler(
                   }
                 }
                 
-                // Update the existing order with payment information
-                const orderRef = firestoreDb.collection('orders').doc(session.metadata.orderId);
-                await orderRef.update({
+                // Update the existing order with payment information and shipping address
+                const updateData: any = {
                   status: 'awaiting_shipping',
                   paymentStatus: 'paid',
                   paymentSessionId: session.id,
                   paymentIntentId: paymentIntentId,
                   platformFee: session.metadata.platformFee ? parseInt(session.metadata.platformFee) / 100 : 0,
-                  ...(paymentMethod && { paymentMethod }),
                   updatedAt: new Date()
-                });
+                };
+
+                // Add payment method if available
+                if (paymentMethod) {
+                  updateData.paymentMethod = paymentMethod;
+                }
+
+                // Add shipping address from Stripe checkout if available
+                if (session.shipping?.address) {
+                  updateData.shippingAddress = {
+                    name: session.shipping.name,
+                    line1: session.shipping.address.line1,
+                    line2: session.shipping.address.line2,
+                    city: session.shipping.address.city,
+                    state: session.shipping.address.state,
+                    postal_code: session.shipping.address.postal_code,
+                    country: session.shipping.address.country,
+                  };
+                  console.log('[Stripe Webhook] Adding shipping address to pending order:', {
+                    name: session.shipping.name,
+                    city: session.shipping.address.city,
+                    state: session.shipping.address.state
+                  });
+                }
+
+                const orderRef = firestoreDb.collection('orders').doc(session.metadata.orderId);
+                await orderRef.update(updateData);
                 
                 console.log('[Stripe Webhook] Updated pending order with payment information:', {
                   orderId: session.metadata.orderId,
                   status: 'awaiting_shipping',
-                  paymentStatus: 'paid'
+                  paymentStatus: 'paid',
+                  hasShippingAddress: !!updateData.shippingAddress
                 });
                 
                 // Send notifications for the updated pending order
@@ -288,8 +313,8 @@ export default async function handler(
                   if (buyerData && sellerData) {
                     const orderNumber = session.metadata.orderId.substring(0, 8).toUpperCase();
                     const orderDate = new Date().toLocaleDateString();
-                    const shippingAddressFormatted = session.shipping?.address ? 
-                      `${session.shipping.name}\n${session.shipping.address.line1}${session.shipping.address.line2 ? '\n' + session.shipping.address.line2 : ''}\n${session.shipping.address.city}, ${session.shipping.address.state} ${session.shipping.address.postal_code}\n${session.shipping.address.country}` : 
+                    const shippingAddressFormatted = updateData.shippingAddress ? 
+                      `${updateData.shippingAddress.name}\n${updateData.shippingAddress.line1}${updateData.shippingAddress.line2 ? '\n' + updateData.shippingAddress.line2 : ''}\n${updateData.shippingAddress.city}, ${updateData.shippingAddress.state} ${updateData.shippingAddress.postal_code}\n${updateData.shippingAddress.country}` : 
                       'No shipping address provided';
 
                     // Send order confirmation email to buyer
@@ -330,33 +355,39 @@ export default async function handler(
                       console.log('[Stripe Webhook] Payment confirmation email sent to buyer for pending order:', buyerData.email);
                     }
 
-                    // Create in-app notification for buyer about order payment
-                    const { notificationService } = await import('@/lib/notification-service');
-                    await notificationService.createNotification({
-                      userId: buyerId,
-                      type: 'order_update',
-                      title: '🛒 Payment Confirmed!',
-                      message: `Your payment for "${listingData.title}" has been processed and the order is awaiting shipment.`,
-                      data: {
-                        orderId: session.metadata.orderId,
-                        actionUrl: `/dashboard/orders/${session.metadata.orderId}`
-                      }
-                    });
-                    console.log('[Stripe Webhook] In-app notification created for buyer (pending order):', buyerId);
+                    // Import notification service and create notifications
+                    try {
+                      const { notificationService } = await import('@/lib/notification-service');
+                      
+                      // Create in-app notification for buyer about order payment
+                      await notificationService.createNotification({
+                        userId: buyerId,
+                        type: 'order_update',
+                        title: '🛒 Payment Confirmed!',
+                        message: `Your payment for "${listingData.title}" has been processed and the order is awaiting shipment.`,
+                        data: {
+                          orderId: session.metadata.orderId,
+                          actionUrl: `/dashboard/orders/${session.metadata.orderId}`
+                        }
+                      });
+                      console.log('[Stripe Webhook] In-app notification created for buyer (pending order):', buyerId);
 
-                    // Create in-app notification for seller about new sale
-                    await notificationService.createNotification({
-                      userId: sellerId,
-                      type: 'sale',
-                      title: '🎉 Payment Received!',
-                      message: `${buyerData.displayName || buyerData.username || 'A buyer'} completed payment for your "${listingData.title}" - $${(session.amount_total ? session.amount_total / 100 : 0).toFixed(2)}`,
-                      data: {
-                        orderId: session.metadata.orderId,
-                        listingId: listingId,
-                        actionUrl: `/dashboard/orders/${session.metadata.orderId}`
-                      }
-                    });
-                    console.log('[Stripe Webhook] In-app notification created for seller (pending order):', sellerId);
+                      // Create in-app notification for seller about new sale
+                      await notificationService.createNotification({
+                        userId: sellerId,
+                        type: 'sale',
+                        title: '🎉 Payment Received!',
+                        message: `${buyerData.displayName || buyerData.username || 'A buyer'} completed payment for your "${listingData.title}" - $${(session.amount_total ? session.amount_total / 100 : 0).toFixed(2)}`,
+                        data: {
+                          orderId: session.metadata.orderId,
+                          listingId: listingId,
+                          actionUrl: `/dashboard/orders/${session.metadata.orderId}`
+                        }
+                      });
+                      console.log('[Stripe Webhook] In-app notification created for seller (pending order):', sellerId);
+                    } catch (notificationImportError) {
+                      console.error('[Stripe Webhook] Error importing notification service for pending order:', notificationImportError);
+                    }
 
                     // Send sale notification email to seller
                     if (sellerData.email) {
@@ -383,8 +414,8 @@ export default async function handler(
                   // Don't throw error - order was updated successfully, notifications are secondary
                 }
                 
-                // No need to create a new order since we're updating an existing one
-                break;
+                // Return early since we've handled the pending order
+                return res.status(200).json({ received: true });
               } catch (err) {
                 console.error('[Stripe Webhook] Error updating pending order:', err);
                 throw err;
@@ -507,7 +538,7 @@ export default async function handler(
                 await orderRef.update({
                   updatedAt: new Date(),
                   paymentIntentId: paymentIntentId, // Ensure payment intent is updated
-                  status: 'completed' // Ensure status is completed
+                  status: 'awaiting_shipping' // Keep status as awaiting_shipping for consistency
                 });
               } else {
                 // Create a new order
