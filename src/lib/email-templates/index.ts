@@ -18,6 +18,12 @@ export {
   getSubscriptionFailedTemplate,
   getSubscriptionRenewalReminderTemplate
 } from './subscription-templates';
+export {
+  getRefundRequestedTemplate,
+  getRefundApprovedTemplate,
+  getRefundDeniedTemplate,
+  getRefundProcessedTemplate
+} from './refund-templates';
 
 // Export types
 export type { EmailTemplateData } from './base-template';
@@ -39,3 +45,9 @@ export type {
   SubscriptionFailedData,
   SubscriptionRenewalReminderData
 } from './subscription-templates';
+export type {
+  RefundRequestedData,
+  RefundApprovedData,
+  RefundDeniedData,
+  RefundProcessedData
+} from './refund-templates';

@@ -18,6 +18,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { AcceptedOfferCheckout } from '@/components/AcceptedOfferCheckout';
 import { generateListingUrl } from '@/lib/listing-slug';
 import { RefundRequestDialog } from '@/components/RefundRequestDialog';
+import { RefundManagementDialog } from '@/components/RefundManagementDialog';
 
 interface OrderCardProps {
   order: Order;
@@ -33,6 +34,7 @@ export function OrderCard({ order, isSale = false }: OrderCardProps) {
   const [isCompletingPickup, setIsCompletingPickup] = useState(false);
   const [showCompletePickupDialog, setShowCompletePickupDialog] = useState(false);
   const [showRefundDialog, setShowRefundDialog] = useState(false);
+  const [showRefundManagementDialog, setShowRefundManagementDialog] = useState(false);
   
   // Fetch user information when component mounts
   useEffect(() => {
@@ -158,6 +160,18 @@ export function OrderCard({ order, isSale = false }: OrderCardProps) {
     router.reload();
   };
 
+  // Function to handle refund management
+  const handleRefundManagement = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent triggering the card click
+    setShowRefundManagementDialog(true);
+  };
+
+  // Function to handle when refund is processed
+  const handleRefundProcessed = () => {
+    // Refresh the page to show updated status
+    router.reload();
+  };
+
   // Check if order is eligible for refund (for buyers only)
   const isRefundEligible = () => {
     if (isSale) return false; // Sellers can't request refunds
@@ -272,13 +286,39 @@ export function OrderCard({ order, isSale = false }: OrderCardProps) {
                       safeOrder.status === 'paid' ? 'success' :
                       safeOrder.status === 'awaiting_shipping' ? 'warning' :
                       safeOrder.status === 'shipped' ? 'info' :
-                      safeOrder.status === 'cancelled' ? 'destructive' : 
+                      safeOrder.status === 'cancelled' ? 'destructive' :
+                      safeOrder.status === 'refunded' ? 'destructive' :
+                      safeOrder.status === 'partially_refunded' ? 'warning' :
                       'secondary'
                     }
                   >
                     {safeOrder.status === 'awaiting_shipping' 
                       ? (!safeOrder.shippingAddress ? 'Requires Shipping Details' : 'Awaiting Shipping')
                       : safeOrder.status.charAt(0).toUpperCase() + safeOrder.status.slice(1).replace('_', ' ')}
+                  </Badge>
+                )}
+                
+                {/* Show refund status badge */}
+                {safeOrder.refundStatus && safeOrder.refundStatus !== 'none' && (
+                  <Badge 
+                    variant={
+                      safeOrder.refundStatus === 'requested' ? 'warning' :
+                      safeOrder.refundStatus === 'processing' ? 'info' :
+                      safeOrder.refundStatus === 'completed' ? 'success' :
+                      safeOrder.refundStatus === 'failed' ? 'destructive' :
+                      safeOrder.refundStatus === 'cancelled' ? 'destructive' :
+                      'secondary'
+                    }
+                    className={
+                      safeOrder.refundStatus === 'requested' ? 'bg-orange-500 text-white' :
+                      safeOrder.refundStatus === 'processing' ? 'bg-blue-500 text-white' :
+                      safeOrder.refundStatus === 'completed' ? 'bg-green-500 text-white' :
+                      safeOrder.refundStatus === 'failed' ? 'bg-red-500 text-white' :
+                      safeOrder.refundStatus === 'cancelled' ? 'bg-gray-500 text-white' :
+                      ''
+                    }
+                  >
+                    Refund {safeOrder.refundStatus.charAt(0).toUpperCase() + safeOrder.refundStatus.slice(1)}
                   </Badge>
                 )}
                 
@@ -404,6 +444,21 @@ export function OrderCard({ order, isSale = false }: OrderCardProps) {
                 Request Refund
               </Button>
             )}
+
+            {/* Manage Refund Button - Only visible for sellers with refund requests */}
+            {isSale && safeOrder.refundStatus === 'requested' && (
+              <Button 
+                variant="outline" 
+                className="border-orange-600 text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-900/20"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleRefundManagement(e);
+                }}
+              >
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Manage Refund
+              </Button>
+            )}
           </div>
           
           {safeOrder.isPickup ? (
@@ -473,6 +528,14 @@ export function OrderCard({ order, isSale = false }: OrderCardProps) {
         onOpenChange={setShowRefundDialog}
         order={safeOrder}
         onRefundRequested={handleRefundRequested}
+      />
+
+      {/* Refund Management Dialog */}
+      <RefundManagementDialog
+        open={showRefundManagementDialog}
+        onOpenChange={setShowRefundManagementDialog}
+        order={safeOrder}
+        onRefundProcessed={handleRefundProcessed}
       />
     </Card>
   );

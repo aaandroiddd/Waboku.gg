@@ -18,6 +18,10 @@ import {
   getSubscriptionCanceledTemplate,
   getSubscriptionFailedTemplate,
   getSubscriptionRenewalReminderTemplate,
+  getRefundRequestedTemplate,
+  getRefundApprovedTemplate,
+  getRefundDeniedTemplate,
+  getRefundProcessedTemplate,
   OrderConfirmationData,
   PaymentConfirmationData,
   ShippingNotificationData,
@@ -31,7 +35,11 @@ import {
   SubscriptionSuccessData,
   SubscriptionCanceledData,
   SubscriptionFailedData,
-  SubscriptionRenewalReminderData
+  SubscriptionRenewalReminderData,
+  RefundRequestedData,
+  RefundApprovedData,
+  RefundDeniedData,
+  RefundProcessedData
 } from './email-templates';
 
 // Conditionally import and initialize Resend only on server-side
@@ -778,6 +786,222 @@ export class EmailService {
       return true;
     } catch (error) {
       console.error('Error sending subscription renewal reminder email:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Send refund requested email
+   */
+  async sendRefundRequestedEmail(data: RefundRequestedData): Promise<boolean> {
+    try {
+      // Only send emails on server-side
+      if (typeof window !== 'undefined') {
+        console.log('Email service called on client-side, skipping refund requested email send');
+        return false;
+      }
+
+      // Check if Resend is available
+      if (!resend) {
+        console.error('Resend service not initialized');
+        return false;
+      }
+
+      const { subject, html, text } = getRefundRequestedTemplate(data);
+
+      const result = await resend.emails.send({
+        from: 'Waboku.gg <refunds@waboku.gg>',
+        to: [data.userEmail],
+        subject,
+        html,
+        text,
+      });
+
+      if (result.error) {
+        console.error('Error sending refund requested email:', result.error);
+        return false;
+      }
+
+      console.log(`Refund requested email sent successfully to ${data.userEmail} (ID: ${result.data?.id})`);
+      return true;
+    } catch (error) {
+      console.error('Error sending refund requested email:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Send refund approved email
+   */
+  async sendRefundApprovedEmail(data: RefundApprovedData): Promise<boolean> {
+    try {
+      // Only send emails on server-side
+      if (typeof window !== 'undefined') {
+        console.log('Email service called on client-side, skipping refund approved email send');
+        return false;
+      }
+
+      // Check if Resend is available
+      if (!resend) {
+        console.error('Resend service not initialized');
+        return false;
+      }
+
+      const { subject, html, text } = getRefundApprovedTemplate(data);
+
+      const result = await resend.emails.send({
+        from: 'Waboku.gg <refunds@waboku.gg>',
+        to: [data.userEmail],
+        subject,
+        html,
+        text,
+      });
+
+      if (result.error) {
+        console.error('Error sending refund approved email:', result.error);
+        return false;
+      }
+
+      console.log(`Refund approved email sent successfully to ${data.userEmail} (ID: ${result.data?.id})`);
+      return true;
+    } catch (error) {
+      console.error('Error sending refund approved email:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Send refund denied email
+   */
+  async sendRefundDeniedEmail(data: RefundDeniedData): Promise<boolean> {
+    try {
+      // Only send emails on server-side
+      if (typeof window !== 'undefined') {
+        console.log('Email service called on client-side, skipping refund denied email send');
+        return false;
+      }
+
+      // Check if Resend is available
+      if (!resend) {
+        console.error('Resend service not initialized');
+        return false;
+      }
+
+      const { subject, html, text } = getRefundDeniedTemplate(data);
+
+      const result = await resend.emails.send({
+        from: 'Waboku.gg <refunds@waboku.gg>',
+        to: [data.userEmail],
+        subject,
+        html,
+        text,
+      });
+
+      if (result.error) {
+        console.error('Error sending refund denied email:', result.error);
+        return false;
+      }
+
+      console.log(`Refund denied email sent successfully to ${data.userEmail} (ID: ${result.data?.id})`);
+      return true;
+    } catch (error) {
+      console.error('Error sending refund denied email:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Send refund processed email
+   */
+  async sendRefundProcessedEmail(data: RefundProcessedData): Promise<boolean> {
+    try {
+      // Only send emails on server-side
+      if (typeof window !== 'undefined') {
+        console.log('Email service called on client-side, skipping refund processed email send');
+        return false;
+      }
+
+      // Check if Resend is available
+      if (!resend) {
+        console.error('Resend service not initialized');
+        return false;
+      }
+
+      const { subject, html, text } = getRefundProcessedTemplate(data);
+
+      const result = await resend.emails.send({
+        from: 'Waboku.gg <refunds@waboku.gg>',
+        to: [data.userEmail],
+        subject,
+        html,
+        text,
+      });
+
+      if (result.error) {
+        console.error('Error sending refund processed email:', result.error);
+        return false;
+      }
+
+      console.log(`Refund processed email sent successfully to ${data.userEmail} (ID: ${result.data?.id})`);
+      return true;
+    } catch (error) {
+      console.error('Error sending refund processed email:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Send notification email with specific type handling
+   */
+  async sendNotificationEmail(data: { to: string; type: string; data: any }): Promise<boolean> {
+    try {
+      // Only send emails on server-side
+      if (typeof window !== 'undefined') {
+        console.log('Email service called on client-side, skipping notification email send');
+        return false;
+      }
+
+      // Check if Resend is available
+      if (!resend) {
+        console.error('Resend service not initialized');
+        return false;
+      }
+
+      let emailResult = false;
+
+      switch (data.type) {
+        case 'refund-requested':
+          emailResult = await this.sendRefundRequestedEmail({
+            userEmail: data.to,
+            ...data.data
+          });
+          break;
+        case 'refund-approved':
+          emailResult = await this.sendRefundApprovedEmail({
+            userEmail: data.to,
+            ...data.data
+          });
+          break;
+        case 'refund-denied':
+          emailResult = await this.sendRefundDeniedEmail({
+            userEmail: data.to,
+            ...data.data
+          });
+          break;
+        case 'refund-processed':
+          emailResult = await this.sendRefundProcessedEmail({
+            userEmail: data.to,
+            ...data.data
+          });
+          break;
+        default:
+          console.log(`Unknown notification email type: ${data.type}`);
+          return false;
+      }
+
+      return emailResult;
+    } catch (error) {
+      console.error('Error sending notification email:', error);
       return false;
     }
   }
