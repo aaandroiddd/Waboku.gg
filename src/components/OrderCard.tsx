@@ -150,7 +150,9 @@ export function OrderCard({ order, isSale = false }: OrderCardProps) {
   
   // Function to handle refund request
   const handleRefundRequest = (e: React.MouseEvent) => {
+    e.preventDefault();
     e.stopPropagation(); // Prevent triggering the card click
+    console.log('Opening refund dialog for order:', order.id);
     setShowRefundDialog(true);
   };
 

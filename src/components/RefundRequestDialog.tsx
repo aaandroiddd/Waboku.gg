@@ -47,6 +47,9 @@ export function RefundRequestDialog({
   const [customReason, setCustomReason] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Debug logging
+  console.log('RefundRequestDialog render:', { open, orderId: order?.id, selectedReason });
+
   // Check if order is eligible for refund
   const checkEligibility = () => {
     // Check if order has been paid
