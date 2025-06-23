@@ -39,8 +39,21 @@ export const database = getFirebaseAdmin().database;
  * Verify Firebase ID token
  */
 export async function verifyIdToken(idToken: string) {
-  const { auth } = getFirebaseAdmin();
-  return await auth.verifyIdToken(idToken);
+  try {
+    console.log('verifyIdToken: Starting token verification');
+    const { auth } = getFirebaseAdmin();
+    console.log('verifyIdToken: Got Firebase Admin auth instance');
+    const result = await auth.verifyIdToken(idToken);
+    console.log('verifyIdToken: Token verification successful for user:', result.uid);
+    return result;
+  } catch (error: any) {
+    console.error('verifyIdToken: Token verification failed:', {
+      error: error.message,
+      code: error.code,
+      stack: error.stack?.split('\n').slice(0, 5).join('\n')
+    });
+    throw error;
+  }
 }
 
 export function getFirebaseAdmin() {

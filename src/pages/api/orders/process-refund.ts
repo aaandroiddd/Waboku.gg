@@ -32,8 +32,27 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     const token = authHeader.split('Bearer ')[1];
-    const decodedToken = await verifyIdToken(token);
-    const userId = decodedToken.uid;
+    
+    // Add more detailed error handling for token verification
+    let decodedToken;
+    let userId;
+    
+    try {
+      console.log('Attempting to verify token for process-refund API');
+      decodedToken = await verifyIdToken(token);
+      userId = decodedToken.uid;
+      console.log('Token verified successfully for user:', userId);
+    } catch (tokenError: any) {
+      console.error('Token verification failed in process-refund:', {
+        error: tokenError.message,
+        code: tokenError.code,
+        stack: tokenError.stack?.split('\n').slice(0, 3).join('\n')
+      });
+      return res.status(401).json({ 
+        error: 'Invalid authorization token',
+        details: tokenError.message || 'Token verification failed'
+      });
+    }
 
     const { db } = getFirebaseServices();
 
