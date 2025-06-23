@@ -14,7 +14,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { formatPrice } from '@/lib/price';
-import { format } from 'date-fns';
+import { format, isValid } from 'date-fns';
 import { AlertTriangle, CheckCircle, XCircle, DollarSign } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
@@ -42,6 +42,40 @@ export function RefundManagementDialog({
   const [isPartialRefund, setIsPartialRefund] = useState(false);
 
   const maxRefundAmount = order.amount || 0;
+
+  // Helper function to safely format dates
+  const formatDate = (date: any, formatString: string, fallback: string = 'Unknown') => {
+    if (!date) return fallback;
+    
+    let dateObj: Date;
+    
+    // Handle different date formats from Firestore
+    if (date instanceof Date) {
+      dateObj = date;
+    } else if (typeof date === 'string') {
+      dateObj = new Date(date);
+    } else if (date && typeof date === 'object' && date.toDate) {
+      // Firestore Timestamp
+      dateObj = date.toDate();
+    } else if (date && typeof date === 'object' && date.seconds) {
+      // Firestore Timestamp object
+      dateObj = new Date(date.seconds * 1000);
+    } else {
+      return fallback;
+    }
+    
+    // Check if the date is valid
+    if (!isValid(dateObj)) {
+      return fallback;
+    }
+    
+    try {
+      return format(dateObj, formatString);
+    } catch (error) {
+      console.error('Error formatting date:', error);
+      return fallback;
+    }
+  };
 
   const handleProcessRefund = async () => {
     if (!action) return;
@@ -152,7 +186,7 @@ export function RefundManagementDialog({
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Order Date:</span>
-                  <span>{format(order.createdAt, 'PPP')}</span>
+                  <span>{formatDate(order.createdAt, 'PPP')}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Status:</span>
@@ -167,7 +201,7 @@ export function RefundManagementDialog({
               <div className="bg-orange-50 dark:bg-orange-900/20 p-4 rounded-lg space-y-2">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Requested:</span>
-                  <span>{order.refundRequestedAt ? format(order.refundRequestedAt, 'PPp') : 'Unknown'}</span>
+                  <span>{formatDate(order.refundRequestedAt, 'PPp')}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Status:</span>
