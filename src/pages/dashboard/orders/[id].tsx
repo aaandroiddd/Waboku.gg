@@ -1152,16 +1152,18 @@ export default function OrderDetailsPage() {
             
             {/* Seller shipping actions for regular orders */}
             {!isUserBuyer && !order.isPickup && (order.status === 'paid' || order.status === 'awaiting_shipping') && (
-              <div className="flex gap-2">
+              <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
                 <Button 
                   variant="outline" 
                   onClick={() => setShowTrackingDialog(true)}
+                  className="w-full sm:w-auto"
                 >
                   <Truck className="mr-2 h-4 w-4" /> Add Tracking
                 </Button>
                 <Button 
                   variant="secondary" 
                   onClick={() => setShowNoTrackingDialog(true)}
+                  className="w-full sm:w-auto"
                 >
                   <Package className="mr-2 h-4 w-4" /> Complete Without Tracking
                 </Button>
