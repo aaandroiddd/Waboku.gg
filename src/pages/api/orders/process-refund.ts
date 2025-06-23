@@ -17,6 +17,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     const { orderId, action, refundAmount, sellerNotes, adminOverride } = req.body;
 
+    console.log('Process refund API called with:', { orderId, action, hasToken: !!req.headers.authorization });
+
     if (!orderId || !action) {
       return res.status(400).json({ error: 'Order ID and action are required' });
     }
@@ -28,6 +30,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Verify authentication
     const authHeader = req.headers.authorization;
     if (!authHeader?.startsWith('Bearer ')) {
+      console.error('No valid authorization header provided');
       return res.status(401).json({ error: 'No valid authorization header' });
     }
 
@@ -39,17 +42,32 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     
     try {
       console.log('Attempting to verify token for process-refund API');
-      decodedToken = await verifyIdToken(token);
-      userId = decodedToken.uid;
-      console.log('Token verified successfully for user:', userId);
+      
+      // Initialize Firebase Admin if not already done
+      try {
+        const { getFirebaseAdmin } = await import('@/lib/firebase-admin');
+        const { auth } = getFirebaseAdmin();
+        console.log('Firebase Admin initialized successfully');
+        
+        decodedToken = await auth.verifyIdToken(token);
+        userId = decodedToken.uid;
+        console.log('Token verified successfully for user:', userId);
+      } catch (adminError: any) {
+        console.error('Firebase Admin initialization or token verification failed:', {
+          error: adminError.message,
+          code: adminError.code,
+          stack: adminError.stack?.split('\n').slice(0, 5).join('\n')
+        });
+        throw adminError;
+      }
     } catch (tokenError: any) {
       console.error('Token verification failed in process-refund:', {
         error: tokenError.message,
         code: tokenError.code,
         stack: tokenError.stack?.split('\n').slice(0, 3).join('\n')
       });
-      return res.status(401).json({ 
-        error: 'Invalid authorization token',
+      return res.status(500).json({ 
+        error: 'Internal server error',
         details: tokenError.message || 'Token verification failed'
       });
     }
@@ -65,10 +83,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     const order = orderDoc.data();
+    console.log('Order found:', { orderId, sellerId: order.sellerId, buyerId: order.buyerId, refundStatus: order.refundStatus });
 
     // Check if user is authorized (seller or admin)
     const isAdmin = decodedToken.admin === true;
     const isSeller = order.sellerId === userId;
+
+    console.log('Authorization check:', { userId, isAdmin, isSeller, sellerId: order.sellerId });
 
     if (!isSeller && !isAdmin && !adminOverride) {
       return res.status(403).json({ error: 'Not authorized to process this refund' });

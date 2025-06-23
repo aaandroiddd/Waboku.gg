@@ -1145,8 +1145,8 @@ export default function OrderDetailsPage() {
               </Card>
             </div>
           </CardContent>
-          <CardFooter className="flex justify-between">
-            <Button onClick={handleBack} variant="outline">
+          <CardFooter className="flex flex-col sm:flex-row gap-4 sm:justify-between">
+            <Button onClick={handleBack} variant="outline" className="w-full sm:w-auto">
               <ArrowLeft className="mr-2 h-4 w-4" /> Back to Orders
             </Button>
             
