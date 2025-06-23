@@ -35,6 +35,14 @@ export function initializeFirebaseAdmin() {
 // Export database directly for convenience
 export const database = getFirebaseAdmin().database;
 
+/**
+ * Verify Firebase ID token
+ */
+export async function verifyIdToken(idToken: string) {
+  const { auth } = getFirebaseAdmin();
+  return await auth.verifyIdToken(idToken);
+}
+
 export function getFirebaseAdmin() {
   if (firebaseAdmin) {
     return {
