@@ -159,7 +159,17 @@ export function RefundRequestDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px]">
+      <DialogContent 
+        className="sm:max-w-[600px]"
+        onClick={(e) => {
+          // Prevent any clicks within the dialog from bubbling up
+          e.stopPropagation();
+        }}
+        onPointerDown={(e) => {
+          // Also prevent pointer events from bubbling
+          e.stopPropagation();
+        }}
+      >
         <DialogHeader>
           <DialogTitle>Request Refund</DialogTitle>
           <DialogDescription>

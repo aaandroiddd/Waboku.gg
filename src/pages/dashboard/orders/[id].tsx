@@ -25,7 +25,9 @@ import { TrackingStatusComponent } from '@/components/TrackingStatus';
 import { UserNameLink } from '@/components/UserNameLink';
 import { ReviewForm } from '@/components/ReviewForm';
 import { OrderShippingInfoDialog } from '@/components/OrderShippingInfoDialog';
+import { RefundRequestDialog } from '@/components/RefundRequestDialog';
 import { generateListingUrl } from '@/lib/listing-slug';
+import { addDays } from 'date-fns';
 
 export default function OrderDetailsPage() {
   const router = useRouter();
@@ -49,6 +51,7 @@ export default function OrderDetailsPage() {
   const [showCompletePickupDialog, setShowCompletePickupDialog] = useState(false);
   const [showReviewDialog, setShowReviewDialog] = useState(false);
   const [showShippingInfoDialog, setShowShippingInfoDialog] = useState(false);
+  const [showRefundDialog, setShowRefundDialog] = useState(false);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
 
   // Check if we should show the review dialog based on URL query param
@@ -438,6 +441,43 @@ export default function OrderDetailsPage() {
   }
 
   const isUserBuyer = user?.uid === order.buyerId;
+
+  // Check if order is eligible for refund (for buyers only)
+  const isRefundEligible = () => {
+    if (!isUserBuyer) return false; // Only buyers can request refunds
+    
+    // Check if order has been paid
+    if (!order.paymentIntentId && !order.paymentSessionId) return false;
+    
+    // Check if order is already refunded
+    if (order.status === 'refunded' || order.status === 'partially_refunded') return false;
+    
+    // Check if order is cancelled
+    if (order.status === 'cancelled') return false;
+    
+    // Check if this is a pickup order that has been completed
+    if (order.isPickup && order.pickupCompleted) return false;
+    
+    // Check if refund already requested
+    if (order.refundStatus && order.refundStatus !== 'none') return false;
+    
+    // Check refund deadline (30 days from order creation)
+    const refundDeadline = addDays(order.createdAt, 30);
+    if (new Date() > refundDeadline) return false;
+    
+    return true;
+  };
+
+  // Function to handle refund request
+  const handleRefundRequest = () => {
+    setShowRefundDialog(true);
+  };
+
+  // Function to handle when refund is requested
+  const handleRefundRequested = () => {
+    // Refresh the page to show updated status
+    router.reload();
+  };
 
   return (
     <DashboardLayout>
@@ -1139,20 +1179,34 @@ export default function OrderDetailsPage() {
               </Button>
             )}
             
-            {/* Buyer actions - 'confirm delivery' button removed as requested */}
-            {isUserBuyer && order.status === 'completed' && !order.reviewSubmitted && (
-              <Button 
-                variant="primary" 
-                onClick={() => setShowReviewDialog(true)}
-              >
-                <Star className="mr-2 h-4 w-4" /> Leave Review
-              </Button>
-            )}
-            {isUserBuyer && order.status === 'completed' && order.reviewSubmitted && (
-              <Button variant="outline" onClick={() => toast.info('Contact support for any issues with this order')}>
-                <Package className="mr-2 h-4 w-4" /> Report Issue
-              </Button>
-            )}
+            {/* Buyer actions */}
+            <div className="flex gap-2">
+              {isUserBuyer && order.status === 'completed' && !order.reviewSubmitted && (
+                <Button 
+                  variant="primary" 
+                  onClick={() => setShowReviewDialog(true)}
+                >
+                  <Star className="mr-2 h-4 w-4" /> Leave Review
+                </Button>
+              )}
+              {isUserBuyer && order.status === 'completed' && order.reviewSubmitted && (
+                <Button variant="outline" onClick={() => toast.info('Contact support for any issues with this order')}>
+                  <Package className="mr-2 h-4 w-4" /> Report Issue
+                </Button>
+              )}
+              
+              {/* Request Refund Button - Only visible for buyers with eligible orders */}
+              {isRefundEligible() && (
+                <Button 
+                  variant="outline" 
+                  className="border-orange-600 text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-900/20"
+                  onClick={handleRefundRequest}
+                >
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                  Request Refund
+                </Button>
+              )}
+            </div>
           </CardFooter>
         </Card>
       </div>
@@ -1322,6 +1376,16 @@ export default function OrderDetailsPage() {
             });
             toast.success('Shipping information updated successfully');
           }}
+        />
+      )}
+
+      {/* Refund Request Dialog */}
+      {order && (
+        <RefundRequestDialog
+          open={showRefundDialog}
+          onOpenChange={setShowRefundDialog}
+          order={order}
+          onRefundRequested={handleRefundRequested}
         />
       )}
     </DashboardLayout>
