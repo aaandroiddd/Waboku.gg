@@ -1,7 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { getFirebaseServices } from '@/lib/firebase';
 import { doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
-import { verifyIdToken } from '@/lib/firebase-admin';
+import { getFirebaseAdmin } from '@/lib/firebase-admin';
 import Stripe from 'stripe';
 import { emailService } from '@/lib/email-service';
 
@@ -17,7 +17,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     const { orderId, action, refundAmount, sellerNotes, adminOverride } = req.body;
 
+    console.log('=== REFUND PROCESSING DEBUG START ===');
     console.log('Process refund API called with:', { orderId, action, hasToken: !!req.headers.authorization });
+    console.log('Environment check:');
+    console.log('- FIREBASE_PROJECT_ID:', !!process.env.FIREBASE_PROJECT_ID);
+    console.log('- FIREBASE_CLIENT_EMAIL:', !!process.env.FIREBASE_CLIENT_EMAIL);
+    console.log('- FIREBASE_PRIVATE_KEY:', !!process.env.FIREBASE_PRIVATE_KEY);
 
     if (!orderId || !action) {
       return res.status(400).json({ error: 'Order ID and action are required' });
@@ -35,42 +40,70 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     const token = authHeader.split('Bearer ')[1];
+    console.log('Token length:', token.length);
+    console.log('Token starts with:', token.substring(0, 20) + '...');
     
-    // Verify authentication using the imported verifyIdToken function
+    // Initialize Firebase Admin with detailed logging
+    let auth;
+    try {
+      console.log('Attempting to get Firebase Admin...');
+      const firebaseAdmin = getFirebaseAdmin();
+      auth = firebaseAdmin.auth;
+      console.log('Firebase Admin initialized successfully');
+      console.log('Auth object type:', typeof auth);
+      console.log('Auth has verifyIdToken:', typeof auth.verifyIdToken === 'function');
+    } catch (initError: any) {
+      console.error('Firebase Admin initialization failed:', initError.message);
+      console.error('Init error stack:', initError.stack);
+      return res.status(500).json({ 
+        error: 'Internal server error', 
+        details: 'Firebase initialization failed: ' + initError.message 
+      });
+    }
+    
+    // Verify authentication with comprehensive error handling
     let decodedToken;
     let userId;
     
     try {
       console.log('Attempting to verify token for process-refund API');
-      console.log('Token length:', token.length);
-      console.log('Token starts with:', token.substring(0, 20) + '...');
       
-      decodedToken = await verifyIdToken(token);
+      // Check if auth is properly initialized
+      if (!auth || typeof auth.verifyIdToken !== 'function') {
+        throw new Error('Firebase Auth not properly initialized');
+      }
+      
+      decodedToken = await auth.verifyIdToken(token);
       userId = decodedToken.uid;
       console.log('Token verified successfully for user:', userId);
+      console.log('Token claims:', Object.keys(decodedToken));
     } catch (tokenError: any) {
       console.error('Token verification failed in process-refund:', {
         error: tokenError.message,
         code: tokenError.code,
-        stack: tokenError.stack?.split('\n').slice(0, 3).join('\n')
+        stack: tokenError.stack?.split('\n').slice(0, 5).join('\n')
       });
       
-      // Try alternative approach - direct Firebase Admin auth
-      try {
-        console.log('Trying direct Firebase Admin auth approach...');
-        const { getFirebaseAdmin } = require('@/lib/firebase-admin');
-        const { auth } = getFirebaseAdmin();
-        decodedToken = await auth.verifyIdToken(token);
-        userId = decodedToken.uid;
-        console.log('Direct auth verification successful for user:', userId);
-      } catch (directAuthError: any) {
-        console.error('Direct auth verification also failed:', {
-          error: directAuthError.message,
-          code: directAuthError.code
+      // Provide more specific error messages
+      if (tokenError.code === 'auth/id-token-expired') {
+        return res.status(401).json({ 
+          error: 'Token expired', 
+          details: 'Please refresh and try again.' 
         });
+      } else if (tokenError.code === 'auth/invalid-id-token') {
+        return res.status(401).json({ 
+          error: 'Invalid token', 
+          details: 'Authentication token is invalid.' 
+        });
+      } else if (tokenError.code === 'auth/project-not-found') {
+        return res.status(500).json({ 
+          error: 'Configuration error', 
+          details: 'Firebase project configuration issue.' 
+        });
+      } else {
         return res.status(500).json({ 
           error: 'Internal server error',
-          details: 'Missing or insufficient permissions.'
+          details: 'Authentication failed: ' + tokenError.message
         });
       }
     }
