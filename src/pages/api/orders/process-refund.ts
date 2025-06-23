@@ -42,6 +42,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     
     try {
       console.log('Attempting to verify token for process-refund API');
+      console.log('Token length:', token.length);
+      console.log('Token starts with:', token.substring(0, 20) + '...');
+      
       decodedToken = await verifyIdToken(token);
       userId = decodedToken.uid;
       console.log('Token verified successfully for user:', userId);
@@ -51,10 +54,25 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         code: tokenError.code,
         stack: tokenError.stack?.split('\n').slice(0, 3).join('\n')
       });
-      return res.status(401).json({ 
-        error: 'Unauthorized',
-        details: 'Invalid or expired token'
-      });
+      
+      // Try alternative approach - direct Firebase Admin auth
+      try {
+        console.log('Trying direct Firebase Admin auth approach...');
+        const { getFirebaseAdmin } = require('@/lib/firebase-admin');
+        const { auth } = getFirebaseAdmin();
+        decodedToken = await auth.verifyIdToken(token);
+        userId = decodedToken.uid;
+        console.log('Direct auth verification successful for user:', userId);
+      } catch (directAuthError: any) {
+        console.error('Direct auth verification also failed:', {
+          error: directAuthError.message,
+          code: directAuthError.code
+        });
+        return res.status(500).json({ 
+          error: 'Internal server error',
+          details: 'Missing or insufficient permissions.'
+        });
+      }
     }
 
     const { db } = getFirebaseServices();
