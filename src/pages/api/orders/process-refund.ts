@@ -36,39 +36,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const token = authHeader.split('Bearer ')[1];
     
-    // Add more detailed error handling for token verification
+    // Verify authentication using the imported verifyIdToken function
     let decodedToken;
     let userId;
     
     try {
       console.log('Attempting to verify token for process-refund API');
-      
-      // Initialize Firebase Admin if not already done
-      try {
-        const { getFirebaseAdmin } = await import('@/lib/firebase-admin');
-        const { auth } = getFirebaseAdmin();
-        console.log('Firebase Admin initialized successfully');
-        
-        decodedToken = await auth.verifyIdToken(token);
-        userId = decodedToken.uid;
-        console.log('Token verified successfully for user:', userId);
-      } catch (adminError: any) {
-        console.error('Firebase Admin initialization or token verification failed:', {
-          error: adminError.message,
-          code: adminError.code,
-          stack: adminError.stack?.split('\n').slice(0, 5).join('\n')
-        });
-        throw adminError;
-      }
+      decodedToken = await verifyIdToken(token);
+      userId = decodedToken.uid;
+      console.log('Token verified successfully for user:', userId);
     } catch (tokenError: any) {
       console.error('Token verification failed in process-refund:', {
         error: tokenError.message,
         code: tokenError.code,
         stack: tokenError.stack?.split('\n').slice(0, 3).join('\n')
       });
-      return res.status(500).json({ 
-        error: 'Internal server error',
-        details: tokenError.message || 'Token verification failed'
+      return res.status(401).json({ 
+        error: 'Unauthorized',
+        details: 'Invalid or expired token'
       });
     }
 

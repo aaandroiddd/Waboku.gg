@@ -26,6 +26,7 @@ import { UserNameLink } from '@/components/UserNameLink';
 import { ReviewForm } from '@/components/ReviewForm';
 import { OrderShippingInfoDialog } from '@/components/OrderShippingInfoDialog';
 import { RefundRequestDialog } from '@/components/RefundRequestDialog';
+import { RefundManagementDialog } from '@/components/RefundManagementDialog';
 import { generateListingUrl } from '@/lib/listing-slug';
 import { addDays } from 'date-fns';
 
@@ -52,6 +53,7 @@ export default function OrderDetailsPage() {
   const [showReviewDialog, setShowReviewDialog] = useState(false);
   const [showShippingInfoDialog, setShowShippingInfoDialog] = useState(false);
   const [showRefundDialog, setShowRefundDialog] = useState(false);
+  const [showRefundManagementDialog, setShowRefundManagementDialog] = useState(false);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
 
   // Check if we should show the review dialog based on URL query param
@@ -475,6 +477,17 @@ export default function OrderDetailsPage() {
 
   // Function to handle when refund is requested
   const handleRefundRequested = () => {
+    // Refresh the page to show updated status
+    router.reload();
+  };
+
+  // Function to handle manage refund for sellers
+  const handleManageRefund = () => {
+    setShowRefundManagementDialog(true);
+  };
+
+  // Function to handle when refund is processed
+  const handleRefundProcessed = () => {
     // Refresh the page to show updated status
     router.reload();
   };
@@ -1181,8 +1194,9 @@ export default function OrderDetailsPage() {
               </Button>
             )}
             
-            {/* Buyer actions */}
+            {/* Buyer and Seller actions */}
             <div className="flex gap-2">
+              {/* Buyer actions */}
               {isUserBuyer && order.status === 'completed' && !order.reviewSubmitted && (
                 <Button 
                   variant="primary" 
@@ -1206,6 +1220,18 @@ export default function OrderDetailsPage() {
                 >
                   <RefreshCw className="mr-2 h-4 w-4" />
                   Request Refund
+                </Button>
+              )}
+
+              {/* Manage Refund Button - Only visible for sellers when refund is requested */}
+              {!isUserBuyer && order.refundStatus === 'requested' && (
+                <Button 
+                  variant="outline" 
+                  className="border-blue-600 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                  onClick={handleManageRefund}
+                >
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                  Manage Refund
                 </Button>
               )}
             </div>
@@ -1388,6 +1414,16 @@ export default function OrderDetailsPage() {
           onOpenChange={setShowRefundDialog}
           order={order}
           onRefundRequested={handleRefundRequested}
+        />
+      )}
+
+      {/* Refund Management Dialog */}
+      {order && (
+        <RefundManagementDialog
+          open={showRefundManagementDialog}
+          onOpenChange={setShowRefundManagementDialog}
+          order={order}
+          onRefundProcessed={handleRefundProcessed}
         />
       )}
     </DashboardLayout>
