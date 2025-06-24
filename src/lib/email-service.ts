@@ -41,6 +41,12 @@ import {
   RefundDeniedData,
   RefundProcessedData
 } from './email-templates';
+import { 
+  getSupportTicketEmailTemplate,
+  getSupportConfirmationEmailTemplate,
+  SupportTicketEmailData,
+  SupportConfirmationEmailData
+} from './email-templates/support-templates';
 
 // Conditionally import and initialize Resend only on server-side
 let Resend: any = null;
@@ -1002,6 +1008,87 @@ export class EmailService {
       return emailResult;
     } catch (error) {
       console.error('Error sending notification email:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Send support ticket email to support team
+   */
+  async sendSupportTicketEmail(data: SupportTicketEmailData): Promise<boolean> {
+    try {
+      // Only send emails on server-side
+      if (typeof window !== 'undefined') {
+        console.log('Email service called on client-side, skipping support ticket email send');
+        return false;
+      }
+
+      // Check if Resend is available
+      if (!resend) {
+        console.error('Resend service not initialized');
+        return false;
+      }
+
+      const { subject, html, text } = getSupportTicketEmailTemplate(data);
+
+      const result = await resend.emails.send({
+        from: 'Waboku.gg Support <noreply@waboku.gg>',
+        to: ['support@waboku.gg'],
+        subject,
+        html,
+        text,
+        replyTo: data.userEmail
+      });
+
+      if (result.error) {
+        console.error('Error sending support ticket email:', result.error);
+        return false;
+      }
+
+      console.log(`Support ticket email sent successfully for ticket #${data.ticketId} (ID: ${result.data?.id})`);
+      return true;
+    } catch (error) {
+      console.error('Error sending support ticket email:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Send support confirmation email to user
+   */
+  async sendSupportConfirmationEmail(data: SupportConfirmationEmailData): Promise<boolean> {
+    try {
+      // Only send emails on server-side
+      if (typeof window !== 'undefined') {
+        console.log('Email service called on client-side, skipping support confirmation email send');
+        return false;
+      }
+
+      // Check if Resend is available
+      if (!resend) {
+        console.error('Resend service not initialized');
+        return false;
+      }
+
+      const { subject, html, text } = getSupportConfirmationEmailTemplate(data);
+
+      const result = await resend.emails.send({
+        from: 'Waboku.gg Support <support@waboku.gg>',
+        to: [data.userEmail],
+        subject,
+        html,
+        text,
+      });
+
+      if (result.error) {
+        console.error('Error sending support confirmation email:', result.error);
+        return false;
+      }
+
+      console.log(`Support confirmation email sent successfully to ${data.userEmail} for ticket #${data.ticketId} (ID: ${result.data?.id})`);
+      return true;
+    } catch (error) {
+      console.error('Error sending support confirmation email:', error);
       return false;
     }
   }
