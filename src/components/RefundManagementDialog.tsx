@@ -163,11 +163,14 @@ export function RefundManagementDialog({
       >
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <AlertTriangle className="h-5 w-5 text-orange-500" />
-            Refund Request Management
+            <AlertTriangle className={`h-5 w-5 ${order.refundStatus === 'failed' ? 'text-red-500' : 'text-orange-500'}`} />
+            {order.refundStatus === 'failed' ? 'Retry Failed Refund' : 'Refund Request Management'}
           </DialogTitle>
           <DialogDescription>
-            Review and process the refund request for this order.
+            {order.refundStatus === 'failed' 
+              ? 'The previous refund attempt failed. You can retry the refund or deny the request.'
+              : 'Review and process the refund request for this order.'
+            }
           </DialogDescription>
         </DialogHeader>
 
@@ -203,15 +206,29 @@ export function RefundManagementDialog({
             {/* Refund Request Information */}
             <div>
               <h4 className="font-semibold mb-2">Refund Request</h4>
-              <div className="bg-orange-50 dark:bg-orange-900/20 p-4 rounded-lg space-y-2">
+              <div className={`p-4 rounded-lg space-y-2 ${
+                order.refundStatus === 'failed' 
+                  ? 'bg-red-50 dark:bg-red-900/20' 
+                  : 'bg-orange-50 dark:bg-orange-900/20'
+              }`}>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Requested:</span>
                   <span>{formatDate(order.refundRequestedAt, 'PPp')}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Status:</span>
-                  <Badge variant="warning">Pending Review</Badge>
+                  <Badge variant={order.refundStatus === 'failed' ? 'destructive' : 'warning'}>
+                    {order.refundStatus === 'failed' ? 'Failed - Retry Available' : 'Pending Review'}
+                  </Badge>
                 </div>
+                {order.refundStatus === 'failed' && order.refundNotes && (
+                  <div>
+                    <span className="text-muted-foreground block mb-1">Failure Reason:</span>
+                    <p className="text-sm bg-background p-2 rounded border text-red-600 dark:text-red-400">
+                      {order.refundNotes}
+                    </p>
+                  </div>
+                )}
                 {order.refundReason && (
                   <div>
                     <span className="text-muted-foreground block mb-1">Buyer's Reason:</span>

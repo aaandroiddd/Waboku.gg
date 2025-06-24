@@ -899,6 +899,108 @@ export default function OrderDetailsPage() {
               </Card>
             </div>
             
+            {/* Refund Status Section - Show when there's refund activity */}
+            {order.refundStatus && order.refundStatus !== 'none' && (
+              <div>
+                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                  <RefreshCw className="h-5 w-5" />
+                  Refund Status
+                </h3>
+                <Card>
+                  <CardContent className="pt-6">
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2">
+                        <Badge 
+                          variant={
+                            order.refundStatus === 'completed' ? 'success' :
+                            order.refundStatus === 'failed' ? 'destructive' :
+                            order.refundStatus === 'cancelled' ? 'secondary' :
+                            'warning'
+                          }
+                          className="px-2 py-1"
+                        >
+                          {order.refundStatus === 'completed' ? 'Refund Completed' :
+                           order.refundStatus === 'failed' ? 'Refund Failed' :
+                           order.refundStatus === 'cancelled' ? 'Refund Denied' :
+                           order.refundStatus === 'requested' ? 'Refund Requested' :
+                           'Refund Pending'}
+                        </Badge>
+                        <span>
+                          {order.refundStatus === 'completed' ? 'The refund has been processed successfully.' :
+                           order.refundStatus === 'failed' ? 'The refund attempt failed and can be retried.' :
+                           order.refundStatus === 'cancelled' ? 'The refund request was denied by the seller.' :
+                           order.refundStatus === 'requested' ? 'A refund has been requested and is awaiting seller review.' :
+                           'Refund status is being processed.'}
+                        </span>
+                      </div>
+
+                      {/* Show refund details */}
+                      {order.refundRequestedAt && (
+                        <div className="bg-muted/50 p-4 rounded-lg space-y-2">
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Requested:</span>
+                            <span>{format(order.refundRequestedAt.toDate ? order.refundRequestedAt.toDate() : new Date(order.refundRequestedAt), 'PPp')}</span>
+                          </div>
+                          {order.refundAmount && (
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">Refund Amount:</span>
+                              <span className="font-semibold">{formatPrice(order.refundAmount)}</span>
+                            </div>
+                          )}
+                          {order.refundReason && (
+                            <div>
+                              <span className="text-muted-foreground block mb-1">Reason:</span>
+                              <p className="text-sm bg-background p-2 rounded border">
+                                {order.refundReason}
+                              </p>
+                            </div>
+                          )}
+                          {order.refundNotes && (
+                            <div>
+                              <span className="text-muted-foreground block mb-1">
+                                {order.refundStatus === 'failed' ? 'Failure Reason:' : 'Notes:'}
+                              </span>
+                              <p className={`text-sm bg-background p-2 rounded border ${
+                                order.refundStatus === 'failed' ? 'text-red-600 dark:text-red-400' : ''
+                              }`}>
+                                {order.refundNotes}
+                              </p>
+                            </div>
+                          )}
+                          {order.refundProcessedAt && (
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">Processed:</span>
+                              <span>{format(order.refundProcessedAt.toDate ? order.refundProcessedAt.toDate() : new Date(order.refundProcessedAt), 'PPp')}</span>
+                            </div>
+                          )}
+                          {order.refundId && (
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">Refund ID:</span>
+                              <span className="font-mono text-sm">{order.refundId}</span>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Show retry information for failed refunds */}
+                      {order.refundStatus === 'failed' && !isUserBuyer && (
+                        <div className="flex items-start gap-2 p-3 rounded-md bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300">
+                          <AlertTriangle className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                          <div>
+                            <p className="font-medium">Refund Failed</p>
+                            <p className="mt-1">
+                              The refund attempt failed. You can retry the refund process or deny the request.
+                              Click the "Retry Refund" button below to try again.
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+
             {/* Shipping/Pickup Status Section */}
             <div>
               <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
@@ -1223,15 +1325,19 @@ export default function OrderDetailsPage() {
                 </Button>
               )}
 
-              {/* Manage Refund Button - Only visible for sellers when refund is requested */}
-              {!isUserBuyer && order.refundStatus === 'requested' && (
+              {/* Manage Refund Button - Only visible for sellers when refund is requested or failed */}
+              {!isUserBuyer && (order.refundStatus === 'requested' || order.refundStatus === 'failed') && (
                 <Button 
                   variant="outline" 
-                  className="border-blue-600 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                  className={
+                    order.refundStatus === 'failed'
+                      ? "border-red-600 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
+                      : "border-blue-600 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                  }
                   onClick={handleManageRefund}
                 >
                   <RefreshCw className="mr-2 h-4 w-4" />
-                  Manage Refund
+                  {order.refundStatus === 'failed' ? 'Retry Refund' : 'Manage Refund'}
                 </Button>
               )}
             </div>
