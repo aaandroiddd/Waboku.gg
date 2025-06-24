@@ -157,9 +157,35 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         // Determine refund amount (full refund if not specified)
         const refundAmountCents = refundAmount ? Math.round(refundAmount * 100) : order.amount * 100;
         
+        // Extract payment intent ID - handle both string and object cases
+        let paymentIntentId = order.paymentIntentId;
+        
+        // If paymentIntentId is an object (stored as string), extract the ID
+        if (typeof paymentIntentId === 'string' && paymentIntentId.startsWith('{')) {
+          try {
+            // This might be a stringified object, try to parse it
+            const parsed = JSON.parse(paymentIntentId);
+            paymentIntentId = parsed.id || paymentIntentId;
+          } catch (parseError) {
+            console.error('Failed to parse payment intent object:', parseError);
+            // If parsing fails, try to extract ID using regex
+            const idMatch = paymentIntentId.match(/pi_[a-zA-Z0-9_]+/);
+            if (idMatch) {
+              paymentIntentId = idMatch[0];
+            }
+          }
+        }
+        
+        // Validate payment intent ID format
+        if (!paymentIntentId || typeof paymentIntentId !== 'string' || !paymentIntentId.startsWith('pi_')) {
+          throw new Error(`Invalid payment intent ID format: ${paymentIntentId}`);
+        }
+        
+        console.log('Processing refund for payment intent:', paymentIntentId);
+        
         // Create refund in Stripe
         const refund = await stripe.refunds.create({
-          payment_intent: order.paymentIntentId,
+          payment_intent: paymentIntentId,
           amount: refundAmountCents,
           reason: 'requested_by_customer',
           metadata: {

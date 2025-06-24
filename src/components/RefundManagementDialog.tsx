@@ -156,9 +156,10 @@ export function RefundManagementDialog({
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent 
-        className="max-w-2xl max-h-[90vh] overflow-y-auto"
+        className="max-w-2xl max-h-[90vh] overflow-y-auto sm:max-h-[85vh]"
         onClick={(e) => e.stopPropagation()}
         onPointerDown={(e) => e.stopPropagation()}
+        onInteractOutside={(e) => e.preventDefault()}
       >
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -233,7 +234,10 @@ export function RefundManagementDialog({
                 <Button
                   variant="outline"
                   className="h-auto p-4 border-green-200 hover:bg-green-50 dark:border-green-800 dark:hover:bg-green-900/20"
-                  onClick={() => setAction('approve')}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setAction('approve');
+                  }}
                 >
                   <div className="flex flex-col items-center gap-2">
                     <CheckCircle className="h-6 w-6 text-green-600" />
@@ -246,7 +250,10 @@ export function RefundManagementDialog({
                 <Button
                   variant="outline"
                   className="h-auto p-4 border-red-200 hover:bg-red-50 dark:border-red-800 dark:hover:bg-red-900/20"
-                  onClick={() => setAction('deny')}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setAction('deny');
+                  }}
                 >
                   <div className="flex flex-col items-center gap-2">
                     <XCircle className="h-6 w-6 text-red-600" />
@@ -287,29 +294,43 @@ export function RefundManagementDialog({
               <div className="space-y-3">
                 <Label>Refund Amount</Label>
                 <div className="space-y-2">
-                  <div className="flex items-center space-x-2">
+                  <div 
+                    className="flex items-center space-x-2 cursor-pointer p-2 rounded hover:bg-muted/50"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIsPartialRefund(false);
+                    }}
+                  >
                     <input
                       type="radio"
                       id="full-refund"
                       name="refund-type"
                       checked={!isPartialRefund}
                       onChange={() => setIsPartialRefund(false)}
-                      className="h-4 w-4"
+                      className="h-4 w-4 cursor-pointer"
+                      onClick={(e) => e.stopPropagation()}
                     />
-                    <label htmlFor="full-refund" className="text-sm font-medium">
+                    <label htmlFor="full-refund" className="text-sm font-medium cursor-pointer">
                       Full Refund: {formatPrice(maxRefundAmount)}
                     </label>
                   </div>
-                  <div className="flex items-center space-x-2">
+                  <div 
+                    className="flex items-center space-x-2 cursor-pointer p-2 rounded hover:bg-muted/50"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIsPartialRefund(true);
+                    }}
+                  >
                     <input
                       type="radio"
                       id="partial-refund"
                       name="refund-type"
                       checked={isPartialRefund}
                       onChange={() => setIsPartialRefund(true)}
-                      className="h-4 w-4"
+                      className="h-4 w-4 cursor-pointer"
+                      onClick={(e) => e.stopPropagation()}
                     />
-                    <label htmlFor="partial-refund" className="text-sm font-medium">
+                    <label htmlFor="partial-refund" className="text-sm font-medium cursor-pointer">
                       Partial Refund
                     </label>
                   </div>
