@@ -150,6 +150,9 @@ const SupportPageContent = () => {
                   <Button onClick={() => setIsSubmitted(false)} variant="outline">
                     Submit Another Ticket
                   </Button>
+                  <Button onClick={() => router.push('/dashboard/support-tickets')} variant="outline">
+                    View My Tickets
+                  </Button>
                   <Button onClick={() => router.push('/dashboard')}>
                     Back to Dashboard
                   </Button>

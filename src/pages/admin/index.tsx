@@ -57,6 +57,7 @@ const SECTIONS = [
   { id: "notification-debug", label: "Notification System Debugger" },
   { id: "email-test", label: "Email Notification Testing" },
   { id: "webhook-notification-test", label: "Webhook & Notification Testing" },
+  { id: "support-management", label: "Support Ticket Management" },
   { id: "wanted-posts", label: "Wanted Posts Debugging Tools" },
 ];
 
@@ -797,6 +798,24 @@ export default function AdminDashboard() {
                       <p><strong>Badge System:</strong> Tests UnreadContext data sources and badge counting logic</p>
                     </div>
                   </div>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+
+            {/* Support Ticket Management */}
+            <AccordionItem value="support-management" id="support-management" ref={el => (sectionRefs.current["support-management"] = el)}>
+              <AccordionTrigger>Support Ticket Management</AccordionTrigger>
+              <AccordionContent>
+                <div className="space-y-4 py-4">
+                  <p className="text-sm text-muted-foreground">
+                    Manage and respond to user support tickets. View all tickets, respond to users, and update ticket statuses.
+                  </p>
+                  <Button 
+                    onClick={() => router.push(`/admin/support-management`)}
+                    className="w-full bg-indigo-600 hover:bg-indigo-700"
+                  >
+                    Support Management Dashboard
+                  </Button>
                 </div>
               </AccordionContent>
             </AccordionItem>
