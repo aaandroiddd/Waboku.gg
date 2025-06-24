@@ -8,7 +8,7 @@ import { Order } from '@/types/order';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { Loader2, RefreshCw, Filter, Search, ArrowUpDown, Download, Check, X } from 'lucide-react';
+import { Loader2, RefreshCw, Filter, Search, ArrowUpDown, Download, Check, X, HelpCircle, MessageCircle } from 'lucide-react';
 import { useRouter } from 'next/router';
 import { toast } from 'sonner';
 import { OrderCard } from '@/components/OrderCard';
@@ -691,6 +691,14 @@ const OrdersComponent = () => {
             <Button 
               variant="outline" 
               size="sm" 
+              onClick={() => router.push('/support')}
+            >
+              <HelpCircle className="mr-2 h-4 w-4" />
+              Get Support
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm" 
               onClick={handleRefresh}
               disabled={isRefreshing}
             >
@@ -923,9 +931,18 @@ const OrdersComponent = () => {
           {purchases.length === 0 ? (
             <div className="text-center py-12 border rounded-lg bg-background">
               <h3 className="text-lg font-medium mb-2">No purchases yet</h3>
-              <p className="text-muted-foreground">
+              <p className="text-muted-foreground mb-4">
                 When you buy items, they will appear here.
               </p>
+              <div className="flex flex-col sm:flex-row gap-2 justify-center">
+                <Button 
+                  variant="outline" 
+                  onClick={() => router.push('/support')}
+                >
+                  <HelpCircle className="mr-2 h-4 w-4" />
+                  Need Help?
+                </Button>
+              </div>
             </div>
           ) : filteredOrders.length === 0 ? (
             <div className="text-center py-12 border rounded-lg bg-background">
@@ -933,7 +950,16 @@ const OrdersComponent = () => {
               <p className="text-muted-foreground mb-4">
                 Try adjusting your filters to see more results.
               </p>
-              <Button variant="outline" onClick={handleClearFilters}>Clear Filters</Button>
+              <div className="flex flex-col sm:flex-row gap-2 justify-center">
+                <Button variant="outline" onClick={handleClearFilters}>Clear Filters</Button>
+                <Button 
+                  variant="outline" 
+                  onClick={() => router.push('/support')}
+                >
+                  <HelpCircle className="mr-2 h-4 w-4" />
+                  Get Support
+                </Button>
+              </div>
             </div>
           ) : (
             <div className="space-y-4">
@@ -948,9 +974,18 @@ const OrdersComponent = () => {
           {sales.length === 0 ? (
             <div className="text-center py-12 border rounded-lg bg-background">
               <h3 className="text-lg font-medium mb-2">No sales yet</h3>
-              <p className="text-muted-foreground">
+              <p className="text-muted-foreground mb-4">
                 When you sell items, they will appear here.
               </p>
+              <div className="flex flex-col sm:flex-row gap-2 justify-center">
+                <Button 
+                  variant="outline" 
+                  onClick={() => router.push('/support')}
+                >
+                  <HelpCircle className="mr-2 h-4 w-4" />
+                  Need Help?
+                </Button>
+              </div>
             </div>
           ) : filteredSales.length === 0 ? (
             <div className="text-center py-12 border rounded-lg bg-background">
@@ -958,7 +993,16 @@ const OrdersComponent = () => {
               <p className="text-muted-foreground mb-4">
                 Try adjusting your filters to see more results.
               </p>
-              <Button variant="outline" onClick={handleClearFilters}>Clear Filters</Button>
+              <div className="flex flex-col sm:flex-row gap-2 justify-center">
+                <Button variant="outline" onClick={handleClearFilters}>Clear Filters</Button>
+                <Button 
+                  variant="outline" 
+                  onClick={() => router.push('/support')}
+                >
+                  <HelpCircle className="mr-2 h-4 w-4" />
+                  Get Support
+                </Button>
+              </div>
             </div>
           ) : (
             <div className="space-y-4">

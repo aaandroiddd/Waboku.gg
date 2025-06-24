@@ -10,8 +10,13 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { HelpCircle, MessageCircle } from "lucide-react";
+import { useRouter } from "next/router";
 
 export default function FAQPage() {
+  const router = useRouter();
+
   return (
     <>
       <div className="container mx-auto py-12 px-4 space-y-16">
@@ -260,13 +265,41 @@ export default function FAQPage() {
 
         {/* Contact Section */}
         <div className="rounded-xl">
-          <Alert variant="primary" className="p-8 text-center">
-            <h2 className="text-2xl font-bold mb-4">Still Have Questions?</h2>
-            <p className="text-lg mb-6">If you couldn't find the answer you were looking for, our support team is here to help.</p>
-            <div className="inline-block">
-              <Badge variant="outline" className="text-lg px-4 py-2">Contact Support</Badge>
-            </div>
-          </Alert>
+          <Card className="border-none shadow-lg">
+            <CardContent className="p-8 text-center">
+              <div className="flex items-center justify-center w-16 h-16 mx-auto mb-4 rounded-full bg-primary/10">
+                <HelpCircle className="w-8 h-8 text-primary" />
+              </div>
+              <h2 className="text-2xl font-bold mb-4">Still Have Questions?</h2>
+              <p className="text-lg text-muted-foreground mb-6 max-w-2xl mx-auto">
+                If you couldn't find the answer you were looking for, our support team is here to help. 
+                Get assistance with orders, payments, disputes, or any other issues.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+                <Button 
+                  onClick={() => router.push('/support')}
+                  className="w-full sm:w-auto"
+                >
+                  <MessageCircle className="mr-2 h-4 w-4" />
+                  Contact Support
+                </Button>
+                <Button 
+                  variant="outline"
+                  onClick={() => router.push('/dashboard/support-tickets')}
+                  className="w-full sm:w-auto"
+                >
+                  <HelpCircle className="mr-2 h-4 w-4" />
+                  View My Tickets
+                </Button>
+              </div>
+              <div className="mt-6 p-4 rounded-lg bg-muted/50">
+                <p className="text-sm text-muted-foreground">
+                  <strong>Need immediate help?</strong> Check out our support center for order issues, 
+                  payment problems, refund requests, and dispute resolution.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
       <Footer />
