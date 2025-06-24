@@ -1,6 +1,4 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { getFirebaseServices } from '@/lib/firebase';
-import { doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { getFirebaseAdmin } from '@/lib/firebase-admin';
 import Stripe from 'stripe';
 import { emailService } from '@/lib/email-service';
@@ -108,17 +106,30 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     }
 
-    const { db } = getFirebaseServices();
-
-    // Get the order
-    const orderRef = doc(db, 'orders', orderId);
-    const orderDoc = await getDoc(orderRef);
-
-    if (!orderDoc.exists()) {
-      return res.status(404).json({ error: 'Order not found' });
+    // Get the order using Firebase Admin SDK
+    let order;
+    let orderRef;
+    try {
+      console.log('Fetching order document using Firebase Admin...');
+      const firebaseAdmin = getFirebaseAdmin();
+      const adminDb = firebaseAdmin.db;
+      
+      orderRef = adminDb.collection('orders').doc(orderId);
+      const orderDoc = await orderRef.get();
+      
+      if (!orderDoc.exists) {
+        return res.status(404).json({ error: 'Order not found' });
+      }
+      
+      order = orderDoc.data();
+      console.log('Order found successfully');
+    } catch (dbError: any) {
+      console.error('Database error:', dbError.message);
+      return res.status(500).json({ 
+        error: 'Database error', 
+        details: dbError.message 
+      });
     }
-
-    const order = orderDoc.data();
     console.log('Order found:', { orderId, sellerId: order.sellerId, buyerId: order.buyerId, refundStatus: order.refundStatus });
 
     // Check if user is authorized (seller or admin)
@@ -158,28 +169,31 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           },
         });
 
-        // Update order in Firestore
+        // Update order in Firestore using Firebase Admin SDK
         const isPartialRefund = refundAmountCents < (order.amount * 100);
         const updateData: any = {
           refundStatus: 'completed',
           refundAmount: refundAmountCents / 100,
-          refundProcessedAt: serverTimestamp(),
+          refundProcessedAt: new Date(),
           refundId: refund.id,
           refundNotes: sellerNotes || '',
           status: isPartialRefund ? 'partially_refunded' : 'refunded',
-          updatedAt: serverTimestamp(),
+          updatedAt: new Date(),
         };
 
-        await updateDoc(orderRef, updateData);
+        await orderRef.update(updateData);
 
         // Send notifications to buyer and seller
         try {
-          // Get user details for notifications
-          const buyerDoc = await getDoc(doc(db, 'users', order.buyerId));
-          const sellerDoc = await getDoc(doc(db, 'users', order.sellerId));
+          // Get user details for notifications using Firebase Admin SDK
+          const firebaseAdmin = getFirebaseAdmin();
+          const adminDb = firebaseAdmin.db;
           
-          const buyerData = buyerDoc.exists() ? buyerDoc.data() : null;
-          const sellerData = sellerDoc.exists() ? sellerDoc.data() : null;
+          const buyerDoc = await adminDb.collection('users').doc(order.buyerId).get();
+          const sellerDoc = await adminDb.collection('users').doc(order.sellerId).get();
+          
+          const buyerData = buyerDoc.exists ? buyerDoc.data() : null;
+          const sellerData = sellerDoc.exists ? sellerDoc.data() : null;
 
           // Notify buyer - refund approved
           if (buyerData?.email) {
@@ -228,11 +242,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       } catch (stripeError: any) {
         console.error('Stripe refund error:', stripeError);
         
-        // Update order status to failed
-        await updateDoc(orderRef, {
+        // Update order status to failed using Firebase Admin SDK
+        await orderRef.update({
           refundStatus: 'failed',
           refundNotes: `Refund failed: ${stripeError.message}`,
-          updatedAt: serverTimestamp(),
+          updatedAt: new Date(),
         });
 
         return res.status(400).json({ 
@@ -242,18 +256,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
 
     } else if (action === 'deny') {
-      // Deny the refund request
-      await updateDoc(orderRef, {
+      // Deny the refund request using Firebase Admin SDK
+      await orderRef.update({
         refundStatus: 'cancelled',
         refundNotes: sellerNotes || 'Refund request denied by seller',
-        refundProcessedAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
+        refundProcessedAt: new Date(),
+        updatedAt: new Date(),
       });
 
       // Send notification to buyer - refund denied
       try {
-        const buyerDoc = await getDoc(doc(db, 'users', order.buyerId));
-        const buyerData = buyerDoc.exists() ? buyerDoc.data() : null;
+        const firebaseAdmin = getFirebaseAdmin();
+        const adminDb = firebaseAdmin.db;
+        
+        const buyerDoc = await adminDb.collection('users').doc(order.buyerId).get();
+        const buyerData = buyerDoc.exists ? buyerDoc.data() : null;
 
         if (buyerData?.email) {
           await emailService.sendNotificationEmail({
