@@ -160,25 +160,62 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         // Extract payment intent ID - handle both string and object cases
         let paymentIntentId = order.paymentIntentId;
         
-        // If paymentIntentId is an object (stored as string), extract the ID
-        if (typeof paymentIntentId === 'string' && paymentIntentId.startsWith('{')) {
-          try {
-            // This might be a stringified object, try to parse it
-            const parsed = JSON.parse(paymentIntentId);
-            paymentIntentId = parsed.id || paymentIntentId;
-          } catch (parseError) {
-            console.error('Failed to parse payment intent object:', parseError);
-            // If parsing fails, try to extract ID using regex
-            const idMatch = paymentIntentId.match(/pi_[a-zA-Z0-9_]+/);
+        console.log('Original paymentIntentId:', typeof paymentIntentId, paymentIntentId);
+        
+        // Handle different formats of payment intent ID
+        if (typeof paymentIntentId === 'object' && paymentIntentId !== null) {
+          // If it's an object, try to extract the ID
+          if (paymentIntentId.id) {
+            paymentIntentId = paymentIntentId.id;
+          } else if (paymentIntentId.payment_intent) {
+            paymentIntentId = paymentIntentId.payment_intent;
+          } else {
+            // Convert object to string and try to extract ID
+            const objString = JSON.stringify(paymentIntentId);
+            const idMatch = objString.match(/pi_[a-zA-Z0-9_]+/);
             if (idMatch) {
               paymentIntentId = idMatch[0];
+            } else {
+              throw new Error(`Cannot extract payment intent ID from object: ${objString}`);
             }
           }
+        } else if (typeof paymentIntentId === 'string') {
+          // If it's a string that looks like JSON, try to parse it
+          if (paymentIntentId.startsWith('{') || paymentIntentId.startsWith('[')) {
+            try {
+              const parsed = JSON.parse(paymentIntentId);
+              if (parsed.id) {
+                paymentIntentId = parsed.id;
+              } else if (parsed.payment_intent) {
+                paymentIntentId = parsed.payment_intent;
+              } else {
+                // Try to extract ID using regex from the JSON string
+                const idMatch = paymentIntentId.match(/pi_[a-zA-Z0-9_]+/);
+                if (idMatch) {
+                  paymentIntentId = idMatch[0];
+                } else {
+                  throw new Error(`Cannot extract payment intent ID from JSON string: ${paymentIntentId}`);
+                }
+              }
+            } catch (parseError) {
+              console.error('Failed to parse payment intent JSON:', parseError);
+              // Try to extract ID using regex as fallback
+              const idMatch = paymentIntentId.match(/pi_[a-zA-Z0-9_]+/);
+              if (idMatch) {
+                paymentIntentId = idMatch[0];
+              } else {
+                throw new Error(`Cannot extract payment intent ID from malformed JSON: ${paymentIntentId}`);
+              }
+            }
+          }
+          // If it's already a proper payment intent ID, keep it as is
         }
+        
+        console.log('Processed paymentIntentId:', paymentIntentId);
         
         // Validate payment intent ID format
         if (!paymentIntentId || typeof paymentIntentId !== 'string' || !paymentIntentId.startsWith('pi_')) {
-          throw new Error(`Invalid payment intent ID format: ${paymentIntentId}`);
+          throw new Error(`Invalid payment intent ID format: ${typeof paymentIntentId === 'object' ? JSON.stringify(paymentIntentId) : paymentIntentId}`);
         }
         
         console.log('Processing refund for payment intent:', paymentIntentId);
