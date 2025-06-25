@@ -1,22 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { getFirestore, FieldValue } from 'firebase-admin/firestore';
-import { initializeApp, getApps, cert } from 'firebase-admin/app';
+import { getFirebaseAdmin } from '@/lib/firebase-admin';
 import { emailService } from '@/lib/email-service';
-
-// Initialize Firebase Admin if not already initialized
-if (!getApps().length) {
-  const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n');
-  
-  initializeApp({
-    credential: cert({
-      projectId: process.env.FIREBASE_PROJECT_ID,
-      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: privateKey,
-    }),
-  });
-}
-
-const db = getFirestore();
 
 interface AddResponseData {
   ticketId: string;
@@ -36,6 +20,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
+    console.log('=== ADMIN SUPPORT ADD RESPONSE API DEBUG START ===');
+    
+    // Initialize Firebase Admin
+    const { db, auth } = getFirebaseAdmin();
+
     // Check admin authorization
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -44,9 +33,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const token = authHeader.split('Bearer ')[1];
     
-    // Verify admin token
-    if (token !== process.env.NEXT_PUBLIC_ADMIN_SECRET) {
-      return res.status(401).json({ error: 'Unauthorized - Invalid admin token' });
+    // Verify the token and check admin status
+    let decodedToken;
+    try {
+      decodedToken = await auth.verifyIdToken(token);
+      console.log('Token verified for admin user:', decodedToken.uid);
+    } catch (tokenError: any) {
+      console.error('Token verification failed:', tokenError.message);
+      return res.status(401).json({ error: 'Invalid authentication token' });
+    }
+
+    // Check if user is admin
+    if (!decodedToken.admin) {
+      return res.status(403).json({ error: 'Access denied - Admin privileges required' });
     }
 
     // Validate request body
@@ -86,6 +85,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     };
 
     // Add response to ticket
+    const { FieldValue } = await import('firebase-admin/firestore');
     await db.collection('supportTickets').doc(ticketId).update({
       responses: FieldValue.arrayUnion(responseData),
       updatedAt: new Date(),

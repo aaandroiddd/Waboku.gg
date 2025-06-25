@@ -1,21 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { getFirestore } from 'firebase-admin/firestore';
-import { initializeApp, getApps, cert } from 'firebase-admin/app';
-
-// Initialize Firebase Admin if not already initialized
-if (!getApps().length) {
-  const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n');
-  
-  initializeApp({
-    credential: cert({
-      projectId: process.env.FIREBASE_PROJECT_ID,
-      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: privateKey,
-    }),
-  });
-}
-
-const db = getFirestore();
+import { getFirebaseAdmin } from '@/lib/firebase-admin';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
@@ -23,6 +7,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
+    console.log('=== ADMIN SUPPORT GET ALL TICKETS API DEBUG START ===');
+    
+    // Initialize Firebase Admin
+    const { db, auth } = getFirebaseAdmin();
+
     // Check admin authorization
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -30,10 +19,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     const token = authHeader.split('Bearer ')[1];
+    console.log('Token length:', token.length);
     
-    // Verify admin token
-    if (token !== process.env.NEXT_PUBLIC_ADMIN_SECRET) {
-      return res.status(401).json({ error: 'Unauthorized - Invalid admin token' });
+    // Verify the token and check admin status
+    let decodedToken;
+    try {
+      decodedToken = await auth.verifyIdToken(token);
+      console.log('Token verified for user:', decodedToken.uid);
+      console.log('User admin status:', decodedToken.admin);
+    } catch (tokenError: any) {
+      console.error('Token verification failed:', tokenError.message);
+      return res.status(401).json({ error: 'Invalid authentication token' });
+    }
+
+    // Check if user is admin
+    if (!decodedToken.admin) {
+      console.error('User is not admin:', decodedToken.uid);
+      return res.status(403).json({ error: 'Access denied - Admin privileges required' });
     }
 
     // Get all support tickets

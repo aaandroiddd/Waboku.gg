@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
+import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -60,6 +61,7 @@ interface SupportTicket {
 const AdminSupportManagement = () => {
   const router = useRouter();
   const { toast } = useToast();
+  const { user } = useAuth();
   
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
   const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(null);
@@ -73,15 +75,22 @@ const AdminSupportManagement = () => {
   const [categoryFilter, setCategoryFilter] = useState("all");
 
   useEffect(() => {
+    if (!user) {
+      router.push('/admin/login');
+      return;
+    }
     fetchTickets();
-  }, []);
+  }, [user, router]);
 
   const fetchTickets = async () => {
+    if (!user) return;
+    
     try {
       setIsLoading(true);
+      const token = await user.getIdToken();
       const response = await fetch('/api/admin/support/get-all-tickets', {
         headers: {
-          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_ADMIN_SECRET}`,
+          'Authorization': `Bearer ${token}`,
         },
       });
 
@@ -103,12 +112,15 @@ const AdminSupportManagement = () => {
     setSelectedTicket(ticket);
     
     // Mark ticket responses as read by support
+    if (!user) return;
+    
     try {
+      const token = await user.getIdToken();
       await fetch('/api/admin/support/mark-read', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_ADMIN_SECRET}`,
+          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({ ticketId: ticket.ticketId }),
       });
@@ -129,15 +141,16 @@ const AdminSupportManagement = () => {
 
   const handleSubmitResponse = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedTicket || !responseMessage.trim()) return;
+    if (!selectedTicket || !responseMessage.trim() || !user) return;
 
     setIsSubmittingResponse(true);
     try {
+      const token = await user.getIdToken();
       const response = await fetch('/api/admin/support/add-response', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_ADMIN_SECRET}`,
+          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({
           ticketId: selectedTicket.ticketId,
@@ -184,14 +197,15 @@ const AdminSupportManagement = () => {
   };
 
   const handleStatusChange = async (newStatus: string) => {
-    if (!selectedTicket) return;
+    if (!selectedTicket || !user) return;
 
     try {
+      const token = await user.getIdToken();
       const response = await fetch('/api/admin/support/update-status', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_ADMIN_SECRET}`,
+          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({
           ticketId: selectedTicket.ticketId,
