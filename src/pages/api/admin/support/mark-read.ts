@@ -34,8 +34,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(401).json({ error: 'Invalid authentication token' });
     }
 
-    // Check if user is admin
-    if (!decodedToken.admin) {
+    // Check if user is admin or moderator
+    const userDoc = await db.collection('users').doc(decodedToken.uid).get();
+    const userData = userDoc.data();
+    
+    const isAdmin = userData?.isAdmin === true;
+    const isModerator = userData?.isModerator === true;
+    const hasModeratorRole = Array.isArray(userData?.roles) && userData.roles.includes('moderator');
+    
+    if (!isAdmin && !isModerator && !hasModeratorRole) {
+      console.error('User is not admin or moderator:', decodedToken.uid);
       return res.status(403).json({ error: 'Access denied - Admin privileges required' });
     }
 

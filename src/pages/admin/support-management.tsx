@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import { useToast } from '@/components/ui/use-toast';
 import { formatDistanceToNow } from 'date-fns';
+import { Footer } from '@/components/Footer';
 
 interface TicketResponse {
   id: string;
@@ -307,20 +308,24 @@ const AdminSupportManagement = () => {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto p-6">
-        <div className="space-y-4">
-          <Skeleton className="h-8 w-64" />
-          <Skeleton className="h-32 w-full" />
-          <Skeleton className="h-32 w-full" />
-          <Skeleton className="h-32 w-full" />
+      <div className="min-h-screen flex flex-col">
+        <div className="container mx-auto p-6 flex-1">
+          <div className="space-y-4">
+            <Skeleton className="h-8 w-64" />
+            <Skeleton className="h-32 w-full" />
+            <Skeleton className="h-32 w-full" />
+            <Skeleton className="h-32 w-full" />
+          </div>
         </div>
+        <Footer />
       </div>
     );
   }
 
   if (selectedTicket) {
     return (
-      <div className="container mx-auto p-6 max-w-6xl">
+      <div className="min-h-screen flex flex-col">
+        <div className="container mx-auto p-6 max-w-6xl flex-1">
         <div className="mb-6">
           <Button 
             variant="ghost" 
@@ -493,12 +498,15 @@ const AdminSupportManagement = () => {
             </div>
           </CardContent>
         </Card>
+        </div>
+        <Footer />
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto p-6">
+    <div className="min-h-screen flex flex-col">
+      <div className="container mx-auto p-6 flex-1">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Support Ticket Management</h1>
@@ -679,6 +687,8 @@ const AdminSupportManagement = () => {
           })}
         </div>
       )}
+      </div>
+      <Footer />
     </div>
   );
 };
