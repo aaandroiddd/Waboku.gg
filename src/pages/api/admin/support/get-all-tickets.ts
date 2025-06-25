@@ -56,12 +56,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       hasModeratorRole
     });
 
-    // Get all support tickets
-    const ticketsSnapshot = await db
-      .collection('supportTickets')
-      .orderBy('priorityLevel', 'desc')
-      .orderBy('createdAt', 'desc')
-      .get();
+    // Get all support tickets - using simple query to avoid index issues
+    let ticketsSnapshot;
+    try {
+      // Try with ordering first
+      ticketsSnapshot = await db
+        .collection('supportTickets')
+        .orderBy('createdAt', 'desc')
+        .get();
+    } catch (indexError: any) {
+      console.log('Falling back to simple query due to index error:', indexError.message);
+      // Fallback to simple query without ordering
+      ticketsSnapshot = await db
+        .collection('supportTickets')
+        .get();
+    }
 
     const tickets = ticketsSnapshot.docs.map(doc => {
       const data = doc.data();
@@ -69,6 +78,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       // Convert Firestore timestamps to Date objects
       const ticket = {
         ...data,
+        ticketId: doc.id, // Ensure we have the document ID
         createdAt: data.createdAt?.toDate() || new Date(),
         updatedAt: data.updatedAt?.toDate() || new Date(),
         lastResponseAt: data.lastResponseAt?.toDate() || null,
@@ -89,9 +99,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       };
     });
 
+    // Sort tickets: priority first (critical=4, high=3, medium=2, low=1), then by creation date
+    const sortedTickets = tickets.sort((a, b) => {
+      // First sort by priority level (higher priority first)
+      const priorityA = a.priorityLevel || 0;
+      const priorityB = b.priorityLevel || 0;
+      if (priorityA !== priorityB) {
+        return priorityB - priorityA;
+      }
+      
+      // Then sort by creation date (newest first)
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    });
+
+    console.log(`Successfully fetched ${sortedTickets.length} support tickets`);
+
     res.status(200).json({
       success: true,
-      tickets
+      tickets: sortedTickets
     });
 
   } catch (error) {
