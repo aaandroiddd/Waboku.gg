@@ -113,6 +113,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     });
 
     console.log(`Successfully fetched ${sortedTickets.length} support tickets`);
+    
+    // Log some ticket details for debugging
+    if (sortedTickets.length > 0) {
+      console.log('Sample ticket data:', {
+        firstTicket: {
+          ticketId: sortedTickets[0].ticketId,
+          status: sortedTickets[0].status,
+          responsesCount: sortedTickets[0].responses?.length || 0,
+          hasUnreadFromUser: sortedTickets[0].hasUnreadFromUser
+        }
+      });
+    }
 
     res.status(200).json({
       success: true,
