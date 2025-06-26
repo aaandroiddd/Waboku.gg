@@ -78,13 +78,20 @@ const SupportTicketsPageContent = () => {
   const [error, setError] = useState("");
   const [responseMessage, setResponseMessage] = useState("");
 
-  // Redirect if not authenticated
+  // Redirect if not authenticated and set up auto-refresh
   useEffect(() => {
     if (!user) {
       router.push('/auth/sign-in?redirect=/dashboard/support-tickets');
       return;
     }
     fetchTickets();
+    
+    // Set up auto-refresh every 30 seconds to sync with admin updates
+    const interval = setInterval(() => {
+      fetchTickets();
+    }, 30000);
+    
+    return () => clearInterval(interval);
   }, [user, router]);
 
   const fetchTickets = async () => {
@@ -475,43 +482,42 @@ const SupportTicketsPageContent = () => {
                 onClick={() => handleTicketClick(ticket)}
               >
                 <CardContent className="pt-6">
-                  <div className="flex items-start justify-between">
-                    <div className="space-y-2 flex-1">
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-medium">
-                          #{ticket.ticketId} - {ticket.subject}
-                        </h3>
-                        {ticket.hasUnreadResponses && (
-                          <Badge variant="destructive" className="text-xs">
-                            New Response
-                          </Badge>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <Badge className={getStatusColor(ticket.status)}>
-                          {getStatusIcon(ticket.status)}
-                          <span className="ml-1 capitalize">{ticket.status.replace('_', ' ')}</span>
+                  <div className="space-y-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <h3 className="font-medium text-sm sm:text-base flex-1 min-w-0">
+                        <span className="text-muted-foreground">#</span>{ticket.ticketId} - {ticket.subject}
+                      </h3>
+                      {ticket.hasUnreadResponses && (
+                        <Badge variant="destructive" className="text-xs shrink-0 ml-2">
+                          <span className="hidden sm:inline">New Response</span>
+                          <span className="sm:hidden">New</span>
                         </Badge>
-                        <Badge className={getPriorityColor(ticket.priority)}>
-                          <AlertTriangle className="h-3 w-3 mr-1" />
-                          {ticket.priority.charAt(0).toUpperCase() + ticket.priority.slice(1)}
-                        </Badge>
-                        <Badge variant="outline">
-                          {ticket.category.charAt(0).toUpperCase() + ticket.category.slice(1)}
-                        </Badge>
-                      </div>
-                      <p className="text-sm text-muted-foreground line-clamp-2">
-                        {ticket.description}
-                      </p>
-                      <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                        <span>Created {formatDistanceToNow(ticket.createdAt)} ago</span>
-                        {ticket.responses.length > 0 && (
-                          <span>{ticket.responses.length} response{ticket.responses.length !== 1 ? 's' : ''}</span>
-                        )}
-                        {ticket.lastResponseAt && (
-                          <span>Last activity {formatDistanceToNow(ticket.lastResponseAt)} ago</span>
-                        )}
-                      </div>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <Badge className={getStatusColor(ticket.status)}>
+                        {getStatusIcon(ticket.status)}
+                        <span className="ml-1 capitalize">{ticket.status.replace('_', ' ')}</span>
+                      </Badge>
+                      <Badge className={getPriorityColor(ticket.priority)}>
+                        <AlertTriangle className="h-3 w-3 mr-1" />
+                        {ticket.priority.charAt(0).toUpperCase() + ticket.priority.slice(1)}
+                      </Badge>
+                      <Badge variant="outline">
+                        {ticket.category.charAt(0).toUpperCase() + ticket.category.slice(1)}
+                      </Badge>
+                    </div>
+                    <p className="text-sm text-muted-foreground line-clamp-2">
+                      {ticket.description}
+                    </p>
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 text-xs text-muted-foreground">
+                      <span>Created {formatDistanceToNow(ticket.createdAt)} ago</span>
+                      {ticket.responses.length > 0 && (
+                        <span>{ticket.responses.length} response{ticket.responses.length !== 1 ? 's' : ''}</span>
+                      )}
+                      {ticket.lastResponseAt && (
+                        <span>Last activity {formatDistanceToNow(ticket.lastResponseAt)} ago</span>
+                      )}
                     </div>
                   </div>
                 </CardContent>

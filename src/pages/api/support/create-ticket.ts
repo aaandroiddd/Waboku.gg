@@ -9,11 +9,16 @@ interface SupportTicketData {
   description: string;
 }
 
-// Generate a unique ticket ID
+// Generate a unique ticket ID - shorter and more readable
 function generateTicketId(): string {
-  const timestamp = Date.now().toString(36);
-  const randomStr = Math.random().toString(36).substring(2, 8);
-  return `${timestamp}${randomStr}`.toUpperCase();
+  // Use a simple counter-based approach with random suffix
+  const now = new Date();
+  const year = now.getFullYear().toString().slice(-2); // Last 2 digits of year
+  const month = (now.getMonth() + 1).toString().padStart(2, '0');
+  const day = now.getDate().toString().padStart(2, '0');
+  const randomSuffix = Math.floor(Math.random() * 999).toString().padStart(3, '0');
+  
+  return `${year}${month}${day}${randomSuffix}`;
 }
 
 // Get priority level for sorting
