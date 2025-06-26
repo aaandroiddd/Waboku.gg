@@ -83,10 +83,10 @@ const AdminSupportManagement = () => {
     }
     fetchTickets();
     
-    // Set up auto-refresh every 30 seconds to sync with user updates
+    // Set up auto-refresh every 10 seconds for better real-time sync
     const interval = setInterval(() => {
       fetchTickets();
-    }, 30000);
+    }, 10000);
     
     return () => clearInterval(interval);
   }, [user, router]);
@@ -109,6 +109,7 @@ const AdminSupportManagement = () => {
 
       const data = await response.json();
       setTickets(data.tickets || []);
+      setError(""); // Clear any previous errors
     } catch (err: any) {
       console.error('Error fetching tickets:', err);
       setError(err.message || 'Failed to load support tickets');
@@ -210,6 +211,12 @@ const AdminSupportManagement = () => {
 
     console.log('Attempting to change status from', selectedTicket.status, 'to', newStatus);
 
+    // Show loading state immediately
+    toast({
+      title: "Updating status...",
+      description: "Please wait while we update the ticket status.",
+    });
+
     try {
       const token = await user.getIdToken();
       const response = await fetch('/api/admin/support/update-status', {
@@ -231,7 +238,7 @@ const AdminSupportManagement = () => {
         throw new Error(responseData.error || 'Failed to update status');
       }
 
-      // Update the selected ticket status with the response data
+      // Update the selected ticket status immediately
       const updatedTicket = {
         ...selectedTicket,
         status: newStatus as any,
@@ -242,15 +249,15 @@ const AdminSupportManagement = () => {
       
       setSelectedTicket(updatedTicket);
       
-      // Update tickets list
+      // Update tickets list immediately
       setTickets(prev => prev.map(t => 
         t.ticketId === selectedTicket.ticketId ? updatedTicket : t
       ));
       
-      // Force a refresh of tickets to ensure sync
-      setTimeout(() => {
-        fetchTickets();
-      }, 1000);
+      // Force multiple refreshes to ensure sync
+      setTimeout(() => fetchTickets(), 500);
+      setTimeout(() => fetchTickets(), 2000);
+      setTimeout(() => fetchTickets(), 5000);
       
       toast({
         title: "Status updated",

@@ -87,18 +87,20 @@ const SupportTicketsPageContent = () => {
     }
     fetchTickets();
     
-    // Set up auto-refresh every 30 seconds to sync with admin updates
+    // Set up auto-refresh every 10 seconds for better real-time sync
     const interval = setInterval(() => {
       fetchTickets();
-    }, 30000);
+    }, 10000);
     
     return () => clearInterval(interval);
   }, [user, router]);
 
   const fetchTickets = async () => {
+    if (!user) return;
+    
     try {
       setIsLoading(true);
-      const token = await user?.getIdToken();
+      const token = await user.getIdToken();
       if (!token) throw new Error("Authentication required");
 
       const response = await fetch('/api/support/get-tickets', {
@@ -113,6 +115,7 @@ const SupportTicketsPageContent = () => {
 
       const data = await response.json();
       setTickets(data.tickets || []);
+      setError(""); // Clear any previous errors
     } catch (err: any) {
       console.error('Error fetching tickets:', err);
       setError(err.message || 'Failed to load support tickets');
