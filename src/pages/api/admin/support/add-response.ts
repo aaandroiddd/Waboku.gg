@@ -2,6 +2,7 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import { FieldValue } from 'firebase-admin/firestore';
 import { getFirebaseAdmin } from '@/lib/firebase-admin';
 import { emailService } from '@/lib/email-service';
+import { notificationService } from '@/lib/notification-service';
 
 interface AddResponseData {
   ticketId: string;
@@ -117,6 +118,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     } catch (updateError: any) {
       console.error('Failed to update ticket:', updateError);
       throw updateError;
+    }
+
+    // Create in-app notification for user
+    try {
+      await notificationService.createSupportResponseNotification(
+        ticketData?.userId,
+        ticketId,
+        ticketData?.subject || 'Support Ticket',
+        'Waboku.gg Support'
+      );
+      console.log('Successfully created support response notification');
+    } catch (notificationError) {
+      console.error('Failed to create support response notification:', notificationError);
+      // Don't fail the request if notification fails
     }
 
     // Send email notification to user

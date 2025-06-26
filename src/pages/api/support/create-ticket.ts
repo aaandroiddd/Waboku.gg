@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { getFirebaseAdmin } from '@/lib/firebase-admin';
 import { emailService } from '@/lib/email-service';
+import { notificationService } from '@/lib/notification-service';
 
 interface SupportTicketData {
   subject: string;
@@ -123,6 +124,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // Save ticket to Firestore
     await db.collection('supportTickets').doc(ticketId).set(ticketData);
+
+    // Create in-app notification for user
+    try {
+      await notificationService.createSupportTicketNotification(
+        userId,
+        ticketId,
+        subject.trim(),
+        'created'
+      );
+    } catch (notificationError) {
+      console.error('Failed to create support ticket notification:', notificationError);
+      // Don't fail the request if notification fails
+    }
 
     // Send email notification to support team
     try {

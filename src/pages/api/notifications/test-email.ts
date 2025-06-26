@@ -8,7 +8,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const { userEmail, userName, type = 'test', listingData } = req.body;
+    const { userEmail, userName, type = 'test', listingData, supportData } = req.body;
 
     if (!userEmail || !userName) {
       return res.status(400).json({ error: 'userEmail and userName are required' });
@@ -296,9 +296,48 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         message = success ? 'Marketplace order shipped notification email sent successfully' : 'Failed to send marketplace order shipped notification email';
         break;
 
+      // Support ticket email types
+      case 'support-ticket':
+        if (!supportData) {
+          return res.status(400).json({ error: 'supportData is required for support-ticket type' });
+        }
+        
+        const supportTicketData = {
+          ticketId: supportData.ticketId,
+          userName: supportData.userName || userName,
+          userEmail: supportData.userEmail || userEmail,
+          subject: supportData.subject,
+          category: supportData.category,
+          priority: supportData.priority,
+          description: supportData.description,
+          createdAt: new Date()
+        };
+        
+        success = await emailService.sendSupportTicketEmail(supportTicketData);
+        message = success ? 'Support ticket email sent successfully to support team' : 'Failed to send support ticket email';
+        break;
+
+      case 'support-confirmation':
+        if (!supportData) {
+          return res.status(400).json({ error: 'supportData is required for support-confirmation type' });
+        }
+        
+        const supportConfirmationData = {
+          ticketId: supportData.ticketId,
+          userName: supportData.userName || userName,
+          userEmail: supportData.userEmail || userEmail,
+          subject: supportData.subject,
+          category: supportData.category,
+          priority: supportData.priority
+        };
+        
+        success = await emailService.sendSupportConfirmationEmail(supportConfirmationData);
+        message = success ? 'Support confirmation email sent successfully to user' : 'Failed to send support confirmation email';
+        break;
+
       default:
         return res.status(400).json({ 
-          error: 'Invalid type. Supported types: welcome, order-confirmation, payment-confirmation, shipping, verification, password-reset, notification, full-notification, marketplace-purchase, marketplace-sale, marketplace-shipping, marketplace-offer, marketplace-payment-received, marketplace-order-shipped' 
+          error: 'Invalid type. Supported types: welcome, order-confirmation, payment-confirmation, shipping, verification, password-reset, notification, full-notification, marketplace-purchase, marketplace-sale, marketplace-shipping, marketplace-offer, marketplace-payment-received, marketplace-order-shipped, support-ticket, support-confirmation' 
         });
     }
 
@@ -308,7 +347,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       type,
       userEmail,
       userName,
-      listingData: listingData || null
+      listingData: listingData || null,
+      supportData: supportData || null
     });
   } catch (error) {
     console.error('Error testing email:', error);

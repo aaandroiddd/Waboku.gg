@@ -198,7 +198,7 @@ export function getSupportTicketEmailTemplate(data: SupportTicketEmailData): { s
             </div>
             
             <h3>Description</h3>
-            <div class="description">${description}</div>
+            <div class="description">${description.replace(/\n/g, '<br>')}</div>
         </div>
         <div class="footer">
             <p>This ticket was automatically generated from the Waboku.gg support system.</p>

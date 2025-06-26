@@ -1,5 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { getFirebaseAdmin } from '@/lib/firebase-admin';
+import { notificationService } from '@/lib/notification-service';
 
 interface UpdateStatusData {
   ticketId: string;
@@ -117,6 +118,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       updatedAt: updatedData?.updatedAt,
       lastModifiedBy: updatedData?.lastModifiedBy
     });
+
+    // Create notification for status changes that matter to users
+    if (status === 'closed' || status === 'resolved') {
+      try {
+        await notificationService.createSupportTicketNotification(
+          currentTicketData?.userId,
+          ticketId,
+          currentTicketData?.subject || 'Support Ticket',
+          'closed'
+        );
+        console.log('Successfully created support ticket status notification');
+      } catch (notificationError) {
+        console.error('Failed to create support ticket status notification:', notificationError);
+        // Don't fail the request if notification fails
+      }
+    }
 
     // Double-check by querying the collection
     const collectionQuery = await db.collection('supportTickets').where('__name__', '==', ticketId).get();

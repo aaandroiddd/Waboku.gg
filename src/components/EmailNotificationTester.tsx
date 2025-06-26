@@ -38,6 +38,14 @@ interface ListingTestData {
   buyerEmail: string;
 }
 
+interface SupportTicketTestData {
+  ticketId: string;
+  subject: string;
+  category: string;
+  priority: string;
+  description: string;
+}
+
 export function EmailNotificationTester({ adminSecret }: EmailNotificationTesterProps) {
   const [userEmail, setUserEmail] = useState('');
   const [userName, setUserName] = useState('');
@@ -58,6 +66,15 @@ export function EmailNotificationTester({ adminSecret }: EmailNotificationTester
     sellerLocation: 'California, USA',
     buyerName: userName || 'TestBuyer',
     buyerEmail: userEmail || 'buyer@example.com'
+  });
+
+  // Support ticket test data
+  const [supportData, setSupportData] = useState<SupportTicketTestData>({
+    ticketId: Math.random().toString(36).substr(2, 8).toUpperCase(),
+    subject: 'Unable to complete purchase',
+    category: 'orders',
+    priority: 'medium',
+    description: 'I am having trouble completing my purchase. When I click the buy now button, the page loads but nothing happens. I have tried multiple browsers and cleared my cache. Please help!'
   });
 
   const handleTestEmail = async () => {
@@ -85,6 +102,15 @@ export function EmailNotificationTester({ adminSecret }: EmailNotificationTester
           ...listingData,
           buyerName: userName,
           buyerEmail: userEmail
+        };
+      }
+
+      // Add support ticket data for support-specific email types
+      if (['support-ticket', 'support-confirmation'].includes(emailType)) {
+        requestBody.supportData = {
+          ...supportData,
+          userName,
+          userEmail
         };
       }
 
@@ -155,9 +181,10 @@ export function EmailNotificationTester({ adminSecret }: EmailNotificationTester
 
   return (
     <Tabs defaultValue="basic" className="space-y-6">
-      <TabsList className="grid w-full grid-cols-2">
+      <TabsList className="grid w-full grid-cols-3">
         <TabsTrigger value="basic">Basic Email Tests</TabsTrigger>
         <TabsTrigger value="marketplace">Marketplace Tests</TabsTrigger>
+        <TabsTrigger value="support">Support Tests</TabsTrigger>
       </TabsList>
 
       <TabsContent value="basic" className="space-y-6">
@@ -198,6 +225,8 @@ export function EmailNotificationTester({ adminSecret }: EmailNotificationTester
               <SelectItem value="password-reset">🔑 Password Reset</SelectItem>
               <SelectItem value="notification">🔔 Test Notification Email</SelectItem>
               <SelectItem value="full-notification">🧪 Full Notification System Test</SelectItem>
+              <SelectItem value="support-ticket">🎫 Support Ticket Email</SelectItem>
+              <SelectItem value="support-confirmation">📧 Support Confirmation Email</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -386,6 +415,147 @@ export function EmailNotificationTester({ adminSecret }: EmailNotificationTester
         </div>
       </TabsContent>
 
+      <TabsContent value="support" className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="userEmail">User Email</Label>
+            <Input
+              id="userEmail"
+              type="email"
+              placeholder="user@example.com"
+              value={userEmail}
+              onChange={(e) => setUserEmail(e.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="userName">User Name</Label>
+            <Input
+              id="userName"
+              placeholder="John Doe"
+              value={userName}
+              onChange={(e) => setUserName(e.target.value)}
+            />
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="emailType">Support Email Type</Label>
+          <Select value={emailType} onValueChange={setEmailType}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select support email type to test" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="support-ticket">🎫 Support Ticket Email (to support team)</SelectItem>
+              <SelectItem value="support-confirmation">📧 Support Confirmation Email (to user)</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <Card className="p-4">
+          <div className="flex justify-between items-center mb-4">
+            <h4 className="font-medium">Test Support Ticket Data</h4>
+            <Button 
+              onClick={() => setSupportData({
+                ticketId: Math.random().toString(36).substr(2, 8).toUpperCase(),
+                subject: 'Unable to complete purchase',
+                category: 'orders',
+                priority: 'medium',
+                description: 'I am having trouble completing my purchase. When I click the buy now button, the page loads but nothing happens. I have tried multiple browsers and cleared my cache. Please help!'
+              })}
+              variant="outline"
+              size="sm"
+            >
+              🎲 Generate Random
+            </Button>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="ticketId">Ticket ID</Label>
+              <Input
+                id="ticketId"
+                value={supportData.ticketId}
+                onChange={(e) => setSupportData(prev => ({ ...prev, ticketId: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="subject">Subject</Label>
+              <Input
+                id="subject"
+                value={supportData.subject}
+                onChange={(e) => setSupportData(prev => ({ ...prev, subject: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="category">Category</Label>
+              <Select 
+                value={supportData.category} 
+                onValueChange={(value) => setSupportData(prev => ({ ...prev, category: value }))}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="account">Account Issues</SelectItem>
+                  <SelectItem value="billing">Billing & Payments</SelectItem>
+                  <SelectItem value="orders">Orders & Shipping</SelectItem>
+                  <SelectItem value="listings">Listings & Marketplace</SelectItem>
+                  <SelectItem value="technical">Technical Issues</SelectItem>
+                  <SelectItem value="refunds">Refunds & Returns</SelectItem>
+                  <SelectItem value="safety">Safety & Security</SelectItem>
+                  <SelectItem value="feature">Feature Request</SelectItem>
+                  <SelectItem value="other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="priority">Priority</Label>
+              <Select 
+                value={supportData.priority} 
+                onValueChange={(value) => setSupportData(prev => ({ ...prev, priority: value }))}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="low">Low</SelectItem>
+                  <SelectItem value="medium">Medium</SelectItem>
+                  <SelectItem value="high">High</SelectItem>
+                  <SelectItem value="critical">Critical</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2 md:col-span-2">
+              <Label htmlFor="description">Description</Label>
+              <Textarea
+                id="description"
+                value={supportData.description}
+                onChange={(e) => setSupportData(prev => ({ ...prev, description: e.target.value }))}
+                rows={4}
+                placeholder="Describe the issue in detail..."
+              />
+            </div>
+          </div>
+        </Card>
+
+        <div className="flex gap-2">
+          <Button 
+            onClick={handleTestEmail}
+            disabled={loading || !userEmail || !userName || !emailType}
+            className="flex-1"
+          >
+            {loading ? 'Sending...' : 'Send Test Email'}
+          </Button>
+          <Button 
+            onClick={clearForm}
+            variant="outline"
+            disabled={loading}
+          >
+            Clear
+          </Button>
+        </div>
+      </TabsContent>
+
       {result && (
         <Alert className={result.success ? 'border-green-500 bg-green-50' : 'border-red-500 bg-red-50'}>
           <AlertDescription>
@@ -408,7 +578,7 @@ export function EmailNotificationTester({ adminSecret }: EmailNotificationTester
 
       <Card className="p-4 bg-blue-50 border-blue-200">
         <h4 className="font-medium text-blue-900 mb-2">Email Type Descriptions:</h4>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
             <h5 className="font-medium text-blue-800 mb-2">Basic Email Types:</h5>
             <ul className="text-sm text-blue-800 space-y-1">
@@ -431,6 +601,13 @@ export function EmailNotificationTester({ adminSecret }: EmailNotificationTester
               <li><strong>💸 New Offer:</strong> Seller receives notification of new offer on listing</li>
               <li><strong>💳 Payment Received:</strong> Seller receives payment confirmation</li>
               <li><strong>🚚 Order Shipped:</strong> Buyer receives shipment confirmation</li>
+            </ul>
+          </div>
+          <div>
+            <h5 className="font-medium text-blue-800 mb-2">Support Email Types:</h5>
+            <ul className="text-sm text-blue-800 space-y-1">
+              <li><strong>🎫 Support Ticket Email:</strong> Notification sent to support team with properly formatted ticket details</li>
+              <li><strong>📧 Support Confirmation:</strong> Confirmation email sent to user when ticket is created or updated</li>
             </ul>
           </div>
         </div>

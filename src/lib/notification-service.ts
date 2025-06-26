@@ -902,6 +902,44 @@ export class NotificationService {
       }
     });
   }
+
+  async createSupportTicketNotification(userId: string, ticketId: string, subject: string, status: 'created' | 'updated' | 'closed'): Promise<string> {
+    const statusMessages = {
+      created: '🎫 Support Ticket Created',
+      updated: '📝 Support Ticket Updated',
+      closed: '✅ Support Ticket Closed'
+    };
+
+    const messages = {
+      created: `Your support ticket #${ticketId} has been created successfully. Our team will review it shortly.`,
+      updated: `Your support ticket #${ticketId} "${subject}" has been updated with a new response.`,
+      closed: `Your support ticket #${ticketId} "${subject}" has been closed.`
+    };
+
+    return this.createNotification({
+      userId,
+      type: 'system',
+      title: statusMessages[status],
+      message: messages[status],
+      data: {
+        ticketId,
+        actionUrl: `/dashboard/support-tickets`
+      }
+    });
+  }
+
+  async createSupportResponseNotification(userId: string, ticketId: string, subject: string, responderName: string): Promise<string> {
+    return this.createNotification({
+      userId,
+      type: 'system',
+      title: '💬 Support Response Received',
+      message: `${responderName} responded to your support ticket #${ticketId} "${subject}".`,
+      data: {
+        ticketId,
+        actionUrl: `/dashboard/support-tickets`
+      }
+    });
+  }
 }
 
 // Export singleton instance
