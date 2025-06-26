@@ -93,6 +93,7 @@ const AdminSupportManagement = () => {
       const adminSecret = localStorage.getItem('adminSecret');
       if (adminSecret === process.env.NEXT_PUBLIC_ADMIN_SECRET) {
         setIsAuthorized(true);
+        setAuthError("");
         return;
       }
 
@@ -110,13 +111,15 @@ const AdminSupportManagement = () => {
         const data = await response.json();
         if (data.isAdmin || data.isModerator) {
           setIsAuthorized(true);
+          setAuthError("");
         } else {
           setIsAuthorized(false);
           setAuthError("Access denied. Admin or moderator privileges required.");
         }
       } else {
+        const errorData = await response.json().catch(() => ({}));
         setIsAuthorized(false);
-        setAuthError("Access denied. Admin or moderator privileges required.");
+        setAuthError(errorData.error || "Access denied. Admin or moderator privileges required.");
       }
     } catch (err) {
       console.error('Error checking authorization:', err);
@@ -426,15 +429,15 @@ const AdminSupportManagement = () => {
                 <p className="text-muted-foreground">
                   {authError || "You don't have permission to access this page."}
                 </p>
-                <div className="space-y-2">
+                <div className="space-y-4">
                   <p className="text-sm text-muted-foreground">
                     This page requires admin or moderator privileges.
                   </p>
-                  <div className="flex flex-col sm:flex-row gap-2 justify-center">
+                  <div className="flex flex-col gap-2 justify-center">
                     <Button 
                       variant="outline" 
                       onClick={() => router.push('/admin/login')}
-                      className="w-full sm:w-auto"
+                      className="w-full"
                     >
                       <Shield className="h-4 w-4 mr-2" />
                       Admin Login
@@ -442,9 +445,51 @@ const AdminSupportManagement = () => {
                     <Button 
                       variant="outline" 
                       onClick={() => router.push('/dashboard')}
-                      className="w-full sm:w-auto"
+                      className="w-full"
                     >
                       Back to Dashboard
+                    </Button>
+                    <Button 
+                      variant="secondary" 
+                      onClick={() => {
+                        const secret = prompt('Enter admin secret:');
+                        if (secret) {
+                          localStorage.setItem('adminSecret', secret);
+                          window.location.reload();
+                        }
+                      }}
+                      className="w-full"
+                    >
+                      Enter Admin Secret
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      onClick={async () => {
+                        try {
+                          const { signOut } = await import('firebase/auth');
+                          const { auth } = await import('@/lib/firebase');
+                          await signOut(auth);
+                          router.push('/auth/sign-in');
+                        } catch (error) {
+                          console.error('Error signing out:', error);
+                          router.push('/auth/sign-in');
+                        }
+                      }}
+                      className="w-full"
+                    >
+                      Log Out
+                    </Button>
+                  </div>
+                  <div className="pt-4 border-t">
+                    <p className="text-xs text-muted-foreground mb-2">
+                      Need help? Contact an administrator
+                    </p>
+                    <Button 
+                      variant="link" 
+                      onClick={() => router.push('/support')}
+                      className="w-full text-xs"
+                    >
+                      Contact Support
                     </Button>
                   </div>
                 </div>
