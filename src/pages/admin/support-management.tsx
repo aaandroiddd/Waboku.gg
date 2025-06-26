@@ -24,7 +24,9 @@ import {
   AlertTriangle,
   Search,
   Filter,
-  RefreshCw
+  RefreshCw,
+  Shield,
+  Lock
 } from "lucide-react";
 import { useToast } from '@/components/ui/use-toast';
 import { formatDistanceToNow } from 'date-fns';
@@ -75,21 +77,75 @@ const AdminSupportManagement = () => {
   const [statusFilter, setStatusFilter] = useState("all");
   const [priorityFilter, setPriorityFilter] = useState("all");
   const [categoryFilter, setCategoryFilter] = useState("all");
+  const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null);
+  const [authError, setAuthError] = useState("");
+
+  // Check if user is authorized (admin or moderator)
+  const checkAuthorization = async () => {
+    if (!user) {
+      setIsAuthorized(false);
+      setAuthError("Please sign in to access this page.");
+      return;
+    }
+
+    try {
+      // Check if user has admin secret in localStorage (for admin access)
+      const adminSecret = localStorage.getItem('adminSecret');
+      if (adminSecret === process.env.NEXT_PUBLIC_ADMIN_SECRET) {
+        setIsAuthorized(true);
+        return;
+      }
+
+      // Check if user is a moderator via API call
+      const token = await user.getIdToken();
+      const response = await fetch('/api/admin/verify', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.isAdmin || data.isModerator) {
+          setIsAuthorized(true);
+        } else {
+          setIsAuthorized(false);
+          setAuthError("Access denied. Admin or moderator privileges required.");
+        }
+      } else {
+        setIsAuthorized(false);
+        setAuthError("Access denied. Admin or moderator privileges required.");
+      }
+    } catch (err) {
+      console.error('Error checking authorization:', err);
+      setIsAuthorized(false);
+      setAuthError("Failed to verify permissions. Please try again.");
+    }
+  };
 
   useEffect(() => {
     if (!user) {
       router.push('/admin/login');
       return;
     }
-    fetchTickets();
     
-    // Set up auto-refresh every 10 seconds for better real-time sync
-    const interval = setInterval(() => {
-      fetchTickets();
-    }, 10000);
-    
-    return () => clearInterval(interval);
+    checkAuthorization();
   }, [user, router]);
+
+  useEffect(() => {
+    if (isAuthorized === true) {
+      fetchTickets();
+      
+      // Set up auto-refresh every 10 seconds for better real-time sync
+      const interval = setInterval(() => {
+        fetchTickets();
+      }, 10000);
+      
+      return () => clearInterval(interval);
+    }
+  }, [isAuthorized]);
 
   const fetchTickets = async () => {
     if (!user) return;
@@ -336,7 +392,8 @@ const AdminSupportManagement = () => {
     return matchesSearch && matchesStatus && matchesPriority && matchesCategory;
   });
 
-  if (isLoading) {
+  // Show loading while checking authorization
+  if (isAuthorized === null || isLoading) {
     return (
       <div className="min-h-screen flex flex-col">
         <div className="container mx-auto p-6 flex-1">
@@ -346,6 +403,54 @@ const AdminSupportManagement = () => {
             <Skeleton className="h-32 w-full" />
             <Skeleton className="h-32 w-full" />
           </div>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
+
+  // Show access denied if not authorized
+  if (isAuthorized === false) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <div className="container mx-auto p-6 flex-1">
+          <Card className="max-w-md mx-auto mt-20">
+            <CardContent className="pt-6">
+              <div className="text-center space-y-4">
+                <div className="flex justify-center">
+                  <div className="p-3 bg-red-100 dark:bg-red-900/20 rounded-full">
+                    <Lock className="h-8 w-8 text-red-600 dark:text-red-400" />
+                  </div>
+                </div>
+                <h2 className="text-xl font-semibold">Access Denied</h2>
+                <p className="text-muted-foreground">
+                  {authError || "You don't have permission to access this page."}
+                </p>
+                <div className="space-y-2">
+                  <p className="text-sm text-muted-foreground">
+                    This page requires admin or moderator privileges.
+                  </p>
+                  <div className="flex flex-col sm:flex-row gap-2 justify-center">
+                    <Button 
+                      variant="outline" 
+                      onClick={() => router.push('/admin/login')}
+                      className="w-full sm:w-auto"
+                    >
+                      <Shield className="h-4 w-4 mr-2" />
+                      Admin Login
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      onClick={() => router.push('/dashboard')}
+                      className="w-full sm:w-auto"
+                    >
+                      Back to Dashboard
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
         <Footer />
       </div>
