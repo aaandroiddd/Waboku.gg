@@ -13,6 +13,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     console.log('=== ADMIN SUPPORT UPDATE STATUS API DEBUG START ===');
+    console.log('Request body:', req.body);
     
     // Initialize Firebase Admin
     const { db, auth } = getFirebaseAdmin();
@@ -65,8 +66,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: 'Invalid status' });
     }
 
+    console.log('Attempting to update ticket:', ticketId, 'to status:', status);
+
     // Get the ticket to verify it exists
-    const ticketDoc = await db.collection('supportTickets').doc(ticketId).get();
+    const ticketRef = db.collection('supportTickets').doc(ticketId);
+    const ticketDoc = await ticketRef.get();
     
     if (!ticketDoc.exists) {
       console.error('Ticket not found:', ticketId);
@@ -74,8 +78,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     const currentTicketData = ticketDoc.data();
-    console.log('Current ticket status:', currentTicketData?.status);
-    console.log('Updating to status:', status);
+    console.log('Current ticket data:', {
+      id: ticketId,
+      currentStatus: currentTicketData?.status,
+      createdAt: currentTicketData?.createdAt,
+      updatedAt: currentTicketData?.updatedAt
+    });
 
     // Update the ticket status with proper timestamp
     const updateData = {
@@ -85,13 +93,39 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       lastModifiedAt: new Date()
     };
 
-    await db.collection('supportTickets').doc(ticketId).update(updateData);
-    console.log('Ticket status update completed');
+    console.log('Updating with data:', updateData);
+
+    try {
+      await ticketRef.update(updateData);
+      console.log('Firestore update operation completed');
+    } catch (updateError: any) {
+      console.error('Firestore update failed:', {
+        error: updateError.message,
+        code: updateError.code,
+        details: updateError.details
+      });
+      throw updateError;
+    }
 
     // Verify the update was successful
-    const updatedTicketDoc = await db.collection('supportTickets').doc(ticketId).get();
+    const updatedTicketDoc = await ticketRef.get();
     const updatedData = updatedTicketDoc.data();
-    console.log('Verified updated status:', updatedData?.status);
+    
+    console.log('Verified updated data:', {
+      id: ticketId,
+      newStatus: updatedData?.status,
+      updatedAt: updatedData?.updatedAt,
+      lastModifiedBy: updatedData?.lastModifiedBy
+    });
+
+    // Double-check by querying the collection
+    const collectionQuery = await db.collection('supportTickets').where('__name__', '==', ticketId).get();
+    if (!collectionQuery.empty) {
+      const docFromCollection = collectionQuery.docs[0].data();
+      console.log('Status from collection query:', docFromCollection?.status);
+    } else {
+      console.log('Document not found in collection query');
+    }
 
     res.status(200).json({
       success: true,
@@ -99,14 +133,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       ticket: {
         id: ticketId,
         status: updatedData?.status,
-        updatedAt: updatedData?.updatedAt
+        updatedAt: updatedData?.updatedAt,
+        lastModifiedBy: updatedData?.lastModifiedBy
       }
     });
 
-  } catch (error) {
-    console.error('Error updating ticket status:', error);
+  } catch (error: any) {
+    console.error('Error updating ticket status:', {
+      message: error.message,
+      code: error.code,
+      stack: error.stack?.split('\n').slice(0, 5).join('\n')
+    });
     res.status(500).json({ 
-      error: 'Failed to update ticket status. Please try again.' 
+      error: 'Failed to update ticket status. Please try again.',
+      details: error.message
     });
   }
 }
