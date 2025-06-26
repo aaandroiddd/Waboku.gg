@@ -29,6 +29,7 @@ import {
 import { useToast } from '@/components/ui/use-toast';
 import { formatDistanceToNow } from 'date-fns';
 import { Footer } from '@/components/Footer';
+import { TimestampTooltip } from '@/components/ui/timestamp-tooltip';
 
 interface TicketResponse {
   id: string;
@@ -383,12 +384,12 @@ const AdminSupportManagement = () => {
             <div className="flex items-center gap-4 text-sm text-muted-foreground">
               <div className="flex items-center gap-1">
                 <Calendar className="h-4 w-4" />
-                Created {formatDistanceToNow(selectedTicket.createdAt)} ago
+                Created <TimestampTooltip date={selectedTicket.createdAt} />
               </div>
               {selectedTicket.lastResponseAt && (
                 <div className="flex items-center gap-1">
                   <MessageCircle className="h-4 w-4" />
-                  Last response {formatDistanceToNow(selectedTicket.lastResponseAt)} ago
+                  Last response <TimestampTooltip date={selectedTicket.lastResponseAt} />
                 </div>
               )}
             </div>
@@ -414,9 +415,7 @@ const AdminSupportManagement = () => {
                 <div className="flex items-center gap-2 mb-2">
                   <User className="h-4 w-4" />
                   <span className="font-medium">{selectedTicket.userName}</span>
-                  <span className="text-sm text-muted-foreground">
-                    {formatDistanceToNow(selectedTicket.createdAt)} ago
-                  </span>
+                  <TimestampTooltip date={selectedTicket.createdAt} className="text-sm text-muted-foreground" />
                 </div>
                 <p className="whitespace-pre-wrap">{selectedTicket.description}</p>
               </div>
@@ -450,9 +449,7 @@ const AdminSupportManagement = () => {
                         <span className="font-medium">
                           {response.isFromSupport ? 'Waboku.gg Support' : response.authorName}
                         </span>
-                        <span className="text-sm text-muted-foreground">
-                          {formatDistanceToNow(response.createdAt)} ago
-                        </span>
+                        <TimestampTooltip date={response.createdAt} className="text-sm text-muted-foreground" />
                         {response.isFromSupport && !response.readByUser && (
                           <Badge variant="outline" className="text-xs">Unread by user</Badge>
                         )}
@@ -678,12 +675,12 @@ const AdminSupportManagement = () => {
                     </p>
                     <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 text-xs text-muted-foreground">
                       <span className="truncate">From: {ticket.userName} ({ticket.userEmail})</span>
-                      <span>Created {formatDistanceToNow(ticket.createdAt)} ago</span>
+                      <span>Created <TimestampTooltip date={ticket.createdAt} className="text-xs text-muted-foreground" /></span>
                       {ticket.responses.length > 0 && (
                         <span>{ticket.responses.length} response{ticket.responses.length !== 1 ? 's' : ''}</span>
                       )}
                       {ticket.lastResponseAt && (
-                        <span>Last activity {formatDistanceToNow(ticket.lastResponseAt)} ago</span>
+                        <span>Last activity <TimestampTooltip date={ticket.lastResponseAt} className="text-xs text-muted-foreground" /></span>
                       )}
                     </div>
                   </div>
