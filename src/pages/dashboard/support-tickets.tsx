@@ -341,7 +341,7 @@ const SupportTicketsPageContent = () => {
                         key={response.id || index}
                         className={`p-4 rounded-lg ${
                           response.isFromSupport 
-                            ? 'bg-blue-50 dark:bg-blue-950/20 border-l-4 border-blue-500' 
+                            ? 'bg-blue-950/20 border border-blue-500/20 dark:bg-blue-950/30 dark:border-blue-500/30' 
                             : 'bg-muted/50'
                         }`}
                       >
