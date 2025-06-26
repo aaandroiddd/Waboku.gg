@@ -1,4 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
+import { FieldValue } from 'firebase-admin/firestore';
 import { getFirebaseAdmin } from '@/lib/firebase-admin';
 import { emailService } from '@/lib/email-service';
 
@@ -58,16 +59,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // Validate request body
     const { ticketId, message }: AddResponseData = req.body;
+    console.log('Request body:', { ticketId, messageLength: message?.length });
 
     if (!ticketId?.trim()) {
+      console.error('Ticket ID is missing');
       return res.status(400).json({ error: 'Ticket ID is required' });
     }
 
     if (!message?.trim()) {
+      console.error('Message is missing');
       return res.status(400).json({ error: 'Message is required' });
     }
 
     if (message.length < 5) {
+      console.error('Message too short:', message.length);
       return res.status(400).json({ error: 'Message must be at least 5 characters long' });
     }
 
@@ -75,10 +80,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const ticketDoc = await db.collection('supportTickets').doc(ticketId).get();
     
     if (!ticketDoc.exists) {
+      console.error('Ticket not found:', ticketId);
       return res.status(404).json({ error: 'Ticket not found' });
     }
 
     const ticketData = ticketDoc.data();
+    console.log('Found ticket:', { 
+      ticketId, 
+      currentStatus: ticketData?.status,
+      currentResponsesCount: ticketData?.responses?.length || 0
+    });
 
     // Create response data
     const responseData = {
@@ -92,14 +103,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       readBySupport: true
     };
 
+    console.log('Adding response:', { responseId: responseData.id, messageLength: responseData.message.length });
+
     // Add response to ticket
-    const { FieldValue } = await import('firebase-admin/firestore');
-    await db.collection('supportTickets').doc(ticketId).update({
-      responses: FieldValue.arrayUnion(responseData),
-      updatedAt: new Date(),
-      lastResponseAt: new Date(),
-      status: 'in_progress' // Update status to in_progress when support responds
-    });
+    try {
+      await db.collection('supportTickets').doc(ticketId).update({
+        responses: FieldValue.arrayUnion(responseData),
+        updatedAt: new Date(),
+        lastResponseAt: new Date(),
+        status: 'in_progress' // Update status to in_progress when support responds
+      });
+      console.log('Successfully updated ticket with new response');
+    } catch (updateError: any) {
+      console.error('Failed to update ticket:', updateError);
+      throw updateError;
+    }
 
     // Send email notification to user
     try {
