@@ -208,6 +208,8 @@ const AdminSupportManagement = () => {
   const handleStatusChange = async (newStatus: string) => {
     if (!selectedTicket || !user) return;
 
+    console.log('Attempting to change status from', selectedTicket.status, 'to', newStatus);
+
     try {
       const token = await user.getIdToken();
       const response = await fetch('/api/admin/support/update-status', {
@@ -222,15 +224,20 @@ const AdminSupportManagement = () => {
         }),
       });
 
+      const responseData = await response.json();
+      console.log('Status update response:', responseData);
+
       if (!response.ok) {
-        throw new Error('Failed to update status');
+        throw new Error(responseData.error || 'Failed to update status');
       }
 
-      // Update the selected ticket status
+      // Update the selected ticket status with the response data
       const updatedTicket = {
         ...selectedTicket,
         status: newStatus as any,
-        updatedAt: new Date()
+        updatedAt: new Date(),
+        lastModifiedBy: user.uid,
+        lastModifiedAt: new Date()
       };
       
       setSelectedTicket(updatedTicket);
@@ -239,6 +246,11 @@ const AdminSupportManagement = () => {
       setTickets(prev => prev.map(t => 
         t.ticketId === selectedTicket.ticketId ? updatedTicket : t
       ));
+      
+      // Force a refresh of tickets to ensure sync
+      setTimeout(() => {
+        fetchTickets();
+      }, 1000);
       
       toast({
         title: "Status updated",
@@ -251,6 +263,9 @@ const AdminSupportManagement = () => {
         description: err.message || 'Failed to update status',
         variant: "destructive",
       });
+      
+      // Refresh tickets on error to ensure we have the latest state
+      fetchTickets();
     }
   };
 

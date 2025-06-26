@@ -146,14 +146,14 @@ const SupportPageContent = () => {
                 <p className="text-muted-foreground">
                   Thank you for contacting support. We've received your ticket and will respond within 24 hours.
                 </p>
-                <div className="flex gap-4 justify-center">
-                  <Button onClick={() => setIsSubmitted(false)} variant="outline">
+                <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center">
+                  <Button onClick={() => setIsSubmitted(false)} variant="outline" className="w-full sm:w-auto">
                     Submit Another Ticket
                   </Button>
-                  <Button onClick={() => router.push('/dashboard/support-tickets')} variant="outline">
+                  <Button onClick={() => router.push('/dashboard/support-tickets')} variant="outline" className="w-full sm:w-auto">
                     View My Tickets
                   </Button>
-                  <Button onClick={() => router.push('/dashboard')}>
+                  <Button onClick={() => router.push('/dashboard')} className="w-full sm:w-auto">
                     Back to Dashboard
                   </Button>
                 </div>

@@ -69,18 +69,38 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const ticketDoc = await db.collection('supportTickets').doc(ticketId).get();
     
     if (!ticketDoc.exists) {
+      console.error('Ticket not found:', ticketId);
       return res.status(404).json({ error: 'Ticket not found' });
     }
 
-    // Update the ticket status
-    await db.collection('supportTickets').doc(ticketId).update({
+    const currentTicketData = ticketDoc.data();
+    console.log('Current ticket status:', currentTicketData?.status);
+    console.log('Updating to status:', status);
+
+    // Update the ticket status with proper timestamp
+    const updateData = {
       status,
-      updatedAt: new Date()
-    });
+      updatedAt: new Date(),
+      lastModifiedBy: decodedToken.uid,
+      lastModifiedAt: new Date()
+    };
+
+    await db.collection('supportTickets').doc(ticketId).update(updateData);
+    console.log('Ticket status update completed');
+
+    // Verify the update was successful
+    const updatedTicketDoc = await db.collection('supportTickets').doc(ticketId).get();
+    const updatedData = updatedTicketDoc.data();
+    console.log('Verified updated status:', updatedData?.status);
 
     res.status(200).json({
       success: true,
-      message: 'Ticket status updated successfully'
+      message: 'Ticket status updated successfully',
+      ticket: {
+        id: ticketId,
+        status: updatedData?.status,
+        updatedAt: updatedData?.updatedAt
+      }
     });
 
   } catch (error) {
