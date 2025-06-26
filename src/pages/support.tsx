@@ -179,6 +179,35 @@ const SupportPageContent = () => {
               Need help? Submit a support ticket and our team will get back to you as soon as possible.
             </CardDescription>
           </CardHeader>
+          
+          {/* Warning Section - Try Direct Communication First */}
+          <div className="mx-6 mb-6">
+            <Alert className="border-yellow-200 bg-yellow-50 dark:border-yellow-800 dark:bg-yellow-900/20">
+              <MessageCircle className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
+              <div className="ml-2">
+                <h4 className="font-semibold text-yellow-800 dark:text-yellow-200 mb-2">
+                  Try Direct Communication First
+                </h4>
+                <div className="text-yellow-700 dark:text-yellow-300 space-y-2 text-sm">
+                  <p>
+                    Before contacting support, we encourage you to reach out directly to the buyer or seller. Most issues can be resolved quickly through direct communication.
+                  </p>
+                  <div className="space-y-1">
+                    <p className="font-medium">You can contact them through:</p>
+                    <ul className="list-disc list-inside ml-4 space-y-1">
+                      <li>The message button on their profile page</li>
+                      <li>The message button on the listing page</li>
+                      <li>Your messages dashboard if you've communicated before</li>
+                      <li>The contact buttons in your order details (for order-related issues)</li>
+                    </ul>
+                  </div>
+                  <p className="font-medium">
+                    Only contact support if you're unable to resolve the issue directly or if there's a violation of our terms of service.
+                  </p>
+                </div>
+              </div>
+            </Alert>
+          </div>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
               {error && (
