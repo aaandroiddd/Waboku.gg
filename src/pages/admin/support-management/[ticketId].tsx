@@ -73,14 +73,16 @@ export default function IndividualSupportTicket() {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
           },
-          body: JSON.stringify({ token }),
         });
 
         if (response.ok) {
           const data = await response.json();
           setIsAuthorized(data.success);
         } else {
+          const errorData = await response.json();
+          console.error('Authorization failed:', errorData);
           setIsAuthorized(false);
         }
       } catch (error) {
