@@ -21,7 +21,8 @@ import {
   ArrowLeft,
   Calendar,
   User,
-  AlertTriangle
+  AlertTriangle,
+  RefreshCw
 } from "lucide-react";
 import { Toaster } from '@/components/ui/toaster';
 import { useToast } from '@/components/ui/use-toast';
@@ -79,20 +80,13 @@ const SupportTicketsPageContent = () => {
   const [error, setError] = useState("");
   const [responseMessage, setResponseMessage] = useState("");
 
-  // Redirect if not authenticated and set up auto-refresh
+  // Redirect if not authenticated
   useEffect(() => {
     if (!user) {
       router.push('/auth/sign-in?redirect=/dashboard/support-tickets');
       return;
     }
     fetchTickets();
-    
-    // Set up auto-refresh every 10 seconds for better real-time sync
-    const interval = setInterval(() => {
-      fetchTickets();
-    }, 10000);
-    
-    return () => clearInterval(interval);
   }, [user, router]);
 
   const fetchTickets = async () => {
@@ -443,10 +437,16 @@ const SupportTicketsPageContent = () => {
               View and manage your support tickets
             </p>
           </div>
-          <Button onClick={() => router.push('/support')}>
-            <Plus className="h-4 w-4 mr-2" />
-            New Ticket
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button onClick={fetchTickets} variant="outline">
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Refresh
+            </Button>
+            <Button onClick={() => router.push('/support')}>
+              <Plus className="h-4 w-4 mr-2" />
+              New Ticket
+            </Button>
+          </div>
         </div>
 
         {error && (

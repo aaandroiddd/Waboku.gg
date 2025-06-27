@@ -158,13 +158,6 @@ const AdminSupportManagement = () => {
   useEffect(() => {
     if (isAuthorized === true) {
       fetchTickets();
-      
-      // Set up auto-refresh every 10 seconds for better real-time sync
-      const interval = setInterval(() => {
-        fetchTickets();
-      }, 10000);
-      
-      return () => clearInterval(interval);
     }
   }, [isAuthorized]);
 
