@@ -26,7 +26,12 @@ import {
   Filter,
   RefreshCw,
   Shield,
-  Lock
+  Lock,
+  UserCheck,
+  UserX,
+  SortAsc,
+  SortDesc,
+  Timer
 } from "lucide-react";
 import { useToast } from '@/components/ui/use-toast';
 import { formatDistanceToNow } from 'date-fns';
@@ -60,6 +65,12 @@ interface SupportTicket {
   responses: TicketResponse[];
   lastResponseAt?: Date;
   hasUnreadResponses?: boolean;
+  assignedTo?: string;
+  assignedToName?: string;
+  assignedAt?: Date;
+  timePriority?: 'good' | 'warning' | 'bad' | null;
+  hoursSinceCreated?: number;
+  hasUnreadFromUser?: boolean;
 }
 
 const AdminSupportManagement = () => {
@@ -77,8 +88,12 @@ const AdminSupportManagement = () => {
   const [statusFilter, setStatusFilter] = useState("all");
   const [priorityFilter, setPriorityFilter] = useState("all");
   const [categoryFilter, setCategoryFilter] = useState("all");
+  const [assignmentFilter, setAssignmentFilter] = useState("all");
+  const [sortBy, setSortBy] = useState("createdAt");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null);
   const [authError, setAuthError] = useState("");
+  const [currentUserName, setCurrentUserName] = useState("");
 
   // Check if user is authorized (admin or moderator)
   const checkAuthorization = async () => {
@@ -89,6 +104,9 @@ const AdminSupportManagement = () => {
     }
 
     try {
+      // Set current user name for assignment
+      setCurrentUserName(user.displayName || user.email?.split('@')[0] || 'Unknown User');
+
       // Check if user has admin secret in localStorage (for admin access)
       const adminSecret = localStorage.getItem('adminSecret');
       if (adminSecret === process.env.NEXT_PUBLIC_ADMIN_SECRET) {
@@ -380,20 +398,147 @@ const AdminSupportManagement = () => {
     }
   };
 
-  // Filter tickets based on search and filters
-  const filteredTickets = tickets.filter(ticket => {
-    const matchesSearch = 
-      ticket.ticketId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      ticket.subject.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      ticket.userName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      ticket.userEmail.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesStatus = statusFilter === 'all' || ticket.status === statusFilter;
-    const matchesPriority = priorityFilter === 'all' || ticket.priority === priorityFilter;
-    const matchesCategory = categoryFilter === 'all' || ticket.category === categoryFilter;
-    
-    return matchesSearch && matchesStatus && matchesPriority && matchesCategory;
-  });
+  const getTimePriorityColor = (timePriority: string | null) => {
+    switch (timePriority) {
+      case 'good':
+        return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300';
+      case 'warning':
+        return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300';
+      case 'bad':
+        return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300';
+      default:
+        return '';
+    }
+  };
+
+  const handleAssignTicket = async (ticketId: string, assign: boolean) => {
+    if (!user) return;
+
+    try {
+      const token = await user.getIdToken();
+      const response = await fetch('/api/admin/support/assign-ticket', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          ticketId,
+          assignedTo: assign ? user.uid : null,
+          assignedToName: assign ? currentUserName : null,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to assign ticket');
+      }
+
+      // Update local state
+      setTickets(prev => prev.map(t => 
+        t.ticketId === ticketId 
+          ? { 
+              ...t, 
+              assignedTo: assign ? user.uid : undefined,
+              assignedToName: assign ? currentUserName : undefined,
+              assignedAt: assign ? new Date() : undefined
+            }
+          : t
+      ));
+
+      // Update selected ticket if it's the one being assigned
+      if (selectedTicket?.ticketId === ticketId) {
+        setSelectedTicket(prev => prev ? {
+          ...prev,
+          assignedTo: assign ? user.uid : undefined,
+          assignedToName: assign ? currentUserName : undefined,
+          assignedAt: assign ? new Date() : undefined
+        } : null);
+      }
+
+      toast({
+        title: assign ? "Ticket assigned" : "Ticket unassigned",
+        description: assign 
+          ? `Ticket assigned to ${currentUserName}` 
+          : "Ticket has been unassigned",
+      });
+    } catch (err: any) {
+      console.error('Error assigning ticket:', err);
+      toast({
+        title: "Error",
+        description: err.message || 'Failed to assign ticket',
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleSortChange = (newSortBy: string) => {
+    if (sortBy === newSortBy) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortBy(newSortBy);
+      setSortOrder('desc');
+    }
+  };
+
+  // Filter and sort tickets
+  const filteredAndSortedTickets = tickets
+    .filter(ticket => {
+      const matchesSearch = 
+        ticket.ticketId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        ticket.subject.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        ticket.userName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        ticket.userEmail.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      const matchesStatus = statusFilter === 'all' || ticket.status === statusFilter;
+      const matchesPriority = priorityFilter === 'all' || ticket.priority === priorityFilter;
+      const matchesCategory = categoryFilter === 'all' || ticket.category === categoryFilter;
+      
+      const matchesAssignment = 
+        assignmentFilter === 'all' ||
+        (assignmentFilter === 'assigned_to_me' && ticket.assignedTo === user?.uid) ||
+        (assignmentFilter === 'unassigned' && !ticket.assignedTo) ||
+        (assignmentFilter === 'assigned' && ticket.assignedTo);
+      
+      return matchesSearch && matchesStatus && matchesPriority && matchesCategory && matchesAssignment;
+    })
+    .sort((a, b) => {
+      switch (sortBy) {
+        case 'createdAt':
+          const dateA = new Date(a.createdAt).getTime();
+          const dateB = new Date(b.createdAt).getTime();
+          return sortOrder === 'asc' ? dateA - dateB : dateB - dateA;
+        
+        case 'updatedAt':
+          const updatedA = new Date(a.updatedAt).getTime();
+          const updatedB = new Date(b.updatedAt).getTime();
+          return sortOrder === 'asc' ? updatedA - updatedB : updatedB - updatedA;
+        
+        case 'priority':
+          const priorityA = a.priorityLevel || 0;
+          const priorityB = b.priorityLevel || 0;
+          if (priorityA !== priorityB) {
+            return sortOrder === 'asc' ? priorityA - priorityB : priorityB - priorityA;
+          }
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        
+        case 'status':
+          const statusOrder = { 'open': 1, 'in_progress': 2, 'resolved': 3, 'closed': 4 };
+          const statusA = statusOrder[a.status] || 5;
+          const statusB = statusOrder[b.status] || 5;
+          if (statusA !== statusB) {
+            return sortOrder === 'asc' ? statusA - statusB : statusB - statusA;
+          }
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        
+        case 'timeAge':
+          const ageA = a.hoursSinceCreated || 0;
+          const ageB = b.hoursSinceCreated || 0;
+          return sortOrder === 'asc' ? ageA - ageB : ageB - ageA;
+        
+        default:
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      }
+    });
 
   // Show loading while checking authorization
   if (isAuthorized === null || isLoading) {
@@ -565,17 +710,72 @@ const AdminSupportManagement = () => {
                 </div>
               )}
             </div>
-            <div className="bg-muted/50 p-4 rounded-lg">
-              <h4 className="font-medium mb-2">User Information</h4>
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <span className="font-medium">Name:</span> {selectedTicket.userName}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="bg-muted/50 p-4 rounded-lg">
+                <h4 className="font-medium mb-2">User Information</h4>
+                <div className="space-y-2 text-sm">
+                  <div>
+                    <span className="font-medium">Name:</span> {selectedTicket.userName}
+                  </div>
+                  <div>
+                    <span className="font-medium">Email:</span> {selectedTicket.userEmail}
+                  </div>
+                  <div>
+                    <span className="font-medium">User ID:</span> {selectedTicket.userId}
+                  </div>
                 </div>
-                <div>
-                  <span className="font-medium">Email:</span> {selectedTicket.userEmail}
-                </div>
-                <div>
-                  <span className="font-medium">User ID:</span> {selectedTicket.userId}
+              </div>
+              
+              <div className="bg-muted/50 p-4 rounded-lg">
+                <h4 className="font-medium mb-2">Assignment & Priority</h4>
+                <div className="space-y-2 text-sm">
+                  <div>
+                    <span className="font-medium">Assigned to:</span>{' '}
+                    {selectedTicket.assignedTo ? (
+                      <span className="text-blue-600 dark:text-blue-400">
+                        {selectedTicket.assignedTo === user?.uid ? 'You' : selectedTicket.assignedToName}
+                      </span>
+                    ) : (
+                      <span className="text-muted-foreground">Unassigned</span>
+                    )}
+                  </div>
+                  {selectedTicket.assignedAt && (
+                    <div>
+                      <span className="font-medium">Assigned:</span>{' '}
+                      <TimestampTooltip date={selectedTicket.assignedAt} className="text-xs text-muted-foreground" />
+                    </div>
+                  )}
+                  {selectedTicket.timePriority && (
+                    <div>
+                      <span className="font-medium">Time Priority:</span>{' '}
+                      <Badge className={getTimePriorityColor(selectedTicket.timePriority)} size="sm">
+                        <Timer className="h-3 w-3 mr-1" />
+                        {selectedTicket.timePriority === 'good' ? 'Recent' :
+                         selectedTicket.timePriority === 'warning' ? 'Aging' : 'Urgent'}
+                      </Badge>
+                    </div>
+                  )}
+                  <div className="flex items-center gap-2 pt-2">
+                    {selectedTicket.assignedTo === user?.uid ? (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleAssignTicket(selectedTicket.ticketId, false)}
+                      >
+                        <UserX className="h-3 w-3 mr-1" />
+                        Unassign from me
+                      </Button>
+                    ) : !selectedTicket.assignedTo ? (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleAssignTicket(selectedTicket.ticketId, true)}
+                      >
+                        <UserCheck className="h-3 w-3 mr-1" />
+                        Assign to me
+                      </Button>
+                    ) : null}
+                  </div>
                 </div>
               </div>
             </div>
@@ -696,87 +896,173 @@ const AdminSupportManagement = () => {
         </Button>
       </div>
 
-      {/* Filters */}
+      {/* Filters and Sorting */}
       <Card className="mb-6">
         <CardContent className="pt-6">
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="search">Search</Label>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="search"
-                  placeholder="Search tickets..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
+          <div className="space-y-4">
+            {/* First row - Filters */}
+            <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="search">Search</Label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="search"
+                    placeholder="Search tickets..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="status-filter">Status</Label>
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Statuses</SelectItem>
+                    <SelectItem value="open">Open</SelectItem>
+                    <SelectItem value="in_progress">In Progress</SelectItem>
+                    <SelectItem value="resolved">Resolved</SelectItem>
+                    <SelectItem value="closed">Closed</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="priority-filter">Priority</Label>
+                <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Priorities</SelectItem>
+                    <SelectItem value="critical">Critical</SelectItem>
+                    <SelectItem value="high">High</SelectItem>
+                    <SelectItem value="medium">Medium</SelectItem>
+                    <SelectItem value="low">Low</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="category-filter">Category</Label>
+                <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Categories</SelectItem>
+                    <SelectItem value="account">Account</SelectItem>
+                    <SelectItem value="billing">Billing</SelectItem>
+                    <SelectItem value="orders">Orders</SelectItem>
+                    <SelectItem value="listings">Listings</SelectItem>
+                    <SelectItem value="technical">Technical</SelectItem>
+                    <SelectItem value="refunds">Refunds</SelectItem>
+                    <SelectItem value="safety">Safety</SelectItem>
+                    <SelectItem value="feature">Feature</SelectItem>
+                    <SelectItem value="other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="assignment-filter">Assignment</Label>
+                <Select value={assignmentFilter} onValueChange={setAssignmentFilter}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Tickets</SelectItem>
+                    <SelectItem value="assigned_to_me">Assigned to Me</SelectItem>
+                    <SelectItem value="unassigned">Unassigned</SelectItem>
+                    <SelectItem value="assigned">Assigned</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex items-end">
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    setSearchTerm("");
+                    setStatusFilter("all");
+                    setPriorityFilter("all");
+                    setCategoryFilter("all");
+                    setAssignmentFilter("all");
+                  }}
+                  className="w-full"
+                >
+                  <Filter className="h-4 w-4 mr-2" />
+                  Clear Filters
+                </Button>
               </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="status-filter">Status</Label>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Statuses</SelectItem>
-                  <SelectItem value="open">Open</SelectItem>
-                  <SelectItem value="in_progress">In Progress</SelectItem>
-                  <SelectItem value="resolved">Resolved</SelectItem>
-                  <SelectItem value="closed">Closed</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="priority-filter">Priority</Label>
-              <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Priorities</SelectItem>
-                  <SelectItem value="critical">Critical</SelectItem>
-                  <SelectItem value="high">High</SelectItem>
-                  <SelectItem value="medium">Medium</SelectItem>
-                  <SelectItem value="low">Low</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="category-filter">Category</Label>
-              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Categories</SelectItem>
-                  <SelectItem value="account">Account</SelectItem>
-                  <SelectItem value="billing">Billing</SelectItem>
-                  <SelectItem value="orders">Orders</SelectItem>
-                  <SelectItem value="listings">Listings</SelectItem>
-                  <SelectItem value="technical">Technical</SelectItem>
-                  <SelectItem value="refunds">Refunds</SelectItem>
-                  <SelectItem value="safety">Safety</SelectItem>
-                  <SelectItem value="feature">Feature</SelectItem>
-                  <SelectItem value="other">Other</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex items-end">
-              <Button 
-                variant="outline" 
-                onClick={() => {
-                  setSearchTerm("");
-                  setStatusFilter("all");
-                  setPriorityFilter("all");
-                  setCategoryFilter("all");
-                }}
-                className="w-full"
-              >
-                <Filter className="h-4 w-4 mr-2" />
-                Clear Filters
-              </Button>
+
+            {/* Second row - Sorting */}
+            <Separator />
+            <div className="flex items-center gap-4 flex-wrap">
+              <Label className="text-sm font-medium">Sort by:</Label>
+              <div className="flex items-center gap-2 flex-wrap">
+                <Button
+                  variant={sortBy === 'createdAt' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => handleSortChange('createdAt')}
+                  className="flex items-center gap-1"
+                >
+                  <Calendar className="h-3 w-3" />
+                  Created Date
+                  {sortBy === 'createdAt' && (
+                    sortOrder === 'asc' ? <SortAsc className="h-3 w-3" /> : <SortDesc className="h-3 w-3" />
+                  )}
+                </Button>
+                <Button
+                  variant={sortBy === 'updatedAt' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => handleSortChange('updatedAt')}
+                  className="flex items-center gap-1"
+                >
+                  <Clock className="h-3 w-3" />
+                  Last Updated
+                  {sortBy === 'updatedAt' && (
+                    sortOrder === 'asc' ? <SortAsc className="h-3 w-3" /> : <SortDesc className="h-3 w-3" />
+                  )}
+                </Button>
+                <Button
+                  variant={sortBy === 'priority' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => handleSortChange('priority')}
+                  className="flex items-center gap-1"
+                >
+                  <AlertTriangle className="h-3 w-3" />
+                  Priority
+                  {sortBy === 'priority' && (
+                    sortOrder === 'asc' ? <SortAsc className="h-3 w-3" /> : <SortDesc className="h-3 w-3" />
+                  )}
+                </Button>
+                <Button
+                  variant={sortBy === 'status' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => handleSortChange('status')}
+                  className="flex items-center gap-1"
+                >
+                  <MessageCircle className="h-3 w-3" />
+                  Status
+                  {sortBy === 'status' && (
+                    sortOrder === 'asc' ? <SortAsc className="h-3 w-3" /> : <SortDesc className="h-3 w-3" />
+                  )}
+                </Button>
+                <Button
+                  variant={sortBy === 'timeAge' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => handleSortChange('timeAge')}
+                  className="flex items-center gap-1"
+                >
+                  <Timer className="h-3 w-3" />
+                  Time Age
+                  {sortBy === 'timeAge' && (
+                    sortOrder === 'asc' ? <SortAsc className="h-3 w-3" /> : <SortDesc className="h-3 w-3" />
+                  )}
+                </Button>
+              </div>
             </div>
           </div>
         </CardContent>
@@ -788,7 +1074,7 @@ const AdminSupportManagement = () => {
         </Alert>
       )}
 
-      {filteredTickets.length === 0 ? (
+      {filteredAndSortedTickets.length === 0 ? (
         <Card>
           <CardContent className="pt-6">
             <div className="text-center space-y-4">
@@ -805,30 +1091,55 @@ const AdminSupportManagement = () => {
         </Card>
       ) : (
         <div className="space-y-4">
-          {filteredTickets.map((ticket) => {
+          {filteredAndSortedTickets.map((ticket) => {
             const hasUnreadFromUser = ticket.responses.some(r => !r.isFromSupport && !r.readBySupport);
+            const isAssignedToMe = ticket.assignedTo === user?.uid;
             
             return (
               <Card 
                 key={ticket.ticketId} 
-                className={`cursor-pointer transition-colors hover:bg-muted/50 ${
+                className={`transition-colors hover:bg-muted/50 ${
                   hasUnreadFromUser ? 'ring-2 ring-blue-500' : ''
+                } ${
+                  ticket.timePriority === 'bad' ? 'border-l-4 border-l-red-500' :
+                  ticket.timePriority === 'warning' ? 'border-l-4 border-l-yellow-500' :
+                  ticket.timePriority === 'good' ? 'border-l-4 border-l-green-500' : ''
                 }`}
-                onClick={() => handleTicketClick(ticket)}
               >
                 <CardContent className="pt-6">
                   <div className="space-y-3">
                     <div className="flex items-start justify-between gap-2">
-                      <h3 className="font-medium text-sm sm:text-base flex-1 min-w-0">
-                        <span className="text-muted-foreground">#</span>{ticket.ticketId} - {ticket.subject}
-                      </h3>
-                      {hasUnreadFromUser && (
-                        <Badge variant="destructive" className="text-xs shrink-0 ml-2">
-                          <span className="hidden sm:inline">New Response</span>
-                          <span className="sm:hidden">New</span>
-                        </Badge>
-                      )}
+                      <div 
+                        className="flex-1 min-w-0 cursor-pointer"
+                        onClick={() => handleTicketClick(ticket)}
+                      >
+                        <h3 className="font-medium text-sm sm:text-base">
+                          <span className="text-muted-foreground">#</span>{ticket.ticketId} - {ticket.subject}
+                        </h3>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        {hasUnreadFromUser && (
+                          <Badge variant="destructive" className="text-xs">
+                            <span className="hidden sm:inline">New Response</span>
+                            <span className="sm:hidden">New</span>
+                          </Badge>
+                        )}
+                        {ticket.timePriority && (
+                          <Badge className={getTimePriorityColor(ticket.timePriority)}>
+                            <Timer className="h-3 w-3 mr-1" />
+                            <span className="hidden sm:inline">
+                              {ticket.timePriority === 'good' ? 'Recent' :
+                               ticket.timePriority === 'warning' ? 'Aging' : 'Urgent'}
+                            </span>
+                            <span className="sm:hidden">
+                              {ticket.timePriority === 'good' ? 'R' :
+                               ticket.timePriority === 'warning' ? 'A' : 'U'}
+                            </span>
+                          </Badge>
+                        )}
+                      </div>
                     </div>
+                    
                     <div className="flex items-center gap-2 flex-wrap">
                       <Badge className={getStatusColor(ticket.status)}>
                         {getStatusIcon(ticket.status)}
@@ -841,19 +1152,69 @@ const AdminSupportManagement = () => {
                       <Badge variant="outline">
                         {ticket.category.charAt(0).toUpperCase() + ticket.category.slice(1)}
                       </Badge>
+                      {ticket.assignedTo && (
+                        <Badge variant="secondary" className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300">
+                          <UserCheck className="h-3 w-3 mr-1" />
+                          {isAssignedToMe ? 'Assigned to me' : `Assigned to ${ticket.assignedToName}`}
+                        </Badge>
+                      )}
                     </div>
-                    <p className="text-sm text-muted-foreground line-clamp-2">
-                      {ticket.description}
-                    </p>
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 text-xs text-muted-foreground">
-                      <span className="truncate">From: {ticket.userName} ({ticket.userEmail})</span>
-                      <span>Created <TimestampTooltip date={ticket.createdAt} className="text-xs text-muted-foreground" /></span>
-                      {ticket.responses.length > 0 && (
-                        <span>{ticket.responses.length} response{ticket.responses.length !== 1 ? 's' : ''}</span>
-                      )}
-                      {ticket.lastResponseAt && (
-                        <span>Last activity <TimestampTooltip date={ticket.lastResponseAt} className="text-xs text-muted-foreground" /></span>
-                      )}
+
+                    <div 
+                      className="cursor-pointer"
+                      onClick={() => handleTicketClick(ticket)}
+                    >
+                      <p className="text-sm text-muted-foreground line-clamp-2">
+                        {ticket.description}
+                      </p>
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 text-xs text-muted-foreground">
+                        <span className="truncate">From: {ticket.userName} ({ticket.userEmail})</span>
+                        <span>Created <TimestampTooltip date={ticket.createdAt} className="text-xs text-muted-foreground" /></span>
+                        {ticket.responses.length > 0 && (
+                          <span>{ticket.responses.length} response{ticket.responses.length !== 1 ? 's' : ''}</span>
+                        )}
+                        {ticket.lastResponseAt && (
+                          <span>Last activity <TimestampTooltip date={ticket.lastResponseAt} className="text-xs text-muted-foreground" /></span>
+                        )}
+                      </div>
+                      
+                      <div className="flex items-center gap-2">
+                        {ticket.assignedTo === user?.uid ? (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleAssignTicket(ticket.ticketId, false);
+                            }}
+                            className="text-xs"
+                          >
+                            <UserX className="h-3 w-3 mr-1" />
+                            Unassign
+                          </Button>
+                        ) : !ticket.assignedTo ? (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleAssignTicket(ticket.ticketId, true);
+                            }}
+                            className="text-xs"
+                          >
+                            <UserCheck className="h-3 w-3 mr-1" />
+                            Assign to me
+                          </Button>
+                        ) : (
+                          <Badge variant="outline" className="text-xs">
+                            <UserCheck className="h-3 w-3 mr-1" />
+                            Assigned
+                          </Badge>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </CardContent>
