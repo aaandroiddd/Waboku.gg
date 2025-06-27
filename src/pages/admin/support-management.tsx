@@ -130,7 +130,7 @@ const AdminSupportManagement = () => {
 
   useEffect(() => {
     if (!user) {
-      router.push('/admin/login');
+      router.push(`/admin/login?returnUrl=${encodeURIComponent(router.asPath)}`);
       return;
     }
     

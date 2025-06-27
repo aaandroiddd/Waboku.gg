@@ -27,15 +27,15 @@ export default function AdminLogin() {
   const [pageLoading, setPageLoading] = useState(true);
   const { returnUrl } = router.query;
 
-  // Check if user is already logged in and is a moderator
+  // Check if user is already logged in and has admin/moderator permissions
   useEffect(() => {
-    const checkModeratorStatus = async () => {
+    const checkAdminStatus = async () => {
       if (user) {
         try {
-          // Check if user has moderator role by trying to access the moderation API
+          // Check if user has admin/moderator role using the verify endpoint
           const token = await user.getIdToken(true);
-          const response = await fetch('/api/admin/moderation/get-listings?filter=pending', {
-            method: 'GET',
+          const response = await fetch('/api/admin/verify', {
+            method: 'POST',
             headers: {
               'Authorization': `Bearer ${token}`,
               'Content-Type': 'application/json'
@@ -43,7 +43,7 @@ export default function AdminLogin() {
           });
           
           if (response.ok) {
-            // User is a moderator, redirect to moderation dashboard or return URL
+            // User is authorized, redirect to return URL or default admin page
             if (returnUrl && typeof returnUrl === 'string') {
               router.push(returnUrl);
             } else {
@@ -51,19 +51,19 @@ export default function AdminLogin() {
             }
             return;
           } else {
-            // User is logged in but not a moderator
-            setError('You do not have moderator permissions.');
+            // User is logged in but not authorized
+            setError('You do not have admin or moderator permissions.');
           }
         } catch (err) {
-          console.error('Error checking moderator status:', err);
-          setError('Failed to verify moderator status.');
+          console.error('Error checking admin status:', err);
+          setError('Failed to verify admin status.');
         }
       }
       
       setPageLoading(false);
     };
     
-    checkModeratorStatus();
+    checkAdminStatus();
   }, [user, router, returnUrl]);
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -76,10 +76,10 @@ export default function AdminLogin() {
       const userCredential = await signIn(email, password);
       
       if (userCredential && userCredential.user) {
-        // Check if user has moderator role by trying to access the moderation API
+        // Check if user has admin/moderator role using the verify endpoint
         const token = await userCredential.user.getIdToken(true);
-        const response = await fetch('/api/admin/moderation/get-listings?filter=pending', {
-          method: 'GET',
+        const response = await fetch('/api/admin/verify', {
+          method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
@@ -87,7 +87,7 @@ export default function AdminLogin() {
         });
         
         if (response.ok) {
-          // User is a moderator, redirect to moderation dashboard or return URL
+          // User is authorized, redirect to return URL or default admin page
           if (returnUrl && typeof returnUrl === 'string') {
             router.push(returnUrl);
           } else {
@@ -95,8 +95,8 @@ export default function AdminLogin() {
           }
           return;
         } else {
-          // User is not a moderator
-          setError('You do not have moderator permissions.');
+          // User is not authorized
+          setError('You do not have admin or moderator permissions.');
         }
       }
     } catch (err: any) {
@@ -131,10 +131,10 @@ export default function AdminLogin() {
       }
       
       if (currentUser) {
-        // Check if user has moderator role by trying to access the moderation API
+        // Check if user has admin/moderator role using the verify endpoint
         const token = await currentUser.getIdToken(true);
-        const response = await fetch('/api/admin/moderation/get-listings?filter=pending', {
-          method: 'GET',
+        const response = await fetch('/api/admin/verify', {
+          method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
@@ -142,7 +142,7 @@ export default function AdminLogin() {
         });
         
         if (response.ok) {
-          // User is a moderator, redirect to moderation dashboard or return URL
+          // User is authorized, redirect to return URL or default admin page
           if (returnUrl && typeof returnUrl === 'string') {
             router.push(returnUrl);
           } else {
@@ -150,10 +150,10 @@ export default function AdminLogin() {
           }
           return;
         } else {
-          // User is not a moderator
+          // User is not authorized
           const responseText = await response.text();
-          console.error('Moderation API response:', response.status, responseText);
-          setError('You do not have moderator permissions.');
+          console.error('Admin verify API response:', response.status, responseText);
+          setError('You do not have admin or moderator permissions.');
         }
       } else {
         setError('Authentication failed. Please try again.');
