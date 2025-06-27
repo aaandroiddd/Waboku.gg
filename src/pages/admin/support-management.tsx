@@ -189,34 +189,8 @@ const AdminSupportManagement = () => {
   };
 
   const handleTicketClick = async (ticket: SupportTicket) => {
-    setSelectedTicket(ticket);
-    
-    // Mark ticket responses as read by support
-    if (!user) return;
-    
-    try {
-      const token = await user.getIdToken();
-      await fetch('/api/admin/support/mark-read', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({ ticketId: ticket.ticketId }),
-      });
-      
-      // Update local state
-      setTickets(prev => prev.map(t => 
-        t.ticketId === ticket.ticketId 
-          ? { 
-              ...t, 
-              responses: t.responses.map(r => ({ ...r, readBySupport: true }))
-            }
-          : t
-      ));
-    } catch (err) {
-      console.error('Error marking ticket as read:', err);
-    }
+    // Navigate to individual ticket page
+    router.push(`/admin/support-management/${ticket.ticketId}`);
   };
 
   const handleSubmitResponse = async (e: React.FormEvent) => {
