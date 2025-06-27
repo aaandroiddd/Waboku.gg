@@ -61,9 +61,28 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     await ticketRef.update(updateData);
 
+    // Verify the update was successful by reading the document back
+    const updatedDoc = await ticketRef.get();
+    const updatedData = updatedDoc.data();
+    
+    console.log('Ticket assignment update completed:', {
+      ticketId,
+      assignedTo: updatedData?.assignedTo,
+      assignedToName: updatedData?.assignedToName,
+      assignedAt: updatedData?.assignedAt,
+      updatedAt: updatedData?.updatedAt
+    });
+
     res.status(200).json({ 
       success: true, 
-      message: assignedTo ? 'Ticket assigned successfully' : 'Ticket unassigned successfully' 
+      message: assignedTo ? 'Ticket assigned successfully' : 'Ticket unassigned successfully',
+      updatedTicket: {
+        ticketId,
+        assignedTo: updatedData?.assignedTo,
+        assignedToName: updatedData?.assignedToName,
+        assignedAt: updatedData?.assignedAt,
+        updatedAt: updatedData?.updatedAt
+      }
     });
 
   } catch (error) {

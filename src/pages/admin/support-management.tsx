@@ -433,15 +433,21 @@ const AdminSupportManagement = () => {
         throw new Error('Failed to assign ticket');
       }
 
-      // Update local state
+      const data = await response.json();
+      console.log('Assignment response:', data);
+
+      // Use the returned data from the API to ensure consistency
+      const updatedTicketData = {
+        assignedTo: data.updatedTicket?.assignedTo || (assign ? user.uid : undefined),
+        assignedToName: data.updatedTicket?.assignedToName || (assign ? currentUserName : undefined),
+        assignedAt: data.updatedTicket?.assignedAt ? new Date(data.updatedTicket.assignedAt) : (assign ? new Date() : undefined),
+        updatedAt: data.updatedTicket?.updatedAt ? new Date(data.updatedTicket.updatedAt) : new Date()
+      };
+
+      // Update local state with the confirmed data
       setTickets(prev => prev.map(t => 
         t.ticketId === ticketId 
-          ? { 
-              ...t, 
-              assignedTo: assign ? user.uid : undefined,
-              assignedToName: assign ? currentUserName : undefined,
-              assignedAt: assign ? new Date() : undefined
-            }
+          ? { ...t, ...updatedTicketData }
           : t
       ));
 
@@ -449,9 +455,7 @@ const AdminSupportManagement = () => {
       if (selectedTicket?.ticketId === ticketId) {
         setSelectedTicket(prev => prev ? {
           ...prev,
-          assignedTo: assign ? user.uid : undefined,
-          assignedToName: assign ? currentUserName : undefined,
-          assignedAt: assign ? new Date() : undefined
+          ...updatedTicketData
         } : null);
       }
 
@@ -461,6 +465,12 @@ const AdminSupportManagement = () => {
           ? `Ticket assigned to ${currentUserName}` 
           : "Ticket has been unassigned",
       });
+
+      // Refresh tickets after a short delay to ensure database consistency
+      setTimeout(() => {
+        fetchTickets();
+      }, 1000);
+
     } catch (err: any) {
       console.error('Error assigning ticket:', err);
       toast({
@@ -468,6 +478,9 @@ const AdminSupportManagement = () => {
         description: err.message || 'Failed to assign ticket',
         variant: "destructive",
       });
+      
+      // Refresh tickets on error to get the current state
+      fetchTickets();
     }
   };
 
