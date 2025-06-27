@@ -185,6 +185,12 @@ export function getBaseEmailTemplate(data: EmailTemplateData): { html: string; t
                 margin-bottom: 20px;
             }
             
+            .content div {
+                color: #c9d1d9;
+                font-size: 16px;
+                margin-bottom: 20px;
+            }
+            
             .cta-button {
                 padding: 14px 28px;
                 font-size: 16px;
@@ -220,7 +226,7 @@ export function getBaseEmailTemplate(data: EmailTemplateData): { html: string; t
         <div class="content">
             <h1>${title} ${emoji}</h1>
             <p>Hey ${userName},</p>
-            <p>${message}</p>
+            <div style="color: #475569; font-size: 18px; line-height: 1.7; margin-bottom: 24px;">${message}</div>
             
             <div style="text-align: center;">
                 <a href="${actionUrl}" class="cta-button">${actionText}</a>
@@ -239,13 +245,21 @@ export function getBaseEmailTemplate(data: EmailTemplateData): { html: string; t
 </body>
 </html>`;
 
-  // Plain text version
+  // Plain text version - strip HTML tags and format properly
+  const plainMessage = message
+    .replace(/<strong>/g, '')
+    .replace(/<\/strong>/g, '')
+    .replace(/<br>/g, '\n')
+    .replace(/&nbsp;&nbsp;&nbsp;&nbsp;/g, '    ')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/•/g, '-');
+
   const text = `
 ${title}
 
 Hi ${userName},
 
-${message}
+${plainMessage}
 
 ${actionText}: ${actionUrl}
 

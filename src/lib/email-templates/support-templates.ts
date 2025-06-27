@@ -268,18 +268,20 @@ export function getSupportConfirmationEmailTemplate(data: SupportConfirmationEma
     title: `Support Ticket Created`,
     message: `Thank you for contacting Waboku.gg support! We've received your ticket and our team will review it shortly.
 
-**Ticket Details:**
-- Ticket ID: #${ticketId}
-- Subject: ${subject}
-- Category: ${categoryDisplay}
-- Priority: ${priorityDisplay}
+<strong>Ticket Details:</strong>
 
-**What happens next?**
-- Our support team will review your ticket within 24 hours
-- ${priority === 'critical' || priority === 'high' ? 'High priority tickets are reviewed first' : 'We respond to tickets in order of priority and submission time'}
-- You'll receive an email response once we've reviewed your request
+&nbsp;&nbsp;&nbsp;&nbsp;• Ticket ID: #${ticketId}<br>
+&nbsp;&nbsp;&nbsp;&nbsp;• Subject: ${subject}<br>
+&nbsp;&nbsp;&nbsp;&nbsp;• Category: ${categoryDisplay}<br>
+&nbsp;&nbsp;&nbsp;&nbsp;• Priority: ${priorityDisplay}<br>
 
-If you need to add more information to your ticket, simply reply to this email with your ticket ID #${ticketId} in the subject line.`,
+<strong>What happens next?</strong>
+
+&nbsp;&nbsp;&nbsp;&nbsp;• Our support team will review your ticket within 24 hours<br>
+&nbsp;&nbsp;&nbsp;&nbsp;• ${priority === 'critical' || priority === 'high' ? 'High priority tickets are reviewed first' : 'We respond to tickets in order of priority and submission time'}<br>
+&nbsp;&nbsp;&nbsp;&nbsp;• You'll receive an email response once we've reviewed your request<br>
+
+If you need to add more information to your ticket, simply reply to this email with your ticket ID <strong>#${ticketId}</strong> in the subject line.`,
     actionUrl,
     actionText: 'Go to Dashboard',
     type: 'system' as const,
