@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { adminAuth, adminDb } from '@/lib/firebase-admin';
+import { getFirebaseAdmin } from '@/lib/firebase-admin';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -27,8 +27,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     } else {
       // Verify Firebase ID token
       try {
-        const decodedToken = await adminAuth.verifyIdToken(token);
-        const userDoc = await adminDb.collection('users').doc(decodedToken.uid).get();
+        const { auth, db } = getFirebaseAdmin();
+        const decodedToken = await auth.verifyIdToken(token);
+        const userDoc = await db.collection('users').doc(decodedToken.uid).get();
         const userData = userDoc.data();
         
         if (!userData?.isAdmin && !userData?.isModerator) {
@@ -41,7 +42,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     // Update the ticket with assignment information
-    const ticketRef = adminDb.collection('supportTickets').doc(ticketId);
+    const { db } = getFirebaseAdmin();
+    const ticketRef = db.collection('supportTickets').doc(ticketId);
     const updateData: any = {
       updatedAt: new Date()
     };
