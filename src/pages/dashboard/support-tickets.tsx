@@ -93,9 +93,16 @@ const SupportTicketsPageContent = () => {
     if (!user) return;
     
     try {
+      console.log('=== FRONTEND SUPPORT TICKETS DEBUG START ===');
+      console.log('User ID:', user.uid);
+      console.log('User email:', user.email);
+      
       setIsLoading(true);
       const token = await user.getIdToken();
       if (!token) throw new Error("Authentication required");
+      
+      console.log('Token obtained, length:', token.length);
+      console.log('Making API call to /api/support/get-tickets');
 
       const response = await fetch('/api/support/get-tickets', {
         headers: {
@@ -103,13 +110,31 @@ const SupportTicketsPageContent = () => {
         },
       });
 
+      console.log('API response status:', response.status);
+      console.log('API response ok:', response.ok);
+
       if (!response.ok) {
+        const errorText = await response.text();
+        console.error('API error response:', errorText);
         throw new Error('Failed to fetch tickets');
       }
 
       const data = await response.json();
+      console.log('API response data:', data);
+      console.log('Number of tickets received:', data.tickets?.length || 0);
+      
+      if (data.tickets && data.tickets.length > 0) {
+        console.log('First ticket details:', {
+          ticketId: data.tickets[0].ticketId,
+          userId: data.tickets[0].userId,
+          userEmail: data.tickets[0].userEmail,
+          subject: data.tickets[0].subject
+        });
+      }
+      
       setTickets(data.tickets || []);
       setError(""); // Clear any previous errors
+      console.log('=== FRONTEND SUPPORT TICKETS DEBUG END ===');
     } catch (err: any) {
       console.error('Error fetching tickets:', err);
       setError(err.message || 'Failed to load support tickets');
