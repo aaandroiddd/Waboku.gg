@@ -69,9 +69,18 @@ interface SupportTicket {
 }
 
 const SupportTicketsPageContent = () => {
+  console.log('=== SUPPORT TICKETS PAGE COMPONENT LOADED ===');
+  console.log('Component render time:', new Date().toISOString());
+  
   const { user } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
+  
+  console.log('=== AUTH CONTEXT STATE ===');
+  console.log('User exists:', !!user);
+  console.log('User ID:', user?.uid);
+  console.log('User email:', user?.email);
+  console.log('Current URL:', typeof window !== 'undefined' ? window.location.href : 'SSR');
   
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
   const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(null);
