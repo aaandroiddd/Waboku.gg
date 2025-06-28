@@ -104,11 +104,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     console.log('Processing tickets data...');
+    console.log('Current user ID:', userId);
+    console.log('Found tickets for user:', ticketsSnapshot.docs.map(doc => ({
+      id: doc.id,
+      userId: doc.data().userId,
+      userEmail: doc.data().userEmail,
+      subject: doc.data().subject
+    })));
+    
     const tickets = ticketsSnapshot.docs.map((doc, index) => {
       try {
         const data = doc.data();
         console.log(`Processing ticket ${index + 1}:`, {
           id: doc.id,
+          userId: data.userId,
+          userEmail: data.userEmail,
+          subject: data.subject,
           hasCreatedAt: !!data.createdAt,
           hasUpdatedAt: !!data.updatedAt,
           responsesCount: (data.responses || []).length
