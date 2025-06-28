@@ -264,7 +264,8 @@ export default function IndividualSupportTicket() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'open': return 'bg-blue-500';
-      case 'in-progress': return 'bg-yellow-500';
+      case 'in_progress': return 'bg-yellow-500';
+      case 'in-progress': return 'bg-yellow-500'; // Support both formats
       case 'closed': return 'bg-gray-500';
       case 'resolved': return 'bg-green-500';
       default: return 'bg-gray-500';
@@ -441,7 +442,7 @@ export default function IndividualSupportTicket() {
                       {ticket.priority.toUpperCase()}
                     </Badge>
                     <Badge className={getStatusColor(ticket.status)}>
-                      {ticket.status.toUpperCase().replace('-', ' ')}
+                      {ticket.status.toUpperCase().replace(/[-_]/g, ' ')}
                     </Badge>
                   </div>
                 </div>
@@ -532,7 +533,7 @@ export default function IndividualSupportTicket() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="open">Open</SelectItem>
-                      <SelectItem value="in-progress">In Progress</SelectItem>
+                      <SelectItem value="in_progress">In Progress</SelectItem>
                       <SelectItem value="closed">Closed</SelectItem>
                       <SelectItem value="resolved">Resolved</SelectItem>
                     </SelectContent>
