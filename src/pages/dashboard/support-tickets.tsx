@@ -82,10 +82,19 @@ const SupportTicketsPageContent = () => {
 
   // Redirect if not authenticated
   useEffect(() => {
+    console.log('=== USEEFFECT TRIGGERED ===');
+    console.log('User exists:', !!user);
+    if (user) {
+      console.log('User ID in useEffect:', user.uid);
+      console.log('User email in useEffect:', user.email);
+    }
+    
     if (!user) {
+      console.log('No user, redirecting to sign-in');
       router.push('/auth/sign-in?redirect=/dashboard/support-tickets');
       return;
     }
+    console.log('Calling fetchTickets from useEffect');
     fetchTickets();
   }, [user, router]);
 
