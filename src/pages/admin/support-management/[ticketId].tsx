@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { MobileSelect } from '@/components/ui/mobile-select';
 import { toast } from 'sonner';
 import { ArrowLeft, Clock, User, Mail, MessageSquare, AlertCircle, CheckCircle, XCircle, Lock, RefreshCw } from 'lucide-react';
 import { Footer } from '@/components/Footer';
@@ -671,17 +671,17 @@ export default function IndividualSupportTicket() {
               <CardContent className="space-y-4">
                 <div>
                   <label className="text-sm font-medium mb-2 block">Status</label>
-                  <Select value={newStatus} onValueChange={setNewStatus}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="open">Open</SelectItem>
-                      <SelectItem value="in_progress">In Progress</SelectItem>
-                      <SelectItem value="closed">Closed</SelectItem>
-                      <SelectItem value="resolved">Resolved</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <MobileSelect 
+                    value={newStatus} 
+                    onValueChange={setNewStatus}
+                    placeholder="Select status"
+                    options={[
+                      { value: "open", label: "Open" },
+                      { value: "in_progress", label: "In Progress" },
+                      { value: "closed", label: "Closed" },
+                      { value: "resolved", label: "Resolved" }
+                    ]}
+                  />
                 </div>
                 {newStatus !== ticket.status && (
                   <Button

@@ -1,13 +1,7 @@
 import { Input } from "@/components/ui/input";
 import { Search, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { MobileSelect } from "@/components/ui/mobile-select";
 import { Card, CardContent } from "@/components/ui/card";
 
 interface FavoritesSearchBarProps {
@@ -85,28 +79,28 @@ export function FavoritesSearchBar({
               {/* Game filter */}
               <div className="space-y-2">
                 <label className="text-sm font-medium">Game</label>
-                <Select value={gameFilter} onValueChange={onGameFilterChange}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="All Games" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Games</SelectItem>
-                    <SelectItem value="dbs">Dragon Ball Super Card Game</SelectItem>
-                    <SelectItem value="digimon">Digimon</SelectItem>
-                    <SelectItem value="lorcana">Disney Lorcana</SelectItem>
-                    <SelectItem value="flesh-and-blood">Flesh and Blood</SelectItem>
-                    <SelectItem value="mtg">Magic: The Gathering</SelectItem>
-                    <SelectItem value="onepiece">One Piece Card Game</SelectItem>
-                    <SelectItem value="pokemon">Pokemon</SelectItem>
-                    <SelectItem value="star-wars">Star Wars: Unlimited</SelectItem>
-                    <SelectItem value="union-arena">Union Arena</SelectItem>
-                    <SelectItem value="universus">Universus</SelectItem>
-                    <SelectItem value="vanguard">Vanguard</SelectItem>
-                    <SelectItem value="weiss">Weiss Schwarz</SelectItem>
-                    <SelectItem value="yugioh">Yu-Gi-Oh!</SelectItem>
-                    <SelectItem value="other">Other</SelectItem>
-                  </SelectContent>
-                </Select>
+                <MobileSelect 
+                  value={gameFilter} 
+                  onValueChange={onGameFilterChange}
+                  placeholder="All Games"
+                  options={[
+                    { value: "all", label: "All Games" },
+                    { value: "dbs", label: "Dragon Ball Super Card Game" },
+                    { value: "digimon", label: "Digimon" },
+                    { value: "lorcana", label: "Disney Lorcana" },
+                    { value: "flesh-and-blood", label: "Flesh and Blood" },
+                    { value: "mtg", label: "Magic: The Gathering" },
+                    { value: "onepiece", label: "One Piece Card Game" },
+                    { value: "pokemon", label: "Pokemon" },
+                    { value: "star-wars", label: "Star Wars: Unlimited" },
+                    { value: "union-arena", label: "Union Arena" },
+                    { value: "universus", label: "Universus" },
+                    { value: "vanguard", label: "Vanguard" },
+                    { value: "weiss", label: "Weiss Schwarz" },
+                    { value: "yugioh", label: "Yu-Gi-Oh!" },
+                    { value: "other", label: "Other" }
+                  ]}
+                />
               </div>
               
               {/* Min Price */}

@@ -8,7 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { MobileSelect } from "@/components/ui/mobile-select";
 import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
 import { 
@@ -897,67 +897,67 @@ const AdminSupportManagement = () => {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="status-filter">Status</Label>
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Statuses</SelectItem>
-                    <SelectItem value="open">Open</SelectItem>
-                    <SelectItem value="in_progress">In Progress</SelectItem>
-                    <SelectItem value="resolved">Resolved</SelectItem>
-                    <SelectItem value="closed">Closed</SelectItem>
-                  </SelectContent>
-                </Select>
+                <MobileSelect 
+                  value={statusFilter} 
+                  onValueChange={setStatusFilter}
+                  placeholder="All Statuses"
+                  options={[
+                    { value: "all", label: "All Statuses" },
+                    { value: "open", label: "Open" },
+                    { value: "in_progress", label: "In Progress" },
+                    { value: "resolved", label: "Resolved" },
+                    { value: "closed", label: "Closed" }
+                  ]}
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="priority-filter">Priority</Label>
-                <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Priorities</SelectItem>
-                    <SelectItem value="critical">Critical</SelectItem>
-                    <SelectItem value="high">High</SelectItem>
-                    <SelectItem value="medium">Medium</SelectItem>
-                    <SelectItem value="low">Low</SelectItem>
-                  </SelectContent>
-                </Select>
+                <MobileSelect 
+                  value={priorityFilter} 
+                  onValueChange={setPriorityFilter}
+                  placeholder="All Priorities"
+                  options={[
+                    { value: "all", label: "All Priorities" },
+                    { value: "critical", label: "Critical" },
+                    { value: "high", label: "High" },
+                    { value: "medium", label: "Medium" },
+                    { value: "low", label: "Low" }
+                  ]}
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="category-filter">Category</Label>
-                <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Categories</SelectItem>
-                    <SelectItem value="account">Account</SelectItem>
-                    <SelectItem value="billing">Billing</SelectItem>
-                    <SelectItem value="orders">Orders</SelectItem>
-                    <SelectItem value="listings">Listings</SelectItem>
-                    <SelectItem value="technical">Technical</SelectItem>
-                    <SelectItem value="refunds">Refunds</SelectItem>
-                    <SelectItem value="safety">Safety</SelectItem>
-                    <SelectItem value="feature">Feature</SelectItem>
-                    <SelectItem value="other">Other</SelectItem>
-                  </SelectContent>
-                </Select>
+                <MobileSelect 
+                  value={categoryFilter} 
+                  onValueChange={setCategoryFilter}
+                  placeholder="All Categories"
+                  options={[
+                    { value: "all", label: "All Categories" },
+                    { value: "account", label: "Account" },
+                    { value: "billing", label: "Billing" },
+                    { value: "orders", label: "Orders" },
+                    { value: "listings", label: "Listings" },
+                    { value: "technical", label: "Technical" },
+                    { value: "refunds", label: "Refunds" },
+                    { value: "safety", label: "Safety" },
+                    { value: "feature", label: "Feature" },
+                    { value: "other", label: "Other" }
+                  ]}
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="assignment-filter">Assignment</Label>
-                <Select value={assignmentFilter} onValueChange={setAssignmentFilter}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Tickets</SelectItem>
-                    <SelectItem value="assigned_to_me">Assigned to Me</SelectItem>
-                    <SelectItem value="unassigned">Unassigned</SelectItem>
-                    <SelectItem value="assigned">Assigned</SelectItem>
-                  </SelectContent>
-                </Select>
+                <MobileSelect 
+                  value={assignmentFilter} 
+                  onValueChange={setAssignmentFilter}
+                  placeholder="All Tickets"
+                  options={[
+                    { value: "all", label: "All Tickets" },
+                    { value: "assigned_to_me", label: "Assigned to Me" },
+                    { value: "unassigned", label: "Unassigned" },
+                    { value: "assigned", label: "Assigned" }
+                  ]}
+                />
               </div>
               <div className="flex items-end">
                 <Button 
