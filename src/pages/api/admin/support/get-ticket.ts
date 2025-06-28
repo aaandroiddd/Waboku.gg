@@ -88,14 +88,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       ...doc.data()
     }));
 
+    // Process the ticket data and handle null values properly
     const ticket = {
       id: ticketDoc.id,
       ticketId: ticketDoc.id,
       ...ticketData,
+      // Ensure assignment fields are properly handled
+      assignedTo: ticketData?.assignedTo || null,
+      assignedToName: ticketData?.assignedToName || null,
+      assignedAt: ticketData?.assignedAt || null,
       responses,
       timePriority,
       hoursSinceCreated
     };
+
+    console.log('Fetched ticket assignment data:', {
+      ticketId: ticket.ticketId,
+      assignedTo: ticket.assignedTo,
+      assignedToName: ticket.assignedToName,
+      assignedAt: ticket.assignedAt
+    });
 
     res.status(200).json({ ticket });
   } catch (error) {

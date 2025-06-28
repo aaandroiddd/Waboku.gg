@@ -280,6 +280,21 @@ export default function IndividualSupportTicket() {
       const newAssignedTo = isCurrentlyAssigned ? null : user.uid;
       const newAssignedToName = isCurrentlyAssigned ? null : user.displayName || user.email;
 
+      console.log('Assignment request:', {
+        ticketId: ticket.ticketId,
+        currentAssignment: {
+          assignedTo: ticket.assignedTo,
+          assignedToName: ticket.assignedToName,
+          assignedAt: ticket.assignedAt
+        },
+        newAssignment: {
+          assignedTo: newAssignedTo,
+          assignedToName: newAssignedToName
+        },
+        isCurrentlyAssigned,
+        userUid: user.uid
+      });
+
       const response = await fetch('/api/admin/support/assign-ticket', {
         method: 'POST',
         headers: {
@@ -295,27 +310,54 @@ export default function IndividualSupportTicket() {
 
       if (response.ok) {
         const responseData = await response.json();
+        console.log('Assignment response:', responseData);
+        
         const action = isCurrentlyAssigned ? 'unassigned' : 'assigned';
         toast.success(`Ticket ${action} successfully`);
         
-        // Immediately update local state with the new assignment
+        // Use the actual response data from the server
+        const updatedTicket = responseData.updatedTicket;
+        
+        // Immediately update local state with the server response
         setTicket(prevTicket => {
           if (!prevTicket) return prevTicket;
-          return {
-            ...prevTicket,
-            assignedTo: newAssignedTo,
-            assignedToName: newAssignedToName,
-            assignedAt: newAssignedTo ? new Date() : undefined,
-            updatedAt: new Date()
+          
+          // Helper function to convert timestamp to Date
+          const convertTimestamp = (timestamp: any) => {
+            if (!timestamp) return null;
+            if (timestamp instanceof Date) return timestamp;
+            if (timestamp.seconds) return new Date(timestamp.seconds * 1000);
+            if (typeof timestamp === 'string') return new Date(timestamp);
+            return new Date(timestamp);
           };
+          
+          const newTicket = {
+            ...prevTicket,
+            assignedTo: updatedTicket.assignedTo || null,
+            assignedToName: updatedTicket.assignedToName || null,
+            assignedAt: convertTimestamp(updatedTicket.assignedAt),
+            updatedAt: convertTimestamp(updatedTicket.updatedAt) || new Date()
+          };
+          
+          console.log('Updated local ticket state:', {
+            assignedTo: newTicket.assignedTo,
+            assignedToName: newTicket.assignedToName,
+            assignedAt: newTicket.assignedAt,
+            rawAssignedAt: updatedTicket.assignedAt,
+            rawUpdatedAt: updatedTicket.updatedAt
+          });
+          
+          return newTicket;
         });
         
         // Also refresh from server after a short delay to ensure consistency
         setTimeout(() => {
+          console.log('Refreshing ticket data from server...');
           fetchTicket();
         }, 1000);
       } else {
         const errorData = await response.json();
+        console.error('Assignment failed:', errorData);
         toast.error(errorData.error || 'Failed to update assignment');
       }
     } catch (error) {

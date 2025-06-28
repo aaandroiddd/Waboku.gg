@@ -53,10 +53,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       updateData.assignedToName = assignedToName;
       updateData.assignedAt = new Date();
     } else {
-      // Unassign ticket
-      updateData.assignedTo = null;
-      updateData.assignedToName = null;
-      updateData.assignedAt = null;
+      // Unassign ticket - use FieldValue.delete() to properly remove fields
+      const { FieldValue } = require('firebase-admin/firestore');
+      updateData.assignedTo = FieldValue.delete();
+      updateData.assignedToName = FieldValue.delete();
+      updateData.assignedAt = FieldValue.delete();
     }
 
     await ticketRef.update(updateData);
