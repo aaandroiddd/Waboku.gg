@@ -176,7 +176,32 @@ export default function IndividualSupportTicket() {
       if (response.ok) {
         toast.success('Response sent successfully');
         setResponseMessage('');
-        fetchTicket(); // Refresh ticket data
+        
+        // Immediately add the new response to local state
+        const newResponse = {
+          id: `temp-${Date.now()}`, // Temporary ID until we refresh
+          message: responseMessage,
+          isFromSupport: true,
+          authorName: user?.displayName || user?.email || 'Support',
+          authorEmail: user?.email || '',
+          createdAt: new Date(),
+          supportStaffName: user?.displayName || user?.email || 'Support'
+        };
+        
+        setTicket(prevTicket => {
+          if (!prevTicket) return prevTicket;
+          return {
+            ...prevTicket,
+            responses: [...(prevTicket.responses || []), newResponse],
+            lastResponseAt: new Date(),
+            updatedAt: new Date()
+          };
+        });
+        
+        // Refresh from server after a short delay to get the actual response ID
+        setTimeout(() => {
+          fetchTicket();
+        }, 1000);
       } else {
         const errorData = await response.json();
         toast.error(errorData.error || 'Failed to send response');
@@ -210,15 +235,34 @@ export default function IndividualSupportTicket() {
       });
 
       if (response.ok) {
+        const responseData = await response.json();
         toast.success('Status updated successfully');
-        fetchTicket(); // Refresh ticket data
+        
+        // Immediately update local state with the new status
+        setTicket(prevTicket => {
+          if (!prevTicket) return prevTicket;
+          return {
+            ...prevTicket,
+            status: newStatus as 'open' | 'in_progress' | 'resolved' | 'closed',
+            updatedAt: new Date()
+          };
+        });
+        
+        // Also refresh from server after a short delay to ensure consistency
+        setTimeout(() => {
+          fetchTicket();
+        }, 1000);
       } else {
         const errorData = await response.json();
         toast.error(errorData.error || 'Failed to update status');
+        // Reset the status selector to the current ticket status on error
+        setNewStatus(ticket.status);
       }
     } catch (error) {
       console.error('Error updating status:', error);
       toast.error('Failed to update status');
+      // Reset the status selector to the current ticket status on error
+      setNewStatus(ticket.status);
     } finally {
       setSubmitting(false);
     }
@@ -232,6 +276,10 @@ export default function IndividualSupportTicket() {
       const adminSecret = localStorage.getItem('adminSecret');
       const token = adminSecret || (await user?.getIdToken());
 
+      const isCurrentlyAssigned = ticket.assignedTo === user.uid;
+      const newAssignedTo = isCurrentlyAssigned ? null : user.uid;
+      const newAssignedToName = isCurrentlyAssigned ? null : user.displayName || user.email;
+
       const response = await fetch('/api/admin/support/assign-ticket', {
         method: 'POST',
         headers: {
@@ -240,15 +288,32 @@ export default function IndividualSupportTicket() {
         },
         body: JSON.stringify({
           ticketId: ticket.ticketId,
-          assignedTo: ticket.assignedTo === user.uid ? null : user.uid,
-          assignedToName: ticket.assignedTo === user.uid ? null : user.displayName || user.email,
+          assignedTo: newAssignedTo,
+          assignedToName: newAssignedToName,
         }),
       });
 
       if (response.ok) {
-        const action = ticket.assignedTo === user.uid ? 'unassigned' : 'assigned';
+        const responseData = await response.json();
+        const action = isCurrentlyAssigned ? 'unassigned' : 'assigned';
         toast.success(`Ticket ${action} successfully`);
-        fetchTicket(); // Refresh ticket data
+        
+        // Immediately update local state with the new assignment
+        setTicket(prevTicket => {
+          if (!prevTicket) return prevTicket;
+          return {
+            ...prevTicket,
+            assignedTo: newAssignedTo,
+            assignedToName: newAssignedToName,
+            assignedAt: newAssignedTo ? new Date() : undefined,
+            updatedAt: new Date()
+          };
+        });
+        
+        // Also refresh from server after a short delay to ensure consistency
+        setTimeout(() => {
+          fetchTicket();
+        }, 1000);
       } else {
         const errorData = await response.json();
         toast.error(errorData.error || 'Failed to update assignment');
