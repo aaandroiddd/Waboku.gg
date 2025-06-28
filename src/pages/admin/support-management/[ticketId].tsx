@@ -57,6 +57,39 @@ export default function IndividualSupportTicket() {
   const [submitting, setSubmitting] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
+  // Helper function to convert various timestamp formats to Date
+  const convertTimestamp = (timestamp: any): Date => {
+    if (!timestamp) return new Date();
+    
+    // If it's already a Date object
+    if (timestamp instanceof Date) {
+      return timestamp;
+    }
+    
+    // If it's a Firestore Timestamp object
+    if (timestamp && typeof timestamp === 'object' && timestamp.toDate) {
+      return timestamp.toDate();
+    }
+    
+    // If it's a Firestore Timestamp-like object with seconds and nanoseconds
+    if (timestamp && typeof timestamp === 'object' && timestamp._seconds !== undefined) {
+      return new Date(timestamp._seconds * 1000 + (timestamp._nanoseconds || 0) / 1000000);
+    }
+    
+    // If it's an object with seconds property
+    if (timestamp && typeof timestamp === 'object' && timestamp.seconds !== undefined) {
+      return new Date(timestamp.seconds * 1000 + (timestamp.nanoseconds || 0) / 1000000);
+    }
+    
+    // If it's a string or number, try to parse it
+    if (typeof timestamp === 'string' || typeof timestamp === 'number') {
+      const date = new Date(timestamp);
+      return isNaN(date.getTime()) ? new Date() : date;
+    }
+    
+    return new Date();
+  };
+
   // Authorization check
   useEffect(() => {
     const checkAuthorization = async () => {
@@ -121,16 +154,16 @@ export default function IndividualSupportTicket() {
         const data = await response.json();
         const ticketData = data.ticket;
         
-        // Convert Firestore timestamps to Date objects
+        // Convert Firestore timestamps to Date objects using the helper function
         const processedTicket = {
           ...ticketData,
-          createdAt: ticketData.createdAt?.seconds ? new Date(ticketData.createdAt.seconds * 1000) : new Date(ticketData.createdAt),
-          updatedAt: ticketData.updatedAt?.seconds ? new Date(ticketData.updatedAt.seconds * 1000) : new Date(ticketData.updatedAt),
-          lastResponseAt: ticketData.lastResponseAt?.seconds ? new Date(ticketData.lastResponseAt.seconds * 1000) : ticketData.lastResponseAt,
-          assignedAt: ticketData.assignedAt?.seconds ? new Date(ticketData.assignedAt.seconds * 1000) : ticketData.assignedAt,
+          createdAt: convertTimestamp(ticketData.createdAt),
+          updatedAt: convertTimestamp(ticketData.updatedAt),
+          lastResponseAt: ticketData.lastResponseAt ? convertTimestamp(ticketData.lastResponseAt) : undefined,
+          assignedAt: ticketData.assignedAt ? convertTimestamp(ticketData.assignedAt) : undefined,
           responses: (ticketData.responses || []).map((response: any) => ({
             ...response,
-            createdAt: response.createdAt?.seconds ? new Date(response.createdAt.seconds * 1000) : new Date(response.createdAt)
+            createdAt: convertTimestamp(response.createdAt)
           }))
         };
         
@@ -490,23 +523,25 @@ export default function IndividualSupportTicket() {
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center space-x-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4">
             <Button
               variant="outline"
               size="sm"
               onClick={() => router.push('/admin/support-management')}
+              className="w-fit"
             >
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back to Support Management
             </Button>
-            <h1 className="text-2xl font-bold">Support Ticket #{ticket.ticketId}</h1>
+            <h1 className="text-xl sm:text-2xl font-bold">Support Ticket #{ticket.ticketId}</h1>
           </div>
           <Button
             variant="outline"
             size="sm"
             onClick={fetchTicket}
             disabled={refreshing}
+            className="w-fit sm:w-auto"
           >
             <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
             Refresh
@@ -519,36 +554,38 @@ export default function IndividualSupportTicket() {
             {/* Main Ticket Info */}
             <Card>
               <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div>
-                    <CardTitle className="flex items-center space-x-2">
-                      <span>{ticket.subject}</span>
+                <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+                  <div className="flex-1 min-w-0">
+                    <CardTitle className="flex flex-col sm:flex-row sm:items-center gap-2 mb-3">
+                      <span className="break-words">{ticket.subject}</span>
                       {ticket.timePriority && (
-                        <Badge variant="outline" className={getTimePriorityColor(ticket.timePriority)}>
+                        <Badge variant="outline" className={`${getTimePriorityColor(ticket.timePriority)} w-fit`}>
                           {getTimePriorityLabel(ticket.timePriority)}
                         </Badge>
                       )}
                     </CardTitle>
-                    <div className="flex items-center space-x-4 mt-2 text-sm text-muted-foreground">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-sm text-muted-foreground">
                       <div className="flex items-center space-x-1">
-                        <User className="h-4 w-4" />
-                        <span>{ticket.userName}</span>
+                        <User className="h-4 w-4 flex-shrink-0" />
+                        <span className="truncate">{ticket.userName}</span>
                       </div>
                       <div className="flex items-center space-x-1">
-                        <Mail className="h-4 w-4" />
-                        <span>{ticket.userEmail}</span>
+                        <Mail className="h-4 w-4 flex-shrink-0" />
+                        <span className="truncate">{ticket.userEmail}</span>
                       </div>
                       <div className="flex items-center space-x-1">
-                        <Clock className="h-4 w-4" />
-                        <span>{ticket.createdAt instanceof Date ? ticket.createdAt.toLocaleString() : new Date(ticket.createdAt).toLocaleString()}</span>
+                        <Clock className="h-4 w-4 flex-shrink-0" />
+                        <span className="text-xs sm:text-sm">
+                          {ticket.createdAt instanceof Date ? ticket.createdAt.toLocaleString() : new Date(ticket.createdAt).toLocaleString()}
+                        </span>
                       </div>
                     </div>
                   </div>
-                  <div className="flex items-center space-x-2">
-                    <Badge className={getPriorityColor(ticket.priority)}>
+                  <div className="flex flex-row lg:flex-col gap-2 lg:items-end">
+                    <Badge className={`${getPriorityColor(ticket.priority)} w-fit`}>
                       {ticket.priority.toUpperCase()}
                     </Badge>
-                    <Badge className={getStatusColor(ticket.status)}>
+                    <Badge className={`${getStatusColor(ticket.status)} w-fit`}>
                       {ticket.status.toUpperCase().replace(/[-_]/g, ' ')}
                     </Badge>
                   </div>
@@ -667,10 +704,14 @@ export default function IndividualSupportTicket() {
                 {ticket.assignedTo ? (
                   <div>
                     <p className="text-sm text-muted-foreground mb-2">Assigned to:</p>
-                    <p className="font-medium">{ticket.assignedToName}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {ticket.assignedAt instanceof Date ? ticket.assignedAt.toLocaleString() : new Date(ticket.assignedAt).toLocaleString()}
-                    </p>
+                    <p className="font-medium break-words">{ticket.assignedToName}</p>
+                    {ticket.assignedAt && (
+                      <p className="text-xs text-muted-foreground">
+                        {ticket.assignedAt instanceof Date && !isNaN(ticket.assignedAt.getTime()) 
+                          ? ticket.assignedAt.toLocaleString() 
+                          : 'Date unavailable'}
+                      </p>
+                    )}
                   </div>
                 ) : (
                   <p className="text-sm text-muted-foreground">Not assigned</p>
@@ -697,22 +738,30 @@ export default function IndividualSupportTicket() {
                 <CardTitle>Ticket Information</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2 text-sm">
-                <div className="flex justify-between">
+                <div className="flex justify-between items-start">
                   <span className="text-muted-foreground">Ticket ID:</span>
-                  <span className="font-mono">{ticket.ticketId}</span>
+                  <span className="font-mono text-right break-all">{ticket.ticketId}</span>
                 </div>
-                <div className="flex justify-between">
+                <div className="flex justify-between items-start">
                   <span className="text-muted-foreground">Created:</span>
-                  <span>{ticket.createdAt instanceof Date ? ticket.createdAt.toLocaleDateString() : new Date(ticket.createdAt).toLocaleDateString()}</span>
+                  <span className="text-right">
+                    {ticket.createdAt instanceof Date && !isNaN(ticket.createdAt.getTime()) 
+                      ? ticket.createdAt.toLocaleDateString() 
+                      : 'Date unavailable'}
+                  </span>
                 </div>
-                <div className="flex justify-between">
+                <div className="flex justify-between items-start">
                   <span className="text-muted-foreground">Last Updated:</span>
-                  <span>{ticket.updatedAt instanceof Date ? ticket.updatedAt.toLocaleDateString() : new Date(ticket.updatedAt).toLocaleDateString()}</span>
+                  <span className="text-right">
+                    {ticket.updatedAt instanceof Date && !isNaN(ticket.updatedAt.getTime()) 
+                      ? ticket.updatedAt.toLocaleDateString() 
+                      : 'Date unavailable'}
+                  </span>
                 </div>
                 {ticket.hoursSinceCreated && (
-                  <div className="flex justify-between">
+                  <div className="flex justify-between items-start">
                     <span className="text-muted-foreground">Age:</span>
-                    <span className={getTimePriorityColor(ticket.timePriority)}>
+                    <span className={`text-right ${getTimePriorityColor(ticket.timePriority)}`}>
                       {ticket.hoursSinceCreated}h
                     </span>
                   </div>
