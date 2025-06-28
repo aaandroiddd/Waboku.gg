@@ -40,13 +40,25 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     let decodedToken;
     let userId;
     try {
+      console.log('Verifying token...');
       decodedToken = await auth.verifyIdToken(token);
       userId = decodedToken.uid;
       console.log('Token verified successfully for user:', userId);
+      console.log('Decoded token details:', {
+        uid: decodedToken.uid,
+        email: decodedToken.email,
+        email_verified: decodedToken.email_verified,
+        iss: decodedToken.iss,
+        aud: decodedToken.aud,
+        auth_time: decodedToken.auth_time,
+        iat: decodedToken.iat,
+        exp: decodedToken.exp
+      });
     } catch (tokenError: any) {
       console.error('Token verification failed:', {
         error: tokenError.message,
-        code: tokenError.code
+        code: tokenError.code,
+        stack: tokenError.stack
       });
       
       if (tokenError.code === 'auth/id-token-expired') {

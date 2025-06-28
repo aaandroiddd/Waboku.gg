@@ -80,6 +80,42 @@ const SupportTicketsPageContent = () => {
   const [error, setError] = useState("");
   const [responseMessage, setResponseMessage] = useState("");
 
+  // Function to clear all authentication and cache data
+  const clearAuthCache = () => {
+    if (typeof window !== 'undefined') {
+      console.log('Clearing all authentication and cache data...');
+      
+      // Clear all localStorage items that might contain cached user data
+      const keysToRemove = Object.keys(localStorage).filter(key => 
+        key.includes('firebase') || 
+        key.includes('auth') || 
+        key.includes('user') || 
+        key.includes('support') || 
+        key.includes('ticket') ||
+        key.includes('waboku')
+      );
+      
+      keysToRemove.forEach(key => {
+        localStorage.removeItem(key);
+        console.log('Removed cache key:', key);
+      });
+      
+      // Clear sessionStorage as well
+      const sessionKeys = Object.keys(sessionStorage).filter(key => 
+        key.includes('firebase') || 
+        key.includes('auth') || 
+        key.includes('user') || 
+        key.includes('support') || 
+        key.includes('ticket')
+      );
+      
+      sessionKeys.forEach(key => {
+        sessionStorage.removeItem(key);
+        console.log('Removed session key:', key);
+      });
+    }
+  };
+
   // Redirect if not authenticated
   useEffect(() => {
     console.log('=== USEEFFECT TRIGGERED ===');
@@ -94,6 +130,9 @@ const SupportTicketsPageContent = () => {
       router.push('/auth/sign-in?redirect=/dashboard/support-tickets');
       return;
     }
+    
+    // Clear cache and fetch tickets
+    clearAuthCache();
     console.log('Calling fetchTickets from useEffect');
     fetchTickets();
   }, [user, router]);
@@ -107,15 +146,33 @@ const SupportTicketsPageContent = () => {
       console.log('User email:', user.email);
       
       setIsLoading(true);
-      const token = await user.getIdToken();
+      
+      // Force token refresh to ensure we have the latest authentication state
+      console.log('Forcing token refresh to ensure fresh authentication...');
+      const token = await user.getIdToken(true); // Force refresh with true parameter
       if (!token) throw new Error("Authentication required");
       
-      console.log('Token obtained, length:', token.length);
-      console.log('Making API call to /api/support/get-tickets');
+      console.log('Fresh token obtained, length:', token.length);
+      
+      // Clear any cached data that might be causing issues
+      if (typeof window !== 'undefined') {
+        // Clear any support ticket related cache
+        const cacheKeys = Object.keys(localStorage).filter(key => 
+          key.includes('support') || key.includes('ticket')
+        );
+        cacheKeys.forEach(key => localStorage.removeItem(key));
+        console.log('Cleared support ticket cache keys:', cacheKeys);
+      }
+      
+      console.log('Making API call to /api/support/get-tickets with fresh token');
 
       const response = await fetch('/api/support/get-tickets', {
+        method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
         },
       });
 
@@ -125,6 +182,37 @@ const SupportTicketsPageContent = () => {
       if (!response.ok) {
         const errorText = await response.text();
         console.error('API error response:', errorText);
+        
+        // If we get an auth error, try to refresh the user's auth state
+        if (response.status === 401) {
+          console.log('Authentication error detected, reloading user auth state...');
+          try {
+            await user.reload();
+            console.log('User auth state reloaded');
+            // Try one more time with a fresh token
+            const freshToken = await user.getIdToken(true);
+            const retryResponse = await fetch('/api/support/get-tickets', {
+              method: 'GET',
+              headers: {
+                'Authorization': `Bearer ${freshToken}`,
+                'Cache-Control': 'no-cache, no-store, must-revalidate',
+                'Pragma': 'no-cache',
+                'Expires': '0'
+              },
+            });
+            
+            if (retryResponse.ok) {
+              const retryData = await retryResponse.json();
+              setTickets(retryData.tickets || []);
+              setError("");
+              console.log('Retry successful after auth refresh');
+              return;
+            }
+          } catch (retryError) {
+            console.error('Retry after auth refresh failed:', retryError);
+          }
+        }
+        
         throw new Error('Failed to fetch tickets');
       }
 
