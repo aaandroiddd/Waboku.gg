@@ -6,9 +6,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
+  // Set cache control headers to prevent caching
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+
   try {
     console.log('=== SUPPORT TICKETS API DEBUG START ===');
     console.log('Request method:', req.method);
+    console.log('Request timestamp:', new Date().toISOString());
+    console.log('Cache buster param:', req.query._t);
     console.log('Has authorization header:', !!req.headers.authorization);
     
     // Initialize Firebase Admin

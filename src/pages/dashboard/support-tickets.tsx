@@ -146,11 +146,36 @@ const SupportTicketsPageContent = () => {
     fetchTickets();
   }, [user, router]);
 
+  // Auto-refresh tickets when the page becomes visible (user navigates back)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden && user) {
+        console.log('Page became visible, refreshing support tickets...');
+        fetchTickets();
+      }
+    };
+
+    const handleFocus = () => {
+      if (user) {
+        console.log('Window focused, refreshing support tickets...');
+        fetchTickets();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [user]);
+
   const fetchTickets = async () => {
     if (!user) return;
     
     try {
-      console.log('=== FRONTEND SUPPORT TICKETS DEBUG START ===');
+      console.log('=== USER SUPPORT TICKETS FETCH START ===');
       console.log('User ID:', user.uid);
       console.log('User email:', user.email);
       
@@ -173,9 +198,11 @@ const SupportTicketsPageContent = () => {
         console.log('Cleared support ticket cache keys:', cacheKeys);
       }
       
-      console.log('Making API call to /api/support/get-tickets with fresh token');
+      // Add cache-busting parameters and headers
+      const cacheBuster = Date.now();
+      console.log('Making API call to /api/support/get-tickets with fresh token and cache buster');
 
-      const response = await fetch('/api/support/get-tickets', {
+      const response = await fetch(`/api/support/get-tickets?_t=${cacheBuster}`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -185,12 +212,12 @@ const SupportTicketsPageContent = () => {
         },
       });
 
-      console.log('API response status:', response.status);
-      console.log('API response ok:', response.ok);
+      console.log('User support tickets API response status:', response.status);
+      console.log('User support tickets API response ok:', response.ok);
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('API error response:', errorText);
+        console.error('User support tickets API error response:', errorText);
         
         // If we get an auth error, try to refresh the user's auth state
         if (response.status === 401) {
@@ -200,7 +227,7 @@ const SupportTicketsPageContent = () => {
             console.log('User auth state reloaded');
             // Try one more time with a fresh token
             const freshToken = await user.getIdToken(true);
-            const retryResponse = await fetch('/api/support/get-tickets', {
+            const retryResponse = await fetch(`/api/support/get-tickets?_t=${Date.now()}`, {
               method: 'GET',
               headers: {
                 'Authorization': `Bearer ${freshToken}`,
@@ -212,9 +239,10 @@ const SupportTicketsPageContent = () => {
             
             if (retryResponse.ok) {
               const retryData = await retryResponse.json();
+              console.log('Retry successful after auth refresh, tickets:', retryData.tickets?.length || 0);
               setTickets(retryData.tickets || []);
               setError("");
-              console.log('Retry successful after auth refresh');
+              console.log('=== USER SUPPORT TICKETS FETCH END (RETRY SUCCESS) ===');
               return;
             }
           } catch (retryError) {
@@ -226,23 +254,25 @@ const SupportTicketsPageContent = () => {
       }
 
       const data = await response.json();
-      console.log('API response data:', data);
-      console.log('Number of tickets received:', data.tickets?.length || 0);
+      console.log('User support tickets API response data:', data);
+      console.log('Number of user tickets received:', data.tickets?.length || 0);
       
       if (data.tickets && data.tickets.length > 0) {
-        console.log('First ticket details:', {
+        console.log('First user ticket details:', {
           ticketId: data.tickets[0].ticketId,
           userId: data.tickets[0].userId,
           userEmail: data.tickets[0].userEmail,
-          subject: data.tickets[0].subject
+          subject: data.tickets[0].subject,
+          status: data.tickets[0].status,
+          updatedAt: data.tickets[0].updatedAt
         });
       }
       
       setTickets(data.tickets || []);
       setError(""); // Clear any previous errors
-      console.log('=== FRONTEND SUPPORT TICKETS DEBUG END ===');
+      console.log('=== USER SUPPORT TICKETS FETCH END ===');
     } catch (err: any) {
-      console.error('Error fetching tickets:', err);
+      console.error('Error fetching user support tickets:', err);
       setError(err.message || 'Failed to load support tickets');
     } finally {
       setIsLoading(false);

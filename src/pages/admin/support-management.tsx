@@ -161,27 +161,80 @@ const AdminSupportManagement = () => {
     }
   }, [isAuthorized]);
 
+  // Auto-refresh tickets when the page becomes visible (user navigates back)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden && user && isAuthorized === true) {
+        console.log('Admin page became visible, refreshing support tickets...');
+        fetchTickets();
+      }
+    };
+
+    const handleFocus = () => {
+      if (user && isAuthorized === true) {
+        console.log('Admin window focused, refreshing support tickets...');
+        fetchTickets();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [user, isAuthorized]);
+
   const fetchTickets = async () => {
     if (!user) return;
     
     try {
+      console.log('=== ADMIN SUPPORT MANAGEMENT FETCH TICKETS START ===');
       setIsLoading(true);
-      const token = await user.getIdToken();
-      const response = await fetch('/api/admin/support/get-all-tickets', {
+      
+      // Force fresh token to ensure authentication is current
+      const token = await user.getIdToken(true);
+      console.log('Fresh token obtained for admin support management');
+      
+      // Add cache-busting parameters and headers
+      const cacheBuster = Date.now();
+      const response = await fetch(`/api/admin/support/get-all-tickets?_t=${cacheBuster}`, {
+        method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
         },
       });
 
+      console.log('Admin support tickets API response status:', response.status);
+
       if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Admin support tickets API error:', errorText);
         throw new Error('Failed to fetch tickets');
       }
 
       const data = await response.json();
+      console.log('Admin support tickets fetched:', data.tickets?.length || 0);
+      
+      // Log sample ticket data for debugging
+      if (data.tickets && data.tickets.length > 0) {
+        console.log('Sample admin ticket data:', {
+          ticketId: data.tickets[0].ticketId,
+          status: data.tickets[0].status,
+          updatedAt: data.tickets[0].updatedAt,
+          assignedTo: data.tickets[0].assignedTo
+        });
+      }
+      
       setTickets(data.tickets || []);
       setError(""); // Clear any previous errors
+      console.log('=== ADMIN SUPPORT MANAGEMENT FETCH TICKETS END ===');
     } catch (err: any) {
-      console.error('Error fetching tickets:', err);
+      console.error('Error fetching admin support tickets:', err);
       setError(err.message || 'Failed to load support tickets');
     } finally {
       setIsLoading(false);
@@ -262,12 +315,13 @@ const AdminSupportManagement = () => {
     });
 
     try {
-      const token = await user.getIdToken();
+      const token = await user.getIdToken(true); // Force fresh token
       const response = await fetch('/api/admin/support/update-status', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
+          'Cache-Control': 'no-cache',
         },
         body: JSON.stringify({
           ticketId: selectedTicket.ticketId,
@@ -298,10 +352,11 @@ const AdminSupportManagement = () => {
         t.ticketId === selectedTicket.ticketId ? updatedTicket : t
       ));
       
-      // Force multiple refreshes to ensure sync
-      setTimeout(() => fetchTickets(), 500);
-      setTimeout(() => fetchTickets(), 2000);
-      setTimeout(() => fetchTickets(), 5000);
+      // Force a single refresh after a short delay to ensure database consistency
+      setTimeout(() => {
+        console.log('Refreshing tickets after status update to ensure consistency');
+        fetchTickets();
+      }, 1000);
       
       toast({
         title: "Status updated",

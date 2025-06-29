@@ -6,8 +6,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
+  // Set cache control headers to prevent caching
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+
   try {
     console.log('=== ADMIN SUPPORT GET ALL TICKETS API DEBUG START ===');
+    console.log('Request timestamp:', new Date().toISOString());
+    console.log('Cache buster param:', req.query._t);
     
     // Get query parameters for sorting and filtering
     const { sortBy = 'createdAt', sortOrder = 'desc', assignedTo, status } = req.query;
