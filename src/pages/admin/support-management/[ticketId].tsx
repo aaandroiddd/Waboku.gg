@@ -313,7 +313,6 @@ export default function IndividualSupportTicket() {
       setSubmitting(false);
     }
   };
-=======
 
   const handleAssignTicket = async () => {
     if (!ticket || !user) return;
