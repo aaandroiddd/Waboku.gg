@@ -86,18 +86,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     }
 
-    // Fetch responses
-    const responsesSnapshot = await db
-      .collection('supportTickets')
-      .doc(ticketId)
-      .collection('responses')
-      .orderBy('createdAt', 'asc')
-      .get();
+    // Fetch responses from the main ticket document (not subcollection)
+    const responses = ticketData?.responses || [];
+    
+    // Sort responses by createdAt (convert timestamps to dates for sorting)
+    const sortedResponses = responses.sort((a: any, b: any) => {
+      const dateA = a.createdAt?.toDate ? a.createdAt.toDate() : new Date(a.createdAt);
+      const dateB = b.createdAt?.toDate ? b.createdAt.toDate() : new Date(b.createdAt);
+      return dateA.getTime() - dateB.getTime();
+    });
 
-    const responses = responsesSnapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    }));
+    console.log('Fetched responses from main document:', {
+      ticketId,
+      responseCount: sortedResponses.length,
+      latestResponseTime: sortedResponses.length > 0 ? 
+        (sortedResponses[sortedResponses.length - 1].createdAt?.toDate?.() || sortedResponses[sortedResponses.length - 1].createdAt) : 
+        'No responses'
+    });
 
     // Process the ticket data and handle null values properly
     const ticket = {
@@ -108,7 +113,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       assignedTo: ticketData?.assignedTo || null,
       assignedToName: ticketData?.assignedToName || null,
       assignedAt: ticketData?.assignedAt || null,
-      responses,
+      responses: sortedResponses,
       timePriority,
       hoursSinceCreated
     };
