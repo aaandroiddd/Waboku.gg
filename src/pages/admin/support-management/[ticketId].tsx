@@ -905,8 +905,8 @@ export default function IndividualSupportTicket() {
                       key={response.id}
                       className={`p-4 rounded-lg ${
                         response.isFromSupport
-                          ? 'bg-blue-50 dark:bg-slate-800/50 border-l-4 border-blue-500'
-                          : 'bg-gray-50 dark:bg-slate-700/50 border-l-4 border-gray-300 dark:border-slate-600'
+                          ? 'bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500 dark:border-blue-400'
+                          : 'bg-gray-50 dark:bg-slate-800/80 border-l-4 border-gray-300 dark:border-slate-500'
                       }`}
                     >
                       <div className="flex items-center justify-between mb-2">
