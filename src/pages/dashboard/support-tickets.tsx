@@ -136,7 +136,7 @@ const SupportTicketsPageContent = () => {
     }
   };
 
-  // Redirect if not authenticated and only fetch tickets on initial page load
+  // Redirect if not authenticated and fetch tickets when navigating between pages
   useEffect(() => {
     console.log('=== USEEFFECT TRIGGERED ===');
     console.log('User exists:', !!user);
@@ -151,16 +151,19 @@ const SupportTicketsPageContent = () => {
       return;
     }
     
-    // Only fetch tickets on initial page load, not when navigating back
-    const hasLoadedTickets = sessionStorage.getItem('support-tickets-loaded');
-    if (!hasLoadedTickets) {
-      console.log('First time loading support tickets page, fetching data...');
+    // Check if we're returning to the same page or navigating from a different page
+    const currentPath = typeof window !== 'undefined' ? window.location.pathname : '';
+    const lastVisitedPath = sessionStorage.getItem('support-tickets-last-path');
+    
+    // Always fetch tickets when navigating from a different page, but skip if returning to same page
+    if (lastVisitedPath !== currentPath) {
+      console.log('Navigating to support tickets from different page, fetching data...');
       clearAuthCache();
-      console.log('Calling fetchTickets from useEffect (initial load)');
+      console.log('Calling fetchTickets from useEffect (page navigation)');
       fetchTickets();
-      sessionStorage.setItem('support-tickets-loaded', 'true');
+      sessionStorage.setItem('support-tickets-last-path', currentPath);
     } else {
-      console.log('Support tickets already loaded in this session, skipping auto-fetch');
+      console.log('Returning to same support tickets page, skipping auto-fetch');
       setIsLoading(false); // Set loading to false since we're not fetching
     }
   }, [user, router]);
