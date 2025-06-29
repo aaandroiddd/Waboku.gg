@@ -260,6 +260,31 @@ export default function IndividualSupportTicket() {
     }
   }, [isAuthorized, ticketId]);
 
+  // Auto-refresh ticket when the page becomes visible (user navigates back)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden && user && isAuthorized === true && ticketId) {
+        console.log('[SupportTicket] Page became visible, refreshing ticket data...');
+        fetchTicket();
+      }
+    };
+
+    const handleFocus = () => {
+      if (user && isAuthorized === true && ticketId) {
+        console.log('[SupportTicket] Window focused, refreshing ticket data...');
+        fetchTicket();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [user, isAuthorized, ticketId, fetchTicket]);
+
   const fetchTicket = useCallback(async () => {
     if (!ticketId || !isMountedRef.current) return;
     
@@ -430,6 +455,15 @@ export default function IndividualSupportTicket() {
           };
         });
         
+        // Signal to other tabs/windows that ticket data has been updated
+        if (typeof window !== 'undefined') {
+          localStorage.setItem(`support-ticket-updated-${ticket.ticketId}`, Date.now().toString());
+          // Remove the signal after a short delay to prevent it from persisting
+          setTimeout(() => {
+            localStorage.removeItem(`support-ticket-updated-${ticket.ticketId}`);
+          }, 2000);
+        }
+        
         // Refresh from server after a short delay to get the actual response ID
         setTimeout(() => {
           fetchTicket();
@@ -494,6 +528,15 @@ export default function IndividualSupportTicket() {
           });
           return updatedTicket;
         });
+        
+        // Signal to other tabs/windows that ticket data has been updated
+        if (typeof window !== 'undefined') {
+          localStorage.setItem(`support-ticket-updated-${ticket.ticketId}`, Date.now().toString());
+          // Remove the signal after a short delay to prevent it from persisting
+          setTimeout(() => {
+            localStorage.removeItem(`support-ticket-updated-${ticket.ticketId}`);
+          }, 2000);
+        }
         
         // Don't automatically refresh - let the user manually refresh if needed
         console.log('Status update completed successfully');
@@ -594,6 +637,15 @@ export default function IndividualSupportTicket() {
           
           return newTicket;
         });
+        
+        // Signal to other tabs/windows that ticket data has been updated
+        if (typeof window !== 'undefined') {
+          localStorage.setItem(`support-ticket-updated-${ticket.ticketId}`, Date.now().toString());
+          // Remove the signal after a short delay to prevent it from persisting
+          setTimeout(() => {
+            localStorage.removeItem(`support-ticket-updated-${ticket.ticketId}`);
+          }, 2000);
+        }
         
         // Also refresh from server after a short delay to ensure consistency
         setTimeout(() => {

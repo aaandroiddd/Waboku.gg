@@ -177,12 +177,22 @@ const AdminSupportManagement = () => {
       }
     };
 
+    // Also listen for storage events to detect when other tabs/windows update ticket data
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key && e.key.includes('support-ticket-updated') && user && isAuthorized === true) {
+        console.log('Support ticket updated in another tab, refreshing...');
+        fetchTickets();
+      }
+    };
+
     document.addEventListener('visibilitychange', handleVisibilityChange);
     window.addEventListener('focus', handleFocus);
+    window.addEventListener('storage', handleStorageChange);
 
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('focus', handleFocus);
+      window.removeEventListener('storage', handleStorageChange);
     };
   }, [user, isAuthorized]);
 
