@@ -26,6 +26,7 @@ import { WebhookFixTrigger } from '@/components/WebhookFixTrigger';
 import { ApiTestPanel } from '@/components/ApiTestPanel';
 import { NotificationDebugger } from '@/components/NotificationDebugger';
 import { EmailNotificationTester } from '@/components/EmailNotificationTester';
+import { MockListingGenerator } from '@/components/admin/MockListingGenerator';
 import {
   Accordion,
   AccordionItem,
@@ -43,6 +44,7 @@ interface ApiResponse {
 const SECTIONS = [
   { id: "user-tier", label: "User Tier Management" },
   { id: "api-endpoints", label: "API Endpoints" },
+  { id: "mock-listings", label: "Mock Listing Generator" },
   { id: "subscription", label: "Subscription Management" },
   { id: "moderation", label: "Content Moderation" },
   { id: "moderator", label: "Moderator Management" },
@@ -319,6 +321,16 @@ export default function AdminDashboard() {
                       </Button>
                     </Card>
                   ))}
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+
+            {/* Mock Listing Generator */}
+            <AccordionItem value="mock-listings" id="mock-listings" ref={el => (sectionRefs.current["mock-listings"] = el)}>
+              <AccordionTrigger>Mock Listing Generator</AccordionTrigger>
+              <AccordionContent>
+                <div className="py-4">
+                  <MockListingGenerator adminSecret={adminSecret} />
                 </div>
               </AccordionContent>
             </AccordionItem>
