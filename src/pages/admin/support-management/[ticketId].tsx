@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/router';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,6 +9,7 @@ import { MobileSelect } from '@/components/ui/mobile-select';
 import { toast } from 'sonner';
 import { ArrowLeft, Clock, User, Mail, MessageSquare, AlertCircle, CheckCircle, XCircle, Lock, RefreshCw } from 'lucide-react';
 import { Footer } from '@/components/Footer';
+import { removeAllListeners, removeListenersByPrefix } from '@/lib/firebase';
 
 interface TicketResponse {
   id: string;
@@ -56,6 +57,10 @@ export default function IndividualSupportTicket() {
   const [newStatus, setNewStatus] = useState<string>('');
   const [submitting, setSubmitting] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  
+  // Refs to track component state and prevent memory leaks
+  const isMountedRef = useRef(true);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   // Helper function to convert various timestamp formats to Date
   const convertTimestamp = (timestamp: any): Date => {
@@ -90,15 +95,118 @@ export default function IndividualSupportTicket() {
     return new Date();
   };
 
-  // Authorization check
+  // Cleanup function to handle component unmounting and prevent memory leaks
+  const cleanup = useCallback(() => {
+    console.log('[SupportTicket] Cleaning up component resources...');
+    
+    // Mark component as unmounted
+    isMountedRef.current = false;
+    
+    // Abort any ongoing fetch requests
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+    
+    // Remove any Firestore listeners related to this ticket
+    if (ticketId) {
+      removeListenersByPrefix(`support-ticket-${ticketId}`);
+      removeListenersByPrefix(`ticket-${ticketId}`);
+    }
+    
+    // Clear any cached data related to this ticket
+    if (typeof window !== 'undefined' && ticketId) {
+      try {
+        // Clear ticket-specific cache
+        const cacheKeys = Object.keys(localStorage).filter(key => 
+          key.includes(`ticket-${ticketId}`) || 
+          key.includes(`support-${ticketId}`)
+        );
+        
+        cacheKeys.forEach(key => {
+          localStorage.removeItem(key);
+        });
+        
+        console.log(`[SupportTicket] Cleared ${cacheKeys.length} cached items for ticket ${ticketId}`);
+      } catch (error) {
+        console.error('[SupportTicket] Error clearing ticket cache:', error);
+      }
+    }
+  }, [ticketId]);
+
+  // Component cleanup on unmount
+  useEffect(() => {
+    return () => {
+      cleanup();
+    };
+  }, [cleanup]);
+
+  // Clear any stale Firestore listeners and session data on component mount
+  useEffect(() => {
+    console.log('[SupportTicket] Component mounting, clearing stale Firestore sessions...');
+    
+    // Clear any existing Firestore listeners that might be causing issues
+    try {
+      removeAllListeners();
+      console.log('[SupportTicket] Cleared all existing Firestore listeners');
+    } catch (error) {
+      console.error('[SupportTicket] Error clearing listeners:', error);
+    }
+    
+    // Clear any stale Firestore session data that might cause Listen channel errors
+    if (typeof window !== 'undefined') {
+      try {
+        // Clear Firestore-related cache that might have stale session IDs
+        const firestoreKeys = Object.keys(localStorage).filter(key => 
+          key.includes('firestore') || 
+          key.includes('fs_') ||
+          key.includes('listen_') ||
+          key.includes('channel_') ||
+          key.startsWith('firebase:') && key.includes('firestore')
+        );
+        
+        firestoreKeys.forEach(key => {
+          localStorage.removeItem(key);
+        });
+        
+        // Also clear sessionStorage
+        const sessionKeys = Object.keys(sessionStorage).filter(key => 
+          key.includes('firestore') || 
+          key.includes('fs_') ||
+          key.includes('listen_') ||
+          key.includes('channel_')
+        );
+        
+        sessionKeys.forEach(key => {
+          sessionStorage.removeItem(key);
+        });
+        
+        if (firestoreKeys.length > 0 || sessionKeys.length > 0) {
+          console.log(`[SupportTicket] Cleared ${firestoreKeys.length + sessionKeys.length} stale Firestore cache entries`);
+        }
+      } catch (error) {
+        console.error('[SupportTicket] Error clearing Firestore cache:', error);
+      }
+    }
+  }, []); // Run only once on mount
+
+  // Enhanced authorization check with better error handling
   useEffect(() => {
     const checkAuthorization = async () => {
+      if (!isMountedRef.current) return;
+      
       try {
+        // Create abort controller for this request
+        const abortController = new AbortController();
+        abortControllerRef.current = abortController;
+        
         const adminSecret = localStorage.getItem('adminSecret');
-        const token = adminSecret || (await user?.getIdToken());
+        const token = adminSecret || (await user?.getIdToken(true)); // Force fresh token
         
         if (!token) {
-          setIsAuthorized(false);
+          if (isMountedRef.current) {
+            setIsAuthorized(false);
+          }
           return;
         }
 
@@ -107,8 +215,13 @@ export default function IndividualSupportTicket() {
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`,
+            'Cache-Control': 'no-cache',
+            'Pragma': 'no-cache'
           },
+          signal: abortController.signal
         });
+
+        if (!isMountedRef.current) return;
 
         if (response.ok) {
           const data = await response.json();
@@ -118,9 +231,20 @@ export default function IndividualSupportTicket() {
           console.error('Authorization failed:', errorData);
           setIsAuthorized(false);
         }
-      } catch (error) {
+      } catch (error: any) {
+        if (error.name === 'AbortError') {
+          console.log('[SupportTicket] Authorization request aborted');
+          return;
+        }
+        
         console.error('Authorization check failed:', error);
-        setIsAuthorized(false);
+        if (isMountedRef.current) {
+          setIsAuthorized(false);
+        }
+      } finally {
+        if (abortControllerRef.current) {
+          abortControllerRef.current = null;
+        }
       }
     };
 
@@ -136,19 +260,30 @@ export default function IndividualSupportTicket() {
     }
   }, [isAuthorized, ticketId]);
 
-  const fetchTicket = async () => {
-    if (!ticketId) return;
+  const fetchTicket = useCallback(async () => {
+    if (!ticketId || !isMountedRef.current) return;
     
     setRefreshing(true);
+    
     try {
+      // Create abort controller for this request
+      const abortController = new AbortController();
+      abortControllerRef.current = abortController;
+      
       const adminSecret = localStorage.getItem('adminSecret');
-      const token = adminSecret || (await user?.getIdToken());
+      const token = adminSecret || (await user?.getIdToken(true)); // Force fresh token
       
       const response = await fetch(`/api/admin/support/get-ticket?ticketId=${ticketId}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache',
+          'Expires': '0'
         },
+        signal: abortController.signal
       });
+
+      if (!isMountedRef.current) return;
 
       if (response.ok) {
         const data = await response.json();
@@ -167,24 +302,88 @@ export default function IndividualSupportTicket() {
           }))
         };
         
-        setTicket(processedTicket);
-        setNewStatus(processedTicket.status);
+        if (isMountedRef.current) {
+          setTicket(processedTicket);
+          setNewStatus(processedTicket.status);
+        }
       } else {
         const errorData = await response.json();
-        toast.error(errorData.error || 'Failed to fetch ticket');
-        // If ticket not found, redirect back to main page
-        if (response.status === 404) {
-          router.push('/admin/support-management');
+        
+        if (isMountedRef.current) {
+          toast.error(errorData.error || 'Failed to fetch ticket');
+          
+          // If ticket not found, redirect back to main page
+          if (response.status === 404) {
+            router.push('/admin/support-management');
+          }
+          
+          // Handle authentication errors
+          if (response.status === 401 || response.status === 403) {
+            console.warn('[SupportTicket] Authentication error, clearing session and redirecting');
+            
+            // Clear any stale authentication data
+            if (typeof window !== 'undefined') {
+              localStorage.removeItem('adminSecret');
+              
+              // Clear Firebase auth cache
+              Object.keys(localStorage).forEach(key => {
+                if (key.startsWith('firebase:') || key.includes('auth')) {
+                  localStorage.removeItem(key);
+                }
+              });
+            }
+            
+            // Redirect to login
+            router.push('/admin/login?returnUrl=' + encodeURIComponent(router.asPath));
+          }
         }
       }
-    } catch (error) {
+    } catch (error: any) {
+      if (error.name === 'AbortError') {
+        console.log('[SupportTicket] Fetch ticket request aborted');
+        return;
+      }
+      
       console.error('Error fetching ticket:', error);
-      toast.error('Failed to fetch ticket');
+      
+      if (isMountedRef.current) {
+        // Check if this is a network error that might be related to Firestore session issues
+        if (error.message && (
+          error.message.includes('Failed to fetch') ||
+          error.message.includes('NetworkError') ||
+          error.message.includes('fetch')
+        )) {
+          console.warn('[SupportTicket] Network error detected, may be related to stale Firestore session');
+          
+          // Clear any Firestore-related cache
+          if (typeof window !== 'undefined') {
+            try {
+              Object.keys(localStorage).forEach(key => {
+                if (key.includes('firestore') || key.includes('firebase')) {
+                  localStorage.removeItem(key);
+                }
+              });
+              
+              console.log('[SupportTicket] Cleared Firestore cache due to network error');
+            } catch (cacheError) {
+              console.error('[SupportTicket] Error clearing cache:', cacheError);
+            }
+          }
+        }
+        
+        toast.error('Failed to fetch ticket');
+      }
     } finally {
-      setLoading(false);
-      setRefreshing(false);
+      if (isMountedRef.current) {
+        setLoading(false);
+        setRefreshing(false);
+      }
+      
+      if (abortControllerRef.current) {
+        abortControllerRef.current = null;
+      }
     }
-  };
+  }, [ticketId, user, router]);
 
   const handleSendResponse = async () => {
     if (!responseMessage.trim() || !ticket) return;
