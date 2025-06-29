@@ -659,20 +659,20 @@ const SupportTicketsPageContent = () => {
     <DashboardLayout>
       <Toaster />
       <div className="container mx-auto p-6">
-        <div className="flex items-center justify-between mb-6">
-          <div>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+          <div className="flex-1">
             <h1 className="text-2xl font-bold tracking-tight">Support Tickets</h1>
             <p className="text-muted-foreground">
               View and manage your support tickets
             </p>
           </div>
-          <div className="flex items-center gap-2">
-            <Button onClick={fetchTickets} variant="outline">
-              <RefreshCw className="h-4 w-4 mr-2" />
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 w-full sm:w-auto">
+            <Button onClick={fetchTickets} variant="outline" className="flex items-center justify-center gap-2 w-full sm:w-auto">
+              <RefreshCw className="h-4 w-4" />
               Refresh
             </Button>
-            <Button onClick={() => router.push('/support')}>
-              <Plus className="h-4 w-4 mr-2" />
+            <Button onClick={() => router.push('/support')} className="flex items-center justify-center gap-2 w-full sm:w-auto">
+              <Plus className="h-4 w-4" />
               New Ticket
             </Button>
           </div>
