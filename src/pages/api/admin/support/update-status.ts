@@ -99,6 +99,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     try {
       await ticketRef.update(updateData);
       console.log('Firestore update operation completed');
+      
+      // Add a small delay to ensure Firestore consistency
+      await new Promise(resolve => setTimeout(resolve, 100));
     } catch (updateError: any) {
       console.error('Firestore update failed:', {
         error: updateError.message,
@@ -108,16 +111,40 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       throw updateError;
     }
 
-    // Verify the update was successful
-    const updatedTicketDoc = await ticketRef.get();
-    const updatedData = updatedTicketDoc.data();
+    // Verify the update was successful with multiple attempts
+    let updatedData;
+    let attempts = 0;
+    const maxAttempts = 3;
     
-    console.log('Verified updated data:', {
-      id: ticketId,
-      newStatus: updatedData?.status,
-      updatedAt: updatedData?.updatedAt,
-      lastModifiedBy: updatedData?.lastModifiedBy
-    });
+    while (attempts < maxAttempts) {
+      const updatedTicketDoc = await ticketRef.get();
+      updatedData = updatedTicketDoc.data();
+      
+      console.log(`Verification attempt ${attempts + 1}:`, {
+        id: ticketId,
+        expectedStatus: status,
+        actualStatus: updatedData?.status,
+        statusMatch: updatedData?.status === status,
+        updatedAt: updatedData?.updatedAt,
+        lastModifiedBy: updatedData?.lastModifiedBy
+      });
+      
+      if (updatedData?.status === status) {
+        console.log('Status update verified successfully');
+        break;
+      }
+      
+      attempts++;
+      if (attempts < maxAttempts) {
+        console.log('Status mismatch, waiting before retry...');
+        await new Promise(resolve => setTimeout(resolve, 200));
+      }
+    }
+    
+    if (updatedData?.status !== status) {
+      console.error('CRITICAL: Status update failed to persist after multiple attempts');
+      throw new Error(`Status update failed to persist. Expected: ${status}, Got: ${updatedData?.status}`);
+    }
 
     // Create notification for status changes that matter to users
     if (status === 'closed' || status === 'resolved') {

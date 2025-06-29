@@ -250,11 +250,17 @@ export default function IndividualSupportTicket() {
   const handleStatusUpdate = async () => {
     if (!ticket || newStatus === ticket.status) return;
 
+    console.log('=== STATUS UPDATE DEBUG START ===');
+    console.log('Current ticket status:', ticket.status);
+    console.log('New status to set:', newStatus);
+    console.log('Ticket ID:', ticket.ticketId);
+
     setSubmitting(true);
     try {
       const adminSecret = localStorage.getItem('adminSecret');
       const token = adminSecret || (await user?.getIdToken());
 
+      console.log('Making status update request...');
       const response = await fetch('/api/admin/support/update-status', {
         method: 'POST',
         headers: {
@@ -267,27 +273,34 @@ export default function IndividualSupportTicket() {
         }),
       });
 
+      console.log('Status update response status:', response.status);
+      const responseData = await response.json();
+      console.log('Status update response data:', responseData);
+
       if (response.ok) {
-        const responseData = await response.json();
         toast.success('Status updated successfully');
         
         // Immediately update local state with the new status
         setTicket(prevTicket => {
           if (!prevTicket) return prevTicket;
-          return {
+          const updatedTicket = {
             ...prevTicket,
             status: newStatus as 'open' | 'in_progress' | 'resolved' | 'closed',
             updatedAt: new Date()
           };
+          console.log('Updated local ticket state:', {
+            oldStatus: prevTicket.status,
+            newStatus: updatedTicket.status,
+            updatedAt: updatedTicket.updatedAt
+          });
+          return updatedTicket;
         });
         
-        // Also refresh from server after a short delay to ensure consistency
-        setTimeout(() => {
-          fetchTicket();
-        }, 1000);
+        // Don't automatically refresh - let the user manually refresh if needed
+        console.log('Status update completed successfully');
       } else {
-        const errorData = await response.json();
-        toast.error(errorData.error || 'Failed to update status');
+        console.error('Status update failed:', responseData);
+        toast.error(responseData.error || 'Failed to update status');
         // Reset the status selector to the current ticket status on error
         setNewStatus(ticket.status);
       }
@@ -300,6 +313,7 @@ export default function IndividualSupportTicket() {
       setSubmitting(false);
     }
   };
+=======
 
   const handleAssignTicket = async () => {
     if (!ticket || !user) return;

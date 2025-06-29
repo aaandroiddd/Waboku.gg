@@ -49,13 +49,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     // Fetch the ticket
+    console.log('=== GET TICKET API DEBUG START ===');
+    console.log('Fetching ticket ID:', ticketId);
+    
     const ticketDoc = await db.collection('supportTickets').doc(ticketId).get();
     
     if (!ticketDoc.exists) {
+      console.log('Ticket not found in database:', ticketId);
       return res.status(404).json({ error: 'Ticket not found' });
     }
 
     const ticketData = ticketDoc.data();
+    console.log('Raw ticket data from Firestore:', {
+      id: ticketDoc.id,
+      status: ticketData?.status,
+      updatedAt: ticketData?.updatedAt,
+      lastModifiedBy: ticketData?.lastModifiedBy,
+      lastModifiedAt: ticketData?.lastModifiedAt
+    });
     
     // Calculate time-based priority for non-closed tickets
     let timePriority = undefined;
