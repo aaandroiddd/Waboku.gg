@@ -235,38 +235,66 @@ const SupportPageContent = () => {
               {/* Category */}
               <div className="space-y-2">
                 <Label htmlFor="category">Category *</Label>
-                <Select value={ticket.category} onValueChange={(value) => handleInputChange('category', value)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="account">Account Issues</SelectItem>
-                    <SelectItem value="billing">Billing & Payments</SelectItem>
-                    <SelectItem value="orders">Orders & Shipping</SelectItem>
-                    <SelectItem value="listings">Listings & Marketplace</SelectItem>
-                    <SelectItem value="technical">Technical Issues</SelectItem>
-                    <SelectItem value="refunds">Refunds & Returns</SelectItem>
-                    <SelectItem value="safety">Safety & Security</SelectItem>
-                    <SelectItem value="feature">Feature Request</SelectItem>
-                    <SelectItem value="other">Other</SelectItem>
-                  </SelectContent>
-                </Select>
+                <div className="relative">
+                  <select
+                    id="category"
+                    value={ticket.category}
+                    onChange={(e) => handleInputChange('category', e.target.value)}
+                    className="block w-full h-12 rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring appearance-none cursor-pointer text-foreground"
+                    style={{
+                      WebkitAppearance: 'none',
+                      MozAppearance: 'none',
+                      backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e")`,
+                      backgroundRepeat: 'no-repeat',
+                      backgroundPosition: 'right 12px center',
+                      backgroundSize: '16px',
+                      paddingRight: '40px',
+                      minWidth: 0,
+                      touchAction: 'manipulation'
+                    }}
+                    required
+                  >
+                    <option value="">Select a category</option>
+                    <option value="account">Account Issues</option>
+                    <option value="billing">Billing & Payments</option>
+                    <option value="orders">Orders & Shipping</option>
+                    <option value="listings">Listings & Marketplace</option>
+                    <option value="technical">Technical Issues</option>
+                    <option value="refunds">Refunds & Returns</option>
+                    <option value="safety">Safety & Security</option>
+                    <option value="feature">Feature Request</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
               </div>
 
               {/* Priority */}
               <div className="space-y-2">
                 <Label htmlFor="priority">Priority</Label>
-                <Select value={ticket.priority} onValueChange={(value) => handleInputChange('priority', value)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="low">Low - General inquiry</SelectItem>
-                    <SelectItem value="medium">Medium - Standard issue</SelectItem>
-                    <SelectItem value="high">High - Urgent issue</SelectItem>
-                    <SelectItem value="critical">Critical - Account/payment issue</SelectItem>
-                  </SelectContent>
-                </Select>
+                <div className="relative">
+                  <select
+                    id="priority"
+                    value={ticket.priority}
+                    onChange={(e) => handleInputChange('priority', e.target.value)}
+                    className="block w-full h-12 rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring appearance-none cursor-pointer text-foreground"
+                    style={{
+                      WebkitAppearance: 'none',
+                      MozAppearance: 'none',
+                      backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e")`,
+                      backgroundRepeat: 'no-repeat',
+                      backgroundPosition: 'right 12px center',
+                      backgroundSize: '16px',
+                      paddingRight: '40px',
+                      minWidth: 0,
+                      touchAction: 'manipulation'
+                    }}
+                  >
+                    <option value="low">Low - General inquiry</option>
+                    <option value="medium">Medium - Standard issue</option>
+                    <option value="high">High - Urgent issue</option>
+                    <option value="critical">Critical - Account/payment issue</option>
+                  </select>
+                </div>
               </div>
 
               {/* Description */}
