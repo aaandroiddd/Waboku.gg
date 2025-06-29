@@ -139,8 +139,35 @@ export default function ListingsPage() {
   const [priceRange, setPriceRange] = useState([0, 50000]);
   const [showGradedOnly, setShowGradedOnly] = useState(false);
 
-  // Use the enhanced useListings hook without automatic search
-  const { listings: allListings, isLoading, error } = useListings();
+  // Use the enhanced useListings hook with pagination
+  const { 
+    listings: allListings, 
+    isLoading, 
+    error, 
+    hasMore, 
+    loadMore 
+  } = useListings({
+    enablePagination: true,
+    limit: 10, // Start with 10 listings
+    showOnlyActive: true
+  });
+
+  // Track if we've reached the 30 listing limit
+  const hasReachedLimit = allListings.length >= 30;
+  const canLoadMore = hasMore && !hasReachedLimit;
+
+  // Custom load more function that respects the 30 listing limit
+  const handleLoadMore = async () => {
+    if (!canLoadMore) return;
+    
+    // Calculate how many more listings we can load
+    const remainingSlots = 30 - allListings.length;
+    
+    // If we have less than 10 slots remaining, we've reached near the limit
+    if (remainingSlots <= 0) return;
+    
+    await loadMore();
+  };
   const { latitude, longitude } = useGeolocation();
   
   // Initialize analytics hooks early
@@ -562,6 +589,8 @@ export default function ListingsPage() {
                 listings={filteredListings} 
                 loading={isLoading} 
                 searchTerm={searchQuery.trim() || undefined}
+                hasMore={canLoadMore}
+                onLoadMore={handleLoadMore}
               />
             ) : (
               <SearchListingList listings={filteredListings} loading={isLoading} />

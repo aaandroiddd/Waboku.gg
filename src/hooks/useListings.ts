@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { collection, query, where, getDocs, orderBy, QueryConstraint, addDoc, doc, getDoc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, orderBy, QueryConstraint, addDoc, doc, getDoc, updateDoc, deleteDoc, limit as firestoreLimit, startAfter } from 'firebase/firestore';
 import { getStorage, ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { getFirebaseServices } from '@/lib/firebase';
 import { Listing } from '@/types/database';
@@ -30,12 +30,23 @@ interface UseListingsProps {
   searchQuery?: string;
   showOnlyActive?: boolean;
   skipInitialFetch?: boolean;
+  limit?: number;
+  enablePagination?: boolean;
 }
 
-export function useListings({ userId, searchQuery, showOnlyActive = false, skipInitialFetch = false }: UseListingsProps = {}) {
+export function useListings({ 
+  userId, 
+  searchQuery, 
+  showOnlyActive = false, 
+  skipInitialFetch = false,
+  limit,
+  enablePagination = false
+}: UseListingsProps = {}) {
   const [listings, setListings] = useState<Listing[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [hasMore, setHasMore] = useState(true);
+  const [lastDoc, setLastDoc] = useState<any>(null);
   const { user } = useAuth();
 
   const updateListing = async (listingId: string, updateData: Partial<Listing>) => {
@@ -731,25 +742,25 @@ export function useListings({ userId, searchQuery, showOnlyActive = false, skipI
       }
     };
 
-    const fetchListings = async () => {
+    const fetchListings = async (isLoadMore = false) => {
       try {
-        setIsLoading(true);
-        setError(null);
+        if (!isLoadMore) {
+          setIsLoading(true);
+          setError(null);
+        }
         
-        console.log('useListings: Fetching listings...');
+        console.log('useListings: Fetching listings...', { isLoadMore, enablePagination, limit });
         
-        // Check if we have cached data
-        const { data: cachedListings, expired } = getFromCache();
-        
-        if (cachedListings && !expired) {
-          console.log(`Using cached listings data (${cachedListings.length} items)`);
-          // Set listings from cache immediately to improve perceived performance
-          setListings(cachedListings);
-          setIsLoading(false);
+        // For non-paginated requests, check cache
+        if (!enablePagination && !isLoadMore) {
+          const { data: cachedListings, expired } = getFromCache();
           
-          // If we're using cached data, we can return early
-          // This provides a faster initial render
-          return;
+          if (cachedListings && !expired) {
+            console.log(`Using cached listings data (${cachedListings.length} items)`);
+            setListings(cachedListings);
+            setIsLoading(false);
+            return;
+          }
         }
         
         // Don't automatically request user's location
@@ -782,12 +793,30 @@ export function useListings({ userId, searchQuery, showOnlyActive = false, skipI
         // Always add sorting by creation date
         queryConstraints.push(orderBy('createdAt', 'desc'));
 
-        console.log(`Creating query with constraints: userId=${userId}, showOnlyActive=${showOnlyActive}`);
+        // Add pagination constraints if enabled
+        if (enablePagination && limit) {
+          if (isLoadMore && lastDoc) {
+            queryConstraints.push(startAfter(lastDoc));
+          }
+          queryConstraints.push(firestoreLimit(limit));
+        }
+
+        console.log(`Creating query with constraints: userId=${userId}, showOnlyActive=${showOnlyActive}, pagination=${enablePagination}, limit=${limit}`);
         const q = query(listingsRef, ...queryConstraints);
         
         console.log('Executing Firestore query...');
         const querySnapshot = await getDocs(q);
         console.log(`Query returned ${querySnapshot.docs.length} listings`);
+        
+        // Update hasMore based on returned results
+        if (enablePagination && limit) {
+          setHasMore(querySnapshot.docs.length === limit);
+          
+          // Update lastDoc for next pagination
+          if (querySnapshot.docs.length > 0) {
+            setLastDoc(querySnapshot.docs[querySnapshot.docs.length - 1]);
+          }
+        }
         
         let fetchedListings = querySnapshot.docs.map(doc => {
           const data = doc.data();
@@ -897,24 +926,36 @@ export function useListings({ userId, searchQuery, showOnlyActive = false, skipI
           });
         }
         
-        // Cache the results for faster loading next time
-        saveToCache(fetchedListings);
-        console.log(`Cached ${fetchedListings.length} listings for future use`);
+        // Update listings state
+        if (isLoadMore) {
+          setListings(prevListings => [...prevListings, ...fetchedListings]);
+        } else {
+          setListings(fetchedListings);
+          
+          // Cache the results for faster loading next time (only for initial load)
+          if (!enablePagination) {
+            saveToCache(fetchedListings);
+            console.log(`Cached ${fetchedListings.length} listings for future use`);
+          }
+        }
         
-        setListings(fetchedListings);
       } catch (err: any) {
         console.error('Error fetching listings:', err);
         setError(err.message || 'Error fetching listings');
         
         // If there was an error, try to clear the cache and retry once
-        try {
-          clearAllListingCaches();
-          console.log('Cleared cache after error, will retry on next render');
-        } catch (cacheError) {
-          console.error('Error clearing cache:', cacheError);
+        if (!isLoadMore) {
+          try {
+            clearAllListingCaches();
+            console.log('Cleared cache after error, will retry on next render');
+          } catch (cacheError) {
+            console.error('Error clearing cache:', cacheError);
+          }
         }
       } finally {
-        setIsLoading(false);
+        if (!isLoadMore) {
+          setIsLoading(false);
+        }
       }
     };
 
@@ -1061,6 +1102,204 @@ const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: numbe
     }
   };
 
+  // Function to load more listings (for pagination)
+  const loadMore = async () => {
+    if (!enablePagination || !hasMore || isLoading) {
+      console.log('Cannot load more:', { enablePagination, hasMore, isLoading });
+      return;
+    }
+
+    console.log('Loading more listings...');
+    
+    // Access the fetchListings function from the useEffect scope
+    const fetchListingsInner = async (isLoadMore = false) => {
+      try {
+        if (!isLoadMore) {
+          setIsLoading(true);
+          setError(null);
+        }
+        
+        console.log('useListings: Fetching listings...', { isLoadMore, enablePagination, limit });
+        
+        // Don't automatically request user's location
+        let userLocation: { latitude: number | null; longitude: number | null } = { latitude: null, longitude: null };
+
+        const { db } = await getFirebaseServices();
+        if (!db) {
+          throw new Error('Firebase Firestore is not initialized');
+        }
+        
+        const listingsRef = collection(db, 'listings');
+        
+        // Create base query for listings
+        let queryConstraints: QueryConstraint[] = [];
+
+        // Add user filter if userId is provided
+        if (userId) {
+          queryConstraints.push(where('userId', '==', userId));
+        }
+
+        // Add status filters
+        if (showOnlyActive) {
+          queryConstraints.push(where('status', '==', 'active'));
+        } else if (userId) {
+          queryConstraints.push(where('status', 'in', ['active', 'archived', 'inactive']));
+        } else {
+          queryConstraints.push(where('status', '==', 'active'));
+        }
+
+        // Always add sorting by creation date
+        queryConstraints.push(orderBy('createdAt', 'desc'));
+
+        // Add pagination constraints if enabled
+        if (enablePagination && limit) {
+          if (isLoadMore && lastDoc) {
+            queryConstraints.push(startAfter(lastDoc));
+          }
+          queryConstraints.push(firestoreLimit(limit));
+        }
+
+        console.log(`Creating query with constraints: userId=${userId}, showOnlyActive=${showOnlyActive}, pagination=${enablePagination}, limit=${limit}`);
+        const q = query(listingsRef, ...queryConstraints);
+        
+        console.log('Executing Firestore query...');
+        const querySnapshot = await getDocs(q);
+        console.log(`Query returned ${querySnapshot.docs.length} listings`);
+        
+        // Update hasMore based on returned results
+        if (enablePagination && limit) {
+          setHasMore(querySnapshot.docs.length === limit);
+          
+          // Update lastDoc for next pagination
+          if (querySnapshot.docs.length > 0) {
+            setLastDoc(querySnapshot.docs[querySnapshot.docs.length - 1]);
+          }
+        }
+        
+        let fetchedListings = querySnapshot.docs.map(doc => {
+          const data = doc.data();
+          
+          // Create a default expiration date if none exists
+          let expiresAt;
+          try {
+            if (data.expiresAt?.toDate) {
+              expiresAt = data.expiresAt.toDate();
+            } else if (data.expiresAt) {
+              expiresAt = new Date(data.expiresAt);
+            } else {
+              const defaultExpiry = new Date();
+              defaultExpiry.setDate(defaultExpiry.getDate() + 30); // 30 days from now
+              expiresAt = defaultExpiry;
+            }
+          } catch (e) {
+            console.error(`Error parsing expiresAt for listing ${doc.id}:`, e);
+            const defaultExpiry = new Date();
+            defaultExpiry.setDate(defaultExpiry.getDate() + 30);
+            expiresAt = defaultExpiry;
+          }
+          
+          // Create a default createdAt if none exists
+          let createdAt;
+          try {
+            if (data.createdAt?.toDate) {
+              createdAt = data.createdAt.toDate();
+            } else if (data.createdAt) {
+              createdAt = new Date(data.createdAt);
+            } else {
+              createdAt = new Date();
+            }
+          } catch (e) {
+            console.error(`Error parsing createdAt for listing ${doc.id}:`, e);
+            createdAt = new Date();
+          }
+          
+          const listing = {
+            id: doc.id,
+            ...data,
+            createdAt,
+            expiresAt,
+            price: Number(data.price) || 0,
+            imageUrls: Array.isArray(data.imageUrls) ? data.imageUrls : [],
+            isGraded: Boolean(data.isGraded),
+            gradeLevel: data.gradeLevel ? Number(data.gradeLevel) : undefined,
+            status: data.status || 'active',
+            condition: data.condition || 'Not specified',
+            game: data.game || 'Not specified',
+            city: data.city || 'Unknown',
+            state: data.state || 'Unknown',
+            gradingCompany: data.gradingCompany || undefined,
+            distance: 0 // Default distance
+          } as Listing & { distance: number };
+
+          // Calculate distance if we have both user location and listing location
+          if (userLocation.latitude && userLocation.longitude && data.latitude && data.longitude) {
+            const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+              const R = 6371; // Earth's radius in kilometers
+              const dLat = (lat2 - lat1) * Math.PI / 180;
+              const dLon = (lon2 - lon1) * Math.PI / 180;
+              const a = 
+                Math.sin(dLat/2) * Math.sin(dLat/2) +
+                Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+                Math.sin(dLon/2) * Math.sin(dLon/2);
+              const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+              return R * c;
+            };
+            
+            listing.distance = calculateDistance(
+              userLocation.latitude,
+              userLocation.longitude,
+              data.latitude,
+              data.longitude
+            );
+          }
+
+          return listing;
+        });
+
+        // If there's a search query, filter results in memory
+        if (searchQuery?.trim()) {
+          const searchLower = searchQuery.toLowerCase();
+          fetchedListings = fetchedListings.filter(listing => 
+            listing.title?.toLowerCase().includes(searchLower)
+          );
+        }
+
+        // Sort listings by distance if location is available, otherwise keep creation date sort
+        if (userLocation.latitude && userLocation.longitude) {
+          fetchedListings.sort((a, b) => {
+            // First prioritize recent listings within 50km
+            const aIsNearby = a.distance <= 50;
+            const bIsNearby = b.distance <= 50;
+            
+            if (aIsNearby && !bIsNearby) return -1;
+            if (!aIsNearby && bIsNearby) return 1;
+            
+            // For listings in the same distance category, sort by date
+            if (aIsNearby === bIsNearby) {
+              return b.createdAt.getTime() - a.createdAt.getTime();
+            }
+            
+            // If neither is nearby, sort by distance
+            return a.distance - b.distance;
+          });
+        }
+        
+        // Update listings state
+        if (isLoadMore) {
+          setListings(prevListings => [...prevListings, ...fetchedListings]);
+        } else {
+          setListings(fetchedListings);
+        }
+        
+      } catch (err: any) {
+        console.error('Error fetching listings:', err);
+        setError(err.message || 'Error fetching listings');
+      }
+    };
+
+    await fetchListingsInner(true);
+  };
+
   // Function to clear all listing-related caches
   const clearAllListingCaches = () => {
     if (typeof window === 'undefined') return;
@@ -1086,6 +1325,8 @@ const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: numbe
     setListings, // Expose setListings to allow direct state updates
     isLoading, 
     error, 
+    hasMore, // Expose pagination state
+    loadMore, // Expose load more function
     createListing, 
     fetchListing, 
     updateListing,
