@@ -378,12 +378,40 @@ export default function IndividualSupportTicket() {
     }
   }, [ticketId, user, router]);
 
-  // Fetch ticket data
+  // Mark ticket as read by support when opened
+  const markTicketAsRead = useCallback(async () => {
+    if (!ticketId || !user) return;
+    
+    try {
+      const adminSecret = localStorage.getItem('adminSecret');
+      const token = adminSecret || (await user?.getIdToken());
+
+      await fetch('/api/admin/support/mark-read', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          ticketId: ticketId,
+        }),
+      });
+      
+      console.log('[SupportTicket] Marked ticket as read by support:', ticketId);
+    } catch (error) {
+      console.error('[SupportTicket] Error marking ticket as read:', error);
+      // Don't show error to user as this is a background operation
+    }
+  }, [ticketId, user]);
+
+  // Fetch ticket data and mark as read
   useEffect(() => {
     if (isAuthorized && ticketId) {
       fetchTicket();
+      // Mark ticket as read by support when opened
+      markTicketAsRead();
     }
-  }, [isAuthorized, ticketId, fetchTicket]);
+  }, [isAuthorized, ticketId, fetchTicket, markTicketAsRead]);
 
   // Auto-refresh ticket when the page becomes visible (user navigates back)
   useEffect(() => {
@@ -877,8 +905,8 @@ export default function IndividualSupportTicket() {
                       key={response.id}
                       className={`p-4 rounded-lg ${
                         response.isFromSupport
-                          ? 'bg-blue-50 dark:bg-blue-950/20 border-l-4 border-blue-500'
-                          : 'bg-gray-50 dark:bg-gray-800/50 border-l-4 border-gray-300'
+                          ? 'bg-blue-50 dark:bg-slate-800/50 border-l-4 border-blue-500'
+                          : 'bg-gray-50 dark:bg-slate-700/50 border-l-4 border-gray-300 dark:border-slate-600'
                       }`}
                     >
                       <div className="flex items-center justify-between mb-2">
