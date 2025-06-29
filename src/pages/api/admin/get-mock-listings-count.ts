@@ -1,6 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { collection, query, where, getDocs } from 'firebase/firestore';
-import { getFirebaseServices } from '@/lib/firebase-admin';
+import { getFirebaseAdmin } from '@/lib/firebase-admin';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
@@ -14,7 +14,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    const { db } = await getFirebaseServices();
+    const { db } = getFirebaseAdmin();
     const listingsRef = collection(db, 'listings');
     
     // Query for mock listings

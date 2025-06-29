@@ -1,6 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { collection, addDoc } from 'firebase/firestore';
-import { getFirebaseServices } from '@/lib/firebase-admin';
+import { getFirebaseAdmin } from '@/lib/firebase-admin';
 
 // Mock TCG data for different games
 const MOCK_CARD_DATA = {
@@ -366,7 +366,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: `Invalid games: ${invalidGames.join(', ')}` });
     }
 
-    const { db } = await getFirebaseServices();
+    const { db } = getFirebaseAdmin();
     const listingsRef = collection(db, 'listings');
     
     const createdListings = [];
