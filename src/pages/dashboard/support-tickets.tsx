@@ -716,142 +716,235 @@ const SupportTicketsPageContent = () => {
                   {/* Status Filter */}
                   <div className="space-y-2">
                     <Label className="text-xs text-muted-foreground">Status</Label>
-                    <Select value={statusFilter} onValueChange={setStatusFilter}>
-                      <SelectTrigger className="h-9">
-                        <SelectValue placeholder="All Statuses" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Statuses</SelectItem>
-                        <SelectItem value="open">
-                          <div className="flex items-center gap-2">
-                            <Clock className="h-3 w-3" />
-                            Open
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="in_progress">
-                          <div className="flex items-center gap-2">
-                            <MessageCircle className="h-3 w-3" />
-                            In Progress
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="resolved">
-                          <div className="flex items-center gap-2">
-                            <CheckCircle className="h-3 w-3" />
-                            Resolved
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="closed">
-                          <div className="flex items-center gap-2">
-                            <XCircle className="h-3 w-3" />
-                            Closed
-                          </div>
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <div className="block sm:hidden">
+                      {/* Mobile: Simple select */}
+                      <div className="relative">
+                        <select 
+                          value={statusFilter} 
+                          onChange={(e) => setStatusFilter(e.target.value)}
+                          className="w-full h-9 px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 dark:text-gray-100 appearance-none cursor-pointer text-sm"
+                        >
+                          <option value="all">All Statuses</option>
+                          <option value="open">Open</option>
+                          <option value="in_progress">In Progress</option>
+                          <option value="resolved">Resolved</option>
+                          <option value="closed">Closed</option>
+                        </select>
+                        <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
+                          <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                          </svg>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="hidden sm:block">
+                      {/* Desktop: Fancy select */}
+                      <Select value={statusFilter} onValueChange={setStatusFilter}>
+                        <SelectTrigger className="h-9">
+                          <SelectValue placeholder="All Statuses" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Statuses</SelectItem>
+                          <SelectItem value="open">
+                            <div className="flex items-center gap-2">
+                              <Clock className="h-3 w-3" />
+                              Open
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="in_progress">
+                            <div className="flex items-center gap-2">
+                              <MessageCircle className="h-3 w-3" />
+                              In Progress
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="resolved">
+                            <div className="flex items-center gap-2">
+                              <CheckCircle className="h-3 w-3" />
+                              Resolved
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="closed">
+                            <div className="flex items-center gap-2">
+                              <XCircle className="h-3 w-3" />
+                              Closed
+                            </div>
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
 
                   {/* Priority Filter */}
                   <div className="space-y-2">
                     <Label className="text-xs text-muted-foreground">Priority</Label>
-                    <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-                      <SelectTrigger className="h-9">
-                        <SelectValue placeholder="All Priorities" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Priorities</SelectItem>
-                        <SelectItem value="critical">
-                          <div className="flex items-center gap-2">
-                            <AlertTriangle className="h-3 w-3 text-red-500" />
-                            Critical
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="high">
-                          <div className="flex items-center gap-2">
-                            <AlertTriangle className="h-3 w-3 text-orange-500" />
-                            High
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="medium">
-                          <div className="flex items-center gap-2">
-                            <AlertTriangle className="h-3 w-3 text-blue-500" />
-                            Medium
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="low">
-                          <div className="flex items-center gap-2">
-                            <AlertTriangle className="h-3 w-3 text-green-500" />
-                            Low
-                          </div>
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <div className="block sm:hidden">
+                      {/* Mobile: Simple select */}
+                      <div className="relative">
+                        <select 
+                          value={priorityFilter} 
+                          onChange={(e) => setPriorityFilter(e.target.value)}
+                          className="w-full h-9 px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 dark:text-gray-100 appearance-none cursor-pointer text-sm"
+                        >
+                          <option value="all">All Priorities</option>
+                          <option value="critical">Critical</option>
+                          <option value="high">High</option>
+                          <option value="medium">Medium</option>
+                          <option value="low">Low</option>
+                        </select>
+                        <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
+                          <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                          </svg>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="hidden sm:block">
+                      {/* Desktop: Fancy select */}
+                      <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+                        <SelectTrigger className="h-9">
+                          <SelectValue placeholder="All Priorities" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Priorities</SelectItem>
+                          <SelectItem value="critical">
+                            <div className="flex items-center gap-2">
+                              <AlertTriangle className="h-3 w-3 text-red-500" />
+                              Critical
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="high">
+                            <div className="flex items-center gap-2">
+                              <AlertTriangle className="h-3 w-3 text-orange-500" />
+                              High
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="medium">
+                            <div className="flex items-center gap-2">
+                              <AlertTriangle className="h-3 w-3 text-blue-500" />
+                              Medium
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="low">
+                            <div className="flex items-center gap-2">
+                              <AlertTriangle className="h-3 w-3 text-green-500" />
+                              Low
+                            </div>
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
 
                   {/* Sort By */}
                   <div className="space-y-2">
                     <Label className="text-xs text-muted-foreground">Sort By</Label>
-                    <Select value={sortBy} onValueChange={setSortBy}>
-                      <SelectTrigger className="h-9">
-                        <SelectValue placeholder="Sort by..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="date_asc">
-                          <div className="flex items-center gap-2">
-                            <SortAsc className="h-3 w-3" />
-                            Date (Oldest First)
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="date_desc">
-                          <div className="flex items-center gap-2">
-                            <SortDesc className="h-3 w-3" />
-                            Date (Newest First)
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="priority">
-                          <div className="flex items-center gap-2">
-                            <AlertTriangle className="h-3 w-3" />
-                            Priority
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="status">
-                          <div className="flex items-center gap-2">
-                            <Clock className="h-3 w-3" />
-                            Status
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="updated">
-                          <div className="flex items-center gap-2">
-                            <Calendar className="h-3 w-3" />
-                            Last Updated
-                          </div>
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <div className="block sm:hidden">
+                      {/* Mobile: Simple select */}
+                      <div className="relative">
+                        <select 
+                          value={sortBy} 
+                          onChange={(e) => setSortBy(e.target.value)}
+                          className="w-full h-9 px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 dark:text-gray-100 appearance-none cursor-pointer text-sm"
+                        >
+                          <option value="date_asc">Date (Oldest First)</option>
+                          <option value="date_desc">Date (Newest First)</option>
+                          <option value="priority">Priority</option>
+                          <option value="status">Status</option>
+                          <option value="updated">Last Updated</option>
+                        </select>
+                        <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
+                          <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                          </svg>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="hidden sm:block">
+                      {/* Desktop: Fancy select */}
+                      <Select value={sortBy} onValueChange={setSortBy}>
+                        <SelectTrigger className="h-9">
+                          <SelectValue placeholder="Sort by..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="date_asc">
+                            <div className="flex items-center gap-2">
+                              <SortAsc className="h-3 w-3" />
+                              Date (Oldest First)
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="date_desc">
+                            <div className="flex items-center gap-2">
+                              <SortDesc className="h-3 w-3" />
+                              Date (Newest First)
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="priority">
+                            <div className="flex items-center gap-2">
+                              <AlertTriangle className="h-3 w-3" />
+                              Priority
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="status">
+                            <div className="flex items-center gap-2">
+                              <Clock className="h-3 w-3" />
+                              Status
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="updated">
+                            <div className="flex items-center gap-2">
+                              <Calendar className="h-3 w-3" />
+                              Last Updated
+                            </div>
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
 
                   {/* Sort Order (only show for non-date sorts) */}
                   {!sortBy.includes('date') && (
                     <div className="space-y-2">
                       <Label className="text-xs text-muted-foreground">Order</Label>
-                      <Select value={sortOrder} onValueChange={(value: 'asc' | 'desc') => setSortOrder(value)}>
-                        <SelectTrigger className="h-9">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="asc">
-                            <div className="flex items-center gap-2">
-                              <SortAsc className="h-3 w-3" />
-                              Ascending
-                            </div>
-                          </SelectItem>
-                          <SelectItem value="desc">
-                            <div className="flex items-center gap-2">
-                              <SortDesc className="h-3 w-3" />
-                              Descending
-                            </div>
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <div className="block sm:hidden">
+                        {/* Mobile: Simple select */}
+                        <div className="relative">
+                          <select 
+                            value={sortOrder} 
+                            onChange={(e) => setSortOrder(e.target.value as 'asc' | 'desc')}
+                            className="w-full h-9 px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 dark:text-gray-100 appearance-none cursor-pointer text-sm"
+                          >
+                            <option value="asc">Ascending</option>
+                            <option value="desc">Descending</option>
+                          </select>
+                          <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
+                            <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                            </svg>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="hidden sm:block">
+                        {/* Desktop: Fancy select */}
+                        <Select value={sortOrder} onValueChange={(value: 'asc' | 'desc') => setSortOrder(value)}>
+                          <SelectTrigger className="h-9">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="asc">
+                              <div className="flex items-center gap-2">
+                                <SortAsc className="h-3 w-3" />
+                                Ascending
+                              </div>
+                            </SelectItem>
+                            <SelectItem value="desc">
+                              <div className="flex items-center gap-2">
+                                <SortDesc className="h-3 w-3" />
+                                Descending
+                              </div>
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </div>
                   )}
                 </div>

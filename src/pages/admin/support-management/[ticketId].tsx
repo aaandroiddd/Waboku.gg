@@ -903,10 +903,10 @@ export default function IndividualSupportTicket() {
                   {ticket.responses.map((response) => (
                     <div
                       key={response.id}
-                      className={`p-4 rounded-lg ${
+                      className={`p-4 rounded-lg border ${
                         response.isFromSupport
-                          ? 'bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500 dark:border-blue-400'
-                          : 'bg-gray-50 dark:bg-slate-800/80 border-l-4 border-gray-300 dark:border-slate-500'
+                          ? 'bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800/50 border-l-4 border-l-blue-500 dark:border-l-blue-400'
+                          : 'bg-gray-50 dark:bg-slate-800/90 border-gray-200 dark:border-slate-700 border-l-4 border-l-gray-300 dark:border-l-slate-500'
                       }`}
                     >
                       <div className="flex items-center justify-between mb-2">
