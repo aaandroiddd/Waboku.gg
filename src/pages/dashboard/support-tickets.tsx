@@ -10,6 +10,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { 
   HelpCircle, 
   MessageCircle, 
@@ -22,7 +23,11 @@ import {
   Calendar,
   User,
   AlertTriangle,
-  RefreshCw
+  RefreshCw,
+  Filter,
+  SortAsc,
+  SortDesc,
+  X
 } from "lucide-react";
 import { Toaster } from '@/components/ui/toaster';
 import { useToast } from '@/components/ui/use-toast';
@@ -88,6 +93,12 @@ const SupportTicketsPageContent = () => {
   const [isSubmittingResponse, setIsSubmittingResponse] = useState(false);
   const [error, setError] = useState("");
   const [responseMessage, setResponseMessage] = useState("");
+  
+  // Filter and sort states
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [priorityFilter, setPriorityFilter] = useState<string>('all');
+  const [sortBy, setSortBy] = useState<string>('date_asc');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
 
   // Function to clear all authentication and cache data
   const clearAuthCache = () => {
@@ -413,6 +424,63 @@ const SupportTicketsPageContent = () => {
     }
   };
 
+  // Filter and sort tickets
+  const getFilteredAndSortedTickets = () => {
+    let filteredTickets = [...tickets];
+
+    // Apply status filter
+    if (statusFilter !== 'all') {
+      filteredTickets = filteredTickets.filter(ticket => ticket.status === statusFilter);
+    }
+
+    // Apply priority filter
+    if (priorityFilter !== 'all') {
+      filteredTickets = filteredTickets.filter(ticket => ticket.priority === priorityFilter);
+    }
+
+    // Apply sorting - default to ascending by creation date (oldest first)
+    filteredTickets.sort((a, b) => {
+      switch (sortBy) {
+        case 'date_asc':
+          return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+        case 'date_desc':
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        case 'status':
+          const statusOrder = { 'open': 1, 'in_progress': 2, 'resolved': 3, 'closed': 4 };
+          const aStatus = statusOrder[a.status] || 5;
+          const bStatus = statusOrder[b.status] || 5;
+          return sortOrder === 'asc' ? aStatus - bStatus : bStatus - aStatus;
+        case 'priority':
+          const priorityOrder = { 'critical': 1, 'high': 2, 'medium': 3, 'low': 4 };
+          const aPriority = priorityOrder[a.priority] || 5;
+          const bPriority = priorityOrder[b.priority] || 5;
+          return sortOrder === 'asc' ? aPriority - bPriority : bPriority - aPriority;
+        case 'updated':
+          return sortOrder === 'asc' 
+            ? new Date(a.updatedAt).getTime() - new Date(b.updatedAt).getTime()
+            : new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+        default:
+          // Default: ascending by creation date (oldest first)
+          return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+      }
+    });
+
+    return filteredTickets;
+  };
+
+  // Clear all filters
+  const clearFilters = () => {
+    setStatusFilter('all');
+    setPriorityFilter('all');
+    setSortBy('date_asc');
+    setSortOrder('asc');
+  };
+
+  // Check if any filters are active
+  const hasActiveFilters = statusFilter !== 'all' || priorityFilter !== 'all' || sortBy !== 'date_asc';
+
+  const displayedTickets = getFilteredAndSortedTickets();
+
   if (!user) {
     return <Skeleton className="w-full h-[400px]" />;
   }
@@ -616,6 +684,193 @@ const SupportTicketsPageContent = () => {
           </Alert>
         )}
 
+        {/* Filter and Sort Controls */}
+        {tickets.length > 0 && (
+          <Card className="mb-6">
+            <CardContent className="pt-6">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Filter className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm font-medium">Filter & Sort</span>
+                    {hasActiveFilters && (
+                      <Badge variant="secondary" className="text-xs">
+                        {displayedTickets.length} of {tickets.length}
+                      </Badge>
+                    )}
+                  </div>
+                  {hasActiveFilters && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={clearFilters}
+                      className="text-xs"
+                    >
+                      <X className="h-3 w-3 mr-1" />
+                      Clear Filters
+                    </Button>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {/* Status Filter */}
+                  <div className="space-y-2">
+                    <Label className="text-xs text-muted-foreground">Status</Label>
+                    <Select value={statusFilter} onValueChange={setStatusFilter}>
+                      <SelectTrigger className="h-9">
+                        <SelectValue placeholder="All Statuses" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Statuses</SelectItem>
+                        <SelectItem value="open">
+                          <div className="flex items-center gap-2">
+                            <Clock className="h-3 w-3" />
+                            Open
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="in_progress">
+                          <div className="flex items-center gap-2">
+                            <MessageCircle className="h-3 w-3" />
+                            In Progress
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="resolved">
+                          <div className="flex items-center gap-2">
+                            <CheckCircle className="h-3 w-3" />
+                            Resolved
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="closed">
+                          <div className="flex items-center gap-2">
+                            <XCircle className="h-3 w-3" />
+                            Closed
+                          </div>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Priority Filter */}
+                  <div className="space-y-2">
+                    <Label className="text-xs text-muted-foreground">Priority</Label>
+                    <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+                      <SelectTrigger className="h-9">
+                        <SelectValue placeholder="All Priorities" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Priorities</SelectItem>
+                        <SelectItem value="critical">
+                          <div className="flex items-center gap-2">
+                            <AlertTriangle className="h-3 w-3 text-red-500" />
+                            Critical
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="high">
+                          <div className="flex items-center gap-2">
+                            <AlertTriangle className="h-3 w-3 text-orange-500" />
+                            High
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="medium">
+                          <div className="flex items-center gap-2">
+                            <AlertTriangle className="h-3 w-3 text-blue-500" />
+                            Medium
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="low">
+                          <div className="flex items-center gap-2">
+                            <AlertTriangle className="h-3 w-3 text-green-500" />
+                            Low
+                          </div>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Sort By */}
+                  <div className="space-y-2">
+                    <Label className="text-xs text-muted-foreground">Sort By</Label>
+                    <Select value={sortBy} onValueChange={setSortBy}>
+                      <SelectTrigger className="h-9">
+                        <SelectValue placeholder="Sort by..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="date_asc">
+                          <div className="flex items-center gap-2">
+                            <SortAsc className="h-3 w-3" />
+                            Date (Oldest First)
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="date_desc">
+                          <div className="flex items-center gap-2">
+                            <SortDesc className="h-3 w-3" />
+                            Date (Newest First)
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="priority">
+                          <div className="flex items-center gap-2">
+                            <AlertTriangle className="h-3 w-3" />
+                            Priority
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="status">
+                          <div className="flex items-center gap-2">
+                            <Clock className="h-3 w-3" />
+                            Status
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="updated">
+                          <div className="flex items-center gap-2">
+                            <Calendar className="h-3 w-3" />
+                            Last Updated
+                          </div>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Sort Order (only show for non-date sorts) */}
+                  {!sortBy.includes('date') && (
+                    <div className="space-y-2">
+                      <Label className="text-xs text-muted-foreground">Order</Label>
+                      <Select value={sortOrder} onValueChange={(value: 'asc' | 'desc') => setSortOrder(value)}>
+                        <SelectTrigger className="h-9">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="asc">
+                            <div className="flex items-center gap-2">
+                              <SortAsc className="h-3 w-3" />
+                              Ascending
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="desc">
+                            <div className="flex items-center gap-2">
+                              <SortDesc className="h-3 w-3" />
+                              Descending
+                            </div>
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                </div>
+
+                {/* Results Summary */}
+                <div className="flex items-center justify-between pt-2 border-t">
+                  <p className="text-sm text-muted-foreground">
+                    Showing {displayedTickets.length} of {tickets.length} tickets
+                    {hasActiveFilters && ' (filtered)'}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Default: Oldest tickets first
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {tickets.length === 0 ? (
           <Card>
             <CardContent className="pt-6">
@@ -632,9 +887,25 @@ const SupportTicketsPageContent = () => {
               </div>
             </CardContent>
           </Card>
+        ) : displayedTickets.length === 0 ? (
+          <Card>
+            <CardContent className="pt-6">
+              <div className="text-center space-y-4">
+                <Filter className="h-16 w-16 text-muted-foreground mx-auto" />
+                <h3 className="text-lg font-medium">No Tickets Match Your Filters</h3>
+                <p className="text-muted-foreground">
+                  Try adjusting your filters to see more tickets.
+                </p>
+                <Button onClick={clearFilters} variant="outline">
+                  <X className="h-4 w-4 mr-2" />
+                  Clear All Filters
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         ) : (
           <div className="space-y-4">
-            {tickets.map((ticket) => (
+            {displayedTickets.map((ticket) => (
               <Card 
                 key={ticket.ticketId} 
                 className={`cursor-pointer transition-colors hover:bg-muted/50 ${
