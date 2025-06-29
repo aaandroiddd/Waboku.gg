@@ -136,7 +136,7 @@ const SupportTicketsPageContent = () => {
     }
   };
 
-  // Redirect if not authenticated
+  // Redirect if not authenticated and only fetch tickets on initial page load
   useEffect(() => {
     console.log('=== USEEFFECT TRIGGERED ===');
     console.log('User exists:', !!user);
@@ -151,36 +151,22 @@ const SupportTicketsPageContent = () => {
       return;
     }
     
-    // Clear cache and fetch tickets
-    clearAuthCache();
-    console.log('Calling fetchTickets from useEffect');
-    fetchTickets();
+    // Only fetch tickets on initial page load, not when navigating back
+    const hasLoadedTickets = sessionStorage.getItem('support-tickets-loaded');
+    if (!hasLoadedTickets) {
+      console.log('First time loading support tickets page, fetching data...');
+      clearAuthCache();
+      console.log('Calling fetchTickets from useEffect (initial load)');
+      fetchTickets();
+      sessionStorage.setItem('support-tickets-loaded', 'true');
+    } else {
+      console.log('Support tickets already loaded in this session, skipping auto-fetch');
+      setIsLoading(false); // Set loading to false since we're not fetching
+    }
   }, [user, router]);
 
-  // Auto-refresh tickets when the page becomes visible (user navigates back)
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (!document.hidden && user) {
-        console.log('Page became visible, refreshing support tickets...');
-        fetchTickets();
-      }
-    };
-
-    const handleFocus = () => {
-      if (user) {
-        console.log('Window focused, refreshing support tickets...');
-        fetchTickets();
-      }
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    window.addEventListener('focus', handleFocus);
-
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('focus', handleFocus);
-    };
-  }, [user]);
+  // Remove auto-refresh on visibility change and focus to prevent unwanted API calls
+  // Users can manually refresh using the refresh button if needed
 
   const fetchTickets = async () => {
     if (!user) return;
