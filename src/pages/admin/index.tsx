@@ -68,6 +68,7 @@ export default function AdminDashboard() {
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [adminSecret, setAdminSecret] = useState('');
   const [loading, setLoading] = useState(false);
+  const [authError, setAuthError] = useState('');
   const [responseDialog, setResponseDialog] = useState(false);
   const [apiResponse, setApiResponse] = useState<ApiResponse | null>(null);
   const [userId, setUserId] = useState('');
@@ -86,6 +87,9 @@ export default function AdminDashboard() {
   }, []);
 
   const verifyAdmin = async (secret: string) => {
+    setLoading(true);
+    setAuthError('');
+    
     try {
       const response = await fetch('/api/admin/verify', {
         method: 'POST',
@@ -97,14 +101,27 @@ export default function AdminDashboard() {
 
       if (response.ok) {
         setIsAuthorized(true);
+        setAuthError('');
         localStorage.setItem('admin_secret', secret);
       } else {
         setIsAuthorized(false);
         localStorage.removeItem('admin_secret');
+        
+        // Handle different error responses
+        if (response.status === 401) {
+          setAuthError('Invalid admin secret. Please check your credentials and try again.');
+        } else if (response.status === 403) {
+          setAuthError('Access denied. You do not have admin privileges.');
+        } else {
+          setAuthError('Authentication failed. Please try again.');
+        }
       }
     } catch (error) {
       console.error('Error verifying admin:', error);
       setIsAuthorized(false);
+      setAuthError('Network error. Please check your connection and try again.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -143,20 +160,39 @@ export default function AdminDashboard() {
     return (
       <div className="min-h-screen flex flex-col">
         <div className="container mx-auto p-8 flex-grow">
-          <Card className="p-6">
+          <Card className="p-6 max-w-md mx-auto">
             <h1 className="text-2xl font-bold mb-4">Admin Authentication</h1>
             <div className="space-y-4">
-              <input
-                type="password"
-                placeholder="Enter admin secret"
-                className="w-full p-2 border rounded"
-                onChange={(e) => setAdminSecret(e.target.value)}
-              />
+              <div className="space-y-2">
+                <Label htmlFor="adminSecret">Admin Secret</Label>
+                <Input
+                  id="adminSecret"
+                  type="password"
+                  placeholder="Enter admin secret"
+                  value={adminSecret}
+                  onChange={(e) => setAdminSecret(e.target.value)}
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter' && adminSecret && !loading) {
+                      verifyAdmin(adminSecret);
+                    }
+                  }}
+                />
+              </div>
+              
+              {authError && (
+                <Alert className="border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-950">
+                  <AlertDescription className="text-red-800 dark:text-red-200">
+                    {authError}
+                  </AlertDescription>
+                </Alert>
+              )}
+              
               <Button 
                 onClick={() => verifyAdmin(adminSecret)}
-                disabled={!adminSecret}
+                disabled={!adminSecret || loading}
+                className="w-full"
               >
-                Verify Admin Access
+                {loading ? 'Verifying...' : 'Verify Admin Access'}
               </Button>
             </div>
           </Card>
