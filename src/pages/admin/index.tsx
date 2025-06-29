@@ -42,25 +42,25 @@ interface ApiResponse {
 }
 
 const SECTIONS = [
-  { id: "user-tier", label: "User Tier Management" },
-  { id: "api-endpoints", label: "API Endpoints" },
-  { id: "mock-listings", label: "Mock Listing Generator" },
-  { id: "subscription", label: "Subscription Management" },
-  { id: "moderation", label: "Content Moderation" },
-  { id: "moderator", label: "Moderator Management" },
-  { id: "webhook", label: "Stripe Webhook Fix" },
-  { id: "api-test", label: "API Test Panel" },
-  { id: "firebase", label: "Firebase Diagnostics" },
   { id: "account-tier-sync", label: "Account Tier Synchronization" },
+  { id: "api-endpoints", label: "API Endpoints" },
+  { id: "api-test", label: "API Test Panel" },
+  { id: "moderation", label: "Content Moderation" },
   { id: "db-usage", label: "Database Usage Monitoring" },
+  { id: "email-test", label: "Email Notification Testing" },
+  { id: "firebase", label: "Firebase Diagnostics" },
   { id: "listing-analytics", label: "Listing Analytics & Capacity Monitoring" },
   { id: "listing-visibility", label: "Listing Visibility Diagnostics" },
-  { id: "review-system", label: "Review System Debug" },
+  { id: "mock-listings", label: "Mock Listing Generator" },
+  { id: "moderator", label: "Moderator Management" },
   { id: "notification-debug", label: "Notification System Debugger" },
-  { id: "email-test", label: "Email Notification Testing" },
-  { id: "webhook-notification-test", label: "Webhook & Notification Testing" },
+  { id: "review-system", label: "Review System Debug" },
+  { id: "webhook", label: "Stripe Webhook Fix" },
+  { id: "subscription", label: "Subscription Management" },
   { id: "support-management", label: "Support Ticket Management" },
+  { id: "user-tier", label: "User Tier Management" },
   { id: "wanted-posts", label: "Wanted Posts Debugging Tools" },
+  { id: "webhook-notification-test", label: "Webhook & Notification Testing" },
 ];
 
 export default function AdminDashboard() {

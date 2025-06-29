@@ -322,7 +322,9 @@ function generateMockListing(game: string, cardData: any): any {
     status: 'active',
     accountTier: 'free',
     offersOnly: isOffersOnly,
-    finalSale: isFinalSale
+    finalSale: isFinalSale,
+    isMockListing: true, // Tag to identify mock listings
+    mockGeneratedAt: new Date() // Timestamp for when this mock was created
   };
   
   // Add grading info if graded
