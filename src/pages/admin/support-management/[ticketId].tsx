@@ -253,38 +253,6 @@ export default function IndividualSupportTicket() {
     }
   }, [user]);
 
-  // Fetch ticket data
-  useEffect(() => {
-    if (isAuthorized && ticketId) {
-      fetchTicket();
-    }
-  }, [isAuthorized, ticketId]);
-
-  // Auto-refresh ticket when the page becomes visible (user navigates back)
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (!document.hidden && user && isAuthorized === true && ticketId) {
-        console.log('[SupportTicket] Page became visible, refreshing ticket data...');
-        fetchTicket();
-      }
-    };
-
-    const handleFocus = () => {
-      if (user && isAuthorized === true && ticketId) {
-        console.log('[SupportTicket] Window focused, refreshing ticket data...');
-        fetchTicket();
-      }
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    window.addEventListener('focus', handleFocus);
-
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('focus', handleFocus);
-    };
-  }, [user, isAuthorized, ticketId, fetchTicket]);
-
   const fetchTicket = useCallback(async () => {
     if (!ticketId || !isMountedRef.current) return;
     
@@ -409,6 +377,38 @@ export default function IndividualSupportTicket() {
       }
     }
   }, [ticketId, user, router]);
+
+  // Fetch ticket data
+  useEffect(() => {
+    if (isAuthorized && ticketId) {
+      fetchTicket();
+    }
+  }, [isAuthorized, ticketId, fetchTicket]);
+
+  // Auto-refresh ticket when the page becomes visible (user navigates back)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden && user && isAuthorized === true && ticketId) {
+        console.log('[SupportTicket] Page became visible, refreshing ticket data...');
+        fetchTicket();
+      }
+    };
+
+    const handleFocus = () => {
+      if (user && isAuthorized === true && ticketId) {
+        console.log('[SupportTicket] Window focused, refreshing ticket data...');
+        fetchTicket();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [user, isAuthorized, ticketId, fetchTicket]);
 
   const handleSendResponse = async () => {
     if (!responseMessage.trim() || !ticket) return;
