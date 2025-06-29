@@ -171,7 +171,7 @@ export default function AdminDashboard() {
                   placeholder="Enter admin secret"
                   value={adminSecret}
                   onChange={(e) => setAdminSecret(e.target.value)}
-                  onKeyPress={(e) => {
+                  onKeyDown={(e) => {
                     if (e.key === 'Enter' && adminSecret && !loading) {
                       verifyAdmin(adminSecret);
                     }
