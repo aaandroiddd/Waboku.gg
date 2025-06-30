@@ -91,17 +91,59 @@ export function AuthRedirectProvider({ children }: { children: React.ReactNode }
     }
     
     const state = getRedirectState();
+    console.log('handlePostLoginRedirect called', { hasState: !!state, hasUser: !!user, state });
+    
+    // Debug logging
+    try {
+      await fetch('/api/debug/test-save-flow', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          step: 'handlePostLoginRedirect_called',
+          data: {
+            hasState: !!state,
+            hasUser: !!user,
+            state,
+            currentPath: router.asPath
+          }
+        })
+      });
+    } catch (debugError) {
+      console.error('Debug logging failed:', debugError);
+    }
+    
     if (state && user) {
       console.log('Handling post-login redirect:', state);
       
       // First try to handle any specific actions
       if (state.action && state.params) {
+        console.log('Attempting to handle action:', state.action, state.params);
+        
+        // Debug logging
+        try {
+          await fetch('/api/debug/test-save-flow', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              step: 'handling_post_login_action',
+              data: {
+                action: state.action,
+                params: state.params
+              }
+            })
+          });
+        } catch (debugError) {
+          console.error('Debug logging failed:', debugError);
+        }
+        
         const actionHandled = await handlePostLoginAction(
           state.action, 
           state.params, 
           user,
           router // Pass the router instance for better navigation
         );
+        
+        console.log('Action handled result:', actionHandled);
         
         // If the action was handled successfully, clear the redirect state
         if (actionHandled) {

@@ -827,9 +827,29 @@ export default function ListingPage() {
 
   // We already have the favorites functionality from above
 
-  const handleFavoriteToggle = (e: React.MouseEvent) => {
+  const handleFavoriteToggle = async (e: React.MouseEvent) => {
     const currentlyFavorited = listing ? isFavorite(listing.id) : false;
     console.log('handleFavoriteToggle called', { user: !!user, listing: !!listing, currentlyFavorited });
+    
+    // Debug logging
+    try {
+      await fetch('/api/debug/test-save-flow', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          step: 'save_button_clicked',
+          data: {
+            hasUser: !!user,
+            hasListing: !!listing,
+            listingId: listing?.id,
+            currentlyFavorited,
+            currentPath: router.asPath
+          }
+        })
+      });
+    } catch (debugError) {
+      console.error('Debug logging failed:', debugError);
+    }
     
     // Prevent any default form submission or event propagation
     e.preventDefault();
@@ -837,9 +857,45 @@ export default function ListingPage() {
     
     if (!user) {
       console.log('No user, saving redirect state and redirecting to sign in');
+      
+      // Debug logging
+      try {
+        await fetch('/api/debug/test-save-flow', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            step: 'saving_redirect_state',
+            data: {
+              action: 'toggle_favorite',
+              listingId: listing?.id,
+              currentPath: router.asPath
+            }
+          })
+        });
+      } catch (debugError) {
+        console.error('Debug logging failed:', debugError);
+      }
+      
       // Save the redirect state before redirecting to sign-in
       saveRedirectState('toggle_favorite', { listingId: listing?.id });
       toast.error('Please sign in to save favorites');
+      
+      // Debug logging
+      try {
+        await fetch('/api/debug/test-save-flow', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            step: 'redirecting_to_signin',
+            data: {
+              redirectPath: '/auth/sign-in'
+            }
+          })
+        });
+      } catch (debugError) {
+        console.error('Debug logging failed:', debugError);
+      }
+      
       router.push('/auth/sign-in');
       return;
     }

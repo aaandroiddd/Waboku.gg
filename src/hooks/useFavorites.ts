@@ -98,7 +98,26 @@ export function useFavorites() {
       event.stopPropagation();
     }
     
+    // Debug logging
+    try {
+      await fetch('/api/debug/test-save-flow', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          step: 'toggleFavorite_called',
+          data: {
+            hasUser: !!user,
+            listingId: listing.id,
+            listingTitle: listing.title
+          }
+        })
+      });
+    } catch (debugError) {
+      console.error('Debug logging failed:', debugError);
+    }
+    
     if (!user) {
+      console.log('toggleFavorite: No user, saving redirect state');
       toast.error('Please sign in to save favorites');
       // Save the current action before redirecting
       saveRedirectState('toggle_favorite', { listingId: listing.id });
