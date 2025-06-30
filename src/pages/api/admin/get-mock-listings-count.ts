@@ -1,5 +1,4 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { collection, query, where, getDocs } from 'firebase/firestore';
 import { getFirebaseAdmin } from '@/lib/firebase-admin';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -15,15 +14,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     const { db } = getFirebaseAdmin();
-    const listingsRef = collection(db, 'listings');
+    const listingsRef = db.collection('listings');
     
-    // Query for mock listings
-    const mockListingsQuery = query(
-      listingsRef,
-      where('isMockListing', '==', true)
-    );
+    // Query for mock listings using Admin SDK
+    const mockListingsQuery = listingsRef.where('isMockListing', '==', true);
     
-    const querySnapshot = await getDocs(mockListingsQuery);
+    const querySnapshot = await mockListingsQuery.get();
     const count = querySnapshot.size;
 
     res.status(200).json({

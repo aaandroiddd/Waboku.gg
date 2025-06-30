@@ -1,5 +1,4 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { collection, addDoc } from 'firebase/firestore';
 import { getFirebaseAdmin } from '@/lib/firebase-admin';
 
 // Mock TCG data for different games
@@ -367,7 +366,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     const { db } = getFirebaseAdmin();
-    const listingsRef = collection(db, 'listings');
+    const listingsRef = db.collection('listings');
     
     const createdListings = [];
     
@@ -380,8 +379,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       // Generate mock listing
       const mockListing = generateMockListing(selectedGame, selectedCard);
       
-      // Add to Firestore
-      const docRef = await addDoc(listingsRef, mockListing);
+      // Add to Firestore using Admin SDK
+      const docRef = await listingsRef.add(mockListing);
       createdListings.push({
         id: docRef.id,
         ...mockListing
