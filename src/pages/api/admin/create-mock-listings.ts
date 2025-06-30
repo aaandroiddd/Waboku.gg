@@ -1,7 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { getFirebaseAdmin } from '@/lib/firebase-admin';
 
-// Mock TCG data for different games
+// Mock TCG data for different games with reliable placeholder images
 const MOCK_CARD_DATA = {
   pokemon: [
     {
@@ -9,35 +9,35 @@ const MOCK_CARD_DATA = {
       set: "Base Set",
       number: "4/102",
       rarity: "Holo Rare",
-      imageUrl: "https://images.pokemontcg.io/base1/4_hires.png"
+      imageUrl: "https://via.placeholder.com/300x420/FF6B35/FFFFFF?text=Charizard+Pokemon+TCG"
     },
     {
       name: "Pikachu",
       set: "Base Set",
       number: "58/102",
       rarity: "Common",
-      imageUrl: "https://images.pokemontcg.io/base1/58_hires.png"
+      imageUrl: "https://via.placeholder.com/300x420/FFD23F/000000?text=Pikachu+Pokemon+TCG"
     },
     {
       name: "Blastoise",
       set: "Base Set",
       number: "2/102",
       rarity: "Holo Rare",
-      imageUrl: "https://images.pokemontcg.io/base1/2_hires.png"
+      imageUrl: "https://via.placeholder.com/300x420/4A90E2/FFFFFF?text=Blastoise+Pokemon+TCG"
     },
     {
       name: "Venusaur",
       set: "Base Set",
       number: "15/102",
       rarity: "Holo Rare",
-      imageUrl: "https://images.pokemontcg.io/base1/15_hires.png"
+      imageUrl: "https://via.placeholder.com/300x420/7ED321/FFFFFF?text=Venusaur+Pokemon+TCG"
     },
     {
       name: "Alakazam",
       set: "Base Set",
       number: "1/102",
       rarity: "Holo Rare",
-      imageUrl: "https://images.pokemontcg.io/base1/1_hires.png"
+      imageUrl: "https://via.placeholder.com/300x420/9013FE/FFFFFF?text=Alakazam+Pokemon+TCG"
     }
   ],
   yugioh: [
@@ -46,35 +46,35 @@ const MOCK_CARD_DATA = {
       set: "Legend of Blue Eyes White Dragon",
       number: "LOB-001",
       rarity: "Ultra Rare",
-      imageUrl: "https://images.ygoprodeck.com/images/cards/89631139.jpg"
+      imageUrl: "https://via.placeholder.com/300x420/4A90E2/FFFFFF?text=Blue-Eyes+White+Dragon+Yu-Gi-Oh"
     },
     {
       name: "Dark Magician",
       set: "Legend of Blue Eyes White Dragon",
       number: "LOB-005",
       rarity: "Ultra Rare",
-      imageUrl: "https://images.ygoprodeck.com/images/cards/46986414.jpg"
+      imageUrl: "https://via.placeholder.com/300x420/9013FE/FFFFFF?text=Dark+Magician+Yu-Gi-Oh"
     },
     {
       name: "Red-Eyes Black Dragon",
       set: "Legend of Blue Eyes White Dragon",
       number: "LOB-070",
       rarity: "Ultra Rare",
-      imageUrl: "https://images.ygoprodeck.com/images/cards/74677422.jpg"
+      imageUrl: "https://via.placeholder.com/300x420/D0021B/FFFFFF?text=Red-Eyes+Black+Dragon+Yu-Gi-Oh"
     },
     {
       name: "Exodia the Forbidden One",
       set: "Legend of Blue Eyes White Dragon",
       number: "LOB-124",
       rarity: "Ultra Rare",
-      imageUrl: "https://images.ygoprodeck.com/images/cards/33396948.jpg"
+      imageUrl: "https://via.placeholder.com/300x420/F5A623/000000?text=Exodia+the+Forbidden+One+Yu-Gi-Oh"
     },
     {
       name: "Time Wizard",
       set: "Legend of Blue Eyes White Dragon",
       number: "LOB-065",
       rarity: "Rare",
-      imageUrl: "https://images.ygoprodeck.com/images/cards/71625222.jpg"
+      imageUrl: "https://via.placeholder.com/300x420/50E3C2/000000?text=Time+Wizard+Yu-Gi-Oh"
     }
   ],
   mtg: [
@@ -83,35 +83,35 @@ const MOCK_CARD_DATA = {
       set: "Alpha",
       number: "1/295",
       rarity: "Rare",
-      imageUrl: "https://gatherer.wizards.com/Handlers/Image.ashx?multiverseid=3&type=card"
+      imageUrl: "https://via.placeholder.com/300x420/000000/FFFFFF?text=Black+Lotus+MTG"
     },
     {
       name: "Lightning Bolt",
       set: "Alpha",
       number: "161/295",
       rarity: "Common",
-      imageUrl: "https://gatherer.wizards.com/Handlers/Image.ashx?multiverseid=209&type=card"
+      imageUrl: "https://via.placeholder.com/300x420/D0021B/FFFFFF?text=Lightning+Bolt+MTG"
     },
     {
       name: "Ancestral Recall",
       set: "Alpha",
       number: "48/295",
       rarity: "Rare",
-      imageUrl: "https://gatherer.wizards.com/Handlers/Image.ashx?multiverseid=95&type=card"
+      imageUrl: "https://via.placeholder.com/300x420/4A90E2/FFFFFF?text=Ancestral+Recall+MTG"
     },
     {
       name: "Mox Pearl",
       set: "Alpha",
       number: "264/295",
       rarity: "Rare",
-      imageUrl: "https://gatherer.wizards.com/Handlers/Image.ashx?multiverseid=31&type=card"
+      imageUrl: "https://via.placeholder.com/300x420/F8F8F8/000000?text=Mox+Pearl+MTG"
     },
     {
       name: "Serra Angel",
       set: "Alpha",
       number: "36/295",
       rarity: "Uncommon",
-      imageUrl: "https://gatherer.wizards.com/Handlers/Image.ashx?multiverseid=83&type=card"
+      imageUrl: "https://via.placeholder.com/300x420/F5A623/000000?text=Serra+Angel+MTG"
     }
   ],
   onepiece: [
@@ -120,35 +120,35 @@ const MOCK_CARD_DATA = {
       set: "Romance Dawn",
       number: "OP01-001",
       rarity: "Leader",
-      imageUrl: "https://en.onepiece-cardgame.com/images/cardlist/card/OP01-001.png"
+      imageUrl: "https://via.placeholder.com/300x420/D0021B/FFFFFF?text=Monkey+D.+Luffy+One+Piece"
     },
     {
       name: "Roronoa Zoro",
       set: "Romance Dawn",
       number: "OP01-025",
       rarity: "Rare",
-      imageUrl: "https://en.onepiece-cardgame.com/images/cardlist/card/OP01-025.png"
+      imageUrl: "https://via.placeholder.com/300x420/7ED321/FFFFFF?text=Roronoa+Zoro+One+Piece"
     },
     {
       name: "Nami",
       set: "Romance Dawn",
       number: "OP01-016",
       rarity: "Common",
-      imageUrl: "https://en.onepiece-cardgame.com/images/cardlist/card/OP01-016.png"
+      imageUrl: "https://via.placeholder.com/300x420/FF6B35/FFFFFF?text=Nami+One+Piece"
     },
     {
       name: "Sanji",
       set: "Romance Dawn",
       number: "OP01-013",
       rarity: "Uncommon",
-      imageUrl: "https://en.onepiece-cardgame.com/images/cardlist/card/OP01-013.png"
+      imageUrl: "https://via.placeholder.com/300x420/FFD23F/000000?text=Sanji+One+Piece"
     },
     {
       name: "Portgas D. Ace",
       set: "Romance Dawn",
       number: "OP01-003",
       rarity: "Super Rare",
-      imageUrl: "https://en.onepiece-cardgame.com/images/cardlist/card/OP01-003.png"
+      imageUrl: "https://via.placeholder.com/300x420/FF6B35/FFFFFF?text=Portgas+D.+Ace+One+Piece"
     }
   ],
   dbs: [
@@ -157,35 +157,35 @@ const MOCK_CARD_DATA = {
       set: "Galactic Battle",
       number: "BT1-001",
       rarity: "Super Rare",
-      imageUrl: "https://www.dbs-cardgame.com/images/cardlist/series1/BT1-001.png"
+      imageUrl: "https://via.placeholder.com/300x420/FF6B35/FFFFFF?text=Son+Goku+Dragon+Ball+Super"
     },
     {
       name: "Vegeta",
       set: "Galactic Battle",
       number: "BT1-020",
       rarity: "Super Rare",
-      imageUrl: "https://www.dbs-cardgame.com/images/cardlist/series1/BT1-020.png"
+      imageUrl: "https://via.placeholder.com/300x420/4A90E2/FFFFFF?text=Vegeta+Dragon+Ball+Super"
     },
     {
       name: "Frieza",
       set: "Galactic Battle",
       number: "BT1-044",
       rarity: "Super Rare",
-      imageUrl: "https://www.dbs-cardgame.com/images/cardlist/series1/BT1-044.png"
+      imageUrl: "https://via.placeholder.com/300x420/9013FE/FFFFFF?text=Frieza+Dragon+Ball+Super"
     },
     {
       name: "Cell",
       set: "Galactic Battle",
       number: "BT1-054",
       rarity: "Rare",
-      imageUrl: "https://www.dbs-cardgame.com/images/cardlist/series1/BT1-054.png"
+      imageUrl: "https://via.placeholder.com/300x420/7ED321/FFFFFF?text=Cell+Dragon+Ball+Super"
     },
     {
       name: "Gohan",
       set: "Galactic Battle",
       number: "BT1-005",
       rarity: "Uncommon",
-      imageUrl: "https://www.dbs-cardgame.com/images/cardlist/series1/BT1-005.png"
+      imageUrl: "https://via.placeholder.com/300x420/F5A623/000000?text=Gohan+Dragon+Ball+Super"
     }
   ],
   lorcana: [
@@ -194,37 +194,47 @@ const MOCK_CARD_DATA = {
       set: "The First Chapter",
       number: "001/204",
       rarity: "Legendary",
-      imageUrl: "https://cdn.lorcana.com/images/cards/001-204.png"
+      imageUrl: "https://via.placeholder.com/300x420/000000/FFFFFF?text=Mickey+Mouse+Disney+Lorcana"
     },
     {
       name: "Elsa - Snow Queen",
       set: "The First Chapter",
       number: "004/204",
       rarity: "Super Rare",
-      imageUrl: "https://cdn.lorcana.com/images/cards/004-204.png"
+      imageUrl: "https://via.placeholder.com/300x420/50E3C2/000000?text=Elsa+Disney+Lorcana"
     },
     {
       name: "Belle - Hidden Depths",
       set: "The First Chapter",
       number: "017/204",
       rarity: "Rare",
-      imageUrl: "https://cdn.lorcana.com/images/cards/017-204.png"
+      imageUrl: "https://via.placeholder.com/300x420/F5A623/000000?text=Belle+Disney+Lorcana"
     },
     {
       name: "Simba - Rightful Heir",
       set: "The First Chapter",
       number: "114/204",
       rarity: "Super Rare",
-      imageUrl: "https://cdn.lorcana.com/images/cards/114-204.png"
+      imageUrl: "https://via.placeholder.com/300x420/FF6B35/FFFFFF?text=Simba+Disney+Lorcana"
     },
     {
       name: "Ariel - On Human Legs",
       set: "The First Chapter",
       number: "045/204",
       rarity: "Uncommon",
-      imageUrl: "https://cdn.lorcana.com/images/cards/045-204.png"
+      imageUrl: "https://via.placeholder.com/300x420/D0021B/FFFFFF?text=Ariel+Disney+Lorcana"
     }
   ]
+};
+
+// Fallback images for each game type using reliable placeholder service
+const FALLBACK_IMAGES = {
+  pokemon: "https://via.placeholder.com/300x420/FFD23F/000000?text=Pokemon+TCG+Card",
+  yugioh: "https://via.placeholder.com/300x420/4A90E2/FFFFFF?text=Yu-Gi-Oh+Card",
+  mtg: "https://via.placeholder.com/300x420/000000/FFFFFF?text=Magic+The+Gathering+Card",
+  onepiece: "https://via.placeholder.com/300x420/D0021B/FFFFFF?text=One+Piece+TCG+Card",
+  dbs: "https://via.placeholder.com/300x420/FF6B35/FFFFFF?text=Dragon+Ball+Super+Card",
+  lorcana: "https://via.placeholder.com/300x420/9013FE/FFFFFF?text=Disney+Lorcana+Card"
 };
 
 const CONDITIONS = ['mint', 'near mint', 'excellent', 'good', 'light played', 'played'];
@@ -301,13 +311,16 @@ function generateMockListing(game: string, cardData: any): any {
   const expiresAt = new Date();
   expiresAt.setHours(expiresAt.getHours() + 48);
   
+  // Use fallback image if primary image is not available
+  const imageUrl = cardData.imageUrl || FALLBACK_IMAGES[game as keyof typeof FALLBACK_IMAGES];
+  
   const listing = {
     title: `${cardData.name} - ${cardData.set} ${cardData.number} - ${condition}`,
     description: `Beautiful ${condition.toLowerCase()} condition ${cardData.name} from ${cardData.set}. ${cardData.rarity} card in excellent shape. Perfect for collectors or players!`,
     price,
     game,
     condition,
-    imageUrls: [cardData.imageUrl],
+    imageUrls: [imageUrl],
     coverImageIndex: 0,
     city,
     state,
