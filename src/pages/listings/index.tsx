@@ -172,6 +172,10 @@ export default function ListingsPage() {
     await loadMore();
   };
 
+  // Determine if pagination controls should be shown
+  const showPaginationControls = hasReachedLimit || currentPage > 1 || (allListings.length === 30 && hasMore);
+=======
+
   // Function to go to next page
   const handleNextPage = () => {
     if (hasMore) {
@@ -645,7 +649,7 @@ export default function ListingsPage() {
                 )}
 
                 {/* Pagination Controls */}
-                {(hasReachedLimit || currentPage > 1) && (
+                {showPaginationControls && (
                   <div className="mt-8 flex flex-col items-center space-y-4">
                     <div className="flex items-center justify-center space-x-4">
                       <Button

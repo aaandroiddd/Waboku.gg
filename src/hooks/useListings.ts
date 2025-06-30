@@ -802,17 +802,23 @@ export function useListings({
         queryConstraints.push(orderBy('createdAt', 'desc'));
 
         // Add pagination constraints if enabled
-        if (enablePagination && limit) {
-          // For page-based pagination, calculate offset
-          if (page > 1 && !isLoadMore) {
-            // For page navigation, we need to skip (page - 1) * 30 listings
-            const offset = (page - 1) * 30;
-            queryConstraints.push(firestoreLimit(offset + 30));
-          } else if (isLoadMore && lastDoc) {
+        if (enablePagination) {
+          if (isLoadMore && lastDoc) {
+            // For infinite scroll within a page
             queryConstraints.push(startAfter(lastDoc));
-            queryConstraints.push(firestoreLimit(limit));
+            queryConstraints.push(firestoreLimit(limit || 10));
           } else {
-            queryConstraints.push(firestoreLimit(30)); // Load 30 for first page
+            // For page navigation, fetch more than needed to determine if there are more pages
+            const fetchLimit = page === 1 ? 31 : 30; // Fetch 31 on first page to check if there are more
+            queryConstraints.push(firestoreLimit(fetchLimit));
+            
+            // For pages beyond the first, we need to skip previous pages
+            if (page > 1) {
+              // This is a simplified approach - in production you'd want to use cursor-based pagination
+              // For now, we'll fetch all and slice (not ideal for large datasets)
+              queryConstraints.pop(); // Remove the limit
+              queryConstraints.push(firestoreLimit((page - 1) * 30 + 31)); // Fetch up to current page + 1 extra
+            }
           }
         }
 
@@ -945,8 +951,29 @@ export function useListings({
 
         // Update hasMore based on returned results
         if (enablePagination) {
-          // For page-based pagination, check if we have more listings
-          setHasMore(querySnapshot.docs.length > (page * 30));
+          if (isLoadMore) {
+            // For infinite scroll within a page, check if we got the requested amount
+            setHasMore(querySnapshot.docs.length === (limit || 10));
+          } else {
+            // For page navigation, check if we have more than 30 listings
+            if (page === 1) {
+              // On first page, if we got 31 listings, there are more pages
+              setHasMore(querySnapshot.docs.length > 30);
+              // Limit to 30 listings for display
+              if (fetchedListings.length > 30) {
+                fetchedListings = fetchedListings.slice(0, 30);
+              }
+            } else {
+              // On subsequent pages, slice to get the correct page and check if there are more
+              const startIndex = (page - 1) * 30;
+              const endIndex = startIndex + 30;
+              const pageListings = fetchedListings.slice(startIndex, endIndex);
+              const hasMoreListings = fetchedListings.length > endIndex;
+              
+              setHasMore(hasMoreListings);
+              fetchedListings = pageListings;
+            }
+          }
           
           // Update lastDoc for infinite scroll within the page
           if (querySnapshot.docs.length > 0) {
