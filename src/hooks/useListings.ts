@@ -32,6 +32,7 @@ interface UseListingsProps {
   skipInitialFetch?: boolean;
   limit?: number;
   enablePagination?: boolean;
+  page?: number;
 }
 
 export function useListings({ 
@@ -40,7 +41,8 @@ export function useListings({
   showOnlyActive = false, 
   skipInitialFetch = false,
   limit,
-  enablePagination = false
+  enablePagination = false,
+  page = 1
 }: UseListingsProps = {}) {
   const [listings, setListings] = useState<Listing[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -665,8 +667,8 @@ export function useListings({
     }
   };
 
-  // Create a cache key based on the current options
-  const cacheKey = `listings_${userId || 'all'}_${showOnlyActive ? 'active' : 'all'}_${searchQuery || 'none'}`;
+  // Create a cache key based on the current options including page
+  const cacheKey = `listings_${userId || 'all'}_${showOnlyActive ? 'active' : 'all'}_${searchQuery || 'none'}_page_${page}`;
   
   // Initialize client cache outside of useEffect
   const { getFromCache, saveToCache } = useClientCache<Listing[]>({
@@ -747,9 +749,13 @@ export function useListings({
         if (!isLoadMore) {
           setIsLoading(true);
           setError(null);
+          // Reset lastDoc when starting a new page
+          if (enablePagination && page === 1) {
+            setLastDoc(null);
+          }
         }
         
-        console.log('useListings: Fetching listings...', { isLoadMore, enablePagination, limit });
+        console.log('useListings: Fetching listings...', { isLoadMore, enablePagination, limit, page });
         
         // For non-paginated requests, check cache
         if (!enablePagination && !isLoadMore) {
@@ -795,28 +801,25 @@ export function useListings({
 
         // Add pagination constraints if enabled
         if (enablePagination && limit) {
-          if (isLoadMore && lastDoc) {
+          // For page-based pagination, calculate offset
+          if (page > 1 && !isLoadMore) {
+            // For page navigation, we need to skip (page - 1) * 30 listings
+            const offset = (page - 1) * 30;
+            queryConstraints.push(firestoreLimit(offset + 30));
+          } else if (isLoadMore && lastDoc) {
             queryConstraints.push(startAfter(lastDoc));
+            queryConstraints.push(firestoreLimit(limit));
+          } else {
+            queryConstraints.push(firestoreLimit(30)); // Load 30 for first page
           }
-          queryConstraints.push(firestoreLimit(limit));
         }
 
-        console.log(`Creating query with constraints: userId=${userId}, showOnlyActive=${showOnlyActive}, pagination=${enablePagination}, limit=${limit}`);
+        console.log(`Creating query with constraints: userId=${userId}, showOnlyActive=${showOnlyActive}, pagination=${enablePagination}, limit=${limit}, page=${page}`);
         const q = query(listingsRef, ...queryConstraints);
         
         console.log('Executing Firestore query...');
         const querySnapshot = await getDocs(q);
         console.log(`Query returned ${querySnapshot.docs.length} listings`);
-        
-        // Update hasMore based on returned results
-        if (enablePagination && limit) {
-          setHasMore(querySnapshot.docs.length === limit);
-          
-          // Update lastDoc for next pagination
-          if (querySnapshot.docs.length > 0) {
-            setLastDoc(querySnapshot.docs[querySnapshot.docs.length - 1]);
-          }
-        }
         
         let fetchedListings = querySnapshot.docs.map(doc => {
           const data = doc.data();
@@ -898,6 +901,12 @@ export function useListings({
           return listing;
         });
 
+        // For page-based pagination, slice the results to get the correct page
+        if (enablePagination && page > 1 && !isLoadMore) {
+          const startIndex = (page - 1) * 30;
+          fetchedListings = fetchedListings.slice(startIndex, startIndex + 30);
+        }
+
         // If there's a search query, filter results in memory
         if (searchQuery?.trim()) {
           const searchLower = searchQuery.toLowerCase();
@@ -925,6 +934,17 @@ export function useListings({
             return a.distance - b.distance;
           });
         }
+
+        // Update hasMore based on returned results
+        if (enablePagination) {
+          // For page-based pagination, check if we have more listings
+          setHasMore(querySnapshot.docs.length > (page * 30));
+          
+          // Update lastDoc for infinite scroll within the page
+          if (querySnapshot.docs.length > 0) {
+            setLastDoc(querySnapshot.docs[querySnapshot.docs.length - 1]);
+          }
+        }
         
         // Update listings state
         if (isLoadMore) {
@@ -932,7 +952,7 @@ export function useListings({
         } else {
           setListings(fetchedListings);
           
-          // Cache the results for faster loading next time (only for initial load)
+          // Cache the results for faster loading next time
           if (!enablePagination) {
             saveToCache(fetchedListings);
             console.log(`Cached ${fetchedListings.length} listings for future use`);
@@ -959,11 +979,11 @@ export function useListings({
       }
     };
 
-    // Only fetch on initial load or when userId changes
+    // Only fetch on initial load or when userId/page changes
     if (!searchQuery && !skipInitialFetch) {
       fetchListings();
     }
-  }, [userId, showOnlyActive, searchQuery]);
+  }, [userId, showOnlyActive, searchQuery, page]);
 
 // Calculate distance between two points using Haversine formula
 const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
