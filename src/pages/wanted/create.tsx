@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { MobileSelect } from "@/components/ui/mobile-select";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { LocationInput } from "@/components/LocationInput";
@@ -245,21 +245,12 @@ export default function CreateWantedPostPage() {
                   <div className="space-y-4">
                     <div>
                       <Label htmlFor="game">Game Category</Label>
-                      <Select
+                      <MobileSelect
                         value={formData.game}
                         onValueChange={(value) => handleSelectChange("game", value)}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select game category" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {ALL_GAME_CATEGORIES.map((category) => (
-                            <SelectItem key={category.value} value={category.value}>
-                              {category.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                        options={ALL_GAME_CATEGORIES}
+                        placeholder="Select game category"
+                      />
                     </div>
                     
                     {formData.game && (
@@ -303,21 +294,12 @@ export default function CreateWantedPostPage() {
                     
                     <div>
                       <Label htmlFor="condition">Preferred Condition</Label>
-                      <Select
+                      <MobileSelect
                         value={formData.condition}
                         onValueChange={(value) => handleSelectChange("condition", value)}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select condition" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {CONDITION_OPTIONS.map((option) => (
-                            <SelectItem key={option.value} value={option.value}>
-                              {option.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                        options={CONDITION_OPTIONS}
+                        placeholder="Select condition"
+                      />
                     </div>
                   </div>
                   
