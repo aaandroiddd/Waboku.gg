@@ -25,6 +25,7 @@ import CardSearchInput from "@/components/CardSearchInput";
 import { MarkdownEditor } from "@/components/MarkdownEditor";
 import { useAccount } from "@/contexts/AccountContext";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { RouteGuard } from "@/components/RouteGuard";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const MAX_TITLE_LENGTH = 100;
@@ -211,7 +212,8 @@ const CreateListingPage = () => {
 
   useEffect(() => {
     if (!loading && !user) {
-      router.push("/auth/sign-in");
+      // Don't redirect here - let RouteGuard handle it with proper redirect state
+      return;
     }
   }, [user, loading, router]);
 
@@ -263,8 +265,9 @@ const CreateListingPage = () => {
   }
 
   return (
-    <DashboardLayout>
-      <div className="max-w-3xl mx-auto space-y-6">
+    <RouteGuard requireAuth={true}>
+      <DashboardLayout>
+        <div className="max-w-3xl mx-auto space-y-6">
         <div className="flex justify-between items-center">
           <h1 className="text-3xl font-bold">Create New Listing</h1>
           {accountTier === 'premium' && (
@@ -754,6 +757,7 @@ const CreateListingPage = () => {
         </Card>
       </div>
     </DashboardLayout>
+    </RouteGuard>
   );
 };
 

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
+import { useAuthRedirect } from '@/contexts/AuthRedirectContext';
 import { useRouter } from 'next/router';
 import { toast } from 'sonner';
 import { loadStripe } from '@stripe/stripe-js';
@@ -30,6 +31,7 @@ export function BuyNowButton({
   children
 }: BuyNowButtonProps) {
   const { user } = useAuth();
+  const { saveRedirectState } = useAuthRedirect();
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [showBuyNowTutorial, setShowBuyNowTutorial] = useState(false);
@@ -39,6 +41,8 @@ export function BuyNowButton({
   const handleBuyNow = async () => {
     if (!user) {
       toast.error('Please sign in to purchase this item');
+      // Save the current action before redirecting
+      saveRedirectState('buy_now', { listingId });
       router.push('/auth/sign-in');
       return;
     }

@@ -110,8 +110,16 @@ export async function handlePostLoginAction(
         return false;
         
       case 'route_guard_redirect':
-        // This is handled by the AuthRedirectContext
-        return true;
+        if (params.returnPath) {
+          // Use router if available, otherwise fallback to window.location
+          if (router) {
+            await router.push(params.returnPath);
+          } else {
+            window.location.href = params.returnPath;
+          }
+          return true;
+        }
+        return false;
         
       default:
         console.log('Unknown action:', action);

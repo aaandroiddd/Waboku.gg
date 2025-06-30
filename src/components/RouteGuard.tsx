@@ -29,8 +29,11 @@ export function RouteGuard({ children, requireAuth = false }: RouteGuardProps) {
         // If auth is required and user is not logged in
         if (requireAuth && !user) {
           setAuthorized(false);
-          // Save the current path before redirecting to sign-in
-          saveRedirectState('route_guard_redirect');
+          // Save the current path and any query parameters before redirecting to sign-in
+          saveRedirectState('route_guard_redirect', { 
+            returnPath: router.asPath,
+            query: router.query 
+          });
           router.push('/auth/sign-in');
           return;
         }
