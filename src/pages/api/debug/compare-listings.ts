@@ -25,8 +25,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Get mock listings
     const mockListingsQuery = await listingsRef.where('isMockListing', '==', true).orderBy('createdAt', 'desc').limit(20).get();
     
-    // Get real listings (non-mock)
-    const realListingsQuery = await listingsRef.where('isMockListing', '!=', true).orderBy('createdAt', 'desc').limit(20).get();
+    // Get real listings by filtering from all listings (to avoid Firestore query limitations)
+    const allForRealQuery = await listingsRef.orderBy('createdAt', 'desc').limit(100).get();
+    const realListingsData = allForRealQuery.docs
+      .filter(doc => !doc.data().isMockListing)
+      .slice(0, 20);
 
     const allListings = allListingsQuery.docs.map(doc => ({
       id: doc.id,
@@ -58,7 +61,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       price: doc.data().price
     }));
 
-    const realListings = realListingsQuery.docs.map(doc => ({
+    const realListings = realListingsData.map(doc => ({
       id: doc.id,
       title: doc.data().title,
       status: doc.data().status,
