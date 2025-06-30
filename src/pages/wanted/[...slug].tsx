@@ -339,26 +339,127 @@ export default function WantedPostDetailPage() {
     setIsSending(true);
     
     try {
-      // In a real implementation, this would send a message to Firebase
-      console.log("Sending message:", message);
+      if (!user) {
+        throw new Error("You must be logged in to send messages");
+      }
+
+      // Double-check to prevent self-messaging
+      if (user.uid === wantedPost?.userId) {
+        throw new Error("You cannot send messages to yourself");
+      }
+
+      // Log the message details to help with debugging
+      console.log('Sending message about wanted post:', {
+        recipientId: wantedPost?.userId,
+        postTitle: wantedPost?.title,
+        messageLength: message.trim().length
+      });
+
+      // Import the token manager for better refresh handling
+      const { refreshAuthToken } = await import('@/lib/auth-token-manager');
       
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Use the more robust token refresh mechanism
+      let token = await refreshAuthToken(user);
       
+      if (!token) {
+        throw new Error("Failed to get authentication token. Please try signing in again.");
+      }
+      
+      // Add retry logic for the API call
+      let retryCount = 0;
+      const maxRetries = 3;
+      let response;
+      
+      while (retryCount < maxRetries) {
+        try {
+          console.log(`Attempting to send message (attempt ${retryCount + 1}/${maxRetries})...`);
+          
+          response = await fetch('/api/messages/send', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+              recipientId: wantedPost?.userId,
+              subject: `Re: ${wantedPost?.title}`,
+              message: message.trim(),
+              listingId: wantedPost?.id,
+              listingTitle: wantedPost?.title
+            })
+          });
+          
+          // If successful, break out of the retry loop
+          if (response.ok) {
+            console.log('Message sent successfully');
+            break;
+          }
+          
+          // If we get a 401, try to refresh the token and retry
+          if (response.status === 401) {
+            console.log('Authentication error (401), attempting to refresh token...');
+            
+            // Force a new token refresh
+            const newToken = await user.getIdToken(true);
+            
+            if (newToken) {
+              console.log('Token refreshed, retrying with new token');
+              token = newToken;
+            } else {
+              throw new Error("Failed to refresh authentication token");
+            }
+          } else {
+            // For other errors, parse the response and throw
+            const error = await response.json();
+            throw new Error(error.error || 'Failed to send message');
+          }
+        } catch (fetchError) {
+          console.error(`Error during message send attempt ${retryCount + 1}:`, fetchError);
+          
+          // If this is the last retry, rethrow the error
+          if (retryCount === maxRetries - 1) {
+            throw fetchError;
+          }
+          
+          // Wait before retrying
+          const delay = Math.pow(2, retryCount) * 1000; // Exponential backoff: 1s, 2s, 4s
+          console.log(`Waiting ${delay}ms before retry...`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
+        
+        retryCount++;
+      }
+      
+      // Final check if response is not ok
+      if (response && !response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to send message');
+      }
+
       // Close dialog and reset form
       setMessageDialogOpen(false);
       setMessage("");
       
       toast({
-        title: "Message Sent",
-        description: "Your message has been sent to the poster.",
+        title: "Message sent",
+        description: "Your message has been sent successfully.",
+        action: (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => router.push("/dashboard/messages")}
+          >
+            View Messages
+          </Button>
+        ),
+        duration: 5000
       });
     } catch (err) {
       console.error("Error sending message:", err);
       
       toast({
         title: "Error",
-        description: "Failed to send message. Please try again.",
+        description: err instanceof Error ? err.message : "Failed to send message. Please try again.",
         variant: "destructive",
       });
     } finally {
