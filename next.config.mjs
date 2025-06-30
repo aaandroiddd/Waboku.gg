@@ -96,6 +96,8 @@ const nextConfig = {
     largePageDataBytes: 256 * 1000, // Increase to 256KB to reduce file operations
     esmExternals: false, // Disable ESM externals to reduce file operations
   },
+  // Disable build trace collection to reduce file operations
+  outputFileTracing: false,
 };
 
 export default nextConfig;
