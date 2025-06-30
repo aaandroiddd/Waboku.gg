@@ -16,20 +16,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const { db } = getFirebaseAdmin();
     const listingsRef = db.collection('listings');
     
-    // Get all listings
-    const allListingsQuery = await listingsRef.orderBy('createdAt', 'desc').limit(50).get();
+    // Get all listings (no complex queries to avoid index requirements)
+    const allListingsQuery = await listingsRef.orderBy('createdAt', 'desc').limit(100).get();
     
     // Get only active listings
     const activeListingsQuery = await listingsRef.where('status', '==', 'active').orderBy('createdAt', 'desc').limit(50).get();
-    
-    // Get mock listings
-    const mockListingsQuery = await listingsRef.where('isMockListing', '==', true).orderBy('createdAt', 'desc').limit(20).get();
-    
-    // Get real listings by filtering from all listings (to avoid Firestore query limitations)
-    const allForRealQuery = await listingsRef.orderBy('createdAt', 'desc').limit(100).get();
-    const realListingsData = allForRealQuery.docs
-      .filter(doc => !doc.data().isMockListing)
-      .slice(0, 20);
 
     const allListings = allListingsQuery.docs.map(doc => ({
       id: doc.id,
@@ -51,25 +42,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       price: doc.data().price
     }));
 
-    const mockListings = mockListingsQuery.docs.map(doc => ({
-      id: doc.id,
-      title: doc.data().title,
-      status: doc.data().status,
-      isMockListing: doc.data().isMockListing || false,
-      createdAt: doc.data().createdAt?.toDate?.()?.toISOString() || 'No date',
-      game: doc.data().game,
-      price: doc.data().price
-    }));
-
-    const realListings = realListingsData.map(doc => ({
-      id: doc.id,
-      title: doc.data().title,
-      status: doc.data().status,
-      isMockListing: doc.data().isMockListing || false,
-      createdAt: doc.data().createdAt?.toDate?.()?.toISOString() || 'No date',
-      game: doc.data().game,
-      price: doc.data().price
-    }));
+    // Filter mock and real listings from the all listings data
+    const mockListings = allListings.filter(listing => listing.isMockListing).slice(0, 20);
+    const realListings = allListings.filter(listing => !listing.isMockListing).slice(0, 20);
 
     // Count by status
     const statusCounts = {
@@ -92,12 +67,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       real: allListings.filter(l => !l.isMockListing).length
     };
 
+    // Additional analysis for /listings/ page issue
+    const activeRealListings = activeListings.filter(listing => !listing.isMockListing);
+    const activeMockListings = activeListings.filter(listing => listing.isMockListing);
+
     res.status(200).json({
       summary: {
         totalListings: allListings.length,
         activeListings: activeListings.length,
         mockListings: mockListings.length,
         realListings: realListings.length,
+        activeRealListings: activeRealListings.length,
+        activeMockListings: activeMockListings.length,
         statusCounts,
         mockVsReal
       },
@@ -105,7 +86,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         allListings: allListings.slice(0, 10),
         activeListings: activeListings.slice(0, 10),
         mockListings: mockListings.slice(0, 5),
-        realListings: realListings.slice(0, 5)
+        realListings: realListings.slice(0, 5),
+        activeRealListings: activeRealListings.slice(0, 5),
+        activeMockListings: activeMockListings.slice(0, 5)
+      },
+      analysis: {
+        message: "This shows the breakdown of listings. If /listings/ only shows mock listings, check if real listings have status='active'",
+        possibleIssues: [
+          "Real listings might not have status='active'",
+          "Real listings might be filtered out by other criteria",
+          "Pagination logic might be excluding real listings",
+          "Cache issues might be showing stale data"
+        ]
       }
     });
 
