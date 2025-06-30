@@ -13,6 +13,8 @@ import { useListings } from '@/hooks/useListings';
 import { useListingVisibility } from '@/hooks/useListingVisibility';
 import { ContentLoader } from './ContentLoader';
 import { useLoading } from '@/contexts/LoadingContext';
+import { useRouter } from 'next/router';
+import { Plus } from 'lucide-react';
 
 interface ListingGridProps {
   listings?: Listing[];
@@ -165,6 +167,7 @@ export function ListingGrid({
   
   const { toggleFavorite, isFavorite } = useFavorites();
   const { user } = useAuth();
+  const router = useRouter();
   const [selectedListing, setSelectedListing] = useState<Listing | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { setLoading } = useLoading();
@@ -334,7 +337,7 @@ export function ListingGrid({
                 ))}
               </AnimatePresence>
             </div>
-            {hasMore && (
+            {hasMore ? (
               <motion.div 
                 className="flex justify-center"
                 initial={{ opacity: 0, y: 20 }}
@@ -347,6 +350,34 @@ export function ListingGrid({
                   className="min-w-[200px]"
                 >
                   Load More
+                </Button>
+              </motion.div>
+            ) : (
+              // Show "Create Listing" button when no more listings to load
+              <motion.div 
+                className="flex flex-col items-center space-y-4 py-8"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.5 }}
+              >
+                <div className="text-center space-y-2">
+                  <h3 className="text-lg font-semibold">You've seen all the listings!</h3>
+                  <p className="text-muted-foreground">
+                    Help grow the marketplace by creating your own listing.
+                  </p>
+                </div>
+                <Button 
+                  onClick={() => {
+                    if (!user) {
+                      router.push('/auth/sign-in');
+                    } else {
+                      router.push('/dashboard/create-listing');
+                    }
+                  }}
+                  className="bg-blue-600 hover:bg-blue-700 text-white min-w-[200px]"
+                >
+                  <Plus className="mr-2 h-4 w-4" />
+                  Create Listing
                 </Button>
               </motion.div>
             )}
