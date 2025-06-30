@@ -178,11 +178,12 @@ export default function ListingsPage() {
   // Function to go to next page
   const handleNextPage = () => {
     if (hasMore) {
-      setCurrentPage(prev => prev + 1);
+      const nextPage = currentPage + 1;
+      setCurrentPage(nextPage);
       // Reset listings and fetch new page
       window.scrollTo({ top: 0, behavior: 'smooth' });
       // Force a refresh by updating the URL with page parameter
-      const currentQuery = { ...router.query, page: currentPage + 1 };
+      const currentQuery = { ...router.query, page: nextPage };
       router.push({
         pathname: '/listings',
         query: currentQuery,
@@ -193,18 +194,19 @@ export default function ListingsPage() {
   // Function to go to previous page
   const handlePreviousPage = () => {
     if (currentPage > 1) {
-      setCurrentPage(prev => prev - 1);
+      const prevPage = currentPage - 1;
+      setCurrentPage(prevPage);
       window.scrollTo({ top: 0, behavior: 'smooth' });
       // Force a refresh by updating the URL with page parameter
-      const currentQuery = { ...router.query, page: currentPage - 1 };
-      if (currentPage - 1 === 1) {
+      if (prevPage === 1) {
         // Remove page parameter if going back to page 1
-        const { page, ...queryWithoutPage } = currentQuery;
+        const { page, ...queryWithoutPage } = router.query;
         router.push({
           pathname: '/listings',
           query: queryWithoutPage,
         }, undefined, { shallow: false });
       } else {
+        const currentQuery = { ...router.query, page: prevPage };
         router.push({
           pathname: '/listings',
           query: currentQuery,

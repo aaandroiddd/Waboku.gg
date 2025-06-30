@@ -808,16 +808,18 @@ export function useListings({
             queryConstraints.push(startAfter(lastDoc));
             queryConstraints.push(firestoreLimit(limit || 10));
           } else {
-            // For page navigation, fetch more than needed to determine if there are more pages
-            const fetchLimit = page === 1 ? 31 : 30; // Fetch 31 on first page to check if there are more
-            queryConstraints.push(firestoreLimit(fetchLimit));
+            // For page navigation, we need to implement proper cursor-based pagination
+            // Calculate how many documents to skip for the current page
+            const documentsPerPage = 30;
+            const documentsToSkip = (page - 1) * documentsPerPage;
             
-            // For pages beyond the first, we need to skip previous pages
-            if (page > 1) {
-              // This is a simplified approach - in production you'd want to use cursor-based pagination
-              // For now, we'll fetch all and slice (not ideal for large datasets)
-              queryConstraints.pop(); // Remove the limit
-              queryConstraints.push(firestoreLimit((page - 1) * 30 + 31)); // Fetch up to current page + 1 extra
+            if (page === 1) {
+              // For first page, just limit to 31 to check if there are more pages
+              queryConstraints.push(firestoreLimit(31));
+            } else {
+              // For subsequent pages, we need to fetch all documents up to the current page
+              // This is not ideal for large datasets, but necessary without cursor persistence
+              queryConstraints.push(firestoreLimit(documentsToSkip + 31));
             }
           }
         }
@@ -916,9 +918,27 @@ export function useListings({
         }
 
         // For page-based pagination, slice the results to get the correct page
-        if (enablePagination && page > 1 && !isLoadMore) {
-          const startIndex = (page - 1) * 30;
-          fetchedListings = fetchedListings.slice(startIndex, startIndex + 30);
+        if (enablePagination && !isLoadMore) {
+          const documentsPerPage = 30;
+          
+          if (page === 1) {
+            // For first page, check if we have more than 30 listings
+            setHasMore(fetchedListings.length > documentsPerPage);
+            // Limit to 30 listings for display
+            if (fetchedListings.length > documentsPerPage) {
+              fetchedListings = fetchedListings.slice(0, documentsPerPage);
+            }
+          } else {
+            // For subsequent pages, slice to get the correct page
+            const startIndex = (page - 1) * documentsPerPage;
+            const endIndex = startIndex + documentsPerPage;
+            
+            // Check if there are more pages after this one
+            setHasMore(fetchedListings.length > endIndex);
+            
+            // Get the listings for the current page
+            fetchedListings = fetchedListings.slice(startIndex, endIndex);
+          }
         }
 
         // If there's a search query, filter results in memory
@@ -949,36 +969,11 @@ export function useListings({
           });
         }
 
-        // Update hasMore based on returned results
-        if (enablePagination) {
-          if (isLoadMore) {
-            // For infinite scroll within a page, check if we got the requested amount
-            setHasMore(querySnapshot.docs.length === (limit || 10));
-          } else {
-            // For page navigation, check if we have more than 30 listings
-            if (page === 1) {
-              // On first page, if we got 31 listings, there are more pages
-              setHasMore(querySnapshot.docs.length > 30);
-              // Limit to 30 listings for display
-              if (fetchedListings.length > 30) {
-                fetchedListings = fetchedListings.slice(0, 30);
-              }
-            } else {
-              // On subsequent pages, slice to get the correct page and check if there are more
-              const startIndex = (page - 1) * 30;
-              const endIndex = startIndex + 30;
-              const pageListings = fetchedListings.slice(startIndex, endIndex);
-              const hasMoreListings = fetchedListings.length > endIndex;
-              
-              setHasMore(hasMoreListings);
-              fetchedListings = pageListings;
-            }
-          }
-          
-          // Update lastDoc for infinite scroll within the page
-          if (querySnapshot.docs.length > 0) {
-            setLastDoc(querySnapshot.docs[querySnapshot.docs.length - 1]);
-          }
+        // Update lastDoc for infinite scroll within the page (only for loadMore)
+        if (enablePagination && isLoadMore && querySnapshot.docs.length > 0) {
+          setLastDoc(querySnapshot.docs[querySnapshot.docs.length - 1]);
+          // For infinite scroll within a page, check if we got the requested amount
+          setHasMore(querySnapshot.docs.length === (limit || 10));
         }
         
         // Update listings state
