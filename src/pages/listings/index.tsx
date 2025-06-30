@@ -151,7 +151,8 @@ export default function ListingsPage() {
     enablePagination: true,
     limit: 10, // Start with 10 listings
     showOnlyActive: true,
-    page: currentPage
+    page: currentPage,
+    excludeMockListings: true // Filter out mock listings from public page
   });
 
   // Track if we've reached the 30 listing limit per page

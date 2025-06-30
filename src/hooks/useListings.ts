@@ -33,6 +33,7 @@ interface UseListingsProps {
   limit?: number;
   enablePagination?: boolean;
   page?: number;
+  excludeMockListings?: boolean;
 }
 
 export function useListings({ 
@@ -42,7 +43,8 @@ export function useListings({
   skipInitialFetch = false,
   limit,
   enablePagination = false,
-  page = 1
+  page = 1,
+  excludeMockListings = false
 }: UseListingsProps = {}) {
   const [listings, setListings] = useState<Listing[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -900,6 +902,12 @@ export function useListings({
 
           return listing;
         });
+
+        // Filter out mock listings if requested (for public pages)
+        if (excludeMockListings) {
+          fetchedListings = fetchedListings.filter(listing => !listing.isMockListing);
+          console.log(`Filtered out mock listings, ${fetchedListings.length} real listings remaining`);
+        }
 
         // For page-based pagination, slice the results to get the correct page
         if (enablePagination && page > 1 && !isLoadMore) {
