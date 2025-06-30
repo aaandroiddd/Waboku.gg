@@ -65,9 +65,14 @@ function SignInComponent() {
       // Check if there's a redirect state to handle
       const redirectState = getRedirectState();
       if (redirectState) {
+        console.log('Found redirect state in sign-in page:', redirectState);
         handlePostLoginRedirect();
       } else {
-        router.replace("/dashboard");
+        // Only redirect to dashboard if we're still on the sign-in page
+        // This prevents interfering with other redirects
+        if (router.pathname === '/auth/sign-in') {
+          router.replace("/dashboard");
+        }
       }
     }
   }, [user, router, handlePostLoginRedirect, getRedirectState]);
@@ -375,7 +380,8 @@ function SignInComponent() {
                           handlePostLoginRedirect();
                         }, 600);
                       } else {
-                        console.log('No redirect state found, will go to dashboard');
+                        console.log('No redirect state found, will let AuthRedirectContext handle default redirect');
+                        // Don't manually redirect here - let the useEffect handle it
                       }
                     }
                   } catch (err: any) {
