@@ -45,21 +45,22 @@ const SECTIONS = [
   { id: "account-tier-sync", label: "Account Tier Synchronization" },
   { id: "api-endpoints", label: "API Endpoints" },
   { id: "api-test", label: "API Test Panel" },
-  { id: "moderation", label: "Content Moderation" },
   { id: "db-usage", label: "Database Usage Monitoring" },
   { id: "email-test", label: "Email Notification Testing" },
   { id: "firebase", label: "Firebase Diagnostics" },
   { id: "listing-analytics", label: "Listing Analytics & Capacity Monitoring" },
+  { id: "listing-debug", label: "Listing Debug Tool" },
   { id: "listing-visibility", label: "Listing Visibility Diagnostics" },
   { id: "mock-listings", label: "Mock Listing Generator" },
+  { id: "moderation", label: "Content Moderation" },
   { id: "moderator", label: "Moderator Management" },
   { id: "notification-debug", label: "Notification System Debugger" },
   { id: "review-system", label: "Review System Debug" },
-  { id: "webhook", label: "Stripe Webhook Fix" },
   { id: "subscription", label: "Subscription Management" },
   { id: "support-management", label: "Support Ticket Management" },
   { id: "user-tier", label: "User Tier Management" },
   { id: "wanted-posts", label: "Wanted Posts Debugging Tools" },
+  { id: "webhook", label: "Stripe Webhook Fix" },
   { id: "webhook-notification-test", label: "Webhook & Notification Testing" },
 ];
 
@@ -74,6 +75,8 @@ export default function AdminDashboard() {
   const [userId, setUserId] = useState('');
   const [selectedTier, setSelectedTier] = useState<string>('');
   const [moderatorUserId, setModeratorUserId] = useState('');
+  const [listingsDebugResult, setListingsDebugResult] = useState<string>('');
+  const [isDebuggingListings, setIsDebuggingListings] = useState(false);
 
   // For smooth scroll to section
   const sectionRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
@@ -261,6 +264,32 @@ export default function AdminDashboard() {
       setResponseDialog(true);
     }
     setLoading(false);
+  };
+
+  const debugListings = async () => {
+    setIsDebuggingListings(true);
+    setListingsDebugResult('');
+    try {
+      const response = await fetch('/api/debug/compare-listings', {
+        method: 'GET',
+        headers: {
+          'x-admin-secret': adminSecret
+        }
+      });
+
+      const result = await response.json();
+      
+      if (response.ok) {
+        setListingsDebugResult(JSON.stringify(result, null, 2));
+      } else {
+        setListingsDebugResult(`❌ Error: ${result.error}`);
+      }
+    } catch (error) {
+      console.error('Listings debug error:', error);
+      setListingsDebugResult(`❌ Network error: ${error}`);
+    } finally {
+      setIsDebuggingListings(false);
+    }
   };
 
   // Smooth scroll to section
@@ -615,6 +644,36 @@ export default function AdminDashboard() {
                   >
                     Listing Analytics Dashboard
                   </Button>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+
+            {/* Listing Debug Tool */}
+            <AccordionItem value="listing-debug" id="listing-debug" ref={el => (sectionRefs.current["listing-debug"] = el)}>
+              <AccordionTrigger>Listing Debug Tool</AccordionTrigger>
+              <AccordionContent>
+                <div className="space-y-4 py-4">
+                  <p className="text-sm text-muted-foreground">
+                    Compare mock vs real listings, analyze status distribution, and debug why only mock listings might be showing on certain pages.
+                  </p>
+                  <Button 
+                    onClick={debugListings}
+                    disabled={isDebuggingListings}
+                    className="w-full bg-red-600 hover:bg-red-700"
+                  >
+                    {isDebuggingListings ? 'Analyzing...' : 'Analyze Listings'}
+                  </Button>
+                  
+                  {listingsDebugResult && (
+                    <div className="mt-4">
+                      <Label className="text-sm font-medium">Debug Results:</Label>
+                      <ScrollArea className="max-h-[400px] mt-2">
+                        <pre className="p-4 bg-muted rounded-lg overflow-x-auto text-xs">
+                          {listingsDebugResult}
+                        </pre>
+                      </ScrollArea>
+                    </div>
+                  )}
                 </div>
               </AccordionContent>
             </AccordionItem>
