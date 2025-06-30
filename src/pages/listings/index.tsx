@@ -130,7 +130,7 @@ export default function ListingsPage() {
   const [stateOpen, setStateOpen] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
   const [showWantedBanner, setShowWantedBanner] = useState(true);
-  const [currentPage, setCurrentPage] = useState(1);
+  const [displayCount, setDisplayCount] = useState(8);
 
   // Search states
   const [searchQuery, setSearchQuery] = useState("");
@@ -140,80 +140,15 @@ export default function ListingsPage() {
   const [priceRange, setPriceRange] = useState([0, 50000]);
   const [showGradedOnly, setShowGradedOnly] = useState(false);
 
-  // Use the enhanced useListings hook with pagination
+  // Use the enhanced useListings hook without pagination
   const { 
     listings: allListings, 
     isLoading, 
-    error, 
-    hasMore, 
-    loadMore 
+    error
   } = useListings({
-    enablePagination: true,
-    limit: 10, // Start with 10 listings
-    showOnlyActive: true,
-    page: currentPage
-    // Allow both real and mock listings for testing pagination
+    showOnlyActive: true
+    // Allow both real and mock listings for testing
   });
-
-  // Track if we've reached the 30 listing limit per page
-  const hasReachedLimit = allListings.length >= 30;
-  const canLoadMore = hasMore && !hasReachedLimit;
-
-  // Custom load more function that respects the 30 listing limit
-  const handleLoadMore = async () => {
-    if (!canLoadMore) return;
-    
-    // Calculate how many more listings we can load
-    const remainingSlots = 30 - allListings.length;
-    
-    // If we have less than 10 slots remaining, we've reached near the limit
-    if (remainingSlots <= 0) return;
-    
-    await loadMore();
-  };
-
-  // Determine if pagination controls should be shown
-  const showPaginationControls = hasReachedLimit || currentPage > 1 || (allListings.length === 30 && hasMore);
-
-  // Function to go to next page
-  const handleNextPage = () => {
-    if (hasMore) {
-      const nextPage = currentPage + 1;
-      setCurrentPage(nextPage);
-      // Reset listings and fetch new page
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-      // Force a refresh by updating the URL with page parameter
-      const currentQuery = { ...router.query, page: nextPage };
-      router.push({
-        pathname: '/listings',
-        query: currentQuery,
-      }, undefined, { shallow: false });
-    }
-  };
-
-  // Function to go to previous page
-  const handlePreviousPage = () => {
-    if (currentPage > 1) {
-      const prevPage = currentPage - 1;
-      setCurrentPage(prevPage);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-      // Force a refresh by updating the URL with page parameter
-      if (prevPage === 1) {
-        // Remove page parameter if going back to page 1
-        const { page, ...queryWithoutPage } = router.query;
-        router.push({
-          pathname: '/listings',
-          query: queryWithoutPage,
-        }, undefined, { shallow: false });
-      } else {
-        const currentQuery = { ...router.query, page: prevPage };
-        router.push({
-          pathname: '/listings',
-          query: currentQuery,
-        }, undefined, { shallow: false });
-      }
-    }
-  };
 
   const { latitude, longitude } = useGeolocation();
   
@@ -246,7 +181,7 @@ export default function ListingsPage() {
 
   useEffect(() => {
     // Initialize filters from URL parameters
-    const { query, state, game, condition, minPrice, maxPrice, page } = router.query;
+    const { query, state, game, condition, minPrice, maxPrice } = router.query;
     if (query) {
       setSearchQuery(query as string);
     } else {
@@ -257,11 +192,6 @@ export default function ListingsPage() {
     if (condition) setSelectedCondition(condition as string);
     if (minPrice && maxPrice) {
       setPriceRange([Number(minPrice), Number(maxPrice)]);
-    }
-    if (page) {
-      setCurrentPage(Number(page));
-    } else {
-      setCurrentPage(1);
     }
   }, [router.query]);
 
@@ -637,54 +567,15 @@ export default function ListingsPage() {
             ) : (
               <>
                 {viewMode === 'grid' ? (
-                  <ListingGridWithAnalytics 
+                  <ListingGrid 
                     listings={filteredListings} 
                     loading={isLoading} 
-                    searchTerm={searchQuery.trim() || undefined}
-                    hasMore={canLoadMore}
-                    onLoadMore={handleLoadMore}
+                    displayCount={displayCount}
+                    hasMore={filteredListings.length > displayCount}
+                    onLoadMore={() => setDisplayCount(prev => prev + 8)}
                   />
                 ) : (
                   <SearchListingList listings={filteredListings} loading={isLoading} />
-                )}
-
-                {/* Pagination Controls */}
-                {showPaginationControls && (
-                  <div className="mt-8 flex flex-col items-center space-y-4">
-                    <div className="flex items-center justify-center space-x-4">
-                      <Button
-                        variant="outline"
-                        onClick={handlePreviousPage}
-                        disabled={currentPage === 1}
-                        className="flex items-center space-x-2"
-                      >
-                        <span>← Previous</span>
-                      </Button>
-                      
-                      <div className="flex items-center space-x-2">
-                        <span className="text-sm text-muted-foreground">Page</span>
-                        <span className="font-medium">{currentPage}</span>
-                      </div>
-                      
-                      <Button
-                        variant="outline"
-                        onClick={handleNextPage}
-                        disabled={!hasMore || isLoading}
-                        className="flex items-center space-x-2"
-                      >
-                        <span>Next →</span>
-                      </Button>
-                    </div>
-                    
-                    <p className="text-sm text-muted-foreground text-center">
-                      Showing {filteredListings.length} listings on this page
-                      {hasMore && (
-                        <span className="block mt-1">
-                          Use the "Next" button to see more listings
-                        </span>
-                      )}
-                    </p>
-                  </div>
                 )}
               </>
             )}
