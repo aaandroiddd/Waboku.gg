@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { MobileSelect } from "@/components/ui/mobile-select";
+
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { LocationInput } from "@/components/LocationInput";
@@ -245,12 +245,33 @@ export default function CreateWantedPostPage() {
                   <div className="space-y-4">
                     <div>
                       <Label htmlFor="game">Game Category</Label>
-                      <MobileSelect
-                        value={formData.game}
-                        onValueChange={(value) => handleSelectChange("game", value)}
-                        options={ALL_GAME_CATEGORIES}
-                        placeholder="Select game category"
-                      />
+                      <div className="relative">
+                        <select
+                          id="game"
+                          value={formData.game}
+                          onChange={(e) => handleSelectChange("game", e.target.value)}
+                          className="block w-full h-12 rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring appearance-none cursor-pointer text-foreground"
+                          style={{
+                            WebkitAppearance: 'none',
+                            MozAppearance: 'none',
+                            backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e")`,
+                            backgroundRepeat: 'no-repeat',
+                            backgroundPosition: 'right 12px center',
+                            backgroundSize: '16px',
+                            paddingRight: '40px',
+                            minWidth: 0,
+                            touchAction: 'manipulation'
+                          }}
+                          required
+                        >
+                          <option value="">Select game category</option>
+                          {ALL_GAME_CATEGORIES.map((category) => (
+                            <option key={category.value} value={category.value}>
+                              {category.label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
                     </div>
                     
                     {formData.game && (
@@ -294,12 +315,31 @@ export default function CreateWantedPostPage() {
                     
                     <div>
                       <Label htmlFor="condition">Preferred Condition</Label>
-                      <MobileSelect
-                        value={formData.condition}
-                        onValueChange={(value) => handleSelectChange("condition", value)}
-                        options={CONDITION_OPTIONS}
-                        placeholder="Select condition"
-                      />
+                      <div className="relative">
+                        <select
+                          id="condition"
+                          value={formData.condition}
+                          onChange={(e) => handleSelectChange("condition", e.target.value)}
+                          className="block w-full h-12 rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring appearance-none cursor-pointer text-foreground"
+                          style={{
+                            WebkitAppearance: 'none',
+                            MozAppearance: 'none',
+                            backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e")`,
+                            backgroundRepeat: 'no-repeat',
+                            backgroundPosition: 'right 12px center',
+                            backgroundSize: '16px',
+                            paddingRight: '40px',
+                            minWidth: 0,
+                            touchAction: 'manipulation'
+                          }}
+                        >
+                          {CONDITION_OPTIONS.map((condition) => (
+                            <option key={condition.value} value={condition.value}>
+                              {condition.label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
                     </div>
                   </div>
                   
