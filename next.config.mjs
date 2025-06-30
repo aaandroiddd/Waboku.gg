@@ -97,14 +97,8 @@ const nextConfig = {
   poweredByHeader: false,
   compress: true,
   swcMinify: true,
-  output: 'standalone',
   experimental: {
     optimizeCss: false, // Disable this as it's causing issues
-    optimizePackageImports: [
-      'lucide-react',
-      '@radix-ui/react-icons',
-      'date-fns',
-    ],
     largePageDataBytes: 128 * 1000, // 128KB
   },
 };
