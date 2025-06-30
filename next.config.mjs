@@ -75,7 +75,14 @@ const nextConfig = {
     domains: [
       "assets.co.dev",
       "firebasestorage.googleapis.com",
-      "lh3.googleusercontent.com"
+      "lh3.googleusercontent.com",
+      // TCG API domains for mock listings
+      "images.pokemontcg.io",
+      "images.ygoprodeck.com",
+      "gatherer.wizards.com",
+      "limitlesstcg.s3.us-west-2.amazonaws.com",
+      "www.dbs-cardgame.com",
+      "cdn.lorcana-api.com"
     ],
     formats: ['image/avif', 'image/webp'],
     deviceSizes: [640, 750, 828, 1080, 1200, 1920],
