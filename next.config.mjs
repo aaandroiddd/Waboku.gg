@@ -1,9 +1,3 @@
-import withBundleAnalyzer from '@next/bundle-analyzer';
-
-const bundleAnalyzer = withBundleAnalyzer({
-  enabled: process.env.ANALYZE === 'true',
-});
-
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   async headers() {
@@ -99,8 +93,9 @@ const nextConfig = {
   swcMinify: true,
   experimental: {
     optimizeCss: false, // Disable this as it's causing issues
-    largePageDataBytes: 128 * 1000, // 128KB
+    largePageDataBytes: 256 * 1000, // Increase to 256KB to reduce file operations
+    esmExternals: false, // Disable ESM externals to reduce file operations
   },
 };
 
-export default bundleAnalyzer(nextConfig);
+export default nextConfig;
