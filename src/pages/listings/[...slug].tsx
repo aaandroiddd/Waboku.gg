@@ -836,9 +836,11 @@ export default function ListingPage() {
     e.stopPropagation();
     
     if (!user) {
-      console.log('No user, redirecting to sign up');
-      toast.error('Please sign up to save favorites');
-      router.push('/auth/sign-up');
+      console.log('No user, saving redirect state and redirecting to sign in');
+      // Save the redirect state before redirecting to sign-in
+      saveRedirectState('toggle_favorite', { listingId: listing?.id });
+      toast.error('Please sign in to save favorites');
+      router.push('/auth/sign-in');
       return;
     }
 

@@ -41,13 +41,14 @@ export async function handlePostLoginAction(
     switch (action) {
       case 'toggle_favorite':
         if (params.listingId) {
-          // Use router if available, otherwise fallback to window.location
+          // For toggle_favorite, we want to redirect to the favorites page
+          // and let the favorites page handle adding the item
           if (router) {
-            await router.push(`/listings/${params.listingId}`);
+            // Add the listing ID as a query parameter so the favorites page can handle it
+            await router.push(`/dashboard/favorites?add=${params.listingId}`);
           } else {
-            window.location.href = `/listings/${params.listingId}`;
+            window.location.href = `/dashboard/favorites?add=${params.listingId}`;
           }
-          toast.success('You can now add this listing to your favorites');
           return true;
         }
         return false;

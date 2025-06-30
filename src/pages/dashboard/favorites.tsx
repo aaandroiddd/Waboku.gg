@@ -11,6 +11,10 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { FavoriteListingCard } from '@/components/FavoriteListingCard';
 import { getConditionColor } from '@/lib/utils';
 import { Listing } from '@/types/database';
+import { useRouter } from 'next/router';
+import { getFirebaseServices } from '@/lib/firebase';
+import { doc, getDoc } from 'firebase/firestore';
+import { toast } from 'sonner';
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -23,6 +27,7 @@ const containerVariants = {
 };
 
 export default function FavoritesPage() {
+  const router = useRouter();
   const { 
     favorites: allFavorites,
     isLoading, 
@@ -44,6 +49,85 @@ export default function FavoritesPage() {
       refresh();
     }
   }, [initialized, refresh]);
+
+  // Handle adding a listing to favorites from the query parameter
+  useEffect(() => {
+    const handleAddToFavorites = async () => {
+      if (!router.isReady || !initialized) return;
+      
+      const { add } = router.query;
+      if (!add || typeof add !== 'string') return;
+      
+      try {
+        // Check if the listing is already in favorites
+        if (isFavorite(add)) {
+          toast.success('This listing is already in your favorites!');
+          // Clean up the URL
+          router.replace('/dashboard/favorites', undefined, { shallow: true });
+          return;
+        }
+        
+        // Fetch the listing data
+        const { db } = getFirebaseServices();
+        if (!db) {
+          throw new Error('Database not initialized');
+        }
+        
+        const listingDoc = await getDoc(doc(db, 'listings', add));
+        if (!listingDoc.exists()) {
+          toast.error('Listing not found or no longer available');
+          router.replace('/dashboard/favorites', undefined, { shallow: true });
+          return;
+        }
+        
+        const listingData = listingDoc.data();
+        
+        // Convert the data to a Listing object
+        const listing: Listing = {
+          id: listingDoc.id,
+          title: listingData.title || 'Untitled Listing',
+          description: listingData.description || '',
+          price: typeof listingData.price === 'number' ? listingData.price : 
+                 typeof listingData.price === 'string' ? parseFloat(listingData.price) : 0,
+          condition: listingData.condition || 'unknown',
+          game: listingData.game || 'other',
+          imageUrls: Array.isArray(listingData.imageUrls) ? listingData.imageUrls : [],
+          coverImageIndex: typeof listingData.coverImageIndex === 'number' ? listingData.coverImageIndex : 0,
+          userId: listingData.userId || '',
+          username: listingData.username || 'Unknown User',
+          createdAt: listingData.createdAt?.toDate() || new Date(),
+          expiresAt: listingData.expiresAt?.toDate() || new Date(),
+          status: listingData.status || 'active',
+          isGraded: Boolean(listingData.isGraded),
+          gradeLevel: listingData.gradeLevel ? Number(listingData.gradeLevel) : undefined,
+          gradingCompany: listingData.gradingCompany,
+          city: listingData.city || 'Unknown',
+          state: listingData.state || 'Unknown',
+          favoriteCount: typeof listingData.favoriteCount === 'number' ? listingData.favoriteCount : 0,
+          quantity: listingData.quantity ? Number(listingData.quantity) : undefined,
+          cardName: listingData.cardName || undefined,
+          location: listingData.location,
+          soldTo: listingData.soldTo || null,
+          archivedAt: listingData.archivedAt?.toDate() || null,
+          offersOnly: listingData.offersOnly === true,
+          finalSale: listingData.finalSale === true
+        };
+        
+        // Add to favorites
+        await toggleFavorite(listing);
+        
+        // Clean up the URL
+        router.replace('/dashboard/favorites', undefined, { shallow: true });
+        
+      } catch (error) {
+        console.error('Error adding listing to favorites:', error);
+        toast.error('Failed to add listing to favorites');
+        router.replace('/dashboard/favorites', undefined, { shallow: true });
+      }
+    };
+    
+    handleAddToFavorites();
+  }, [router.isReady, router.query, initialized, isFavorite, toggleFavorite]);
   
   // Apply filters to favorites - same logic as dashboard
   const filteredFavorites = useMemo(() => {
