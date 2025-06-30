@@ -174,7 +174,6 @@ export default function ListingsPage() {
 
   // Determine if pagination controls should be shown
   const showPaginationControls = hasReachedLimit || currentPage > 1 || (allListings.length === 30 && hasMore);
-=======
 
   // Function to go to next page
   const handleNextPage = () => {
@@ -213,6 +212,7 @@ export default function ListingsPage() {
       }
     }
   };
+
   const { latitude, longitude } = useGeolocation();
   
   // Initialize analytics hooks early
@@ -241,8 +241,6 @@ export default function ListingsPage() {
   };
 
   const [filteredListings, setFilteredListings] = useState<Listing[]>([]);
-
-  // Get geolocation data
 
   useEffect(() => {
     // Initialize filters from URL parameters
