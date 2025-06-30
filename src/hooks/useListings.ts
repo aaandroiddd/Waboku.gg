@@ -808,19 +808,11 @@ export function useListings({
             queryConstraints.push(startAfter(lastDoc));
             queryConstraints.push(firestoreLimit(limit || 10));
           } else {
-            // For page navigation, we need to implement proper cursor-based pagination
-            // Calculate how many documents to skip for the current page
+            // For page navigation, we need to fetch enough documents to get to the current page
             const documentsPerPage = 30;
-            const documentsToSkip = (page - 1) * documentsPerPage;
+            const documentsToFetch = page * documentsPerPage + 1; // +1 to check if there are more pages
             
-            if (page === 1) {
-              // For first page, just limit to 31 to check if there are more pages
-              queryConstraints.push(firestoreLimit(31));
-            } else {
-              // For subsequent pages, we need to fetch all documents up to the current page
-              // This is not ideal for large datasets, but necessary without cursor persistence
-              queryConstraints.push(firestoreLimit(documentsToSkip + 31));
-            }
+            queryConstraints.push(firestoreLimit(documentsToFetch));
           }
         }
 
@@ -920,25 +912,22 @@ export function useListings({
         // For page-based pagination, slice the results to get the correct page
         if (enablePagination && !isLoadMore) {
           const documentsPerPage = 30;
+          const startIndex = (page - 1) * documentsPerPage;
+          const endIndex = startIndex + documentsPerPage;
           
-          if (page === 1) {
-            // For first page, check if we have more than 30 listings
-            setHasMore(fetchedListings.length > documentsPerPage);
-            // Limit to 30 listings for display
-            if (fetchedListings.length > documentsPerPage) {
-              fetchedListings = fetchedListings.slice(0, documentsPerPage);
-            }
-          } else {
-            // For subsequent pages, slice to get the correct page
-            const startIndex = (page - 1) * documentsPerPage;
-            const endIndex = startIndex + documentsPerPage;
-            
-            // Check if there are more pages after this one
-            setHasMore(fetchedListings.length > endIndex);
-            
-            // Get the listings for the current page
-            fetchedListings = fetchedListings.slice(startIndex, endIndex);
-          }
+          // Store total count before slicing
+          const totalFetched = fetchedListings.length;
+          
+          // Check if there are more pages after this one
+          setHasMore(totalFetched > endIndex);
+          
+          // Get the listings for the current page
+          const pageListings = fetchedListings.slice(startIndex, endIndex);
+          
+          console.log(`Page ${page}: Showing listings ${startIndex + 1}-${startIndex + pageListings.length} of ${totalFetched} total, hasMore: ${totalFetched > endIndex}`);
+          
+          // Set the sliced listings
+          fetchedListings = pageListings;
         }
 
         // If there's a search query, filter results in memory
