@@ -808,11 +808,18 @@ export function useListings({
             queryConstraints.push(startAfter(lastDoc));
             queryConstraints.push(firestoreLimit(limit || 10));
           } else {
-            // For page navigation, we need to fetch enough documents to get to the current page
+            // For page navigation, we need to calculate the right offset
             const documentsPerPage = 30;
-            const documentsToFetch = page * documentsPerPage + 1; // +1 to check if there are more pages
             
-            queryConstraints.push(firestoreLimit(documentsToFetch));
+            if (page === 1) {
+              // For page 1, just limit to 30 + 1 to check for more pages
+              queryConstraints.push(firestoreLimit(documentsPerPage + 1));
+            } else {
+              // For subsequent pages, we need to fetch more documents to skip to the right page
+              // This is a limitation of Firestore - we need to fetch all previous pages to get to the current one
+              const totalDocumentsToFetch = page * documentsPerPage + 1;
+              queryConstraints.push(firestoreLimit(totalDocumentsToFetch));
+            }
           }
         }
 
@@ -903,22 +910,24 @@ export function useListings({
           return listing;
         });
 
-        // Filter out mock listings if requested (for public pages)
-        if (excludeMockListings) {
-          fetchedListings = fetchedListings.filter(listing => !listing.isMockListing);
-          console.log(`Filtered out mock listings, ${fetchedListings.length} real listings remaining`);
-        }
 
-        // For page-based pagination, slice the results to get the correct page
+
+        // Handle page-based pagination
         if (enablePagination && !isLoadMore) {
           const documentsPerPage = 30;
+          
+          // Filter out mock listings if requested before pagination
+          if (excludeMockListings) {
+            fetchedListings = fetchedListings.filter(listing => !listing.isMockListing);
+            console.log(`Filtered out mock listings, ${fetchedListings.length} real listings remaining`);
+          }
+          
+          // Calculate pagination indices
           const startIndex = (page - 1) * documentsPerPage;
           const endIndex = startIndex + documentsPerPage;
-          
-          // Store total count before slicing
           const totalFetched = fetchedListings.length;
           
-          // Check if there are more pages after this one
+          // Check if there are more pages
           setHasMore(totalFetched > endIndex);
           
           // Get the listings for the current page
@@ -928,6 +937,10 @@ export function useListings({
           
           // Set the sliced listings
           fetchedListings = pageListings;
+        } else if (excludeMockListings) {
+          // Filter out mock listings for non-paginated requests
+          fetchedListings = fetchedListings.filter(listing => !listing.isMockListing);
+          console.log(`Filtered out mock listings, ${fetchedListings.length} real listings remaining`);
         }
 
         // If there's a search query, filter results in memory
