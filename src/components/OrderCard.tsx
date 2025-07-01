@@ -175,7 +175,7 @@ export function OrderCard({ order, isSale = false }: OrderCardProps) {
   };
 
   // Function to handle relisting after successful refund
-  const handleRelistItem = (e: React.MouseEvent) => {
+  const handleRelistItem = async (e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent triggering the card click
     
     if (!safeOrder?.listingSnapshot) {
@@ -183,45 +183,43 @@ export function OrderCard({ order, isSale = false }: OrderCardProps) {
       return;
     }
 
-    console.log('Relisting item with data:', safeOrder.listingSnapshot);
-
-    // Create URL with pre-filled data from the original listing
-    const params = new URLSearchParams();
-    params.set('relist', 'true');
-    
-    if (safeOrder.listingSnapshot.title) {
-      params.set('title', safeOrder.listingSnapshot.title);
-    }
-    if (safeOrder.listingSnapshot.price !== undefined) {
-      params.set('price', safeOrder.listingSnapshot.price.toString());
-    }
-    if (safeOrder.listingSnapshot.game) {
-      params.set('game', safeOrder.listingSnapshot.game);
-    }
-    if (safeOrder.listingSnapshot.condition) {
-      params.set('condition', safeOrder.listingSnapshot.condition);
-    }
-    if (safeOrder.listingSnapshot.description) {
-      params.set('description', safeOrder.listingSnapshot.description);
-    }
-    if (safeOrder.listingSnapshot.isGraded) {
-      params.set('isGraded', 'true');
-      if (safeOrder.listingSnapshot.gradeLevel !== undefined) {
-        params.set('gradeLevel', safeOrder.listingSnapshot.gradeLevel.toString());
-      }
-      if (safeOrder.listingSnapshot.gradingCompany) {
-        params.set('gradingCompany', safeOrder.listingSnapshot.gradingCompany);
-      }
-    }
-    if (safeOrder.listingSnapshot.finalSale) {
-      params.set('finalSale', 'true');
+    if (!user) {
+      toast.error('You must be logged in to relist items');
+      return;
     }
 
-    const url = `/dashboard/create-listing?${params.toString()}`;
-    console.log('Navigating to:', url);
-    console.log('URL parameters:', Object.fromEntries(params.entries()));
-    
-    router.push(url);
+    try {
+      console.log('Relisting item from order:', safeOrder.id);
+
+      // Get the user's ID token for authentication
+      const token = await user.getIdToken();
+
+      const response = await fetch('/api/listings/relist-from-order', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          orderId: safeOrder.id,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to relist item');
+      }
+
+      toast.success('Item successfully relisted! You can find it in your active listings.');
+      
+      // Optionally redirect to the dashboard to see the new listing
+      router.push('/dashboard');
+
+    } catch (error) {
+      console.error('Error relisting item:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to relist item');
+    }
   };
 
   // Check if order is eligible for refund (for buyers only)

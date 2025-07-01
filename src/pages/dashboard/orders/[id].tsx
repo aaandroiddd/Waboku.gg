@@ -510,36 +510,49 @@ export default function OrderDetailsPage() {
   };
 
   // Function to handle relisting after successful refund
-  const handleRelistItem = () => {
+  const handleRelistItem = async () => {
     if (!order?.listingSnapshot) {
       toast.error('Unable to relist: listing information not available');
       return;
     }
 
-    console.log('Relisting item with data:', order.listingSnapshot);
+    if (!user) {
+      toast.error('You must be logged in to relist items');
+      return;
+    }
 
-    // Create URL with pre-filled data from the original listing
-    const params = new URLSearchParams({
-      relist: 'true',
-      title: order.listingSnapshot.title || '',
-      price: order.listingSnapshot.price?.toString() || '',
-      game: order.listingSnapshot.game || '',
-      condition: order.listingSnapshot.condition || '',
-      description: order.listingSnapshot.description || '',
-      ...(order.listingSnapshot.isGraded && {
-        isGraded: 'true',
-        gradeLevel: order.listingSnapshot.gradeLevel?.toString() || '',
-        gradingCompany: order.listingSnapshot.gradingCompany || ''
-      }),
-      ...(order.listingSnapshot.finalSale && {
-        finalSale: 'true'
-      })
-    });
+    try {
+      console.log('Relisting item from order:', order.id);
 
-    const url = `/dashboard/create-listing?${params.toString()}`;
-    console.log('Navigating to:', url);
-    
-    router.push(url);
+      // Get the user's ID token for authentication
+      const token = await user.getIdToken();
+
+      const response = await fetch('/api/listings/relist-from-order', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          orderId: order.id,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to relist item');
+      }
+
+      toast.success('Item successfully relisted! You can find it in your active listings.');
+      
+      // Optionally redirect to the dashboard to see the new listing
+      router.push('/dashboard');
+
+    } catch (error) {
+      console.error('Error relisting item:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to relist item');
+    }
   };
 
   // Check if order is eligible for relisting (for sellers with completed refunds)
