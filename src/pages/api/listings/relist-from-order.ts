@@ -68,7 +68,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       condition: listingSnapshot.condition || 'near_mint',
       imageUrl: listingSnapshot.imageUrl || '',
       images: listingSnapshot.images || [],
-      sellerId: userId,
+      imageUrls: listingSnapshot.imageUrls || listingSnapshot.images || [],
+      userId: userId, // Use userId instead of sellerId for consistency with dashboard queries
+      username: listingSnapshot.username || 'Anonymous',
       status: 'active',
       createdAt: FieldValue.serverTimestamp(),
       updatedAt: FieldValue.serverTimestamp(),
@@ -78,6 +80,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       gradeLevel: listingSnapshot.gradeLevel || null,
       gradingCompany: listingSnapshot.gradingCompany || null,
       finalSale: listingSnapshot.finalSale || false,
+      coverImageIndex: listingSnapshot.coverImageIndex || 0,
       // Add any other fields that might be in the snapshot
       ...(listingSnapshot.cardNumber && { cardNumber: listingSnapshot.cardNumber }),
       ...(listingSnapshot.setName && { setName: listingSnapshot.setName }),
@@ -85,6 +88,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       ...(listingSnapshot.language && { language: listingSnapshot.language }),
       ...(listingSnapshot.foil && { foil: listingSnapshot.foil }),
       ...(listingSnapshot.edition && { edition: listingSnapshot.edition }),
+      ...(listingSnapshot.city && { city: listingSnapshot.city }),
+      ...(listingSnapshot.state && { state: listingSnapshot.state }),
     };
 
     // Create the new listing
