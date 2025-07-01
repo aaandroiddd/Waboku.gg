@@ -153,9 +153,11 @@ export function ListingGrid({
   // Use propListings if provided, otherwise fall back to fetched listings
   const rawListings = propListings.length > 0 ? propListings : (userId ? fetchedListings : []);
   
-  // Use our enhanced hook to filter listings for visibility
-  const { visibleListings, filteredOutReasons } = useListingVisibility(rawListings);
-  const listings = visibleListings;
+  // Use our enhanced hook to filter listings for visibility only if we're fetching listings internally
+  // If listings are passed as props (already filtered/sorted), skip additional visibility filtering
+  const shouldApplyVisibilityFilter = !propListings.length && userId;
+  const { visibleListings, filteredOutReasons } = useListingVisibility(shouldApplyVisibilityFilter ? rawListings : []);
+  const listings = shouldApplyVisibilityFilter ? visibleListings : rawListings;
   
   // Log detailed filtering reasons in development
   useEffect(() => {
