@@ -198,10 +198,10 @@ export function OrderCard({ order, isSale = false }: OrderCardProps) {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({
           orderId: safeOrder.id,
+          idToken: token,
         }),
       });
 

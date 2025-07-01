@@ -9,20 +9,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const { orderId } = req.body;
+    const { orderId, idToken } = req.body;
 
     if (!orderId) {
       return res.status(400).json({ error: 'Order ID is required' });
     }
 
-    // Get the authorization header
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    if (!idToken) {
       return res.status(401).json({ error: 'No authorization token provided' });
     }
 
-    const token = authHeader.split('Bearer ')[1];
-    const decodedToken = await verifyIdToken(token);
+    const decodedToken = await verifyIdToken(idToken);
     const userId = decodedToken.uid;
 
     const { db } = getFirebaseServices();

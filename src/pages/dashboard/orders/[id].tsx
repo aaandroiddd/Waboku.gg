@@ -531,10 +531,10 @@ export default function OrderDetailsPage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({
           orderId: order.id,
+          idToken: token,
         }),
       });
 
