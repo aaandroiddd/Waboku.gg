@@ -86,7 +86,23 @@ export default function OrderDetailsPage() {
           return;
         }
         
-        const orderData = orderDoc.data() as Omit<Order, 'id' | 'createdAt' | 'updatedAt'>;
+        const rawOrderData = orderDoc.data();
+        
+        // Map the shipping data from Firestore structure to Order interface
+        const shippingAddress = rawOrderData.shipping?.address ? {
+          name: rawOrderData.shipping.address.name || '',
+          line1: rawOrderData.shipping.address.line1 || '',
+          line2: rawOrderData.shipping.address.line2 || '',
+          city: rawOrderData.shipping.address.city || '',
+          state: rawOrderData.shipping.address.state || '',
+          postal_code: rawOrderData.shipping.address.postal_code || '',
+          country: rawOrderData.shipping.address.country || '',
+        } : rawOrderData.shippingAddress;
+
+        const orderData = {
+          ...rawOrderData,
+          shippingAddress,
+        } as Omit<Order, 'id' | 'createdAt' | 'updatedAt'>;
         
         // Check if the current user is either the buyer or seller
         if (orderData.buyerId !== user.uid && orderData.sellerId !== user.uid) {
