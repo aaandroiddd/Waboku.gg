@@ -465,7 +465,18 @@ export default async function handler(
             let shippingFromPaymentIntent = null;
             if (paymentIntentId) {
               try {
-                const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+                const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId, {
+                  expand: ['payment_method']
+                });
+                
+                console.log('[Stripe Webhook] Retrieved payment intent for new order:', {
+                  id: paymentIntent.id,
+                  hasShipping: !!paymentIntent.shipping,
+                  shippingDetails: paymentIntent.shipping ? {
+                    name: paymentIntent.shipping.name,
+                    address: paymentIntent.shipping.address
+                  } : null
+                });
                 
                 // Extract payment method details
                 if (paymentIntent.payment_method) {
@@ -491,19 +502,25 @@ export default async function handler(
                 // Extract shipping information from payment intent
                 if (paymentIntent.shipping?.address) {
                   shippingFromPaymentIntent = {
-                    name: paymentIntent.shipping.name,
-                    line1: paymentIntent.shipping.address.line1,
-                    line2: paymentIntent.shipping.address.line2,
-                    city: paymentIntent.shipping.address.city,
-                    state: paymentIntent.shipping.address.state,
-                    postal_code: paymentIntent.shipping.address.postal_code,
-                    country: paymentIntent.shipping.address.country,
+                    name: paymentIntent.shipping.name || '',
+                    line1: paymentIntent.shipping.address.line1 || '',
+                    line2: paymentIntent.shipping.address.line2 || '',
+                    city: paymentIntent.shipping.address.city || '',
+                    state: paymentIntent.shipping.address.state || '',
+                    postal_code: paymentIntent.shipping.address.postal_code || '',
+                    country: paymentIntent.shipping.address.country || '',
                   };
                   console.log('[Stripe Webhook] Retrieved shipping address from payment intent:', {
                     name: paymentIntent.shipping.name,
                     city: paymentIntent.shipping.address.city,
-                    state: paymentIntent.shipping.address.state
+                    state: paymentIntent.shipping.address.state,
+                    line1: paymentIntent.shipping.address.line1,
+                    line2: paymentIntent.shipping.address.line2,
+                    postal_code: paymentIntent.shipping.address.postal_code,
+                    country: paymentIntent.shipping.address.country
                   });
+                } else {
+                  console.log('[Stripe Webhook] No shipping address found in payment intent for new order');
                 }
               } catch (error) {
                 console.error('[Stripe Webhook] Error retrieving payment intent details for new order:', error);
@@ -528,14 +545,16 @@ export default async function handler(
               ...(offerPrice && { offerPrice }),
               // Use shipping address from payment intent (preferred) or session fallback
               shippingAddress: shippingFromPaymentIntent || (session.shipping?.address ? {
-                name: session.shipping.name,
-                line1: session.shipping.address.line1,
-                line2: session.shipping.address.line2,
-                city: session.shipping.address.city,
-                state: session.shipping.address.state,
-                postal_code: session.shipping.address.postal_code,
-                country: session.shipping.address.country,
+                name: session.shipping.name || '',
+                line1: session.shipping.address.line1 || '',
+                line2: session.shipping.address.line2 || '',
+                city: session.shipping.address.city || '',
+                state: session.shipping.address.state || '',
+                postal_code: session.shipping.address.postal_code || '',
+                country: session.shipping.address.country || '',
               } : null),
+              // Add tracking requirement flag
+              trackingRequired: true,
               // Add the listing snapshot for display in the orders page
               listingSnapshot: {
                 title: listingData.title || 'Untitled Listing',
