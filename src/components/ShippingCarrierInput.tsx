@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { MobileSelect } from '@/components/ui/mobile-select';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { AlertCircle, Package } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -73,21 +73,15 @@ export function ShippingCarrierInput({ onSubmit, isLoading = false, error = null
           
           <div className="space-y-2">
             <Label htmlFor="carrier">Shipping Carrier</Label>
-            <Select 
-              value={carrier} 
+            <MobileSelect
+              value={carrier}
               onValueChange={setCarrier}
-            >
-              <SelectTrigger id="carrier">
-                <SelectValue placeholder="Select carrier" />
-              </SelectTrigger>
-              <SelectContent>
-                {CARRIERS.map(c => (
-                  <SelectItem key={c.id} value={c.id}>
-                    {c.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              placeholder="Select carrier"
+              options={CARRIERS.map(c => ({
+                value: c.id,
+                label: c.name
+              }))}
+            />
           </div>
           
           <div className="space-y-2">

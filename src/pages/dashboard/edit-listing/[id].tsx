@@ -12,7 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { InfoIcon } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { MobileSelect } from '@/components/ui/mobile-select';
 import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from '@/components/ui/use-toast';
@@ -528,54 +528,49 @@ const EditListingPage = () => {
 
                   <div className="space-y-2">
                     <Label htmlFor="game">Game *</Label>
-                    <Select
+                    <MobileSelect
                       value={formData.game}
                       onValueChange={(value) => setFormData({ ...formData, game: value })}
-                    >
-                      <SelectTrigger className={errors.game ? "border-red-500" : ""}>
-                        <SelectValue placeholder="Select game" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="accessories">Accessories</SelectItem>
-                        <SelectItem value="dbs">Dragon Ball Super Card Game</SelectItem>
-                        <SelectItem value="digimon">Digimon</SelectItem>
-                        <SelectItem value="lorcana">Disney Lorcana</SelectItem>
-                        <SelectItem value="flesh-and-blood">Flesh and Blood</SelectItem>
-                        <SelectItem value="mtg">Magic: The Gathering</SelectItem>
-                        <SelectItem value="onepiece">One Piece Card Game</SelectItem>
-                        <SelectItem value="pokemon">Pokemon</SelectItem>
-                        <SelectItem value="star-wars">Star Wars: Unlimited</SelectItem>
-                        <SelectItem value="union-arena">Union Arena</SelectItem>
-                        <SelectItem value="universus">Universus</SelectItem>
-                        <SelectItem value="vanguard">Vanguard</SelectItem>
-                        <SelectItem value="weiss">Weiss Schwarz</SelectItem>
-                        <SelectItem value="yugioh">Yu-Gi-Oh!</SelectItem>
-                        <SelectItem value="other">Other</SelectItem>
-                      </SelectContent>
-                    </Select>
+                      placeholder="Select game"
+                      className={errors.game ? "border-red-500" : ""}
+                      options={[
+                        { value: "accessories", label: "Accessories" },
+                        { value: "dbs", label: "Dragon Ball Super Card Game" },
+                        { value: "digimon", label: "Digimon" },
+                        { value: "lorcana", label: "Disney Lorcana" },
+                        { value: "flesh-and-blood", label: "Flesh and Blood" },
+                        { value: "mtg", label: "Magic: The Gathering" },
+                        { value: "onepiece", label: "One Piece Card Game" },
+                        { value: "pokemon", label: "Pokemon" },
+                        { value: "star-wars", label: "Star Wars: Unlimited" },
+                        { value: "union-arena", label: "Union Arena" },
+                        { value: "universus", label: "Universus" },
+                        { value: "vanguard", label: "Vanguard" },
+                        { value: "weiss", label: "Weiss Schwarz" },
+                        { value: "yugioh", label: "Yu-Gi-Oh!" },
+                        { value: "other", label: "Other" }
+                      ]}
+                    />
                     {errors.game && <p className="text-sm text-red-500">{errors.game}</p>}
                   </div>
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="condition">Condition *</Label>
-                  <Select
+                  <MobileSelect
                     value={formData.condition}
                     onValueChange={(value) => setFormData({ ...formData, condition: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select condition" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="mint">Mint</SelectItem>
-                      <SelectItem value="near mint">Near Mint</SelectItem>
-                      <SelectItem value="excellent">Excellent</SelectItem>
-                      <SelectItem value="good">Good</SelectItem>
-                      <SelectItem value="light played">Light Played</SelectItem>
-                      <SelectItem value="played">Played</SelectItem>
-                      <SelectItem value="poor">Poor</SelectItem>
-                    </SelectContent>
-                  </Select>
+                    placeholder="Select condition"
+                    options={[
+                      { value: "mint", label: "Mint" },
+                      { value: "near mint", label: "Near Mint" },
+                      { value: "excellent", label: "Excellent" },
+                      { value: "good", label: "Good" },
+                      { value: "light played", label: "Light Played" },
+                      { value: "played", label: "Played" },
+                      { value: "poor", label: "Poor" }
+                    ]}
+                  />
                 </div>
 
                 <div className="space-y-4">
@@ -606,39 +601,30 @@ const EditListingPage = () => {
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label htmlFor="gradeLevel">Grade Level</Label>
-                        <Select
-                          value={formData.gradeLevel?.toString()}
+                        <MobileSelect
+                          value={formData.gradeLevel?.toString() || ""}
                           onValueChange={(value) => setFormData({ ...formData, gradeLevel: parseFloat(value) })}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select grade" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {[10, 9.5, 9, 8.5, 8, 7.5, 7, 6.5, 6, 5.5, 5].map((grade) => (
-                              <SelectItem key={grade} value={grade.toString()}>
-                                {grade.toFixed(1)}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                          placeholder="Select grade"
+                          options={[10, 9.5, 9, 8.5, 8, 7.5, 7, 6.5, 6, 5.5, 5].map((grade) => ({
+                            value: grade.toString(),
+                            label: grade.toFixed(1)
+                          }))}
+                        />
                       </div>
 
                       <div className="space-y-2">
                         <Label htmlFor="gradingCompany">Grading Company</Label>
-                        <Select
-                          value={formData.gradingCompany}
+                        <MobileSelect
+                          value={formData.gradingCompany || ""}
                           onValueChange={(value) => setFormData({ ...formData, gradingCompany: value })}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select company" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="PSA">PSA</SelectItem>
-                            <SelectItem value="BGS">BGS</SelectItem>
-                            <SelectItem value="CGC">CGC</SelectItem>
-                            <SelectItem value="other">Other</SelectItem>
-                          </SelectContent>
-                        </Select>
+                          placeholder="Select company"
+                          options={[
+                            { value: "PSA", label: "PSA" },
+                            { value: "BGS", label: "BGS" },
+                            { value: "CGC", label: "CGC" },
+                            { value: "other", label: "Other" }
+                          ]}
+                        />
                       </div>
                     </div>
                   )}

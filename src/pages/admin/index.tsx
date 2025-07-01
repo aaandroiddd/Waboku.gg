@@ -13,13 +13,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { MobileSelect } from "@/components/ui/mobile-select";
 import { Footer } from '@/components/Footer';
 import { WantedPostsDebugger } from '@/components/dashboard/WantedPostsDebugger';
 import { WebhookFixTrigger } from '@/components/WebhookFixTrigger';
@@ -347,15 +341,15 @@ export default function AdminDashboard() {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="tier">Account Tier</Label>
-                    <Select value={selectedTier} onValueChange={setSelectedTier}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select tier" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="free">Free</SelectItem>
-                        <SelectItem value="premium">Premium</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <MobileSelect
+                      value={selectedTier}
+                      onValueChange={setSelectedTier}
+                      placeholder="Select tier"
+                      options={[
+                        { value: "free", label: "Free" },
+                        { value: "premium", label: "Premium" }
+                      ]}
+                    />
                   </div>
                   <Button 
                     onClick={handleUpdateUserTier}
