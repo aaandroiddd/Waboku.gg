@@ -34,6 +34,7 @@ import { LoadingAnimation } from '@/components/LoadingAnimation';
 import { Skeleton } from '@/components/ui/skeleton';
 import { EmptyStateCard } from '@/components/EmptyStateCard';
 import { ArchivedListings } from '@/components/ArchivedListings';
+import { MultiSelectListings } from '@/components/MultiSelectListings';
 import { FirebaseConnectionHandler } from '@/components/FirebaseConnectionHandler';
 import { useLoading } from '@/hooks/useLoading';
 import { ViewCounter } from '@/components/ViewCounter';
@@ -615,6 +616,136 @@ const DashboardComponent = () => {
     }
   };
 
+  // Bulk action handlers
+  const handleBulkArchive = async (listingIds: string[]) => {
+    try {
+      const now = new Date();
+      
+      // Process each listing
+      for (const listingId of listingIds) {
+        await updateListingStatus(listingId, 'archived');
+      }
+      
+      // Update local state for all archived listings
+      setListings(prevListings => 
+        prevListings.map(listing => 
+          listingIds.includes(listing.id)
+            ? { 
+                ...listing, 
+                status: 'archived',
+                archivedAt: now,
+                previousStatus: listing.status,
+                previousExpiresAt: listing.expiresAt,
+                expiresAt: (() => {
+                  const archiveExpiration = new Date(now);
+                  archiveExpiration.setDate(archiveExpiration.getDate() + 7);
+                  return archiveExpiration;
+                })()
+              } 
+            : listing
+        )
+      );
+      
+      // Clear cache and refresh
+      if (user) {
+        try {
+          const userListingsCacheKey = `listings_${user.uid}_all_none`;
+          const activeListingsCacheKey = `listings_${user.uid}_active_none`;
+          localStorage.removeItem(userListingsCacheKey);
+          localStorage.removeItem(activeListingsCacheKey);
+        } catch (cacheError) {
+          console.error('Error clearing listings cache:', cacheError);
+        }
+      }
+      
+      refreshListings();
+    } catch (err: any) {
+      console.error('Error bulk archiving listings:', err);
+      throw err;
+    }
+  };
+
+  const handleBulkDelete = async (listingIds: string[]) => {
+    try {
+      // Process each listing for permanent deletion
+      for (const listingId of listingIds) {
+        await permanentlyDeleteListing(listingId);
+      }
+      
+      // Update local state to remove deleted listings
+      setListings(prevListings => 
+        prevListings.filter(listing => !listingIds.includes(listing.id))
+      );
+      
+      // Clear cache and refresh
+      if (user) {
+        try {
+          const userListingsCacheKey = `listings_${user.uid}_all_none`;
+          const activeListingsCacheKey = `listings_${user.uid}_active_none`;
+          localStorage.removeItem(userListingsCacheKey);
+          localStorage.removeItem(activeListingsCacheKey);
+        } catch (cacheError) {
+          console.error('Error clearing listings cache:', cacheError);
+        }
+      }
+      
+      refreshListings();
+    } catch (err: any) {
+      console.error('Error bulk deleting listings:', err);
+      throw err;
+    }
+  };
+
+  const handleBulkRestore = async (listingIds: string[]) => {
+    try {
+      // Process each listing for restoration
+      for (const listingId of listingIds) {
+        await updateListingStatus(listingId, 'active');
+      }
+      
+      // Update local state for all restored listings
+      setListings(prevListings => 
+        prevListings.map(listing => 
+          listingIds.includes(listing.id)
+            ? { 
+                ...listing, 
+                status: 'active',
+                archivedAt: null,
+                createdAt: new Date(),
+                expiresAt: (() => {
+                  const now = new Date();
+                  const tierDuration = (profile?.tier === 'premium' ? 720 : 48);
+                  const expirationTime = new Date(now);
+                  expirationTime.setHours(expirationTime.getHours() + tierDuration);
+                  return expirationTime;
+                })(),
+                originalCreatedAt: null,
+                previousStatus: null,
+                previousExpiresAt: null
+              } 
+            : listing
+        )
+      );
+      
+      // Clear cache and refresh
+      if (user) {
+        try {
+          const userListingsCacheKey = `listings_${user.uid}_all_none`;
+          const activeListingsCacheKey = `listings_${user.uid}_active_none`;
+          localStorage.removeItem(userListingsCacheKey);
+          localStorage.removeItem(activeListingsCacheKey);
+        } catch (cacheError) {
+          console.error('Error clearing listings cache:', cacheError);
+        }
+      }
+      
+      refreshListings();
+    } catch (err: any) {
+      console.error('Error bulk restoring listings:', err);
+      throw err;
+    }
+  };
+
   const handleMessage = (listingId: string) => {
     router.push('/dashboard/messages?listing=' + listingId);
   };
@@ -921,127 +1052,19 @@ const DashboardComponent = () => {
               <LoadingAnimation size="80" color="currentColor" className="text-primary" />
               <p className="mt-4 text-muted-foreground">Refreshing your listings...</p>
             </div>
-          ) : viewMode === 'list' ? (
-            <ListingList
+          ) : (
+            <MultiSelectListings
               listings={activeListings}
+              type="active"
+              accountTier={profile?.tier || 'free'}
               onEdit={handleEditListing}
               onDelete={handleDeleteListing}
               onMessage={handleMessage}
               onView={handleViewListing}
               onShare={handleShare}
+              onBulkArchive={handleBulkArchive}
+              onBulkDelete={handleBulkDelete}
             />
-          ) : activeListings.length === 0 ? (
-            <Card className="p-6 text-center">
-              <h3 className="text-lg font-medium mb-2">No active listings</h3>
-              <p className="text-muted-foreground mb-4">
-                Active listings are cards or items you're currently selling. They'll appear here for other users to find and purchase.
-              </p>
-              <p className="text-sm text-muted-foreground">
-                To create a new listing, click the "Create Listing" button in the sidebar.
-              </p>
-            </Card>
-          ) : (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {activeListings.map((listing) => (
-                <Card key={listing.id} className="relative group cursor-pointer hover:shadow-lg transition-shadow">
-                  <div 
-                    className="absolute inset-0"
-                    onClick={() => handleViewListing(listing.id)}
-                  ></div>
-                  <CardHeader>
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <CardTitle>{listing.title}</CardTitle>
-                        <CardDescription>{listing.game}</CardDescription>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="relative z-10"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleShare(listing.id);
-                        }}
-                      >
-                        <Share2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2">
-                      <div className="flex justify-between items-center">
-                        <Badge className={getConditionColor(listing.condition)}>
-                          {listing.condition}
-                        </Badge>
-                        <span className="font-bold">${listing.price.toFixed(2)}</span>
-                      </div>
-                      {profile?.tier === 'premium' && (
-                        <div className="flex justify-end mt-1">
-                          <ViewCounter viewCount={listing.viewCount || 0} />
-                        </div>
-                      )}
-                      <div className="flex justify-between items-center text-sm text-muted-foreground">
-                        <span>Listed on {new Date(listing.createdAt).toLocaleDateString()}</span>
-                      </div>
-                      <div className="mt-2">
-                        <ListingTimer
-                          createdAt={listing.createdAt}
-                          accountTier={profile?.tier || 'free'}
-                          status={listing.status}
-                        />
-                      </div>
-                      <div className="flex flex-wrap gap-2 mt-4 relative z-10">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleEditListing(listing.id);
-                          }}
-                        >
-                          <Edit2 className="h-4 w-4 mr-1" />
-                          Edit
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="text-red-500 hover:text-red-600"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDeleteListing(listing.id);
-                          }}
-                        >
-                          <Trash2 className="h-4 w-4 mr-1" />
-                          Archive
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleMessage(listing.id);
-                          }}
-                        >
-                          <MessageCircle className="h-4 w-4 mr-1" />
-                          Messages
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleViewListing(listing.id);
-                          }}
-                        >
-                          <ExternalLink className="h-4 w-4 mr-1" />
-                          View
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
           )}
         </TabsContent>
 
@@ -1052,10 +1075,11 @@ const DashboardComponent = () => {
               <p className="mt-4 text-muted-foreground">Refreshing your archived listings...</p>
             </div>
           ) : (
-            <ArchivedListings
+            <MultiSelectListings
               listings={archivedListings}
+              type="archived"
               accountTier={profile?.tier || 'free'}
-              onRestore={handleRestoreListing}
+              onEdit={handleEditListing}
               onDelete={(listingId) => {
                 setDialogState({
                   isOpen: true,
@@ -1063,7 +1087,12 @@ const DashboardComponent = () => {
                   mode: 'permanent'
                 });
               }}
+              onMessage={handleMessage}
               onView={handleViewListing}
+              onShare={handleShare}
+              onRestore={handleRestoreListing}
+              onBulkDelete={handleBulkDelete}
+              onBulkRestore={handleBulkRestore}
             />
           )}
         </TabsContent>
