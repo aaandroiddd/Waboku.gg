@@ -49,7 +49,19 @@ export function MobileSelect({
       // Check touch capability
       const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
       
-      return isMobileUserAgent || (isSmallScreen && isTouchDevice);
+      const result = isMobileUserAgent || (isSmallScreen && isTouchDevice);
+      
+      // Debug logging
+      console.log('MobileSelect detection:', {
+        userAgent,
+        isMobileUserAgent,
+        isSmallScreen,
+        isTouchDevice,
+        windowWidth: window.innerWidth,
+        result
+      });
+      
+      return result;
     };
 
     setIsMobile(checkMobile());
