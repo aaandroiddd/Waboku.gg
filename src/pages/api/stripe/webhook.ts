@@ -89,6 +89,16 @@ export default async function handler(
       case 'checkout.session.completed': {
         const session = event.data.object as Stripe.Checkout.Session;
         
+        console.log('[Stripe Webhook] Checkout session completed:', {
+          sessionId: session.id,
+          hasShipping: !!session.shipping,
+          shippingData: session.shipping ? {
+            name: session.shipping.name,
+            address: session.shipping.address
+          } : null,
+          metadata: session.metadata
+        });
+        
         // Handle subscription checkout
         if (session.metadata?.userId) {
           const userId = session.metadata.userId;
@@ -492,7 +502,11 @@ export default async function handler(
               hasShippingAddress: !!orderData.shippingAddress,
               shippingName: orderData.shippingAddress?.name,
               shippingCity: orderData.shippingAddress?.city,
-              shippingState: orderData.shippingAddress?.state
+              shippingState: orderData.shippingAddress?.state,
+              sessionShippingData: session.shipping ? {
+                name: session.shipping.name,
+                address: session.shipping.address
+              } : 'No shipping data in session'
             });
 
             // Create the order in Firestore
