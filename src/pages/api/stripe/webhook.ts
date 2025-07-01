@@ -237,11 +237,14 @@ export default async function handler(
               });
               
               try {
-                // Get payment method details if available
+                // Get payment method details and shipping information from payment intent
                 let paymentMethod = null;
+                let shippingFromPaymentIntent = null;
                 if (paymentIntentId) {
                   try {
                     const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+                    
+                    // Extract payment method details
                     if (paymentIntent.payment_method) {
                       const paymentMethodDetails = await stripe.paymentMethods.retrieve(
                         paymentIntent.payment_method as string
@@ -261,8 +264,26 @@ export default async function handler(
                         });
                       }
                     }
+
+                    // Extract shipping information from payment intent
+                    if (paymentIntent.shipping?.address) {
+                      shippingFromPaymentIntent = {
+                        name: paymentIntent.shipping.name,
+                        line1: paymentIntent.shipping.address.line1,
+                        line2: paymentIntent.shipping.address.line2,
+                        city: paymentIntent.shipping.address.city,
+                        state: paymentIntent.shipping.address.state,
+                        postal_code: paymentIntent.shipping.address.postal_code,
+                        country: paymentIntent.shipping.address.country,
+                      };
+                      console.log('[Stripe Webhook] Retrieved shipping address from payment intent for pending order:', {
+                        name: paymentIntent.shipping.name,
+                        city: paymentIntent.shipping.address.city,
+                        state: paymentIntent.shipping.address.state
+                      });
+                    }
                   } catch (error) {
-                    console.error('[Stripe Webhook] Error retrieving payment method for pending order:', error);
+                    console.error('[Stripe Webhook] Error retrieving payment intent details for pending order:', error);
                   }
                 }
                 
@@ -281,8 +302,15 @@ export default async function handler(
                   updateData.paymentMethod = paymentMethod;
                 }
 
-                // Add shipping address from Stripe checkout if available
-                if (session.shipping?.address) {
+                // Add shipping address from payment intent (preferred) or session fallback
+                if (shippingFromPaymentIntent) {
+                  updateData.shippingAddress = shippingFromPaymentIntent;
+                  console.log('[Stripe Webhook] Adding shipping address from payment intent to pending order:', {
+                    name: shippingFromPaymentIntent.name,
+                    city: shippingFromPaymentIntent.city,
+                    state: shippingFromPaymentIntent.state
+                  });
+                } else if (session.shipping?.address) {
                   updateData.shippingAddress = {
                     name: session.shipping.name,
                     line1: session.shipping.address.line1,
@@ -292,7 +320,7 @@ export default async function handler(
                     postal_code: session.shipping.address.postal_code,
                     country: session.shipping.address.country,
                   };
-                  console.log('[Stripe Webhook] Adding shipping address to pending order:', {
+                  console.log('[Stripe Webhook] Adding shipping address from session to pending order:', {
                     name: session.shipping.name,
                     city: session.shipping.address.city,
                     state: session.shipping.address.state
@@ -432,11 +460,14 @@ export default async function handler(
               }
             }
 
-            // Get payment method details if available
+            // Get payment method details and shipping information from payment intent
             let paymentMethod = null;
+            let shippingFromPaymentIntent = null;
             if (paymentIntentId) {
               try {
                 const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+                
+                // Extract payment method details
                 if (paymentIntent.payment_method) {
                   const paymentMethodDetails = await stripe.paymentMethods.retrieve(
                     paymentIntent.payment_method as string
@@ -456,8 +487,26 @@ export default async function handler(
                     });
                   }
                 }
+
+                // Extract shipping information from payment intent
+                if (paymentIntent.shipping?.address) {
+                  shippingFromPaymentIntent = {
+                    name: paymentIntent.shipping.name,
+                    line1: paymentIntent.shipping.address.line1,
+                    line2: paymentIntent.shipping.address.line2,
+                    city: paymentIntent.shipping.address.city,
+                    state: paymentIntent.shipping.address.state,
+                    postal_code: paymentIntent.shipping.address.postal_code,
+                    country: paymentIntent.shipping.address.country,
+                  };
+                  console.log('[Stripe Webhook] Retrieved shipping address from payment intent:', {
+                    name: paymentIntent.shipping.name,
+                    city: paymentIntent.shipping.address.city,
+                    state: paymentIntent.shipping.address.state
+                  });
+                }
               } catch (error) {
-                console.error('[Stripe Webhook] Error retrieving payment method for new order:', error);
+                console.error('[Stripe Webhook] Error retrieving payment intent details for new order:', error);
               }
             }
             
@@ -477,8 +526,8 @@ export default async function handler(
               updatedAt: new Date(),
               // Include offer price if available
               ...(offerPrice && { offerPrice }),
-              // Always include shipping address from Stripe checkout for Buy Now orders
-              shippingAddress: session.shipping?.address ? {
+              // Use shipping address from payment intent (preferred) or session fallback
+              shippingAddress: shippingFromPaymentIntent || (session.shipping?.address ? {
                 name: session.shipping.name,
                 line1: session.shipping.address.line1,
                 line2: session.shipping.address.line2,
@@ -486,7 +535,7 @@ export default async function handler(
                 state: session.shipping.address.state,
                 postal_code: session.shipping.address.postal_code,
                 country: session.shipping.address.country,
-              } : null,
+              } : null),
               // Add the listing snapshot for display in the orders page
               listingSnapshot: {
                 title: listingData.title || 'Untitled Listing',
@@ -503,10 +552,12 @@ export default async function handler(
               shippingName: orderData.shippingAddress?.name,
               shippingCity: orderData.shippingAddress?.city,
               shippingState: orderData.shippingAddress?.state,
+              shippingSource: shippingFromPaymentIntent ? 'payment_intent' : (session.shipping ? 'session' : 'none'),
               sessionShippingData: session.shipping ? {
                 name: session.shipping.name,
                 address: session.shipping.address
-              } : 'No shipping data in session'
+              } : 'No shipping data in session',
+              paymentIntentShippingData: shippingFromPaymentIntent ? 'Present' : 'Missing'
             });
 
             // Create the order in Firestore
