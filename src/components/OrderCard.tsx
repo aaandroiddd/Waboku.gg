@@ -494,8 +494,8 @@ export function OrderCard({ order, isSale = false }: OrderCardProps) {
               </Button>
             )}
 
-            {/* Relist Item Button - Only visible for buyers with completed refunds */}
-            {!isSale && safeOrder.refundStatus === 'completed' && (
+            {/* Relist Item Button - Only visible for sellers with completed refunds */}
+            {isSale && safeOrder.refundStatus === 'completed' && (
               <Button 
                 variant="outline" 
                 className="border-green-600 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 w-full md:w-auto"

@@ -537,18 +537,18 @@ export default function OrderDetailsPage() {
     router.push(`/dashboard/create-listing?${params.toString()}`);
   };
 
-  // Check if order is eligible for relisting (for buyers with completed refunds)
+  // Check if order is eligible for relisting (for sellers with completed refunds)
   const isRelistEligible = () => {
     console.log('Relist eligibility check:', {
       isUserBuyer,
       refundStatus: order.refundStatus,
       orderStatus: order.status,
-      buyerId: order.buyerId,
+      sellerId: order.sellerId,
       currentUserId: user?.uid,
-      eligible: isUserBuyer && order.refundStatus === 'completed'
+      eligible: !isUserBuyer && order.refundStatus === 'completed'
     });
     
-    if (!isUserBuyer) return false; // Only buyers can relist
+    if (isUserBuyer) return false; // Only sellers can relist
     
     // Check if refund was completed successfully
     if (order.refundStatus !== 'completed') return false;
