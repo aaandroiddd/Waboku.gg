@@ -463,6 +463,32 @@ export default async function handler(
             // Get payment method details and shipping information from payment intent
             let paymentMethod = null;
             let shippingFromPaymentIntent = null;
+            let shippingFromSession = null;
+            
+            // First, try to get shipping from the session directly (this is more reliable for checkout sessions)
+            if (session.shipping?.address) {
+              shippingFromSession = {
+                name: session.shipping.name || '',
+                line1: session.shipping.address.line1 || '',
+                line2: session.shipping.address.line2 || '',
+                city: session.shipping.address.city || '',
+                state: session.shipping.address.state || '',
+                postal_code: session.shipping.address.postal_code || '',
+                country: session.shipping.address.country || '',
+              };
+              console.log('[Stripe Webhook] Retrieved shipping address from session:', {
+                name: session.shipping.name,
+                city: session.shipping.address.city,
+                state: session.shipping.address.state,
+                line1: session.shipping.address.line1,
+                line2: session.shipping.address.line2,
+                postal_code: session.shipping.address.postal_code,
+                country: session.shipping.address.country
+              });
+            } else {
+              console.log('[Stripe Webhook] No shipping address found in session for new order');
+            }
+            
             if (paymentIntentId) {
               try {
                 const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId, {
@@ -499,7 +525,7 @@ export default async function handler(
                   }
                 }
 
-                // Extract shipping information from payment intent
+                // Extract shipping information from payment intent (as backup)
                 if (paymentIntent.shipping?.address) {
                   shippingFromPaymentIntent = {
                     name: paymentIntent.shipping.name || '',
@@ -543,16 +569,8 @@ export default async function handler(
               updatedAt: new Date(),
               // Include offer price if available
               ...(offerPrice && { offerPrice }),
-              // Use shipping address from payment intent (preferred) or session fallback
-              shippingAddress: shippingFromPaymentIntent || (session.shipping?.address ? {
-                name: session.shipping.name || '',
-                line1: session.shipping.address.line1 || '',
-                line2: session.shipping.address.line2 || '',
-                city: session.shipping.address.city || '',
-                state: session.shipping.address.state || '',
-                postal_code: session.shipping.address.postal_code || '',
-                country: session.shipping.address.country || '',
-              } : null),
+              // Use shipping address from session (preferred for checkout sessions) or payment intent fallback
+              shippingAddress: shippingFromSession || shippingFromPaymentIntent,
               // Add tracking requirement flag
               trackingRequired: true,
               // Add the listing snapshot for display in the orders page
