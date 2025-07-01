@@ -266,10 +266,11 @@ export default function ListingsPage() {
     if (searchQuery.trim()) {
       updateSearchSession(searchQuery.trim(), filtered.length);
     }
-  }, [allListings, searchQuery, selectedState, selectedGame, selectedCondition, priceRange, showGradedOnly, sortBy, updateSearchSession]);
+  }, [allListings, searchQuery, selectedState, selectedGame, selectedCondition, priceRange, showGradedOnly, sortBy, latitude, longitude, updateSearchSession]);
 
   // Function to sort listings based on selected criteria
   const sortListings = (listings: Listing[], sortBy: string) => {
+    console.log(`Sorting ${listings.length} listings by: ${sortBy}`);
     const sorted = [...listings];
     
     switch (sortBy) {
