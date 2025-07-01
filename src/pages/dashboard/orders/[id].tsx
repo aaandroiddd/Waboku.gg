@@ -539,6 +539,15 @@ export default function OrderDetailsPage() {
 
   // Check if order is eligible for relisting (for buyers with completed refunds)
   const isRelistEligible = () => {
+    console.log('Relist eligibility check:', {
+      isUserBuyer,
+      refundStatus: order.refundStatus,
+      orderStatus: order.status,
+      buyerId: order.buyerId,
+      currentUserId: user?.uid,
+      eligible: isUserBuyer && order.refundStatus === 'completed'
+    });
+    
     if (!isUserBuyer) return false; // Only buyers can relist
     
     // Check if refund was completed successfully
