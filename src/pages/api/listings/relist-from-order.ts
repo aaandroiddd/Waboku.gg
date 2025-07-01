@@ -1,7 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { getFirebaseServices } from '@/lib/firebase';
-import { doc, getDoc, addDoc, collection, serverTimestamp } from 'firebase/firestore';
-import { verifyIdToken } from '@/lib/firebase-admin';
+import { getFirebaseAdmin, verifyIdToken } from '@/lib/firebase-admin';
+import { FieldValue } from 'firebase-admin/firestore';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -33,12 +32,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     console.log('Relist API: Token verified successfully for user:', decodedToken.uid);
     const userId = decodedToken.uid;
 
-    const { db } = getFirebaseServices();
+    const { db } = getFirebaseAdmin();
 
     // Get the order to verify ownership and get listing data
-    const orderDoc = await getDoc(doc(db, 'orders', orderId));
+    const orderDoc = await db.collection('orders').doc(orderId).get();
     
-    if (!orderDoc.exists()) {
+    if (!orderDoc.exists) {
       return res.status(404).json({ error: 'Order not found' });
     }
 
@@ -71,8 +70,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       images: listingSnapshot.images || [],
       sellerId: userId,
       status: 'active',
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
+      createdAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
       views: 0,
       favorites: 0,
       isGraded: listingSnapshot.isGraded || false,
@@ -89,7 +88,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     };
 
     // Create the new listing
-    const newListingRef = await addDoc(collection(db, 'listings'), newListingData);
+    const newListingRef = await db.collection('listings').add(newListingData);
 
     console.log(`Successfully relisted item from order ${orderId} as new listing ${newListingRef.id}`);
 
