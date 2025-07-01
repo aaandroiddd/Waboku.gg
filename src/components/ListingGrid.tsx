@@ -144,13 +144,14 @@ export function ListingGrid({
 }: ListingGridProps) {
   // Don't automatically request location
   const location = { latitude: null, longitude: null };
-  // Only use useListings if no listings are provided and userId is provided
+  // Only use useListings if no listings are provided via props
   const { listings: fetchedListings, isLoading } = useListings({ 
     userId, 
     showOnlyActive: true 
   });
   
-  const rawListings = userId ? (propListings.length > 0 ? propListings : fetchedListings) : propListings;
+  // Use propListings if provided, otherwise fall back to fetched listings
+  const rawListings = propListings.length > 0 ? propListings : (userId ? fetchedListings : []);
   
   // Use our enhanced hook to filter listings for visibility
   const { visibleListings, filteredOutReasons } = useListingVisibility(rawListings);
@@ -163,7 +164,7 @@ export function ListingGrid({
     }
   }, [filteredOutReasons]);
   
-  const loading = propLoading || (userId ? isLoading : false);
+  const loading = propLoading || (propListings.length === 0 && userId ? isLoading : false);
   
   const { toggleFavorite, isFavorite } = useFavorites();
   const { user } = useAuth();
