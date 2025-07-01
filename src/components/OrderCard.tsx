@@ -186,25 +186,40 @@ export function OrderCard({ order, isSale = false }: OrderCardProps) {
     console.log('Relisting item with data:', safeOrder.listingSnapshot);
 
     // Create URL with pre-filled data from the original listing
-    const params = new URLSearchParams({
-      relist: 'true',
-      title: safeOrder.listingSnapshot.title || '',
-      price: safeOrder.listingSnapshot.price?.toString() || '',
-      game: safeOrder.listingSnapshot.game || '',
-      condition: safeOrder.listingSnapshot.condition || '',
-      description: safeOrder.listingSnapshot.description || '',
-      ...(safeOrder.listingSnapshot.isGraded && {
-        isGraded: 'true',
-        gradeLevel: safeOrder.listingSnapshot.gradeLevel?.toString() || '',
-        gradingCompany: safeOrder.listingSnapshot.gradingCompany || ''
-      }),
-      ...(safeOrder.listingSnapshot.finalSale && {
-        finalSale: 'true'
-      })
-    });
+    const params = new URLSearchParams();
+    params.set('relist', 'true');
+    
+    if (safeOrder.listingSnapshot.title) {
+      params.set('title', safeOrder.listingSnapshot.title);
+    }
+    if (safeOrder.listingSnapshot.price !== undefined) {
+      params.set('price', safeOrder.listingSnapshot.price.toString());
+    }
+    if (safeOrder.listingSnapshot.game) {
+      params.set('game', safeOrder.listingSnapshot.game);
+    }
+    if (safeOrder.listingSnapshot.condition) {
+      params.set('condition', safeOrder.listingSnapshot.condition);
+    }
+    if (safeOrder.listingSnapshot.description) {
+      params.set('description', safeOrder.listingSnapshot.description);
+    }
+    if (safeOrder.listingSnapshot.isGraded) {
+      params.set('isGraded', 'true');
+      if (safeOrder.listingSnapshot.gradeLevel !== undefined) {
+        params.set('gradeLevel', safeOrder.listingSnapshot.gradeLevel.toString());
+      }
+      if (safeOrder.listingSnapshot.gradingCompany) {
+        params.set('gradingCompany', safeOrder.listingSnapshot.gradingCompany);
+      }
+    }
+    if (safeOrder.listingSnapshot.finalSale) {
+      params.set('finalSale', 'true');
+    }
 
     const url = `/dashboard/create-listing?${params.toString()}`;
     console.log('Navigating to:', url);
+    console.log('URL parameters:', Object.fromEntries(params.entries()));
     
     router.push(url);
   };

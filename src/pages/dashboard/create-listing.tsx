@@ -293,8 +293,9 @@ const CreateListingPage = () => {
         finalSale
       });
 
-      setFormData(prev => ({
-        ...prev,
+      // Pre-fill the form with the relist data
+      const newFormData = {
+        ...formData,
         title: (title as string) || '',
         price: (price as string) || '',
         game: (game as string) || '',
@@ -304,7 +305,10 @@ const CreateListingPage = () => {
         gradeLevel: gradeLevel ? parseFloat(gradeLevel as string) : undefined,
         gradingCompany: (gradingCompany as string) || undefined,
         finalSale: finalSale === 'true'
-      }));
+      };
+
+      console.log('Setting form data to:', newFormData);
+      setFormData(newFormData);
 
       // Show a toast to inform the user
       toast({
@@ -312,13 +316,15 @@ const CreateListingPage = () => {
         description: "Your listing has been pre-filled with information from your refunded order. You can modify any details before creating the new listing.",
       });
 
-      // Clean up the URL to remove the relist parameters after a short delay
+      // Clean up the URL to remove the relist parameters without affecting the form
+      // Use a longer delay to ensure form data is set first
       setTimeout(() => {
         const cleanUrl = router.asPath.split('?')[0];
+        console.log('Cleaning URL from', router.asPath, 'to', cleanUrl);
         router.replace(cleanUrl, undefined, { shallow: true });
-      }, 100);
+      }, 1000);
     }
-  }, [router.isReady, router.query, toast, router]);
+  }, [router.isReady, router.query, toast]);
 
   if (loading || !user) {
     return null;
