@@ -112,8 +112,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     console.log(`Successfully updated offer ${offerId} status to ${status}`);
     
-    // Send email notifications for accepted/declined offers
-    if (status === 'accepted' || status === 'declined') {
+    // Send notifications and emails for status changes
+    if (status === 'accepted' || status === 'declined' || status === 'countered') {
       try {
         // Get buyer and seller information
         const buyerData = await getAuth(admin).getUser(offerData.buyerId);
@@ -122,6 +122,38 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://waboku.gg';
         
         if (status === 'accepted') {
+          // Create notification for buyer
+          try {
+            console.log('Creating offer accepted notification for buyer:', offerData.buyerId);
+            const notificationResponse = await fetch(`${baseUrl}/api/notifications/create`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                userId: offerData.buyerId,
+                type: 'offer_accepted',
+                title: '✅ Offer Accepted!',
+                message: `${sellerData.displayName || 'The seller'} accepted your $${offerData.amount.toFixed(2)} offer on "${offerData.listingSnapshot?.title || 'Unknown Item'}"`,
+                data: {
+                  offerId: offerId,
+                  listingId: offerData.listingId,
+                  actionUrl: `/dashboard/orders`
+                }
+              })
+            });
+            
+            if (notificationResponse.ok) {
+              const result = await notificationResponse.json();
+              console.log('Offer accepted notification created successfully:', result.notificationId);
+            } else {
+              const errorData = await notificationResponse.json();
+              console.error('Failed to create offer accepted notification:', errorData);
+            }
+          } catch (notificationError) {
+            console.error('Error creating offer accepted notification:', notificationError);
+          }
+
           // Send offer accepted email to buyer
           await emailService.sendOfferAcceptedEmail({
             userName: buyerData.displayName || 'User',
@@ -133,6 +165,38 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           });
           console.log('Offer accepted email sent to buyer:', buyerData.email);
         } else if (status === 'declined') {
+          // Create notification for buyer
+          try {
+            console.log('Creating offer declined notification for buyer:', offerData.buyerId);
+            const notificationResponse = await fetch(`${baseUrl}/api/notifications/create`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                userId: offerData.buyerId,
+                type: 'offer_declined',
+                title: '❌ Offer Declined',
+                message: `${sellerData.displayName || 'The seller'} declined your $${offerData.amount.toFixed(2)} offer on "${offerData.listingSnapshot?.title || 'Unknown Item'}"`,
+                data: {
+                  offerId: offerId,
+                  listingId: offerData.listingId,
+                  actionUrl: `/dashboard/offers`
+                }
+              })
+            });
+            
+            if (notificationResponse.ok) {
+              const result = await notificationResponse.json();
+              console.log('Offer declined notification created successfully:', result.notificationId);
+            } else {
+              const errorData = await notificationResponse.json();
+              console.error('Failed to create offer declined notification:', errorData);
+            }
+          } catch (notificationError) {
+            console.error('Error creating offer declined notification:', notificationError);
+          }
+
           // Send offer declined email to buyer
           await emailService.sendOfferDeclinedEmail({
             userName: buyerData.displayName || 'User',
@@ -143,6 +207,52 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             actionUrl: `${baseUrl}/listings`
           });
           console.log('Offer declined email sent to buyer:', buyerData.email);
+        } else if (status === 'countered') {
+          // Create notification for buyer
+          try {
+            console.log('Creating counter offer notification for buyer:', offerData.buyerId);
+            const notificationResponse = await fetch(`${baseUrl}/api/notifications/create`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                userId: offerData.buyerId,
+                type: 'offer',
+                title: '🔄 Counter Offer Received',
+                message: `${sellerData.displayName || 'The seller'} made a counter offer of $${offerData.counterOffer?.toFixed(2) || 'N/A'} on "${offerData.listingSnapshot?.title || 'Unknown Item'}"`,
+                data: {
+                  offerId: offerId,
+                  listingId: offerData.listingId,
+                  actionUrl: `/dashboard/offers`
+                }
+              })
+            });
+            
+            if (notificationResponse.ok) {
+              const result = await notificationResponse.json();
+              console.log('Counter offer notification created successfully:', result.notificationId);
+            } else {
+              const errorData = await notificationResponse.json();
+              console.error('Failed to create counter offer notification:', errorData);
+            }
+          } catch (notificationError) {
+            console.error('Error creating counter offer notification:', notificationError);
+          }
+
+          // Send counter offer email to buyer
+          if (offerData.counterOffer) {
+            await emailService.sendOfferCounterEmail({
+              userName: buyerData.displayName || 'User',
+              userEmail: buyerData.email || '',
+              sellerName: sellerData.displayName || 'Seller',
+              listingTitle: offerData.listingSnapshot?.title || 'Unknown Item',
+              originalOfferAmount: offerData.amount,
+              counterOfferAmount: offerData.counterOffer,
+              actionUrl: `${baseUrl}/dashboard/offers`
+            });
+            console.log('Counter offer email sent to buyer:', buyerData.email);
+          }
         }
       } catch (emailError) {
         console.error('Error sending offer status email:', emailError);

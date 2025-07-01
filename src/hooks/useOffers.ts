@@ -170,14 +170,35 @@ export function useOffers() {
     if (!user) return false;
 
     try {
-      const { db } = getFirebaseServices();
-      const offerRef = doc(db, 'offers', offerId);
-      
-      // Update the offer status in Firestore
-      await updateDoc(offerRef, {
-        status,
-        updatedAt: serverTimestamp()
-      });
+      // For accepted and declined offers, use the API to ensure notifications and emails are sent
+      if (status === 'accepted' || status === 'declined') {
+        const token = await user.getIdToken();
+        const response = await fetch('/api/offers/update-status', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            offerId,
+            status
+          })
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || `Failed to ${status} offer`);
+        }
+      } else {
+        // For other statuses (expired), update directly in Firestore
+        const { db } = getFirebaseServices();
+        const offerRef = doc(db, 'offers', offerId);
+        
+        await updateDoc(offerRef, {
+          status,
+          updatedAt: serverTimestamp()
+        });
+      }
 
       // Immediately update local state to reflect the change
       const updateOfferInState = (offers: Offer[]) => 
@@ -193,11 +214,11 @@ export function useOffers() {
       // Show appropriate toast message based on status
       if (status === 'accepted') {
         toast.success('Offer accepted', {
-          description: 'The offer has been accepted successfully'
+          description: 'The buyer has been notified of your acceptance'
         });
       } else if (status === 'declined') {
         toast.success('Offer declined', {
-          description: 'The offer has been declined'
+          description: 'The buyer has been notified of your decision'
         });
       } else if (status === 'countered') {
         toast.success('Counter offer sent', {
@@ -225,6 +246,7 @@ export function useOffers() {
     if (!user) return false;
     
     try {
+      // First update the offer with the counter amount
       const { db } = getFirebaseServices();
       const offerRef = doc(db, 'offers', offerId);
       
@@ -239,12 +261,30 @@ export function useOffers() {
         throw new Error('You are not authorized to make a counter offer');
       }
       
-      // Update the offer with counter offer amount and change status
+      // Update the offer with counter offer amount first
       await updateDoc(offerRef, {
         counterOffer: counterAmount,
-        status: 'countered',
         updatedAt: serverTimestamp()
       });
+
+      // Now use the API to update status to 'countered' which will trigger notifications and emails
+      const token = await user.getIdToken();
+      const response = await fetch('/api/offers/update-status', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          offerId,
+          status: 'countered'
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to send counter offer');
+      }
 
       // Immediately update local state to reflect the change
       const updateOfferInState = (offers: Offer[]) => 
