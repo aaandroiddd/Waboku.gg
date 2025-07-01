@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { MobileSelect } from '@/components/ui/mobile-select';
 import { useAuth } from '@/contexts/AuthContext';
 import { useReviews } from '@/hooks/useReviews';
 import { ReviewCard } from '@/components/ReviewCard';
@@ -213,19 +213,20 @@ export default function ReviewsDashboardPage() {
                   />
                 </div>
                 
-                <Select value={sortBy} onValueChange={handleSortChange}>
-                  <SelectTrigger className="w-full sm:w-[200px]">
-                    <SelectValue placeholder="Sort by" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="newest">Newest First</SelectItem>
-                    <SelectItem value="oldest">Oldest First</SelectItem>
-                    <SelectItem value="highest_rating">Highest Rating</SelectItem>
-                    <SelectItem value="lowest_rating">Lowest Rating</SelectItem>
-                    <SelectItem value="most_helpful">Most Helpful</SelectItem>
-                    <SelectItem value="needs_response">Needs Response</SelectItem>
-                  </SelectContent>
-                </Select>
+                <MobileSelect
+                  value={sortBy}
+                  onValueChange={handleSortChange}
+                  placeholder="Sort by"
+                  className="w-full sm:w-[200px]"
+                  options={[
+                    { value: 'newest', label: 'Newest First' },
+                    { value: 'oldest', label: 'Oldest First' },
+                    { value: 'highest_rating', label: 'Highest Rating' },
+                    { value: 'lowest_rating', label: 'Lowest Rating' },
+                    { value: 'most_helpful', label: 'Most Helpful' },
+                    { value: 'needs_response', label: 'Needs Response' }
+                  ]}
+                />
               </div>
               
               <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
