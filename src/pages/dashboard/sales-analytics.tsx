@@ -10,7 +10,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { MobileSelect } from '@/components/ui/mobile-select';
 import { getFirebaseServices } from '@/lib/firebase';
 import { collection, query, where, orderBy, getDocs, getDoc, doc } from 'firebase/firestore';
 import { Order } from '@/types/order';
@@ -529,22 +529,20 @@ export default function SalesAnalytics() {
         )}
 
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <Select
+          <MobileSelect
             value={timeRange}
             onValueChange={(value) => setTimeRange(value as TimeRange)}
-          >
-            <SelectTrigger className="w-full sm:w-[180px]">
-              <SelectValue placeholder="Select time range" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="7days">Last 7 days</SelectItem>
-              <SelectItem value="30days">Last 30 days</SelectItem>
-              <SelectItem value="90days">Last 90 days</SelectItem>
-              <SelectItem value="thisMonth">This month</SelectItem>
-              <SelectItem value="lastMonth">Last month</SelectItem>
-              <SelectItem value="allTime">All time</SelectItem>
-            </SelectContent>
-          </Select>
+            placeholder="Select time range"
+            className="w-full sm:w-[180px]"
+            options={[
+              { value: '7days', label: 'Last 7 days' },
+              { value: '30days', label: 'Last 30 days' },
+              { value: '90days', label: 'Last 90 days' },
+              { value: 'thisMonth', label: 'This month' },
+              { value: 'lastMonth', label: 'Last month' },
+              { value: 'allTime', label: 'All time' }
+            ]}
+          />
 
           <Button 
             variant="outline" 
