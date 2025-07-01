@@ -180,7 +180,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       });
     }
 
-    // Send order confirmation emails to both buyer and seller
+    // Send offer order created emails to both buyer and seller
     try {
       // Fetch buyer and seller user data
       const buyerUser = await admin.auth().getUser(offerData.buyerId);
@@ -191,41 +191,37 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       // Email to buyer
       if (buyerUser.email) {
-        await emailService.sendOrderConfirmationEmail({
+        await emailService.sendOfferOrderCreatedEmail({
           userName: buyerUser.displayName || 'Buyer',
           userEmail: buyerUser.email,
-          orderId: orderId,
-          listingTitle: orderData.listingSnapshot?.title || 'Unknown Listing',
-          listingImage: orderData.listingSnapshot?.imageUrl || '',
-          amount: orderData.amount,
-          role: 'buyer',
-          actionUrl: orderUrl,
           sellerName: sellerUser.displayName || 'Seller',
-          shippingAddress: orderData.shippingAddress,
+          listingTitle: orderData.listingSnapshot?.title || 'Unknown Listing',
+          offerAmount: orderData.amount,
+          orderId: orderId,
+          actionUrl: orderUrl,
+          role: 'buyer',
           isPickup: orderData.isPickup,
         });
-        console.log(`Order confirmation email sent to buyer: ${buyerUser.email}`);
+        console.log(`Offer order created email sent to buyer: ${buyerUser.email}`);
       }
 
       // Email to seller
       if (sellerUser.email) {
-        await emailService.sendOrderConfirmationEmail({
+        await emailService.sendOfferOrderCreatedEmail({
           userName: sellerUser.displayName || 'Seller',
           userEmail: sellerUser.email,
-          orderId: orderId,
-          listingTitle: orderData.listingSnapshot?.title || 'Unknown Listing',
-          listingImage: orderData.listingSnapshot?.imageUrl || '',
-          amount: orderData.amount,
-          role: 'seller',
-          actionUrl: orderUrl,
           buyerName: buyerUser.displayName || 'Buyer',
-          shippingAddress: orderData.shippingAddress,
+          listingTitle: orderData.listingSnapshot?.title || 'Unknown Listing',
+          offerAmount: orderData.amount,
+          orderId: orderId,
+          actionUrl: orderUrl,
+          role: 'seller',
           isPickup: orderData.isPickup,
         });
-        console.log(`Order confirmation email sent to seller: ${sellerUser.email}`);
+        console.log(`Offer order created email sent to seller: ${sellerUser.email}`);
       }
     } catch (emailError) {
-      console.error('Error sending order confirmation emails:', emailError);
+      console.error('Error sending offer order created emails:', emailError);
     }
     
     return res.status(200).json({ 

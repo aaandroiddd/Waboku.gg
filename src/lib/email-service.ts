@@ -13,6 +13,7 @@ import {
   getOfferAcceptedTemplate,
   getOfferDeclinedTemplate,
   getOfferCounterTemplate,
+  getOfferOrderCreatedTemplate,
   getSubscriptionChargeTemplate,
   getSubscriptionSuccessTemplate,
   getSubscriptionCanceledTemplate,
@@ -31,6 +32,7 @@ import {
   OfferAcceptedData,
   OfferDeclinedData,
   OfferCounterData,
+  OfferOrderCreatedData,
   SubscriptionChargeData,
   SubscriptionSuccessData,
   SubscriptionCanceledData,
@@ -592,6 +594,46 @@ export class EmailService {
       return true;
     } catch (error) {
       console.error('Error sending offer counter email:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Send offer order created email
+   */
+  async sendOfferOrderCreatedEmail(data: OfferOrderCreatedData): Promise<boolean> {
+    try {
+      // Only send emails on server-side
+      if (typeof window !== 'undefined') {
+        console.log('Email service called on client-side, skipping offer order created email send');
+        return false;
+      }
+
+      // Check if Resend is available
+      if (!resend) {
+        console.error('Resend service not initialized');
+        return false;
+      }
+
+      const { subject, html, text } = getOfferOrderCreatedTemplate(data);
+
+      const result = await resend.emails.send({
+        from: 'Waboku.gg <offers@waboku.gg>',
+        to: [data.userEmail],
+        subject,
+        html,
+        text,
+      });
+
+      if (result.error) {
+        console.error('Error sending offer order created email:', result.error);
+        return false;
+      }
+
+      console.log(`Offer order created email sent successfully to ${data.userEmail} (ID: ${result.data?.id})`);
+      return true;
+    } catch (error) {
+      console.error('Error sending offer order created email:', error);
       return false;
     }
   }

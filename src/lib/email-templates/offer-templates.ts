@@ -371,3 +371,123 @@ The Waboku.gg Team
 
   return { subject, html, text: textContent };
 }
+
+export interface OfferOrderCreatedData {
+  userName: string;
+  userEmail: string;
+  sellerName?: string;
+  buyerName?: string;
+  listingTitle: string;
+  offerAmount: number;
+  orderId: string;
+  actionUrl: string;
+  role: 'buyer' | 'seller';
+  isPickup?: boolean;
+}
+
+export function getOfferOrderCreatedTemplate(data: OfferOrderCreatedData): { subject: string; html: string; text: string } {
+  const isBuyer = data.role === 'buyer';
+  const subject = isBuyer 
+    ? `🎉 Offer Accepted - Order Created: "${data.listingTitle}"` 
+    : `📦 Order Created from Accepted Offer: "${data.listingTitle}"`;
+  
+  const content = `
+    <div style="text-align: center; margin-bottom: 32px;">
+      <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; width: 80px; height: 80px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 32px; margin-bottom: 16px;">
+        ${isBuyer ? '🎉' : '📦'}
+      </div>
+      <h1 style="color: #1e293b; font-size: 28px; font-weight: 700; margin: 0; line-height: 1.2;">
+        ${isBuyer ? 'Offer Accepted - Order Created!' : 'Order Created from Accepted Offer!'}
+      </h1>
+    </div>
+
+    <div style="background: #f0fdf4; border-radius: 12px; padding: 24px; margin-bottom: 32px; border-left: 4px solid #10b981;">
+      <h2 style="color: #1e293b; font-size: 20px; font-weight: 600; margin: 0 0 16px 0;">
+        Order Details
+      </h2>
+      <div style="display: grid; gap: 12px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #dcfce7;">
+          <span style="color: #166534; font-weight: 500;">Order ID:</span>
+          <span style="color: #1e293b; font-weight: 600;">${data.orderId}</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #dcfce7;">
+          <span style="color: #166534; font-weight: 500;">${isBuyer ? 'Seller:' : 'Buyer:'}</span>
+          <span style="color: #1e293b; font-weight: 600;">${isBuyer ? (data.sellerName || 'Seller') : (data.buyerName || 'Buyer')}</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #dcfce7;">
+          <span style="color: #166534; font-weight: 500;">Item:</span>
+          <span style="color: #1e293b; font-weight: 600;">${data.listingTitle}</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #dcfce7;">
+          <span style="color: #166534; font-weight: 500;">Agreed Price:</span>
+          <span style="color: #10b981; font-weight: 700; font-size: 18px;">$${data.offerAmount.toFixed(2)}</span>
+        </div>
+        ${data.isPickup ? `
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0;">
+          <span style="color: #166534; font-weight: 500;">Delivery:</span>
+          <span style="color: #1e293b; font-weight: 600;">Local Pickup</span>
+        </div>
+        ` : ''}
+      </div>
+    </div>
+
+    <p style="color: #475569; font-size: 16px; line-height: 1.6; margin-bottom: 32px;">
+      Hi ${data.userName},<br><br>
+      ${isBuyer 
+        ? `Great news! Your offer of $${data.offerAmount.toFixed(2)} for "${data.listingTitle}" has been accepted by ${data.sellerName || 'the seller'}. An order has been created and you can now ${data.isPickup ? 'arrange pickup details' : 'proceed with payment'}.`
+        : `Your offer for "${data.listingTitle}" has been accepted by ${data.buyerName || 'the buyer'}! An order has been created and ${data.isPickup ? 'the buyer can now arrange pickup details with you' : 'the buyer will proceed with payment'}.`
+      }
+    </p>
+
+    <div style="text-align: center; margin-bottom: 32px;">
+      <a href="${data.actionUrl}" style="display: inline-block; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; text-decoration: none; padding: 16px 32px; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3); transition: all 0.2s ease;">
+        ${isBuyer ? (data.isPickup ? 'Arrange Pickup' : 'Complete Payment') : 'View Order Details'}
+      </a>
+    </div>
+
+    <div style="background: #dbeafe; border-radius: 8px; padding: 16px; margin-bottom: 24px; border-left: 4px solid #3b82f6;">
+      <p style="color: #1e40af; font-size: 14px; margin: 0; font-weight: 500;">
+        ${isBuyer 
+          ? `🚀 <strong>Next Steps:</strong> ${data.isPickup ? 'Contact the seller to arrange pickup details.' : 'Complete your payment to secure your purchase. The seller will be notified once payment is received.'}`
+          : `📋 <strong>Next Steps:</strong> ${data.isPickup ? 'The buyer will contact you to arrange pickup details.' : 'Wait for the buyer to complete payment, then prepare the item for shipment.'}`
+        }
+      </p>
+    </div>
+  `;
+
+  const textContent = `
+${isBuyer ? 'Offer Accepted - Order Created!' : 'Order Created from Accepted Offer!'}
+
+Hi ${data.userName},
+
+${isBuyer 
+  ? `Great news! Your offer of $${data.offerAmount.toFixed(2)} for "${data.listingTitle}" has been accepted by ${data.sellerName || 'the seller'}. An order has been created and you can now ${data.isPickup ? 'arrange pickup details' : 'proceed with payment'}.`
+  : `Your offer for "${data.listingTitle}" has been accepted by ${data.buyerName || 'the buyer'}! An order has been created and ${data.isPickup ? 'the buyer can now arrange pickup details with you' : 'the buyer will proceed with payment'}.`
+}
+
+Order Details:
+- Order ID: ${data.orderId}
+- ${isBuyer ? 'Seller:' : 'Buyer:'} ${isBuyer ? (data.sellerName || 'Seller') : (data.buyerName || 'Buyer')}
+- Item: ${data.listingTitle}
+- Agreed Price: $${data.offerAmount.toFixed(2)}
+${data.isPickup ? '- Delivery: Local Pickup' : ''}
+
+${isBuyer ? (data.isPickup ? 'Arrange pickup' : 'Complete payment') : 'View order details'}: ${data.actionUrl}
+
+${isBuyer 
+  ? `Next Steps: ${data.isPickup ? 'Contact the seller to arrange pickup details.' : 'Complete your payment to secure your purchase. The seller will be notified once payment is received.'}`
+  : `Next Steps: ${data.isPickup ? 'The buyer will contact you to arrange pickup details.' : 'Wait for the buyer to complete payment, then prepare the item for shipment.'}`
+}
+
+Best regards,
+The Waboku.gg Team
+  `;
+
+  const html = getBaseEmailTemplate({
+    content,
+    actionUrl: data.actionUrl,
+    actionText: isBuyer ? (data.isPickup ? 'Arrange Pickup' : 'Complete Payment') : 'View Order Details'
+  });
+
+  return { subject, html, text: textContent };
+}

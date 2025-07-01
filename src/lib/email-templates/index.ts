@@ -9,7 +9,8 @@ export {
   getOfferReceivedTemplate, 
   getOfferAcceptedTemplate, 
   getOfferDeclinedTemplate, 
-  getOfferCounterTemplate 
+  getOfferCounterTemplate,
+  getOfferOrderCreatedTemplate
 } from './offer-templates';
 export { 
   getSubscriptionChargeTemplate,
@@ -36,7 +37,8 @@ export type {
   OfferReceivedData, 
   OfferAcceptedData, 
   OfferDeclinedData, 
-  OfferCounterData 
+  OfferCounterData,
+  OfferOrderCreatedData
 } from './offer-templates';
 export type { 
   SubscriptionChargeData,
