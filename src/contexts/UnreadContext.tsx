@@ -4,6 +4,7 @@ import { getDatabase, ref, onValue, get, update } from 'firebase/database';
 import { getFirebaseServices } from '@/lib/firebase';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { databaseOptimizer } from '@/lib/database-usage-optimizer';
+import { notificationService } from '@/lib/notification-service';
 
 interface UnreadCounts {
   messages: number;
@@ -34,6 +35,7 @@ export const UnreadProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const listenersRef = useRef<string[]>([]);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const lastFetchRef = useRef<Record<string, number>>({});
+  const notificationUnsubscribeRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     if (!user) {
@@ -41,6 +43,13 @@ export const UnreadProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       // Clean up any existing listeners
       listenersRef.current.forEach(id => databaseOptimizer.removeListener(id));
       listenersRef.current = [];
+      
+      // Clean up notification listener
+      if (notificationUnsubscribeRef.current) {
+        notificationUnsubscribeRef.current();
+        notificationUnsubscribeRef.current = null;
+      }
+      
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
         intervalRef.current = null;
@@ -54,6 +63,28 @@ export const UnreadProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     // Clean up previous listeners
     listenersRef.current.forEach(id => databaseOptimizer.removeListener(id));
     listenersRef.current = [];
+    
+    // Clean up previous notification listener
+    if (notificationUnsubscribeRef.current) {
+      notificationUnsubscribeRef.current();
+      notificationUnsubscribeRef.current = null;
+    }
+
+    // Set up real-time notification listener using the same service as NotificationBell
+    console.log('[UnreadContext] Setting up real-time notification listener');
+    try {
+      notificationUnsubscribeRef.current = notificationService.subscribeToUnreadCount(
+        user.uid,
+        (count) => {
+          console.log('[UnreadContext] Received notification count update:', count);
+          if (activeSection !== 'notifications') {
+            setUnreadCounts(prev => ({ ...prev, notifications: count }));
+          }
+        }
+      );
+    } catch (error) {
+      console.error('[UnreadContext] Error setting up notification listener:', error);
+    }
 
     // Use optimized listener for messages - check actual chat data for unread status
     // Only create this listener when user is authenticated
@@ -213,61 +244,22 @@ export const UnreadProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       }
     };
 
-    const fetchUnreadNotifications = async () => {
-      try {
-        if (activeSection === 'notifications') return;
-        
-        const now = Date.now();
-        const lastFetch = lastFetchRef.current.notifications || 0;
-        
-        // Rate limit: only fetch every 60 seconds
-        if (now - lastFetch < 60000) {
-          return;
-        }
-        
-        lastFetchRef.current.notifications = now;
-        
-        const { db } = getFirebaseServices();
-        
-        // Query for unread notifications that are not deleted
-        const unreadNotificationsQuery = query(
-          collection(db, 'notifications'),
-          where('userId', '==', user.uid),
-          where('read', '==', false),
-          where('deleted', '!=', true)
-        );
-        
-        const notificationsSnapshot = await getDocs(unreadNotificationsQuery);
-        let unreadNotificationCount = 0;
-        
-        // Double-check that notifications are not deleted
-        notificationsSnapshot.forEach((doc) => {
-          const data = doc.data();
-          if (!data.deleted) {
-            unreadNotificationCount++;
-          }
-        });
-        
-        setUnreadCounts(prev => ({ ...prev, notifications: unreadNotificationCount }));
-      } catch (error) {
-        console.error('Error counting unread notifications:', error);
-      }
-    };
+
 
     // Initial fetch with longer delay to avoid overwhelming on mount
     setTimeout(() => {
       fetchUnreadOffers();
       fetchUnreadOrders();
-      fetchUnreadNotifications();
+      // Remove fetchUnreadNotifications since we now use real-time listener
     }, 2000); // Increased from 1 second to 2 seconds
 
-    // Set up interval to periodically check for unread offers, orders, and notifications (further increased interval)
+    // Set up interval to periodically check for unread offers and orders only (notifications now use real-time)
     intervalRef.current = setInterval(() => {
       // Only fetch if user is still authenticated and page is visible
       if (user && document.visibilityState === 'visible') {
         fetchUnreadOffers();
         fetchUnreadOrders();
-        fetchUnreadNotifications();
+        // Remove fetchUnreadNotifications since we now use real-time listener
       }
     }, 300000); // Check every 5 minutes instead of 2 minutes
 
@@ -275,6 +267,12 @@ export const UnreadProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       // Clean up listeners
       listenersRef.current.forEach(id => databaseOptimizer.removeListener(id));
       listenersRef.current = [];
+      
+      // Clean up notification listener
+      if (notificationUnsubscribeRef.current) {
+        notificationUnsubscribeRef.current();
+        notificationUnsubscribeRef.current = null;
+      }
       
       // Clean up interval
       if (intervalRef.current) {
