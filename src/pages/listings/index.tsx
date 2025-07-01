@@ -13,7 +13,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useRouter } from 'next/router';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Search, MapPin, Filter, Check, LayoutGrid, List, X } from 'lucide-react';
+import { Search, MapPin, Filter, Check, LayoutGrid, List, X, ArrowUpDown } from 'lucide-react';
 import { useListings } from '@/hooks/useListings';
 import { useTrendingSearches } from '@/hooks/useTrendingSearches';
 import { FirebaseConnectionHandler } from '@/components/FirebaseConnectionHandler';
@@ -124,6 +124,15 @@ const usStates = [
   { value: "wy", label: "Wyoming" }
 ];
 
+const sortOptions = [
+  { value: "newest", label: "Newest First" },
+  { value: "oldest", label: "Oldest First" },
+  { value: "price-low", label: "Price: Low to High" },
+  { value: "price-high", label: "Price: High to Low" },
+  { value: "game", label: "Game Category" },
+  { value: "condition", label: "Condition" },
+];
+
 export default function ListingsPage() {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const router = useRouter();
@@ -139,6 +148,7 @@ export default function ListingsPage() {
   const [selectedCondition, setSelectedCondition] = useState("all");
   const [priceRange, setPriceRange] = useState([0, 50000]);
   const [showGradedOnly, setShowGradedOnly] = useState(false);
+  const [sortBy, setSortBy] = useState("newest");
 
   // Use the enhanced useListings hook without pagination
   const { 
@@ -181,7 +191,7 @@ export default function ListingsPage() {
 
   useEffect(() => {
     // Initialize filters from URL parameters
-    const { query, state, game, condition, minPrice, maxPrice } = router.query;
+    const { query, state, game, condition, minPrice, maxPrice, sort } = router.query;
     if (query) {
       setSearchQuery(query as string);
     } else {
@@ -193,6 +203,7 @@ export default function ListingsPage() {
     if (minPrice && maxPrice) {
       setPriceRange([Number(minPrice), Number(maxPrice)]);
     }
+    if (sort) setSortBy(sort as string);
   }, [router.query]);
 
   useEffect(() => {
@@ -245,13 +256,66 @@ export default function ListingsPage() {
 
     // Add distance information to filtered listings
     filtered = addDistanceInfo(filtered);
+
+    // Apply sorting
+    filtered = sortListings(filtered, sortBy);
+
     setFilteredListings(filtered);
 
     // Update search session for analytics
     if (searchQuery.trim()) {
       updateSearchSession(searchQuery.trim(), filtered.length);
     }
-  }, [allListings, searchQuery, selectedState, selectedGame, selectedCondition, priceRange, showGradedOnly, updateSearchSession]);
+  }, [allListings, searchQuery, selectedState, selectedGame, selectedCondition, priceRange, showGradedOnly, sortBy, updateSearchSession]);
+
+  // Function to sort listings based on selected criteria
+  const sortListings = (listings: Listing[], sortBy: string) => {
+    const sorted = [...listings];
+    
+    switch (sortBy) {
+      case "newest":
+        return sorted.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      
+      case "oldest":
+        return sorted.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+      
+      case "price-low":
+        return sorted.sort((a, b) => a.price - b.price);
+      
+      case "price-high":
+        return sorted.sort((a, b) => b.price - a.price);
+      
+      case "game":
+        return sorted.sort((a, b) => {
+          const gameA = a.game?.toLowerCase() || '';
+          const gameB = b.game?.toLowerCase() || '';
+          return gameA.localeCompare(gameB);
+        });
+      
+      case "condition":
+        // Define condition hierarchy for sorting
+        const conditionOrder = {
+          'mint': 1,
+          'near mint': 2,
+          'near-mint': 2,
+          'excellent': 3,
+          'good': 4,
+          'light played': 5,
+          'light-played': 5,
+          'played': 6,
+          'poor': 7
+        };
+        
+        return sorted.sort((a, b) => {
+          const conditionA = conditionOrder[a.condition?.toLowerCase() as keyof typeof conditionOrder] || 999;
+          const conditionB = conditionOrder[b.condition?.toLowerCase() as keyof typeof conditionOrder] || 999;
+          return conditionA - conditionB;
+        });
+      
+      default:
+        return sorted.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    }
+  };
 
   const handleSearch = async () => {
     try {
@@ -297,6 +361,10 @@ export default function ListingsPage() {
         queryParams.maxPrice = priceRange[1];
       }
 
+      if (sortBy !== 'newest') {
+        queryParams.sort = sortBy;
+      }
+
       // Update URL with search parameters
       router.push({
         pathname: '/listings',
@@ -314,6 +382,7 @@ export default function ListingsPage() {
     setSelectedGame("all");
     setSelectedCondition("all");
     setPriceRange([0, 50000]);
+    setSortBy("newest");
     router.push('/listings', undefined, { shallow: true });
   };
 
@@ -512,6 +581,21 @@ export default function ListingsPage() {
                         </SheetFooter>
                       </SheetContent>
                     </Sheet>
+
+                    {/* Sort dropdown */}
+                    <Select value={sortBy} onValueChange={setSortBy}>
+                      <SelectTrigger className="h-12 w-[180px]">
+                        <ArrowUpDown className="mr-2 h-4 w-4" />
+                        <SelectValue placeholder="Sort by" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {sortOptions.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
 
                   <div className="inline-flex rounded-lg border bg-card p-1 h-12">
@@ -559,6 +643,68 @@ export default function ListingsPage() {
                 </Button>
               </div>
             )}
+
+            {/* Results summary and active filters */}
+            <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
+              <div className="text-sm text-muted-foreground">
+                {isLoading ? (
+                  "Loading listings..."
+                ) : (
+                  `Showing ${filteredListings.length} listing${filteredListings.length !== 1 ? 's' : ''}`
+                )}
+                {sortBy !== 'newest' && (
+                  <span className="ml-2">
+                    • Sorted by {sortOptions.find(opt => opt.value === sortBy)?.label}
+                  </span>
+                )}
+              </div>
+              
+              {/* Active filters display */}
+              {(searchQuery || selectedState !== 'all' || selectedGame !== 'all' || 
+                selectedCondition !== 'all' || priceRange[0] !== 0 || priceRange[1] !== 50000 || 
+                showGradedOnly) && (
+                <div className="flex flex-wrap gap-2">
+                  {searchQuery && (
+                    <span className="inline-flex items-center px-2 py-1 rounded-md bg-primary/10 text-primary text-xs">
+                      Search: "{searchQuery}"
+                    </span>
+                  )}
+                  {selectedState !== 'all' && (
+                    <span className="inline-flex items-center px-2 py-1 rounded-md bg-primary/10 text-primary text-xs">
+                      {usStates.find(s => s.value === selectedState)?.label}
+                    </span>
+                  )}
+                  {selectedGame !== 'all' && (
+                    <span className="inline-flex items-center px-2 py-1 rounded-md bg-primary/10 text-primary text-xs">
+                      {games.find(g => g.value === selectedGame)?.label}
+                    </span>
+                  )}
+                  {selectedCondition !== 'all' && (
+                    <span className="inline-flex items-center px-2 py-1 rounded-md bg-primary/10 text-primary text-xs">
+                      {conditions.find(c => c.value === selectedCondition)?.label}
+                    </span>
+                  )}
+                  {(priceRange[0] !== 0 || priceRange[1] !== 50000) && (
+                    <span className="inline-flex items-center px-2 py-1 rounded-md bg-primary/10 text-primary text-xs">
+                      ${priceRange[0]} - ${priceRange[1]}
+                    </span>
+                  )}
+                  {showGradedOnly && (
+                    <span className="inline-flex items-center px-2 py-1 rounded-md bg-primary/10 text-primary text-xs">
+                      Graded Only
+                    </span>
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={resetFilters}
+                    className="h-6 px-2 text-xs text-muted-foreground hover:text-foreground"
+                  >
+                    Clear all
+                  </Button>
+                </div>
+              )}
+            </div>
 
             {error ? (
               <Alert variant="destructive" className="mb-8">
