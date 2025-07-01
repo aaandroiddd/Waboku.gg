@@ -464,8 +464,9 @@ export default async function handler(
             let paymentMethod = null;
             let shippingFromPaymentIntent = null;
             let shippingFromSession = null;
+            let finalShippingAddress = null;
             
-            // First, try to get shipping from the session directly (this is more reliable for checkout sessions)
+            // First, try to get shipping from the session directly
             if (session.shipping?.address) {
               shippingFromSession = {
                 name: session.shipping.name || '',
@@ -525,7 +526,7 @@ export default async function handler(
                   }
                 }
 
-                // Extract shipping information from payment intent (as backup)
+                // Extract shipping information from payment intent
                 if (paymentIntent.shipping?.address) {
                   shippingFromPaymentIntent = {
                     name: paymentIntent.shipping.name || '',
@@ -552,6 +553,18 @@ export default async function handler(
                 console.error('[Stripe Webhook] Error retrieving payment intent details for new order:', error);
               }
             }
+
+            // Determine the best shipping address source
+            // For Buy Now orders, payment intent shipping is more reliable than session shipping
+            if (shippingFromPaymentIntent) {
+              finalShippingAddress = shippingFromPaymentIntent;
+              console.log('[Stripe Webhook] Using shipping address from payment intent (most reliable for Buy Now orders)');
+            } else if (shippingFromSession) {
+              finalShippingAddress = shippingFromSession;
+              console.log('[Stripe Webhook] Using shipping address from session (fallback)');
+            } else {
+              console.log('[Stripe Webhook] No shipping address found in either session or payment intent');
+            }
             
             // Create an order record
             const orderData = {
@@ -569,8 +582,8 @@ export default async function handler(
               updatedAt: new Date(),
               // Include offer price if available
               ...(offerPrice && { offerPrice }),
-              // Use shipping address from session (preferred for checkout sessions) or payment intent fallback
-              shippingAddress: shippingFromSession || shippingFromPaymentIntent,
+              // Use the determined best shipping address
+              shippingAddress: finalShippingAddress,
               // Add tracking requirement flag
               trackingRequired: true,
               // Add the listing snapshot for display in the orders page
