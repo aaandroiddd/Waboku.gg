@@ -25,6 +25,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { MobileSelect } from "@/components/ui/mobile-select";
 import {
   Sheet,
   SheetContent,
@@ -484,33 +485,21 @@ export default function ListingsPage() {
                         <div className="py-4 space-y-4">
                           <div className="space-y-2">
                             <label className="text-sm font-medium">Category</label>
-                            <Select value={selectedGame} onValueChange={setSelectedGame}>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select category" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {games.map((game) => (
-                                  <SelectItem key={game.value} value={game.value}>
-                                    {game.label}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
+                            <MobileSelect 
+                              value={selectedGame} 
+                              onValueChange={setSelectedGame}
+                              options={games}
+                              placeholder="Select category"
+                            />
                           </div>
                           <div className="space-y-2">
                             <label className="text-sm font-medium">Condition</label>
-                            <Select value={selectedCondition} onValueChange={setSelectedCondition}>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select condition" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {conditions.map((condition) => (
-                                  <SelectItem key={condition.value} value={condition.value}>
-                                    {condition.label}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
+                            <MobileSelect 
+                              value={selectedCondition} 
+                              onValueChange={setSelectedCondition}
+                              options={conditions}
+                              placeholder="Select condition"
+                            />
                           </div>
                           <div className="space-y-2">
                             <label className="text-sm font-medium">Price Range</label>
@@ -584,19 +573,16 @@ export default function ListingsPage() {
                     </Sheet>
 
                     {/* Sort dropdown */}
-                    <Select value={sortBy} onValueChange={setSortBy}>
-                      <SelectTrigger className="h-12 w-[180px]">
-                        <ArrowUpDown className="mr-2 h-4 w-4" />
-                        <SelectValue placeholder="Sort by" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {sortOptions.map((option) => (
-                          <SelectItem key={option.value} value={option.value}>
-                            {option.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <div className="flex items-center">
+                      <ArrowUpDown className="mr-2 h-4 w-4" />
+                      <MobileSelect 
+                        value={sortBy} 
+                        onValueChange={setSortBy}
+                        options={sortOptions}
+                        placeholder="Sort by"
+                        className="w-[160px]"
+                      />
+                    </div>
                   </div>
 
                   <div className="inline-flex rounded-lg border bg-card p-1 h-12">
