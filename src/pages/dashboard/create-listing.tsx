@@ -262,6 +262,12 @@ const CreateListingPage = () => {
 
   // Handle relist functionality - pre-fill form with data from URL parameters
   useEffect(() => {
+    console.log('Relist useEffect triggered:', {
+      isReady: router.isReady,
+      query: router.query,
+      relist: router.query.relist
+    });
+
     if (router.isReady && router.query.relist === 'true') {
       const {
         title,
@@ -274,6 +280,18 @@ const CreateListingPage = () => {
         gradingCompany,
         finalSale
       } = router.query;
+
+      console.log('Pre-filling form with relist data:', {
+        title,
+        price,
+        game,
+        condition,
+        description,
+        isGraded,
+        gradeLevel,
+        gradingCompany,
+        finalSale
+      });
 
       setFormData(prev => ({
         ...prev,
@@ -294,11 +312,13 @@ const CreateListingPage = () => {
         description: "Your listing has been pre-filled with information from your refunded order. You can modify any details before creating the new listing.",
       });
 
-      // Clean up the URL to remove the relist parameters
-      const cleanUrl = router.asPath.split('?')[0];
-      router.replace(cleanUrl, undefined, { shallow: true });
+      // Clean up the URL to remove the relist parameters after a short delay
+      setTimeout(() => {
+        const cleanUrl = router.asPath.split('?')[0];
+        router.replace(cleanUrl, undefined, { shallow: true });
+      }, 100);
     }
-  }, [router.isReady, router.query, toast]);
+  }, [router.isReady, router.query, toast, router]);
 
   if (loading || !user) {
     return null;

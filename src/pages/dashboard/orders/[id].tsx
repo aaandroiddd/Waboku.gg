@@ -516,6 +516,8 @@ export default function OrderDetailsPage() {
       return;
     }
 
+    console.log('Relisting item with data:', order.listingSnapshot);
+
     // Create URL with pre-filled data from the original listing
     const params = new URLSearchParams({
       relist: 'true',
@@ -534,7 +536,10 @@ export default function OrderDetailsPage() {
       })
     });
 
-    router.push(`/dashboard/create-listing?${params.toString()}`);
+    const url = `/dashboard/create-listing?${params.toString()}`;
+    console.log('Navigating to:', url);
+    
+    router.push(url);
   };
 
   // Check if order is eligible for relisting (for sellers with completed refunds)
