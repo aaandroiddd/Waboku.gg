@@ -96,7 +96,14 @@ export function OfferCard({ offer, type, onCounterOffer }: OfferCardProps) {
   const handleDecline = async () => {
     setIsUpdating(true);
     try {
-      await updateOfferStatus(offer.id, 'declined');
+      const success = await updateOfferStatus(offer.id, 'declined');
+      
+      // Dispatch custom event to notify the offers page to refresh
+      if (success) {
+        window.dispatchEvent(new CustomEvent('offerStatusChanged', {
+          detail: { offerId: offer.id, status: 'declined', type }
+        }));
+      }
     } catch (error) {
       console.error('Error declining offer:', error);
     } finally {

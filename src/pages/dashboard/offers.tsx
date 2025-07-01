@@ -50,7 +50,7 @@ const OffersComponent = () => {
     setSentOffers(initialSentOffers);
   }, [initialSentOffers]);
   
-  // Listen for offer cleared events
+  // Listen for offer cleared events and status changes
   useEffect(() => {
     const handleOfferCleared = (event: CustomEvent) => {
       const { offerId, type } = event.detail;
@@ -62,14 +62,27 @@ const OffersComponent = () => {
       }
     };
     
-    // Add event listener
+    const handleOfferStatusChanged = (event: CustomEvent) => {
+      const { offerId, status, type } = event.detail;
+      console.log(`Offer status changed event received: ${offerId} -> ${status} (${type})`);
+      
+      // Refresh offers data to ensure consistency
+      setTimeout(() => {
+        console.log('Refreshing offers due to status change event');
+        fetchOffers();
+      }, 500);
+    };
+    
+    // Add event listeners
     window.addEventListener('offerCleared', handleOfferCleared as EventListener);
+    window.addEventListener('offerStatusChanged', handleOfferStatusChanged as EventListener);
     
     // Clean up
     return () => {
       window.removeEventListener('offerCleared', handleOfferCleared as EventListener);
+      window.removeEventListener('offerStatusChanged', handleOfferStatusChanged as EventListener);
     };
-  }, []);
+  }, [fetchOffers]);
   
   const [counterOfferDialog, setCounterOfferDialog] = useState({
     isOpen: false,
@@ -135,12 +148,20 @@ const OffersComponent = () => {
     }
 
     try {
-      await makeCounterOffer(counterOfferDialog.offerId, amount);
+      const success = await makeCounterOffer(counterOfferDialog.offerId, amount);
       setCounterOfferDialog({ ...counterOfferDialog, isOpen: false });
-      toast({
-        title: "Counter offer sent",
-        description: "Your counter offer has been sent successfully",
-      });
+      
+      if (success) {
+        // Dispatch custom event to notify the page to refresh
+        window.dispatchEvent(new CustomEvent('offerStatusChanged', {
+          detail: { offerId: counterOfferDialog.offerId, status: 'countered', type: 'received' }
+        }));
+        
+        toast({
+          title: "Counter offer sent",
+          description: "Your counter offer has been sent successfully",
+        });
+      }
     } catch (error: any) {
       toast({
         title: "Error",

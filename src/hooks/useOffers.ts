@@ -103,15 +103,11 @@ export function useOffers() {
           // Continue with the function, we'll still set whatever data we have
         }
 
-        // If we have data from either query, use it
-        if (receivedOffersData.length > 0 || sentOffersData.length > 0) {
-          console.log('Using client-side fetched data');
-          setReceivedOffers(receivedOffersData);
-          setSentOffers(sentOffersData);
-          return; // Exit early if we have data
-        } else {
-          console.log('No offers found via client-side, will try API endpoint');
-        }
+        // Always use client-side data if we successfully fetched it (even if empty)
+        console.log('Using client-side fetched data');
+        setReceivedOffers(receivedOffersData);
+        setSentOffers(sentOffersData);
+        return; // Exit early since client-side fetch was successful
       } catch (clientErr: any) {
         console.error('Error in client-side Firebase fetch:', clientErr);
         console.log('Falling back to API endpoint due to client-side error');
@@ -211,8 +207,9 @@ export function useOffers() {
         toast.info('Offer marked as expired');
       }
 
-      // Refresh offers data in the background to ensure consistency
+      // Refresh offers data in the background to ensure consistency for all status changes
       setTimeout(() => {
+        console.log(`Refreshing offers after ${status} status update for offer ${offerId}`);
         fetchOffers();
       }, 1000);
       
@@ -266,6 +263,7 @@ export function useOffers() {
 
       // Refresh offers data in the background to ensure consistency
       setTimeout(() => {
+        console.log(`Refreshing offers after counter offer for offer ${offerId}`);
         fetchOffers();
       }, 1000);
       
