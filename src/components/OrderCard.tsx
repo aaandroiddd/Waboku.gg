@@ -189,11 +189,15 @@ export function OrderCard({ order, isSale = false }: OrderCardProps) {
     }
 
     try {
-      console.log('Relisting item from order:', safeOrder.id);
+      console.log('OrderCard: Relisting item from order:', safeOrder.id);
+      console.log('OrderCard: User UID:', user.uid);
 
       // Get the user's ID token for authentication
-      const token = await user.getIdToken();
+      console.log('OrderCard: Getting fresh ID token...');
+      const token = await user.getIdToken(true); // Force refresh
+      console.log('OrderCard: Token obtained, length:', token.length);
 
+      console.log('OrderCard: Making API request to relist endpoint');
       const response = await fetch('/api/listings/relist-from-order', {
         method: 'POST',
         headers: {
@@ -205,10 +209,12 @@ export function OrderCard({ order, isSale = false }: OrderCardProps) {
         }),
       });
 
+      console.log('OrderCard: API response status:', response.status);
       const data = await response.json();
+      console.log('OrderCard: API response data:', data);
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to relist item');
+        throw new Error(data.details || data.error || 'Failed to relist item');
       }
 
       toast.success('Item successfully relisted! You can find it in your active listings.');
@@ -217,7 +223,7 @@ export function OrderCard({ order, isSale = false }: OrderCardProps) {
       router.push('/dashboard');
 
     } catch (error) {
-      console.error('Error relisting item:', error);
+      console.error('OrderCard: Error relisting item:', error);
       toast.error(error instanceof Error ? error.message : 'Failed to relist item');
     }
   };

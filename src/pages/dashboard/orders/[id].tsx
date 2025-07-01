@@ -522,11 +522,15 @@ export default function OrderDetailsPage() {
     }
 
     try {
-      console.log('Relisting item from order:', order.id);
+      console.log('OrderDetails: Relisting item from order:', order.id);
+      console.log('OrderDetails: User UID:', user.uid);
 
       // Get the user's ID token for authentication
-      const token = await user.getIdToken();
+      console.log('OrderDetails: Getting fresh ID token...');
+      const token = await user.getIdToken(true); // Force refresh
+      console.log('OrderDetails: Token obtained, length:', token.length);
 
+      console.log('OrderDetails: Making API request to relist endpoint');
       const response = await fetch('/api/listings/relist-from-order', {
         method: 'POST',
         headers: {
@@ -538,10 +542,12 @@ export default function OrderDetailsPage() {
         }),
       });
 
+      console.log('OrderDetails: API response status:', response.status);
       const data = await response.json();
+      console.log('OrderDetails: API response data:', data);
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to relist item');
+        throw new Error(data.details || data.error || 'Failed to relist item');
       }
 
       toast.success('Item successfully relisted! You can find it in your active listings.');
@@ -550,7 +556,7 @@ export default function OrderDetailsPage() {
       router.push('/dashboard');
 
     } catch (error) {
-      console.error('Error relisting item:', error);
+      console.error('OrderDetails: Error relisting item:', error);
       toast.error(error instanceof Error ? error.message : 'Failed to relist item');
     }
   };
