@@ -7,6 +7,7 @@ import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { VerificationStatus } from '@/components/VerificationStatus';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { MobileSelect } from "@/components/ui/mobile-select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -837,28 +838,29 @@ const DashboardComponent = () => {
               
               {/* Game Categories Filter - On same line for desktop, below for mobile */}
               <div className="hidden md:block md:w-[300px]">
-                <Select value={gameFilter} onValueChange={setGameFilter}>
-                  <SelectTrigger className="h-9">
-                    <SelectValue placeholder="All Games" />
-                  </SelectTrigger>
-                  <SelectContent className="min-w-[300px]">
-                    <SelectItem value="all">All Games</SelectItem>
-                    <SelectItem value="dbs">Dragon Ball Super Card Game</SelectItem>
-                    <SelectItem value="digimon">Digimon</SelectItem>
-                    <SelectItem value="lorcana">Disney Lorcana</SelectItem>
-                    <SelectItem value="flesh-and-blood">Flesh and Blood</SelectItem>
-                    <SelectItem value="mtg">Magic: The Gathering</SelectItem>
-                    <SelectItem value="onepiece">One Piece Card Game</SelectItem>
-                    <SelectItem value="pokemon">Pokemon</SelectItem>
-                    <SelectItem value="star-wars">Star Wars: Unlimited</SelectItem>
-                    <SelectItem value="union-arena">Union Arena</SelectItem>
-                    <SelectItem value="universus">Universus</SelectItem>
-                    <SelectItem value="vanguard">Vanguard</SelectItem>
-                    <SelectItem value="weiss">Weiss Schwarz</SelectItem>
-                    <SelectItem value="yugioh">Yu-Gi-Oh!</SelectItem>
-                    <SelectItem value="other">Other</SelectItem>
-                  </SelectContent>
-                </Select>
+                <MobileSelect 
+                  value={gameFilter} 
+                  onValueChange={setGameFilter}
+                  options={[
+                    { value: "all", label: "All Games" },
+                    { value: "dbs", label: "Dragon Ball Super Card Game" },
+                    { value: "digimon", label: "Digimon" },
+                    { value: "lorcana", label: "Disney Lorcana" },
+                    { value: "flesh-and-blood", label: "Flesh and Blood" },
+                    { value: "mtg", label: "Magic: The Gathering" },
+                    { value: "onepiece", label: "One Piece Card Game" },
+                    { value: "pokemon", label: "Pokemon" },
+                    { value: "star-wars", label: "Star Wars: Unlimited" },
+                    { value: "union-arena", label: "Union Arena" },
+                    { value: "universus", label: "Universus" },
+                    { value: "vanguard", label: "Vanguard" },
+                    { value: "weiss", label: "Weiss Schwarz" },
+                    { value: "yugioh", label: "Yu-Gi-Oh!" },
+                    { value: "other", label: "Other" }
+                  ]}
+                  placeholder="All Games"
+                  className="h-9"
+                />
               </div>
               
               {/* Refresh button moved to the right on the same row */}
@@ -878,28 +880,29 @@ const DashboardComponent = () => {
             
             {/* Game Categories Filter - Only visible on mobile */}
             <div className="md:hidden w-full">
-              <Select value={gameFilter} onValueChange={setGameFilter}>
-                <SelectTrigger className="h-9 w-full">
-                  <SelectValue placeholder="All Games" />
-                </SelectTrigger>
-                <SelectContent className="min-w-[300px]">
-                  <SelectItem value="all">All Games</SelectItem>
-                  <SelectItem value="dbs">Dragon Ball Super Card Game</SelectItem>
-                  <SelectItem value="digimon">Digimon</SelectItem>
-                  <SelectItem value="lorcana">Disney Lorcana</SelectItem>
-                  <SelectItem value="flesh-and-blood">Flesh and Blood</SelectItem>
-                  <SelectItem value="mtg">Magic: The Gathering</SelectItem>
-                  <SelectItem value="onepiece">One Piece Card Game</SelectItem>
-                  <SelectItem value="pokemon">Pokemon</SelectItem>
-                  <SelectItem value="star-wars">Star Wars: Unlimited</SelectItem>
-                  <SelectItem value="union-arena">Union Arena</SelectItem>
-                  <SelectItem value="universus">Universus</SelectItem>
-                  <SelectItem value="vanguard">Vanguard</SelectItem>
-                  <SelectItem value="weiss">Weiss Schwarz</SelectItem>
-                  <SelectItem value="yugioh">Yu-Gi-Oh!</SelectItem>
-                  <SelectItem value="other">Other</SelectItem>
-                </SelectContent>
-              </Select>
+              <MobileSelect 
+                value={gameFilter} 
+                onValueChange={setGameFilter}
+                options={[
+                  { value: "all", label: "All Games" },
+                  { value: "dbs", label: "Dragon Ball Super Card Game" },
+                  { value: "digimon", label: "Digimon" },
+                  { value: "lorcana", label: "Disney Lorcana" },
+                  { value: "flesh-and-blood", label: "Flesh and Blood" },
+                  { value: "mtg", label: "Magic: The Gathering" },
+                  { value: "onepiece", label: "One Piece Card Game" },
+                  { value: "pokemon", label: "Pokemon" },
+                  { value: "star-wars", label: "Star Wars: Unlimited" },
+                  { value: "union-arena", label: "Union Arena" },
+                  { value: "universus", label: "Universus" },
+                  { value: "vanguard", label: "Vanguard" },
+                  { value: "weiss", label: "Weiss Schwarz" },
+                  { value: "yugioh", label: "Yu-Gi-Oh!" },
+                  { value: "other", label: "Other" }
+                ]}
+                placeholder="All Games"
+                className="h-9 w-full"
+              />
             </div>
             
             {/* Search Bar - Full width on mobile */}
