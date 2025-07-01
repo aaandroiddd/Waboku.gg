@@ -6,7 +6,7 @@ import { formatPrice } from '@/lib/price';
 import { format, addDays } from 'date-fns';
 import Image from 'next/image';
 import { UserNameLink } from '@/components/UserNameLink';
-import { Package, ExternalLink, MapPin, RefreshCw } from 'lucide-react';
+import { Package, ExternalLink, MapPin, RefreshCw, Plus } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { getFirebaseServices } from '@/lib/firebase';
@@ -172,6 +172,36 @@ export function OrderCard({ order, isSale = false }: OrderCardProps) {
   const handleRefundProcessed = () => {
     // Refresh the page to show updated status
     router.reload();
+  };
+
+  // Function to handle relisting after successful refund
+  const handleRelistItem = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent triggering the card click
+    
+    if (!safeOrder?.listingSnapshot) {
+      toast.error('Unable to relist: listing information not available');
+      return;
+    }
+
+    // Create URL with pre-filled data from the original listing
+    const params = new URLSearchParams({
+      relist: 'true',
+      title: safeOrder.listingSnapshot.title || '',
+      price: safeOrder.listingSnapshot.price?.toString() || '',
+      game: safeOrder.listingSnapshot.game || '',
+      condition: safeOrder.listingSnapshot.condition || '',
+      description: safeOrder.listingSnapshot.description || '',
+      ...(safeOrder.listingSnapshot.isGraded && {
+        isGraded: 'true',
+        gradeLevel: safeOrder.listingSnapshot.gradeLevel?.toString() || '',
+        gradingCompany: safeOrder.listingSnapshot.gradingCompany || ''
+      }),
+      ...(safeOrder.listingSnapshot.finalSale && {
+        finalSale: 'true'
+      })
+    });
+
+    router.push(`/dashboard/create-listing?${params.toString()}`);
   };
 
   // Check if order is eligible for refund (for buyers only)
@@ -461,6 +491,21 @@ export function OrderCard({ order, isSale = false }: OrderCardProps) {
               >
                 <RefreshCw className="mr-2 h-4 w-4" />
                 Manage Refund
+              </Button>
+            )}
+
+            {/* Relist Item Button - Only visible for buyers with completed refunds */}
+            {!isSale && safeOrder.refundStatus === 'completed' && (
+              <Button 
+                variant="outline" 
+                className="border-green-600 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 w-full md:w-auto"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleRelistItem(e);
+                }}
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                Relist Item
               </Button>
             )}
           </div>
