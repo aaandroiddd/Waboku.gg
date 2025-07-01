@@ -260,6 +260,46 @@ const CreateListingPage = () => {
     }
   }, [profile]);
 
+  // Handle relist functionality - pre-fill form with data from URL parameters
+  useEffect(() => {
+    if (router.isReady && router.query.relist === 'true') {
+      const {
+        title,
+        price,
+        game,
+        condition,
+        description,
+        isGraded,
+        gradeLevel,
+        gradingCompany,
+        finalSale
+      } = router.query;
+
+      setFormData(prev => ({
+        ...prev,
+        title: (title as string) || '',
+        price: (price as string) || '',
+        game: (game as string) || '',
+        condition: (condition as string) || '',
+        description: (description as string) || '',
+        isGraded: isGraded === 'true',
+        gradeLevel: gradeLevel ? parseFloat(gradeLevel as string) : undefined,
+        gradingCompany: (gradingCompany as string) || undefined,
+        finalSale: finalSale === 'true'
+      }));
+
+      // Show a toast to inform the user
+      toast({
+        title: "Listing Pre-filled",
+        description: "Your listing has been pre-filled with information from your refunded order. You can modify any details before creating the new listing.",
+      });
+
+      // Clean up the URL to remove the relist parameters
+      const cleanUrl = router.asPath.split('?')[0];
+      router.replace(cleanUrl, undefined, { shallow: true });
+    }
+  }, [router.isReady, router.query, toast]);
+
   if (loading || !user) {
     return null;
   }

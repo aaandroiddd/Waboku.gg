@@ -348,9 +348,10 @@ export function OrderCard({ order, isSale = false }: OrderCardProps) {
             </div>
           </div>
           
-          <div className="flex flex-col gap-2 mt-2 md:mt-0">
+          <div className="flex flex-col gap-2 mt-2 md:mt-0 md:items-end md:justify-start md:min-w-[200px]">
             <Button 
               variant="outline" 
+              className="w-full md:w-auto"
               onClick={(e) => {
                 e.stopPropagation();
                 handleViewOrder();
@@ -362,6 +363,7 @@ export function OrderCard({ order, isSale = false }: OrderCardProps) {
             {safeOrder.listingId && (
               <Button 
                 variant="outline" 
+                className="w-full md:w-auto"
                 onClick={(e) => {
                   e.stopPropagation();
                   handleViewListing(e);
@@ -376,7 +378,7 @@ export function OrderCard({ order, isSale = false }: OrderCardProps) {
              (safeOrder.status === 'paid' || safeOrder.status === 'awaiting_shipping') && (
               <Button 
                 variant="default" 
-                className="bg-green-600 hover:bg-green-700 text-white font-medium"
+                className="bg-green-600 hover:bg-green-700 text-white font-medium w-full md:w-auto"
                 onClick={(e) => {
                   e.stopPropagation();
                   handleCompletePickup(e);
@@ -390,7 +392,7 @@ export function OrderCard({ order, isSale = false }: OrderCardProps) {
             {!isSale && safeOrder.status === 'awaiting_shipping' && !safeOrder.shippingAddress && (
               <Button 
                 variant="default" 
-                className="bg-blue-600 hover:bg-blue-700 text-white font-medium"
+                className="bg-blue-600 hover:bg-blue-700 text-white font-medium w-full md:w-auto"
                 onClick={(e) => {
                   e.stopPropagation();
                   router.push(`/dashboard/orders/${safeOrder.id}?shipping=true`);
@@ -407,7 +409,7 @@ export function OrderCard({ order, isSale = false }: OrderCardProps) {
                 orderId={safeOrder.id}
                 sellerId={safeOrder.sellerId}
                 variant="default"
-                className="bg-green-600 hover:bg-green-700 text-white font-medium"
+                className="bg-green-600 hover:bg-green-700 text-white font-medium w-full md:w-auto"
                 onClick={(e) => {
                   e.stopPropagation();
                 }}
@@ -421,7 +423,7 @@ export function OrderCard({ order, isSale = false }: OrderCardProps) {
             {!isSale && safeOrder.status === 'completed' && !safeOrder.reviewSubmitted && (
               <Button 
                 variant="default" 
-                className="bg-primary hover:bg-primary/90 text-white font-medium"
+                className="bg-primary hover:bg-primary/90 text-white font-medium w-full md:w-auto"
                 onClick={(e) => {
                   e.stopPropagation();
                   router.push(`/dashboard/orders/${safeOrder.id}?review=true`);
@@ -436,7 +438,7 @@ export function OrderCard({ order, isSale = false }: OrderCardProps) {
             {isRefundEligible() && (
               <Button 
                 variant="outline" 
-                className="border-orange-600 text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-900/20"
+                className="border-orange-600 text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-900/20 w-full md:w-auto"
                 onClick={(e) => {
                   e.stopPropagation();
                   handleRefundRequest(e);
@@ -451,7 +453,7 @@ export function OrderCard({ order, isSale = false }: OrderCardProps) {
             {isSale && safeOrder.refundStatus === 'requested' && (
               <Button 
                 variant="outline" 
-                className="border-orange-600 text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-900/20"
+                className="border-orange-600 text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-900/20 w-full md:w-auto"
                 onClick={(e) => {
                   e.stopPropagation();
                   handleRefundManagement(e);

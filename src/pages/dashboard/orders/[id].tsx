@@ -13,7 +13,7 @@ import { Separator } from '@/components/ui/separator';
 import { formatPrice } from '@/lib/price';
 import Image from 'next/image';
 import { format } from 'date-fns';
-import { Loader2, ArrowLeft, Package, CreditCard, User, MapPin, Calendar, Clock, Truck, AlertTriangle, Copy, ExternalLink, Info, RefreshCw, CheckCircle, Star, MessageCircle, HelpCircle } from 'lucide-react';
+import { Loader2, ArrowLeft, Package, CreditCard, User, MapPin, Calendar, Clock, Truck, AlertTriangle, Copy, ExternalLink, Info, RefreshCw, CheckCircle, Star, MessageCircle, HelpCircle, Plus } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { toast } from 'sonner';
 import { Input } from '@/components/ui/input';
@@ -507,6 +507,44 @@ export default function OrderDetailsPage() {
   const handleRefundProcessed = () => {
     // Refresh the page to show updated status
     router.reload();
+  };
+
+  // Function to handle relisting after successful refund
+  const handleRelistItem = () => {
+    if (!order?.listingSnapshot) {
+      toast.error('Unable to relist: listing information not available');
+      return;
+    }
+
+    // Create URL with pre-filled data from the original listing
+    const params = new URLSearchParams({
+      relist: 'true',
+      title: order.listingSnapshot.title || '',
+      price: order.listingSnapshot.price?.toString() || '',
+      game: order.listingSnapshot.game || '',
+      condition: order.listingSnapshot.condition || '',
+      description: order.listingSnapshot.description || '',
+      ...(order.listingSnapshot.isGraded && {
+        isGraded: 'true',
+        gradeLevel: order.listingSnapshot.gradeLevel?.toString() || '',
+        gradingCompany: order.listingSnapshot.gradingCompany || ''
+      }),
+      ...(order.listingSnapshot.finalSale && {
+        finalSale: 'true'
+      })
+    });
+
+    router.push(`/dashboard/create-listing?${params.toString()}`);
+  };
+
+  // Check if order is eligible for relisting (for buyers with completed refunds)
+  const isRelistEligible = () => {
+    if (!isUserBuyer) return false; // Only buyers can relist
+    
+    // Check if refund was completed successfully
+    if (order.refundStatus !== 'completed') return false;
+    
+    return true;
   };
 
   return (
@@ -1407,6 +1445,18 @@ export default function OrderDetailsPage() {
               {isUserBuyer && order.status === 'completed' && order.reviewSubmitted && (
                 <Button variant="outline" onClick={() => toast.info('Contact support for any issues with this order')}>
                   <Package className="mr-2 h-4 w-4" /> Report Issue
+                </Button>
+              )}
+
+              {/* Relist Button - Only visible for buyers with completed refunds */}
+              {isRelistEligible() && (
+                <Button 
+                  variant="outline" 
+                  className="border-green-600 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20"
+                  onClick={handleRelistItem}
+                >
+                  <Plus className="mr-2 h-4 w-4" />
+                  Relist Item
                 </Button>
               )}
               
