@@ -547,7 +547,11 @@ export default async function handler(
                     country: paymentIntent.shipping.address.country
                   });
                 } else {
-                  console.log('[Stripe Webhook] No shipping address found in payment intent for new order');
+                  console.log('[Stripe Webhook] No shipping address found in payment intent for new order. Payment intent shipping object:', {
+                    hasShipping: !!paymentIntent.shipping,
+                    shippingObject: paymentIntent.shipping,
+                    hasAddress: !!paymentIntent.shipping?.address
+                  });
                 }
               } catch (error) {
                 console.error('[Stripe Webhook] Error retrieving payment intent details for new order:', error);
@@ -558,12 +562,52 @@ export default async function handler(
             // For Buy Now orders, payment intent shipping is more reliable than session shipping
             if (shippingFromPaymentIntent) {
               finalShippingAddress = shippingFromPaymentIntent;
-              console.log('[Stripe Webhook] Using shipping address from payment intent (most reliable for Buy Now orders)');
+              console.log('[Stripe Webhook] Using shipping address from payment intent (most reliable for Buy Now orders):', {
+                name: shippingFromPaymentIntent.name,
+                city: shippingFromPaymentIntent.city,
+                state: shippingFromPaymentIntent.state,
+                line1: shippingFromPaymentIntent.line1
+              });
             } else if (shippingFromSession) {
               finalShippingAddress = shippingFromSession;
-              console.log('[Stripe Webhook] Using shipping address from session (fallback)');
+              console.log('[Stripe Webhook] Using shipping address from session (fallback):', {
+                name: shippingFromSession.name,
+                city: shippingFromSession.city,
+                state: shippingFromSession.state,
+                line1: shippingFromSession.line1
+              });
             } else {
               console.log('[Stripe Webhook] No shipping address found in either session or payment intent');
+            }
+
+            // Additional validation to ensure we have a complete shipping address
+            if (finalShippingAddress) {
+              // Validate that we have the essential fields
+              const hasRequiredFields = finalShippingAddress.name && 
+                                      finalShippingAddress.line1 && 
+                                      finalShippingAddress.city && 
+                                      finalShippingAddress.state && 
+                                      finalShippingAddress.postal_code && 
+                                      finalShippingAddress.country;
+              
+              if (!hasRequiredFields) {
+                console.warn('[Stripe Webhook] Shipping address is incomplete, missing required fields:', {
+                  hasName: !!finalShippingAddress.name,
+                  hasLine1: !!finalShippingAddress.line1,
+                  hasCity: !!finalShippingAddress.city,
+                  hasState: !!finalShippingAddress.state,
+                  hasPostalCode: !!finalShippingAddress.postal_code,
+                  hasCountry: !!finalShippingAddress.country,
+                  shippingAddress: finalShippingAddress
+                });
+              } else {
+                console.log('[Stripe Webhook] Final shipping address validated successfully:', {
+                  name: finalShippingAddress.name,
+                  city: finalShippingAddress.city,
+                  state: finalShippingAddress.state,
+                  country: finalShippingAddress.country
+                });
+              }
             }
             
             // Create an order record
@@ -649,11 +693,29 @@ export default async function handler(
                 });
                 orderRef = existingOrder.ref;
                 
-                // Update the existing order with any new information
-                await orderRef.update({
+                // Update the existing order with any new information including shipping address
+                const updateData: any = {
                   updatedAt: new Date(),
                   paymentIntentId: paymentIntentId, // Ensure payment intent is updated
-                  status: 'awaiting_shipping' // Keep status as awaiting_shipping for consistency
+                  status: 'awaiting_shipping', // Keep status as awaiting_shipping for consistency
+                  ...(paymentMethod && { paymentMethod })
+                };
+
+                // Add shipping address if we have it
+                if (finalShippingAddress) {
+                  updateData.shippingAddress = finalShippingAddress;
+                  console.log('[Stripe Webhook] Adding shipping address to existing order:', {
+                    orderId: existingOrder.id,
+                    shippingName: finalShippingAddress.name,
+                    shippingCity: finalShippingAddress.city,
+                    shippingState: finalShippingAddress.state
+                  });
+                }
+
+                await orderRef.update(updateData);
+                console.log('[Stripe Webhook] Updated existing order with shipping address:', {
+                  orderId: existingOrder.id,
+                  hasShippingAddress: !!updateData.shippingAddress
                 });
               } else {
                 // Create a new order
