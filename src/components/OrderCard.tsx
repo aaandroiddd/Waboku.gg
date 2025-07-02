@@ -554,29 +554,6 @@ export function OrderCard({ order, isSale = false }: OrderCardProps) {
               </Button>
             )}
           </div>
-          
-          {safeOrder.isPickup ? (
-            <div className="md:w-1/3 hidden md:block md:self-start">
-              <h4 className="font-semibold mb-2">Delivery Method</h4>
-              <div className="text-sm text-muted-foreground">
-                <p className="font-medium text-green-600 dark:text-green-400">Local Pickup</p>
-                <p>Arrange pickup details with {isSale ? 'buyer' : 'seller'}</p>
-              </div>
-            </div>
-          ) : safeOrder.shippingAddress && (
-            <div className="md:w-1/3 hidden md:block md:self-start">
-              <h4 className="font-semibold mb-2">Shipping Address</h4>
-              <div className="text-sm text-muted-foreground">
-                <p>{safeOrder.shippingAddress.name}</p>
-                <p>{safeOrder.shippingAddress.line1}</p>
-                {safeOrder.shippingAddress.line2 && <p>{safeOrder.shippingAddress.line2}</p>}
-                <p>
-                  {safeOrder.shippingAddress.city}, {safeOrder.shippingAddress.state}{' '}
-                  {safeOrder.shippingAddress.postal_code}
-                </p>
-              </div>
-            </div>
-          )}
         </div>
       </CardContent>
       
