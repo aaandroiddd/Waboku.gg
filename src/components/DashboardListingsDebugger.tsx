@@ -38,15 +38,24 @@ export default function DashboardListingsDebugger({ onRefreshListings }: Dashboa
         details: { uid: user?.uid, email: user?.email }
       });
 
-      // Test 2: Check localStorage cache
-      const cacheKeys = [
-        'dashboard_listings_cache',
-        'user_listings_cache',
-        'listings_cache_timestamp',
-        'force_listings_refresh'
+      // Test 2: Check localStorage cache - use actual cache keys
+      const actualCacheKeys = [
+        `dashboard_data_${user.uid}`, // From useDashboardCache
+        `listings_${user.uid}_all_none`, // From useOptimizedListings (all listings)
+        `listings_${user.uid}_active_none`, // From useOptimizedListings (active only)
+        'force_listings_refresh' // This one is correct
       ];
       
-      const cacheStatus = cacheKeys.map(key => ({
+      // Also check for any other listing-related cache keys
+      const allCacheKeys = Object.keys(localStorage).filter(key => 
+        key.startsWith('listings_') || 
+        key.startsWith('dashboard_') || 
+        key.includes('force_listings_refresh') ||
+        key.includes('dashboard_last_refresh') ||
+        key.includes('listings_last_fetch')
+      );
+      
+      const cacheStatus = actualCacheKeys.map(key => ({
         key,
         exists: localStorage.getItem(key) !== null,
         value: localStorage.getItem(key)
@@ -55,9 +64,17 @@ export default function DashboardListingsDebugger({ onRefreshListings }: Dashboa
       results.push({
         test: 'Cache State',
         status: cacheStatus.some(c => c.exists) ? 'pass' : 'warning',
-        message: `Found ${cacheStatus.filter(c => c.exists).length}/${cacheKeys.length} cache entries`,
-        details: cacheStatus
+        message: `Found ${cacheStatus.filter(c => c.exists).length}/${actualCacheKeys.length} expected cache entries`,
+        details: {
+          expectedCaches: cacheStatus,
+          allListingCaches: allCacheKeys.map(key => ({
+            key,
+            exists: true,
+            value: localStorage.getItem(key)
+          }))
+        }
       });
+=======
 
       // Test 3: Check Firebase connection
       try {
@@ -148,16 +165,29 @@ export default function DashboardListingsDebugger({ onRefreshListings }: Dashboa
     if (!user) return;
 
     try {
-      // Clear all caches
-      const cacheKeys = [
-        'dashboard_listings_cache',
-        'user_listings_cache',
-        'listings_cache_timestamp',
+      // Clear all actual cache keys used by the system
+      const actualCacheKeys = [
+        `dashboard_data_${user.uid}`, // From useDashboardCache
+        `listings_${user.uid}_all_none`, // From useOptimizedListings
+        `listings_${user.uid}_active_none`, // From useOptimizedListings
         'dashboard_last_refresh',
         'listings_last_fetch'
       ];
       
-      cacheKeys.forEach(key => localStorage.removeItem(key));
+      // Also clear any other listing-related cache keys
+      const allCacheKeys = Object.keys(localStorage).filter(key => 
+        key.startsWith('listings_') || 
+        key.startsWith('dashboard_') || 
+        key.includes('force_listings_refresh') ||
+        key.includes('dashboard_last_refresh') ||
+        key.includes('listings_last_fetch')
+      );
+      
+      // Combine and deduplicate cache keys to clear
+      const keysToRemove = [...new Set([...actualCacheKeys, ...allCacheKeys])];
+      
+      console.log('Auto-fix: Clearing cache keys:', keysToRemove);
+      keysToRemove.forEach(key => localStorage.removeItem(key));
 
       // Clear session flags
       const sessionKeys = [
@@ -191,6 +221,7 @@ export default function DashboardListingsDebugger({ onRefreshListings }: Dashboa
       console.error('Auto-fix failed:', error);
     }
   };
+=======
 
   const getStatusIcon = (status: DiagnosticResult['status']) => {
     switch (status) {
