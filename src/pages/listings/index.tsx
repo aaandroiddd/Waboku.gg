@@ -193,11 +193,14 @@ export default function ListingsPage() {
   useEffect(() => {
     // Initialize filters from URL parameters
     const { query, state, game, condition, minPrice, maxPrice, sort } = router.query;
-    if (query) {
-      setSearchQuery(query as string);
-    } else {
-      setSearchQuery(""); // Reset search query when it's removed from URL
+    
+    // Only update search query if it's different from current state
+    // This prevents overriding user input with stale URL parameters
+    const urlQuery = query as string || "";
+    if (urlQuery !== searchQuery) {
+      setSearchQuery(urlQuery);
     }
+    
     if (state) setSelectedState(state as string);
     if (game) setSelectedGame(game as string);
     if (condition) setSelectedCondition(condition as string);
@@ -319,14 +322,22 @@ export default function ListingsPage() {
     }
   };
 
-  const handleSearch = async () => {
+  const handleSearch = async (searchTerm?: string) => {
     try {
+      // Use provided search term or current searchQuery state
+      const currentSearchTerm = searchTerm !== undefined ? searchTerm : searchQuery;
+      
+      // Update local state if search term was provided
+      if (searchTerm !== undefined && searchTerm !== searchQuery) {
+        setSearchQuery(searchTerm);
+      }
+      
       // Only record search term if there is one
-      if (searchQuery.trim()) {
+      if (currentSearchTerm.trim()) {
         try {
           // Use the recordSearch function from useTrendingSearches hook
-          console.log('Recording search term from listings page:', searchQuery.trim());
-          await recordSearch(searchQuery.trim());
+          console.log('Recording search term from listings page:', currentSearchTerm.trim());
+          await recordSearch(currentSearchTerm.trim());
           // Add a small delay to ensure the search is recorded before refreshing the page
           await new Promise(resolve => setTimeout(resolve, 100));
         } catch (error) {
@@ -339,8 +350,8 @@ export default function ListingsPage() {
       const queryParams: any = {};
       
       // Only add parameters that have values
-      if (searchQuery.trim()) {
-        queryParams.query = searchQuery;
+      if (currentSearchTerm.trim()) {
+        queryParams.query = currentSearchTerm.trim();
       }
       
       if (selectedState !== 'all') {
@@ -413,8 +424,7 @@ export default function ListingsPage() {
                     showSearchButton={true}
                     initialValue={searchQuery}
                     onSearch={(query: string) => {
-                      setSearchQuery(query);
-                      handleSearch();
+                      handleSearch(query);
                     }}
                   />
                 </div>
