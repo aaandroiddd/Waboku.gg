@@ -16,6 +16,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useToast } from "@/components/ui/use-toast";
 import { ListingVisibilityFixer } from "@/components/ListingVisibilityFixer";
 import { AdvancedTools } from "@/components/dashboard/AdvancedTools";
+import DashboardListingsDebugger from "@/components/DashboardListingsDebugger";
 import { ProfileAvatar } from "@/components/ProfileAvatar";
 import { ProfileName } from "@/components/ProfileName";
 import { Star, Edit2, Trash2, MessageCircle, Share2, ExternalLink, AlertCircle, RefreshCw } from "lucide-react";
@@ -48,6 +49,8 @@ const DashboardComponent = () => {
   const [gameFilter, setGameFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [refreshLoading, setRefreshLoading] = useState<boolean>(false);
+  const [showDiagnostics, setShowDiagnostics] = useState<boolean>(false);
+  const [listingsLoadAttempts, setListingsLoadAttempts] = useState<number>(0);
   const [dialogState, setDialogState] = useState<{
     isOpen: boolean;
     listingId: string;
@@ -444,7 +447,7 @@ const DashboardComponent = () => {
     }
   });
   
-  // Debug logging for active listings
+  // Debug logging for active listings and detect potential issues
   useEffect(() => {
     console.log('Dashboard - All listings count:', allListings.length);
     console.log('Dashboard - Active listings count:', allListings.filter(l => l.status === 'active').length);
@@ -456,6 +459,20 @@ const DashboardComponent = () => {
       sortOrder,
       searchQuery
     });
+    
+    // Track load attempts and show diagnostics if there are issues
+    setListingsLoadAttempts(prev => prev + 1);
+    
+    // Show diagnostics if we have issues loading listings
+    const hasLoadingIssues = (
+      (user && allListings.length === 0 && !listingsLoading && listingsLoadAttempts > 2) ||
+      (allListings.length > 0 && properlyFilteredActiveListings.length === 0 && allListings.filter(l => l.status === 'active').length > 0)
+    );
+    
+    if (hasLoadingIssues && !showDiagnostics) {
+      console.warn('Dashboard - Potential listing visibility issues detected, showing diagnostics');
+      setShowDiagnostics(true);
+    }
     
     // Log all listings with their key properties for debugging
     if (allListings.length > 0) {
@@ -535,7 +552,7 @@ const DashboardComponent = () => {
         game: sampleListing.game
       });
     }
-  }, [allListings, properlyFilteredActiveListings, activeListings, gameFilter, sortBy, sortOrder, searchQuery]);
+  }, [allListings, properlyFilteredActiveListings, activeListings, gameFilter, sortBy, sortOrder, searchQuery, user, listingsLoading, listingsLoadAttempts, showDiagnostics]);
   // Filter for archived listings specifically - ensure we're explicitly checking for 'archived' status
   const archivedListings = allListings.filter(listing => listing.status === 'archived');
 
@@ -1130,6 +1147,13 @@ const DashboardComponent = () => {
       
       {/* Advanced Tools Section */}
       <AdvancedTools />
+      
+      {/* Dashboard Listings Diagnostics - Show when there are potential issues */}
+      {showDiagnostics && (
+        <div className="mt-6">
+          <DashboardListingsDebugger onRefreshListings={handleRefreshListings} />
+        </div>
+      )}
       </FirebaseConnectionHandler>
     </DashboardLayout>
   );
