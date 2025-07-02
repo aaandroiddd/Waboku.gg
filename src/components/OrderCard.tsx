@@ -301,8 +301,8 @@ export function OrderCard({ order, isSale = false }: OrderCardProps) {
   return (
     <Card className="mb-4 cursor-pointer hover:shadow-md transition-shadow duration-200" onClick={handleViewOrder}>
       <CardContent className="pt-6">
-        <div className="flex flex-col md:flex-row gap-4">
-          <div className="relative w-24 h-24 md:w-32 md:h-32">
+        <div className="flex flex-col md:flex-row gap-4 md:items-start">
+          <div className="relative w-24 h-24 md:w-32 md:h-32 md:flex-shrink-0">
             {safeOrder.listingSnapshot.imageUrl ? (
               <Image
                 src={safeOrder.listingSnapshot.imageUrl}
@@ -319,7 +319,7 @@ export function OrderCard({ order, isSale = false }: OrderCardProps) {
               </div>
             )}
           </div>
-          <div className="flex-1">
+          <div className="flex-1 md:min-h-0">
             <h3 
               className="font-semibold text-lg mb-2 cursor-pointer hover:text-primary" 
               onClick={handleViewListing}
@@ -423,7 +423,7 @@ export function OrderCard({ order, isSale = false }: OrderCardProps) {
             </div>
           </div>
           
-          <div className="flex flex-col gap-2 mt-4 md:mt-0 md:flex-shrink-0 md:w-[200px] md:items-end">
+          <div className="flex flex-col gap-2 mt-4 md:mt-0 md:flex-shrink-0 md:w-[200px] md:self-start">
             <Button 
               variant="outline" 
               className="w-full"
@@ -556,7 +556,7 @@ export function OrderCard({ order, isSale = false }: OrderCardProps) {
           </div>
           
           {safeOrder.isPickup ? (
-            <div className="md:w-1/3 hidden md:block">
+            <div className="md:w-1/3 hidden md:block md:self-start">
               <h4 className="font-semibold mb-2">Delivery Method</h4>
               <div className="text-sm text-muted-foreground">
                 <p className="font-medium text-green-600 dark:text-green-400">Local Pickup</p>
@@ -564,7 +564,7 @@ export function OrderCard({ order, isSale = false }: OrderCardProps) {
               </div>
             </div>
           ) : safeOrder.shippingAddress && (
-            <div className="md:w-1/3 hidden md:block">
+            <div className="md:w-1/3 hidden md:block md:self-start">
               <h4 className="font-semibold mb-2">Shipping Address</h4>
               <div className="text-sm text-muted-foreground">
                 <p>{safeOrder.shippingAddress.name}</p>
