@@ -172,7 +172,30 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         status: createdData?.status,
         title: createdData?.title,
         createdAt: createdData?.createdAt,
-        expiresAt: createdData?.expiresAt
+        expiresAt: createdData?.expiresAt,
+        archivedAt: createdData?.archivedAt,
+        originalCreatedAt: createdData?.originalCreatedAt,
+        previousStatus: createdData?.previousStatus,
+        previousExpiresAt: createdData?.previousExpiresAt,
+        soldTo: createdData?.soldTo,
+        expirationReason: createdData?.expirationReason
+      });
+      
+      // Additional verification: Check if this listing would be visible in a dashboard query
+      console.log('Relist API: Dashboard visibility check:', {
+        hasUserId: !!createdData?.userId,
+        userIdMatches: createdData?.userId === userId,
+        statusIsActive: createdData?.status === 'active',
+        hasAccountTier: !!createdData?.accountTier,
+        hasUsername: !!createdData?.username,
+        allArchiveFieldsNull: (
+          createdData?.archivedAt === null &&
+          createdData?.originalCreatedAt === null &&
+          createdData?.previousStatus === null &&
+          createdData?.previousExpiresAt === null &&
+          createdData?.soldTo === null &&
+          createdData?.expirationReason === null
+        )
       });
     } else {
       console.error('Relist API: Failed to verify created listing');

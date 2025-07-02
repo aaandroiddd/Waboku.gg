@@ -432,8 +432,13 @@ const DashboardComponent = () => {
       searchQuery
     });
     
-    // Log the first few listings for debugging
+    // Log all listings with their key properties for debugging
     if (allListings.length > 0) {
+      console.log('Dashboard - All listings details:');
+      allListings.forEach((listing, index) => {
+        console.log(`  [${index}] ${listing.id}: status=${listing.status}, userId=${listing.userId}, title="${listing.title}", accountTier=${listing.accountTier}, archivedAt=${listing.archivedAt}`);
+      });
+      
       // Enhanced debugging for the first listing
       const sampleListing = allListings[0];
       
