@@ -34,6 +34,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const { db } = getFirebaseAdmin();
 
+    // Get the user's current profile to ensure we have the correct username
+    const userDoc = await db.collection('users').doc(userId).get();
+    let currentUsername = 'Anonymous';
+    
+    if (userDoc.exists) {
+      const userData = userDoc.data();
+      currentUsername = userData?.username || userData?.displayName || 'Anonymous';
+      console.log('Relist API: Retrieved current username:', currentUsername);
+    } else {
+      console.log('Relist API: User document not found, using Anonymous');
+    }
+
     // Get the order to verify ownership and get listing data
     const orderDoc = await db.collection('orders').doc(orderId).get();
     
@@ -70,7 +82,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       images: listingSnapshot.images || [],
       imageUrls: listingSnapshot.imageUrls || listingSnapshot.images || [],
       userId: userId, // Use userId instead of sellerId for consistency with dashboard queries
-      username: listingSnapshot.username || 'Anonymous',
+      username: currentUsername, // Use current user's username instead of snapshot
       status: 'active',
       createdAt: FieldValue.serverTimestamp(),
       updatedAt: FieldValue.serverTimestamp(),
