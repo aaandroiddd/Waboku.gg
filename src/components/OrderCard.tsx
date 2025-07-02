@@ -217,9 +217,30 @@ export function OrderCard({ order, isSale = false }: OrderCardProps) {
         throw new Error(data.details || data.error || 'Failed to relist item');
       }
 
-      toast.success('Item successfully relisted! You can find it in your active listings.');
+      console.log('OrderCard: Relist successful, new listing ID:', data.listingId);
+      toast.success('Item successfully relisted! Redirecting to your dashboard...');
       
-      // Optionally redirect to the dashboard to see the new listing
+      // Clear any cached listings data to ensure fresh data
+      try {
+        const cacheKeys = Object.keys(localStorage).filter(key => 
+          key.startsWith('listings_')
+        );
+        
+        for (const key of cacheKeys) {
+          localStorage.removeItem(key);
+          console.log('OrderCard: Cleared cache:', key);
+        }
+        
+        console.log('OrderCard: Cleared all listing caches to ensure fresh data');
+      } catch (cacheError) {
+        console.error('OrderCard: Error clearing listing caches:', cacheError);
+      }
+      
+      // Add a flag to localStorage to indicate that listings should be refreshed
+      localStorage.setItem('force_listings_refresh', 'true');
+      localStorage.setItem('relist_success', 'true');
+      
+      // Redirect to the dashboard to see the new listing
       router.push('/dashboard');
 
     } catch (error) {

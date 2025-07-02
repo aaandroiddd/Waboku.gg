@@ -299,6 +299,20 @@ const DashboardComponent = () => {
       });
     }
     
+    // Check for relist success flag
+    const relistSuccess = localStorage.getItem('relist_success');
+    const forceRefresh = localStorage.getItem('force_listings_refresh');
+    
+    if (relistSuccess === 'true') {
+      console.log('Dashboard: Detected successful relist, showing success message');
+      toast({
+        title: "Item Successfully Relisted!",
+        description: "Your item has been added to your active listings.",
+        duration: 5000,
+      });
+      localStorage.removeItem('relist_success');
+    }
+    
     // Clear any cached listings data to ensure fresh data
     if (user) {
       try {
@@ -321,6 +335,17 @@ const DashboardComponent = () => {
           setTimeout(() => {
             refreshListings();
           }, 500);
+        } else if (forceRefresh === 'true') {
+          console.log('Dashboard: Force refresh flag detected, refreshing listings');
+          localStorage.removeItem('force_listings_refresh');
+          
+          // Clear dashboard cache as well
+          clearListingsCache();
+          
+          // Force refresh the listings
+          setTimeout(() => {
+            refreshListings();
+          }, 100);
         } else {
           console.log('Cleared listings cache on dashboard mount');
           refreshListings();
@@ -329,7 +354,7 @@ const DashboardComponent = () => {
         console.error('Error clearing listings cache:', cacheError);
       }
     }
-  }, [user, prevAuthState.isLoggedIn, prevAuthState.userId, clearListingsCache, refreshListings]);
+  }, [user, prevAuthState.isLoggedIn, prevAuthState.userId, clearListingsCache, refreshListings, toast]);
   
   const sortedListings = [...(allListings || [])].sort((a, b) => {
     if (sortBy === 'date') {
