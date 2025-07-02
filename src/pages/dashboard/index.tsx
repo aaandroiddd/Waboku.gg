@@ -16,7 +16,6 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useToast } from "@/components/ui/use-toast";
 import { ListingVisibilityFixer } from "@/components/ListingVisibilityFixer";
 import { AdvancedTools } from "@/components/dashboard/AdvancedTools";
-import DashboardListingsDebugger from "@/components/DashboardListingsDebugger";
 import { ProfileAvatar } from "@/components/ProfileAvatar";
 import { ProfileName } from "@/components/ProfileName";
 import { Star, Edit2, Trash2, MessageCircle, Share2, ExternalLink, AlertCircle, RefreshCw } from "lucide-react";
@@ -1145,15 +1144,7 @@ const DashboardComponent = () => {
         </TabsContent>
       </Tabs>
       
-      {/* Advanced Tools Section */}
-      <AdvancedTools />
-      
-      {/* Dashboard Listings Diagnostics - Show when there are potential issues */}
-      {showDiagnostics && (
-        <div className="mt-6">
-          <DashboardListingsDebugger onRefreshListings={handleRefreshListings} />
-        </div>
-      )}
+
       </FirebaseConnectionHandler>
     </DashboardLayout>
   );

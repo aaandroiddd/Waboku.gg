@@ -22,6 +22,7 @@ import { doc, getDoc, deleteDoc, collection, query, where, getDocs, setDoc } fro
 import { db, auth } from '@/lib/firebase';
 import { ClearBrowserDataButton } from '@/components/ClearBrowserDataButton';
 import { AccountLinkingButton } from '@/components/AccountLinkingButton';
+import { AdvancedTools } from '@/components/dashboard/AdvancedTools';
 import { Toaster } from '@/components/ui/toaster';
 import { ProfileAvatar } from '@/components/ProfileAvatar';
 import MfaEnrollment from '@/components/MfaEnrollment';
@@ -870,6 +871,16 @@ const SettingsPageContent = () => {
             <CollapsibleContent>
               <CardContent>
                 <div className="space-y-6">
+                  <div>
+                    <h3 className="text-lg font-medium mb-2">Dashboard Diagnostics</h3>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Advanced tools to help diagnose and resolve dashboard listing visibility issues.
+                    </p>
+                    <AdvancedTools />
+                  </div>
+                  
+                  <Separator />
+                  
                   <div>
                     <h3 className="text-lg font-medium mb-2">Fix Browser Data</h3>
                     <p className="text-sm text-muted-foreground mb-4">

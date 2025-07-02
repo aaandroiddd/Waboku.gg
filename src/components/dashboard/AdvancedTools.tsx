@@ -2,9 +2,14 @@ import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ListingsFetchDebugger } from "@/components/ListingsFetchDebugger";
 import { ListingRestorationTool } from "./ListingRestorationTool";
+import DashboardListingsDebugger from "@/components/DashboardListingsDebugger";
 import { ChevronDown, ChevronUp, Settings } from "lucide-react";
 
-export function AdvancedTools() {
+interface AdvancedToolsProps {
+  onRefreshListings?: () => void;
+}
+
+export function AdvancedTools({ onRefreshListings }: AdvancedToolsProps) {
   const [isExpanded, setIsExpanded] = useState(false);
 
   return (
@@ -31,6 +36,7 @@ export function AdvancedTools() {
       
       {isExpanded && (
         <CardContent className="space-y-6">
+          <DashboardListingsDebugger onRefreshListings={onRefreshListings} />
           <ListingsFetchDebugger />
           <ListingRestorationTool />
         </CardContent>
