@@ -894,7 +894,7 @@ export default function OrderDetailsPage() {
                     </div>
                   )}
                   
-                  {/* Payment button for pending orders with Stripe Connect sellers */}
+                  {/* Payment button for pending orders with Stripe Connect sellers - NOT for pickup orders */}
                   {!order.isPickup && order.sellerHasStripeAccount && !order.paymentSessionId && !order.paymentIntentId && isUserBuyer && order.shippingAddress && order.status === 'pending' && (
                     <div className="flex flex-col gap-3 p-3 rounded-md bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 mb-4">
                       <div className="flex items-center gap-2">
@@ -925,7 +925,7 @@ export default function OrderDetailsPage() {
                     </div>
                   )}
                   
-                  {/* Payment button for orders that need shipping info first */}
+                  {/* Payment button for orders that need shipping info first - NOT for pickup orders */}
                   {!order.isPickup && order.sellerHasStripeAccount && !order.paymentSessionId && !order.paymentIntentId && isUserBuyer && !order.shippingAddress && (
                     <div className="flex flex-col gap-3 p-3 rounded-md bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 mb-4">
                       <div className="flex items-center gap-2">

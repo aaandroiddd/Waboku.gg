@@ -281,8 +281,8 @@ export function OrderCard({ order, isSale = false }: OrderCardProps) {
     return null;
   }
   
-  // Determine if this is an awaiting payment order
-  const isAwaitingPayment = order.paymentStatus === 'awaiting_payment';
+  // Determine if this is an awaiting payment order (but not for pickup orders)
+  const isAwaitingPayment = order.paymentStatus === 'awaiting_payment' && !order.isPickup;
   
   // Ensure we have valid data for the order
   const safeOrder = {
@@ -478,8 +478,8 @@ export function OrderCard({ order, isSale = false }: OrderCardProps) {
               </Button>
             )}
             
-            {/* Payment Button - Only visible for buyers with pending orders */}
-            {!isSale && safeOrder.status === 'pending' && safeOrder.shippingAddress && (
+            {/* Payment Button - Only visible for buyers with pending orders that are NOT pickup orders */}
+            {!isSale && safeOrder.status === 'pending' && safeOrder.shippingAddress && !safeOrder.isPickup && (
               <AcceptedOfferCheckout
                 orderId={safeOrder.id}
                 sellerId={safeOrder.sellerId}
