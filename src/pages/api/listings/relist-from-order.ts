@@ -73,26 +73,64 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: 'No listing information available to relist' });
     }
 
+    // Try to get the original listing for more complete data
+    let originalListing = null;
+    try {
+      if (orderData.listingId) {
+        const originalListingDoc = await db.collection('listings').doc(orderData.listingId).get();
+        if (originalListingDoc.exists) {
+          originalListing = originalListingDoc.data();
+          console.log('Relist API: Found original listing for more complete data');
+        }
+      }
+    } catch (error) {
+      console.log('Relist API: Could not fetch original listing, using snapshot only:', error.message);
+    }
+
+    // Use original listing data if available, otherwise fall back to snapshot
+    const sourceData = originalListing || listingSnapshot;
+
     // Calculate expiration date based on account tier
     // Free tier: 48 hours, Premium tier: 720 hours (30 days)
     const tierDuration = accountTier === 'premium' ? 720 : 48;
     const expiresAt = new Date();
     expiresAt.setHours(expiresAt.getHours() + tierDuration);
 
-    // Create a new listing based on the snapshot - ensure it matches the exact structure of manually created listings
+    // Handle image URLs properly - ensure we have valid image data
+    let imageUrls = [];
+    let imageUrl = '';
+
+    if (sourceData.imageUrls && Array.isArray(sourceData.imageUrls)) {
+      imageUrls = sourceData.imageUrls.filter(url => url && typeof url === 'string');
+    } else if (sourceData.imageUrl && typeof sourceData.imageUrl === 'string') {
+      imageUrls = [sourceData.imageUrl];
+    }
+
+    // Set the primary image URL
+    if (imageUrls.length > 0) {
+      imageUrl = imageUrls[0];
+    }
+
+    console.log('Relist API: Image handling:', {
+      hasOriginalListing: !!originalListing,
+      sourceImageUrls: sourceData.imageUrls,
+      sourceImageUrl: sourceData.imageUrl,
+      processedImageUrls: imageUrls,
+      primaryImageUrl: imageUrl
+    });
+
+    // Create a new listing based on the source data - ensure it matches the exact structure of manually created listings
     const newListingData = {
       // Core listing information
-      title: listingSnapshot.title || '',
-      description: listingSnapshot.description || '',
-      price: typeof listingSnapshot.price === 'string' ? listingSnapshot.price : String(listingSnapshot.price || 0),
-      game: listingSnapshot.game || 'other',
-      condition: listingSnapshot.condition || 'near_mint',
+      title: sourceData.title || '',
+      description: sourceData.description || 'No description provided for this listing.',
+      price: typeof sourceData.price === 'string' ? sourceData.price : String(sourceData.price || 0),
+      game: sourceData.game || 'other',
+      condition: sourceData.condition || 'near_mint',
       
-      // Image handling - ensure we have the right image fields
-      imageUrl: listingSnapshot.imageUrl || (listingSnapshot.imageUrls && listingSnapshot.imageUrls[0]) || '',
-      images: listingSnapshot.images || [],
-      imageUrls: listingSnapshot.imageUrls || listingSnapshot.images || [],
-      coverImageIndex: typeof listingSnapshot.coverImageIndex === 'number' ? listingSnapshot.coverImageIndex : 0,
+      // Image handling - use processed image data
+      imageUrl: imageUrl,
+      imageUrls: imageUrls,
       
       // User and authentication fields - CRITICAL for dashboard visibility
       userId: userId, // This must match exactly what the dashboard queries for
@@ -112,27 +150,27 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       favorites: 0,
       
       // Grading information
-      isGraded: Boolean(listingSnapshot.isGraded),
-      gradeLevel: listingSnapshot.gradeLevel ? Number(listingSnapshot.gradeLevel) : null,
-      gradingCompany: listingSnapshot.gradingCompany || null,
+      isGraded: Boolean(sourceData.isGraded),
+      gradeLevel: sourceData.gradeLevel ? Number(sourceData.gradeLevel) : null,
+      gradingCompany: sourceData.gradingCompany || null,
       
       // Sale and quantity information
-      finalSale: Boolean(listingSnapshot.finalSale),
-      quantity: typeof listingSnapshot.quantity === 'number' ? listingSnapshot.quantity : 1,
-      offersOnly: Boolean(listingSnapshot.offersOnly),
+      finalSale: Boolean(sourceData.finalSale),
+      quantity: typeof sourceData.quantity === 'number' ? sourceData.quantity : 1,
+      offersOnly: Boolean(sourceData.offersOnly),
       
       // Location information
-      city: listingSnapshot.city || '',
-      state: listingSnapshot.state || '',
+      city: sourceData.city || '',
+      state: sourceData.state || '',
       
       // Additional card details (conditionally include only if they exist)
-      ...(listingSnapshot.cardNumber && { cardNumber: listingSnapshot.cardNumber }),
-      ...(listingSnapshot.setName && { setName: listingSnapshot.setName }),
-      ...(listingSnapshot.rarity && { rarity: listingSnapshot.rarity }),
-      ...(listingSnapshot.language && { language: listingSnapshot.language }),
-      ...(listingSnapshot.foil && { foil: listingSnapshot.foil }),
-      ...(listingSnapshot.edition && { edition: listingSnapshot.edition }),
-      ...(listingSnapshot.cardReference && { cardReference: listingSnapshot.cardReference }),
+      ...(sourceData.cardNumber && { cardNumber: sourceData.cardNumber }),
+      ...(sourceData.setName && { setName: sourceData.setName }),
+      ...(sourceData.rarity && { rarity: sourceData.rarity }),
+      ...(sourceData.language && { language: sourceData.language }),
+      ...(sourceData.foil && { foil: sourceData.foil }),
+      ...(sourceData.edition && { edition: sourceData.edition }),
+      ...(sourceData.cardReference && { cardReference: sourceData.cardReference }),
       
       // Ensure all archive-related fields are explicitly null for active listings
       archivedAt: null,
