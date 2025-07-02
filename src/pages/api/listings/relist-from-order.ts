@@ -34,16 +34,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const { db } = getFirebaseAdmin();
 
-    // Get the user's current profile to ensure we have the correct username
+    // Get the user's current profile to ensure we have the correct username and account tier
     const userDoc = await db.collection('users').doc(userId).get();
     let currentUsername = 'Anonymous';
+    let accountTier = 'free'; // Default to free tier
     
     if (userDoc.exists) {
       const userData = userDoc.data();
       currentUsername = userData?.username || userData?.displayName || 'Anonymous';
-      console.log('Relist API: Retrieved current username:', currentUsername);
+      accountTier = userData?.accountTier || 'free';
+      console.log('Relist API: Retrieved current username:', currentUsername, 'and account tier:', accountTier);
     } else {
-      console.log('Relist API: User document not found, using Anonymous');
+      console.log('Relist API: User document not found, using defaults');
     }
 
     // Get the order to verify ownership and get listing data
@@ -71,6 +73,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: 'No listing information available to relist' });
     }
 
+    // Calculate expiration date based on account tier
+    // Free tier: 48 hours, Premium tier: 720 hours (30 days)
+    const tierDuration = accountTier === 'premium' ? 720 : 48;
+    const expiresAt = new Date();
+    expiresAt.setHours(expiresAt.getHours() + tierDuration);
+
     // Create a new listing based on the snapshot
     const newListingData = {
       title: listingSnapshot.title || '',
@@ -86,6 +94,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       status: 'active',
       createdAt: FieldValue.serverTimestamp(),
       updatedAt: FieldValue.serverTimestamp(),
+      expiresAt: expiresAt, // Set expiration based on account tier
+      accountTier: accountTier, // Include account tier
       views: 0,
       favorites: 0,
       isGraded: listingSnapshot.isGraded || false,
@@ -93,6 +103,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       gradingCompany: listingSnapshot.gradingCompany || null,
       finalSale: listingSnapshot.finalSale || false,
       coverImageIndex: listingSnapshot.coverImageIndex || 0,
+      quantity: listingSnapshot.quantity || 1,
+      // Ensure state is set even if empty for backward compatibility
+      state: listingSnapshot.state || '',
       // Add any other fields that might be in the snapshot
       ...(listingSnapshot.cardNumber && { cardNumber: listingSnapshot.cardNumber }),
       ...(listingSnapshot.setName && { setName: listingSnapshot.setName }),
@@ -101,7 +114,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       ...(listingSnapshot.foil && { foil: listingSnapshot.foil }),
       ...(listingSnapshot.edition && { edition: listingSnapshot.edition }),
       ...(listingSnapshot.city && { city: listingSnapshot.city }),
-      ...(listingSnapshot.state && { state: listingSnapshot.state }),
+      // Include card reference if it exists
+      ...(listingSnapshot.cardReference && { cardReference: listingSnapshot.cardReference }),
     };
 
     // Create the new listing
