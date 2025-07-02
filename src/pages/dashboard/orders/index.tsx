@@ -714,14 +714,7 @@ const OrdersComponent = () => {
                 </>
               )}
             </Button>
-            <Button 
-              variant="secondary" 
-              size="sm" 
-              onClick={checkForMissingReferences}
-              disabled={isRefreshing}
-            >
-              Fix Missing References
-            </Button>
+
           </div>
         </div>
       </div>

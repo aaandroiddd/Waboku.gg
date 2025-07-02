@@ -165,23 +165,23 @@ export default function NotificationsPage() {
               Stay updated with your marketplace activity
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
             {unreadCount > 0 && (
-              <Button onClick={markAllAsRead} variant="outline" size="sm">
-                <CheckCheck className="h-4 w-4 mr-2" />
-                Mark all as read ({unreadCount})
+              <Button onClick={markAllAsRead} variant="outline" size="sm" className="flex items-center justify-center gap-2 w-full sm:w-auto">
+                <CheckCheck className="h-4 w-4 flex-shrink-0" />
+                <span className="truncate">Mark all as read ({unreadCount})</span>
               </Button>
             )}
             {readCount > 0 && (
-              <Button onClick={handleClearReadNotifications} variant="outline" size="sm">
-                <X className="h-4 w-4 mr-2" />
-                Clear read ({readCount})
+              <Button onClick={handleClearReadNotifications} variant="outline" size="sm" className="flex items-center justify-center gap-2 w-full sm:w-auto">
+                <X className="h-4 w-4 flex-shrink-0" />
+                <span className="truncate">Clear read ({readCount})</span>
               </Button>
             )}
             {notifications.length > 0 && (
-              <Button onClick={handleDeleteAllNotifications} variant="destructive" size="sm">
-                <Trash2 className="h-4 w-4 mr-2" />
-                Delete all
+              <Button onClick={handleDeleteAllNotifications} variant="destructive" size="sm" className="flex items-center justify-center gap-2 w-full sm:w-auto">
+                <Trash2 className="h-4 w-4 flex-shrink-0" />
+                <span className="truncate">Delete all</span>
               </Button>
             )}
           </div>
