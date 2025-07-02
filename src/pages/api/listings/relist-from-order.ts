@@ -79,54 +79,115 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const expiresAt = new Date();
     expiresAt.setHours(expiresAt.getHours() + tierDuration);
 
-    // Create a new listing based on the snapshot
+    // Create a new listing based on the snapshot - ensure it matches the exact structure of manually created listings
     const newListingData = {
+      // Core listing information
       title: listingSnapshot.title || '',
       description: listingSnapshot.description || '',
-      price: listingSnapshot.price || 0,
+      price: typeof listingSnapshot.price === 'string' ? listingSnapshot.price : String(listingSnapshot.price || 0),
       game: listingSnapshot.game || 'other',
       condition: listingSnapshot.condition || 'near_mint',
-      imageUrl: listingSnapshot.imageUrl || '',
+      
+      // Image handling - ensure we have the right image fields
+      imageUrl: listingSnapshot.imageUrl || (listingSnapshot.imageUrls && listingSnapshot.imageUrls[0]) || '',
       images: listingSnapshot.images || [],
       imageUrls: listingSnapshot.imageUrls || listingSnapshot.images || [],
-      userId: userId, // Use userId instead of sellerId for consistency with dashboard queries
-      username: currentUsername, // Use current user's username instead of snapshot
+      coverImageIndex: typeof listingSnapshot.coverImageIndex === 'number' ? listingSnapshot.coverImageIndex : 0,
+      
+      // User and authentication fields - CRITICAL for dashboard visibility
+      userId: userId, // This must match exactly what the dashboard queries for
+      username: currentUsername, // Use current user's username
+      
+      // Status and timestamps - use server timestamps for consistency
       status: 'active',
       createdAt: FieldValue.serverTimestamp(),
       updatedAt: FieldValue.serverTimestamp(),
       expiresAt: expiresAt, // Set expiration based on account tier
-      accountTier: accountTier, // Include account tier
+      
+      // Account and tier information - CRITICAL for listing visibility
+      accountTier: accountTier,
+      
+      // Counters and metrics
       views: 0,
       favorites: 0,
-      isGraded: listingSnapshot.isGraded || false,
-      gradeLevel: listingSnapshot.gradeLevel || null,
+      
+      // Grading information
+      isGraded: Boolean(listingSnapshot.isGraded),
+      gradeLevel: listingSnapshot.gradeLevel ? Number(listingSnapshot.gradeLevel) : null,
       gradingCompany: listingSnapshot.gradingCompany || null,
-      finalSale: listingSnapshot.finalSale || false,
-      coverImageIndex: listingSnapshot.coverImageIndex || 0,
-      quantity: listingSnapshot.quantity || 1,
-      // Ensure state is set even if empty for backward compatibility
+      
+      // Sale and quantity information
+      finalSale: Boolean(listingSnapshot.finalSale),
+      quantity: typeof listingSnapshot.quantity === 'number' ? listingSnapshot.quantity : 1,
+      offersOnly: Boolean(listingSnapshot.offersOnly),
+      
+      // Location information
+      city: listingSnapshot.city || '',
       state: listingSnapshot.state || '',
-      // Add any other fields that might be in the snapshot
+      
+      // Additional card details (conditionally include only if they exist)
       ...(listingSnapshot.cardNumber && { cardNumber: listingSnapshot.cardNumber }),
       ...(listingSnapshot.setName && { setName: listingSnapshot.setName }),
       ...(listingSnapshot.rarity && { rarity: listingSnapshot.rarity }),
       ...(listingSnapshot.language && { language: listingSnapshot.language }),
       ...(listingSnapshot.foil && { foil: listingSnapshot.foil }),
       ...(listingSnapshot.edition && { edition: listingSnapshot.edition }),
-      ...(listingSnapshot.city && { city: listingSnapshot.city }),
-      // Include card reference if it exists
       ...(listingSnapshot.cardReference && { cardReference: listingSnapshot.cardReference }),
+      
+      // Ensure all archive-related fields are explicitly null for active listings
+      archivedAt: null,
+      originalCreatedAt: null,
+      previousStatus: null,
+      previousExpiresAt: null,
+      soldTo: null,
+      expirationReason: null,
     };
+
+    console.log('Relist API: Creating new listing with data:', {
+      userId: newListingData.userId,
+      username: newListingData.username,
+      accountTier: newListingData.accountTier,
+      status: newListingData.status,
+      title: newListingData.title,
+      price: newListingData.price,
+      game: newListingData.game,
+      hasImageUrls: newListingData.imageUrls?.length > 0,
+      expiresAt: newListingData.expiresAt
+    });
 
     // Create the new listing
     const newListingRef = await db.collection('listings').add(newListingData);
 
     console.log(`Successfully relisted item from order ${orderId} as new listing ${newListingRef.id}`);
 
+    // Verify the listing was created correctly by reading it back
+    const createdListingDoc = await db.collection('listings').doc(newListingRef.id).get();
+    if (createdListingDoc.exists) {
+      const createdData = createdListingDoc.data();
+      console.log('Relist API: Verified created listing data:', {
+        id: newListingRef.id,
+        userId: createdData?.userId,
+        username: createdData?.username,
+        accountTier: createdData?.accountTier,
+        status: createdData?.status,
+        title: createdData?.title,
+        createdAt: createdData?.createdAt,
+        expiresAt: createdData?.expiresAt
+      });
+    } else {
+      console.error('Relist API: Failed to verify created listing');
+    }
+
     return res.status(200).json({ 
       success: true, 
       listingId: newListingRef.id,
-      message: 'Item successfully relisted'
+      message: 'Item successfully relisted',
+      debug: {
+        userId: newListingData.userId,
+        username: newListingData.username,
+        accountTier: newListingData.accountTier,
+        status: newListingData.status
+      }
     });
 
   } catch (error) {
