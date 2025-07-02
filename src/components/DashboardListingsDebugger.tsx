@@ -74,7 +74,6 @@ export default function DashboardListingsDebugger({ onRefreshListings }: Dashboa
           }))
         }
       });
-=======
 
       // Test 3: Check Firebase connection
       try {
@@ -221,7 +220,6 @@ export default function DashboardListingsDebugger({ onRefreshListings }: Dashboa
       console.error('Auto-fix failed:', error);
     }
   };
-=======
 
   const getStatusIcon = (status: DiagnosticResult['status']) => {
     switch (status) {
