@@ -217,46 +217,49 @@ export const updateSellerReviewStats = async (sellerId) => {
  */
 export const submitReview = async (reviewData) => {
   try {
-    const { db } = getFirebaseServices();
-    if (!db) {
-      throw new Error('Firestore database is not initialized');
+    console.log('submitReview service: Submitting review via API endpoint', reviewData);
+    
+    // Get the current user from Firebase Auth
+    const { auth } = getFirebaseServices();
+    if (!auth || !auth.currentUser) {
+      throw new Error('User must be logged in to submit a review');
     }
     
-    // Create a new review document in the main reviews collection
-    const reviewsRef = collection(db, 'reviews');
-    const newReviewRef = doc(reviewsRef);
-    const reviewId = newReviewRef.id;
+    const userId = auth.currentUser.uid;
     
-    const reviewToSubmit = {
-      ...reviewData,
-      id: reviewId,
-      status: 'published',
-      isPublic: true,
-      helpfulCount: 0,
-      reportCount: 0,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp()
+    // Prepare the data for the API endpoint
+    const apiData = {
+      orderId: reviewData.orderId,
+      rating: reviewData.rating,
+      comment: reviewData.comment || '',
+      title: reviewData.title || '',
+      images: reviewData.images || [],
+      userId: userId
     };
     
-    // Add to main reviews collection
-    await setDoc(newReviewRef, reviewToSubmit);
+    console.log('submitReview service: Calling API with data:', apiData);
     
-    // Add to seller's subcollection for faster access
-    const sellerReviewRef = doc(db, 'users', reviewData.sellerId, 'reviews', reviewId);
-    await setDoc(sellerReviewRef, reviewToSubmit);
-    
-    // Update the order to mark as reviewed
-    const orderRef = doc(db, 'orders', reviewData.orderId);
-    await updateDoc(orderRef, {
-      hasReview: true,
-      reviewId: reviewId,
-      updatedAt: serverTimestamp()
+    // Call the API endpoint
+    const response = await fetch('/api/reviews/create', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(apiData),
     });
     
-    // Update seller stats
-    await updateSellerReviewStats(reviewData.sellerId);
+    const result = await response.json();
+    console.log('submitReview service: API response:', result);
     
-    return reviewId;
+    if (!response.ok) {
+      throw new Error(result.message || 'Failed to submit review');
+    }
+    
+    if (!result.success) {
+      throw new Error(result.message || 'Review submission failed');
+    }
+    
+    return result.reviewId;
   } catch (error) {
     console.error('Error submitting review:', error);
     throw error;
