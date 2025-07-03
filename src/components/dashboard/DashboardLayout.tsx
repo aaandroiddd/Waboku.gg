@@ -9,57 +9,33 @@ import { AdminBadge } from '../AdminBadge';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { GlobalLoading } from '@/components/GlobalLoading';
 import { DashboardLoadingScreen } from '@/components/DashboardLoadingScreen';
+import { DashboardPreloadingScreen } from '@/components/DashboardPreloadingScreen';
+import { DashboardProvider, useDashboard } from '@/contexts/DashboardContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/router';
 import { Card, CardContent } from '@/components/ui/card';
 import { getAuthToken } from '@/lib/auth-token-manager';
-import { useListings } from '@/hooks/useListings';
-import { useProfile } from '@/hooks/useProfile';
-import { useDashboardListingsCache } from '@/hooks/useDashboardCache';
 
-export const DashboardLayout = ({ children }: { children: ReactNode }) => {
+interface DashboardLayoutProps {
+  children: ReactNode;
+  showPreloader?: boolean;
+}
+
+function DashboardLayoutContent({ children, showPreloader = true }: DashboardLayoutProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isPreloading, setIsPreloading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [authError, setAuthError] = useState<string | null>(null);
   const { user, profile } = useAuth();
+  const { loading, isInitialized, error } = useDashboard();
   const router = useRouter();
   
   // Check if current page is the main dashboard page
   const isMainDashboardPage = router.pathname === '/dashboard' || router.pathname === '/dashboard/index';
   
-  // Initialize dashboard data caching
-  const { 
-    cachedListings, 
-    saveListingsToCache, 
-    isInitialized: cacheInitialized 
-  } = useDashboardListingsCache({ 
-    userId: user?.uid,
-    expirationMinutes: 60 // Cache for 1 hour
-  });
-  
-  // Preload listings data while showing loading screen
-  const { 
-    listings: preloadedListings, 
-    loading: listingsLoading, 
-    error: listingsError,
-    refreshListings
-  } = useListings({ 
-    userId: user?.uid,
-    showOnlyActive: false,
-    // Skip initial fetch if we have cached data and we're not on the main dashboard page
-    skipInitialFetch: !!cachedListings && !isMainDashboardPage
-  });
-  
-  // Preload user profile data
-  const { profile: preloadedProfile, loading: profileLoading } = useProfile(user?.uid || null);
-  
   // Check authentication and token validity
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        setIsLoading(true);
-        setError(null);
+        setAuthError(null);
         
         // If no user is logged in, redirect to sign in
         if (!user) {
@@ -72,93 +48,25 @@ export const DashboardLayout = ({ children }: { children: ReactNode }) => {
         const token = await getAuthToken(false);
         if (!token) {
           console.error('Failed to get auth token, user may need to re-authenticate');
-          setError('Authentication error. Please sign in again.');
+          setAuthError('Authentication error. Please sign in again.');
           return;
-        }
-        
-        // Start preloading data while showing loading screen
-        setIsPreloading(true);
-        
-        // Check if we have valid cached data
-        if (cachedListings && cacheInitialized) {
-          console.log('Using cached dashboard data');
-          // We have cached data, so we can hide the loading screen sooner
-          setTimeout(() => {
-            setIsLoading(false);
-          }, 500);
-        } else if (!isMainDashboardPage) {
-          // If we're not on the main dashboard page, don't show the loading screen
-          // but still preload data in the background
-          setIsLoading(false);
-        } else {
-          // No cached data and on main dashboard page, wait for preloading to complete
-          // The loading screen will remain visible during preloading
         }
       } catch (err) {
         console.error('Error in dashboard auth check:', err);
-        setError('An error occurred while checking your authentication. Please try again.');
-        setIsLoading(false);
+        setAuthError('An error occurred while checking your authentication. Please try again.');
       }
     };
     
     checkAuth();
-  }, [user, router, cachedListings, cacheInitialized, isMainDashboardPage]);
-  
-  // Handle preloading completion
-  useEffect(() => {
-    if (!isPreloading || !user) return;
-    
-    // If we're preloading and have listings data and profile data
-    if (!listingsLoading && !profileLoading) {
-      // Cache the preloaded listings
-      if (preloadedListings && preloadedListings.length > 0) {
-        saveListingsToCache(preloadedListings);
-      }
-      
-      // Preloading complete, hide loading screen after a short delay
-      setTimeout(() => {
-        setIsPreloading(false);
-        setIsLoading(false);
-      }, 500);
-    }
-  }, [
-    isPreloading, 
-    listingsLoading, 
-    profileLoading, 
-    preloadedListings, 
-    saveListingsToCache,
-    user
-  ]);
+  }, [user, router]);
 
-  // Show loading state with appropriate step, but only on the main dashboard page
-  if (isLoading && isMainDashboardPage) {
-    // Calculate loading step based on preloading status
-    let currentStep = 1; // Start with authentication step
-    let totalSteps = 7; // Total number of steps
-    
-    if (!listingsLoading && preloadedListings) {
-      currentStep = 4; // Listings loaded, processing data
-    }
-    
-    if (!profileLoading && preloadedProfile) {
-      currentStep = 6; // Profile loaded, preparing view
-    }
-    
-    if (!isPreloading && cachedListings) {
-      currentStep = 7; // Almost done
-    }
-    
-    return (
-      <DashboardLoadingScreen 
-        message="Preparing your dashboard..." 
-        currentStep={currentStep}
-        totalSteps={totalSteps}
-      />
-    );
+  // Show preloading screen if enabled and data is still loading
+  if (showPreloader && (!isInitialized || (loading?.overall && isInitialized))) {
+    return loading ? <DashboardPreloadingScreen loading={loading} /> : null;
   }
   
-  // Show error state
-  if (error) {
+  // Show auth error state
+  if (authError) {
     return (
       <div className="min-h-screen flex items-center justify-center p-4">
         <Card className="max-w-md w-full">
@@ -175,13 +83,46 @@ export const DashboardLayout = ({ children }: { children: ReactNode }) => {
               </svg>
             </div>
             <h3 className="text-lg font-medium mb-2">Authentication Error</h3>
-            <p className="text-muted-foreground mb-6">{error}</p>
+            <p className="text-muted-foreground mb-6">{authError}</p>
             <div className="flex gap-4">
               <Button variant="outline" onClick={() => router.push('/')}>
                 Go Home
               </Button>
               <Button onClick={() => router.push('/auth/sign-in')}>
                 Sign In Again
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Show dashboard error state
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <Card className="max-w-md w-full">
+          <CardContent className="pt-6 flex flex-col items-center text-center">
+            <div className="w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/20 flex items-center justify-center mb-4">
+              <svg 
+                xmlns="http://www.w3.org/2000/svg" 
+                className="h-6 w-6 text-red-600 dark:text-red-400" 
+                fill="none" 
+                viewBox="0 0 24 24" 
+                stroke="currentColor"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            </div>
+            <h3 className="text-lg font-medium mb-2">Dashboard Error</h3>
+            <p className="text-muted-foreground mb-6">{error}</p>
+            <div className="flex gap-4">
+              <Button variant="outline" onClick={() => router.push('/')}>
+                Go Home
+              </Button>
+              <Button onClick={() => window.location.reload()}>
+                Retry
               </Button>
             </div>
           </CardContent>
@@ -236,6 +177,16 @@ export const DashboardLayout = ({ children }: { children: ReactNode }) => {
     </div>
   );
 }
+
+export const DashboardLayout = ({ children, showPreloader = true }: DashboardLayoutProps) => {
+  return (
+    <DashboardProvider>
+      <DashboardLayoutContent showPreloader={showPreloader}>
+        {children}
+      </DashboardLayoutContent>
+    </DashboardProvider>
+  );
+};
 
 function MenuIcon(props: React.SVGProps<SVGSVGElement>) {
   return (

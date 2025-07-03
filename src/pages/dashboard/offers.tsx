@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUnread } from '@/contexts/UnreadContext';
+import { useDashboard } from '@/contexts/DashboardContext';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { EmptyStateCard } from '@/components/EmptyStateCard';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -17,19 +18,29 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { formatPrice } from '@/lib/price';
 import { RefreshCw } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const OffersComponent = () => {
   const { toast } = useToast();
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
   const { clearUnreadCount, resetUnreadCount } = useUnread();
+  const { getOffers, isLoadingOffers, refreshSection } = useDashboard();
   const [error, setError] = useState<string | null>(null);
-  const { receivedOffers: initialReceivedOffers, sentOffers: initialSentOffers, loading: offersLoading, error: offersError, fetchOffers, updateOfferStatus, makeCounterOffer } = useOffers();
   const [isRefreshing, setIsRefreshing] = useState(false);
   
-  // Create local state to manage offers that can be updated immediately on UI
-  const [receivedOffers, setReceivedOffers] = useState(initialReceivedOffers);
-  const [sentOffers, setSentOffers] = useState(initialSentOffers);
+  // Get preloaded offers data
+  const preloadedOffers = getOffers();
+  
+  // Fallback to useOffers hook for additional functionality
+  const { receivedOffers: fallbackReceivedOffers, sentOffers: fallbackSentOffers, loading: offersLoading, error: offersError, fetchOffers, updateOfferStatus, makeCounterOffer } = useOffers();
+  
+  // Use preloaded data if available, otherwise fallback to hook data
+  const allOffers = preloadedOffers.length > 0 ? preloadedOffers : [...fallbackReceivedOffers, ...fallbackSentOffers];
+  
+  // Separate received and sent offers
+  const receivedOffers = allOffers.filter(offer => offer.sellerId === user?.uid);
+  const sentOffers = allOffers.filter(offer => offer.buyerId === user?.uid);
   
   // Clear unread count when component mounts
   useEffect(() => {
@@ -41,25 +52,11 @@ const OffersComponent = () => {
     };
   }, [clearUnreadCount, resetUnreadCount]);
   
-  // Update local state when the hook data changes
-  useEffect(() => {
-    setReceivedOffers(initialReceivedOffers);
-  }, [initialReceivedOffers]);
-  
-  useEffect(() => {
-    setSentOffers(initialSentOffers);
-  }, [initialSentOffers]);
-  
   // Listen for offer cleared events and status changes
   useEffect(() => {
     const handleOfferCleared = (event: CustomEvent) => {
-      const { offerId, type } = event.detail;
-      
-      if (type === 'sent') {
-        setSentOffers(prev => prev.filter(offer => offer.id !== offerId));
-      } else if (type === 'received') {
-        setReceivedOffers(prev => prev.filter(offer => offer.id !== offerId));
-      }
+      // Refresh offers section when an offer is cleared
+      refreshSection('offers');
     };
     
     const handleOfferStatusChanged = (event: CustomEvent) => {
@@ -69,7 +66,7 @@ const OffersComponent = () => {
       // Refresh offers data to ensure consistency
       setTimeout(() => {
         console.log('Refreshing offers due to status change event');
-        fetchOffers();
+        refreshSection('offers');
       }, 500);
     };
     
@@ -82,7 +79,7 @@ const OffersComponent = () => {
       window.removeEventListener('offerCleared', handleOfferCleared as EventListener);
       window.removeEventListener('offerStatusChanged', handleOfferStatusChanged as EventListener);
     };
-  }, [fetchOffers]);
+  }, [refreshSection]);
   
   const [counterOfferDialog, setCounterOfferDialog] = useState({
     isOpen: false,
@@ -176,7 +173,7 @@ const OffersComponent = () => {
     
     try {
       setIsRefreshing(true);
-      await fetchOffers();
+      await refreshSection('offers');
       toast({
         title: "Refreshed",
         description: "Your offers have been refreshed",
@@ -191,6 +188,47 @@ const OffersComponent = () => {
       setIsRefreshing(false);
     }
   };
+
+  // Show loading skeleton if offers are still loading
+  if (isLoadingOffers()) {
+    return (
+      <DashboardLayout showPreloader={false}>
+        <div className="mb-8 space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <Skeleton className="h-8 w-48 mb-2" />
+              <Skeleton className="h-4 w-64" />
+            </div>
+            <Skeleton className="h-9 w-24" />
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <Skeleton className="h-10 w-64" />
+          <div className="space-y-4">
+            {[...Array(3)].map((_, i) => (
+              <Card key={i}>
+                <CardContent className="p-6">
+                  <div className="flex items-start gap-4">
+                    <Skeleton className="h-16 w-16 rounded" />
+                    <div className="flex-1 space-y-2">
+                      <Skeleton className="h-5 w-3/4" />
+                      <Skeleton className="h-4 w-1/2" />
+                      <Skeleton className="h-4 w-1/4" />
+                    </div>
+                    <div className="flex gap-2">
+                      <Skeleton className="h-9 w-20" />
+                      <Skeleton className="h-9 w-20" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   if (loading) {
     return (
