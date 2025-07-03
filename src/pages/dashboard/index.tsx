@@ -285,6 +285,12 @@ const DashboardComponent = () => {
   
   // Force refresh listings when the component mounts or when the user logs in
   useEffect(() => {
+    // Don't do anything if we don't have a user yet
+    if (!user) {
+      console.log('Dashboard: No user yet, waiting for authentication');
+      return;
+    }
+
     // Check if this is a new login (user changed from null to a value)
     const isNewLogin = user && (!prevAuthState.isLoggedIn || prevAuthState.userId !== user.uid);
     
@@ -316,45 +322,47 @@ const DashboardComponent = () => {
     }
     
     // Clear any cached listings data to ensure fresh data
-    if (user) {
-      try {
-        // Create cache keys for the user's listings
-        const userListingsCacheKey = `listings_${user.uid}_all_none`;
-        const activeListingsCacheKey = `listings_${user.uid}_active_none`;
+    try {
+      // Create cache keys for the user's listings
+      const userListingsCacheKey = `listings_${user.uid}_all_none`;
+      const activeListingsCacheKey = `listings_${user.uid}_active_none`;
+      
+      // Clear from localStorage to ensure fresh data
+      localStorage.removeItem(userListingsCacheKey);
+      localStorage.removeItem(activeListingsCacheKey);
+      
+      // If this is a new login, log it and force a refresh
+      if (isNewLogin) {
+        console.log('Dashboard: User logged in, clearing listings cache and forcing refresh');
         
-        // Clear from localStorage to ensure fresh data
-        localStorage.removeItem(userListingsCacheKey);
-        localStorage.removeItem(activeListingsCacheKey);
+        // Clear dashboard cache as well
+        clearListingsCache();
         
-        // If this is a new login, log it and force a refresh
-        if (isNewLogin) {
-          console.log('User logged in, clearing listings cache and forcing refresh');
-          
-          // Clear dashboard cache as well
-          clearListingsCache();
-          
-          // Small delay to ensure auth is fully established
-          setTimeout(() => {
-            refreshListings();
-          }, 500);
-        } else if (forceRefresh === 'true') {
-          console.log('Dashboard: Force refresh flag detected, refreshing listings');
-          localStorage.removeItem('force_listings_refresh');
-          
-          // Clear dashboard cache as well
-          clearListingsCache();
-          
-          // Force refresh the listings
-          setTimeout(() => {
-            refreshListings();
-          }, 100);
-        } else {
-          console.log('Cleared listings cache on dashboard mount');
+        // Longer delay to ensure auth is fully established and Firestore listeners are ready
+        setTimeout(() => {
+          console.log('Dashboard: Executing delayed refresh for new login');
           refreshListings();
-        }
-      } catch (cacheError) {
-        console.error('Error clearing listings cache:', cacheError);
+        }, 1000); // Increased from 500ms to 1000ms
+      } else if (forceRefresh === 'true') {
+        console.log('Dashboard: Force refresh flag detected, refreshing listings');
+        localStorage.removeItem('force_listings_refresh');
+        
+        // Clear dashboard cache as well
+        clearListingsCache();
+        
+        // Force refresh the listings
+        setTimeout(() => {
+          refreshListings();
+        }, 100);
+      } else {
+        console.log('Dashboard: Cleared listings cache on dashboard mount, refreshing');
+        // Small delay even for regular refreshes to ensure everything is ready
+        setTimeout(() => {
+          refreshListings();
+        }, 200);
       }
+    } catch (cacheError) {
+      console.error('Error clearing listings cache:', cacheError);
     }
   }, [user, prevAuthState.isLoggedIn, prevAuthState.userId, clearListingsCache, refreshListings, toast]);
   

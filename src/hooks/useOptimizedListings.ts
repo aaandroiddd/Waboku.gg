@@ -84,6 +84,13 @@ export function useOptimizedListings({ userId, searchQuery, showOnlyActive = fal
 
   // Setup the Firestore listener
   useEffect(() => {
+    // Don't set up listener if we don't have a userId for user-specific queries
+    if (userId === undefined) {
+      console.log('useOptimizedListings: Waiting for userId to be defined before setting up listener');
+      setIsLoading(true);
+      return;
+    }
+
     // Check if we have cached data first
     const { data: cachedListings, expired } = getFromCache();
     
@@ -108,7 +115,7 @@ export function useOptimizedListings({ userId, searchQuery, showOnlyActive = fal
         setIsLoading(true);
         setError(null);
         
-        console.log('useOptimizedListings: Setting up Firestore listener...');
+        console.log(`useOptimizedListings: Setting up Firestore listener for userId: ${userId}`);
         
         const { db } = await getFirebaseServices();
         if (!db) {
