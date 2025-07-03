@@ -901,34 +901,34 @@ const OrdersComponent = () => {
         
         {/* Attention Summary */}
         {activeAttentionCounts.total > 0 && (
-          <div className="mb-4 p-4 rounded-lg border bg-gradient-to-r from-orange-50 to-red-50 dark:from-orange-950/30 dark:to-red-950/30 border-orange-200 dark:border-orange-800">
+          <div className="mb-4 p-4 rounded-lg border border-primary/20 bg-primary/10 dark:bg-primary/20">
             <div className="flex items-start gap-3">
-              <AlertTriangle className="h-5 w-5 text-orange-600 dark:text-orange-400 flex-shrink-0 mt-0.5" />
+              <AlertTriangle className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
               <div className="flex-1">
-                <h3 className="font-medium text-orange-800 dark:text-orange-200 mb-2">
+                <h3 className="font-medium text-primary mb-2">
                   {activeAttentionCounts.total} {activeTab === 'purchases' ? 'purchase' : 'sale'}{activeAttentionCounts.total === 1 ? '' : 's'} need{activeAttentionCounts.total === 1 ? 's' : ''} your attention
                 </h3>
                 <div className="flex flex-wrap gap-2">
                   {activeAttentionCounts.high > 0 && (
-                    <Badge variant="destructive" className="bg-red-600 text-white">
+                    <Badge variant="outline" className="border-primary text-primary">
                       <AlertTriangle className="h-3 w-3 mr-1" />
                       {activeAttentionCounts.high} urgent
                     </Badge>
                   )}
                   {activeAttentionCounts.medium > 0 && (
-                    <Badge variant="outline" className="border-orange-500 text-orange-700 dark:text-orange-300">
+                    <Badge variant="outline" className="border-primary text-primary">
                       <Clock className="h-3 w-3 mr-1" />
                       {activeAttentionCounts.medium} action needed
                     </Badge>
                   )}
                   {activeAttentionCounts.low > 0 && (
-                    <Badge variant="outline" className="border-blue-500 text-blue-700 dark:text-blue-300">
+                    <Badge variant="outline" className="border-primary text-primary">
                       <Info className="h-3 w-3 mr-1" />
                       {activeAttentionCounts.low} informational
                     </Badge>
                   )}
                 </div>
-                <p className="text-sm text-orange-700 dark:text-orange-300 mt-2">
+                <p className="text-sm text-primary/80 mt-2">
                   Orders requiring attention are automatically sorted to the top when using default date sorting.
                 </p>
               </div>
