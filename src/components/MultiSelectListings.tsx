@@ -174,79 +174,83 @@ export function MultiSelectListings({
   return (
     <div className="space-y-4">
       {/* Multi-select controls */}
-      <div className="flex items-center justify-between bg-muted/50 p-3 rounded-lg">
-        <div className="flex items-center gap-3">
-          <Button
-            variant={isSelectMode ? "default" : "outline"}
-            size="sm"
-            onClick={() => {
-              setIsSelectMode(!isSelectMode);
-              if (!isSelectMode) {
-                setSelectedListings([]);
-              }
-            }}
-          >
-            {isSelectMode ? <CheckSquare className="h-4 w-4 mr-2" /> : <Square className="h-4 w-4 mr-2" />}
-            {isSelectMode ? 'Exit Select' : 'Select Multiple'}
-          </Button>
-          
-          {isSelectMode && (
-            <>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleSelectAll}
-              >
-                {selectedListings.length === listings.length ? 'Deselect All' : 'Select All'}
-              </Button>
-              
-              <span className="text-sm text-muted-foreground">
-                {selectedListings.length} of {listings.length} selected
-              </span>
-            </>
-          )}
-        </div>
-
-        {/* Bulk action buttons */}
-        {isSelectMode && selectedListings.length > 0 && (
-          <div className="flex items-center gap-2">
-            {type === 'active' && onBulkArchive && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handleBulkAction('archive')}
-                className="text-orange-600 hover:text-orange-700"
-              >
-                <Archive className="h-4 w-4 mr-2" />
-                Archive ({selectedListings.length})
-              </Button>
-            )}
+      <div className="bg-muted/50 p-3 rounded-lg space-y-3">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              variant={isSelectMode ? "default" : "outline"}
+              size="sm"
+              onClick={() => {
+                setIsSelectMode(!isSelectMode);
+                if (!isSelectMode) {
+                  setSelectedListings([]);
+                }
+              }}
+              className="flex-shrink-0"
+            >
+              {isSelectMode ? <CheckSquare className="h-4 w-4 mr-2" /> : <Square className="h-4 w-4 mr-2" />}
+              {isSelectMode ? 'Exit Select' : 'Select Multiple'}
+            </Button>
             
-            {type === 'archived' && onBulkRestore && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handleBulkAction('restore')}
-                className="text-green-600 hover:text-green-700"
-              >
-                <RotateCcw className="h-4 w-4 mr-2" />
-                Restore ({selectedListings.length})
-              </Button>
-            )}
-            
-            {onBulkDelete && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handleBulkAction('delete')}
-                className="text-red-600 hover:text-red-700"
-              >
-                <Trash2 className="h-4 w-4 mr-2" />
-                Delete ({selectedListings.length})
-              </Button>
+            {isSelectMode && (
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleSelectAll}
+                  className="flex-shrink-0"
+                >
+                  {selectedListings.length === listings.length ? 'Deselect All' : 'Select All'}
+                </Button>
+                
+                <span className="text-sm text-muted-foreground whitespace-nowrap">
+                  {selectedListings.length} of {listings.length} selected
+                </span>
+              </>
             )}
           </div>
-        )}
+
+          {/* Bulk action buttons */}
+          {isSelectMode && selectedListings.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+              {type === 'active' && onBulkArchive && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleBulkAction('archive')}
+                  className="text-orange-600 hover:text-orange-700 flex-shrink-0"
+                >
+                  <Archive className="h-4 w-4 mr-1 sm:mr-2" />
+                  <span className="hidden xs:inline">Archive </span>({selectedListings.length})
+                </Button>
+              )}
+              
+              {type === 'archived' && onBulkRestore && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleBulkAction('restore')}
+                  className="text-green-600 hover:text-green-700 flex-shrink-0"
+                >
+                  <RotateCcw className="h-4 w-4 mr-1 sm:mr-2" />
+                  <span className="hidden xs:inline">Restore </span>({selectedListings.length})
+                </Button>
+              )}
+              
+              {onBulkDelete && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleBulkAction('delete')}
+                  className="text-red-600 hover:text-red-700 flex-shrink-0"
+                >
+                  <Trash2 className="h-4 w-4 mr-1 sm:mr-2" />
+                  <span className="hidden xs:inline">Delete </span>({selectedListings.length})
+                </Button>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Warning for bulk delete */}
