@@ -22,6 +22,11 @@ export interface Order {
   isPickup?: boolean; // Flag to indicate if this is a local pickup
   pickupCompleted?: boolean; // Flag to indicate if pickup has been completed
   pickupCompletedAt?: Date; // When the pickup was completed
+  // New dual pickup confirmation fields
+  buyerPickupConfirmed?: boolean; // Flag to indicate if buyer has confirmed pickup
+  buyerPickupConfirmedAt?: Date; // When the buyer confirmed pickup
+  sellerPickupConfirmed?: boolean; // Flag to indicate if seller has confirmed pickup
+  sellerPickupConfirmedAt?: Date; // When the seller confirmed pickup
   reviewSubmitted?: boolean; // Flag to indicate if a review has been submitted
   sellerHasStripeAccount?: boolean; // Flag to indicate if the seller has a Stripe Connect account
   paymentRequired?: boolean; // Flag to indicate if payment is required for this order

@@ -34,6 +34,8 @@ export function OrderCard({ order, isSale = false }: OrderCardProps) {
   const [isLoadingUser, setIsLoadingUser] = useState<boolean>(false);
   const [isCompletingPickup, setIsCompletingPickup] = useState(false);
   const [showCompletePickupDialog, setShowCompletePickupDialog] = useState(false);
+  const [isConfirmingBuyerPickup, setIsConfirmingBuyerPickup] = useState(false);
+  const [showBuyerPickupDialog, setShowBuyerPickupDialog] = useState(false);
   const [showRefundDialog, setShowRefundDialog] = useState(false);
   const [showRefundManagementDialog, setShowRefundManagementDialog] = useState(false);
   
@@ -101,13 +103,19 @@ export function OrderCard({ order, isSale = false }: OrderCardProps) {
     }
   };
   
-  // Function to handle the complete pickup button click
+  // Function to handle the complete pickup button click (seller)
   const handleCompletePickup = (e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent triggering the card click
     setShowCompletePickupDialog(true);
   };
   
-  // Function to actually complete the pickup
+  // Function to handle the buyer pickup confirmation button click
+  const handleBuyerConfirmPickup = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent triggering the card click
+    setShowBuyerPickupDialog(true);
+  };
+  
+  // Function to actually complete the pickup (seller)
   const completePickup = async () => {
     if (!order.id || !user) return;
     
@@ -146,6 +154,49 @@ export function OrderCard({ order, isSale = false }: OrderCardProps) {
     } finally {
       setIsCompletingPickup(false);
       setShowCompletePickupDialog(false);
+    }
+  };
+  
+  // Function to actually confirm pickup (buyer)
+  const confirmBuyerPickup = async () => {
+    if (!order.id || !user) return;
+    
+    try {
+      setIsConfirmingBuyerPickup(true);
+      console.log('Confirming buyer pickup for order:', order.id, 'by user:', user.uid);
+      
+      // Call the API to confirm pickup as buyer
+      const response = await fetch('/api/orders/confirm-pickup', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          orderId: order.id,
+          userId: user.uid,
+          role: 'buyer',
+        }),
+      });
+      
+      console.log('API response status:', response.status);
+      const data = await response.json();
+      console.log('API response data:', data);
+      
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to confirm pickup');
+      }
+      
+      toast.success(data.message);
+      
+      // Refresh the page to show updated status
+      router.reload();
+      
+    } catch (error) {
+      console.error('Error confirming buyer pickup:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to confirm pickup');
+    } finally {
+      setIsConfirmingBuyerPickup(false);
+      setShowBuyerPickupDialog(false);
     }
   };
   
@@ -496,20 +547,52 @@ export function OrderCard({ order, isSale = false }: OrderCardProps) {
                 View Listing
               </Button>
             )}
-            {/* Complete Pickup Button - Only visible for sellers with pickup orders that aren't completed */}
-            {isSale && safeOrder.isPickup && !safeOrder.pickupCompleted && 
+            {/* Pickup Confirmation Buttons - Show for both buyer and seller */}
+            {safeOrder.isPickup && !safeOrder.pickupCompleted && 
              (safeOrder.status === 'paid' || safeOrder.status === 'awaiting_shipping') && (
-              <Button 
-                variant="default" 
-                className="bg-green-600 hover:bg-green-700 text-white font-medium w-full"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleCompletePickup(e);
-                }}
-              >
-                <CheckCircle className="mr-2 h-4 w-4" />
-                Complete Pickup
-              </Button>
+              <>
+                {/* Seller Pickup Confirmation */}
+                {isSale && !safeOrder.sellerPickupConfirmed && (
+                  <Button 
+                    variant="default" 
+                    className="bg-green-600 hover:bg-green-700 text-white font-medium w-full"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleCompletePickup(e);
+                    }}
+                  >
+                    <CheckCircle className="mr-2 h-4 w-4" />
+                    Confirm Pickup (Seller)
+                  </Button>
+                )}
+                
+                {/* Buyer Pickup Confirmation */}
+                {!isSale && !safeOrder.buyerPickupConfirmed && (
+                  <Button 
+                    variant="default" 
+                    className="bg-blue-600 hover:bg-blue-700 text-white font-medium w-full"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleBuyerConfirmPickup(e);
+                    }}
+                  >
+                    <CheckCircle className="mr-2 h-4 w-4" />
+                    Confirm Pickup (Buyer)
+                  </Button>
+                )}
+                
+                {/* Show confirmation status */}
+                {(safeOrder.buyerPickupConfirmed || safeOrder.sellerPickupConfirmed) && (
+                  <div className="text-sm text-muted-foreground w-full text-center">
+                    {safeOrder.buyerPickupConfirmed && safeOrder.sellerPickupConfirmed 
+                      ? "Both parties confirmed pickup"
+                      : safeOrder.buyerPickupConfirmed 
+                        ? "Buyer confirmed • Waiting for seller"
+                        : "Seller confirmed • Waiting for buyer"
+                    }
+                  </div>
+                )}
+              </>
             )}
             {/* Shipping Details Button - Only visible for buyers with orders requiring shipping details */}
             {!isSale && safeOrder.status === 'awaiting_shipping' && !safeOrder.shippingAddress && (
@@ -636,6 +719,43 @@ export function OrderCard({ order, isSale = false }: OrderCardProps) {
             >
               {isCompletingPickup && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Complete Pickup
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Buyer Pickup Confirmation Dialog */}
+      <AlertDialog open={showBuyerPickupDialog} onOpenChange={setShowBuyerPickupDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm Pickup</AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2">
+              <p>
+                By confirming pickup, you acknowledge that you have received the item from the seller.
+              </p>
+              <div className="flex items-start gap-2 p-3 rounded-md bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 mt-2">
+                <CheckCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-medium">What happens next?</p>
+                  <ul className="list-disc list-inside mt-1 space-y-1 text-sm">
+                    <li>Your pickup confirmation will be recorded</li>
+                    <li>The seller will also need to confirm pickup</li>
+                    <li>Once both parties confirm, the order will be completed</li>
+                    <li>You'll then be able to leave a review for this transaction</li>
+                  </ul>
+                </div>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmBuyerPickup}
+              disabled={isConfirmingBuyerPickup}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              {isConfirmingBuyerPickup && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Confirm Pickup
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -121,27 +121,41 @@ export default async function handler(
     }
     
     try {
-      // Update the order status to completed
+      // Update the order with seller confirmation
       const now = Timestamp.now();
-      console.log('[complete-pickup] Updating order with timestamp:', now);
+      console.log('[complete-pickup] Updating order with seller confirmation timestamp:', now);
       
       const orderRef = db.collection('orders').doc(orderId);
-      const updateData = {
-        status: 'completed',
-        pickupCompleted: true,
-        pickupCompletedAt: now,
+      const updateData: any = {
+        sellerPickupConfirmed: true,
+        sellerPickupConfirmedAt: now,
         updatedAt: now
       };
+      
+      // Check if buyer has already confirmed
+      const buyerAlreadyConfirmed = orderData.buyerPickupConfirmed;
+      
+      if (buyerAlreadyConfirmed) {
+        // Both parties have confirmed, complete the order
+        updateData.status = 'completed';
+        updateData.pickupCompleted = true;
+        updateData.pickupCompletedAt = now;
+        console.log('[complete-pickup] Both parties confirmed, completing order');
+      }
       
       console.log('[complete-pickup] Update data:', updateData);
       
       await orderRef.update(updateData);
       
-      console.log('[complete-pickup] Order marked as completed successfully:', orderId);
+      const responseMessage = buyerAlreadyConfirmed 
+        ? 'Pickup completed! Both parties have confirmed pickup and the order is now completed. Reviews can now be left for this transaction.'
+        : 'Pickup confirmed by seller! Waiting for the buyer to also confirm pickup before completing the order.';
+      
+      console.log('[complete-pickup] Order updated successfully:', orderId);
       
       return res.status(200).json({ 
         success: true, 
-        message: 'Order marked as completed successfully. The buyer can now leave a review for this transaction.',
+        message: responseMessage,
       });
     } catch (updateError) {
       console.error('[complete-pickup] Error updating order document:', updateError);
