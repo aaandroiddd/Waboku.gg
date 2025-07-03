@@ -227,6 +227,43 @@ const OffersContent = () => {
     }
   };
 
+  const handleTestOfferCreation = async () => {
+    if (!user) return;
+    
+    try {
+      const token = await user.getIdToken();
+      const response = await fetch('/api/debug/test-offer-creation', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Offer Creation Test Data:', data);
+        toast({
+          title: "Test Complete",
+          description: "Check the browser console for offer creation test results",
+        });
+      } else {
+        const errorData = await response.json();
+        console.error('Test API Error:', errorData);
+        toast({
+          title: "Test Failed",
+          description: "Failed to run offer creation test",
+          variant: "destructive",
+        });
+      }
+    } catch (error: any) {
+      console.error('Test Error:', error);
+      toast({
+        title: "Test Error",
+        description: "An error occurred while testing",
+        variant: "destructive",
+      });
+    }
+  };
+
   // Show loading skeleton if offers are still loading
   if (isLoadingOffers()) {
     return (
@@ -361,6 +398,13 @@ const OffersContent = () => {
               onClick={handleDebugOffers}
             >
               Debug Offers
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleTestOfferCreation}
+            >
+              Test Creation
             </Button>
           </div>
         </div>
