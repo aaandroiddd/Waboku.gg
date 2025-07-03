@@ -190,6 +190,43 @@ const OffersContent = () => {
     }
   };
 
+  const handleDebugOffers = async () => {
+    if (!user) return;
+    
+    try {
+      const token = await user.getIdToken();
+      const response = await fetch('/api/debug/check-offers', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Offers Debug Data:', data);
+        toast({
+          title: "Debug Complete",
+          description: "Check the browser console for detailed offer information",
+        });
+      } else {
+        const errorData = await response.json();
+        console.error('Debug API Error:', errorData);
+        toast({
+          title: "Debug Failed",
+          description: "Failed to fetch debug information",
+          variant: "destructive",
+        });
+      }
+    } catch (error: any) {
+      console.error('Debug Error:', error);
+      toast({
+        title: "Debug Error",
+        description: "An error occurred while debugging",
+        variant: "destructive",
+      });
+    }
+  };
+
   // Show loading skeleton if offers are still loading
   if (isLoadingOffers()) {
     return (
@@ -299,24 +336,33 @@ const OffersContent = () => {
               Manage your received and sent offers for listings
             </p>
           </div>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={handleRefresh}
-            disabled={isRefreshing}
-          >
-            {isRefreshing ? (
-              <>
-                <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                Refreshing...
-              </>
-            ) : (
-              <>
-                <RefreshCw className="mr-2 h-4 w-4" />
-                Refresh
-              </>
-            )}
-          </Button>
+          <div className="flex gap-2">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+            >
+              {isRefreshing ? (
+                <>
+                  <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                  Refreshing...
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                  Refresh
+                </>
+              )}
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleDebugOffers}
+            >
+              Debug Offers
+            </Button>
+          </div>
         </div>
       </div>
 
