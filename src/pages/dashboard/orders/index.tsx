@@ -8,7 +8,7 @@ import { Order } from '@/types/order';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { Loader2, RefreshCw, Filter, Search, ArrowUpDown, Download, Check, X, HelpCircle, MessageCircle } from 'lucide-react';
+import { Loader2, RefreshCw, Filter, Search, ArrowUpDown, Download, Check, X, HelpCircle, MessageCircle, AlertTriangle, Clock, Info } from 'lucide-react';
 import { useRouter } from 'next/router';
 import { toast } from 'sonner';
 import { OrderCard } from '@/components/OrderCard';
@@ -29,6 +29,7 @@ import { format, subDays } from 'date-fns';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
 import { ReviewPrompt } from '@/components/ReviewPrompt';
+import { sortOrdersByAttention, getAttentionCounts } from '@/lib/order-utils';
 
 type OrderStatus = 'all' | 'pending' | 'paid' | 'awaiting_shipping' | 'shipped' | 'completed' | 'cancelled';
 type SortField = 'date' | 'amount' | 'status';
@@ -531,26 +532,32 @@ const OrdersComponent = () => {
       );
     }
     
-    // Apply sorting
-    result.sort((a, b) => {
-      if (sortField === 'date') {
-        return sortDirection === 'asc' 
-          ? a.createdAt.getTime() - b.createdAt.getTime()
-          : b.createdAt.getTime() - a.createdAt.getTime();
-      } else if (sortField === 'amount') {
-        return sortDirection === 'asc'
-          ? a.amount - b.amount
-          : b.amount - a.amount;
-      } else if (sortField === 'status') {
-        // Use the effective status for sorting
-        const statusA = getEffectiveStatus(a);
-        const statusB = getEffectiveStatus(b);
-        return sortDirection === 'asc'
-          ? statusA.localeCompare(statusB)
-          : statusB.localeCompare(statusA);
-      }
-      return 0;
-    });
+    // Apply sorting - prioritize attention-based sorting for better UX
+    if (sortField === 'date' && sortDirection === 'desc') {
+      // Default sorting: use attention-based sorting to show orders needing attention first
+      result = sortOrdersByAttention(result, false);
+    } else {
+      // Custom sorting
+      result.sort((a, b) => {
+        if (sortField === 'date') {
+          return sortDirection === 'asc' 
+            ? a.createdAt.getTime() - b.createdAt.getTime()
+            : b.createdAt.getTime() - a.createdAt.getTime();
+        } else if (sortField === 'amount') {
+          return sortDirection === 'asc'
+            ? a.amount - b.amount
+            : b.amount - a.amount;
+        } else if (sortField === 'status') {
+          // Use the effective status for sorting
+          const statusA = getEffectiveStatus(a);
+          const statusB = getEffectiveStatus(b);
+          return sortDirection === 'asc'
+            ? statusA.localeCompare(statusB)
+            : statusB.localeCompare(statusA);
+        }
+        return 0;
+      });
+    }
     
     return result;
   }, [purchases, statusFilter, searchTerm, sortField, sortDirection, dateFilter]);
@@ -592,26 +599,32 @@ const OrdersComponent = () => {
       );
     }
     
-    // Apply sorting
-    result.sort((a, b) => {
-      if (sortField === 'date') {
-        return sortDirection === 'asc' 
-          ? a.createdAt.getTime() - b.createdAt.getTime()
-          : b.createdAt.getTime() - a.createdAt.getTime();
-      } else if (sortField === 'amount') {
-        return sortDirection === 'asc'
-          ? a.amount - b.amount
-          : b.amount - a.amount;
-      } else if (sortField === 'status') {
-        // Use the effective status for sorting
-        const statusA = getEffectiveStatus(a);
-        const statusB = getEffectiveStatus(b);
-        return sortDirection === 'asc'
-          ? statusA.localeCompare(statusB)
-          : statusB.localeCompare(statusA);
-      }
-      return 0;
-    });
+    // Apply sorting - prioritize attention-based sorting for better UX
+    if (sortField === 'date' && sortDirection === 'desc') {
+      // Default sorting: use attention-based sorting to show orders needing attention first
+      result = sortOrdersByAttention(result, true);
+    } else {
+      // Custom sorting
+      result.sort((a, b) => {
+        if (sortField === 'date') {
+          return sortDirection === 'asc' 
+            ? a.createdAt.getTime() - b.createdAt.getTime()
+            : b.createdAt.getTime() - a.createdAt.getTime();
+        } else if (sortField === 'amount') {
+          return sortDirection === 'asc'
+            ? a.amount - b.amount
+            : b.amount - a.amount;
+        } else if (sortField === 'status') {
+          // Use the effective status for sorting
+          const statusA = getEffectiveStatus(a);
+          const statusB = getEffectiveStatus(b);
+          return sortDirection === 'asc'
+            ? statusA.localeCompare(statusB)
+            : statusB.localeCompare(statusA);
+        }
+        return 0;
+      });
+    }
     
     return result;
   }, [sales, statusFilter, searchTerm, sortField, sortDirection, dateFilter]);
@@ -651,6 +664,11 @@ const OrdersComponent = () => {
   
   // Get the active status counts based on the current tab
   const activeStatusCounts = activeTab === 'purchases' ? purchaseStatusCounts : salesStatusCounts;
+  
+  // Get attention counts for current orders
+  const purchaseAttentionCounts = useMemo(() => getAttentionCounts(purchases, false), [purchases]);
+  const salesAttentionCounts = useMemo(() => getAttentionCounts(sales, true), [sales]);
+  const activeAttentionCounts = activeTab === 'purchases' ? purchaseAttentionCounts : salesAttentionCounts;
   
   // Get orders that need reviews (completed orders without reviews)
   const ordersNeedingReviews = useMemo(() => {
@@ -878,6 +896,43 @@ const OrdersComponent = () => {
                 Clear
               </Button>
             )}
+          </div>
+        )}
+        
+        {/* Attention Summary */}
+        {activeAttentionCounts.total > 0 && (
+          <div className="mb-4 p-4 rounded-lg border bg-gradient-to-r from-orange-50 to-red-50 dark:from-orange-950/30 dark:to-red-950/30 border-orange-200 dark:border-orange-800">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="h-5 w-5 text-orange-600 dark:text-orange-400 flex-shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <h3 className="font-medium text-orange-800 dark:text-orange-200 mb-2">
+                  {activeAttentionCounts.total} {activeTab === 'purchases' ? 'purchase' : 'sale'}{activeAttentionCounts.total === 1 ? '' : 's'} need{activeAttentionCounts.total === 1 ? 's' : ''} your attention
+                </h3>
+                <div className="flex flex-wrap gap-2">
+                  {activeAttentionCounts.high > 0 && (
+                    <Badge variant="destructive" className="bg-red-600 text-white">
+                      <AlertTriangle className="h-3 w-3 mr-1" />
+                      {activeAttentionCounts.high} urgent
+                    </Badge>
+                  )}
+                  {activeAttentionCounts.medium > 0 && (
+                    <Badge variant="outline" className="border-orange-500 text-orange-700 dark:text-orange-300">
+                      <Clock className="h-3 w-3 mr-1" />
+                      {activeAttentionCounts.medium} action needed
+                    </Badge>
+                  )}
+                  {activeAttentionCounts.low > 0 && (
+                    <Badge variant="outline" className="border-blue-500 text-blue-700 dark:text-blue-300">
+                      <Info className="h-3 w-3 mr-1" />
+                      {activeAttentionCounts.low} informational
+                    </Badge>
+                  )}
+                </div>
+                <p className="text-sm text-orange-700 dark:text-orange-300 mt-2">
+                  Orders requiring attention are automatically sorted to the top when using default date sorting.
+                </p>
+              </div>
+            </div>
           </div>
         )}
         

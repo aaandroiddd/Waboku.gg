@@ -6,7 +6,7 @@ import { formatPrice } from '@/lib/price';
 import { format, addDays } from 'date-fns';
 import Image from 'next/image';
 import { UserNameLink } from '@/components/UserNameLink';
-import { Package, ExternalLink, MapPin, RefreshCw, Plus } from 'lucide-react';
+import { Package, ExternalLink, MapPin, RefreshCw, Plus, AlertTriangle, Clock, Info } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { getFirebaseServices } from '@/lib/firebase';
@@ -19,6 +19,7 @@ import { AcceptedOfferCheckout } from '@/components/AcceptedOfferCheckout';
 import { generateListingUrl } from '@/lib/listing-slug';
 import { RefundRequestDialog } from '@/components/RefundRequestDialog';
 import { RefundManagementDialog } from '@/components/RefundManagementDialog';
+import { getOrderAttentionInfo } from '@/lib/order-utils';
 
 interface OrderCardProps {
   order: Order;
@@ -298,9 +299,83 @@ export function OrderCard({ order, isSale = false }: OrderCardProps) {
     status: isAwaitingPayment ? 'pending' : (order.status || 'pending')
   };
 
+  // Get attention info for this order
+  const attentionInfo = getOrderAttentionInfo(safeOrder, isSale);
+
+  // Determine card styling based on attention level
+  const getCardClassName = () => {
+    let baseClass = "mb-4 cursor-pointer hover:shadow-md transition-all duration-200";
+    
+    if (attentionInfo.needsAttention) {
+      switch (attentionInfo.priority) {
+        case 'high':
+          return `${baseClass} border-l-4 border-l-red-500 bg-red-50/50 dark:bg-red-950/20 hover:bg-red-50 dark:hover:bg-red-950/30`;
+        case 'medium':
+          return `${baseClass} border-l-4 border-l-orange-500 bg-orange-50/50 dark:bg-orange-950/20 hover:bg-orange-50 dark:hover:bg-orange-950/30`;
+        case 'low':
+          return `${baseClass} border-l-4 border-l-blue-500 bg-blue-50/50 dark:bg-blue-950/20 hover:bg-blue-50 dark:hover:bg-blue-950/30`;
+        default:
+          return baseClass;
+      }
+    }
+    
+    return baseClass;
+  };
+
+  // Get attention icon
+  const getAttentionIcon = () => {
+    if (!attentionInfo.needsAttention) return null;
+    
+    switch (attentionInfo.priority) {
+      case 'high':
+        return <AlertTriangle className="h-4 w-4 text-red-600 dark:text-red-400" />;
+      case 'medium':
+        return <Clock className="h-4 w-4 text-orange-600 dark:text-orange-400" />;
+      case 'low':
+        return <Info className="h-4 w-4 text-blue-600 dark:text-blue-400" />;
+      default:
+        return null;
+    }
+  };
+
   return (
-    <Card className="mb-4 cursor-pointer hover:shadow-md transition-shadow duration-200" onClick={handleViewOrder}>
+    <Card className={getCardClassName()} onClick={handleViewOrder}>
       <CardContent className="pt-6">
+        {/* Attention Banner */}
+        {attentionInfo.needsAttention && (
+          <div className={`mb-4 p-3 rounded-lg border-l-4 ${
+            attentionInfo.priority === 'high' 
+              ? 'border-l-red-500 bg-red-50 dark:bg-red-950/30' 
+              : attentionInfo.priority === 'medium'
+              ? 'border-l-orange-500 bg-orange-50 dark:bg-orange-950/30'
+              : 'border-l-blue-500 bg-blue-50 dark:bg-blue-950/30'
+          }`}>
+            <div className="flex items-start gap-2">
+              {getAttentionIcon()}
+              <div className="flex-1">
+                <p className={`font-medium text-sm ${
+                  attentionInfo.priority === 'high' 
+                    ? 'text-red-800 dark:text-red-200' 
+                    : attentionInfo.priority === 'medium'
+                    ? 'text-orange-800 dark:text-orange-200'
+                    : 'text-blue-800 dark:text-blue-200'
+                }`}>
+                  {attentionInfo.reason}
+                </p>
+                <p className={`text-xs mt-1 ${
+                  attentionInfo.priority === 'high' 
+                    ? 'text-red-700 dark:text-red-300' 
+                    : attentionInfo.priority === 'medium'
+                    ? 'text-orange-700 dark:text-orange-300'
+                    : 'text-blue-700 dark:text-blue-300'
+                }`}>
+                  {attentionInfo.actionRequired}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+        
         <div className="flex flex-col md:flex-row gap-4 md:items-start">
           <div className="relative w-24 h-24 md:w-32 md:h-32 md:flex-shrink-0">
             {safeOrder.listingSnapshot.imageUrl ? (
