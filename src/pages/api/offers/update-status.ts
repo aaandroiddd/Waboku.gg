@@ -1,7 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { getFirebaseServices } from '@/lib/firebase';
-import { doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { getFirebaseAdmin } from '@/lib/firebase-admin';
 import { getAuth } from 'firebase-admin/auth';
+import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import { emailService } from '@/lib/email-service';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -22,12 +22,48 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const token = authHeader.split('Bearer ')[1];
     
+    // Initialize Firebase Admin
+    console.log('Initializing Firebase Admin...');
+    let firebaseAdminInstance;
+    try {
+      firebaseAdminInstance = getFirebaseAdmin();
+      console.log('Firebase Admin initialized successfully');
+    } catch (adminInitError: any) {
+      console.error('Firebase Admin initialization error:', {
+        message: adminInitError.message,
+        code: adminInitError.code
+      });
+      return res.status(500).json({ 
+        error: 'Failed to initialize Firebase Admin',
+        details: adminInitError.message
+      });
+    }
+    
+    // Get Auth and Firestore instances
+    console.log('Getting Auth and Firestore instances...');
+    let auth;
+    let db;
+    
+    try {
+      auth = getAuth();
+      db = getFirestore();
+      console.log('Successfully got Auth and Firestore instances');
+    } catch (instanceError: any) {
+      console.error('Error getting Auth or Firestore instance:', {
+        message: instanceError.message,
+        code: instanceError.code
+      });
+      return res.status(500).json({
+        error: 'Failed to initialize Firebase services',
+        details: instanceError.message
+      });
+    }
+    
     // Verify the token and get the user
     console.log('Verifying token...');
-    const { admin } = getFirebaseServices();
     let decodedToken;
     try {
-      decodedToken = await getAuth(admin).verifyIdToken(token);
+      decodedToken = await auth.verifyIdToken(token);
       console.log('Token verified successfully');
     } catch (tokenError: any) {
       console.error('Token verification error:', {
@@ -61,11 +97,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // Get the offer
     console.log(`Getting offer with ID: ${offerId}`);
-    const { db } = getFirebaseServices();
-    const offerRef = doc(db, 'offers', offerId);
-    const offerSnap = await getDoc(offerRef);
+    const offerRef = db.collection('offers').doc(offerId);
+    const offerSnap = await offerRef.get();
 
-    if (!offerSnap.exists()) {
+    if (!offerSnap.exists) {
       console.error(`Offer with ID ${offerId} not found`);
       return res.status(404).json({ error: 'Offer not found' });
     }
@@ -105,10 +140,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // If the offer is being accepted, check if it requires shipping info
     const updateData: any = {
       status,
-      updatedAt: serverTimestamp()
+      updatedAt: FieldValue.serverTimestamp()
     };
     
-    await updateDoc(offerRef, updateData);
+    await offerRef.update(updateData);
 
     console.log(`Successfully updated offer ${offerId} status to ${status}`);
     
