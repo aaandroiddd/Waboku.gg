@@ -20,7 +20,8 @@ import { formatPrice } from '@/lib/price';
 import { RefreshCw } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 
-const OffersComponent = () => {
+// Inner component that uses the dashboard context
+const OffersContent = () => {
   const { toast } = useToast();
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
@@ -192,7 +193,7 @@ const OffersComponent = () => {
   // Show loading skeleton if offers are still loading
   if (isLoadingOffers()) {
     return (
-      <DashboardLayout showPreloader={false}>
+      <>
         <div className="mb-8 space-y-3">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
@@ -226,76 +227,70 @@ const OffersComponent = () => {
             ))}
           </div>
         </div>
-      </DashboardLayout>
+      </>
     );
   }
 
   if (loading) {
     return (
-      <DashboardLayout>
-        <div className="min-h-screen flex items-center justify-center">
-          <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-        </div>
-      </DashboardLayout>
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+      </div>
     );
   }
 
   if (error || offersError) {
     return (
-      <DashboardLayout>
-        <div className="min-h-screen flex items-center justify-center">
-          <div className="text-center">
-            <h2 className="text-2xl font-bold text-red-600 mb-4">Error</h2>
-            <p className="text-gray-600 mb-4">{error || offersError}</p>
-            <div className="flex gap-4 justify-center">
-              <Button
-                variant="outline"
-                onClick={handleRefresh}
-                disabled={isRefreshing}
-              >
-                {isRefreshing ? (
-                  <>
-                    <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                    Refreshing...
-                  </>
-                ) : (
-                  <>
-                    <RefreshCw className="mr-2 h-4 w-4" />
-                    Try Again
-                  </>
-                )}
-              </Button>
-              <Button
-                onClick={() => router.push('/dashboard')}
-              >
-                Return to Dashboard
-              </Button>
-            </div>
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-red-600 mb-4">Error</h2>
+          <p className="text-gray-600 mb-4">{error || offersError}</p>
+          <div className="flex gap-4 justify-center">
+            <Button
+              variant="outline"
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+            >
+              {isRefreshing ? (
+                <>
+                  <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                  Refreshing...
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                  Try Again
+                </>
+              )}
+            </Button>
+            <Button
+              onClick={() => router.push('/dashboard')}
+            >
+              Return to Dashboard
+            </Button>
           </div>
         </div>
-      </DashboardLayout>
+      </div>
     );
   }
 
   if (!user) {
     return (
-      <DashboardLayout>
-        <div className="min-h-screen flex items-center justify-center">
-          <div className="text-center">
-            <h2 className="text-2xl font-bold mb-4">Please sign in</h2>
-            <Button
-              onClick={() => router.push('/auth/sign-in')}
-            >
-              Sign In
-            </Button>
-          </div>
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold mb-4">Please sign in</h2>
+          <Button
+            onClick={() => router.push('/auth/sign-in')}
+          >
+            Sign In
+          </Button>
         </div>
-      </DashboardLayout>
+      </div>
     );
   }
 
   return (
-    <DashboardLayout>
+    <>
       <div className="mb-8 space-y-3">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
@@ -415,6 +410,15 @@ const OffersComponent = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+    </>
+  );
+};
+
+// Main component that wraps content with DashboardLayout
+const OffersComponent = () => {
+  return (
+    <DashboardLayout>
+      <OffersContent />
     </DashboardLayout>
   );
 };
