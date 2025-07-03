@@ -153,21 +153,54 @@ class DashboardPreloader {
   // Load offers data
   private async loadOffers(user: User): Promise<any[]> {
     try {
-      const offersQuery = query(
+      // Fetch both received offers (where user is seller) and sent offers (where user is buyer)
+      const receivedOffersQuery = query(
         collection(db, 'offers'),
         where('sellerId', '==', user.uid),
         orderBy('createdAt', 'desc'),
         limit(50)
       );
       
-      const snapshot = await getDocs(offersQuery);
-      const offers = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
+      const sentOffersQuery = query(
+        collection(db, 'offers'),
+        where('buyerId', '==', user.uid),
+        orderBy('createdAt', 'desc'),
+        limit(50)
+      );
       
-      this.saveToCache(user.uid, 'offers', offers);
-      return offers;
+      // Execute both queries concurrently
+      const [receivedSnapshot, sentSnapshot] = await Promise.all([
+        getDocs(receivedOffersQuery),
+        getDocs(sentOffersQuery)
+      ]);
+      
+      const receivedOffers = receivedSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        createdAt: doc.data().createdAt?.toDate() || new Date(),
+        updatedAt: doc.data().updatedAt?.toDate() || new Date(),
+        expiresAt: doc.data().expiresAt?.toDate() || null,
+        cleared: doc.data().cleared === true
+      })).filter(offer => !offer.cleared);
+      
+      const sentOffers = sentSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        createdAt: doc.data().createdAt?.toDate() || new Date(),
+        updatedAt: doc.data().updatedAt?.toDate() || new Date(),
+        expiresAt: doc.data().expiresAt?.toDate() || null,
+        cleared: doc.data().cleared === true
+      })).filter(offer => !offer.cleared);
+      
+      // Combine both arrays and sort by creation date
+      const allOffers = [...receivedOffers, ...sentOffers].sort((a, b) => 
+        b.createdAt.getTime() - a.createdAt.getTime()
+      );
+      
+      console.log(`Dashboard preloader loaded ${receivedOffers.length} received offers and ${sentOffers.length} sent offers`);
+      
+      this.saveToCache(user.uid, 'offers', allOffers);
+      return allOffers;
     } catch (error) {
       console.error('Failed to load offers:', error);
       return [];
@@ -347,29 +380,67 @@ class DashboardPreloader {
       }
     }));
 
-    // Offers listener
-    const offersQuery = query(
+    // Offers listeners - both received and sent
+    const receivedOffersQuery = query(
       collection(db, 'offers'),
       where('sellerId', '==', userId),
       orderBy('createdAt', 'desc'),
       limit(50)
     );
     
-    listeners.push(onSnapshot(offersQuery, (snapshot) => {
-      const offers = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      
-      const currentData = this.cache.get(userId);
-      if (currentData) {
-        currentData.offers = offers;
-        currentData.lastUpdated = Date.now();
-        this.cache.set(userId, currentData);
-        this.saveToCache(userId, 'offers', offers);
-        this.notifyCallbacks(userId);
-      }
-    }));
+    const sentOffersQuery = query(
+      collection(db, 'offers'),
+      where('buyerId', '==', userId),
+      orderBy('createdAt', 'desc'),
+      limit(50)
+    );
+    
+    // Function to update offers data from both listeners
+    const updateOffersData = () => {
+      // We need to refetch both queries to get the complete picture
+      Promise.all([
+        getDocs(receivedOffersQuery),
+        getDocs(sentOffersQuery)
+      ]).then(([receivedSnapshot, sentSnapshot]) => {
+        const receivedOffers = receivedSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+          createdAt: doc.data().createdAt?.toDate() || new Date(),
+          updatedAt: doc.data().updatedAt?.toDate() || new Date(),
+          expiresAt: doc.data().expiresAt?.toDate() || null,
+          cleared: doc.data().cleared === true
+        })).filter(offer => !offer.cleared);
+        
+        const sentOffers = sentSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+          createdAt: doc.data().createdAt?.toDate() || new Date(),
+          updatedAt: doc.data().updatedAt?.toDate() || new Date(),
+          expiresAt: doc.data().expiresAt?.toDate() || null,
+          cleared: doc.data().cleared === true
+        })).filter(offer => !offer.cleared);
+        
+        // Combine both arrays and sort by creation date
+        const allOffers = [...receivedOffers, ...sentOffers].sort((a, b) => 
+          b.createdAt.getTime() - a.createdAt.getTime()
+        );
+        
+        const currentData = this.cache.get(userId);
+        if (currentData) {
+          currentData.offers = allOffers;
+          currentData.lastUpdated = Date.now();
+          this.cache.set(userId, currentData);
+          this.saveToCache(userId, 'offers', allOffers);
+          this.notifyCallbacks(userId);
+        }
+      }).catch(error => {
+        console.error('Error updating offers data from listeners:', error);
+      });
+    };
+    
+    // Set up listeners for both received and sent offers
+    listeners.push(onSnapshot(receivedOffersQuery, updateOffersData));
+    listeners.push(onSnapshot(sentOffersQuery, updateOffersData));
 
     // Store listeners for cleanup
     this.listeners.set(userId, listeners);

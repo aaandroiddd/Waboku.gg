@@ -194,6 +194,15 @@ const OffersContent = () => {
     if (!user) return;
     
     try {
+      console.log('=== OFFERS DEBUG START ===');
+      console.log('Current user:', user.uid);
+      console.log('Preloaded offers:', preloadedOffers);
+      console.log('Fallback received offers:', fallbackReceivedOffers);
+      console.log('Fallback sent offers:', fallbackSentOffers);
+      console.log('All offers (combined):', allOffers);
+      console.log('Received offers (filtered):', receivedOffers);
+      console.log('Sent offers (filtered):', sentOffers);
+      
       const token = await user.getIdToken();
       const response = await fetch('/api/debug/check-offers', {
         headers: {
@@ -203,7 +212,7 @@ const OffersContent = () => {
       
       if (response.ok) {
         const data = await response.json();
-        console.log('Offers Debug Data:', data);
+        console.log('API Debug Data:', data);
         toast({
           title: "Debug Complete",
           description: "Check the browser console for detailed offer information",
@@ -217,6 +226,7 @@ const OffersContent = () => {
           variant: "destructive",
         });
       }
+      console.log('=== OFFERS DEBUG END ===');
     } catch (error: any) {
       console.error('Debug Error:', error);
       toast({
@@ -231,6 +241,9 @@ const OffersContent = () => {
     if (!user) return;
     
     try {
+      console.log('=== OFFER CREATION TEST START ===');
+      console.log('Current user:', user.uid);
+      
       const token = await user.getIdToken();
       const response = await fetch('/api/debug/test-offer-creation', {
         headers: {
@@ -254,6 +267,7 @@ const OffersContent = () => {
           variant: "destructive",
         });
       }
+      console.log('=== OFFER CREATION TEST END ===');
     } catch (error: any) {
       console.error('Test Error:', error);
       toast({
