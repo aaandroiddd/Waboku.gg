@@ -364,19 +364,51 @@ export function OrderCard({ order, isSale = false }: OrderCardProps) {
     return baseClass;
   };
 
-  // Get attention icon - simplified to use single icon
+  // Get attention icon with priority-based colors
   const getAttentionIcon = () => {
     if (!attentionInfo.needsAttention) return null;
     
     switch (attentionInfo.priority) {
       case 'high':
-        return <AlertTriangle className="h-4 w-4 text-primary" />;
+        return <AlertTriangle className="h-4 w-4 text-red-600 dark:text-red-400" />;
       case 'medium':
-        return <Clock className="h-4 w-4 text-primary" />;
+        return <Clock className="h-4 w-4 text-orange-600 dark:text-orange-400" />;
       case 'low':
-        return <Info className="h-4 w-4 text-primary" />;
+        return <Info className="h-4 w-4 text-blue-600 dark:text-blue-400" />;
       default:
         return null;
+    }
+  };
+
+  // Get attention banner styling based on priority
+  const getAttentionBannerStyle = () => {
+    if (!attentionInfo.needsAttention) return '';
+    
+    switch (attentionInfo.priority) {
+      case 'high':
+        return 'border-l-red-600 bg-red-50 dark:bg-red-900/20';
+      case 'medium':
+        return 'border-l-orange-600 bg-orange-50 dark:bg-orange-900/20';
+      case 'low':
+        return 'border-l-blue-600 bg-blue-50 dark:bg-blue-900/20';
+      default:
+        return 'border-l-primary bg-primary/10 dark:bg-primary/20';
+    }
+  };
+
+  // Get attention text color based on priority
+  const getAttentionTextColor = () => {
+    if (!attentionInfo.needsAttention) return 'text-primary';
+    
+    switch (attentionInfo.priority) {
+      case 'high':
+        return 'text-red-700 dark:text-red-300';
+      case 'medium':
+        return 'text-orange-700 dark:text-orange-300';
+      case 'low':
+        return 'text-blue-700 dark:text-blue-300';
+      default:
+        return 'text-primary';
     }
   };
 
@@ -385,14 +417,14 @@ export function OrderCard({ order, isSale = false }: OrderCardProps) {
       <CardContent className="pt-6">
         {/* Attention Banner */}
         {attentionInfo.needsAttention && (
-          <div className="mb-4 p-3 rounded-lg border-l-4 border-l-primary bg-primary/10 dark:bg-primary/20">
+          <div className={`mb-4 p-3 rounded-lg border-l-4 ${getAttentionBannerStyle()}`}>
             <div className="flex items-start gap-2">
               {getAttentionIcon()}
               <div className="flex-1">
-                <p className="font-medium text-sm text-primary">
+                <p className={`font-medium text-sm ${getAttentionTextColor()}`}>
                   {attentionInfo.reason}
                 </p>
-                <p className="text-xs mt-1 text-primary/80">
+                <p className={`text-xs mt-1 ${getAttentionTextColor()} opacity-80`}>
                   {attentionInfo.actionRequired}
                 </p>
               </div>

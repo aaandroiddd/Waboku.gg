@@ -910,19 +910,19 @@ const OrdersComponent = () => {
                 </h3>
                 <div className="flex flex-wrap gap-2">
                   {activeAttentionCounts.high > 0 && (
-                    <Badge variant="outline" className="border-primary text-primary">
+                    <Badge variant="outline" className="border-red-600 text-red-600 dark:border-red-400 dark:text-red-400">
                       <AlertTriangle className="h-3 w-3 mr-1" />
                       {activeAttentionCounts.high} urgent
                     </Badge>
                   )}
                   {activeAttentionCounts.medium > 0 && (
-                    <Badge variant="outline" className="border-primary text-primary">
+                    <Badge variant="outline" className="border-orange-600 text-orange-600 dark:border-orange-400 dark:text-orange-400">
                       <Clock className="h-3 w-3 mr-1" />
                       {activeAttentionCounts.medium} action needed
                     </Badge>
                   )}
                   {activeAttentionCounts.low > 0 && (
-                    <Badge variant="outline" className="border-primary text-primary">
+                    <Badge variant="outline" className="border-blue-600 text-blue-600 dark:border-blue-400 dark:text-blue-400">
                       <Info className="h-3 w-3 mr-1" />
                       {activeAttentionCounts.low} informational
                     </Badge>
