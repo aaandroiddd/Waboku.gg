@@ -5,6 +5,8 @@ import { getFirebaseServices } from '@/lib/firebase';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { databaseOptimizer } from '@/lib/database-usage-optimizer';
 import { notificationService } from '@/lib/notification-service';
+import { getOrderAttentionInfo } from '@/lib/order-utils';
+import { Order } from '@/types/order';
 
 interface UnreadCounts {
   messages: number;
@@ -208,39 +210,63 @@ export const UnreadProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         
         const { db } = getFirebaseServices();
         
-        // Query for new orders (as seller)
-        const newOrdersQuery = query(
+        // Query for orders where user is seller
+        const sellerOrdersQuery = query(
           collection(db, 'orders'),
-          where('sellerId', '==', user.uid),
-          where('sellerRead', '==', false)
+          where('sellerId', '==', user.uid)
         );
         
-        // Query for updated orders (as buyer)
-        const updatedOrdersQuery = query(
+        // Query for orders where user is buyer
+        const buyerOrdersQuery = query(
           collection(db, 'orders'),
-          where('buyerId', '==', user.uid),
-          where('buyerRead', '==', false)
+          where('buyerId', '==', user.uid)
         );
         
-        // Query for unshipped orders (as buyer) - orders that are paid or awaiting shipping
-        const unshippedOrdersQuery = query(
-          collection(db, 'orders'),
-          where('buyerId', '==', user.uid),
-          where('status', 'in', ['paid', 'awaiting_shipping'])
-        );
-        
-        const [newOrdersSnapshot, updatedOrdersSnapshot, unshippedOrdersSnapshot] = await Promise.all([
-          getDocs(newOrdersQuery),
-          getDocs(updatedOrdersQuery),
-          getDocs(unshippedOrdersQuery)
+        const [sellerOrdersSnapshot, buyerOrdersSnapshot] = await Promise.all([
+          getDocs(sellerOrdersQuery),
+          getDocs(buyerOrdersQuery)
         ]);
         
-        // Count unread orders (new/updated) plus unshipped orders
-        const unreadOrderCount = newOrdersSnapshot.size + updatedOrdersSnapshot.size + unshippedOrdersSnapshot.size;
+        // Process seller orders (sales)
+        const sellerOrders = sellerOrdersSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+          createdAt: doc.data().createdAt?.toDate() || new Date(),
+          updatedAt: doc.data().updatedAt?.toDate() || new Date()
+        })) as Order[];
         
-        setUnreadCounts(prev => ({ ...prev, orders: unreadOrderCount }));
+        // Process buyer orders (purchases)
+        const buyerOrders = buyerOrdersSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+          createdAt: doc.data().createdAt?.toDate() || new Date(),
+          updatedAt: doc.data().updatedAt?.toDate() || new Date()
+        })) as Order[];
+        
+        // Count orders that need attention
+        let attentionCount = 0;
+        
+        // Check seller orders (sales)
+        sellerOrders.forEach(order => {
+          const attentionInfo = getOrderAttentionInfo(order, true); // isSale = true
+          if (attentionInfo.needsAttention) {
+            attentionCount++;
+          }
+        });
+        
+        // Check buyer orders (purchases)
+        buyerOrders.forEach(order => {
+          const attentionInfo = getOrderAttentionInfo(order, false); // isSale = false
+          if (attentionInfo.needsAttention) {
+            attentionCount++;
+          }
+        });
+        
+        console.log(`[UnreadContext] Orders needing attention: ${attentionCount} (${sellerOrders.length} sales, ${buyerOrders.length} purchases)`);
+        
+        setUnreadCounts(prev => ({ ...prev, orders: attentionCount }));
       } catch (error) {
-        console.error('Error counting unread orders:', error);
+        console.error('Error counting orders needing attention:', error);
       }
     };
 
