@@ -207,24 +207,61 @@ class DashboardPreloader {
     }
   }
 
-  // Load orders data
+  // Load orders data - fetch both purchases and sales
   private async loadOrders(user: User): Promise<any[]> {
     try {
-      const ordersQuery = query(
+      // Fetch both purchases (where user is buyer) and sales (where user is seller)
+      const purchasesQuery = query(
+        collection(db, 'orders'),
+        where('buyerId', '==', user.uid),
+        orderBy('createdAt', 'desc'),
+        limit(50)
+      );
+      
+      const salesQuery = query(
         collection(db, 'orders'),
         where('sellerId', '==', user.uid),
         orderBy('createdAt', 'desc'),
         limit(50)
       );
       
-      const snapshot = await getDocs(ordersQuery);
-      const orders = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
+      // Execute both queries concurrently
+      const [purchasesSnapshot, salesSnapshot] = await Promise.all([
+        getDocs(purchasesQuery),
+        getDocs(salesQuery)
+      ]);
       
-      this.saveToCache(user.uid, 'orders', orders);
-      return orders;
+      const purchases = purchasesSnapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          ...data,
+          createdAt: data.createdAt?.toDate?.() || new Date(),
+          updatedAt: data.updatedAt?.toDate?.() || new Date(),
+          _orderType: 'purchase' // Add type for easier filtering
+        };
+      });
+      
+      const sales = salesSnapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          ...data,
+          createdAt: data.createdAt?.toDate?.() || new Date(),
+          updatedAt: data.updatedAt?.toDate?.() || new Date(),
+          _orderType: 'sale' // Add type for easier filtering
+        };
+      });
+      
+      // Combine both arrays and sort by creation date
+      const allOrders = [...purchases, ...sales].sort((a, b) => 
+        b.createdAt.getTime() - a.createdAt.getTime()
+      );
+      
+      console.log(`Dashboard preloader loaded ${purchases.length} purchases and ${sales.length} sales`);
+      
+      this.saveToCache(user.uid, 'orders', allOrders);
+      return allOrders;
     } catch (error) {
       console.error('Failed to load orders:', error);
       return [];
@@ -441,6 +478,71 @@ class DashboardPreloader {
     // Set up listeners for both received and sent offers
     listeners.push(onSnapshot(receivedOffersQuery, updateOffersData));
     listeners.push(onSnapshot(sentOffersQuery, updateOffersData));
+
+    // Orders listeners - both purchases and sales
+    const purchasesQuery = query(
+      collection(db, 'orders'),
+      where('buyerId', '==', userId),
+      orderBy('createdAt', 'desc'),
+      limit(50)
+    );
+    
+    const salesQuery = query(
+      collection(db, 'orders'),
+      where('sellerId', '==', userId),
+      orderBy('createdAt', 'desc'),
+      limit(50)
+    );
+    
+    // Function to update orders data from both listeners
+    const updateOrdersData = () => {
+      Promise.all([
+        getDocs(purchasesQuery),
+        getDocs(salesQuery)
+      ]).then(([purchasesSnapshot, salesSnapshot]) => {
+        const purchases = purchasesSnapshot.docs.map(doc => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            ...data,
+            createdAt: data.createdAt?.toDate?.() || new Date(),
+            updatedAt: data.updatedAt?.toDate?.() || new Date(),
+            _orderType: 'purchase'
+          };
+        });
+        
+        const sales = salesSnapshot.docs.map(doc => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            ...data,
+            createdAt: data.createdAt?.toDate?.() || new Date(),
+            updatedAt: data.updatedAt?.toDate?.() || new Date(),
+            _orderType: 'sale'
+          };
+        });
+        
+        // Combine both arrays and sort by creation date
+        const allOrders = [...purchases, ...sales].sort((a, b) => 
+          b.createdAt.getTime() - a.createdAt.getTime()
+        );
+        
+        const currentData = this.cache.get(userId);
+        if (currentData) {
+          currentData.orders = allOrders;
+          currentData.lastUpdated = Date.now();
+          this.cache.set(userId, currentData);
+          this.saveToCache(userId, 'orders', allOrders);
+          this.notifyCallbacks(userId);
+        }
+      }).catch(error => {
+        console.error('Error updating orders data from listeners:', error);
+      });
+    };
+    
+    // Set up listeners for both purchases and sales
+    listeners.push(onSnapshot(purchasesQuery, updateOrdersData));
+    listeners.push(onSnapshot(salesQuery, updateOrdersData));
 
     // Store listeners for cleanup
     this.listeners.set(userId, listeners);

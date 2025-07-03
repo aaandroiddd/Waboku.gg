@@ -2,8 +2,7 @@ import dynamic from 'next/dynamic';
 import { useEffect, useState, useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUnread } from '@/contexts/UnreadContext';
-import { getFirebaseServices } from '@/lib/firebase';
-import { collection, query, where, orderBy, getDocs, doc, getDoc, setDoc } from 'firebase/firestore';
+import { useDashboard } from '@/contexts/DashboardContext';
 import { Order } from '@/types/order';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -39,9 +38,14 @@ const OrdersComponent = () => {
   const { user } = useAuth();
   const router = useRouter();
   const { clearUnreadCount, resetUnreadCount } = useUnread();
-  const [purchases, setPurchases] = useState<Order[]>([]);
-  const [sales, setSales] = useState<Order[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { 
+    data: dashboardData, 
+    loading: dashboardLoading, 
+    isLoadingOrders, 
+    refreshSection,
+    getOrders 
+  } = useDashboard();
+  
   const [processingOrder, setProcessingOrder] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [sellerNames, setSellerNames] = useState<Record<string, string>>({});
@@ -56,6 +60,36 @@ const OrdersComponent = () => {
   const [activeTab, setActiveTab] = useState<'purchases' | 'sales'>(
     router.query.tab === 'sales' ? 'sales' : 'purchases'
   );
+  
+  // Get orders from preloaded data and separate into purchases and sales
+  const { purchases, sales } = useMemo(() => {
+    const allOrders = getOrders();
+    
+    if (!user || !allOrders.length) {
+      return { purchases: [], sales: [] };
+    }
+    
+    const purchases: Order[] = [];
+    const sales: Order[] = [];
+    
+    allOrders.forEach((order: any) => {
+      // Ensure proper date conversion
+      const processedOrder = {
+        ...order,
+        createdAt: order.createdAt instanceof Date ? order.createdAt : new Date(order.createdAt),
+        updatedAt: order.updatedAt instanceof Date ? order.updatedAt : new Date(order.updatedAt),
+      };
+      
+      // Use the _orderType if available, otherwise check user IDs
+      if (order._orderType === 'purchase' || (!order._orderType && order.buyerId === user.uid)) {
+        purchases.push(processedOrder);
+      } else if (order._orderType === 'sale' || (!order._orderType && order.sellerId === user.uid)) {
+        sales.push(processedOrder);
+      }
+    });
+    
+    return { purchases, sales };
+  }, [getOrders, user]);
   
   // Clear unread count when component mounts
   useEffect(() => {
@@ -102,8 +136,8 @@ const OrdersComponent = () => {
             // Remove the query parameters to prevent duplicate processing
             router.replace('/dashboard/orders', undefined, { shallow: true });
             
-            // Refresh the orders list by triggering a re-render
-            fetchOrders();
+            // Refresh the orders data
+            await refreshSection('orders');
           } else {
             // There was an error
             toast.error('Failed to process order. Please contact support.', { id: toastId });
@@ -121,201 +155,7 @@ const OrdersComponent = () => {
     if (user) {
       checkAndEnsureOrder();
     }
-  }, [router.query, user, processingOrder]);
-
-  const fetchOrders = async () => {
-    if (!user) return;
-    
-    try {
-      setLoading(true);
-      const { db } = getFirebaseServices();
-      console.log('[Orders Page] Fetching orders for user:', user.uid);
-      console.log('[Orders Page] Will specifically check for orders with paymentStatus: "awaiting_payment"');
-      
-      // Log the query paths we're going to check
-      console.log('[Orders Page] Will check the following paths:');
-      console.log(`- users/${user.uid}/orders (user-specific subcollection)`);
-      console.log(`- orders (main collection, filtered by buyerId/sellerId)`);
-      
-      // Method 1: Try to fetch from user-specific subcollections first
-      const userOrdersQuery = query(
-        collection(db, 'users', user.uid, 'orders'),
-        orderBy('createdAt', 'desc')
-      );
-      
-      console.log('Querying user-specific orders subcollection');
-      const userOrdersSnapshot = await getDocs(userOrdersQuery);
-      
-      // If we have user-specific orders, fetch the full order details
-      if (!userOrdersSnapshot.empty) {
-        console.log(`Found ${userOrdersSnapshot.docs.length} user-specific orders`);
-        
-        const userPurchases: Order[] = [];
-        const userSales: Order[] = [];
-        
-        // For each order reference, get the full order details
-        const orderPromises = userOrdersSnapshot.docs.map(async (orderDoc) => {
-          try {
-            const orderData = orderDoc.data();
-            const orderId = orderData.orderId;
-            const role = orderData.role; // 'buyer' or 'seller'
-            
-            console.log(`Fetching full order details for order: ${orderId}, role: ${role}`);
-            
-            // Get the full order details from the main orders collection
-            const fullOrderDoc = await getDoc(doc(db, 'orders', orderId));
-            
-            if (fullOrderDoc.exists()) {
-              const fullOrderData = fullOrderDoc.data() as Order;
-              
-              // Safely convert timestamps to dates
-              const createdAt = fullOrderData.createdAt?.toDate?.() || new Date();
-              const updatedAt = fullOrderData.updatedAt?.toDate?.() || new Date();
-              
-              const order = {
-                id: fullOrderDoc.id,
-                ...fullOrderData,
-                createdAt,
-                updatedAt,
-              };
-              
-              console.log(`Successfully fetched order: ${orderId}`);
-              
-              // Add to the appropriate array based on role
-              if (role === 'buyer') {
-                userPurchases.push(order);
-              } else if (role === 'seller') {
-                userSales.push(order);
-              }
-            } else {
-              console.warn(`Order ${orderId} referenced in user subcollection not found in main orders collection`);
-            }
-          } catch (err) {
-            console.error(`Error processing order reference:`, err);
-          }
-        });
-        
-        await Promise.all(orderPromises);
-        
-        console.log(`Processed ${userPurchases.length} purchases and ${userSales.length} sales`);
-        setPurchases(userPurchases);
-        setSales(userSales);
-      } else {
-        // Method 2: Fallback to querying the main orders collection directly
-        console.log('No user-specific orders found, falling back to main collection query');
-        
-        try {
-          // Fetch purchases
-          const purchasesQuery = query(
-            collection(db, 'orders'),
-            where('buyerId', '==', user.uid),
-            orderBy('createdAt', 'desc')
-          );
-          
-          // Fetch sales - include both regular sales and orders from offers
-          const salesQuery = query(
-            collection(db, 'orders'),
-            where('sellerId', '==', user.uid),
-            orderBy('createdAt', 'desc')
-          );
-
-          console.log('Querying main orders collection');
-          const [purchasesSnapshot, salesSnapshot] = await Promise.all([
-            getDocs(purchasesQuery),
-            getDocs(salesQuery)
-          ]);
-
-          console.log(`Found ${purchasesSnapshot.size} purchases and ${salesSnapshot.size} sales in main collection`);
-          
-          // Log if any orders have offerPrice field (indicating they came from offers)
-          const offersBasedOrders = salesSnapshot.docs.filter(doc => doc.data().offerPrice !== undefined);
-          if (offersBasedOrders.length > 0) {
-            console.log(`Found ${offersBasedOrders.length} sales that originated from offers:`);
-            offersBasedOrders.forEach(doc => {
-              const data = doc.data();
-              console.log(`- Order ID: ${doc.id}, Amount: ${data.amount}, OfferPrice: ${data.offerPrice}, Status: ${data.status}`);
-            });
-          }
-
-          const purchasesData = purchasesSnapshot.docs.map(doc => {
-            try {
-              const data = doc.data();
-              // Safely convert timestamps to dates
-              const createdAt = data.createdAt?.toDate?.() || new Date();
-              const updatedAt = data.updatedAt?.toDate?.() || new Date();
-              
-              return {
-                id: doc.id,
-                ...data,
-                createdAt,
-                updatedAt,
-              };
-            } catch (err) {
-              console.error(`Error processing purchase document ${doc.id}:`, err);
-              return null;
-            }
-          }).filter(Boolean) as Order[];
-
-          const salesData = salesSnapshot.docs.map(doc => {
-            try {
-              const data = doc.data();
-              // Safely convert timestamps to dates
-              const createdAt = data.createdAt?.toDate?.() || new Date();
-              const updatedAt = data.updatedAt?.toDate?.() || new Date();
-              
-              return {
-                id: doc.id,
-                ...data,
-                createdAt,
-                updatedAt,
-              };
-            } catch (err) {
-              console.error(`Error processing sale document ${doc.id}:`, err);
-              return null;
-            }
-          }).filter(Boolean) as Order[];
-
-          // Log any orders with paymentStatus: "awaiting_payment" for debugging
-          const awaitingPaymentPurchases = purchasesData.filter(order => order.paymentStatus === 'awaiting_payment');
-          const awaitingPaymentSales = salesData.filter(order => order.paymentStatus === 'awaiting_payment');
-          
-          if (awaitingPaymentPurchases.length > 0) {
-            console.log(`[Orders Page] Found ${awaitingPaymentPurchases.length} purchases with paymentStatus: "awaiting_payment":`);
-            awaitingPaymentPurchases.forEach(order => {
-              console.log(`- Order ID: ${order.id}, Status: ${order.status}, PaymentStatus: ${order.paymentStatus}`);
-            });
-          } else {
-            console.log('[Orders Page] No purchases with paymentStatus: "awaiting_payment" found');
-          }
-          
-          if (awaitingPaymentSales.length > 0) {
-            console.log(`[Orders Page] Found ${awaitingPaymentSales.length} sales with paymentStatus: "awaiting_payment":`);
-            awaitingPaymentSales.forEach(order => {
-              console.log(`- Order ID: ${order.id}, Status: ${order.status}, PaymentStatus: ${order.paymentStatus}`);
-            });
-          } else {
-            console.log('[Orders Page] No sales with paymentStatus: "awaiting_payment" found');
-          }
-          
-          setPurchases(purchasesData);
-          setSales(salesData);
-        } catch (err) {
-          console.error('Error querying main orders collection:', err);
-        }
-      }
-    } catch (error) {
-      console.error('Error fetching orders:', error);
-      toast.error('Failed to load orders. Please try again.');
-    } finally {
-      setLoading(false);
-      setIsRefreshing(false);
-    }
-  };
-
-  // Fetch orders when component mounts
-  useEffect(() => {
-    fetchOrders();
-  }, [user]);
+  }, [router.query, user, processingOrder, refreshSection]);
   
   // Load dismissed review prompts from localStorage
   useEffect(() => {
@@ -344,17 +184,34 @@ const OrdersComponent = () => {
       const names: Record<string, string> = {};
       
       try {
-        const { db } = getFirebaseServices();
+        // Use a batch API call instead of individual calls
+        const response = await fetch('/api/users/get-usernames', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ userIds: sellerIds }),
+        });
         
-        for (const sellerId of sellerIds) {
-          if (!sellerId) continue;
+        if (response.ok) {
+          const userData = await response.json();
+          Object.assign(names, userData);
+        } else {
+          // Fallback to individual calls if batch API doesn't exist
+          const { getFirebaseServices } = await import('@/lib/firebase');
+          const { doc, getDoc } = await import('firebase/firestore');
+          const { db } = getFirebaseServices();
           
-          const userDoc = await getDoc(doc(db, 'users', sellerId));
-          if (userDoc.exists()) {
-            const userData = userDoc.data();
-            names[sellerId] = userData.displayName || userData.username || 'Seller';
-          } else {
-            names[sellerId] = 'Seller';
+          for (const sellerId of sellerIds) {
+            if (!sellerId) continue;
+            
+            const userDoc = await getDoc(doc(db, 'users', sellerId));
+            if (userDoc.exists()) {
+              const userData = userDoc.data();
+              names[sellerId] = userData.displayName || userData.username || 'Seller';
+            } else {
+              names[sellerId] = 'Seller';
+            }
           }
         }
         
@@ -366,67 +223,19 @@ const OrdersComponent = () => {
     
     fetchSellerNames();
   }, [purchases, user]);
-  
-  // Debug function to check for missing user references in orders
-  const checkForMissingReferences = async () => {
-    if (!user) return;
-    
-    try {
-      console.log('[Orders Page] Running diagnostic check for missing user references');
-      const { db } = getFirebaseServices();
-      
-      // Query orders that have the current user as seller
-      const sellerOrdersQuery = query(
-        collection(db, 'orders'),
-        where('sellerId', '==', user.uid)
-      );
-      
-      const sellerOrdersSnapshot = await getDocs(sellerOrdersQuery);
-      console.log(`[Orders Page] Found ${sellerOrdersSnapshot.size} orders where user is seller`);
-      
-      // Check each order to see if it has a corresponding user reference
-      for (const orderDoc of sellerOrdersSnapshot.docs) {
-        const orderId = orderDoc.id;
-        const orderData = orderDoc.data();
-        
-        // Check if there's a corresponding reference in the user's orders subcollection
-        const userOrderRef = doc(db, 'users', user.uid, 'orders', orderId);
-        const userOrderDoc = await getDoc(userOrderRef);
-        
-        if (!userOrderDoc.exists()) {
-          console.log(`[Orders Page] Found missing user reference for order ${orderId}`);
-          
-          // Create the missing reference
-          await setDoc(userOrderRef, {
-            orderId: orderId,
-            role: 'seller',
-            createdAt: orderData.createdAt || new Date()
-          });
-          
-          console.log(`[Orders Page] Created missing reference for order ${orderId}`);
-        }
-      }
-      
-      // After fixing references, refresh the orders
-      await fetchOrders();
-      toast.success('Order references checked and fixed');
-      
-    } catch (error) {
-      console.error('Error checking for missing references:', error);
-      toast.error('Failed to check order references');
-    }
-  };
 
   const handleRefresh = async () => {
     if (isRefreshing) return;
     
     try {
       setIsRefreshing(true);
-      await fetchOrders();
+      await refreshSection('orders');
       toast.success('Orders refreshed successfully');
     } catch (error) {
       console.error('Error refreshing orders:', error);
       toast.error('Failed to refresh orders. Please try again.');
+    } finally {
+      setIsRefreshing(false);
     }
   };
 
@@ -495,7 +304,7 @@ const OrdersComponent = () => {
     return order.status || 'pending';
   };
 
-  // Filter and sort orders
+  // Filter and sort orders with memoization for performance
   const filteredOrders = useMemo(() => {
     let result = [...purchases];
     
@@ -508,10 +317,6 @@ const OrdersComponent = () => {
     // Apply status filter
     if (statusFilter !== 'all') {
       if (statusFilter === 'pending') {
-        // For pending filter, include:
-        // 1. Orders with 'pending' status
-        // 2. Orders without a status
-        // 3. Orders with paymentStatus 'awaiting_payment'
         result = result.filter(order => 
           order.status === 'pending' || 
           !order.status || 
@@ -534,10 +339,8 @@ const OrdersComponent = () => {
     
     // Apply sorting - prioritize attention-based sorting for better UX
     if (sortField === 'date' && sortDirection === 'desc') {
-      // Default sorting: use attention-based sorting to show orders needing attention first
       result = sortOrdersByAttention(result, false);
     } else {
-      // Custom sorting
       result.sort((a, b) => {
         if (sortField === 'date') {
           return sortDirection === 'asc' 
@@ -548,7 +351,6 @@ const OrdersComponent = () => {
             ? a.amount - b.amount
             : b.amount - a.amount;
         } else if (sortField === 'status') {
-          // Use the effective status for sorting
           const statusA = getEffectiveStatus(a);
           const statusB = getEffectiveStatus(b);
           return sortDirection === 'asc'
@@ -562,7 +364,7 @@ const OrdersComponent = () => {
     return result;
   }, [purchases, statusFilter, searchTerm, sortField, sortDirection, dateFilter]);
 
-  // Filter and sort sales
+  // Filter and sort sales with memoization for performance
   const filteredSales = useMemo(() => {
     let result = [...sales];
     
@@ -575,10 +377,6 @@ const OrdersComponent = () => {
     // Apply status filter
     if (statusFilter !== 'all') {
       if (statusFilter === 'pending') {
-        // For pending filter, include:
-        // 1. Orders with 'pending' status
-        // 2. Orders without a status
-        // 3. Orders with paymentStatus 'awaiting_payment'
         result = result.filter(order => 
           order.status === 'pending' || 
           !order.status || 
@@ -601,10 +399,8 @@ const OrdersComponent = () => {
     
     // Apply sorting - prioritize attention-based sorting for better UX
     if (sortField === 'date' && sortDirection === 'desc') {
-      // Default sorting: use attention-based sorting to show orders needing attention first
       result = sortOrdersByAttention(result, true);
     } else {
-      // Custom sorting
       result.sort((a, b) => {
         if (sortField === 'date') {
           return sortDirection === 'asc' 
@@ -615,7 +411,6 @@ const OrdersComponent = () => {
             ? a.amount - b.amount
             : b.amount - a.amount;
         } else if (sortField === 'status') {
-          // Use the effective status for sorting
           const statusA = getEffectiveStatus(a);
           const statusB = getEffectiveStatus(b);
           return sortDirection === 'asc'
@@ -629,48 +424,43 @@ const OrdersComponent = () => {
     return result;
   }, [sales, statusFilter, searchTerm, sortField, sortDirection, dateFilter]);
 
-  // Get active orders count for each status
-  const getStatusCounts = (orders: Order[]) => {
-    const counts = {
-      all: orders.length,
-      pending: 0,
-      paid: 0,
-      awaiting_shipping: 0,
-      shipped: 0,
-      completed: 0,
-      cancelled: 0
+  // Get active orders count for each status with memoization
+  const getStatusCounts = useMemo(() => {
+    return (orders: Order[]) => {
+      const counts = {
+        all: orders.length,
+        pending: 0,
+        paid: 0,
+        awaiting_shipping: 0,
+        shipped: 0,
+        completed: 0,
+        cancelled: 0
+      };
+      
+      orders.forEach(order => {
+        if (order.paymentStatus === 'awaiting_payment') {
+          counts.pending++;
+        } else if (!order.status || order.status === '') {
+          counts.pending++;
+        } else if (counts[order.status as keyof typeof counts] !== undefined) {
+          counts[order.status as keyof typeof counts]++;
+        }
+      });
+      
+      return counts;
     };
-    
-    orders.forEach(order => {
-      // First check if this is an awaiting payment order
-      if (order.paymentStatus === 'awaiting_payment') {
-        counts.pending++;
-      }
-      // Then check for missing status (count as pending)
-      else if (!order.status || order.status === '') {
-        counts.pending++;
-      }
-      // Count other orders by their status
-      else if (counts[order.status as keyof typeof counts] !== undefined) {
-        counts[order.status as keyof typeof counts]++;
-      }
-    });
-    
-    return counts;
-  };
+  }, []);
   
-  const purchaseStatusCounts = getStatusCounts(purchases);
-  const salesStatusCounts = getStatusCounts(sales);
-  
-  // Get the active status counts based on the current tab
+  const purchaseStatusCounts = useMemo(() => getStatusCounts(purchases), [purchases, getStatusCounts]);
+  const salesStatusCounts = useMemo(() => getStatusCounts(sales), [sales, getStatusCounts]);
   const activeStatusCounts = activeTab === 'purchases' ? purchaseStatusCounts : salesStatusCounts;
   
-  // Get attention counts for current orders
+  // Get attention counts for current orders with memoization
   const purchaseAttentionCounts = useMemo(() => getAttentionCounts(purchases, false), [purchases]);
   const salesAttentionCounts = useMemo(() => getAttentionCounts(sales, true), [sales]);
   const activeAttentionCounts = activeTab === 'purchases' ? purchaseAttentionCounts : salesAttentionCounts;
   
-  // Get orders that need reviews (completed orders without reviews)
+  // Get orders that need reviews (completed orders without reviews) with memoization
   const ordersNeedingReviews = useMemo(() => {
     return purchases.filter(
       order => 
@@ -685,7 +475,8 @@ const OrdersComponent = () => {
     setDismissedReviewPrompts(prev => [...prev, orderId]);
   };
 
-  if (loading && !isRefreshing) {
+  // Show loading state only if we're loading orders and don't have any cached data
+  if (isLoadingOrders() && purchases.length === 0 && sales.length === 0) {
     return (
       <DashboardLayout>
         <div className="flex items-center justify-center min-h-[400px]">
@@ -732,7 +523,6 @@ const OrdersComponent = () => {
                 </>
               )}
             </Button>
-
           </div>
         </div>
       </div>
