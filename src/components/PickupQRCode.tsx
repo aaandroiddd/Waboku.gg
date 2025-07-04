@@ -123,7 +123,14 @@ export function PickupQRCode({ order, isSeller, onPickupCompleted }: PickupQRCod
 
   // Confirm pickup after QR scan
   const handleConfirmPickup = async () => {
-    if (!user || !scannedOrderDetails || !pickupToken) return;
+    if (!user || !scannedOrderDetails) return;
+
+    // Extract pickup token from scanned order details
+    const tokenToUse = scannedOrderDetails.pickupToken;
+    if (!tokenToUse) {
+      toast.error('Missing pickup token from QR code');
+      return;
+    }
 
     try {
       setIsConfirming(true);
@@ -138,7 +145,7 @@ export function PickupQRCode({ order, isSeller, onPickupCompleted }: PickupQRCod
           orderId: scannedOrderDetails.orderId,
           userId: user.uid,
           role: 'buyer',
-          pickupToken: pickupToken,
+          pickupToken: tokenToUse,
         }),
       });
 

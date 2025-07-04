@@ -10,6 +10,7 @@ type ResponseData = {
     listingTitle: string;
     sellerName?: string;
     amount?: number;
+    pickupToken?: string;
   };
   error?: string;
 };
@@ -154,7 +155,8 @@ export default async function handler(
         orderId,
         listingTitle: listingTitle || orderData.listingSnapshot?.title || 'Unknown Item',
         sellerName,
-        amount: orderData.amount
+        amount: orderData.amount,
+        pickupToken: token
       }
     });
 
