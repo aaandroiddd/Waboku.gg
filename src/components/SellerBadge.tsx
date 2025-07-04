@@ -5,6 +5,7 @@ import { AccountTier, ACCOUNT_TIERS } from '@/types/account';
 import { Badge } from '@/components/ui/badge';
 import { getFirebaseServices } from '@/lib/firebase';
 import { BadgeTooltip } from '@/components/BadgeTooltip';
+import { useRouter } from 'next/router';
 
 interface SellerBadgeProps {
   className?: string;
@@ -25,6 +26,7 @@ interface UserData {
 
 export function SellerBadge({ className, userId, showOnlyOnProfile = false }: SellerBadgeProps) {
   const { user } = useAuth();
+  const router = useRouter();
   const [userData, setUserData] = useState<UserData | null>(null);
   
   useEffect(() => {
@@ -114,15 +116,20 @@ export function SellerBadge({ className, userId, showOnlyOnProfile = false }: Se
               <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z" />
               <path d="m9 12 2 2 4-4" />
             </svg>
-            <span className="truncate">Verified</span>
+            <span className="truncate">Email Verified</span>
           </Badge>
         </BadgeTooltip>
       )}
       {isPremiumActive ? (
-        <BadgeTooltip content="Premium members enjoy enhanced features, priority listings, and reduced fees">
+        <BadgeTooltip content="Premium members enjoy enhanced features. Click to view account status.">
           <Badge 
             variant="secondary"
-            className="bg-gradient-to-r from-yellow-500 to-yellow-600 text-white border-none inline-flex items-center text-xs max-w-full overflow-hidden"
+            className="bg-gradient-to-r from-yellow-500 to-yellow-600 text-white border-none inline-flex items-center text-xs max-w-full overflow-hidden cursor-pointer hover:opacity-80 transition-opacity"
+            onClick={() => {
+              if (user && user.uid === userId) {
+                router.push('/dashboard/account-status');
+              }
+            }}
           >
             <span className="mr-1 flex-shrink-0">⭐</span>
             <span className="truncate">Premium</span>
