@@ -34,7 +34,7 @@ type OrderStatus = 'all' | 'pending' | 'paid' | 'awaiting_shipping' | 'shipped' 
 type SortField = 'date' | 'amount' | 'status';
 type SortDirection = 'asc' | 'desc';
 
-const OrdersComponent = () => {
+const OrdersContent = () => {
   const { user } = useAuth();
   const router = useRouter();
   const { clearUnreadCount, resetUnreadCount } = useUnread();
@@ -478,16 +478,14 @@ const OrdersComponent = () => {
   // Show loading state only if we're loading orders and don't have any cached data
   if (isLoadingOrders() && purchases.length === 0 && sales.length === 0) {
     return (
-      <DashboardLayout>
-        <div className="flex items-center justify-center min-h-[400px]">
-          <Loader2 className="w-6 h-6 animate-spin" />
-        </div>
-      </DashboardLayout>
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="w-6 h-6 animate-spin" />
+      </div>
     );
   }
 
   return (
-    <DashboardLayout>
+    <>
       <div className="mb-8 space-y-3">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
@@ -851,6 +849,14 @@ const OrdersComponent = () => {
           )}
         </TabsContent>
       </Tabs>
+    </>
+  );
+};
+
+const OrdersComponent = () => {
+  return (
+    <DashboardLayout>
+      <OrdersContent />
     </DashboardLayout>
   );
 };

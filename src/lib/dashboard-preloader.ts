@@ -154,17 +154,16 @@ class DashboardPreloader {
   private async loadOffers(user: User): Promise<any[]> {
     try {
       // Fetch both received offers (where user is seller) and sent offers (where user is buyer)
+      // Remove orderBy to avoid index requirements, we'll sort in memory
       const receivedOffersQuery = query(
         collection(db, 'offers'),
         where('sellerId', '==', user.uid),
-        orderBy('createdAt', 'desc'),
         limit(50)
       );
       
       const sentOffersQuery = query(
         collection(db, 'offers'),
         where('buyerId', '==', user.uid),
-        orderBy('createdAt', 'desc'),
         limit(50)
       );
       
@@ -211,17 +210,16 @@ class DashboardPreloader {
   private async loadOrders(user: User): Promise<any[]> {
     try {
       // Fetch both purchases (where user is buyer) and sales (where user is seller)
+      // Remove orderBy to avoid index requirements, we'll sort in memory
       const purchasesQuery = query(
         collection(db, 'orders'),
         where('buyerId', '==', user.uid),
-        orderBy('createdAt', 'desc'),
         limit(50)
       );
       
       const salesQuery = query(
         collection(db, 'orders'),
         where('sellerId', '==', user.uid),
-        orderBy('createdAt', 'desc'),
         limit(50)
       );
       
@@ -418,17 +416,16 @@ class DashboardPreloader {
     }));
 
     // Offers listeners - both received and sent
+    // Remove orderBy to avoid index requirements
     const receivedOffersQuery = query(
       collection(db, 'offers'),
       where('sellerId', '==', userId),
-      orderBy('createdAt', 'desc'),
       limit(50)
     );
     
     const sentOffersQuery = query(
       collection(db, 'offers'),
       where('buyerId', '==', userId),
-      orderBy('createdAt', 'desc'),
       limit(50)
     );
     
@@ -480,17 +477,16 @@ class DashboardPreloader {
     listeners.push(onSnapshot(sentOffersQuery, updateOffersData));
 
     // Orders listeners - both purchases and sales
+    // Remove orderBy to avoid index requirements
     const purchasesQuery = query(
       collection(db, 'orders'),
       where('buyerId', '==', userId),
-      orderBy('createdAt', 'desc'),
       limit(50)
     );
     
     const salesQuery = query(
       collection(db, 'orders'),
       where('sellerId', '==', userId),
-      orderBy('createdAt', 'desc'),
       limit(50)
     );
     
