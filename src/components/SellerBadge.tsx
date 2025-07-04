@@ -124,11 +124,8 @@ export function SellerBadge({ className, userId, showOnlyOnProfile = false }: Se
         <BadgeTooltip content="Premium members enjoy enhanced features. Click to view account status.">
           <Badge 
             variant="secondary"
-            className="bg-gradient-to-r from-yellow-500 to-yellow-600 text-white border-none inline-flex items-center text-xs max-w-full overflow-hidden cursor-pointer hover:opacity-80 transition-opacity"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              console.log('Premium badge clicked', { user: user?.uid, userId, match: user?.uid === userId });
+            className="bg-gradient-to-r from-yellow-500 to-yellow-600 text-white border-none inline-flex items-center text-xs max-w-full overflow-hidden cursor-pointer hover:opacity-80 transition-all duration-200"
+            onClick={() => {
               if (user && user.uid === userId) {
                 router.push('/dashboard/account-status/');
               }
