@@ -19,6 +19,7 @@ import { AcceptedOfferCheckout } from '@/components/AcceptedOfferCheckout';
 import { generateListingUrl } from '@/lib/listing-slug';
 import { RefundRequestDialog } from '@/components/RefundRequestDialog';
 import { RefundManagementDialog } from '@/components/RefundManagementDialog';
+import { PickupQRCode } from '@/components/PickupQRCode';
 import { getOrderAttentionInfo } from '@/lib/order-utils';
 
 interface OrderCardProps {
@@ -579,52 +580,24 @@ export function OrderCard({ order, isSale = false }: OrderCardProps) {
                 View Listing
               </Button>
             )}
-            {/* Pickup Confirmation Buttons - Show for both buyer and seller */}
+            {/* QR Code Pickup System - Show for both buyer and seller */}
             {safeOrder.isPickup && !safeOrder.pickupCompleted && 
              (safeOrder.status === 'paid' || safeOrder.status === 'awaiting_shipping') && (
-              <>
-                {/* Seller Pickup Confirmation */}
-                {isSale && !safeOrder.sellerPickupConfirmed && (
-                  <Button 
-                    variant="default" 
-                    className="bg-green-600 hover:bg-green-700 text-white font-medium w-full"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleCompletePickup(e);
-                    }}
-                  >
-                    <CheckCircle className="mr-2 h-4 w-4" />
-                    Confirm Pickup (Seller)
-                  </Button>
-                )}
-                
-                {/* Buyer Pickup Confirmation */}
-                {!isSale && !safeOrder.buyerPickupConfirmed && (
-                  <Button 
-                    variant="default" 
-                    className="bg-blue-600 hover:bg-blue-700 text-white font-medium w-full"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleBuyerConfirmPickup(e);
-                    }}
-                  >
-                    <CheckCircle className="mr-2 h-4 w-4" />
-                    Confirm Pickup (Buyer)
-                  </Button>
-                )}
-                
-                {/* Show confirmation status */}
-                {(safeOrder.buyerPickupConfirmed || safeOrder.sellerPickupConfirmed) && (
-                  <div className="text-sm text-muted-foreground w-full text-center">
-                    {safeOrder.buyerPickupConfirmed && safeOrder.sellerPickupConfirmed 
-                      ? "Both parties confirmed pickup"
-                      : safeOrder.buyerPickupConfirmed 
-                        ? "Buyer confirmed • Waiting for seller"
-                        : "Seller confirmed • Waiting for buyer"
-                    }
-                  </div>
-                )}
-              </>
+              <div onClick={(e) => e.stopPropagation()}>
+                <PickupQRCode 
+                  order={safeOrder}
+                  isSeller={isSale}
+                  onPickupCompleted={() => router.reload()}
+                />
+              </div>
+            )}
+            
+            {/* Show pickup completion status */}
+            {safeOrder.isPickup && safeOrder.pickupCompleted && (
+              <div className="text-sm text-muted-foreground w-full text-center p-2 bg-green-50 dark:bg-green-900/20 rounded-md">
+                <CheckCircle className="inline mr-1 h-3 w-3 text-green-600" />
+                Pickup Completed
+              </div>
             )}
             {/* Shipping Details Button - Only visible for buyers with orders requiring shipping details */}
             {!isSale && safeOrder.status === 'awaiting_shipping' && !safeOrder.shippingAddress && (

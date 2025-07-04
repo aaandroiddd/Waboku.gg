@@ -27,6 +27,12 @@ export interface Order {
   buyerPickupConfirmedAt?: Date; // When the buyer confirmed pickup
   sellerPickupConfirmed?: boolean; // Flag to indicate if seller has confirmed pickup
   sellerPickupConfirmedAt?: Date; // When the seller confirmed pickup
+  // QR code pickup system fields
+  pickupToken?: string; // Unique token for QR code pickup verification
+  pickupTokenCreatedAt?: Date; // When the pickup token was created
+  pickupTokenExpiresAt?: Date; // When the pickup token expires
+  sellerPickupInitiated?: boolean; // Flag to indicate if seller has initiated pickup with QR
+  sellerPickupInitiatedAt?: Date; // When the seller initiated pickup
   reviewSubmitted?: boolean; // Flag to indicate if a review has been submitted
   sellerHasStripeAccount?: boolean; // Flag to indicate if the seller has a Stripe Connect account
   paymentRequired?: boolean; // Flag to indicate if payment is required for this order

@@ -28,6 +28,7 @@ import { OrderShippingInfoDialog } from '@/components/OrderShippingInfoDialog';
 import { RefundRequestDialog } from '@/components/RefundRequestDialog';
 import { RefundManagementDialog } from '@/components/RefundManagementDialog';
 import { MessageDialog } from '@/components/MessageDialog';
+import { PickupQRCode } from '@/components/PickupQRCode';
 import { generateListingUrl } from '@/lib/listing-slug';
 import { addDays } from 'date-fns';
 
@@ -1265,45 +1266,15 @@ export default function OrderDetailsPage() {
                             : 'This item is ready for pickup.'}
                         </span>
                         
-                        {/* Pickup Confirmation Buttons - Show for both buyer and seller */}
+                        {/* QR Code Pickup System - Show for both buyer and seller */}
                         {!order.pickupCompleted && (order.status === 'paid' || order.status === 'awaiting_shipping') && (
-                          <>
-                            {/* Seller Pickup Confirmation */}
-                            {!isUserBuyer && !order.sellerPickupConfirmed && (
-                              <Button 
-                                variant="default" 
-                                size="sm"
-                                className="mt-2 sm:mt-0 w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white font-medium"
-                                onClick={() => setShowCompletePickupDialog(true)}
-                              >
-                                <CheckCircle className="mr-2 h-4 w-4" /> Confirm Pickup (Seller)
-                              </Button>
-                            )}
-                            
-                            {/* Buyer Pickup Confirmation */}
-                            {isUserBuyer && !order.buyerPickupConfirmed && (
-                              <Button 
-                                variant="default" 
-                                size="sm"
-                                className="mt-2 sm:mt-0 w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-medium"
-                                onClick={() => setShowBuyerPickupDialog(true)}
-                              >
-                                <CheckCircle className="mr-2 h-4 w-4" /> Confirm Pickup (Buyer)
-                              </Button>
-                            )}
-                            
-                            {/* Show confirmation status */}
-                            {(order.buyerPickupConfirmed || order.sellerPickupConfirmed) && (
-                              <div className="text-sm text-muted-foreground w-full text-center mt-2">
-                                {order.buyerPickupConfirmed && order.sellerPickupConfirmed 
-                                  ? "Both parties confirmed pickup"
-                                  : order.buyerPickupConfirmed 
-                                    ? "Buyer confirmed • Waiting for seller"
-                                    : "Seller confirmed • Waiting for buyer"
-                                }
-                              </div>
-                            )}
-                          </>
+                          <div className="mt-2 sm:mt-0 w-full sm:w-auto">
+                            <PickupQRCode 
+                              order={order}
+                              isSeller={!isUserBuyer}
+                              onPickupCompleted={() => router.reload()}
+                            />
+                          </div>
                         )}
                       </div>
                       
