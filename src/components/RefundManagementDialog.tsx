@@ -208,8 +208,8 @@ export function RefundManagementDialog({
               <h4 className="font-semibold mb-2">Refund Request</h4>
               <div className={`p-4 rounded-lg space-y-2 ${
                 order.refundStatus === 'failed' 
-                  ? 'bg-red-50 dark:bg-red-900/20' 
-                  : 'bg-orange-50 dark:bg-orange-900/20'
+                  ? 'bg-destructive/10 border border-destructive/20' 
+                  : 'bg-primary/10 border border-primary/20'
               }`}>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Requested:</span>
