@@ -19,11 +19,18 @@ export function BadgeTooltip({
   side = 'top', 
   align = 'center' 
 }: BadgeTooltipProps) {
+  // Check if the child has cursor-pointer class to determine cursor style
+  const childHasCursorPointer = React.isValidElement(children) && 
+    typeof children.props.className === 'string' && 
+    children.props.className.includes('cursor-pointer');
+
   return (
     <TooltipProvider>
       <Tooltip delayDuration={300}>
         <TooltipTrigger asChild>
-          <span className="inline-flex cursor-help">{children}</span>
+          <span className={`inline-flex ${childHasCursorPointer ? 'cursor-pointer' : 'cursor-help'}`}>
+            {children}
+          </span>
         </TooltipTrigger>
         <TooltipContent 
           side={side} 
