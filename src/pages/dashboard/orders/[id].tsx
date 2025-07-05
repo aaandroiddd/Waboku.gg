@@ -1653,55 +1653,20 @@ export default function OrderDetailsPage() {
         </AlertDialogContent>
       </AlertDialog>
       
-      {/* Review Dialog - Conditional rendering for mobile vs desktop */}
-      {showReviewDialog && (
-        <>
-          {/* Mobile: Full screen review form */}
-          <div className="md:hidden">
-            {order && (
-              <ReviewForm 
-                orderId={order.id} 
-                onSuccess={() => {
-                  setShowReviewDialog(false);
-                  // Update local state to reflect that a review has been submitted
-                  setOrder({
-                    ...order,
-                    reviewSubmitted: true
-                  });
-                }}
-                onCancel={() => setShowReviewDialog(false)}
-              />
-            )}
-          </div>
-          
-          {/* Desktop: Dialog modal */}
-          <div className="hidden md:block">
-            <Dialog open={showReviewDialog} onOpenChange={setShowReviewDialog}>
-              <DialogContent className="sm:max-w-[600px]">
-                <DialogHeader>
-                  <DialogTitle>Leave a Review</DialogTitle>
-                  <DialogDescription>
-                    Share your experience with this seller and help other buyers make informed decisions.
-                  </DialogDescription>
-                </DialogHeader>
-                {order && (
-                  <ReviewForm 
-                    orderId={order.id} 
-                    onSuccess={() => {
-                      setShowReviewDialog(false);
-                      // Update local state to reflect that a review has been submitted
-                      setOrder({
-                        ...order,
-                        reviewSubmitted: true
-                      });
-                    }}
-                    onCancel={() => setShowReviewDialog(false)}
-                  />
-                )}
-              </DialogContent>
-            </Dialog>
-          </div>
-        </>
+      {/* Review Dialog - Only show the ReviewForm component which handles mobile/desktop internally */}
+      {showReviewDialog && order && (
+        <ReviewForm 
+          orderId={order.id} 
+          onSuccess={() => {
+            setShowReviewDialog(false);
+            // Update local state to reflect that a review has been submitted
+            setOrder({
+              ...order,
+              reviewSubmitted: true
+            });
+          }}
+          onCancel={() => setShowReviewDialog(false)}
+        />
       )}
 
       {/* Shipping Info Dialog */}
