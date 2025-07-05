@@ -47,12 +47,10 @@ export default function OrderDetailsPage() {
   const [trackingNotes, setTrackingNotes] = useState('');
   const [isUpdatingShipping, setIsUpdatingShipping] = useState(false);
   const [isConfirmingDelivery, setIsConfirmingDelivery] = useState(false);
-  const [isCompletingPickup, setIsCompletingPickup] = useState(false);
   const [isConfirmingBuyerPickup, setIsConfirmingBuyerPickup] = useState(false);
   const [showTrackingDialog, setShowTrackingDialog] = useState(false);
   const [showNoTrackingDialog, setShowNoTrackingDialog] = useState(false);
   const [showConfirmDeliveryDialog, setShowConfirmDeliveryDialog] = useState(false);
-  const [showCompletePickupDialog, setShowCompletePickupDialog] = useState(false);
   const [showBuyerPickupDialog, setShowBuyerPickupDialog] = useState(false);
   const [showReviewDialog, setShowReviewDialog] = useState(false);
   const [showShippingInfoDialog, setShowShippingInfoDialog] = useState(false);
@@ -1616,41 +1614,7 @@ export default function OrderDetailsPage() {
       
       {/* Confirm Delivery Dialog removed as it's no longer needed */}
       
-      {/* Complete Pickup Dialog */}
-      <AlertDialog open={showCompletePickupDialog} onOpenChange={setShowCompletePickupDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Complete Pickup</AlertDialogTitle>
-            <AlertDialogDescription className="space-y-2">
-              <p>
-                By marking this order as completed, you confirm that the buyer has picked up the item.
-              </p>
-              <div className="flex items-start gap-2 p-3 rounded-md bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 mt-2">
-                <Info className="h-4 w-4 flex-shrink-0 mt-0.5" />
-                <div>
-                  <p className="font-medium">What happens next?</p>
-                  <ul className="list-disc list-inside mt-1 space-y-1 text-sm">
-                    <li>The order will be marked as completed</li>
-                    <li>The buyer will be able to leave a review for this transaction</li>
-                    <li>The review will be visible on your seller profile</li>
-                  </ul>
-                </div>
-              </div>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={handleCompletePickup}
-              disabled={isCompletingPickup}
-              className="bg-green-600 hover:bg-green-700"
-            >
-              {isCompletingPickup && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Complete Pickup
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+
 
       {/* Buyer Pickup Confirmation Dialog */}
       <AlertDialog open={showBuyerPickupDialog} onOpenChange={setShowBuyerPickupDialog}>
