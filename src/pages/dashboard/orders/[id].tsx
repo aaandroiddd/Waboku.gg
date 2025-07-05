@@ -326,6 +326,7 @@ export default function OrderDetailsPage() {
         body: JSON.stringify({
           orderId: id,
           userId: user?.uid,
+          role: 'seller',
         }),
       });
       
