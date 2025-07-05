@@ -195,12 +195,19 @@ export function PickupQRCode({ order, isSeller, onPickupCompleted }: PickupQRCod
       return;
     }
 
+    // Basic validation for QR code data format
+    const input = scanInput.trim();
+    if (!input.startsWith('{') || !input.endsWith('}')) {
+      toast.error('Invalid QR code format. Please scan the QR code with your camera instead.');
+      return;
+    }
+
     try {
       setIsScanning(true);
-      await processQRScan(scanInput.trim());
+      await processQRScan(input);
     } catch (error) {
       console.error('Error processing manual scan:', error);
-      toast.error('Failed to process QR code data');
+      toast.error('Failed to process QR code data. Please try scanning with your camera instead.');
     } finally {
       setIsScanning(false);
     }
@@ -233,7 +240,36 @@ export function PickupQRCode({ order, isSeller, onPickupCompleted }: PickupQRCod
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.message || 'Failed to verify pickup code');
+        // Handle specific error cases with user-friendly messages
+        let errorMessage = 'Failed to verify pickup code';
+        
+        switch (response.status) {
+          case 400:
+            if (data.message?.includes('Invalid pickup code format')) {
+              errorMessage = 'Please enter a valid 6-digit code (numbers only)';
+            } else if (data.message?.includes('expired')) {
+              errorMessage = 'This pickup code has expired. Please ask the seller to generate a new one.';
+            } else if (data.message?.includes('already been completed')) {
+              errorMessage = 'This pickup has already been completed.';
+            } else {
+              errorMessage = data.message || 'Invalid pickup code';
+            }
+            break;
+          case 403:
+            errorMessage = 'This pickup code is not for your order. Please check with the seller.';
+            break;
+          case 404:
+            errorMessage = 'Invalid pickup code. Please check the code and try again.';
+            break;
+          case 500:
+            errorMessage = 'Server error. Please try again in a moment.';
+            break;
+          default:
+            errorMessage = data.message || 'Failed to verify pickup code';
+        }
+        
+        toast.error(errorMessage);
+        return;
       }
 
       setScannedOrderDetails(data.orderDetails);
@@ -249,7 +285,19 @@ export function PickupQRCode({ order, isSeller, onPickupCompleted }: PickupQRCod
 
     } catch (error) {
       console.error('Error verifying pickup code:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to verify pickup code');
+      
+      // Handle network errors and other exceptions
+      let errorMessage = 'Failed to verify pickup code';
+      
+      if (error instanceof Error) {
+        if (error.message.includes('fetch')) {
+          errorMessage = 'Network error. Please check your connection and try again.';
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
+      toast.error(errorMessage);
     } finally {
       setIsScanning(false);
     }
@@ -300,7 +348,42 @@ export function PickupQRCode({ order, isSeller, onPickupCompleted }: PickupQRCod
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.message || 'Failed to verify QR code');
+        // Handle specific error cases with user-friendly messages
+        let errorMessage = 'Failed to verify QR code';
+        
+        switch (response.status) {
+          case 400:
+            if (data.message?.includes('Invalid QR code format')) {
+              errorMessage = 'This QR code is not valid. Please scan the correct pickup QR code from the seller.';
+            } else if (data.message?.includes('not for pickup confirmation')) {
+              errorMessage = 'This QR code is not for pickup confirmation. Please scan the pickup QR code from the seller.';
+            } else if (data.message?.includes('missing required information')) {
+              errorMessage = 'This QR code is incomplete or corrupted. Please ask the seller to generate a new one.';
+            } else if (data.message?.includes('expired')) {
+              errorMessage = 'This QR code has expired. Please ask the seller to generate a new one.';
+            } else if (data.message?.includes('already been completed')) {
+              errorMessage = 'This pickup has already been completed.';
+            } else if (data.message?.includes('not a pickup order')) {
+              errorMessage = 'This order is not set up for pickup. Please contact the seller.';
+            } else {
+              errorMessage = data.message || 'Invalid QR code';
+            }
+            break;
+          case 403:
+            errorMessage = 'This QR code is not for your order. Please check with the seller.';
+            break;
+          case 404:
+            errorMessage = 'Order not found. This QR code may be invalid or the order may have been cancelled.';
+            break;
+          case 500:
+            errorMessage = 'Server error. Please try again in a moment.';
+            break;
+          default:
+            errorMessage = data.message || 'Failed to verify QR code';
+        }
+        
+        toast.error(errorMessage);
+        return;
       }
 
       setScannedOrderDetails(data.orderDetails);
@@ -316,7 +399,19 @@ export function PickupQRCode({ order, isSeller, onPickupCompleted }: PickupQRCod
 
     } catch (error) {
       console.error('Error scanning QR code:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to scan QR code');
+      
+      // Handle network errors and other exceptions
+      let errorMessage = 'Failed to verify QR code';
+      
+      if (error instanceof Error) {
+        if (error.message.includes('fetch')) {
+          errorMessage = 'Network error. Please check your connection and try again.';
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
+      toast.error(errorMessage);
     }
   };
 
