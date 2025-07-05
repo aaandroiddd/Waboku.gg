@@ -309,48 +309,7 @@ export default function OrderDetailsPage() {
     }
   };
   
-  // Function for seller to mark a pickup order as completed
-  const handleCompletePickup = async () => {
-    if (!order || !id) return;
-    
-    try {
-      setIsCompletingPickup(true);
-      console.log('Completing pickup for order:', id, 'by user:', user?.uid);
-      
-      // Call the API to complete the pickup
-      const response = await fetch('/api/orders/complete-pickup', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          orderId: id,
-          userId: user?.uid,
-          role: 'seller',
-        }),
-      });
-      
-      console.log('API response status:', response.status);
-      const data = await response.json();
-      console.log('API response data:', data);
-      
-      if (!response.ok) {
-        throw new Error(data.message || 'Failed to complete pickup');
-      }
-      
-      toast.success(data.message);
-      
-      // Refresh the page to show updated status
-      router.reload();
-      
-    } catch (error) {
-      console.error('Error completing pickup:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to complete pickup');
-    } finally {
-      setIsCompletingPickup(false);
-      setShowCompletePickupDialog(false);
-    }
-  };
+
   
   // Function for buyer to confirm pickup
   const handleConfirmBuyerPickup = async () => {
@@ -1307,16 +1266,7 @@ export default function OrderDetailsPage() {
                                   Once the buyer has picked up the item, click the "Complete Pickup" button to mark this order as completed.
                                   This will allow the buyer to leave a review for this transaction.
                                 </p>
-                                <div className="mt-3">
-                                  <Button 
-                                    variant="primary" 
-                                    size="sm"
-                                    className="w-full sm:w-auto"
-                                    onClick={() => setShowCompletePickupDialog(true)}
-                                  >
-                                    <CheckCircle className="mr-2 h-4 w-4" /> Complete Pickup
-                                  </Button>
-                                </div>
+
                               </div>
                             ) : (
                               <div className="mt-2 border-t border-blue-200 dark:border-blue-800 pt-2">
@@ -1514,16 +1464,7 @@ export default function OrderDetailsPage() {
               </div>
             )}
             
-            {/* Seller actions for pickup orders */}
-            {!isUserBuyer && order.isPickup && !order.pickupCompleted && (
-              <Button 
-                variant="default" 
-                className="bg-green-600 hover:bg-green-700 text-white font-medium"
-                onClick={() => setShowCompletePickupDialog(true)}
-              >
-                <CheckCircle className="mr-2 h-4 w-4" /> Complete Pickup
-              </Button>
-            )}
+
             
             {/* Buyer and Seller actions */}
             <div className="flex gap-2">
