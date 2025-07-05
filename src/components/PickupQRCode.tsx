@@ -59,6 +59,41 @@ export function PickupQRCode({ order, isSeller, onPickupCompleted }: PickupQRCod
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
+  // Load existing pickup code from order if available
+  useEffect(() => {
+    if (isSeller && order && order.pickupCode && order.pickupCodeExpiresAt) {
+      const expiresAt = new Date(order.pickupCodeExpiresAt.seconds * 1000);
+      const now = new Date();
+      
+      // Only set the code if it hasn't expired
+      if (expiresAt > now) {
+        setPickupCode(order.pickupCode);
+        setCodeExpiresAt(expiresAt);
+      }
+    }
+  }, [order, isSeller]);
+
+  // Update countdown timer for existing codes
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    
+    if (codeExpiresAt && pickupCode) {
+      interval = setInterval(() => {
+        const now = new Date();
+        if (codeExpiresAt <= now) {
+          // Code has expired, clear it
+          setPickupCode(null);
+          setCodeExpiresAt(null);
+          clearInterval(interval);
+        }
+      }, 1000);
+    }
+    
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [codeExpiresAt, pickupCode]);
+
   // Generate QR code for seller
   const handleGenerateQR = async () => {
     if (!user || !order.id) return;
@@ -107,6 +142,13 @@ export function PickupQRCode({ order, isSeller, onPickupCompleted }: PickupQRCod
   const handleGenerateCode = async () => {
     if (!user || !order.id) return;
 
+    // If there's already an active code, just show it
+    if (pickupCode && codeExpiresAt && codeExpiresAt > new Date()) {
+      setPickupMethod('code');
+      setShowQRDialog(true);
+      return;
+    }
+
     try {
       setIsGeneratingCode(true);
       console.log('Generating 6-digit code for pickup:', order.id);
@@ -133,7 +175,10 @@ export function PickupQRCode({ order, isSeller, onPickupCompleted }: PickupQRCod
       setPickupMethod('code');
       setShowQRDialog(true);
       
-      toast.success('6-digit pickup code generated! Share this code with the buyer.');
+      const message = data.isExisting 
+        ? 'Active pickup code retrieved! Share this code with the buyer.'
+        : '6-digit pickup code generated! Share this code with the buyer.';
+      toast.success(message);
 
     } catch (error) {
       console.error('Error generating pickup code:', error);
@@ -456,12 +501,17 @@ export function PickupQRCode({ order, isSeller, onPickupCompleted }: PickupQRCod
             variant="outline" 
             className="w-full border-green-600 text-green-600 hover:bg-green-50"
             onClick={handleGenerateCode}
-            disabled={isGeneratingCode || order.pickupCompleted}
+            disabled={isGeneratingCode || order.pickupCompleted || (pickupCode && codeExpiresAt && codeExpiresAt > new Date())}
           >
             {isGeneratingCode ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Generating Code...
+              </>
+            ) : pickupCode && codeExpiresAt && codeExpiresAt > new Date() ? (
+              <>
+                <Hash className="mr-2 h-4 w-4" />
+                Show Active Code
               </>
             ) : (
               <>

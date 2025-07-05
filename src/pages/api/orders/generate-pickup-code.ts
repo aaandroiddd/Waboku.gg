@@ -129,6 +129,25 @@ export default async function handler(
       });
     }
 
+    // Check if there's already an active pickup code
+    if (orderData.pickupCode && orderData.pickupCodeExpiresAt) {
+      const expiresAt = orderData.pickupCodeExpiresAt.toDate ? orderData.pickupCodeExpiresAt.toDate() : new Date(orderData.pickupCodeExpiresAt);
+      const now = new Date();
+      
+      if (expiresAt > now) {
+        console.log('[generate-pickup-code] Returning existing active code:', orderData.pickupCode);
+        return res.status(200).json({ 
+          success: true, 
+          message: 'Active pickup code retrieved! Share this code with the buyer.',
+          pickupCode: orderData.pickupCode,
+          expiresAt: expiresAt.toISOString(),
+          isExisting: true
+        });
+      } else {
+        console.log('[generate-pickup-code] Existing code has expired, generating new one');
+      }
+    }
+
     try {
       // Generate a unique 6-digit pickup code
       const pickupCode = Math.floor(100000 + Math.random() * 900000).toString();
@@ -153,7 +172,8 @@ export default async function handler(
         success: true, 
         message: '6-digit pickup code generated successfully! Share this code with the buyer.',
         pickupCode: pickupCode,
-        expiresAt: expiresAt.toISOString()
+        expiresAt: expiresAt.toISOString(),
+        isExisting: false
       });
     } catch (updateError) {
       console.error('[generate-pickup-code] Error generating pickup code:', updateError);

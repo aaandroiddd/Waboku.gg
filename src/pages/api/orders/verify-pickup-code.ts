@@ -90,17 +90,30 @@ export default async function handler(
       });
     }
 
-    // Check if code has expired (30 minutes)
-    const codeCreatedAt = orderData.pickupCodeCreatedAt;
-    if (codeCreatedAt) {
-      const codeAge = Date.now() - (codeCreatedAt.seconds * 1000);
-      const thirtyMinutes = 30 * 60 * 1000;
+    // Check if code has expired using the stored expiration timestamp
+    if (orderData.pickupCodeExpiresAt) {
+      const expiresAt = orderData.pickupCodeExpiresAt.toDate ? orderData.pickupCodeExpiresAt.toDate() : new Date(orderData.pickupCodeExpiresAt);
+      const now = new Date();
       
-      if (codeAge > thirtyMinutes) {
+      if (expiresAt <= now) {
         return res.status(400).json({ 
           success: false, 
           message: 'Pickup code has expired. Please ask the seller to generate a new one.' 
         });
+      }
+    } else {
+      // Fallback to creation time check if expiration timestamp is missing
+      const codeCreatedAt = orderData.pickupCodeCreatedAt;
+      if (codeCreatedAt) {
+        const codeAge = Date.now() - (codeCreatedAt.seconds * 1000);
+        const thirtyMinutes = 30 * 60 * 1000;
+        
+        if (codeAge > thirtyMinutes) {
+          return res.status(400).json({ 
+            success: false, 
+            message: 'Pickup code has expired. Please ask the seller to generate a new one.' 
+          });
+        }
       }
     }
 
