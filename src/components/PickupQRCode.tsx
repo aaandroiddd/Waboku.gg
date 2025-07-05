@@ -30,6 +30,7 @@ export function PickupQRCode({ order, isSeller, onPickupCompleted }: PickupQRCod
   const [scannedOrderDetails, setScannedOrderDetails] = useState<any>(null);
   const [scanInput, setScanInput] = useState('');
   const [isMobile, setIsMobile] = useState(false);
+  const [showMobileConfirmPage, setShowMobileConfirmPage] = useState(false);
   
   // Camera scanning state
   const [isCameraActive, setIsCameraActive] = useState(false);
@@ -139,7 +140,13 @@ export function PickupQRCode({ order, isSeller, onPickupCompleted }: PickupQRCod
 
       setScannedOrderDetails(data.orderDetails);
       setShowScanDialog(false);
-      setShowConfirmDialog(true);
+      
+      if (isMobile) {
+        setShowMobileConfirmPage(true);
+      } else {
+        setShowConfirmDialog(true);
+      }
+      
       toast.success('QR code verified! Please confirm the pickup details.');
 
     } catch (error) {
@@ -184,6 +191,7 @@ export function PickupQRCode({ order, isSeller, onPickupCompleted }: PickupQRCod
 
       toast.success(data.message);
       setShowConfirmDialog(false);
+      setShowMobileConfirmPage(false);
       onPickupCompleted();
 
     } catch (error) {
@@ -568,171 +576,168 @@ export function PickupQRCode({ order, isSeller, onPickupCompleted }: PickupQRCod
         </DialogContent>
       </Dialog>
 
-      {/* Pickup Confirmation Dialog - Mobile vs Desktop */}
-      {showConfirmDialog && (
-        <>
-          {isMobile ? (
-            /* Mobile: Full-screen native HTML page */
-            <div className="fixed inset-0 z-50 bg-background flex flex-col h-screen">
-              {/* Header */}
-              <header className="shrink-0 flex items-center justify-between p-4 border-b border-border bg-background">
-                <h1 className="text-lg font-semibold">Confirm Pickup</h1>
-                <button
-                  onClick={() => setShowConfirmDialog(false)}
-                  className="p-2 hover:bg-muted rounded-md transition-colors"
-                  type="button"
-                  aria-label="Close"
-                  disabled={isConfirming}
-                >
-                  <X className="h-5 w-5" />
-                </button>
-              </header>
+      {/* Mobile: Full-screen confirmation page */}
+      {showMobileConfirmPage && (
+        <div className="fixed inset-0 z-50 bg-background flex flex-col h-screen">
+          {/* Header */}
+          <header className="shrink-0 flex items-center justify-between p-4 border-b border-border bg-background">
+            <h1 className="text-lg font-semibold">Confirm Pickup</h1>
+            <button
+              onClick={() => setShowMobileConfirmPage(false)}
+              className="p-2 hover:bg-muted rounded-md transition-colors"
+              type="button"
+              aria-label="Close"
+              disabled={isConfirming}
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </header>
 
-              {/* Content */}
-              <main className="flex-1 overflow-y-auto p-4 pb-24">
-                <div className="max-w-md mx-auto space-y-6">
-                  <div className="text-center">
-                    <p className="text-muted-foreground">
-                      Please verify the pickup details below and confirm that you have received the item.
-                    </p>
+          {/* Content */}
+          <main className="flex-1 overflow-y-auto p-4 pb-24">
+            <div className="max-w-md mx-auto space-y-6">
+              <div className="text-center">
+                <p className="text-muted-foreground">
+                  Please verify the pickup details below and confirm that you have received the item.
+                </p>
+              </div>
+              
+              {scannedOrderDetails && (
+                <div className="bg-muted/50 p-4 rounded-lg border">
+                  <h2 className="font-medium mb-3 text-base">Order Details</h2>
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-start">
+                      <span className="text-muted-foreground text-sm">Item:</span>
+                      <span className="font-medium text-right flex-1 ml-2 text-sm">{scannedOrderDetails.listingTitle}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground text-sm">Seller:</span>
+                      <span className="font-medium text-sm">{scannedOrderDetails.sellerName}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground text-sm">Amount:</span>
+                      <span className="font-medium text-sm">{formatPrice(scannedOrderDetails.amount)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground text-sm">Order ID:</span>
+                      <span className="font-mono text-xs">{scannedOrderDetails.orderId.slice(0, 8)}...</span>
+                    </div>
                   </div>
+                </div>
+              )}
+
+              <div className="bg-primary/10 border border-primary/20 p-4 rounded-lg">
+                <div className="flex items-start gap-3">
+                  <CheckCircle className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
+                  <div>
+                    <h2 className="font-medium mb-2 text-base">What happens next?</h2>
+                    <ul className="space-y-2 text-sm">
+                      <li className="flex items-start gap-2">
+                        <span className="text-primary mt-0.5">•</span>
+                        <span>The order will be marked as completed</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-primary mt-0.5">•</span>
+                        <span>You'll be able to leave a review for this transaction</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-primary mt-0.5">•</span>
+                        <span>The seller will receive confirmation of the completed pickup</span>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </main>
+
+          {/* Footer */}
+          <footer className="shrink-0 p-4 border-t border-border bg-background">
+            <div className="max-w-md mx-auto space-y-3">
+              <button
+                onClick={handleConfirmPickup}
+                disabled={isConfirming}
+                className="w-full bg-primary hover:bg-primary/90 disabled:opacity-50 text-primary-foreground font-medium py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition-colors"
+                type="button"
+              >
+                {isConfirming && <Loader2 className="h-4 w-4 animate-spin" />}
+                {isConfirming ? 'Confirming...' : 'Confirm Pickup'}
+              </button>
+              <button
+                onClick={() => setShowMobileConfirmPage(false)}
+                disabled={isConfirming}
+                className="w-full bg-muted hover:bg-muted/80 disabled:opacity-50 text-muted-foreground font-medium py-3 px-4 rounded-lg transition-colors"
+                type="button"
+              >
+                Cancel
+              </button>
+            </div>
+          </footer>
+        </div>
+      )}
+
+      {/* Desktop: AlertDialog */}
+      {showConfirmDialog && (
+        <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Confirm Pickup</AlertDialogTitle>
+              <AlertDialogDescription asChild>
+                <div className="space-y-4">
+                  <p>Please verify the pickup details below and confirm that you have received the item:</p>
                   
                   {scannedOrderDetails && (
-                    <div className="bg-muted/50 p-4 rounded-lg border">
-                      <h2 className="font-medium mb-3 text-base">Order Details</h2>
-                      <div className="space-y-3">
-                        <div className="flex justify-between items-start">
-                          <span className="text-muted-foreground text-sm">Item:</span>
-                          <span className="font-medium text-right flex-1 ml-2 text-sm">{scannedOrderDetails.listingTitle}</span>
+                    <Card>
+                      <CardContent className="pt-4">
+                        <div className="space-y-2">
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Item:</span>
+                            <span className="font-medium">{scannedOrderDetails.listingTitle}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Seller:</span>
+                            <span className="font-medium">{scannedOrderDetails.sellerName}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Amount:</span>
+                            <span className="font-medium">{formatPrice(scannedOrderDetails.amount)}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Order ID:</span>
+                            <span className="font-mono text-sm">{scannedOrderDetails.orderId.slice(0, 8)}...</span>
+                          </div>
                         </div>
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground text-sm">Seller:</span>
-                          <span className="font-medium text-sm">{scannedOrderDetails.sellerName}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground text-sm">Amount:</span>
-                          <span className="font-medium text-sm">{formatPrice(scannedOrderDetails.amount)}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground text-sm">Order ID:</span>
-                          <span className="font-mono text-xs">{scannedOrderDetails.orderId.slice(0, 8)}...</span>
-                        </div>
-                      </div>
-                    </div>
+                      </CardContent>
+                    </Card>
                   )}
 
-                  <div className="bg-primary/10 border border-primary/20 p-4 rounded-lg">
-                    <div className="flex items-start gap-3">
-                      <CheckCircle className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
-                      <div>
-                        <h2 className="font-medium mb-2 text-base">What happens next?</h2>
-                        <ul className="space-y-2 text-sm">
-                          <li className="flex items-start gap-2">
-                            <span className="text-primary mt-0.5">•</span>
-                            <span>The order will be marked as completed</span>
-                          </li>
-                          <li className="flex items-start gap-2">
-                            <span className="text-primary mt-0.5">•</span>
-                            <span>You'll be able to leave a review for this transaction</span>
-                          </li>
-                          <li className="flex items-start gap-2">
-                            <span className="text-primary mt-0.5">•</span>
-                            <span>The seller will receive confirmation of the completed pickup</span>
-                          </li>
-                        </ul>
-                      </div>
+                  <div className="flex items-start gap-2 p-3 rounded-md bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300">
+                    <CheckCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-medium">What happens next?</p>
+                      <ul className="list-disc list-inside mt-1 space-y-1 text-sm">
+                        <li>The order will be marked as completed</li>
+                        <li>You'll be able to leave a review for this transaction</li>
+                        <li>The seller will receive confirmation of the completed pickup</li>
+                      </ul>
                     </div>
                   </div>
                 </div>
-              </main>
-
-              {/* Footer */}
-              <footer className="shrink-0 p-4 border-t border-border bg-background">
-                <div className="max-w-md mx-auto space-y-3">
-                  <button
-                    onClick={handleConfirmPickup}
-                    disabled={isConfirming}
-                    className="w-full bg-primary hover:bg-primary/90 disabled:opacity-50 text-primary-foreground font-medium py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition-colors"
-                    type="button"
-                  >
-                    {isConfirming && <Loader2 className="h-4 w-4 animate-spin" />}
-                    {isConfirming ? 'Confirming...' : 'Confirm Pickup'}
-                  </button>
-                  <button
-                    onClick={() => setShowConfirmDialog(false)}
-                    disabled={isConfirming}
-                    className="w-full bg-muted hover:bg-muted/80 disabled:opacity-50 text-muted-foreground font-medium py-3 px-4 rounded-lg transition-colors"
-                    type="button"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </footer>
-            </div>
-          ) : (
-            /* Desktop: AlertDialog */
-            <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Confirm Pickup</AlertDialogTitle>
-                  <AlertDialogDescription asChild>
-                    <div className="space-y-4">
-                      <p>Please verify the pickup details below and confirm that you have received the item:</p>
-                      
-                      {scannedOrderDetails && (
-                        <Card>
-                          <CardContent className="pt-4">
-                            <div className="space-y-2">
-                              <div className="flex justify-between">
-                                <span className="text-muted-foreground">Item:</span>
-                                <span className="font-medium">{scannedOrderDetails.listingTitle}</span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span className="text-muted-foreground">Seller:</span>
-                                <span className="font-medium">{scannedOrderDetails.sellerName}</span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span className="text-muted-foreground">Amount:</span>
-                                <span className="font-medium">{formatPrice(scannedOrderDetails.amount)}</span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span className="text-muted-foreground">Order ID:</span>
-                                <span className="font-mono text-sm">{scannedOrderDetails.orderId.slice(0, 8)}...</span>
-                              </div>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      )}
-
-                      <div className="flex items-start gap-2 p-3 rounded-md bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300">
-                        <CheckCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
-                        <div>
-                          <p className="font-medium">What happens next?</p>
-                          <ul className="list-disc list-inside mt-1 space-y-1 text-sm">
-                            <li>The order will be marked as completed</li>
-                            <li>You'll be able to leave a review for this transaction</li>
-                            <li>The seller will receive confirmation of the completed pickup</li>
-                          </ul>
-                        </div>
-                      </div>
-                    </div>
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction 
-                    onClick={handleConfirmPickup}
-                    disabled={isConfirming}
-                    className="bg-blue-600 hover:bg-blue-700"
-                  >
-                    {isConfirming && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Confirm Pickup
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          )}
-        </>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction 
+                onClick={handleConfirmPickup}
+                disabled={isConfirming}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                {isConfirming && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Confirm Pickup
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       )}
     </>
   );
