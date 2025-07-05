@@ -77,9 +77,9 @@ export function ReviewForm({ orderId, onSuccess, onCancel }: ReviewFormProps) {
   // Mobile Form Component
   if (isMobile) {
     return (
-      <div className="fixed inset-0 z-50 bg-background">
+      <div className="fixed inset-0 z-50 bg-background flex flex-col h-screen">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-border bg-card shadow-sm">
+        <div className="flex items-center justify-between p-4 border-b border-border bg-card shadow-sm shrink-0">
           <button
             onClick={handleCancel}
             className="flex items-center space-x-2 text-muted-foreground hover:text-foreground transition-colors"
@@ -92,102 +92,103 @@ export function ReviewForm({ orderId, onSuccess, onCancel }: ReviewFormProps) {
           <div className="w-16" /> {/* Spacer for centering */}
         </div>
 
-        {/* Form Content */}
+        {/* Form Content - Scrollable */}
         <div className="flex-1 overflow-y-auto">
-          <form onSubmit={handleSubmit} className="p-4 space-y-6">
-            {/* Rating */}
-            <div className="space-y-3">
-              <Label className="text-base font-medium text-foreground">Rating *</Label>
-              <div className="flex justify-center space-x-2">
-                {[1, 2, 3, 4, 5].map((value) => (
-                  <button
-                    key={value}
-                    type="button"
-                    className="p-2 focus:outline-none"
-                    onTouchStart={() => setHoverRating(value)}
-                    onTouchEnd={() => setHoverRating(0)}
-                    onClick={() => setRating(value)}
-                    disabled={loading}
-                  >
-                    <Star
-                      className={`h-10 w-10 ${
-                        (hoverRating || rating) >= value
-                          ? 'text-yellow-500 fill-yellow-500'
-                          : 'text-muted-foreground'
-                      }`}
-                    />
-                  </button>
-                ))}
+          <div className="p-4 pb-24"> {/* Extra bottom padding for fixed footer */}
+            <div className="space-y-6">
+              {/* Rating */}
+              <div className="space-y-3">
+                <Label className="text-base font-medium text-foreground">Rating *</Label>
+                <div className="flex justify-center space-x-2">
+                  {[1, 2, 3, 4, 5].map((value) => (
+                    <button
+                      key={value}
+                      type="button"
+                      className="p-2 focus:outline-none"
+                      onTouchStart={() => setHoverRating(value)}
+                      onTouchEnd={() => setHoverRating(0)}
+                      onClick={() => setRating(value)}
+                      disabled={loading}
+                    >
+                      <Star
+                        className={`h-10 w-10 ${
+                          (hoverRating || rating) >= value
+                            ? 'text-yellow-500 fill-yellow-500'
+                            : 'text-muted-foreground'
+                        }`}
+                      />
+                    </button>
+                  ))}
+                </div>
+                {rating > 0 && (
+                  <p className="text-sm text-center text-muted-foreground mt-2">
+                    {rating === 1 && 'Poor - Major issues with this product/seller'}
+                    {rating === 2 && 'Fair - Below average experience'}
+                    {rating === 3 && 'Average - Met basic expectations'}
+                    {rating === 4 && 'Good - Better than expected'}
+                    {rating === 5 && 'Excellent - Outstanding experience'}
+                  </p>
+                )}
               </div>
-              {rating > 0 && (
-                <p className="text-sm text-center text-muted-foreground mt-2">
-                  {rating === 1 && 'Poor - Major issues with this product/seller'}
-                  {rating === 2 && 'Fair - Below average experience'}
-                  {rating === 3 && 'Average - Met basic expectations'}
-                  {rating === 4 && 'Good - Better than expected'}
-                  {rating === 5 && 'Excellent - Outstanding experience'}
+              
+              {/* Title */}
+              <div className="space-y-3">
+                <Label htmlFor="mobile-title" className="text-base font-medium text-foreground">
+                  Review Title (Optional)
+                </Label>
+                <Input
+                  id="mobile-title"
+                  placeholder="Summarize your experience"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  maxLength={100}
+                  className="text-base p-4 border-2 border-input focus:border-primary rounded-lg"
+                  disabled={loading}
+                />
+              </div>
+              
+              {/* Comment */}
+              <div className="space-y-3">
+                <Label htmlFor="mobile-comment" className="text-base font-medium text-foreground">
+                  Review *
+                </Label>
+                <Textarea
+                  id="mobile-comment"
+                  placeholder="Share your experience with this product and seller"
+                  value={comment}
+                  onChange={(e) => setComment(e.target.value)}
+                  rows={6}
+                  required
+                  className="text-base p-4 border-2 border-input focus:border-primary rounded-lg resize-none"
+                  disabled={loading}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Your review helps other buyers make informed decisions
                 </p>
-              )}
+              </div>
             </div>
-            
-            {/* Title */}
-            <div className="space-y-3">
-              <Label htmlFor="mobile-title" className="text-base font-medium text-foreground">
-                Review Title (Optional)
-              </Label>
-              <Input
-                id="mobile-title"
-                placeholder="Summarize your experience"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                maxLength={100}
-                className="text-base p-4 border-2 border-input focus:border-primary rounded-lg"
-                disabled={loading}
-              />
-            </div>
-            
-            {/* Comment */}
-            <div className="space-y-3">
-              <Label htmlFor="mobile-comment" className="text-base font-medium text-foreground">
-                Review *
-              </Label>
-              <Textarea
-                id="mobile-comment"
-                placeholder="Share your experience with this product and seller"
-                value={comment}
-                onChange={(e) => setComment(e.target.value)}
-                rows={6}
-                required
-                className="text-base p-4 border-2 border-input focus:border-primary rounded-lg resize-none"
-                disabled={loading}
-              />
-              <p className="text-xs text-muted-foreground">
-                Your review helps other buyers make informed decisions
-              </p>
-            </div>
-          </form>
+          </div>
         </div>
 
         {/* Fixed Bottom Buttons */}
-        <div className="border-t border-border bg-card p-4 shadow-lg">
+        <div className="border-t border-border bg-card p-4 shadow-lg shrink-0">
           <div className="flex space-x-3">
-            <Button
+            <button
               type="button"
-              variant="outline"
               onClick={handleCancel}
               disabled={loading}
-              className="flex-1 p-4 text-base"
+              className="flex-1 p-4 text-base border border-input bg-background text-foreground rounded-md hover:bg-accent hover:text-accent-foreground transition-colors disabled:opacity-50"
             >
               Cancel
-            </Button>
-            <Button 
+            </button>
+            <button 
               onClick={handleSubmit}
               disabled={loading || rating === 0 || !comment.trim()}
-              className="flex-1 p-4 text-base"
+              className="flex-1 p-4 text-base bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {loading ? 'Submitting...' : 'Submit Review'}
-            </Button>
+            </button>
           </div>
         </div>
       </div>
