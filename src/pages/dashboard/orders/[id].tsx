@@ -1225,7 +1225,7 @@ export default function OrderDetailsPage() {
                         </span>
                         
                         {/* QR Code Pickup System - Show for both buyer and seller */}
-                        {!order.pickupCompleted && (order.status === 'paid' || order.status === 'awaiting_shipping') && (
+                        {!order.pickupCompleted && (order.status === 'paid' || order.status === 'awaiting_shipping' || order.status === 'awaiting_pickup') && (
                           <div className="mt-2 sm:mt-0 w-full sm:w-auto">
                             <PickupQRCode 
                               order={order}
