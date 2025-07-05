@@ -1223,18 +1223,18 @@ export default function OrderDetailsPage() {
                             ? 'This item has been picked up by the buyer.' 
                             : 'This item is ready for pickup.'}
                         </span>
-                        
-                        {/* QR Code Pickup System - Show for both buyer and seller */}
-                        {!order.pickupCompleted && (order.status === 'paid' || order.status === 'awaiting_shipping' || order.status === 'awaiting_pickup') && (
-                          <div className="mt-2 sm:mt-0 w-full sm:w-auto">
-                            <PickupQRCode 
-                              order={order}
-                              isSeller={!isUserBuyer}
-                              onPickupCompleted={() => router.reload()}
-                            />
-                          </div>
-                        )}
                       </div>
+                      
+                      {/* QR Code Pickup System - Show for both buyer and seller when pickup is not completed */}
+                      {!order.pickupCompleted && order.isPickup && (
+                        <div className="mt-4 w-full">
+                          <PickupQRCode 
+                            order={order}
+                            isSeller={!isUserBuyer}
+                            onPickupCompleted={() => router.reload()}
+                          />
+                        </div>
+                      )}
                       
                       {order.pickupCompleted && (
                         <div className="flex items-center gap-2 p-3 rounded-md bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 mt-2">
