@@ -157,16 +157,31 @@ export default async function handler(
       
       // Store the pickup code in the order for verification
       const orderRef = db.collection('orders').doc(orderId);
-      await orderRef.update({
+      const updateData = {
         pickupCode: pickupCode,
         pickupCodeCreatedAt: FieldValue.serverTimestamp(),
         pickupCodeExpiresAt: new Date(Date.now() + 30 * 60 * 1000), // 30 minutes from now
         sellerPickupInitiated: true,
         sellerPickupInitiatedAt: FieldValue.serverTimestamp(),
         updatedAt: FieldValue.serverTimestamp()
+      };
+      
+      console.log('[generate-pickup-code] Updating order with data:', {
+        orderId,
+        pickupCode,
+        pickupCodeType: typeof pickupCode,
+        expiresAt: expiresAt.toISOString(),
+        updateData: {
+          ...updateData,
+          pickupCodeCreatedAt: 'FieldValue.serverTimestamp()',
+          sellerPickupInitiatedAt: 'FieldValue.serverTimestamp()',
+          updatedAt: 'FieldValue.serverTimestamp()'
+        }
       });
+      
+      await orderRef.update(updateData);
 
-      console.log('[generate-pickup-code] Generated 6-digit code:', pickupCode, 'expires at:', expiresAt.toISOString());
+      console.log('[generate-pickup-code] Successfully updated order with 6-digit code:', pickupCode, 'expires at:', expiresAt.toISOString());
       
       return res.status(200).json({ 
         success: true, 
