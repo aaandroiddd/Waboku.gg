@@ -138,11 +138,18 @@ export default async function handler(
       return res.status(400).json({ success: false, message: 'Pickup has already been completed for this order' });
     }
 
-    // Check if this role has already confirmed
-    const confirmationField = role === 'buyer' ? 'buyerPickupConfirmed' : 'sellerPickupConfirmed';
-    if (orderData[confirmationField]) {
-      console.log(`[complete-pickup] ${role} has already confirmed pickup for order:`, orderId);
-      return res.status(400).json({ error: `${role.charAt(0).toUpperCase() + role.slice(1)} has already confirmed pickup` });
+    // For seller: Allow regeneration of QR code if pickup hasn't been completed
+    if (role === 'seller') {
+      // If seller has already initiated but pickup isn't completed, allow regeneration
+      if (orderData.sellerPickupInitiated && !orderData.pickupCompleted) {
+        console.log('[complete-pickup] Seller regenerating QR code for order:', orderId);
+      }
+    }
+
+    // For buyer: Check if they have already confirmed
+    if (role === 'buyer' && orderData.buyerPickupConfirmed) {
+      console.log('[complete-pickup] Buyer has already confirmed pickup for order:', orderId);
+      return res.status(400).json({ success: false, message: 'Buyer has already confirmed pickup' });
     }
     
     // Verify the order is in a valid state to be completed

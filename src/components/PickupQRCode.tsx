@@ -58,7 +58,11 @@ export function PickupQRCode({ order, isSeller, onPickupCompleted }: PickupQRCod
       setQrCodeData(data.qrCode);
       setPickupToken(data.pickupToken);
       setShowQRDialog(true);
-      toast.success('QR code generated! Show this to the buyer to complete pickup.');
+      
+      const message = order.sellerPickupInitiated 
+        ? 'New QR code generated! Show this to the buyer to complete pickup.'
+        : 'QR code generated! Show this to the buyer to complete pickup.';
+      toast.success(message);
 
     } catch (error) {
       console.error('Error generating QR code:', error);
@@ -202,7 +206,7 @@ export function PickupQRCode({ order, isSeller, onPickupCompleted }: PickupQRCod
           ) : (
             <>
               <QrCode className="mr-2 h-4 w-4" />
-              Start Pickup Process
+              {order.sellerPickupInitiated ? 'Generate New QR Code' : 'Start Pickup Process'}
             </>
           )}
         </Button>
