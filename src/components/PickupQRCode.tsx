@@ -4,7 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
-import { QrCode, Camera, CheckCircle, Loader2, RefreshCw, Copy, X, CameraOff } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { QrCode, Camera, CheckCircle, Loader2, RefreshCw, Copy, X, CameraOff, Hash, Clock } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { formatPrice } from '@/lib/price';
@@ -24,13 +25,18 @@ export function PickupQRCode({ order, isSeller, onPickupCompleted }: PickupQRCod
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [qrCodeData, setQrCodeData] = useState<string | null>(null);
   const [pickupToken, setPickupToken] = useState<string | null>(null);
+  const [pickupCode, setPickupCode] = useState<string | null>(null);
+  const [codeExpiresAt, setCodeExpiresAt] = useState<Date | null>(null);
   const [isGeneratingQR, setIsGeneratingQR] = useState(false);
+  const [isGeneratingCode, setIsGeneratingCode] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
   const [isConfirming, setIsConfirming] = useState(false);
   const [scannedOrderDetails, setScannedOrderDetails] = useState<any>(null);
   const [scanInput, setScanInput] = useState('');
+  const [codeInput, setCodeInput] = useState('');
   const [isMobile, setIsMobile] = useState(false);
   const [showMobileConfirmPage, setShowMobileConfirmPage] = useState(false);
+  const [pickupMethod, setPickupMethod] = useState<'qr' | 'code'>('qr');
   
   // Camera scanning state
   const [isCameraActive, setIsCameraActive] = useState(false);
@@ -81,6 +87,7 @@ export function PickupQRCode({ order, isSeller, onPickupCompleted }: PickupQRCod
 
       setQrCodeData(data.qrCode);
       setPickupToken(data.pickupToken);
+      setPickupMethod('qr');
       setShowQRDialog(true);
       
       const message = order.sellerPickupInitiated 
@@ -93,6 +100,46 @@ export function PickupQRCode({ order, isSeller, onPickupCompleted }: PickupQRCod
       toast.error(error instanceof Error ? error.message : 'Failed to generate QR code');
     } finally {
       setIsGeneratingQR(false);
+    }
+  };
+
+  // Generate 6-digit code for seller
+  const handleGenerateCode = async () => {
+    if (!user || !order.id) return;
+
+    try {
+      setIsGeneratingCode(true);
+      console.log('Generating 6-digit code for pickup:', order.id);
+
+      const response = await fetch('/api/orders/generate-pickup-code', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          orderId: order.id,
+          userId: user.uid,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to generate pickup code');
+      }
+
+      setPickupCode(data.pickupCode);
+      setCodeExpiresAt(new Date(data.expiresAt));
+      setPickupMethod('code');
+      setShowQRDialog(true);
+      
+      toast.success('6-digit pickup code generated! Share this code with the buyer.');
+
+    } catch (error) {
+      console.error('Error generating pickup code:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to generate pickup code');
+    } finally {
+      setIsGeneratingCode(false);
     }
   };
 
@@ -112,6 +159,79 @@ export function PickupQRCode({ order, isSeller, onPickupCompleted }: PickupQRCod
     } finally {
       setIsScanning(false);
     }
+  };
+
+  // Handle 6-digit code verification
+  const handleCodeVerification = async () => {
+    if (!codeInput.trim() || codeInput.length !== 6) {
+      toast.error('Please enter a valid 6-digit code');
+      return;
+    }
+
+    if (!user) return;
+
+    try {
+      setIsScanning(true);
+      console.log('Verifying 6-digit code for user:', user.uid);
+
+      const response = await fetch('/api/orders/verify-pickup-code', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          pickupCode: codeInput.trim(),
+          userId: user.uid,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to verify pickup code');
+      }
+
+      setScannedOrderDetails(data.orderDetails);
+      setShowScanDialog(false);
+      
+      if (isMobile) {
+        setShowMobileConfirmPage(true);
+      } else {
+        setShowConfirmDialog(true);
+      }
+      
+      toast.success('Pickup code verified! Please confirm the pickup details.');
+
+    } catch (error) {
+      console.error('Error verifying pickup code:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to verify pickup code');
+    } finally {
+      setIsScanning(false);
+    }
+  };
+
+  // Copy pickup code to clipboard
+  const handleCopyCode = () => {
+    if (pickupCode) {
+      navigator.clipboard.writeText(pickupCode).then(() => {
+        toast.success('Pickup code copied to clipboard');
+      }).catch(() => {
+        toast.error('Failed to copy pickup code');
+      });
+    }
+  };
+
+  // Format time remaining for code expiration
+  const getTimeRemaining = (expiresAt: Date) => {
+    const now = new Date();
+    const timeLeft = expiresAt.getTime() - now.getTime();
+    
+    if (timeLeft <= 0) return 'Expired';
+    
+    const minutes = Math.floor(timeLeft / (1000 * 60));
+    const seconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
+    
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   };
 
   // Process QR code scan
@@ -312,35 +432,68 @@ export function PickupQRCode({ order, isSeller, onPickupCompleted }: PickupQRCod
   if (isSeller) {
     return (
       <>
-        <Button 
-          variant="default" 
-          className="bg-green-600 hover:bg-green-700 text-white font-medium w-full"
-          onClick={handleGenerateQR}
-          disabled={isGeneratingQR || order.pickupCompleted}
-        >
-          {isGeneratingQR ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Generating QR Code...
-            </>
-          ) : (
-            <>
-              <QrCode className="mr-2 h-4 w-4" />
-              {order.sellerPickupInitiated ? 'Generate New QR Code' : 'Start Pickup Process'}
-            </>
-          )}
-        </Button>
+        <div className="space-y-2">
+          <Button 
+            variant="default" 
+            className="bg-green-600 hover:bg-green-700 text-white font-medium w-full"
+            onClick={handleGenerateQR}
+            disabled={isGeneratingQR || order.pickupCompleted}
+          >
+            {isGeneratingQR ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Generating QR Code...
+              </>
+            ) : (
+              <>
+                <QrCode className="mr-2 h-4 w-4" />
+                {order.sellerPickupInitiated ? 'Generate QR Code' : 'Start Pickup (QR Code)'}
+              </>
+            )}
+          </Button>
 
-        {/* QR Code Display Dialog */}
+          <Button 
+            variant="outline" 
+            className="w-full border-green-600 text-green-600 hover:bg-green-50"
+            onClick={handleGenerateCode}
+            disabled={isGeneratingCode || order.pickupCompleted}
+          >
+            {isGeneratingCode ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Generating Code...
+              </>
+            ) : (
+              <>
+                <Hash className="mr-2 h-4 w-4" />
+                Generate 6-Digit Code
+              </>
+            )}
+          </Button>
+        </div>
+
+        {/* Pickup Method Display Dialog */}
         <Dialog open={showQRDialog} onOpenChange={setShowQRDialog}>
           <DialogContent className="sm:max-w-[500px]">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
-                <QrCode className="h-5 w-5" />
-                Pickup QR Code
+                {pickupMethod === 'qr' ? (
+                  <>
+                    <QrCode className="h-5 w-5" />
+                    Pickup QR Code
+                  </>
+                ) : (
+                  <>
+                    <Hash className="h-5 w-5" />
+                    Pickup Code
+                  </>
+                )}
               </DialogTitle>
               <DialogDescription>
-                Show this QR code to the buyer to complete the pickup process. The code will expire in 24 hours.
+                {pickupMethod === 'qr' 
+                  ? 'Show this QR code to the buyer to complete the pickup process. The code will expire in 24 hours.'
+                  : 'Share this 6-digit code with the buyer to complete the pickup process. The code will expire in 30 minutes.'
+                }
               </DialogDescription>
             </DialogHeader>
             
@@ -365,8 +518,8 @@ export function PickupQRCode({ order, isSeller, onPickupCompleted }: PickupQRCod
                 </CardContent>
               </Card>
 
-              {/* QR Code */}
-              {qrCodeData && (
+              {/* QR Code Display */}
+              {pickupMethod === 'qr' && qrCodeData && (
                 <div className="flex flex-col items-center space-y-4">
                   <div className="p-4 bg-white rounded-lg border">
                     <img 
@@ -398,6 +551,46 @@ export function PickupQRCode({ order, isSeller, onPickupCompleted }: PickupQRCod
                   </div>
                 </div>
               )}
+
+              {/* 6-Digit Code Display */}
+              {pickupMethod === 'code' && pickupCode && (
+                <div className="flex flex-col items-center space-y-4">
+                  <div className="p-6 bg-gradient-to-br from-green-50 to-blue-50 dark:from-green-900/20 dark:to-blue-900/20 rounded-lg border-2 border-dashed border-green-300 dark:border-green-700">
+                    <div className="text-center space-y-3">
+                      <div className="text-3xl font-mono font-bold tracking-wider text-green-700 dark:text-green-300">
+                        {pickupCode}
+                      </div>
+                      <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+                        <Clock className="h-4 w-4" />
+                        {codeExpiresAt && (
+                          <span>Expires in: {getTimeRemaining(codeExpiresAt)}</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                      <CheckCircle className="mr-1 h-3 w-3" />
+                      Ready for Pickup
+                    </Badge>
+                  </div>
+
+                  <div className="text-center space-y-2">
+                    <p className="text-sm text-muted-foreground">
+                      Share this 6-digit code with the buyer. They can enter it in the app to confirm pickup.
+                    </p>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={handleCopyCode}
+                    >
+                      <Copy className="mr-2 h-4 w-4" />
+                      Copy Code
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
 
             <DialogFooter>
@@ -421,24 +614,24 @@ export function PickupQRCode({ order, isSeller, onPickupCompleted }: PickupQRCod
         disabled={order.pickupCompleted}
       >
         <Camera className="mr-2 h-4 w-4" />
-        Scan Pickup QR Code
+        Confirm Pickup
       </Button>
 
-      {/* QR Scan Dialog */}
+      {/* Pickup Confirmation Dialog */}
       <Dialog open={showScanDialog} onOpenChange={setShowScanDialog}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Camera className="h-5 w-5" />
-              Scan Pickup QR Code
+              Confirm Pickup
             </DialogTitle>
             <DialogDescription>
-              Scan the QR code provided by the seller to confirm pickup of your order.
+              Scan the QR code or enter the 6-digit code provided by the seller to confirm pickup of your order.
             </DialogDescription>
           </DialogHeader>
           
           <div className="space-y-4">
-            {/* Scan Mode Toggle */}
+            {/* Method Toggle */}
             <div className="flex gap-2">
               <Button
                 variant={scanMode === 'camera' ? 'default' : 'outline'}
@@ -447,7 +640,7 @@ export function PickupQRCode({ order, isSeller, onPickupCompleted }: PickupQRCod
                 className="flex-1"
               >
                 <Camera className="mr-2 h-4 w-4" />
-                Camera
+                QR Code
               </Button>
               <Button
                 variant={scanMode === 'manual' ? 'default' : 'outline'}
@@ -455,7 +648,8 @@ export function PickupQRCode({ order, isSeller, onPickupCompleted }: PickupQRCod
                 onClick={() => setScanMode('manual')}
                 className="flex-1"
               >
-                Manual Entry
+                <Hash className="mr-2 h-4 w-4" />
+                6-Digit Code
               </Button>
             </div>
 
@@ -537,33 +731,61 @@ export function PickupQRCode({ order, isSeller, onPickupCompleted }: PickupQRCod
                 </div>
               </div>
             ) : (
-              /* Manual QR Data Input */
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Manual QR Code Data Entry:</label>
-                <textarea
-                  className="w-full p-3 border rounded-md resize-none"
-                  rows={4}
-                  placeholder="Paste QR code data here..."
-                  value={scanInput}
-                  onChange={(e) => setScanInput(e.target.value)}
-                />
+              /* 6-Digit Code Input */
+              <div className="space-y-4">
+                <div className="text-center">
+                  <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                    <Hash className="h-8 w-8 text-blue-600 dark:text-blue-400 mx-auto mb-2" />
+                    <h3 className="font-medium text-blue-900 dark:text-blue-100 mb-1">Enter 6-Digit Code</h3>
+                    <p className="text-sm text-blue-700 dark:text-blue-300">
+                      Enter the 6-digit code provided by the seller
+                    </p>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <label className="text-sm font-medium">Pickup Code:</label>
+                  <Input
+                    type="text"
+                    placeholder="000000"
+                    value={codeInput}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/\D/g, '').slice(0, 6);
+                      setCodeInput(value);
+                    }}
+                    className="text-center text-2xl font-mono tracking-widest"
+                    maxLength={6}
+                  />
+                  <div className="text-center">
+                    <p className="text-xs text-muted-foreground">
+                      {codeInput.length}/6 digits entered
+                    </p>
+                  </div>
+                </div>
+
                 <Button 
-                  onClick={handleManualScan}
-                  disabled={isScanning || !scanInput.trim()}
+                  onClick={handleCodeVerification}
+                  disabled={isScanning || codeInput.length !== 6}
                   className="w-full"
                 >
                   {isScanning ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Processing...
+                      Verifying...
                     </>
                   ) : (
                     <>
                       <CheckCircle className="mr-2 h-4 w-4" />
-                      Verify QR Code
+                      Verify Code
                     </>
                   )}
                 </Button>
+
+                <div className="text-center">
+                  <p className="text-sm text-muted-foreground">
+                    The code expires in 30 minutes after generation
+                  </p>
+                </div>
               </div>
             )}
           </div>
