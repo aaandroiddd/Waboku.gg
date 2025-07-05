@@ -21,6 +21,7 @@ import { ApiTestPanel } from '@/components/ApiTestPanel';
 import { NotificationDebugger } from '@/components/NotificationDebugger';
 import { EmailNotificationTester } from '@/components/EmailNotificationTester';
 import { MockListingGenerator } from '@/components/admin/MockListingGenerator';
+import { PickupCodeDebugger } from '@/components/admin/PickupCodeDebugger';
 import {
   Accordion,
   AccordionItem,
@@ -49,6 +50,7 @@ const SECTIONS = [
   { id: "moderation", label: "Content Moderation" },
   { id: "moderator", label: "Moderator Management" },
   { id: "notification-debug", label: "Notification System Debugger" },
+  { id: "pickup-code-debug", label: "Pickup Code Debugger" },
   { id: "review-system", label: "Review System Debug" },
   { id: "subscription", label: "Subscription Management" },
   { id: "support-management", label: "Support Ticket Management" },
@@ -717,6 +719,19 @@ export default function AdminDashboard() {
                     Test and debug the notification system functionality, including creation, delivery, and API endpoints.
                   </p>
                   <NotificationDebugger />
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+
+            {/* Pickup Code Debugger */}
+            <AccordionItem value="pickup-code-debug" id="pickup-code-debug" ref={el => (sectionRefs.current["pickup-code-debug"] = el)}>
+              <AccordionTrigger>Pickup Code Debugger</AccordionTrigger>
+              <AccordionContent>
+                <div className="space-y-4 py-4">
+                  <p className="text-sm text-muted-foreground">
+                    Debug and test the 6-digit pickup code system for local pickup orders. Generate codes, verify them, and inspect database storage.
+                  </p>
+                  <PickupCodeDebugger />
                 </div>
               </AccordionContent>
             </AccordionItem>
