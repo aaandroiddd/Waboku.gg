@@ -48,15 +48,29 @@ export default async function handler(
     const { db } = getFirebaseAdmin();
     
     // Find the order with the matching pickup code
+    console.log('[verify-pickup-code] Searching for pickup code:', pickupCode);
+    
     const ordersQuery = db.collection('orders')
       .where('pickupCode', '==', pickupCode)
       .where('isPickup', '==', true)
-      .where('pickupCompleted', '==', false)
       .limit(1);
     
     const querySnapshot = await ordersQuery.get();
     
+    console.log('[verify-pickup-code] Query results:', {
+      empty: querySnapshot.empty,
+      size: querySnapshot.size,
+      docs: querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        pickupCode: doc.data().pickupCode,
+        isPickup: doc.data().isPickup,
+        pickupCompleted: doc.data().pickupCompleted,
+        status: doc.data().status
+      }))
+    });
+    
     if (querySnapshot.empty) {
+      console.log('[verify-pickup-code] No orders found with pickup code:', pickupCode);
       return res.status(404).json({ 
         success: false, 
         message: 'Invalid or expired pickup code' 
