@@ -500,8 +500,17 @@ export function PickupQRCode({ order, isSeller, onPickupCompleted }: PickupQRCod
           <Button 
             variant="outline" 
             className="w-full border-green-600 text-green-600 hover:bg-green-50"
-            onClick={handleGenerateCode}
-            disabled={isGeneratingCode || order.pickupCompleted || (pickupCode && codeExpiresAt && codeExpiresAt > new Date())}
+            onClick={() => {
+              if (pickupCode && codeExpiresAt && codeExpiresAt > new Date()) {
+                // Show existing code
+                setPickupMethod('code');
+                setShowQRDialog(true);
+              } else {
+                // Generate new code
+                handleGenerateCode();
+              }
+            }}
+            disabled={isGeneratingCode || order.pickupCompleted}
           >
             {isGeneratingCode ? (
               <>
