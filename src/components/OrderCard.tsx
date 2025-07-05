@@ -33,10 +33,7 @@ export function OrderCard({ order, isSale = false }: OrderCardProps) {
   const [buyerName, setBuyerName] = useState<string | null>(null);
   const [sellerName, setSellerName] = useState<string | null>(null);
   const [isLoadingUser, setIsLoadingUser] = useState<boolean>(false);
-  const [isCompletingPickup, setIsCompletingPickup] = useState(false);
-  const [showCompletePickupDialog, setShowCompletePickupDialog] = useState(false);
-  const [isConfirmingBuyerPickup, setIsConfirmingBuyerPickup] = useState(false);
-  const [showBuyerPickupDialog, setShowBuyerPickupDialog] = useState(false);
+
   const [showRefundDialog, setShowRefundDialog] = useState(false);
   const [showRefundManagementDialog, setShowRefundManagementDialog] = useState(false);
   
@@ -104,102 +101,7 @@ export function OrderCard({ order, isSale = false }: OrderCardProps) {
     }
   };
   
-  // Function to handle the complete pickup button click (seller)
-  const handleCompletePickup = (e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevent triggering the card click
-    setShowCompletePickupDialog(true);
-  };
-  
-  // Function to handle the buyer pickup confirmation button click
-  const handleBuyerConfirmPickup = (e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevent triggering the card click
-    setShowBuyerPickupDialog(true);
-  };
-  
-  // Function to actually complete the pickup (seller)
-  const completePickup = async () => {
-    if (!order.id || !user) return;
-    
-    try {
-      setIsCompletingPickup(true);
-      console.log('Completing pickup for order:', order.id, 'by user:', user.uid);
-      
-      // Call the API to complete the pickup
-      const response = await fetch('/api/orders/complete-pickup', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          orderId: order.id,
-          userId: user.uid,
-        }),
-      });
-      
-      console.log('API response status:', response.status);
-      const data = await response.json();
-      console.log('API response data:', data);
-      
-      if (!response.ok) {
-        throw new Error(data.message || 'Failed to complete pickup');
-      }
-      
-      toast.success('Pickup completed successfully! The buyer can now leave a review for this transaction.');
-      
-      // Refresh the page to show updated status
-      router.reload();
-      
-    } catch (error) {
-      console.error('Error completing pickup:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to complete pickup');
-    } finally {
-      setIsCompletingPickup(false);
-      setShowCompletePickupDialog(false);
-    }
-  };
-  
-  // Function to actually confirm pickup (buyer)
-  const confirmBuyerPickup = async () => {
-    if (!order.id || !user) return;
-    
-    try {
-      setIsConfirmingBuyerPickup(true);
-      console.log('Confirming buyer pickup for order:', order.id, 'by user:', user.uid);
-      
-      // Call the API to confirm pickup as buyer
-      const response = await fetch('/api/orders/confirm-pickup', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          orderId: order.id,
-          userId: user.uid,
-          role: 'buyer',
-        }),
-      });
-      
-      console.log('API response status:', response.status);
-      const data = await response.json();
-      console.log('API response data:', data);
-      
-      if (!response.ok) {
-        throw new Error(data.message || 'Failed to confirm pickup');
-      }
-      
-      toast.success(data.message);
-      
-      // Refresh the page to show updated status
-      router.reload();
-      
-    } catch (error) {
-      console.error('Error confirming buyer pickup:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to confirm pickup');
-    } finally {
-      setIsConfirmingBuyerPickup(false);
-      setShowBuyerPickupDialog(false);
-    }
-  };
+
   
   // Function to handle refund request
   const handleRefundRequest = (e: React.MouseEvent) => {
@@ -693,79 +595,6 @@ export function OrderCard({ order, isSale = false }: OrderCardProps) {
         </div>
       </CardContent>
       
-      {/* Complete Pickup Dialog */}
-      <AlertDialog open={showCompletePickupDialog} onOpenChange={setShowCompletePickupDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Complete Pickup</AlertDialogTitle>
-            <AlertDialogDescription className="space-y-2">
-              <p>
-                By marking this order as completed, you confirm that the buyer has picked up the item.
-              </p>
-              <div className="flex items-start gap-2 p-3 rounded-md bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 mt-2">
-                <CheckCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
-                <div>
-                  <p className="font-medium">What happens next?</p>
-                  <ul className="list-disc list-inside mt-1 space-y-1 text-sm">
-                    <li>The order will be marked as completed</li>
-                    <li>The buyer will be able to leave a review for this transaction</li>
-                    <li>The review will be visible on your seller profile</li>
-                  </ul>
-                </div>
-              </div>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={completePickup}
-              disabled={isCompletingPickup}
-              className="bg-green-600 hover:bg-green-700"
-            >
-              {isCompletingPickup && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Complete Pickup
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Buyer Pickup Confirmation Dialog */}
-      <AlertDialog open={showBuyerPickupDialog} onOpenChange={setShowBuyerPickupDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Confirm Pickup</AlertDialogTitle>
-            <AlertDialogDescription className="space-y-2">
-              <p>
-                By confirming pickup, you acknowledge that you have received the item from the seller.
-              </p>
-              <div className="flex items-start gap-2 p-3 rounded-md bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 mt-2">
-                <CheckCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
-                <div>
-                  <p className="font-medium">What happens next?</p>
-                  <ul className="list-disc list-inside mt-1 space-y-1 text-sm">
-                    <li>Your pickup confirmation will be recorded</li>
-                    <li>The seller will also need to confirm pickup</li>
-                    <li>Once both parties confirm, the order will be completed</li>
-                    <li>You'll then be able to leave a review for this transaction</li>
-                  </ul>
-                </div>
-              </div>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={confirmBuyerPickup}
-              disabled={isConfirmingBuyerPickup}
-              className="bg-blue-600 hover:bg-blue-700"
-            >
-              {isConfirmingBuyerPickup && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Confirm Pickup
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
       {/* Refund Request Dialog */}
       <RefundRequestDialog
         open={showRefundDialog}
