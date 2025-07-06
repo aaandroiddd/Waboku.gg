@@ -55,6 +55,17 @@ export function getOrderAttentionInfo(order: Order, isSale: boolean = false): Or
     };
   }
   
+  // 4b. Pickup awaiting for buyers
+  if (!isSale && order.isPickup && !order.pickupCompleted && 
+      (order.status === 'paid' || order.status === 'awaiting_shipping')) {
+    return {
+      needsAttention: true,
+      priority: 'medium',
+      reason: 'Awaiting Pickup',
+      actionRequired: 'This item is ready for pickup'
+    };
+  }
+  
   // Medium priority issues (action needed but not urgent)
   
   // 5. Tracking required (for sellers)
