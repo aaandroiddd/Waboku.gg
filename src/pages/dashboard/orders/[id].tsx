@@ -619,6 +619,8 @@ export default function OrderDetailsPage() {
           >
             {order.status === 'awaiting_shipping' 
               ? (!order.shippingAddress ? 'Requires Shipping Details' : 'Awaiting Shipping')
+              : order.status === 'paid' && order.isPickup
+              ? 'Awaiting Pickup'
               : order.status.charAt(0).toUpperCase() + order.status.slice(1).replace('_', ' ')}
           </Badge>
         </div>
