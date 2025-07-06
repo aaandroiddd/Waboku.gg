@@ -46,7 +46,8 @@ export function getOrderAttentionInfo(order: Order, isSale: boolean = false): Or
   
   // 4. Pickup ready for completion (for sellers)
   if (isSale && order.isPickup && !order.pickupCompleted && 
-      (order.status === 'paid' || order.status === 'awaiting_shipping')) {
+      (order.status === 'paid' || order.status === 'awaiting_shipping' || 
+       (order.status === 'pending' && order.paymentRequired === false))) {
     return {
       needsAttention: true,
       priority: 'high',
@@ -57,7 +58,8 @@ export function getOrderAttentionInfo(order: Order, isSale: boolean = false): Or
   
   // 4b. Pickup awaiting for buyers
   if (!isSale && order.isPickup && !order.pickupCompleted && 
-      (order.status === 'paid' || order.status === 'awaiting_shipping')) {
+      (order.status === 'paid' || order.status === 'awaiting_shipping' || 
+       (order.status === 'pending' && order.paymentRequired === false))) {
     return {
       needsAttention: true,
       priority: 'medium',
@@ -110,8 +112,8 @@ export function getOrderAttentionInfo(order: Order, isSale: boolean = false): Or
     };
   }
   
-  // 9. Pending orders without specific issues
-  if (order.status === 'pending' && !order.paymentStatus) {
+  // 9. Pending orders without specific issues (exclude pickup orders)
+  if (order.status === 'pending' && !order.paymentStatus && !order.isPickup) {
     return {
       needsAttention: true,
       priority: 'low',
