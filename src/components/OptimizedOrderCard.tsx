@@ -458,6 +458,8 @@ export const OptimizedOrderCard = memo(function OptimizedOrderCard({
                   >
                     {safeOrder.status === 'awaiting_shipping' 
                       ? (!safeOrder.shippingAddress ? 'Requires Shipping Details' : 'Awaiting Shipping')
+                      : safeOrder.status === 'paid' && safeOrder.isPickup
+                      ? 'Awaiting Pickup'
                       : safeOrder.status.charAt(0).toUpperCase() + safeOrder.status.slice(1).replace('_', ' ')}
                   </Badge>
                 )}

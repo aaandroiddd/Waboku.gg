@@ -771,6 +771,95 @@ export default function OrderDetailsPage() {
               </div>
             </div>
 
+            {/* Pickup Status - Moved to top */}
+            {order.isPickup && (
+              <div>
+                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                  <MapPin className="h-5 w-5" />
+                  Pickup Status
+                </h3>
+                <Card>
+                  <CardContent className="pt-6">
+                    <div className="space-y-4">
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full">
+                        <Badge 
+                          variant={order.status === 'completed' ? 'success' : 'warning'} 
+                          className={`px-2 py-1 inline-flex ${
+                            order.status === 'completed' 
+                              ? 'bg-green-100 hover:bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 dark:hover:bg-green-900/40 border-green-200 dark:border-green-800' 
+                              : 'bg-yellow-100 hover:bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300 dark:hover:bg-yellow-900/40 border-yellow-200 dark:border-yellow-800'
+                          }`}
+                        >
+                          {order.status === 'completed' ? 'Pickup Completed' : 'Awaiting Pickup'}
+                        </Badge>
+                        <span className="flex-1">
+                          {order.status === 'completed' 
+                            ? 'This item has been picked up by the buyer.' 
+                            : 'This item is ready for pickup.'}
+                        </span>
+                      </div>
+                      
+                      {/* QR Code Pickup System - Show for both buyer and seller when pickup is not completed */}
+                      {!order.pickupCompleted && order.isPickup && (
+                        <div className="mt-4 w-full">
+                          <PickupQRCode 
+                            order={order}
+                            isSeller={!isUserBuyer}
+                            onPickupCompleted={() => router.reload()}
+                          />
+                        </div>
+                      )}
+                      
+                      {order.pickupCompleted && (
+                        <div className="flex items-center gap-2 p-3 rounded-md bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 mt-2">
+                          <CheckCircle className="h-4 w-4 flex-shrink-0" />
+                          <p>
+                            Pickup was completed on {order.pickupCompletedAt && 
+                              (typeof order.pickupCompletedAt === 'object' && 'seconds' in order.pickupCompletedAt
+                                ? format(new Date(order.pickupCompletedAt.seconds * 1000), 'PPP')
+                                : format(new Date(order.pickupCompletedAt), 'PPP')
+                              )}
+                          </p>
+                        </div>
+                      )}
+                      
+                      {!order.pickupCompleted && (order.status === 'paid' || order.status === 'awaiting_shipping') && (
+                        <div className="flex items-start gap-2 p-3 rounded-md bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 mt-2">
+                          <Info className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                          <div>
+                            <p className="font-medium">Local Pickup Instructions</p>
+                            <p className="mt-1">Contact the {isUserBuyer ? 'seller' : 'buyer'} to arrange a pickup time and location.</p>
+                            {!isUserBuyer ? (
+                              <div className="mt-2 border-t border-blue-200 dark:border-blue-800 pt-2">
+                                <p className="font-medium flex items-center">
+                                  <CheckCircle className="h-4 w-4 mr-1" /> Seller Action Required
+                                </p>
+                                <p className="mt-1">
+                                  Once the buyer has picked up the item, click the "Complete Pickup" button to mark this order as completed.
+                                  This will allow the buyer to leave a review for this transaction.
+                                </p>
+
+                              </div>
+                            ) : (
+                              <div className="mt-2 border-t border-blue-200 dark:border-blue-800 pt-2">
+                                <p className="font-medium flex items-center">
+                                  <Info className="h-4 w-4 mr-1" /> Next Steps
+                                </p>
+                                <p className="mt-1">
+                                  After you pick up the item, the seller will mark the order as completed.
+                                  You'll then be able to leave a review for this transaction.
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+
             {/* Shipping Information */}
             {order.isPickup ? (
               <div>
@@ -1188,254 +1277,171 @@ export default function OrderDetailsPage() {
               </Card>
             </div>
 
-            {/* Shipping/Pickup Status Section */}
-            <div>
-              <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                {order.isPickup ? (
-                  <>
-                    <MapPin className="h-5 w-5" />
-                    Pickup Status
-                  </>
-                ) : (
-                  <>
-                    <Truck className="h-5 w-5" />
-                    Shipping Status
-                  </>
-                )}
-              </h3>
-              <Card>
-                <CardContent className="pt-6">
-                  {order.isPickup ? (
-                    <div className="space-y-4">
-                      <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full">
-                        <Badge 
-                          variant={order.status === 'completed' ? 'success' : 'warning'} 
-                          className={`px-2 py-1 inline-flex ${
-                            order.status === 'completed' 
-                              ? 'bg-green-100 hover:bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 dark:hover:bg-green-900/40 border-green-200 dark:border-green-800' 
-                              : 'bg-yellow-100 hover:bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300 dark:hover:bg-yellow-900/40 border-yellow-200 dark:border-yellow-800'
-                          }`}
-                        >
-                          {order.status === 'completed' ? 'Pickup Completed' : 'Awaiting Pickup'}
-                        </Badge>
-                        <span className="flex-1">
-                          {order.status === 'completed' 
-                            ? 'This item has been picked up by the buyer.' 
-                            : 'This item is ready for pickup.'}
-                        </span>
-                      </div>
-                      
-                      {/* QR Code Pickup System - Show for both buyer and seller when pickup is not completed */}
-                      {!order.pickupCompleted && order.isPickup && (
-                        <div className="mt-4 w-full">
-                          <PickupQRCode 
-                            order={order}
-                            isSeller={!isUserBuyer}
-                            onPickupCompleted={() => router.reload()}
-                          />
+            {/* Shipping Status Section - Only for non-pickup orders */}
+            {!order.isPickup && (
+              <div>
+                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                  <Truck className="h-5 w-5" />
+                  Shipping Status
+                </h3>
+                <Card>
+                  <CardContent className="pt-6">
+                    {order.status === 'shipped' || order.status === 'completed' ? (
+                      <div className="space-y-4">
+                        <div className="flex items-center gap-2">
+                          <Badge 
+                            variant={order.status === 'completed' ? 'success' : 'info'} 
+                            className={`px-2 py-1 ${
+                              order.status === 'completed' 
+                                ? 'bg-green-100 hover:bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 dark:hover:bg-green-900/40 border-green-200 dark:border-green-800' 
+                                : 'bg-blue-100 hover:bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 dark:hover:bg-blue-900/40 border-blue-200 dark:border-blue-800'
+                            }`}
+                          >
+                            {order.status === 'completed' ? 'Delivered' : 'Shipped'}
+                          </Badge>
+                          <span>
+                            {order.status === 'completed' 
+                              ? 'This order has been delivered.' 
+                              : 'This order has been shipped.'}
+                          </span>
                         </div>
-                      )}
-                      
-                      {order.pickupCompleted && (
-                        <div className="flex items-center gap-2 p-3 rounded-md bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 mt-2">
-                          <CheckCircle className="h-4 w-4 flex-shrink-0" />
-                          <p>
-                            Pickup was completed on {order.pickupCompletedAt && 
-                              (typeof order.pickupCompletedAt === 'object' && 'seconds' in order.pickupCompletedAt
-                                ? format(new Date(order.pickupCompletedAt.seconds * 1000), 'PPP')
-                                : format(new Date(order.pickupCompletedAt), 'PPP')
-                              )}
-                          </p>
-                        </div>
-                      )}
-                      
-                      {!order.pickupCompleted && (order.status === 'paid' || order.status === 'awaiting_shipping') && (
-                        <div className="flex items-start gap-2 p-3 rounded-md bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 mt-2">
-                          <Info className="h-4 w-4 flex-shrink-0 mt-0.5" />
-                          <div>
-                            <p className="font-medium">Local Pickup Instructions</p>
-                            <p className="mt-1">Contact the {isUserBuyer ? 'seller' : 'buyer'} to arrange a pickup time and location.</p>
-                            {!isUserBuyer ? (
-                              <div className="mt-2 border-t border-blue-200 dark:border-blue-800 pt-2">
-                                <p className="font-medium flex items-center">
-                                  <CheckCircle className="h-4 w-4 mr-1" /> Seller Action Required
-                                </p>
-                                <p className="mt-1">
-                                  Once the buyer has picked up the item, click the "Complete Pickup" button to mark this order as completed.
-                                  This will allow the buyer to leave a review for this transaction.
-                                </p>
-
+                        
+                        {/* Tracking Information */}
+                        {order.trackingInfo ? (
+                          <div className="space-y-4 mt-4">
+                            <div className="border rounded-lg p-4 bg-card">
+                              <div className="space-y-3">
+                                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-muted-foreground font-medium">Carrier:</span>
+                                    <Badge variant="outline" className="font-semibold">
+                                      {order.trackingInfo.carrier}
+                                    </Badge>
+                                  </div>
+                                  
+                                  <div className="flex flex-wrap items-center gap-2 mt-2 sm:mt-0">
+                                    {/* Update Tracking Button - Only visible to seller */}
+                                    {!isUserBuyer && order.status !== 'completed' && (
+                                      <Button 
+                                        variant="outline" 
+                                        size="sm"
+                                        onClick={() => {
+                                          setCarrier(order.trackingInfo?.carrier || '');
+                                          setTrackingNumber(order.trackingInfo?.trackingNumber || '');
+                                          setTrackingNotes(order.trackingInfo?.notes || '');
+                                          setShowTrackingDialog(true);
+                                        }}
+                                      >
+                                        <RefreshCw className="mr-2 h-4 w-4" />
+                                        Update Tracking
+                                      </Button>
+                                    )}
+                                    
+                                    {/* Removed redundant 'track package' button as requested */}
+                                  </div>
+                                </div>
+                                
+                                <div className="flex flex-col sm:flex-row sm:items-center gap-2 mt-3">
+                                  <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+                                    <span className="text-muted-foreground font-medium">Tracking Number:</span>
+                                    <code className="bg-muted px-2 py-1 rounded font-mono text-foreground text-sm break-all">
+                                      {order.trackingInfo.trackingNumber}
+                                    </code>
+                                  </div>
+                                  
+                                  {/* Copy Tracking Button with Tooltip */}
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <Button 
+                                          variant="ghost" 
+                                          size="sm"
+                                          className="mt-1 sm:mt-0 self-start sm:self-auto"
+                                          onClick={() => {
+                                            try {
+                                              const trackingNumber = order.trackingInfo?.trackingNumber || '';
+                                              navigator.clipboard.writeText(trackingNumber)
+                                                .then(() => {
+                                                  // Show a toast notification to confirm the copy action
+                                                  toast.success('Tracking number copied to clipboard', {
+                                                    duration: 3000,
+                                                    position: 'bottom-center',
+                                                    icon: <Copy className="h-4 w-4" />
+                                                  });
+                                                })
+                                                .catch((err) => {
+                                                  console.error('Failed to copy tracking number:', err);
+                                                  toast.error('Failed to copy tracking number');
+                                                });
+                                            } catch (error) {
+                                              console.error('Error copying tracking number:', error);
+                                              toast.error('Failed to copy tracking number');
+                                            }
+                                          }}
+                                        >
+                                          <Copy className="mr-2 h-4 w-4" />
+                                          Copy
+                                        </Button>
+                                      </TooltipTrigger>
+                                      <TooltipContent>
+                                        <p>Copy tracking number to clipboard</p>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
+                                </div>
+                                
+                                {order.trackingInfo.notes && (
+                                  <div className="mt-2">
+                                    <span className="text-muted-foreground font-medium">Notes:</span>
+                                    <p className="mt-1 text-sm p-2 bg-muted rounded text-foreground">
+                                      {order.trackingInfo.notes}
+                                    </p>
+                                  </div>
+                                )}
+                                
+                                <div className="text-sm text-muted-foreground mt-2">
+                                  Tracking added on {order.trackingInfo.addedAt && 
+                                    (typeof order.trackingInfo.addedAt === 'object' && 'seconds' in order.trackingInfo.addedAt
+                                      ? format(new Date(order.trackingInfo.addedAt.seconds * 1000), 'PPP')
+                                      : format(new Date(order.trackingInfo.addedAt), 'PPP')
+                                    )}
+                                </div>
                               </div>
-                            ) : (
-                              <div className="mt-2 border-t border-blue-200 dark:border-blue-800 pt-2">
-                                <p className="font-medium flex items-center">
-                                  <Info className="h-4 w-4 mr-1" /> Next Steps
-                                </p>
-                                <p className="mt-1">
-                                  After you pick up the item, the seller will mark the order as completed.
-                                  You'll then be able to leave a review for this transaction.
-                                </p>
+                            </div>
+                            
+                            {/* Live Tracking Status */}
+                            {order.trackingInfo.carrier && order.trackingInfo.trackingNumber && (
+                              <div className="mt-4">
+                                <h4 className="text-sm font-medium mb-2">Live Tracking Status</h4>
+                                <TrackingStatusComponent 
+                                  carrier={order.trackingInfo.carrier} 
+                                  trackingNumber={order.trackingInfo.trackingNumber} 
+                                />
                               </div>
                             )}
                           </div>
-                        </div>
-                      )}
-                    </div>
-                  ) : order.status === 'shipped' || order.status === 'completed' ? (
-                    <div className="space-y-4">
-                      <div className="flex items-center gap-2">
-                        <Badge 
-                          variant={order.status === 'completed' ? 'success' : 'info'} 
-                          className={`px-2 py-1 ${
-                            order.status === 'completed' 
-                              ? 'bg-green-100 hover:bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 dark:hover:bg-green-900/40 border-green-200 dark:border-green-800' 
-                              : 'bg-blue-100 hover:bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 dark:hover:bg-blue-900/40 border-blue-200 dark:border-blue-800'
-                          }`}
-                        >
-                          {order.status === 'completed' ? 'Delivered' : 'Shipped'}
-                        </Badge>
-                        <span>
-                          {order.status === 'completed' 
-                            ? 'This order has been delivered.' 
-                            : 'This order has been shipped.'}
-                        </span>
-                      </div>
-                      
-                      {/* Tracking Information */}
-                      {order.trackingInfo ? (
-                        <div className="space-y-4 mt-4">
-                          <div className="border rounded-lg p-4 bg-card">
-                            <div className="space-y-3">
-                              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
-                                <div className="flex items-center gap-2">
-                                  <span className="text-muted-foreground font-medium">Carrier:</span>
-                                  <Badge variant="outline" className="font-semibold">
-                                    {order.trackingInfo.carrier}
-                                  </Badge>
-                                </div>
-                                
-                                <div className="flex flex-wrap items-center gap-2 mt-2 sm:mt-0">
-                                  {/* Update Tracking Button - Only visible to seller */}
-                                  {!isUserBuyer && order.status !== 'completed' && (
-                                    <Button 
-                                      variant="outline" 
-                                      size="sm"
-                                      onClick={() => {
-                                        setCarrier(order.trackingInfo?.carrier || '');
-                                        setTrackingNumber(order.trackingInfo?.trackingNumber || '');
-                                        setTrackingNotes(order.trackingInfo?.notes || '');
-                                        setShowTrackingDialog(true);
-                                      }}
-                                    >
-                                      <RefreshCw className="mr-2 h-4 w-4" />
-                                      Update Tracking
-                                    </Button>
-                                  )}
-                                  
-                                  {/* Removed redundant 'track package' button as requested */}
-                                </div>
-                              </div>
-                              
-                              <div className="flex flex-col sm:flex-row sm:items-center gap-2 mt-3">
-                                <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
-                                  <span className="text-muted-foreground font-medium">Tracking Number:</span>
-                                  <code className="bg-muted px-2 py-1 rounded font-mono text-foreground text-sm break-all">
-                                    {order.trackingInfo.trackingNumber}
-                                  </code>
-                                </div>
-                                
-                                {/* Copy Tracking Button with Tooltip */}
-                                <TooltipProvider>
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <Button 
-                                        variant="ghost" 
-                                        size="sm"
-                                        className="mt-1 sm:mt-0 self-start sm:self-auto"
-                                        onClick={() => {
-                                          try {
-                                            const trackingNumber = order.trackingInfo?.trackingNumber || '';
-                                            navigator.clipboard.writeText(trackingNumber)
-                                              .then(() => {
-                                                // Show a toast notification to confirm the copy action
-                                                toast.success('Tracking number copied to clipboard', {
-                                                  duration: 3000,
-                                                  position: 'bottom-center',
-                                                  icon: <Copy className="h-4 w-4" />
-                                                });
-                                              })
-                                              .catch((err) => {
-                                                console.error('Failed to copy tracking number:', err);
-                                                toast.error('Failed to copy tracking number');
-                                              });
-                                          } catch (error) {
-                                            console.error('Error copying tracking number:', error);
-                                            toast.error('Failed to copy tracking number');
-                                          }
-                                        }}
-                                      >
-                                        <Copy className="mr-2 h-4 w-4" />
-                                        Copy
-                                      </Button>
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                      <p>Copy tracking number to clipboard</p>
-                                    </TooltipContent>
-                                  </Tooltip>
-                                </TooltipProvider>
-                              </div>
-                              
-                              {order.trackingInfo.notes && (
-                                <div className="mt-2">
-                                  <span className="text-muted-foreground font-medium">Notes:</span>
-                                  <p className="mt-1 text-sm p-2 bg-muted rounded text-foreground">
-                                    {order.trackingInfo.notes}
-                                  </p>
-                                </div>
-                              )}
-                              
-                              <div className="text-sm text-muted-foreground mt-2">
-                                Tracking added on {order.trackingInfo.addedAt && 
-                                  (typeof order.trackingInfo.addedAt === 'object' && 'seconds' in order.trackingInfo.addedAt
-                                    ? format(new Date(order.trackingInfo.addedAt.seconds * 1000), 'PPP')
-                                    : format(new Date(order.trackingInfo.addedAt), 'PPP')
-                                  )}
-                              </div>
-                            </div>
+                        ) : order.noTrackingConfirmed ? (
+                          <div className="flex items-center gap-2 p-3 rounded-md bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 mt-2">
+                            <AlertTriangle className="h-4 w-4" />
+                            <p>This order was marked as shipped without tracking information.</p>
                           </div>
-                          
-                          {/* Live Tracking Status */}
-                          {order.trackingInfo.carrier && order.trackingInfo.trackingNumber && (
-                            <div className="mt-4">
-                              <h4 className="text-sm font-medium mb-2">Live Tracking Status</h4>
-                              <TrackingStatusComponent 
-                                carrier={order.trackingInfo.carrier} 
-                                trackingNumber={order.trackingInfo.trackingNumber} 
-                              />
-                            </div>
-                          )}
-                        </div>
-                      ) : order.noTrackingConfirmed ? (
-                        <div className="flex items-center gap-2 p-3 rounded-md bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 mt-2">
-                          <AlertTriangle className="h-4 w-4" />
-                          <p>This order was marked as shipped without tracking information.</p>
-                        </div>
-                      ) : null}
-                    </div>
-                  ) : order.status === 'awaiting_shipping' || order.status === 'paid' ? (
-                    <div className="flex items-center gap-2 text-yellow-600">
-                      <Clock className="h-4 w-4" />
-                      <p>This order is awaiting shipment.</p>
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <Info className="h-4 w-4" />
-                      <p>Shipping information will appear here once the order is processed.</p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </div>
+                        ) : null}
+                      </div>
+                    ) : order.status === 'awaiting_shipping' || order.status === 'paid' ? (
+                      <div className="flex items-center gap-2 text-yellow-600">
+                        <Clock className="h-4 w-4" />
+                        <p>This order is awaiting shipment.</p>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <Info className="h-4 w-4" />
+                        <p>Shipping information will appear here once the order is processed.</p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+            )}
           </CardContent>
           <CardFooter className="flex flex-col sm:flex-row gap-4 sm:justify-between">
             <Button onClick={handleBack} variant="outline" className="w-full sm:w-auto">
