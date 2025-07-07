@@ -15,7 +15,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { Menu, LayoutDashboard, Heart, MessageSquare, Settings, Store, LogOut, Home, Search, ClipboardList, ChevronDown } from "lucide-react";
+import { Menu, LayoutDashboard, Heart, MessageSquare, Settings, Store, LogOut, Home, Search, ClipboardList, ChevronDown, Gamepad2 } from "lucide-react";
 import { useState, useCallback, useEffect, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "next-themes";
@@ -23,6 +23,14 @@ import { motion, useReducedMotion } from "framer-motion";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { useToast } from "@/components/ui/use-toast";
 import { NotificationBell } from "./NotificationBell";
+import { 
+  GAME_MAPPING, 
+  OTHER_GAME_MAPPING, 
+  MAIN_GAME_CATEGORIES, 
+  OTHER_GAME_CATEGORIES,
+  GameCategory,
+  GAME_ICONS
+} from "@/lib/game-mappings";
 
 // Dynamically import the auth-dependent navigation component
 const AuthNav = dynamic(() => import("./AuthNav"), {
@@ -165,6 +173,21 @@ export default function Header({ animate = true }: HeaderProps) {
 
   const handleNavigation = (path: string) => {
     router.push(path);
+    setIsMobileMenuOpen(false);
+  };
+
+  const handleCategoryClick = (category?: GameCategory) => {
+    const query = category 
+      ? { game: category === "Magic: The Gathering" 
+          ? "mtg" 
+          : GAME_MAPPING[category as keyof typeof GAME_MAPPING] || 
+            OTHER_GAME_MAPPING[category as keyof typeof OTHER_GAME_MAPPING] } 
+      : {}
+    
+    router.push({
+      pathname: "/listings",
+      query,
+    });
     setIsMobileMenuOpen(false);
   };
   
@@ -431,6 +454,57 @@ export default function Header({ animate = true }: HeaderProps) {
                         <ClipboardList className="h-5 w-5" />
                         Wanted Board
                       </button>
+                      
+                      {/* Game Categories Collapsible */}
+                      <Collapsible>
+                        <CollapsibleTrigger asChild>
+                          <button className="flex items-center w-full gap-3 text-sm font-medium rounded-md px-3 py-2.5 hover:bg-accent hover:text-accent-foreground transition-colors text-muted-foreground">
+                            <Gamepad2 className="h-5 w-5" />
+                            <span className="flex-1">Game Categories</span>
+                            <ChevronDown className="h-4 w-4 transition-transform duration-200 data-[state=open]:rotate-180" />
+                          </button>
+                        </CollapsibleTrigger>
+                        <CollapsibleContent className="space-y-1 mt-1">
+                          <button
+                            onClick={() => handleCategoryClick()}
+                            className={`flex items-center w-full gap-3 text-sm rounded-md px-6 py-2 hover:bg-accent hover:text-accent-foreground transition-colors ${
+                              !router.query.game ? 'bg-accent text-accent-foreground' : 'text-muted-foreground'
+                            }`}
+                          >
+                            🎯 All Categories
+                          </button>
+                          {MAIN_GAME_CATEGORIES.map((category) => {
+                            const gameKey = GAME_MAPPING[category];
+                            const icon = GAME_ICONS[gameKey] || '🎮';
+                            return (
+                              <button
+                                key={category}
+                                onClick={() => handleCategoryClick(category)}
+                                className={`flex items-center w-full gap-3 text-sm rounded-md px-6 py-2 hover:bg-accent hover:text-accent-foreground transition-colors ${
+                                  router.query.game === gameKey ? 'bg-accent text-accent-foreground' : 'text-muted-foreground'
+                                }`}
+                              >
+                                {icon} {category}
+                              </button>
+                            );
+                          })}
+                          {OTHER_GAME_CATEGORIES.map((category) => {
+                            const gameKey = OTHER_GAME_MAPPING[category];
+                            const icon = GAME_ICONS[gameKey] || '🎮';
+                            return (
+                              <button
+                                key={category}
+                                onClick={() => handleCategoryClick(category)}
+                                className={`flex items-center w-full gap-3 text-sm rounded-md px-6 py-2 hover:bg-accent hover:text-accent-foreground transition-colors ${
+                                  router.query.game === gameKey ? 'bg-accent text-accent-foreground' : 'text-muted-foreground'
+                                }`}
+                              >
+                                {icon} {category}
+                              </button>
+                            );
+                          })}
+                        </CollapsibleContent>
+                      </Collapsible>
                       
                       {user ? (
                         <>
