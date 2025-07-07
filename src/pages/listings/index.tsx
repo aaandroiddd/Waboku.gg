@@ -610,7 +610,7 @@ export default function ListingsPage() {
                             <Button
                               variant="outline"
                               role="combobox"
-                              className="h-12"
+                              className="h-10"
                             >
                               <MapPin className="mr-2 h-4 w-4" />
                               <span className="hidden sm:inline">
@@ -653,7 +653,7 @@ export default function ListingsPage() {
 
                         <Sheet open={filterOpen} onOpenChange={setFilterOpen}>
                           <SheetTrigger asChild>
-                            <Button variant="outline" className="h-12">
+                            <Button variant="outline" className="h-10">
                               <Filter className="mr-2 h-4 w-4" />
                               <span className="hidden sm:inline">Filters</span>
                             </Button>
@@ -771,7 +771,7 @@ export default function ListingsPage() {
                         <div className="flex items-center">
                           <ArrowUpDown className="mr-2 h-4 w-4" />
                           <Select value={sortBy} onValueChange={setSortBy}>
-                            <SelectTrigger className="w-[160px]">
+                            <SelectTrigger className="w-[160px] h-10">
                               <SelectValue placeholder="Sort by" />
                             </SelectTrigger>
                             <SelectContent>
@@ -785,11 +785,11 @@ export default function ListingsPage() {
                         </div>
                       </div>
 
-                      <div className="inline-flex rounded-lg border bg-card p-1 h-12">
+                      <div className="inline-flex rounded-lg border bg-card p-1 h-10">
                         <Button
                           variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
                           size="sm"
-                          className="px-3"
+                          className="px-3 h-8"
                           onClick={() => setViewMode('grid')}
                         >
                           <LayoutGrid className="h-4 w-4 sm:mr-2" />
@@ -798,7 +798,7 @@ export default function ListingsPage() {
                         <Button
                           variant={viewMode === 'list' ? 'secondary' : 'ghost'}
                           size="sm"
-                          className="px-3"
+                          className="px-3 h-8"
                           onClick={() => setViewMode('list')}
                         >
                           <List className="h-4 w-4 sm:mr-2" />
