@@ -141,6 +141,7 @@ export default function ScrollIndicator({
     return (
       <div
         className={cn(
+          "scroll-indicator-mobile",
           "fixed left-1/2 cursor-pointer touch-manipulation",
           "bottom-6 z-[9999]",
           "block opacity-100 visible",
@@ -148,7 +149,11 @@ export default function ScrollIndicator({
         )}
         style={{ 
           transform: 'translateX(-50%)',
-          animation: 'fadeIn 0.3s ease-out'
+          animation: 'fadeIn 0.3s ease-out forwards',
+          display: 'block',
+          visibility: 'visible',
+          opacity: '1',
+          pointerEvents: 'auto'
         }}
         onClick={handleClick}
         role="button"
@@ -161,12 +166,33 @@ export default function ScrollIndicator({
           }
         }}
       >
-        {/* Simple glow effect */}
-        <div className="absolute inset-0 bg-primary/20 rounded-full blur-md animate-pulse" />
+        {/* Simple glow effect - disabled animate-pulse for mobile */}
+        <div 
+          className="absolute inset-0 bg-primary/20 rounded-full blur-md" 
+          style={{
+            animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite'
+          }}
+        />
         
         {/* Main button - simple version */}
-        <div className="relative bg-primary text-primary-foreground rounded-full p-3 shadow-lg min-h-[48px] min-w-[48px] flex items-center justify-center active:scale-95 transition-transform duration-150">
-          <div className="animate-bounce">
+        <div 
+          className="relative bg-primary text-primary-foreground rounded-full p-3 shadow-lg min-h-[48px] min-w-[48px] flex items-center justify-center"
+          style={{
+            transition: 'transform 0.15s ease',
+            transform: 'scale(1)'
+          }}
+          onTouchStart={(e) => {
+            e.currentTarget.style.transform = 'scale(0.95)';
+          }}
+          onTouchEnd={(e) => {
+            e.currentTarget.style.transform = 'scale(1)';
+          }}
+        >
+          <div 
+            style={{
+              animation: 'bounce 1s infinite'
+            }}
+          >
             <ChevronDown className="w-6 h-6" />
           </div>
         </div>
