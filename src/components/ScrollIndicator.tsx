@@ -55,6 +55,7 @@ export default function ScrollIndicator({
       // Only show if user hasn't scrolled significantly
       if (window.scrollY <= hideAfterScroll && !hasScrolled) {
         setIsVisible(true);
+        console.log('ScrollIndicator: Showing indicator');
       }
     };
 
@@ -63,6 +64,9 @@ export default function ScrollIndicator({
 
     // Listen for scroll events
     window.addEventListener('scroll', handleScroll, { passive: true });
+
+    // Add debug logging for mobile
+    console.log('ScrollIndicator: Initialized with delay:', delay);
 
     return () => {
       if (timeoutId) clearTimeout(timeoutId);
@@ -123,9 +127,12 @@ export default function ScrollIndicator({
             }
           }}
           className={cn(
-            "fixed bottom-6 sm:bottom-8 left-1/2 z-50 cursor-pointer touch-manipulation",
-            // Ensure it's above mobile navigation bars and other UI elements
-            "safe-area-inset-bottom",
+            "fixed left-1/2 cursor-pointer touch-manipulation",
+            // Mobile positioning - higher z-index and better bottom positioning
+            "bottom-4 sm:bottom-6 md:bottom-8",
+            "z-[9999]", // Very high z-index to ensure visibility
+            // Add padding for mobile safe areas
+            "pb-safe",
             className
           )}
           style={{ x: '-50%' }}

@@ -520,14 +520,14 @@ export const ListingCard = memo(({ listing, isFavorite, onFavoriteClick, getCond
                     
                     return (
                       <Image
-                        key={`listing-image-${listing.id}-${safeIndex}-${imageUrl.split('/').pop()?.split('?')[0] || 'default'}`} // More stable key
+                        key={`listing-${listing.id}-${safeIndex}`} // Stable key that doesn't change on re-renders
                         src={imageUrl}
                         alt={listing.title}
                         className="rounded-lg object-cover"
                         fill
-                        sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                        sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, 20vw"
                         priority={false}
-                        quality={80}
+                        quality={75} // Reduced quality to save bandwidth
                         loading="lazy"
                         unoptimized={imageUrl.includes('/api/images/')} // Disable optimization for proxy URLs
                         onError={(e) => {
