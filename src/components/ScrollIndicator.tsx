@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -93,46 +94,116 @@ export default function ScrollIndicator({
     setHasScrolled(true);
   };
 
-  if (!isVisible) return null;
-
   return (
-    <div
-      className={cn(
-        "fixed bottom-8 left-1/2 transform -translate-x-1/2 z-50",
-        "transition-all duration-500 ease-in-out",
-        "animate-bounce cursor-pointer",
-        "hover:scale-110 active:scale-95",
-        className
+    <AnimatePresence>
+      {isVisible && (
+        <motion.div
+          initial={{ 
+            opacity: 0, 
+            y: 20,
+            scale: 0.8
+          }}
+          animate={{ 
+            opacity: 1, 
+            y: 0,
+            scale: 1
+          }}
+          exit={{ 
+            opacity: 0, 
+            y: 20,
+            scale: 0.8
+          }}
+          transition={{
+            duration: 0.6,
+            ease: [0.25, 0.46, 0.45, 0.94], // Custom easing for smooth entrance
+            scale: {
+              type: "spring",
+              stiffness: 300,
+              damping: 20
+            }
+          }}
+          className={cn(
+            "fixed bottom-8 left-1/2 z-50 cursor-pointer",
+            className
+          )}
+          style={{ x: '-50%' }}
+          onClick={handleClick}
+          role="button"
+          tabIndex={0}
+          aria-label="Scroll down to view listings"
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              handleClick();
+            }
+          }}
+          whileHover={{ 
+            scale: 1.1,
+            transition: { duration: 0.2 }
+          }}
+          whileTap={{ 
+            scale: 0.95,
+            transition: { duration: 0.1 }
+          }}
+        >
+          {/* Outer glow effect */}
+          <motion.div 
+            className="absolute inset-0 bg-primary/20 rounded-full blur-lg"
+            animate={{
+              opacity: [0.3, 0.6, 0.3],
+              scale: [1, 1.1, 1]
+            }}
+            transition={{
+              duration: 2,
+              repeat: Infinity,
+              ease: "easeInOut"
+            }}
+          />
+          
+          {/* Main button */}
+          <motion.div 
+            className="relative bg-primary text-primary-foreground rounded-full p-3 shadow-lg"
+            animate={{
+              y: [0, -8, 0]
+            }}
+            transition={{
+              duration: 2,
+              repeat: Infinity,
+              ease: "easeInOut"
+            }}
+            whileHover={{
+              boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)"
+            }}
+          >
+            <motion.div
+              animate={{
+                rotate: [0, 5, -5, 0]
+              }}
+              transition={{
+                duration: 3,
+                repeat: Infinity,
+                ease: "easeInOut"
+              }}
+            >
+              <ChevronDown size={24} />
+            </motion.div>
+          </motion.div>
+          
+          {/* Tooltip */}
+          <motion.div 
+            className="absolute bottom-full left-1/2 mb-2 pointer-events-none"
+            style={{ x: '-50%' }}
+            initial={{ opacity: 0, y: 10 }}
+            whileHover={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.2 }}
+          >
+            <div className="bg-background/90 backdrop-blur-sm text-foreground text-sm px-3 py-1 rounded-md shadow-lg whitespace-nowrap border">
+              Scroll to view listings
+            </div>
+            <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-background/90" />
+          </motion.div>
+        </motion.div>
       )}
-      onClick={handleClick}
-      role="button"
-      tabIndex={0}
-      aria-label="Scroll down to view listings"
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          handleClick();
-        }
-      }}
-    >
-      {/* Outer glow effect */}
-      <div className="absolute inset-0 bg-primary/20 rounded-full blur-lg animate-pulse" />
-      
-      {/* Main button */}
-      <div className="relative bg-primary text-primary-foreground rounded-full p-3 shadow-lg hover:shadow-xl transition-shadow duration-300">
-        <ChevronDown 
-          size={24} 
-          className="animate-pulse"
-        />
-      </div>
-      
-      {/* Tooltip */}
-      <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 opacity-0 hover:opacity-100 transition-opacity duration-300 pointer-events-none">
-        <div className="bg-background/90 backdrop-blur-sm text-foreground text-sm px-3 py-1 rounded-md shadow-lg whitespace-nowrap border">
-          Scroll to view listings
-        </div>
-        <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-background/90" />
-      </div>
-    </div>
+    </AnimatePresence>
   );
 }
