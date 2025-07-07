@@ -13,11 +13,26 @@ interface ScrollIndicatorProps {
 
 export default function ScrollIndicator({ 
   className, 
-  delay = 3000, 
-  hideAfterScroll = 100 
+  delay = 2000, // Reduced delay for mobile
+  hideAfterScroll = 50 // Reduced threshold for mobile
 }: ScrollIndicatorProps) {
   const [isVisible, setIsVisible] = useState(false);
   const [hasScrolled, setHasScrolled] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Detect mobile on mount
+  useEffect(() => {
+    const checkMobile = () => {
+      const mobile = window.innerWidth <= 768;
+      setIsMobile(mobile);
+      console.log('ScrollIndicator: Mobile detection:', mobile, 'Width:', window.innerWidth);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   useEffect(() => {
     let timeoutId: NodeJS.Timeout;
@@ -52,9 +67,10 @@ export default function ScrollIndicator({
 
         // If user hasn't scrolled much, show indicator again after they stop scrolling
         if (!hasScrolled) {
+          const showDelay = isMobile ? 1500 : 2000; // Faster on mobile
           scrollTimeout = setTimeout(() => {
             setIsVisible(true);
-          }, 2000); // Show again after 2 seconds of no scrolling
+          }, showDelay);
         }
         
         isScrolling = false;
@@ -65,14 +81,23 @@ export default function ScrollIndicator({
       // Only show if user hasn't scrolled significantly
       if (window.scrollY <= hideAfterScroll && !hasScrolled) {
         setIsVisible(true);
-        console.log('ScrollIndicator: Showing indicator - Mobile:', window.innerWidth <= 640);
+        console.log('ScrollIndicator: Showing indicator');
+        console.log('ScrollIndicator: Mobile:', isMobile);
         console.log('ScrollIndicator: Window dimensions:', window.innerWidth, 'x', window.innerHeight);
         console.log('ScrollIndicator: Scroll position:', window.scrollY);
+        console.log('ScrollIndicator: Hide threshold:', hideAfterScroll);
+        console.log('ScrollIndicator: Delay used:', delay);
+      } else {
+        console.log('ScrollIndicator: Not showing - scrollY:', window.scrollY, 'hasScrolled:', hasScrolled);
       }
     };
 
+    // Use shorter delay on mobile
+    const actualDelay = isMobile ? Math.min(delay, 1500) : delay;
+    console.log('ScrollIndicator: Setting timeout with delay:', actualDelay);
+    
     // Initial delay before showing indicator
-    timeoutId = setTimeout(showIndicator, delay);
+    timeoutId = setTimeout(showIndicator, actualDelay);
 
     // Listen for scroll events with passive option for better performance
     window.addEventListener('scroll', handleScroll, { passive: true });
@@ -82,7 +107,7 @@ export default function ScrollIndicator({
       if (scrollTimeout) clearTimeout(scrollTimeout);
       window.removeEventListener('scroll', handleScroll);
     };
-  }, [delay, hideAfterScroll, hasScrolled]);
+  }, [delay, hideAfterScroll, hasScrolled, isMobile]);
 
   const handleClick = () => {
     // Smooth scroll to the listings section
