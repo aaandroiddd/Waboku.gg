@@ -123,7 +123,9 @@ export default function ScrollIndicator({
             }
           }}
           className={cn(
-            "fixed bottom-8 left-1/2 z-50 cursor-pointer",
+            "fixed bottom-6 sm:bottom-8 left-1/2 z-50 cursor-pointer touch-manipulation",
+            // Ensure it's above mobile navigation bars and other UI elements
+            "safe-area-inset-bottom",
             className
           )}
           style={{ x: '-50%' }}
@@ -162,7 +164,7 @@ export default function ScrollIndicator({
           
           {/* Main button */}
           <motion.div 
-            className="relative bg-primary text-primary-foreground rounded-full p-3 shadow-lg"
+            className="relative bg-primary text-primary-foreground rounded-full p-3 sm:p-3 md:p-4 shadow-lg min-h-[48px] min-w-[48px] flex items-center justify-center"
             animate={{
               y: [0, -8, 0]
             }}
@@ -185,13 +187,13 @@ export default function ScrollIndicator({
                 ease: "easeInOut"
               }}
             >
-              <ChevronDown size={24} />
+              <ChevronDown size={24} className="sm:w-6 sm:h-6" />
             </motion.div>
           </motion.div>
           
-          {/* Tooltip */}
+          {/* Tooltip - Hidden on mobile, shown on hover for desktop */}
           <motion.div 
-            className="absolute bottom-full left-1/2 mb-2 pointer-events-none"
+            className="absolute bottom-full left-1/2 mb-2 pointer-events-none hidden sm:block"
             style={{ x: '-50%' }}
             initial={{ opacity: 0, y: 10 }}
             whileHover={{ opacity: 1, y: 0 }}
