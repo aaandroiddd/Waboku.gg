@@ -23,6 +23,7 @@ import { FirebaseConnectionHandler } from "@/components/FirebaseConnectionHandle
 import { fixFirestoreListenChannel, clearFirestoreCaches } from "@/lib/firebase-connection-fix";
 import { StateSelect } from "@/components/StateSelect";
 import { useAnimationConfig } from "@/hooks/useOptimizedMediaQuery";
+import ScrollIndicator from "@/components/ScrollIndicator";
 
 // Subtitles array - moved outside component to prevent recreation on each render
 const subtitles = [
@@ -178,7 +179,7 @@ const OptimizedMotion = ({
 };
 
 // Lazy-loaded section component
-const LazySection = ({ children, className, threshold = 0.1, minHeight = "200px" }: any) => {
+const LazySection = ({ children, className, threshold = 0.1, minHeight = "200px", ...props }: any) => {
   const ref = useRef(null);
   const isInView = useInView(ref, { 
     once: true, 
@@ -187,7 +188,7 @@ const LazySection = ({ children, className, threshold = 0.1, minHeight = "200px"
   });
   
   return (
-    <div ref={ref} className={className}>
+    <div ref={ref} className={className} {...props}>
       {isInView ? children : <div style={{ minHeight }} />}
     </div>
   );
@@ -589,7 +590,11 @@ export default function Home() {
           </div>
 
           {/* Listings Section */}
-          <LazySection className="container mx-auto px-4 py-8 sm:py-12 relative z-10 bg-background mt-0" minHeight="400px">
+          <LazySection 
+            className="container mx-auto px-4 py-8 sm:py-12 relative z-10 bg-background mt-0" 
+            minHeight="400px"
+            data-scroll-target="listings"
+          >
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-2xl font-semibold text-foreground">
                 {latitude && longitude ? "Latest Listings Near You" : "Latest Listings"}
@@ -691,6 +696,11 @@ export default function Home() {
         
         <ErrorBoundary fallback={<div className="h-16 bg-background" />}>
           <Footer />
+        </ErrorBoundary>
+        
+        {/* Scroll Indicator */}
+        <ErrorBoundary fallback={null}>
+          <ScrollIndicator />
         </ErrorBoundary>
       </div>
     </ErrorBoundary>
