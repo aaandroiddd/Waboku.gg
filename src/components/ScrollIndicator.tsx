@@ -65,7 +65,9 @@ export default function ScrollIndicator({
       // Only show if user hasn't scrolled significantly
       if (window.scrollY <= hideAfterScroll && !hasScrolled) {
         setIsVisible(true);
-        console.log('ScrollIndicator: Showing indicator');
+        console.log('ScrollIndicator: Showing indicator - Mobile:', window.innerWidth <= 640);
+        console.log('ScrollIndicator: Window dimensions:', window.innerWidth, 'x', window.innerHeight);
+        console.log('ScrollIndicator: Scroll position:', window.scrollY);
       }
     };
 
@@ -136,10 +138,10 @@ export default function ScrollIndicator({
           className={cn(
             "fixed left-1/2 cursor-pointer touch-manipulation",
             // Mobile positioning - higher z-index and better bottom positioning
-            "bottom-4 sm:bottom-6 md:bottom-8",
+            "bottom-6 sm:bottom-8 md:bottom-10",
             "z-[9999]", // Very high z-index to ensure visibility
-            // Add padding for mobile safe areas
-            "pb-safe",
+            // Ensure visibility on mobile
+            "block",
             className
           )}
           style={{ x: '-50%' }}
@@ -201,7 +203,7 @@ export default function ScrollIndicator({
                 ease: "easeInOut"
               }}
             >
-              <ChevronDown size={24} className="sm:w-6 sm:h-6" />
+              <ChevronDown className="w-6 h-6" />
             </motion.div>
           </motion.div>
           
