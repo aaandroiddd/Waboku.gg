@@ -22,33 +22,43 @@ export default function ScrollIndicator({
   useEffect(() => {
     let timeoutId: NodeJS.Timeout;
     let scrollTimeout: NodeJS.Timeout;
+    let isScrolling = false;
 
     const handleScroll = () => {
-      // Clear the show timeout if user scrolls before delay
-      if (timeoutId) {
-        clearTimeout(timeoutId);
-      }
+      // Debounce scroll events to prevent excessive re-renders
+      if (isScrolling) return;
+      isScrolling = true;
+      
+      requestAnimationFrame(() => {
+        // Clear the show timeout if user scrolls before delay
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+        }
 
-      // Clear previous scroll timeout
-      if (scrollTimeout) {
-        clearTimeout(scrollTimeout);
-      }
+        // Clear previous scroll timeout
+        if (scrollTimeout) {
+          clearTimeout(scrollTimeout);
+        }
 
-      // Hide indicator immediately when scrolling
-      setIsVisible(false);
+        // Hide indicator immediately when scrolling
+        setIsVisible(false);
 
-      // Check if user has scrolled enough to consider them engaged
-      if (window.scrollY > hideAfterScroll) {
-        setHasScrolled(true);
-        return;
-      }
+        // Check if user has scrolled enough to consider them engaged
+        if (window.scrollY > hideAfterScroll) {
+          setHasScrolled(true);
+          isScrolling = false;
+          return;
+        }
 
-      // If user hasn't scrolled much, show indicator again after they stop scrolling
-      if (!hasScrolled) {
-        scrollTimeout = setTimeout(() => {
-          setIsVisible(true);
-        }, 2000); // Show again after 2 seconds of no scrolling
-      }
+        // If user hasn't scrolled much, show indicator again after they stop scrolling
+        if (!hasScrolled) {
+          scrollTimeout = setTimeout(() => {
+            setIsVisible(true);
+          }, 2000); // Show again after 2 seconds of no scrolling
+        }
+        
+        isScrolling = false;
+      });
     };
 
     const showIndicator = () => {
@@ -62,11 +72,8 @@ export default function ScrollIndicator({
     // Initial delay before showing indicator
     timeoutId = setTimeout(showIndicator, delay);
 
-    // Listen for scroll events
+    // Listen for scroll events with passive option for better performance
     window.addEventListener('scroll', handleScroll, { passive: true });
-
-    // Add debug logging for mobile
-    console.log('ScrollIndicator: Initialized with delay:', delay);
 
     return () => {
       if (timeoutId) clearTimeout(timeoutId);

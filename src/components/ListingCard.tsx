@@ -520,16 +520,16 @@ export const ListingCard = memo(({ listing, isFavorite, onFavoriteClick, getCond
                     
                     return (
                       <Image
-                        key={`listing-${listing.id}-${safeIndex}`} // Stable key that doesn't change on re-renders
+                        key={listing.id} // Use stable listing ID as key
                         src={imageUrl}
                         alt={listing.title}
                         className="rounded-lg object-cover"
                         fill
                         sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, 20vw"
                         priority={false}
-                        quality={75} // Reduced quality to save bandwidth
+                        quality={75}
                         loading="lazy"
-                        unoptimized={imageUrl.includes('/api/images/')} // Disable optimization for proxy URLs
+                        unoptimized={imageUrl.includes('/api/images/')}
                         onError={(e) => {
                           console.error(`Image load error for listing ${listing.id}:`, imageUrl);
                           const target = e.target as HTMLImageElement;

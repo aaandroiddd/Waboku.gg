@@ -713,6 +713,9 @@ export function useListings({
   }, [user]);
 
   useEffect(() => {
+    // Prevent multiple simultaneous fetches
+    let isFetching = false;
+    
     // Calculate distance between two points using Haversine formula
     const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
       const R = 6371; // Earth's radius in kilometers
@@ -747,6 +750,13 @@ export function useListings({
     };
 
     const fetchListings = async (isLoadMore = false) => {
+      // Prevent multiple simultaneous fetches
+      if (isFetching) {
+        console.log('Fetch already in progress, skipping...');
+        return;
+      }
+      
+      isFetching = true;
       try {
         if (!isLoadMore) {
           setIsLoading(true);
@@ -1008,6 +1018,7 @@ export function useListings({
         if (!isLoadMore) {
           setIsLoading(false);
         }
+        isFetching = false; // Reset the fetch guard
       }
     };
 
@@ -1015,6 +1026,11 @@ export function useListings({
     if (!searchQuery && !skipInitialFetch) {
       fetchListings();
     }
+
+    // Cleanup function to reset fetch guard
+    return () => {
+      isFetching = false;
+    };
   }, [userId, showOnlyActive, searchQuery, page]);
 
 // Calculate distance between two points using Haversine formula

@@ -228,7 +228,11 @@ export default function Home() {
   // Call useListings hook directly at the top level with error handling
   let listingsResult;
   try {
-    listingsResult = useListings();
+    listingsResult = useListings({ 
+      showOnlyActive: true,
+      skipInitialFetch: false,
+      limit: 8 // Limit initial load to 8 listings to reduce Firebase usage
+    });
   } catch (error) {
     console.error('Error calling useListings hook:', error);
     listingsResult = { listings: [], isLoading: false, error: 'Failed to load listings' };
