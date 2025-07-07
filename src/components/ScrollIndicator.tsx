@@ -46,7 +46,6 @@ export default function ScrollIndicator({
     }
 
     let timeoutId: NodeJS.Timeout;
-    let scrollTimeout: NodeJS.Timeout;
     let isScrolling = false;
 
     const handleScroll = () => {
@@ -60,11 +59,6 @@ export default function ScrollIndicator({
           clearTimeout(timeoutId);
         }
 
-        // Clear previous scroll timeout
-        if (scrollTimeout) {
-          clearTimeout(scrollTimeout);
-        }
-
         // Hide indicator immediately when scrolling
         setIsVisible(false);
 
@@ -74,16 +68,6 @@ export default function ScrollIndicator({
           // Remember that user has interacted with the page
           localStorage.setItem(SCROLL_INDICATOR_KEY, 'true');
           console.log('ScrollIndicator: Hidden due to scroll and marked as dismissed');
-          isScrolling = false;
-          return;
-        }
-
-        // If user hasn't scrolled much, show indicator again after they stop scrolling
-        if (!hasScrolled) {
-          const showDelay = isMobile ? 0 : 2000; // Immediate on mobile, 2s on desktop
-          scrollTimeout = setTimeout(() => {
-            setIsVisible(true);
-          }, showDelay);
         }
         
         isScrolling = false;
@@ -99,7 +83,7 @@ export default function ScrollIndicator({
         console.log('ScrollIndicator: Window dimensions:', window.innerWidth, 'x', window.innerHeight);
         console.log('ScrollIndicator: Scroll position:', window.scrollY);
         console.log('ScrollIndicator: Hide threshold:', hideAfterScroll);
-        console.log('ScrollIndicator: Delay used:', delay);
+        console.log('ScrollIndicator: Actual delay used:', isMobile ? 0 : delay);
       } else {
         console.log('ScrollIndicator: Not showing - scrollY:', window.scrollY, 'hasScrolled:', hasScrolled);
       }
@@ -117,7 +101,6 @@ export default function ScrollIndicator({
 
     return () => {
       if (timeoutId) clearTimeout(timeoutId);
-      if (scrollTimeout) clearTimeout(scrollTimeout);
       window.removeEventListener('scroll', handleScroll);
     };
   }, [delay, hideAfterScroll, hasScrolled, isMobile]);
@@ -150,13 +133,14 @@ export default function ScrollIndicator({
   };
 
   return (
-    <AnimatePresence>
+    <AnimatePresence mode="wait">
       {isVisible && (
         <motion.div
+          key="scroll-indicator"
           initial={{ 
             opacity: 0, 
-            y: 20,
-            scale: 0.8
+            y: 10,
+            scale: 0.9
           }}
           animate={{ 
             opacity: 1, 
@@ -165,17 +149,12 @@ export default function ScrollIndicator({
           }}
           exit={{ 
             opacity: 0, 
-            y: 20,
-            scale: 0.8
+            y: 10,
+            scale: 0.9
           }}
           transition={{
-            duration: 0.6,
-            ease: [0.25, 0.46, 0.45, 0.94], // Custom easing for smooth entrance
-            scale: {
-              type: "spring",
-              stiffness: 300,
-              damping: 20
-            }
+            duration: 0.3,
+            ease: "easeOut"
           }}
           className={cn(
             "fixed left-1/2 cursor-pointer touch-manipulation",
@@ -184,9 +163,14 @@ export default function ScrollIndicator({
             "z-[9999]", // Very high z-index to ensure visibility
             // Ensure visibility on mobile
             "block",
+            // Force visibility and prevent any layout issues
+            "!opacity-100 !visible",
             className
           )}
-          style={{ x: '-50%' }}
+          style={{ 
+            transform: 'translateX(-50%)',
+            willChange: 'transform, opacity'
+          }}
           onClick={handleClick}
           role="button"
           tabIndex={0}
@@ -198,7 +182,7 @@ export default function ScrollIndicator({
             }
           }}
           whileHover={{ 
-            scale: 1.1,
+            scale: 1.05,
             transition: { duration: 0.2 }
           }}
           whileTap={{ 
@@ -206,62 +190,32 @@ export default function ScrollIndicator({
             transition: { duration: 0.1 }
           }}
         >
-          {/* Outer glow effect */}
-          <motion.div 
-            className="absolute inset-0 bg-primary/20 rounded-full blur-lg"
-            animate={{
-              opacity: [0.3, 0.6, 0.3],
-              scale: [1, 1.1, 1]
-            }}
-            transition={{
-              duration: 2,
-              repeat: Infinity,
-              ease: "easeInOut"
-            }}
-          />
+          {/* Simplified glow effect */}
+          <div className="absolute inset-0 bg-primary/20 rounded-full blur-md animate-pulse" />
           
-          {/* Main button */}
+          {/* Main button - simplified */}
           <motion.div 
             className="relative bg-primary text-primary-foreground rounded-full p-3 sm:p-3 md:p-4 shadow-lg min-h-[48px] min-w-[48px] flex items-center justify-center"
             animate={{
-              y: [0, -8, 0]
+              y: [0, -6, 0]
             }}
             transition={{
               duration: 2,
               repeat: Infinity,
               ease: "easeInOut"
             }}
-            whileHover={{
-              boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)"
-            }}
           >
-            <motion.div
-              animate={{
-                rotate: [0, 5, -5, 0]
-              }}
-              transition={{
-                duration: 3,
-                repeat: Infinity,
-                ease: "easeInOut"
-              }}
-            >
-              <ChevronDown className="w-6 h-6" />
-            </motion.div>
+            <ChevronDown className="w-6 h-6" />
           </motion.div>
           
           {/* Tooltip - Hidden on mobile, shown on hover for desktop */}
-          <motion.div 
-            className="absolute bottom-full left-1/2 mb-2 pointer-events-none hidden sm:block"
-            style={{ x: '-50%' }}
-            initial={{ opacity: 0, y: 10 }}
-            whileHover={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.2 }}
-          >
+          <div className="absolute bottom-full left-1/2 mb-2 pointer-events-none hidden sm:block opacity-0 hover:opacity-100 transition-opacity duration-200"
+               style={{ transform: 'translateX(-50%)' }}>
             <div className="bg-background/90 backdrop-blur-sm text-foreground text-sm px-3 py-1 rounded-md shadow-lg whitespace-nowrap border">
               Scroll to view listings
             </div>
             <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-background/90" />
-          </motion.div>
+          </div>
         </motion.div>
       )}
     </AnimatePresence>
