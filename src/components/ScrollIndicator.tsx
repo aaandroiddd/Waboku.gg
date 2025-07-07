@@ -11,6 +11,8 @@ interface ScrollIndicatorProps {
   hideAfterScroll?: number; // Hide after scrolling this many pixels
 }
 
+const SCROLL_INDICATOR_KEY = 'scroll_indicator_dismissed';
+
 export default function ScrollIndicator({ 
   className, 
   delay = 2000, // Reduced delay for mobile
@@ -35,6 +37,14 @@ export default function ScrollIndicator({
   }, []);
 
   useEffect(() => {
+    // Check if user has previously dismissed the indicator
+    const isDismissed = localStorage.getItem(SCROLL_INDICATOR_KEY) === 'true';
+    
+    if (isDismissed) {
+      console.log('ScrollIndicator: Previously dismissed, not showing');
+      return;
+    }
+
     let timeoutId: NodeJS.Timeout;
     let scrollTimeout: NodeJS.Timeout;
     let isScrolling = false;
@@ -61,13 +71,16 @@ export default function ScrollIndicator({
         // Check if user has scrolled enough to consider them engaged
         if (window.scrollY > hideAfterScroll) {
           setHasScrolled(true);
+          // Remember that user has interacted with the page
+          localStorage.setItem(SCROLL_INDICATOR_KEY, 'true');
+          console.log('ScrollIndicator: Hidden due to scroll and marked as dismissed');
           isScrolling = false;
           return;
         }
 
         // If user hasn't scrolled much, show indicator again after they stop scrolling
         if (!hasScrolled) {
-          const showDelay = isMobile ? 1500 : 2000; // Faster on mobile
+          const showDelay = isMobile ? 0 : 2000; // Immediate on mobile, 2s on desktop
           scrollTimeout = setTimeout(() => {
             setIsVisible(true);
           }, showDelay);
@@ -92,8 +105,8 @@ export default function ScrollIndicator({
       }
     };
 
-    // Use shorter delay on mobile
-    const actualDelay = isMobile ? Math.min(delay, 1500) : delay;
+    // No delay for mobile, use original delay for desktop
+    const actualDelay = isMobile ? 0 : delay;
     console.log('ScrollIndicator: Setting timeout with delay:', actualDelay);
     
     // Initial delay before showing indicator
@@ -110,6 +123,10 @@ export default function ScrollIndicator({
   }, [delay, hideAfterScroll, hasScrolled, isMobile]);
 
   const handleClick = () => {
+    // Remember that user has clicked the indicator
+    localStorage.setItem(SCROLL_INDICATOR_KEY, 'true');
+    console.log('ScrollIndicator: Clicked and marked as dismissed');
+
     // Smooth scroll to the listings section
     const listingsSection = document.querySelector('[data-scroll-target="listings"]') || 
                            document.querySelector('.listings-section') ||
