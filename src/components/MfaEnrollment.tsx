@@ -346,13 +346,7 @@ export default function MfaEnrollment() {
             )}
             
             {/* Add a note about preview environments */}
-            <Alert className="bg-amber-50 dark:bg-amber-950 border-amber-200 dark:border-amber-800">
-              <AlertTitle className="text-amber-800 dark:text-amber-300">Preview Environment Notice</AlertTitle>
-              <AlertDescription className="text-amber-700 dark:text-amber-400">
-                Two-factor authentication may not work correctly in preview environments due to domain verification requirements. 
-                If you encounter errors, please try again on the production domain.
-              </AlertDescription>
-            </Alert>
+            
             
             <div className="space-y-2">
               <label htmlFor="phone" className="text-sm font-medium">
