@@ -132,92 +132,129 @@ export default function ScrollIndicator({
     setHasScrolled(true);
   };
 
+  if (!isVisible) {
+    return null;
+  }
+
+  // Mobile version without Framer Motion - uses simple CSS animations
+  if (isMobile) {
+    return (
+      <div
+        className={cn(
+          "fixed left-1/2 cursor-pointer touch-manipulation",
+          "bottom-6 z-[9999]",
+          "block opacity-100 visible",
+          className
+        )}
+        style={{ 
+          transform: 'translateX(-50%)',
+          animation: 'fadeIn 0.3s ease-out'
+        }}
+        onClick={handleClick}
+        role="button"
+        tabIndex={0}
+        aria-label="Scroll down to view listings"
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            handleClick();
+          }
+        }}
+      >
+        {/* Simple glow effect */}
+        <div className="absolute inset-0 bg-primary/20 rounded-full blur-md animate-pulse" />
+        
+        {/* Main button - simple version */}
+        <div className="relative bg-primary text-primary-foreground rounded-full p-3 shadow-lg min-h-[48px] min-w-[48px] flex items-center justify-center active:scale-95 transition-transform duration-150">
+          <div className="animate-bounce">
+            <ChevronDown className="w-6 h-6" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Desktop version with Framer Motion
   return (
     <AnimatePresence mode="wait">
-      {isVisible && (
-        <motion.div
-          key="scroll-indicator"
-          initial={{ 
-            opacity: 0, 
-            y: 10,
-            scale: 0.9
-          }}
-          animate={{ 
-            opacity: 1, 
-            y: 0,
-            scale: 1
-          }}
-          exit={{ 
-            opacity: 0, 
-            y: 10,
-            scale: 0.9
+      <motion.div
+        key="scroll-indicator"
+        initial={{ 
+          opacity: 0, 
+          y: 10,
+          scale: 0.9
+        }}
+        animate={{ 
+          opacity: 1, 
+          y: 0,
+          scale: 1
+        }}
+        exit={{ 
+          opacity: 0, 
+          y: 10,
+          scale: 0.9
+        }}
+        transition={{
+          duration: 0.3,
+          ease: "easeOut"
+        }}
+        className={cn(
+          "fixed left-1/2 cursor-pointer touch-manipulation",
+          "bottom-6 sm:bottom-8 md:bottom-10",
+          "z-[9999]",
+          "block !opacity-100 !visible",
+          className
+        )}
+        style={{ 
+          transform: 'translateX(-50%)',
+          willChange: 'transform, opacity'
+        }}
+        onClick={handleClick}
+        role="button"
+        tabIndex={0}
+        aria-label="Scroll down to view listings"
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            handleClick();
+          }
+        }}
+        whileHover={{ 
+          scale: 1.05,
+          transition: { duration: 0.2 }
+        }}
+        whileTap={{ 
+          scale: 0.95,
+          transition: { duration: 0.1 }
+        }}
+      >
+        {/* Glow effect */}
+        <div className="absolute inset-0 bg-primary/20 rounded-full blur-md animate-pulse" />
+        
+        {/* Main button */}
+        <motion.div 
+          className="relative bg-primary text-primary-foreground rounded-full p-3 sm:p-3 md:p-4 shadow-lg min-h-[48px] min-w-[48px] flex items-center justify-center"
+          animate={{
+            y: [0, -6, 0]
           }}
           transition={{
-            duration: 0.3,
-            ease: "easeOut"
-          }}
-          className={cn(
-            "fixed left-1/2 cursor-pointer touch-manipulation",
-            // Mobile positioning - higher z-index and better bottom positioning
-            "bottom-6 sm:bottom-8 md:bottom-10",
-            "z-[9999]", // Very high z-index to ensure visibility
-            // Ensure visibility on mobile
-            "block",
-            // Force visibility and prevent any layout issues
-            "!opacity-100 !visible",
-            className
-          )}
-          style={{ 
-            transform: 'translateX(-50%)',
-            willChange: 'transform, opacity'
-          }}
-          onClick={handleClick}
-          role="button"
-          tabIndex={0}
-          aria-label="Scroll down to view listings"
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-              e.preventDefault();
-              handleClick();
-            }
-          }}
-          whileHover={{ 
-            scale: 1.05,
-            transition: { duration: 0.2 }
-          }}
-          whileTap={{ 
-            scale: 0.95,
-            transition: { duration: 0.1 }
+            duration: 2,
+            repeat: Infinity,
+            ease: "easeInOut"
           }}
         >
-          {/* Simplified glow effect */}
-          <div className="absolute inset-0 bg-primary/20 rounded-full blur-md animate-pulse" />
-          
-          {/* Main button - simplified */}
-          <motion.div 
-            className="relative bg-primary text-primary-foreground rounded-full p-3 sm:p-3 md:p-4 shadow-lg min-h-[48px] min-w-[48px] flex items-center justify-center"
-            animate={{
-              y: [0, -6, 0]
-            }}
-            transition={{
-              duration: 2,
-              repeat: Infinity,
-              ease: "easeInOut"
-            }}
-          >
-            <ChevronDown className="w-6 h-6" />
-          </motion.div>
-          
-          {/* Tooltip - Hidden on mobile, shown on hover for desktop */}
-          <div className="absolute bottom-full left-1/2 mb-2 pointer-events-none hidden sm:block opacity-0 hover:opacity-100 transition-opacity duration-200"
-               style={{ transform: 'translateX(-50%)' }}>
-            <div className="bg-background/90 backdrop-blur-sm text-foreground text-sm px-3 py-1 rounded-md shadow-lg whitespace-nowrap border">
-              Scroll to view listings
-            </div>
-            <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-background/90" />
-          </div>
+          <ChevronDown className="w-6 h-6" />
         </motion.div>
-      )}
+        
+        {/* Tooltip - Hidden on mobile, shown on hover for desktop */}
+        <div className="absolute bottom-full left-1/2 mb-2 pointer-events-none hidden sm:block opacity-0 hover:opacity-100 transition-opacity duration-200"
+             style={{ transform: 'translateX(-50%)' }}>
+          <div className="bg-background/90 backdrop-blur-sm text-foreground text-sm px-3 py-1 rounded-md shadow-lg whitespace-nowrap border">
+            Scroll to view listings
+          </div>
+          <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-background/90" />
+        </div>
+      </motion.div>
     </AnimatePresence>
   );
 }
