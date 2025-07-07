@@ -766,7 +766,9 @@ export default function ListingsPage() {
                             </SheetFooter>
                           </SheetContent>
                         </Sheet>
+                      </div>
 
+                      <div className="flex items-center gap-2">
                         {/* Sort dropdown */}
                         <div className="flex items-center">
                           <ArrowUpDown className="mr-2 h-4 w-4" />
@@ -783,27 +785,27 @@ export default function ListingsPage() {
                             </SelectContent>
                           </Select>
                         </div>
-                      </div>
 
-                      <div className="inline-flex rounded-lg border bg-card p-1 h-10">
-                        <Button
-                          variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
-                          size="sm"
-                          className="px-3 h-8"
-                          onClick={() => setViewMode('grid')}
-                        >
-                          <LayoutGrid className="h-4 w-4 sm:mr-2" />
-                          <span className="hidden sm:inline">Grid</span>
-                        </Button>
-                        <Button
-                          variant={viewMode === 'list' ? 'secondary' : 'ghost'}
-                          size="sm"
-                          className="px-3 h-8"
-                          onClick={() => setViewMode('list')}
-                        >
-                          <List className="h-4 w-4 sm:mr-2" />
-                          <span className="hidden sm:inline">List</span>
-                        </Button>
+                        <div className="inline-flex rounded-lg border bg-card p-1 h-10">
+                          <Button
+                            variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
+                            size="sm"
+                            className="px-3 h-8"
+                            onClick={() => setViewMode('grid')}
+                          >
+                            <LayoutGrid className="h-4 w-4 sm:mr-2" />
+                            <span className="hidden sm:inline">Grid</span>
+                          </Button>
+                          <Button
+                            variant={viewMode === 'list' ? 'secondary' : 'ghost'}
+                            size="sm"
+                            className="px-3 h-8"
+                            onClick={() => setViewMode('list')}
+                          >
+                            <List className="h-4 w-4 sm:mr-2" />
+                            <span className="hidden sm:inline">List</span>
+                          </Button>
+                        </div>
                       </div>
                     </>
                   )}
