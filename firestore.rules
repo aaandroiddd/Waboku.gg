@@ -26,7 +26,7 @@ service cloud.firestore {
       return true; // Temporarily disabled rate limiting for profile updates
     }
 
-    // Data validation functions
+    // ENHANCED: Data validation functions with security improvements
     function isValidListing(data) {
       return data.title is string
         && data.title.size() >= 3
@@ -34,8 +34,11 @@ service cloud.firestore {
         && (data.price is number || data.price is string)
         && (data.description is string || !("description" in data))
         && data.userId is string
+        && data.userId == request.auth.uid // SECURITY: Ensure userId matches authenticated user
         && data.imageUrls is list
+        && data.imageUrls.size() <= 10 // SECURITY: Limit number of images
         && data.status is string
+        && data.status in ['active', 'inactive', 'sold', 'archived'] // SECURITY: Validate status values
         && data.city is string
         && data.state is string
         && data.game is string
@@ -44,7 +47,8 @@ service cloud.firestore {
         && (!data.isGraded || (
           (!("gradeLevel" in data) || data.gradeLevel == null || data.gradeLevel is number) &&
           (!("gradingCompany" in data) || data.gradingCompany == null || data.gradingCompany is string)
-        ));
+        ))
+        && (!("price" in data) || (data.price is number && data.price > 0 && data.price <= 50000)); // SECURITY: Validate price range
     }
 
     function isValidMessage(data) {
@@ -52,16 +56,46 @@ service cloud.firestore {
         && data.text.size() > 0 
         && data.text.size() <= 1000
         && data.senderId is string
+        && data.senderId == request.auth.uid // SECURITY: Ensure sender matches authenticated user
         && data.receiverId is string
+        && data.receiverId != request.auth.uid // SECURITY: Prevent self-messaging
         && data.createdAt is string;
     }
 
     function isValidProfile(data) {
       return data.uid is string
+        && data.uid == request.auth.uid // SECURITY: Ensure UID matches authenticated user
         && data.email is string
         && data.username is string
         && data.username.size() >= 3
         && data.username.size() <= 30;
+    }
+
+    // SECURITY: New validation functions for offers and reviews
+    function isValidOffer(data) {
+      return data.buyerId is string
+        && data.buyerId == request.auth.uid // SECURITY: Ensure buyer matches authenticated user
+        && data.sellerId is string
+        && data.sellerId != request.auth.uid // SECURITY: Prevent self-offers
+        && data.listingId is string
+        && data.amount is number
+        && data.amount > 0
+        && data.amount <= 50000 // SECURITY: Reasonable maximum
+        && data.status is string
+        && data.status in ['pending', 'accepted', 'declined', 'expired', 'countered']; // SECURITY: Validate status
+    }
+
+    function isValidReview(data) {
+      return data.reviewerId is string
+        && data.reviewerId == request.auth.uid // SECURITY: Ensure reviewer matches authenticated user
+        && data.sellerId is string
+        && data.sellerId != request.auth.uid // SECURITY: Prevent self-reviews
+        && data.orderId is string
+        && data.rating is number
+        && data.rating >= 1
+        && data.rating <= 5
+        && data.rating == math.floor(data.rating) // SECURITY: Ensure integer rating
+        && (!("comment" in data) || (data.comment is string && data.comment.size() <= 1000)); // SECURITY: Validate comment length
     }
 
     // Allow read access to usernames collection for everyone
@@ -109,19 +143,22 @@ service cloud.firestore {
         && resource.data.userId == request.auth.uid;
     }
 
-    // Messages with rate limiting and content validation
+    // SECURITY FIX: Messages with proper participant validation
     match /messages/{messageId} {
-      // Allow read access to messages for authenticated users
-      allow read: if isAuthenticated();
+      // Allow read access only to message participants
+      allow read: if isAuthenticated() && 
+        (resource.data.senderId == request.auth.uid || resource.data.receiverId == request.auth.uid);
       
-      // Allow users to create messages if they are authenticated
-      allow create: if isAuthenticated();
+      // Allow users to create messages with validation
+      allow create: if isAuthenticated() && 
+        request.resource.data.senderId == request.auth.uid &&
+        isValidMessage(request.resource.data);
       
-      // Allow users to update their own messages
-      allow update: if isAuthenticated();
+      // Allow users to update only their own messages
+      allow update: if isAuthenticated() && resource.data.senderId == request.auth.uid;
       
-      // Allow users to delete their own messages
-      allow delete: if isAuthenticated();
+      // Allow users to delete only their own messages
+      allow delete: if isAuthenticated() && resource.data.senderId == request.auth.uid;
     }
 
     // Favorites subcollection rules
@@ -168,21 +205,27 @@ service cloud.firestore {
       allow delete: if isAuthenticated() && request.auth.uid == userId;
     }
 
-    // Offers collection rules
+    // SECURITY FIX: Offers collection with enhanced validation
     match /offers/{offerId} {
       // Allow users to read offers where they are either the buyer or seller
       allow read: if isAuthenticated() && 
         (resource.data.buyerId == request.auth.uid || resource.data.sellerId == request.auth.uid);
       
-      // Allow users to create offers if they are authenticated and buyerId matches the authenticated user
+      // Allow users to create offers with validation
       allow create: if isAuthenticated() && 
-        request.resource.data.buyerId == request.auth.uid;
+        request.resource.data.buyerId == request.auth.uid &&
+        isValidOffer(request.resource.data);
       
-      // Allow users to update offers if they are authenticated and they are either the buyer or seller
+      // Allow users to update offers with restrictions
       allow update: if isAuthenticated() && 
-        (resource.data.buyerId == request.auth.uid || resource.data.sellerId == request.auth.uid);
+        (resource.data.buyerId == request.auth.uid || resource.data.sellerId == request.auth.uid) &&
+        // SECURITY: Prevent changing core offer data after creation
+        request.resource.data.buyerId == resource.data.buyerId &&
+        request.resource.data.sellerId == resource.data.sellerId &&
+        request.resource.data.listingId == resource.data.listingId &&
+        request.resource.data.amount == resource.data.amount;
       
-      // Allow users to delete offers if they are authenticated and they are either the buyer or seller
+      // Allow users to delete offers if they are either the buyer or seller
       allow delete: if isAuthenticated() && 
         (resource.data.buyerId == request.auth.uid || resource.data.sellerId == request.auth.uid);
     }
@@ -195,10 +238,12 @@ service cloud.firestore {
       allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
     }
     
-    // Reviews collection rules
+    // SECURITY FIX: Reviews collection with proper authentication
     match /reviews/{reviewId} {
       allow read: if true; // Anyone can read reviews
-      allow create: if true; // Allow creation from server-side code
+      allow create: if isAuthenticated() && 
+        request.resource.data.reviewerId == request.auth.uid &&
+        isValidReview(request.resource.data);
       allow update: if isAuthenticated() && 
         (resource.data.reviewerId == request.auth.uid || resource.data.sellerId == request.auth.uid);
       allow delete: if isAuthenticated() && resource.data.reviewerId == request.auth.uid;
@@ -236,6 +281,14 @@ service cloud.firestore {
       allow create: if isAuthenticated() && request.auth.uid == userId;
       allow update: if isAuthenticated() && request.auth.uid == userId;
       allow delete: if isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // SECURITY: Security events collection for monitoring
+    match /securityEvents/{eventId} {
+      allow read: if false; // Only server-side access
+      allow create: if true; // Allow server-side creation
+      allow update: if false; // Immutable once created
+      allow delete: if false; // Never delete security events
     }
 
     // Default rule - deny everything else
