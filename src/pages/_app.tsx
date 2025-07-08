@@ -22,6 +22,8 @@ import { LoadingProvider, useLoading } from '@/contexts/LoadingContext';
 import { FirebaseConnectionManager } from '@/components/FirebaseConnectionManager';
 import { FirestoreConnectionManager } from '@/components/FirestoreConnectionManager';
 import { FirestoreListenerDebugger } from '@/components/FirestoreListenerDebugger';
+import { FirebaseErrorBoundary } from '@/components/FirebaseErrorBoundary';
+import { ListenChannelErrorHandler } from '@/components/ListenChannelErrorHandler';
 import { getFirebaseServices } from '@/lib/firebase';
 import { useCallback } from 'react';
 import { useThemeSync } from '@/hooks/useThemeSync';
@@ -100,6 +102,7 @@ const MainContent = memo(({ Component, pageProps, pathname }: {
         <>
           <FirebaseConnectionManager />
           <FirestoreConnectionManager />
+          <ListenChannelErrorHandler />
           {process.env.NODE_ENV === 'development' && <FirestoreListenerDebugger />}
         </>
       )}
@@ -133,26 +136,28 @@ export default function App({ Component, pageProps }: AppProps) {
           }
         `}</style>
       </Head>
-      <ThemeProvider>
-        <LoadingProvider>
-          <AuthProvider>
-            <AuthRedirectProvider>
-              <AccountProvider>
-                <UnreadProvider>
-                  <TutorialProvider>
-                    <RouteGuard requireAuth={requireAuth}>
-                      <MainContent 
-                        Component={Component}
-                        pageProps={pageProps}
-                        pathname={router.pathname}
-                      />
-                    </RouteGuard>
-                  </TutorialProvider>
-                </UnreadProvider>
-              </AccountProvider>
-            </AuthRedirectProvider>
-          </AuthProvider>
-        </LoadingProvider>
-      </ThemeProvider>
+      <FirebaseErrorBoundary>
+        <ThemeProvider>
+          <LoadingProvider>
+            <AuthProvider>
+              <AuthRedirectProvider>
+                <AccountProvider>
+                  <UnreadProvider>
+                    <TutorialProvider>
+                      <RouteGuard requireAuth={requireAuth}>
+                        <MainContent 
+                          Component={Component}
+                          pageProps={pageProps}
+                          pathname={router.pathname}
+                        />
+                      </RouteGuard>
+                    </TutorialProvider>
+                  </UnreadProvider>
+                </AccountProvider>
+              </AuthRedirectProvider>
+            </AuthProvider>
+          </LoadingProvider>
+        </ThemeProvider>
+      </FirebaseErrorBoundary>
     </>);
 }

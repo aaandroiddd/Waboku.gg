@@ -350,57 +350,87 @@ if (typeof window !== 'undefined') {
           }, 1000);
         }
       }
-      // Handle fetch errors which might be related to Firestore
+      // Handle fetch errors which might be related to Firestore - ENHANCED FOR LISTEN CHANNEL ERRORS
       else if (event.reason.name === 'TypeError' && 
                event.reason.message === 'Failed to fetch' && 
                event.reason.stack && 
                (event.reason.stack.includes('firestore.googleapis.com') || 
                 event.reason.stack.includes('Firestore'))) {
         
-        console.error('[Firebase] Unhandled fetch error for Firestore:', event.reason);
+        console.error('[Firebase] CRITICAL: Unhandled fetch error for Firestore detected:', event.reason);
+        console.error('[Firebase] Error stack trace:', event.reason.stack);
         
         // Check if this is specifically a Listen channel error
         const isListenChannelError = event.reason.stack.includes('/Listen/channel');
         
-        // If we have a connection manager, trigger reconnection with appropriate strategy
-        if (connectionManager) {
-          if (isListenChannelError) {
-            console.log('[Firebase] Listen channel fetch error detected, implementing special reconnection strategy...');
+        if (isListenChannelError) {
+          console.error('[Firebase] CRITICAL: Listen channel error detected in unhandled rejection handler');
+          console.error('[Firebase] This is the main error we are trying to fix');
+          
+          // Prevent the default unhandled rejection behavior for Listen channel errors
+          event.preventDefault();
+          
+          // Implement immediate and aggressive recovery for Listen channel errors
+          if (connectionManager) {
+            console.log('[Firebase] Implementing immediate Listen channel recovery via connection manager...');
+            setTimeout(() => {
+              connectionManager.handleListenChannelError('unhandled-rejection', 0);
+            }, 10); // Immediate response
+          } else {
+            console.error('[Firebase] Connection manager not available, implementing direct recovery...');
             
-            // For Listen channel errors, we need a more aggressive approach:
-            // 1. First disable network to clear any hanging connections
-            // 2. Wait a short period
-            // 3. Re-enable network
+            // Direct recovery without connection manager
             const { db } = getFirebaseServices();
             if (db) {
+              console.log('[Firebase] Attempting direct Firestore recovery for Listen channel error');
+              
+              // Remove all listeners first
+              removeAllListeners();
+              
+              // Disable network
               disableFirestoreNetwork(db).then(() => {
-                console.log('[Firebase] Firestore network disabled after Listen channel error');
+                console.log('[Firebase] Firestore network disabled for Listen channel recovery');
+                
+                // Clear caches
+                if (typeof window !== 'undefined') {
+                  try {
+                    // Clear Firestore-related localStorage
+                    Object.keys(localStorage).forEach(key => {
+                      if (key.includes('firestore') || key.includes('fs_')) {
+                        localStorage.removeItem(key);
+                      }
+                    });
+                    
+                    // Clear IndexedDB
+                    const deleteRequest = indexedDB.deleteDatabase('firestore/[DEFAULT]/main');
+                    deleteRequest.onsuccess = () => {
+                      console.log('[Firebase] Cleared Firestore IndexedDB cache');
+                    };
+                  } catch (cacheError) {
+                    console.error('[Firebase] Error clearing caches:', cacheError);
+                  }
+                }
                 
                 // Wait before re-enabling
                 setTimeout(() => {
                   enableFirestoreNetwork(db).then(() => {
-                    console.log('[Firebase] Firestore network re-enabled after Listen channel error');
+                    console.log('[Firebase] Firestore network re-enabled after Listen channel recovery');
                   }).catch(err => {
-                    console.error('[Firebase] Error re-enabling network after Listen channel error:', err);
+                    console.error('[Firebase] Error re-enabling network after Listen channel recovery:', err);
                   });
-                }, 2000);
+                }, 3000);
               }).catch(err => {
                 console.error('[Firebase] Error disabling network after Listen channel error:', err);
-                
-                // If disabling fails, still try to reconnect
-                setTimeout(() => {
-                  connectionManager.reconnectFirebase();
-                }, 5000);
               });
             } else {
-              // Fallback to standard reconnection if db is not available
-              setTimeout(() => {
-                connectionManager.reconnectFirebase();
-              }, 5000);
+              console.error('[Firebase] No Firestore instance available for recovery');
             }
-          } else {
-            // For other Firestore errors, use standard reconnection with backoff
-            console.log('[Firebase] Fetch error detected, attempting reconnection with backoff...');
+          }
+        } else {
+          // For other Firestore errors, use standard reconnection with backoff
+          console.log('[Firebase] Non-Listen channel Firestore error, attempting standard reconnection...');
+          
+          if (connectionManager) {
             setTimeout(() => {
               connectionManager.reconnectFirebase();
             }, 5000);
@@ -518,14 +548,42 @@ if (typeof window !== 'undefined') {
       else if (url.includes('firestore.googleapis.com')) {
         console.error('[Firebase] Fetch error for Firestore request:', error);
         
-        // Special handling for Listen channel fetch errors
+        // Special handling for Listen channel fetch errors - this is the main issue we're fixing
         if (url.includes('/Listen/channel')) {
-          console.warn('[Firebase] Detected Firestore Listen channel fetch error, implementing recovery');
+          console.error('[Firebase] CRITICAL: Listen channel fetch error detected - implementing immediate recovery');
+          console.error('[Firebase] Listen channel error details:', {
+            url,
+            error: error instanceof Error ? error.message : 'Unknown error',
+            stack: error instanceof Error ? error.stack : 'No stack trace'
+          });
           
           if (connectionManager) {
+            // Immediate recovery for Listen channel fetch errors
             setTimeout(() => {
               connectionManager.handleListenChannelError(url, 0);
-            }, 50);
+            }, 10); // Reduced delay for immediate response
+          } else {
+            // Fallback if connection manager is not available
+            console.error('[Firebase] Connection manager not available, implementing fallback recovery');
+            setTimeout(() => {
+              // Direct recovery without connection manager
+              const { db } = getFirebaseServices();
+              if (db) {
+                console.log('[Firebase] Attempting direct Firestore network reset for Listen channel error');
+                disableFirestoreNetwork(db).then(() => {
+                  console.log('[Firebase] Firestore network disabled for Listen channel recovery');
+                  setTimeout(() => {
+                    enableFirestoreNetwork(db).then(() => {
+                      console.log('[Firebase] Firestore network re-enabled after Listen channel recovery');
+                    }).catch(enableError => {
+                      console.error('[Firebase] Error re-enabling Firestore network:', enableError);
+                    });
+                  }, 3000);
+                }).catch(disableError => {
+                  console.error('[Firebase] Error disabling Firestore network:', disableError);
+                });
+              }
+            }, 100);
           }
         }
         // Special handling for Write channel errors

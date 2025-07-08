@@ -1,109 +1,259 @@
-import React, { useState, useEffect } from 'react';
-import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
-import { Button } from '@/components/ui/button';
-import { RefreshCw } from 'lucide-react';
-import { getFirebaseServices, connectionManager } from '@/lib/firebase';
+import React, { Component, ReactNode } from 'react';
+import { Alert, AlertDescription, AlertTitle } from './ui/alert';
+import { Button } from './ui/button';
+import { RefreshCw, AlertTriangle } from 'lucide-react';
+import { connectionManager } from '@/lib/firebase';
 
-interface FirebaseErrorBoundaryProps {
-  children: React.ReactNode;
-  fallback?: React.ReactNode;
+interface Props {
+  children: ReactNode;
 }
 
-export function FirebaseErrorBoundary({ 
-  children, 
-  fallback 
-}: FirebaseErrorBoundaryProps) {
-  const [hasError, setHasError] = useState(false);
-  const [errorDetails, setErrorDetails] = useState<string | null>(null);
-  const [isRetrying, setIsRetrying] = useState(false);
+interface State {
+  hasError: boolean;
+  error: Error | null;
+  errorInfo: any;
+  isRecovering: boolean;
+  recoveryAttempts: number;
+}
 
-  // Check Firebase connection on mount
-  useEffect(() => {
-    const checkFirebaseConnection = async () => {
-      try {
-        const services = getFirebaseServices();
-        if (!services.app || !services.db) {
-          console.error('[FirebaseErrorBoundary] Firebase services not properly initialized');
-          setHasError(true);
-          setErrorDetails('Firebase connection issue detected. This might affect some app features.');
-        } else {
-          setHasError(false);
-          setErrorDetails(null);
-        }
-      } catch (error) {
-        console.error('[FirebaseErrorBoundary] Error checking Firebase connection:', error);
-        setHasError(true);
-        setErrorDetails('Error connecting to Firebase services.');
-      }
+export class FirebaseErrorBoundary extends Component<Props, State> {
+  private maxRecoveryAttempts = 3;
+  private recoveryTimeoutId: NodeJS.Timeout | null = null;
+
+  constructor(props: Props) {
+    super(props);
+    this.state = {
+      hasError: false,
+      error: null,
+      errorInfo: null,
+      isRecovering: false,
+      recoveryAttempts: 0
     };
+  }
 
-    checkFirebaseConnection();
+  static getDerivedStateFromError(error: Error): Partial<State> {
+    // Update state so the next render will show the fallback UI
+    return { hasError: true, error };
+  }
 
-    // Add connection listener if available
-    let removeListener: (() => void) | undefined;
-    if (connectionManager) {
-      removeListener = connectionManager.addConnectionListener(() => {
-        // When connection status changes, recheck
-        checkFirebaseConnection();
-      });
-    }
-
-    return () => {
-      if (removeListener) {
-        removeListener();
-      }
-    };
-  }, []);
-
-  const handleRetry = async () => {
-    setIsRetrying(true);
+  componentDidCatch(error: Error, errorInfo: any) {
+    console.error('[Firebase Error Boundary] Caught error:', error);
+    console.error('[Firebase Error Boundary] Error info:', errorInfo);
     
-    try {
-      // Attempt to reinitialize Firebase services
-      const services = getFirebaseServices();
-      
-      // Wait a moment to allow connection to establish
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      if (services.app && services.db) {
-        setHasError(false);
-        setErrorDetails(null);
-      } else {
-        setErrorDetails('Still having trouble connecting to Firebase. Please try again later.');
-      }
-    } catch (error) {
-      console.error('[FirebaseErrorBoundary] Error during retry:', error);
-      setErrorDetails('Failed to reconnect to Firebase services.');
-    } finally {
-      setIsRetrying(false);
-    }
-  };
+    this.setState({
+      error,
+      errorInfo,
+      hasError: true
+    });
 
-  if (hasError) {
+    // Check if this is a Firebase-related error
+    const isFirebaseError = this.isFirebaseRelatedError(error);
+    
+    if (isFirebaseError) {
+      console.log('[Firebase Error Boundary] Firebase-related error detected, attempting automatic recovery...');
+      this.attemptAutomaticRecovery(error);
+    }
+  }
+
+  private isFirebaseRelatedError(error: Error): boolean {
+    const errorMessage = error.message.toLowerCase();
+    const errorStack = error.stack?.toLowerCase() || '';
+    
     return (
-      <>
-        <Alert variant="destructive" className="mb-4">
-          <AlertTitle>Connection Issue</AlertTitle>
-          <AlertDescription>
-            {errorDetails || 'There was a problem connecting to our services.'}
-            <div className="mt-2">
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={handleRetry}
-                disabled={isRetrying}
-                className="flex items-center gap-2"
-              >
-                <RefreshCw className={`h-4 w-4 ${isRetrying ? 'animate-spin' : ''}`} />
-                {isRetrying ? 'Reconnecting...' : 'Retry Connection'}
-              </Button>
-            </div>
-          </AlertDescription>
-        </Alert>
-        {fallback || children}
-      </>
+      errorMessage.includes('firebase') ||
+      errorMessage.includes('firestore') ||
+      errorMessage.includes('failed to fetch') ||
+      errorStack.includes('firebase') ||
+      errorStack.includes('firestore') ||
+      errorStack.includes('listen/channel') ||
+      errorStack.includes('write/channel') ||
+      error.name === 'FirebaseError'
     );
   }
 
-  return <>{children}</>;
+  private attemptAutomaticRecovery = async (error: Error) => {
+    if (this.state.recoveryAttempts >= this.maxRecoveryAttempts) {
+      console.log('[Firebase Error Boundary] Maximum recovery attempts reached');
+      return;
+    }
+
+    this.setState({ 
+      isRecovering: true,
+      recoveryAttempts: this.state.recoveryAttempts + 1
+    });
+
+    try {
+      // Check if this is a Listen channel error
+      const isListenChannelError = error.stack?.includes('/Listen/channel') || 
+                                   error.message.includes('Listen/channel');
+      
+      if (isListenChannelError && connectionManager) {
+        console.log('[Firebase Error Boundary] Attempting Listen channel recovery...');
+        await connectionManager.handleListenChannelError('error-boundary', 0);
+      } else if (connectionManager) {
+        console.log('[Firebase Error Boundary] Attempting general Firebase reconnection...');
+        await connectionManager.reconnectFirebase();
+      }
+
+      // Wait a bit before attempting to recover
+      this.recoveryTimeoutId = setTimeout(() => {
+        console.log('[Firebase Error Boundary] Attempting to recover from error...');
+        this.setState({
+          hasError: false,
+          error: null,
+          errorInfo: null,
+          isRecovering: false
+        });
+      }, 3000);
+
+    } catch (recoveryError) {
+      console.error('[Firebase Error Boundary] Recovery attempt failed:', recoveryError);
+      this.setState({ isRecovering: false });
+    }
+  };
+
+  private handleManualRecovery = () => {
+    console.log('[Firebase Error Boundary] Manual recovery initiated...');
+    
+    this.setState({ isRecovering: true });
+
+    // Clear any existing timeout
+    if (this.recoveryTimeoutId) {
+      clearTimeout(this.recoveryTimeoutId);
+    }
+
+    // Attempt recovery
+    if (connectionManager) {
+      // Force a complete session reset for manual recovery
+      connectionManager.forceCompleteSessionReset().then(() => {
+        console.log('[Firebase Error Boundary] Manual recovery completed');
+        
+        // Reset the error boundary state
+        setTimeout(() => {
+          this.setState({
+            hasError: false,
+            error: null,
+            errorInfo: null,
+            isRecovering: false,
+            recoveryAttempts: 0
+          });
+        }, 2000);
+      }).catch((recoveryError) => {
+        console.error('[Firebase Error Boundary] Manual recovery failed:', recoveryError);
+        this.setState({ isRecovering: false });
+      });
+    } else {
+      // Fallback: just reset the state
+      setTimeout(() => {
+        this.setState({
+          hasError: false,
+          error: null,
+          errorInfo: null,
+          isRecovering: false,
+          recoveryAttempts: 0
+        });
+      }, 1000);
+    }
+  };
+
+  private handlePageReload = () => {
+    console.log('[Firebase Error Boundary] Reloading page...');
+    window.location.reload();
+  };
+
+  componentWillUnmount() {
+    if (this.recoveryTimeoutId) {
+      clearTimeout(this.recoveryTimeoutId);
+    }
+  }
+
+  render() {
+    if (this.state.hasError) {
+      const isFirebaseError = this.isFirebaseRelatedError(this.state.error!);
+      
+      return (
+        <div className="min-h-screen flex items-center justify-center p-4 bg-background">
+          <div className="max-w-md w-full space-y-4">
+            <Alert variant="destructive">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertTitle>
+                {isFirebaseError ? 'Connection Error' : 'Application Error'}
+              </AlertTitle>
+              <AlertDescription>
+                {isFirebaseError ? (
+                  <>
+                    We're experiencing connection issues with our servers. 
+                    {this.state.recoveryAttempts > 0 && (
+                      <span className="block mt-2 text-sm">
+                        Recovery attempt {this.state.recoveryAttempts} of {this.maxRecoveryAttempts}
+                      </span>
+                    )}
+                  </>
+                ) : (
+                  'Something went wrong. Please try refreshing the page.'
+                )}
+              </AlertDescription>
+            </Alert>
+
+            {process.env.NODE_ENV === 'development' && (
+              <Alert>
+                <AlertTitle>Error Details (Development)</AlertTitle>
+                <AlertDescription>
+                  <details className="mt-2">
+                    <summary className="cursor-pointer text-sm font-medium">
+                      Click to view error details
+                    </summary>
+                    <pre className="mt-2 text-xs overflow-auto max-h-32 bg-muted p-2 rounded">
+                      {this.state.error?.message}
+                      {'\n\n'}
+                      {this.state.error?.stack}
+                    </pre>
+                  </details>
+                </AlertDescription>
+              </Alert>
+            )}
+
+            <div className="flex flex-col gap-2">
+              {isFirebaseError && (
+                <Button 
+                  onClick={this.handleManualRecovery}
+                  disabled={this.state.isRecovering}
+                  className="w-full"
+                >
+                  {this.state.isRecovering ? (
+                    <>
+                      <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                      Reconnecting...
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCw className="mr-2 h-4 w-4" />
+                      Try Again
+                    </>
+                  )}
+                </Button>
+              )}
+              
+              <Button 
+                onClick={this.handlePageReload}
+                variant="outline"
+                className="w-full"
+              >
+                Reload Page
+              </Button>
+            </div>
+
+            {isFirebaseError && (
+              <div className="text-center text-sm text-muted-foreground">
+                If the problem persists, please check your internet connection
+                or try again in a few minutes.
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
 }
