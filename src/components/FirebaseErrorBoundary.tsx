@@ -63,10 +63,13 @@ export class FirebaseErrorBoundary extends Component<Props, State> {
       errorMessage.includes('firebase') ||
       errorMessage.includes('firestore') ||
       errorMessage.includes('failed to fetch') ||
+      errorMessage.includes('unknown sid') ||
+      errorMessage.includes('bad request') ||
       errorStack.includes('firebase') ||
       errorStack.includes('firestore') ||
       errorStack.includes('listen/channel') ||
       errorStack.includes('write/channel') ||
+      errorStack.includes('googleapis.com') ||
       error.name === 'FirebaseError'
     );
   }

@@ -24,6 +24,9 @@ import { FirestoreConnectionManager } from '@/components/FirestoreConnectionMana
 import { FirestoreListenerDebugger } from '@/components/FirestoreListenerDebugger';
 import { FirebaseErrorBoundary } from '@/components/FirebaseErrorBoundary';
 import { ListenChannelErrorHandler } from '@/components/ListenChannelErrorHandler';
+import { CriticalErrorHandler } from '@/components/CriticalErrorHandler';
+import { SessionManagerInitializer } from '@/components/SessionManagerInitializer';
+import { ComprehensiveErrorHandlerInitializer } from '@/components/ComprehensiveErrorHandlerInitializer';
 import { getFirebaseServices } from '@/lib/firebase';
 import { useCallback } from 'react';
 import { useThemeSync } from '@/hooks/useThemeSync';
@@ -100,6 +103,9 @@ const MainContent = memo(({ Component, pageProps, pathname }: {
       {/* Firebase connection management */}
       {isMounted && (
         <>
+          <ComprehensiveErrorHandlerInitializer />
+          <SessionManagerInitializer />
+          <CriticalErrorHandler />
           <FirebaseConnectionManager />
           <FirestoreConnectionManager />
           <ListenChannelErrorHandler />
