@@ -46,9 +46,10 @@ const convertTimestamps = (data) => {
  * Fetch reviews received by a seller
  * @param {string} sellerId - The seller's user ID
  * @param {number} limitCount - Optional limit on number of reviews to fetch
+ * @param {Object} filterOptions - Optional filter and sort options
  * @returns {Promise<Array>} Array of review objects
  */
-export const fetchReviewsForSeller = async (sellerId, limitCount = 50) => {
+export const fetchReviewsForSeller = async (sellerId, limitCount = 50, filterOptions = {}) => {
   try {
     const { db } = getFirebaseServices();
     if (!db) {
@@ -57,23 +58,70 @@ export const fetchReviewsForSeller = async (sellerId, limitCount = 50) => {
     
     const reviewsRef = collection(db, 'reviews');
     
-    const q = query(
-      reviewsRef,
+    // Build query constraints
+    let queryConstraints = [
       where('sellerId', '==', sellerId),
-      where('status', '==', 'published'),
-      orderBy('createdAt', 'desc'),
-      limit(limitCount)
-    );
+      where('status', '==', 'published')
+    ];
+    
+    // Add rating filter if specified
+    if (filterOptions.rating) {
+      queryConstraints.push(where('rating', '==', filterOptions.rating));
+    }
+    
+    // Add sorting based on sortBy option
+    let orderByField = 'createdAt';
+    let orderByDirection = 'desc';
+    
+    switch (filterOptions.sortBy) {
+      case 'oldest':
+        orderByField = 'createdAt';
+        orderByDirection = 'asc';
+        break;
+      case 'newest':
+      default:
+        orderByField = 'createdAt';
+        orderByDirection = 'desc';
+        break;
+      case 'highest_rating':
+        orderByField = 'rating';
+        orderByDirection = 'desc';
+        break;
+      case 'lowest_rating':
+        orderByField = 'rating';
+        orderByDirection = 'asc';
+        break;
+      case 'most_helpful':
+        orderByField = 'helpfulCount';
+        orderByDirection = 'desc';
+        break;
+    }
+    
+    queryConstraints.push(orderBy(orderByField, orderByDirection));
+    queryConstraints.push(limit(limitCount));
+    
+    const q = query(reviewsRef, ...queryConstraints);
     
     const reviewsSnapshot = await getDocs(q);
     
-    return reviewsSnapshot.docs.map(doc => {
+    let reviews = reviewsSnapshot.docs.map(doc => {
       const data = doc.data();
       return {
         id: doc.id,
         ...convertTimestamps(data)
       };
     });
+    
+    // For most_helpful sorting, we need to handle cases where helpfulCount might be undefined
+    if (filterOptions.sortBy === 'most_helpful') {
+      reviews = reviews.sort((a, b) => {
+        const aHelpful = a.helpfulCount || 0;
+        const bHelpful = b.helpfulCount || 0;
+        return bHelpful - aHelpful;
+      });
+    }
+    
+    return reviews;
   } catch (error) {
     console.error('Error fetching reviews for seller:', error);
     throw error;
@@ -84,9 +132,10 @@ export const fetchReviewsForSeller = async (sellerId, limitCount = 50) => {
  * Fetch reviews written by a buyer
  * @param {string} buyerId - The buyer/reviewer's user ID
  * @param {number} limitCount - Optional limit on number of reviews to fetch
+ * @param {Object} filterOptions - Optional filter and sort options
  * @returns {Promise<Array>} Array of review objects
  */
-export const fetchReviewsByBuyer = async (buyerId, limitCount = 50) => {
+export const fetchReviewsByBuyer = async (buyerId, limitCount = 50, filterOptions = {}) => {
   try {
     const { db } = getFirebaseServices();
     if (!db) {
@@ -95,22 +144,69 @@ export const fetchReviewsByBuyer = async (buyerId, limitCount = 50) => {
     
     const reviewsRef = collection(db, 'reviews');
     
-    const q = query(
-      reviewsRef,
-      where('reviewerId', '==', buyerId),
-      orderBy('createdAt', 'desc'),
-      limit(limitCount)
-    );
+    // Build query constraints
+    let queryConstraints = [
+      where('reviewerId', '==', buyerId)
+    ];
+    
+    // Add rating filter if specified
+    if (filterOptions.rating) {
+      queryConstraints.push(where('rating', '==', filterOptions.rating));
+    }
+    
+    // Add sorting based on sortBy option
+    let orderByField = 'createdAt';
+    let orderByDirection = 'desc';
+    
+    switch (filterOptions.sortBy) {
+      case 'oldest':
+        orderByField = 'createdAt';
+        orderByDirection = 'asc';
+        break;
+      case 'newest':
+      default:
+        orderByField = 'createdAt';
+        orderByDirection = 'desc';
+        break;
+      case 'highest_rating':
+        orderByField = 'rating';
+        orderByDirection = 'desc';
+        break;
+      case 'lowest_rating':
+        orderByField = 'rating';
+        orderByDirection = 'asc';
+        break;
+      case 'most_helpful':
+        orderByField = 'helpfulCount';
+        orderByDirection = 'desc';
+        break;
+    }
+    
+    queryConstraints.push(orderBy(orderByField, orderByDirection));
+    queryConstraints.push(limit(limitCount));
+    
+    const q = query(reviewsRef, ...queryConstraints);
     
     const reviewsSnapshot = await getDocs(q);
     
-    return reviewsSnapshot.docs.map(doc => {
+    let reviews = reviewsSnapshot.docs.map(doc => {
       const data = doc.data();
       return {
         id: doc.id,
         ...convertTimestamps(data)
       };
     });
+    
+    // For most_helpful sorting, we need to handle cases where helpfulCount might be undefined
+    if (filterOptions.sortBy === 'most_helpful') {
+      reviews = reviews.sort((a, b) => {
+        const aHelpful = a.helpfulCount || 0;
+        const bHelpful = b.helpfulCount || 0;
+        return bHelpful - aHelpful;
+      });
+    }
+    
+    return reviews;
   } catch (error) {
     console.error('Error fetching reviews by buyer:', error);
     throw error;

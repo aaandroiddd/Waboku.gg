@@ -40,7 +40,7 @@ export function useReviews() {
     
     try {
       // Use the client-side service to fetch reviews directly from Firestore
-      const reviews = await fetchReviewsForSeller(sellerId, pageSize);
+      const reviews = await fetchReviewsForSeller(sellerId, pageSize, filterOptions);
       console.log('useReviews: Fetched reviews from Firestore:', reviews.length);
       
       // Get seller stats
@@ -364,11 +364,11 @@ export function useReviews() {
       // Determine which reviews to fetch based on role
       if (filterOptions.role === 'seller') {
         // Get reviews received by this seller
-        reviews = await fetchReviewsForSeller(userId, pageSize);
+        reviews = await fetchReviewsForSeller(userId, pageSize, filterOptions);
         console.log('useReviews: Fetched seller reviews from Firestore:', reviews.length);
       } else {
         // Default to reviewer role - get reviews written by this buyer
-        reviews = await fetchReviewsByBuyer(userId, pageSize);
+        reviews = await fetchReviewsByBuyer(userId, pageSize, filterOptions);
         console.log('useReviews: Fetched buyer reviews from Firestore:', reviews.length);
       }
       
