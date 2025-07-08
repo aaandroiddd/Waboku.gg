@@ -518,6 +518,6 @@ export default function Header({ animate = true }: HeaderProps) {
           </Sheet>
         </div>
       </div>
-    </motion.header>
+    </header>
   );
 }
