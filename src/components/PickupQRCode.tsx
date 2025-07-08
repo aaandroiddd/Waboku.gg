@@ -55,20 +55,39 @@ export function PickupQRCode({ order, isSeller, onPickupCompleted }: PickupQRCod
     }
   }, [order, isSeller]);
 
-  // Update countdown timer for existing codes
+  // State for real-time countdown
+  const [timeRemaining, setTimeRemaining] = useState<string>('');
+
+  // Update countdown timer for existing codes with real-time display
   useEffect(() => {
     let interval: NodeJS.Timeout;
     
     if (codeExpiresAt && pickupCode) {
-      interval = setInterval(() => {
+      const updateCountdown = () => {
         const now = new Date();
-        if (codeExpiresAt <= now) {
+        const timeLeft = codeExpiresAt.getTime() - now.getTime();
+        
+        if (timeLeft <= 0) {
           // Code has expired, clear it
           setPickupCode(null);
           setCodeExpiresAt(null);
+          setTimeRemaining('Expired');
           clearInterval(interval);
+        } else {
+          // Update the countdown display
+          const minutes = Math.floor(timeLeft / (1000 * 60));
+          const seconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
+          setTimeRemaining(`${minutes}:${seconds.toString().padStart(2, '0')}`);
         }
-      }, 1000);
+      };
+      
+      // Update immediately
+      updateCountdown();
+      
+      // Then update every second
+      interval = setInterval(updateCountdown, 1000);
+    } else {
+      setTimeRemaining('');
     }
     
     return () => {
@@ -663,8 +682,10 @@ export function PickupQRCode({ order, isSeller, onPickupCompleted }: PickupQRCod
                       </div>
                       <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
                         <Clock className="h-4 w-4" />
-                        {codeExpiresAt && (
-                          <span>Expires in: {getTimeRemaining(codeExpiresAt)}</span>
+                        {timeRemaining && (
+                          <span className={timeRemaining === 'Expired' ? 'text-red-500 font-medium' : ''}>
+                            Expires in: {timeRemaining}
+                          </span>
                         )}
                       </div>
                     </div>
