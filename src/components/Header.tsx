@@ -16,10 +16,9 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { Menu, LayoutDashboard, Heart, MessageSquare, Settings, Store, LogOut, Home, Search, ClipboardList, ChevronDown, Gamepad2 } from "lucide-react";
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "next-themes";
-import { motion, useReducedMotion } from "framer-motion";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { useToast } from "@/components/ui/use-toast";
 import { NotificationBell } from "./NotificationBell";
@@ -47,97 +46,12 @@ export default function Header({ animate = true }: HeaderProps) {
   const { theme, setTheme } = useTheme();
   const isAuthPage = router.pathname.startsWith("/auth/");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [isMenuAnimating, setIsMenuAnimating] = useState(false);
   const isMobile = useMediaQuery("(max-width: 768px)");
-  const prefersReducedMotion = useReducedMotion();
   
-  // State for scroll-based header visibility
-  const [showHeader, setShowHeader] = useState(true);
-  const [lastScrollY, setLastScrollY] = useState(0);
-  const scrollThreshold = 10; // Minimum scroll difference to trigger header visibility change
-  const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  
-  // Throttle menu opening/closing to prevent performance issues
+  // Simplified menu toggle without animation delays
   const handleMenuToggle = useCallback((open: boolean) => {
-    if (isMenuAnimating) return;
-    
-    setIsMenuAnimating(true);
     setIsMobileMenuOpen(open);
-    
-    // Reset animation lock after animation completes
-    setTimeout(() => {
-      setIsMenuAnimating(false);
-    }, 300); // Match this with the animation duration
-  }, [isMenuAnimating]);
-  
-  // Control header visibility based on scroll direction
-  const controlHeader = useCallback(() => {
-    const currentScrollY = window.scrollY;
-    
-    // Always show header when at the top of the page
-    if (currentScrollY <= 10) {
-      setShowHeader(true);
-      setLastScrollY(currentScrollY);
-      return;
-    }
-    
-    // Only update if we've scrolled more than the threshold
-    if (Math.abs(currentScrollY - lastScrollY) > scrollThreshold) {
-      // Show header when scrolling up, hide when scrolling down
-      if (currentScrollY > lastScrollY && currentScrollY > 50) {
-        // Scrolling down & not at the top
-        setShowHeader(false);
-      } else {
-        // Scrolling up
-        setShowHeader(true);
-      }
-      
-      // Update last scroll position
-      setLastScrollY(currentScrollY);
-    }
-  }, [lastScrollY, scrollThreshold]);
-  
-  // Add scroll event listener with throttling
-  useEffect(() => {
-    // Skip for non-browser environments
-    if (typeof window === 'undefined') return;
-    
-    const handleScroll = () => {
-      // Throttle scroll events
-      if (scrollTimeoutRef.current) return;
-      
-      scrollTimeoutRef.current = setTimeout(() => {
-        controlHeader();
-        scrollTimeoutRef.current = null;
-      }, 50); // Throttle to 20 times per second for more responsive behavior
-    };
-    
-    window.addEventListener('scroll', handleScroll);
-    
-    // Force header visibility check on mount and when component updates
-    controlHeader();
-    
-    // Also add a check when user stops scrolling
-    const handleScrollEnd = () => {
-      // Wait a bit after scrolling stops to ensure we have the final position
-      setTimeout(() => {
-        // If we're at the top, always show the header
-        if (window.scrollY <= 10) {
-          setShowHeader(true);
-        }
-      }, 150);
-    };
-    
-    window.addEventListener('scrollend', handleScrollEnd);
-    
-    return () => {
-      window.removeEventListener('scroll', handleScroll);
-      window.removeEventListener('scrollend', handleScrollEnd);
-      if (scrollTimeoutRef.current) {
-        clearTimeout(scrollTimeoutRef.current);
-      }
-    };
-  }, [controlHeader]);
+  }, []);
   
   // Lock body scroll when mobile menu is open
   useEffect(() => {
@@ -147,9 +61,6 @@ export default function Header({ animate = true }: HeaderProps) {
       document.body.style.position = 'fixed';
       document.body.style.width = '100%';
       document.body.style.top = `-${window.scrollY}px`;
-      
-      // Always show header when menu is open
-      setShowHeader(true);
     } else {
       // Unlock body scroll and restore position
       const scrollY = document.body.style.top;
@@ -268,82 +179,8 @@ export default function Header({ animate = true }: HeaderProps) {
     }
   };
 
-  // Simplified animation variants for mobile
-  const headerVariants = {
-    hidden: { y: 0, opacity: 0 },
-    visible: { 
-      y: 0, 
-      opacity: 1,
-      transition: {
-        type: prefersReducedMotion || isMobile ? "tween" : "spring",
-        damping: isMobile ? 25 : 20,
-        stiffness: isMobile ? 100 : 100,
-        duration: isMobile ? 0.15 : 0.2
-      }
-    }
-  };
-
-  // Animation variants for header show/hide - simplified for mobile
-  const showHideVariants = {
-    visible: { 
-      y: 0,
-      opacity: 1,
-      transition: {
-        y: { 
-          type: isMobile ? "tween" : "spring", 
-          stiffness: isMobile ? undefined : 300, 
-          damping: isMobile ? undefined : 30,
-          duration: isMobile ? 0.15 : undefined
-        },
-        opacity: { duration: isMobile ? 0.1 : 0.2 }
-      }
-    },
-    hidden: { 
-      y: -60,
-      opacity: 0,
-      transition: {
-        y: { 
-          type: isMobile ? "tween" : "spring", 
-          stiffness: isMobile ? undefined : 300, 
-          damping: isMobile ? undefined : 30,
-          duration: isMobile ? 0.15 : undefined
-        },
-        opacity: { duration: isMobile ? 0.1 : 0.2 }
-      }
-    }
-  };
-
-  // Add mouse movement detection to ensure header is visible when user is active
-  useEffect(() => {
-    // Completely disable mouse move detection when mobile menu is open
-    if (isMobileMenuOpen) return;
-    
-    const handleMouseMove = (e: MouseEvent) => {
-      // Only show header if mouse is near the top of the page
-      if (window.scrollY < 100) {
-        setShowHeader(true);
-      }
-    };
-    
-    window.addEventListener('mousemove', handleMouseMove);
-    
-    return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-    };
-  }, [isMobileMenuOpen]);
-  
   return (
-    <motion.header 
-      className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60"
-      initial={animate ? "hidden" : "visible"}
-      animate={showHeader ? "visible" : "hidden"}
-      variants={showHideVariants}
-      // Add layout="preserved" to maintain layout during animation
-      layout="preserved"
-      // Add onMouseEnter to ensure header is visible when hovered
-      onMouseEnter={() => setShowHeader(true)}
-      style={{ willChange: "transform, opacity" }}
-    >
+    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto px-4 h-10 flex items-center justify-between gap-4">
         <div>
           <Link href="/" className="flex items-center">
@@ -392,12 +229,6 @@ export default function Header({ animate = true }: HeaderProps) {
                 variant="ghost" 
                 size="icon" 
                 className="md:hidden"
-                style={{ 
-                  willChange: "transform", 
-                  transform: 'translateZ(0)',
-                  backfaceVisibility: 'hidden',
-                  WebkitBackfaceVisibility: 'hidden'
-                }} // Enhanced hardware acceleration
               >
                 <Menu className="h-5 w-5" />
                 <span className="sr-only">Toggle menu</span>

@@ -471,7 +471,7 @@ export default function Home() {
 
       <div className="bg-background min-h-screen flex flex-col">
         <ErrorBoundary fallback={<div className="h-16 bg-background" />}>
-          <Header animate={true} />
+          <Header />
         </ErrorBoundary>
         
         <main className="flex-1">
