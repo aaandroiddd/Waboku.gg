@@ -69,6 +69,7 @@ const CreateListingPage = () => {
     termsAccepted: false,
     offersOnly: false,
     finalSale: false,
+    language: "English",
   });
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -278,7 +279,8 @@ const CreateListingPage = () => {
         isGraded,
         gradeLevel,
         gradingCompany,
-        finalSale
+        finalSale,
+        language
       } = router.query;
 
       console.log('Pre-filling form with relist data:', {
@@ -290,7 +292,8 @@ const CreateListingPage = () => {
         isGraded,
         gradeLevel,
         gradingCompany,
-        finalSale
+        finalSale,
+        language
       });
 
       // Pre-fill the form with the relist data
@@ -304,7 +307,8 @@ const CreateListingPage = () => {
         isGraded: isGraded === 'true',
         gradeLevel: gradeLevel ? parseFloat(gradeLevel as string) : undefined,
         gradingCompany: (gradingCompany as string) || undefined,
-        finalSale: finalSale === 'true'
+        finalSale: finalSale === 'true',
+        language: (language as string) || 'English'
       };
 
       console.log('Setting form data to:', newFormData);
@@ -559,22 +563,41 @@ const CreateListingPage = () => {
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="condition">Condition *</Label>
-                  <MobileSelect
-                    value={formData.condition}
-                    onValueChange={(value) => setFormData({ ...formData, condition: value })}
-                    placeholder="Select condition"
-                    options={[
-                      { value: "mint", label: "Mint" },
-                      { value: "near mint", label: "Near Mint" },
-                      { value: "excellent", label: "Excellent" },
-                      { value: "good", label: "Good" },
-                      { value: "light played", label: "Light Played" },
-                      { value: "played", label: "Played" },
-                      { value: "poor", label: "Poor" }
-                    ]}
-                  />
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="condition">Condition *</Label>
+                    <MobileSelect
+                      value={formData.condition}
+                      onValueChange={(value) => setFormData({ ...formData, condition: value })}
+                      placeholder="Select condition"
+                      options={[
+                        { value: "mint", label: "Mint" },
+                        { value: "near mint", label: "Near Mint" },
+                        { value: "excellent", label: "Excellent" },
+                        { value: "good", label: "Good" },
+                        { value: "light played", label: "Light Played" },
+                        { value: "played", label: "Played" },
+                        { value: "poor", label: "Poor" }
+                      ]}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="language">Language</Label>
+                    <MobileSelect
+                      value={formData.language}
+                      onValueChange={(value) => setFormData({ ...formData, language: value })}
+                      placeholder="Select language"
+                      options={[
+                        { value: "English", label: "English" },
+                        { value: "Japanese", label: "Japanese" },
+                        { value: "Spanish", label: "Spanish" },
+                        { value: "Chinese", label: "Chinese" },
+                        { value: "French", label: "French" },
+                        { value: "German", label: "German" }
+                      ]}
+                    />
+                  </div>
                 </div>
 
                 {formData.game !== 'accessories' && (
