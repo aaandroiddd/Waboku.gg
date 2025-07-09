@@ -1,12 +1,4 @@
 import React, { useState, useEffect, useRef } from "react";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { ScrollArea } from "@/components/ui/scroll-area";
 
 const US_STATES = [
   { code: "all", name: "All locations" },
@@ -68,51 +60,13 @@ interface StateSelectProps {
 }
 
 export function StateSelect({ value = "all", onValueChange }: StateSelectProps) {
-  const [isMobile, setIsMobile] = useState(false);
   const [internalValue, setInternalValue] = useState(value);
   const selectRef = useRef<HTMLSelectElement>(null);
-
-  // Detect mobile device and screen size
-  useEffect(() => {
-    const checkMobile = () => {
-      if (typeof window === "undefined") return false;
-      
-      // Check user agent
-      const userAgent = navigator.userAgent;
-      const isMobileUserAgent = /Mobi|Android|iPhone|iPad|iPod|Opera Mini|IEMobile|WPDesktop/i.test(userAgent);
-      
-      // Check screen size
-      const isSmallScreen = window.innerWidth <= 768;
-      
-      // Check touch capability
-      const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-      
-      return isMobileUserAgent || (isSmallScreen && isTouchDevice);
-    };
-
-    setIsMobile(checkMobile());
-    
-    // Listen for resize events
-    const handleResize = () => {
-      setIsMobile(checkMobile());
-    };
-    
-    window.addEventListener('resize', handleResize);
-    window.addEventListener('orientationchange', handleResize);
-    
-    return () => {
-      window.removeEventListener('resize', handleResize);
-      window.removeEventListener('orientationchange', handleResize);
-    };
-  }, []);
 
   // Sync internal value with prop value
   useEffect(() => {
     setInternalValue(value);
   }, [value]);
-
-  // Find the selected state object
-  const selectedState = US_STATES.find((state) => state.code.toLowerCase() === internalValue.toLowerCase());
 
   // Handle value changes for native select
   const handleNativeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -120,16 +74,6 @@ export function StateSelect({ value = "all", onValueChange }: StateSelectProps) 
     e.stopPropagation();
     
     const newValue = e.target.value;
-    setInternalValue(newValue);
-    
-    // Call the parent's onChange handler
-    if (onValueChange) {
-      onValueChange(newValue);
-    }
-  };
-
-  // Handle value changes for custom select
-  const handleCustomChange = (newValue: string) => {
     setInternalValue(newValue);
     
     // Call the parent's onChange handler
@@ -148,60 +92,34 @@ export function StateSelect({ value = "all", onValueChange }: StateSelectProps) 
     e.stopPropagation();
   };
 
-  if (isMobile) {
-    // Use native select for mobile devices
-    return (
-      <div className="relative w-full">
-        <select
-          ref={selectRef}
-          className="block w-full h-12 rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring appearance-none cursor-pointer text-foreground"
-          value={internalValue}
-          onChange={handleNativeChange}
-          onFocus={handleFocus}
-          onClick={handleClick}
-          style={{
-            WebkitAppearance: 'none',
-            MozAppearance: 'none',
-            backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e")`,
-            backgroundRepeat: 'no-repeat',
-            backgroundPosition: 'right 12px center',
-            backgroundSize: '16px',
-            paddingRight: '40px',
-            minWidth: 0,
-            touchAction: 'manipulation'
-          }}
-        >
-          {US_STATES.map((state) => (
-            <option key={state.code} value={state.code.toLowerCase()}>
-              {state.name}
-            </option>
-          ))}
-        </select>
-      </div>
-    );
-  }
-
-  // Use custom Select for desktop
+  // Always use native select for all devices
   return (
-    <Select value={internalValue} onValueChange={handleCustomChange}>
-      <SelectTrigger className="h-12 w-full">
-        <SelectValue placeholder="All locations">
-          {selectedState?.name || "All locations"}
-        </SelectValue>
-      </SelectTrigger>
-      <SelectContent className="max-h-[300px] z-[200]">
-        <ScrollArea className="h-[300px]">
-          {US_STATES.map((state) => (
-            <SelectItem
-              key={state.code}
-              value={state.code.toLowerCase()}
-              className="cursor-pointer"
-            >
-              {state.name}
-            </SelectItem>
-          ))}
-        </ScrollArea>
-      </SelectContent>
-    </Select>
+    <div className="relative w-full">
+      <select
+        ref={selectRef}
+        className="block w-full h-12 rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring appearance-none cursor-pointer text-foreground"
+        value={internalValue}
+        onChange={handleNativeChange}
+        onFocus={handleFocus}
+        onClick={handleClick}
+        style={{
+          WebkitAppearance: 'none',
+          MozAppearance: 'none',
+          backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e")`,
+          backgroundRepeat: 'no-repeat',
+          backgroundPosition: 'right 12px center',
+          backgroundSize: '16px',
+          paddingRight: '40px',
+          minWidth: 0,
+          touchAction: 'manipulation'
+        }}
+      >
+        {US_STATES.map((state) => (
+          <option key={state.code} value={state.code.toLowerCase()}>
+            {state.name}
+          </option>
+        ))}
+      </select>
+    </div>
   );
 }

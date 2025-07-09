@@ -1054,7 +1054,16 @@ export default function ListingsPage() {
                           <select
                             value={selectedGame}
                             onChange={(e) => setSelectedGame(e.target.value)}
-                            className="w-full h-9 px-3 py-1 text-sm bg-background border border-input rounded-md focus:outline-none focus:ring-1 focus:ring-ring"
+                            className="w-full h-9 px-3 py-1 text-sm bg-background border border-input rounded-md focus:outline-none focus:ring-1 focus:ring-ring appearance-none cursor-pointer"
+                            style={{
+                              WebkitAppearance: 'none',
+                              MozAppearance: 'none',
+                              backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e")`,
+                              backgroundRepeat: 'no-repeat',
+                              backgroundPosition: 'right 8px center',
+                              backgroundSize: '12px',
+                              paddingRight: '28px'
+                            }}
                           >
                             {games.map((game) => (
                               <option key={game.value} value={game.value}>
@@ -1070,7 +1079,16 @@ export default function ListingsPage() {
                           <select
                             value={selectedCondition}
                             onChange={(e) => setSelectedCondition(e.target.value)}
-                            className="w-full h-9 px-3 py-1 text-sm bg-background border border-input rounded-md focus:outline-none focus:ring-1 focus:ring-ring"
+                            className="w-full h-9 px-3 py-1 text-sm bg-background border border-input rounded-md focus:outline-none focus:ring-1 focus:ring-ring appearance-none cursor-pointer"
+                            style={{
+                              WebkitAppearance: 'none',
+                              MozAppearance: 'none',
+                              backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e")`,
+                              backgroundRepeat: 'no-repeat',
+                              backgroundPosition: 'right 8px center',
+                              backgroundSize: '12px',
+                              paddingRight: '28px'
+                            }}
                           >
                             {conditions.map((condition) => (
                               <option key={condition.value} value={condition.value}>
@@ -1234,33 +1252,49 @@ export default function ListingsPage() {
                             <div className="py-4 space-y-4">
                               <div className="space-y-2">
                                 <label className="text-sm font-medium">Category</label>
-                                <Select value={selectedGame} onValueChange={setSelectedGame}>
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Select category" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {games.map((game) => (
-                                      <SelectItem key={game.value} value={game.value}>
-                                        {game.label}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
+                                <select
+                                  value={selectedGame}
+                                  onChange={(e) => setSelectedGame(e.target.value)}
+                                  className="w-full h-10 px-3 py-2 text-sm bg-background border border-input rounded-md focus:outline-none focus:ring-1 focus:ring-ring appearance-none cursor-pointer"
+                                  style={{
+                                    WebkitAppearance: 'none',
+                                    MozAppearance: 'none',
+                                    backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e")`,
+                                    backgroundRepeat: 'no-repeat',
+                                    backgroundPosition: 'right 12px center',
+                                    backgroundSize: '16px',
+                                    paddingRight: '40px'
+                                  }}
+                                >
+                                  {games.map((game) => (
+                                    <option key={game.value} value={game.value}>
+                                      {game.label}
+                                    </option>
+                                  ))}
+                                </select>
                               </div>
                               <div className="space-y-2">
                                 <label className="text-sm font-medium">Condition</label>
-                                <Select value={selectedCondition} onValueChange={setSelectedCondition}>
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Select condition" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {conditions.map((condition) => (
-                                      <SelectItem key={condition.value} value={condition.value}>
-                                        {condition.label}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
+                                <select
+                                  value={selectedCondition}
+                                  onChange={(e) => setSelectedCondition(e.target.value)}
+                                  className="w-full h-10 px-3 py-2 text-sm bg-background border border-input rounded-md focus:outline-none focus:ring-1 focus:ring-ring appearance-none cursor-pointer"
+                                  style={{
+                                    WebkitAppearance: 'none',
+                                    MozAppearance: 'none',
+                                    backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e")`,
+                                    backgroundRepeat: 'no-repeat',
+                                    backgroundPosition: 'right 12px center',
+                                    backgroundSize: '16px',
+                                    paddingRight: '40px'
+                                  }}
+                                >
+                                  {conditions.map((condition) => (
+                                    <option key={condition.value} value={condition.value}>
+                                      {condition.label}
+                                    </option>
+                                  ))}
+                                </select>
                               </div>
                               <div className="space-y-2">
                                 <label className="text-sm font-medium">Price Range</label>
@@ -1338,18 +1372,26 @@ export default function ListingsPage() {
                         {/* Sort dropdown */}
                         <div className="flex items-center">
                           <ArrowUpDown className="mr-2 h-4 w-4" />
-                          <Select value={sortBy} onValueChange={setSortBy}>
-                            <SelectTrigger className="w-[160px] h-10">
-                              <SelectValue placeholder="Sort by" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {sortOptions.map((option) => (
-                                <SelectItem key={option.value} value={option.value}>
-                                  {option.label}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          <select
+                            value={sortBy}
+                            onChange={(e) => setSortBy(e.target.value)}
+                            className="w-[160px] h-10 px-3 py-2 text-sm bg-background border border-input rounded-md focus:outline-none focus:ring-1 focus:ring-ring appearance-none cursor-pointer"
+                            style={{
+                              WebkitAppearance: 'none',
+                              MozAppearance: 'none',
+                              backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e")`,
+                              backgroundRepeat: 'no-repeat',
+                              backgroundPosition: 'right 12px center',
+                              backgroundSize: '16px',
+                              paddingRight: '40px'
+                            }}
+                          >
+                            {sortOptions.map((option) => (
+                              <option key={option.value} value={option.value}>
+                                {option.label}
+                              </option>
+                            ))}
+                          </select>
                         </div>
 
                         <div className="inline-flex rounded-lg border bg-card p-1 h-10">
