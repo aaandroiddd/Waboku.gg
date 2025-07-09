@@ -260,27 +260,72 @@ export default function ListingsPage() {
         }
       });
 
-      // Apply search query filter with enhanced safety
+      // Apply search query filter with ultra-enhanced safety
       if (searchQuery && String(searchQuery).trim()) {
         const query = String(searchQuery).toLowerCase().trim();
         filtered = filtered.filter(listing => {
           try {
             if (!listing || typeof listing !== 'object') return false;
             
-            // Safely extract and convert title and description to strings
-            const title = listing.title != null ? String(listing.title).toLowerCase() : '';
-            const description = listing.description != null ? String(listing.description).toLowerCase() : '';
+            // Safely extract and convert title and description to strings with multiple fallbacks
+            let title = '';
+            let description = '';
             
-            // Double-check that we have valid strings before using includes
-            const titleIsString = typeof title === 'string' && title.length >= 0;
-            const descriptionIsString = typeof description === 'string' && description.length >= 0;
-            const queryIsString = typeof query === 'string' && query.length > 0;
+            try {
+              if (listing.title != null) {
+                title = String(listing.title);
+                if (typeof title === 'string' && title.toLowerCase) {
+                  title = title.toLowerCase();
+                } else {
+                  title = '';
+                }
+              }
+            } catch (titleError) {
+              console.error('Error processing title:', titleError, listing.title);
+              title = '';
+            }
             
-            if (!queryIsString) return false;
+            try {
+              if (listing.description != null) {
+                description = String(listing.description);
+                if (typeof description === 'string' && description.toLowerCase) {
+                  description = description.toLowerCase();
+                } else {
+                  description = '';
+                }
+              }
+            } catch (descError) {
+              console.error('Error processing description:', descError, listing.description);
+              description = '';
+            }
             
-            // Use includes only if we have valid strings
-            const titleMatch = titleIsString && title.includes ? title.includes(query) : false;
-            const descriptionMatch = descriptionIsString && description.includes ? description.includes(query) : false;
+            // Triple-check that we have valid strings with includes method before using
+            let titleMatch = false;
+            let descriptionMatch = false;
+            
+            try {
+              if (typeof title === 'string' && 
+                  typeof title.includes === 'function' && 
+                  typeof query === 'string' && 
+                  query.length > 0) {
+                titleMatch = title.includes(query);
+              }
+            } catch (titleMatchError) {
+              console.error('Error in title includes:', titleMatchError, { title, query });
+              titleMatch = false;
+            }
+            
+            try {
+              if (typeof description === 'string' && 
+                  typeof description.includes === 'function' && 
+                  typeof query === 'string' && 
+                  query.length > 0) {
+                descriptionMatch = description.includes(query);
+              }
+            } catch (descMatchError) {
+              console.error('Error in description includes:', descMatchError, { description, query });
+              descriptionMatch = false;
+            }
             
             return titleMatch || descriptionMatch;
           } catch (error) {
@@ -299,7 +344,19 @@ export default function ListingsPage() {
           try {
             if (!listing || typeof listing !== 'object' || !listing.game) return false;
             
-            const listingGame = String(listing.game || '').toLowerCase();
+            let listingGame = '';
+            try {
+              listingGame = String(listing.game || '');
+              if (typeof listingGame === 'string' && listingGame.toLowerCase) {
+                listingGame = listingGame.toLowerCase();
+              } else {
+                listingGame = '';
+              }
+            } catch (gameError) {
+              console.error('Error processing listing game:', gameError, listing.game);
+              return false;
+            }
+            
             const gameMapping = GAME_NAME_MAPPING[selectedGame];
             
             if (!gameMapping || !Array.isArray(gameMapping)) {
@@ -310,13 +367,24 @@ export default function ListingsPage() {
             return gameMapping.some(name => {
               try {
                 if (name == null || typeof name !== 'string') return false;
-                const nameString = String(name).toLowerCase();
+                
+                let nameString = '';
+                try {
+                  nameString = String(name);
+                  if (typeof nameString === 'string' && nameString.toLowerCase) {
+                    nameString = nameString.toLowerCase();
+                  } else {
+                    return false;
+                  }
+                } catch (nameError) {
+                  console.error('Error processing game name:', nameError, name);
+                  return false;
+                }
                 
                 // Ensure both strings are valid before comparison
-                const gameIsString = typeof listingGame === 'string' && listingGame.length >= 0;
-                const nameIsString = typeof nameString === 'string' && nameString.length >= 0;
-                
-                return gameIsString && nameIsString && listingGame === nameString;
+                return typeof listingGame === 'string' && 
+                       typeof nameString === 'string' && 
+                       listingGame === nameString;
               } catch (error) {
                 console.error('Error comparing game names:', error, { name, listingGame });
                 return false;
@@ -338,14 +406,36 @@ export default function ListingsPage() {
           try {
             if (!listing || typeof listing !== 'object' || !listing.condition) return false;
             
-            const condition = String(listing.condition || '').toLowerCase();
-            const selectedConditionLower = String(selectedCondition || '').toLowerCase();
+            let condition = '';
+            let selectedConditionLower = '';
             
-            // Ensure both are valid strings before comparison
-            const conditionIsString = typeof condition === 'string' && condition.length >= 0;
-            const selectedIsString = typeof selectedConditionLower === 'string' && selectedConditionLower.length >= 0;
+            try {
+              condition = String(listing.condition || '');
+              if (typeof condition === 'string' && condition.toLowerCase) {
+                condition = condition.toLowerCase();
+              } else {
+                return false;
+              }
+            } catch (condError) {
+              console.error('Error processing condition:', condError, listing.condition);
+              return false;
+            }
             
-            return conditionIsString && selectedIsString && condition === selectedConditionLower;
+            try {
+              selectedConditionLower = String(selectedCondition || '');
+              if (typeof selectedConditionLower === 'string' && selectedConditionLower.toLowerCase) {
+                selectedConditionLower = selectedConditionLower.toLowerCase();
+              } else {
+                return false;
+              }
+            } catch (selCondError) {
+              console.error('Error processing selected condition:', selCondError, selectedCondition);
+              return false;
+            }
+            
+            return typeof condition === 'string' && 
+                   typeof selectedConditionLower === 'string' && 
+                   condition === selectedConditionLower;
           } catch (error) {
             console.error('Error filtering by condition:', error, { 
               listing: listing ? { id: listing.id, condition: listing.condition } : null, 
@@ -362,14 +452,36 @@ export default function ListingsPage() {
           try {
             if (!listing || typeof listing !== 'object' || !listing.state) return false;
             
-            const state = String(listing.state || '').toLowerCase();
-            const selectedStateLower = String(selectedState || '').toLowerCase();
+            let state = '';
+            let selectedStateLower = '';
             
-            // Ensure both are valid strings before comparison
-            const stateIsString = typeof state === 'string' && state.length >= 0;
-            const selectedIsString = typeof selectedStateLower === 'string' && selectedStateLower.length >= 0;
+            try {
+              state = String(listing.state || '');
+              if (typeof state === 'string' && state.toLowerCase) {
+                state = state.toLowerCase();
+              } else {
+                return false;
+              }
+            } catch (stateError) {
+              console.error('Error processing state:', stateError, listing.state);
+              return false;
+            }
             
-            return stateIsString && selectedIsString && state === selectedStateLower;
+            try {
+              selectedStateLower = String(selectedState || '');
+              if (typeof selectedStateLower === 'string' && selectedStateLower.toLowerCase) {
+                selectedStateLower = selectedStateLower.toLowerCase();
+              } else {
+                return false;
+              }
+            } catch (selStateError) {
+              console.error('Error processing selected state:', selStateError, selectedState);
+              return false;
+            }
+            
+            return typeof state === 'string' && 
+                   typeof selectedStateLower === 'string' && 
+                   state === selectedStateLower;
           } catch (error) {
             console.error('Error filtering by state:', error, { 
               listing: listing ? { id: listing.id, state: listing.state } : null, 
@@ -447,7 +559,7 @@ export default function ListingsPage() {
     }
   }, [allListings, searchQuery, selectedState, selectedGame, selectedCondition, priceRange, showGradedOnly, sortBy, latitude, longitude, updateSearchSession]);
 
-  // Function to sort listings based on selected criteria with enhanced safety
+  // Function to sort listings based on selected criteria with ultra-enhanced safety
   const sortListings = (listings: Listing[], sortBy: string) => {
     try {
       console.log(`Sorting ${listings?.length || 0} listings by: ${sortBy}`);
@@ -457,10 +569,18 @@ export default function ListingsPage() {
         return [];
       }
       
-      // Filter out any null/undefined entries before sorting
-      const validListings = listings.filter(listing => 
-        listing && typeof listing === 'object'
-      );
+      // Filter out any null/undefined entries before sorting with extra validation
+      const validListings = listings.filter(listing => {
+        try {
+          return listing && 
+                 typeof listing === 'object' && 
+                 listing.id && 
+                 typeof listing.id === 'string';
+        } catch (error) {
+          console.error('Error validating listing in sortListings:', error, listing);
+          return false;
+        }
+      });
       
       if (validListings.length === 0) {
         console.warn('No valid listings found after filtering');
@@ -474,8 +594,40 @@ export default function ListingsPage() {
           return sorted.sort((a, b) => {
             try {
               if (!a || !b) return 0;
-              const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-              const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+              
+              let dateA = 0;
+              let dateB = 0;
+              
+              try {
+                if (a.createdAt) {
+                  if (a.createdAt instanceof Date) {
+                    dateA = a.createdAt.getTime();
+                  } else if (typeof a.createdAt === 'string' || typeof a.createdAt === 'number') {
+                    dateA = new Date(a.createdAt).getTime();
+                  } else if (a.createdAt && typeof a.createdAt.toDate === 'function') {
+                    dateA = a.createdAt.toDate().getTime();
+                  }
+                }
+              } catch (dateAError) {
+                console.error('Error parsing dateA:', dateAError, a.createdAt);
+                dateA = 0;
+              }
+              
+              try {
+                if (b.createdAt) {
+                  if (b.createdAt instanceof Date) {
+                    dateB = b.createdAt.getTime();
+                  } else if (typeof b.createdAt === 'string' || typeof b.createdAt === 'number') {
+                    dateB = new Date(b.createdAt).getTime();
+                  } else if (b.createdAt && typeof b.createdAt.toDate === 'function') {
+                    dateB = b.createdAt.toDate().getTime();
+                  }
+                }
+              } catch (dateBError) {
+                console.error('Error parsing dateB:', dateBError, b.createdAt);
+                dateB = 0;
+              }
+              
               return dateB - dateA;
             } catch (error) {
               console.error('Error sorting by newest:', error, { 
@@ -490,8 +642,40 @@ export default function ListingsPage() {
           return sorted.sort((a, b) => {
             try {
               if (!a || !b) return 0;
-              const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-              const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+              
+              let dateA = 0;
+              let dateB = 0;
+              
+              try {
+                if (a.createdAt) {
+                  if (a.createdAt instanceof Date) {
+                    dateA = a.createdAt.getTime();
+                  } else if (typeof a.createdAt === 'string' || typeof a.createdAt === 'number') {
+                    dateA = new Date(a.createdAt).getTime();
+                  } else if (a.createdAt && typeof a.createdAt.toDate === 'function') {
+                    dateA = a.createdAt.toDate().getTime();
+                  }
+                }
+              } catch (dateAError) {
+                console.error('Error parsing dateA:', dateAError, a.createdAt);
+                dateA = 0;
+              }
+              
+              try {
+                if (b.createdAt) {
+                  if (b.createdAt instanceof Date) {
+                    dateB = b.createdAt.getTime();
+                  } else if (typeof b.createdAt === 'string' || typeof b.createdAt === 'number') {
+                    dateB = new Date(b.createdAt).getTime();
+                  } else if (b.createdAt && typeof b.createdAt.toDate === 'function') {
+                    dateB = b.createdAt.toDate().getTime();
+                  }
+                }
+              } catch (dateBError) {
+                console.error('Error parsing dateB:', dateBError, b.createdAt);
+                dateB = 0;
+              }
+              
               return dateA - dateB;
             } catch (error) {
               console.error('Error sorting by oldest:', error, { 
@@ -538,11 +722,41 @@ export default function ListingsPage() {
           return sorted.sort((a, b) => {
             try {
               if (!a || !b) return 0;
-              const gameA = a.game != null ? String(a.game).toLowerCase() : '';
-              const gameB = b.game != null ? String(b.game).toLowerCase() : '';
+              
+              let gameA = '';
+              let gameB = '';
+              
+              try {
+                if (a.game != null) {
+                  gameA = String(a.game);
+                  if (typeof gameA === 'string' && gameA.toLowerCase) {
+                    gameA = gameA.toLowerCase();
+                  } else {
+                    gameA = '';
+                  }
+                }
+              } catch (gameAError) {
+                console.error('Error processing gameA:', gameAError, a.game);
+                gameA = '';
+              }
+              
+              try {
+                if (b.game != null) {
+                  gameB = String(b.game);
+                  if (typeof gameB === 'string' && gameB.toLowerCase) {
+                    gameB = gameB.toLowerCase();
+                  } else {
+                    gameB = '';
+                  }
+                }
+              } catch (gameBError) {
+                console.error('Error processing gameB:', gameBError, b.game);
+                gameB = '';
+              }
               
               // Ensure both are valid strings before using localeCompare
               if (typeof gameA !== 'string' || typeof gameB !== 'string') return 0;
+              if (typeof gameA.localeCompare !== 'function') return 0;
               
               return gameA.localeCompare(gameB);
             } catch (error) {
@@ -571,8 +785,37 @@ export default function ListingsPage() {
           return sorted.sort((a, b) => {
             try {
               if (!a || !b) return 0;
-              const conditionA = a.condition != null ? String(a.condition).toLowerCase() : '';
-              const conditionB = b.condition != null ? String(b.condition).toLowerCase() : '';
+              
+              let conditionA = '';
+              let conditionB = '';
+              
+              try {
+                if (a.condition != null) {
+                  conditionA = String(a.condition);
+                  if (typeof conditionA === 'string' && conditionA.toLowerCase) {
+                    conditionA = conditionA.toLowerCase();
+                  } else {
+                    conditionA = '';
+                  }
+                }
+              } catch (condAError) {
+                console.error('Error processing conditionA:', condAError, a.condition);
+                conditionA = '';
+              }
+              
+              try {
+                if (b.condition != null) {
+                  conditionB = String(b.condition);
+                  if (typeof conditionB === 'string' && conditionB.toLowerCase) {
+                    conditionB = conditionB.toLowerCase();
+                  } else {
+                    conditionB = '';
+                  }
+                }
+              } catch (condBError) {
+                console.error('Error processing conditionB:', condBError, b.condition);
+                conditionB = '';
+              }
               
               // Ensure both are valid strings
               if (typeof conditionA !== 'string' || typeof conditionB !== 'string') return 0;
@@ -594,8 +837,40 @@ export default function ListingsPage() {
           return sorted.sort((a, b) => {
             try {
               if (!a || !b) return 0;
-              const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-              const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+              
+              let dateA = 0;
+              let dateB = 0;
+              
+              try {
+                if (a.createdAt) {
+                  if (a.createdAt instanceof Date) {
+                    dateA = a.createdAt.getTime();
+                  } else if (typeof a.createdAt === 'string' || typeof a.createdAt === 'number') {
+                    dateA = new Date(a.createdAt).getTime();
+                  } else if (a.createdAt && typeof a.createdAt.toDate === 'function') {
+                    dateA = a.createdAt.toDate().getTime();
+                  }
+                }
+              } catch (dateAError) {
+                console.error('Error parsing dateA:', dateAError, a.createdAt);
+                dateA = 0;
+              }
+              
+              try {
+                if (b.createdAt) {
+                  if (b.createdAt instanceof Date) {
+                    dateB = b.createdAt.getTime();
+                  } else if (typeof b.createdAt === 'string' || typeof b.createdAt === 'number') {
+                    dateB = new Date(b.createdAt).getTime();
+                  } else if (b.createdAt && typeof b.createdAt.toDate === 'function') {
+                    dateB = b.createdAt.toDate().getTime();
+                  }
+                }
+              } catch (dateBError) {
+                console.error('Error parsing dateB:', dateBError, b.createdAt);
+                dateB = 0;
+              }
+              
               return dateB - dateA;
             } catch (error) {
               console.error('Error sorting by default (newest):', error, { 
