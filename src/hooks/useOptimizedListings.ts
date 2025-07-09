@@ -52,6 +52,16 @@ export function useOptimizedListings({ userId, searchQuery, showOnlyActive = fal
   const { user } = useAuth();
   const listenerRef = useRef<Unsubscribe | null>(null);
   const componentId = useRef(`listings-${userId || 'all'}-${Date.now()}`).current;
+  
+  // Add debugging for auth state changes
+  useEffect(() => {
+    console.log('useOptimizedListings: Auth state changed', {
+      userId,
+      userFromContext: user?.uid,
+      isLoading,
+      listingsCount: listings.length
+    });
+  }, [userId, user?.uid, isLoading, listings.length]);
 
   // Create a cache key based on the current options
   const cacheKey = `listings_${userId || 'all'}_${showOnlyActive ? 'active' : 'all'}_${searchQuery || 'none'}`;
@@ -84,10 +94,20 @@ export function useOptimizedListings({ userId, searchQuery, showOnlyActive = fal
 
   // Setup the Firestore listener
   useEffect(() => {
-    // Don't set up listener if we don't have a userId for user-specific queries
+    // For user-specific queries, wait for userId to be properly defined
+    // userId should be either a string (authenticated) or null (not authenticated)
+    // undefined means we're still waiting for auth state
     if (userId === undefined) {
-      console.log('useOptimizedListings: Waiting for userId to be defined before setting up listener');
+      console.log('useOptimizedListings: Waiting for auth state to be determined');
       setIsLoading(true);
+      return;
+    }
+
+    // If we need a userId but don't have one (user not authenticated), don't fetch
+    if (userId === null) {
+      console.log('useOptimizedListings: No authenticated user, skipping fetch');
+      setIsLoading(false);
+      setListings([]);
       return;
     }
 

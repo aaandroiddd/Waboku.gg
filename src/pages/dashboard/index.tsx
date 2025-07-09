@@ -76,8 +76,9 @@ const DashboardComponent = () => {
   const [error, setError] = useState<string | null>(null);
   
   // Always fetch fresh data, but use cache for immediate display
+  // Pass null instead of undefined when user is not authenticated to avoid race conditions
   const { listings: fetchedListings, setListings, loading: listingsLoading, error: listingsError, refreshListings, updateListingStatus, permanentlyDeleteListing } = useOptimizedListings({ 
-    userId: user?.uid,
+    userId: authLoading ? undefined : (user?.uid || null), // undefined = still loading auth, null = not authenticated, string = authenticated
     showOnlyActive: false,
     skipInitialFetch: false // Always fetch fresh data
   });
