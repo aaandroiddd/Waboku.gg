@@ -420,35 +420,38 @@ export function useOptimizedListings({ userId, searchQuery, showOnlyActive = fal
         throw new Error('You do not have permission to update this listing');
       }
 
-      // Prepare update data
-      const updateData: any = { status };
+      // Prepare update data with proper validation for Firestore security rules
       const now = new Date();
+      let updateData: any = {};
       
       if (status === 'archived') {
         // When archiving, set archive time and 7-day expiration
         const archiveExpiration = new Date(now);
         archiveExpiration.setDate(archiveExpiration.getDate() + 7);
         
-        // Store the original status for potential restoration
-        updateData.previousStatus = listingData.status;
-        updateData.previousExpiresAt = listingData.expiresAt;
-        
-        // Set archive-specific fields
-        updateData.archivedAt = now;
-        updateData.expiresAt = archiveExpiration;
-        updateData.originalCreatedAt = listingData.createdAt;
-        updateData.updatedAt = now;
+        updateData = {
+          status: 'archived',
+          archivedAt: now,
+          expiresAt: archiveExpiration,
+          originalCreatedAt: listingData.createdAt,
+          updatedAt: now,
+          previousStatus: listingData.status,
+          previousExpiresAt: listingData.expiresAt
+        };
       } else if (status === 'active') {
-        // When activating/restoring, set new dates and remove archive-related fields
+        // When activating/restoring, ensure all required fields are present and properly typed
         
         // Get user data to determine account tier
         let accountTier = 'free'; // Default to free tier
+        let username = user.displayName || 'Anonymous';
+        
         try {
           const userRef = doc(db, 'users', user.uid);
           const userDoc = await getDoc(userRef);
           if (userDoc.exists()) {
             const userData = userDoc.data();
             accountTier = userData.accountTier || 'free';
+            username = userData.username || userData.displayName || user.displayName || 'Anonymous';
           }
         } catch (error) {
           console.error('Error getting user account tier:', error);
@@ -463,27 +466,109 @@ export function useOptimizedListings({ userId, searchQuery, showOnlyActive = fal
         const expirationTime = new Date(now);
         expirationTime.setHours(expirationTime.getHours() + tierDuration);
         
-        // When restoring from archived, ensure we properly reset all archive-related fields
-        updateData.status = 'active';
-        updateData.createdAt = now;
-        updateData.updatedAt = now;
-        updateData.expiresAt = expirationTime;
+        // Ensure all required fields are present and properly typed for security rules
+        // Build the update data step by step to ensure all required fields are included
+        updateData = {
+          // Core required fields that must always be present
+          status: 'active',
+          userId: String(user.uid),
+          username: String(username),
+          accountTier: String(accountTier),
+          createdAt: now,
+          updatedAt: now,
+          expiresAt: expirationTime,
+          
+          // Required listing fields with proper type conversion and validation
+          title: String(listingData.title || '').trim(),
+          price: Math.max(0, Math.min(50000, Number(listingData.price) || 0)), // Validate price range
+          description: String(listingData.description || '').trim(),
+          city: String(listingData.city || '').trim(),
+          state: String(listingData.state || '').trim(),
+          game: String(listingData.game || '').trim(),
+          condition: String(listingData.condition || '').trim(),
+          imageUrls: Array.isArray(listingData.imageUrls) ? listingData.imageUrls.slice(0, 10) : [], // Limit to 10 images
+          isGraded: Boolean(listingData.isGraded)
+        };
+
+        // Add optional fields only if they exist and are valid
+        if (listingData.cardName && String(listingData.cardName).trim()) {
+          updateData.cardName = String(listingData.cardName).trim();
+        }
         
-        // IMPORTANT: Explicitly set all archive-related fields to null to ensure proper visibility
-        updateData.archivedAt = null; // Remove archived timestamp
-        updateData.originalCreatedAt = null; // Remove original creation date
-        updateData.expirationReason = null; // Remove expiration reason if it exists
-        updateData.soldTo = null; // Ensure the listing isn't marked as sold
-        updateData.previousStatus = null; // Clear previous status
-        updateData.previousExpiresAt = null; // Clear previous expiration date
+        if (listingData.quantity && Number(listingData.quantity) > 0) {
+          updateData.quantity = Number(listingData.quantity);
+        }
         
-        // Store the account tier with the listing
-        updateData.accountTier = accountTier;
-      } else {
-        // For inactive status, keep current expiration but remove archive-related fields
+        if (listingData.language && String(listingData.language).trim()) {
+          updateData.language = String(listingData.language).trim();
+        }
+        
+        if (typeof listingData.finalSale === 'boolean') {
+          updateData.finalSale = Boolean(listingData.finalSale);
+        }
+        
+        if (typeof listingData.offersOnly === 'boolean') {
+          updateData.offersOnly = Boolean(listingData.offersOnly);
+        }
+        
+        if (typeof listingData.coverImageIndex === 'number' && listingData.coverImageIndex >= 0) {
+          updateData.coverImageIndex = Number(listingData.coverImageIndex);
+        }
+        
+        if (typeof listingData.latitude === 'number' && typeof listingData.longitude === 'number') {
+          updateData.latitude = Number(listingData.latitude);
+          updateData.longitude = Number(listingData.longitude);
+        }
+        
+        // Handle grading fields properly
+        if (updateData.isGraded) {
+          if (listingData.gradeLevel && Number(listingData.gradeLevel) > 0) {
+            updateData.gradeLevel = Number(listingData.gradeLevel);
+          }
+          if (listingData.gradingCompany && String(listingData.gradingCompany).trim()) {
+            updateData.gradingCompany = String(listingData.gradingCompany).trim();
+          }
+        }
+
+        // Validate required fields before sending to Firestore
+        const requiredFields = ['title', 'price', 'description', 'city', 'state', 'game', 'condition', 'userId', 'username', 'createdAt', 'expiresAt'];
+        for (const field of requiredFields) {
+          if (!updateData[field] && updateData[field] !== 0 && updateData[field] !== false) {
+            console.error(`Missing required field: ${field}`, updateData[field]);
+            throw new Error(`Missing required field: ${field}`);
+          }
+        }
+
+        // Validate field lengths and constraints
+        if (updateData.title.length < 3 || updateData.title.length > 100) {
+          throw new Error('Title must be between 3 and 100 characters');
+        }
+        
+        if (updateData.price < 0 || updateData.price > 50000) {
+          throw new Error('Price must be between 0 and 50000');
+        }
+        
+        if (!Array.isArray(updateData.imageUrls) || updateData.imageUrls.length > 10) {
+          throw new Error('Invalid image URLs or too many images');
+        }
+
+        console.log('Validation passed for all required fields');
+
+        // Explicitly set archive-related fields to null when restoring to 'active'
         updateData.archivedAt = null;
         updateData.originalCreatedAt = null;
-        updateData.updatedAt = now;
+        updateData.expirationReason = null;
+        updateData.soldTo = null;
+        updateData.previousStatus = null;
+        updateData.previousExpiresAt = null;
+      } else {
+        // For inactive status, keep current expiration but remove archive-related fields
+        updateData = {
+          status: 'inactive',
+          updatedAt: now,
+          archivedAt: null,
+          originalCreatedAt: null
+        };
       }
 
       console.log(`Updating listing ${listingId} status to ${status} with data:`, updateData);
@@ -499,8 +584,7 @@ export function useOptimizedListings({ userId, searchQuery, showOnlyActive = fal
         
         if (updatedData.status !== status) {
           console.error(`Failed to update listing status to ${status}. Current status: ${updatedData.status}`);
-          // Try one more time with a direct status update
-          await updateDoc(listingRef, { status: status });
+          throw new Error(`Failed to update listing status to ${status}`);
         }
       }
       
