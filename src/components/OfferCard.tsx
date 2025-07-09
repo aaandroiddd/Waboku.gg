@@ -7,6 +7,7 @@ import { format, formatDistanceToNow, differenceInHours, isPast } from 'date-fns
 import Image from 'next/image';
 import { UserNameLink } from '@/components/UserNameLink';
 import { Check, X, RefreshCw, Send, Trash2, XCircle, MapPin, Truck, Clock, AlertTriangle, MessageCircle } from 'lucide-react';
+import { OfferTimer } from '@/components/OfferTimer';
 import { useOffers } from '@/hooks/useOffers';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
@@ -199,31 +200,19 @@ export function OfferCard({ offer, type, onCounterOffer }: OfferCardProps) {
                 Date: {format(safeOffer.createdAt, 'PPP')}
               </p>
               
-              {/* Move expiration info to be more prominent */}
+              {/* Active offer timer for pending offers */}
               {safeOffer.expiresAt && safeOffer.status === 'pending' && (
-                <div className={`p-2 rounded-md border ${
-                  expirationInfo?.isExpiringSoon 
-                    ? 'bg-orange-50 border-orange-200 dark:bg-orange-950/20 dark:border-orange-800' 
-                    : 'bg-blue-50 border-blue-200 dark:bg-blue-950/20 dark:border-blue-800'
-                }`}>
-                  <div className="flex items-center gap-2">
-                    <Clock className={`h-4 w-4 ${
-                      expirationInfo?.isExpiringSoon ? 'text-orange-600 dark:text-orange-400' : 'text-blue-600 dark:text-blue-400'
-                    }`} />
-                    <div className="flex-1">
-                      <p className={`text-sm font-medium ${
-                        expirationInfo?.isExpiringSoon ? 'text-orange-800 dark:text-orange-200' : 'text-blue-800 dark:text-blue-200'
-                      }`}>
-                        {expirationInfo?.isExpiringSoon ? 'Expires Soon!' : 'Offer Expires'}
-                      </p>
-                      <p className={`text-xs ${
-                        expirationInfo?.isExpiringSoon ? 'text-orange-600 dark:text-orange-300' : 'text-blue-600 dark:text-blue-300'
-                      }`}>
-                        {format(safeOffer.expiresAt, 'PPP')} {expirationInfo && `(${expirationInfo.timeUntilExpiry})`}
-                      </p>
-                    </div>
-                  </div>
-                </div>
+                <OfferTimer
+                  expiresAt={safeOffer.expiresAt}
+                  status={safeOffer.status}
+                  offerId={safeOffer.id}
+                  onExpired={() => {
+                    // Refresh the offers when timer expires
+                    window.dispatchEvent(new CustomEvent('offerExpired', {
+                      detail: { offerId: safeOffer.id }
+                    }));
+                  }}
+                />
               )}
               
               <div className="flex flex-col sm:flex-row sm:items-center gap-2">

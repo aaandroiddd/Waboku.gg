@@ -53,7 +53,7 @@ const OffersContent = () => {
     };
   }, [clearUnreadCount, resetUnreadCount]);
   
-  // Listen for offer cleared events and status changes
+  // Listen for offer cleared events, status changes, and expirations
   useEffect(() => {
     const handleOfferCleared = (event: CustomEvent) => {
       // Refresh offers section when an offer is cleared
@@ -71,16 +71,36 @@ const OffersContent = () => {
       }, 500);
     };
     
+    const handleOfferExpired = (event: CustomEvent) => {
+      const { offerId } = event.detail;
+      console.log(`Offer expired event received: ${offerId}`);
+      
+      // Show toast notification
+      toast({
+        title: "Offer Expired",
+        description: "An offer has expired and will be updated automatically",
+        variant: "default",
+      });
+      
+      // Refresh offers data to show updated status
+      setTimeout(() => {
+        console.log('Refreshing offers due to expiration event');
+        refreshSection('offers');
+      }, 1000);
+    };
+    
     // Add event listeners
     window.addEventListener('offerCleared', handleOfferCleared as EventListener);
     window.addEventListener('offerStatusChanged', handleOfferStatusChanged as EventListener);
+    window.addEventListener('offerExpired', handleOfferExpired as EventListener);
     
     // Clean up
     return () => {
       window.removeEventListener('offerCleared', handleOfferCleared as EventListener);
       window.removeEventListener('offerStatusChanged', handleOfferStatusChanged as EventListener);
+      window.removeEventListener('offerExpired', handleOfferExpired as EventListener);
     };
-  }, [refreshSection]);
+  }, [refreshSection, toast]);
   
   const [counterOfferDialog, setCounterOfferDialog] = useState({
     isOpen: false,
