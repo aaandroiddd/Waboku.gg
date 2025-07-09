@@ -21,6 +21,7 @@ import { useTrendingSearches } from "@/hooks/useTrendingSearches";
 import Link from "next/link";
 import { FirebaseConnectionHandler } from "@/components/FirebaseConnectionHandler";
 import { fixFirestoreListenChannel, clearFirestoreCaches } from "@/lib/firebase-connection-fix";
+import { fixClientFirestoreConnection, initializeFirestoreWithRetry } from "@/lib/firebase-client-fix";
 import { StateSelect } from "@/components/StateSelect";
 import { useAnimationConfig } from "@/hooks/useOptimizedMediaQuery";
 import ScrollIndicator from "@/components/ScrollIndicator";
@@ -629,23 +630,40 @@ export default function Home() {
                         onClick={async () => {
                           setIsRecovering(true);
                           try {
-                            await clearFirestoreCaches();
-                            console.log('Cleared all Firestore caches');
+                            console.log('Starting comprehensive connection recovery...');
                             
-                            Object.keys(localStorage).forEach(key => {
-                              if (key.startsWith('listings_')) {
-                                localStorage.removeItem(key);
-                              }
-                            });
+                            // Step 1: Try client-side Firestore fix first
+                            const clientFixResult = await fixClientFirestoreConnection();
+                            console.log('Client fix result:', clientFixResult);
                             
-                            await fixFirestoreListenChannel();
-                            console.log('Fixed Firestore Listen channel');
+                            if (!clientFixResult.success) {
+                              // Step 2: If client fix fails, try the listen channel fix
+                              await clearFirestoreCaches();
+                              console.log('Cleared all Firestore caches');
+                              
+                              Object.keys(localStorage).forEach(key => {
+                                if (key.startsWith('listings_')) {
+                                  localStorage.removeItem(key);
+                                }
+                              });
+                              
+                              await fixFirestoreListenChannel();
+                              console.log('Fixed Firestore Listen channel');
+                            }
                             
-                            setConnectionError(false);
-                            window.location.reload();
+                            // Step 3: Try to reinitialize Firestore with retry
+                            const initResult = await initializeFirestoreWithRetry(2);
+                            console.log('Firestore reinit result:', initResult);
+                            
+                            if (initResult.success) {
+                              setConnectionError(false);
+                              window.location.reload();
+                            } else {
+                              throw new Error(initResult.message);
+                            }
                           } catch (error) {
                             console.error('Error recovering connection:', error);
-                            alert('Unable to automatically fix the connection. Please try refreshing the page manually.');
+                            alert('Unable to automatically fix the connection. Please try refreshing the page manually or check your internet connection.');
                           } finally {
                             setIsRecovering(false);
                           }
