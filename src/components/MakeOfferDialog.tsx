@@ -15,6 +15,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { StateSelect } from '@/components/StateSelect';
 import { useStripeSellerStatus } from '@/hooks/useStripeSellerStatus';
+import { usePremiumStatus } from '@/hooks/usePremiumStatus';
 import MakeOfferTutorial from './MakeOfferTutorial';
 
 interface MakeOfferDialogProps {
@@ -46,6 +47,10 @@ export function MakeOfferDialog({
   const router = useRouter();
   const [deliveryMethod, setDeliveryMethod] = useState<'shipping' | 'pickup'>('shipping');
   const { hasStripeAccount, isLoading: isLoadingStripeStatus } = useStripeSellerStatus(sellerId);
+  const { isPremium, isLoading: isPremiumLoading } = usePremiumStatus();
+  
+  // Offer expiration state
+  const [expirationHours, setExpirationHours] = useState<number>(24); // Default 24 hours
   
   // Acknowledgment checkboxes
   const [shippingAcknowledged, setShippingAcknowledged] = useState(false);
@@ -131,7 +136,8 @@ export function MakeOfferDialog({
         shippingAddress: null, // No shipping address at this stage
         isPickup: deliveryMethod === 'pickup',
         requiresShippingInfo: deliveryMethod === 'shipping',
-        sellerHasStripeAccount: hasStripeAccount
+        sellerHasStripeAccount: hasStripeAccount,
+        expirationHours: expirationHours // Include expiration hours for premium users
       };
       
       console.log('Sending offer request with data:', {
@@ -283,6 +289,41 @@ export function MakeOfferDialog({
               </div>
               <p className="text-xs text-muted-foreground leading-relaxed">Enter the amount you want to offer for this item</p>
             </div>
+            
+            {/* Offer Expiration Options for Premium Users */}
+            {isPremium && !isPremiumLoading && (
+              <div className="grid gap-2 mt-2">
+                <Label className="text-sm font-medium text-foreground">Offer Expiration</Label>
+                <Select 
+                  value={expirationHours.toString()} 
+                  onValueChange={(value) => setExpirationHours(parseInt(value))}
+                  disabled={isSubmitting}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select expiration time" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="24">24 hours</SelectItem>
+                    <SelectItem value="168">7 days</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  As a premium user, you can choose how long your offer remains active
+                </p>
+              </div>
+            )}
+            
+            {/* Show default expiration info for free users */}
+            {!isPremium && !isPremiumLoading && (
+              <div className="grid gap-2 mt-2">
+                <Alert className="bg-blue-500/10 border-blue-500/50">
+                  <InfoIcon className="h-4 w-4 text-blue-500" />
+                  <AlertDescription className="ml-2 text-sm font-medium text-blue-700 dark:text-blue-300">
+                    Your offer will expire in 24 hours. Upgrade to premium to choose longer expiration times.
+                  </AlertDescription>
+                </Alert>
+              </div>
+            )}
             
             <div className="grid gap-2 mt-2">
               <Label className="text-sm font-medium text-foreground">Delivery Method</Label>

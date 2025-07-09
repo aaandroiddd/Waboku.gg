@@ -113,7 +113,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     console.log(`Authenticated user: ${userId}`);
 
     // Get the request body
-    const { listingId, sellerId, amount, listingSnapshot, shippingAddress, isPickup, requiresShippingInfo } = req.body;
+    const { listingId, sellerId, amount, listingSnapshot, shippingAddress, isPickup, requiresShippingInfo, expirationHours } = req.body;
     console.log('Request body:', { 
       listingId, 
       sellerId, 
@@ -125,7 +125,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       } : null,
       hasShippingAddress: !!shippingAddress,
       isPickup: !!isPickup,
-      requiresShippingInfo: !!requiresShippingInfo
+      requiresShippingInfo: !!requiresShippingInfo,
+      expirationHours: expirationHours
     });
 
     // Validate the request body
@@ -148,6 +149,35 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       console.error('User attempted to make an offer on their own listing');
       return res.status(400).json({ error: 'You cannot make an offer on your own listing' });
     }
+
+    // Determine expiration time based on user's premium status and provided expiration hours
+    let offerExpirationHours = 24; // Default 24 hours for all users
+    
+    // Check if user is premium and validate expiration hours
+    if (expirationHours) {
+      try {
+        // Check user's premium status
+        const userDoc = await db.collection('users').doc(userId).get();
+        const userData = userDoc.data();
+        const isPremium = userData?.accountTier === 'premium';
+        
+        if (isPremium) {
+          // Premium users can choose between 24 hours and 7 days (168 hours)
+          if (expirationHours === 24 || expirationHours === 168) {
+            offerExpirationHours = expirationHours;
+            console.log(`Premium user ${userId} set offer expiration to ${offerExpirationHours} hours`);
+          } else {
+            console.log(`Premium user ${userId} provided invalid expiration hours (${expirationHours}), using default 24 hours`);
+          }
+        } else {
+          console.log(`Free user ${userId} attempted to set custom expiration, using default 24 hours`);
+        }
+      } catch (premiumCheckError) {
+        console.error('Error checking premium status, using default expiration:', premiumCheckError);
+      }
+    }
+    
+    console.log(`Offer will expire in ${offerExpirationHours} hours`);
 
     // Create the offer using admin SDK to bypass security rules
     console.log(`Creating offer for listing ${listingId} by buyer ${userId} to seller ${sellerId}`);
@@ -192,7 +222,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       status: 'pending',
       createdAt: FieldValue.serverTimestamp(),
       updatedAt: FieldValue.serverTimestamp(),
-      expiresAt: admin.firestore.Timestamp.fromDate(new Date(Date.now() + 48 * 60 * 60 * 1000)),
+      expiresAt: admin.firestore.Timestamp.fromDate(new Date(Date.now() + offerExpirationHours * 60 * 60 * 1000)),
       listingSnapshot: {
         title: listingSnapshot.title || 'Unknown Listing',
         price: listingSnapshot.price || 0,
