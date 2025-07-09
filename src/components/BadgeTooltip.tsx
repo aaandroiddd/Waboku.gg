@@ -21,6 +21,7 @@ export function BadgeTooltip({
 }: BadgeTooltipProps) {
   // Check if the child has cursor-pointer class to determine cursor style
   const childHasCursorPointer = React.isValidElement(children) && 
+    children.props?.className && 
     typeof children.props.className === 'string' && 
     children.props.className.includes('cursor-pointer');
 

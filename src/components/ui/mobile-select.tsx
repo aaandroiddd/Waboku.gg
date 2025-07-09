@@ -40,7 +40,7 @@ export function MobileSelect({
       if (typeof window === "undefined") return false;
       
       // Check user agent
-      const userAgent = navigator.userAgent;
+      const userAgent = navigator.userAgent || '';
       const isMobileUserAgent = /Mobi|Android|iPhone|iPad|iPod|Opera Mini|IEMobile|WPDesktop/i.test(userAgent);
       
       // Check screen size
