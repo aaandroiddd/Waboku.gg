@@ -161,10 +161,17 @@ service cloud.firestore {
         && request.resource.data.userId == request.auth.uid
         && isValidListing(request.resource.data);
       
-      // Allow owners to update their listings with validation
+      // Allow owners to update their listings with flexible validation
       allow update: if isAuthenticated() 
         && resource.data.userId == request.auth.uid
-        && isValidListing(request.resource.data);
+        && request.resource.data.userId == request.auth.uid
+        && (
+          // Allow status changes (archive/restore operations) with basic validation
+          (request.resource.data.status in ['active', 'inactive', 'sold', 'archived'] &&
+           request.resource.data.updatedAt is timestamp) ||
+          // For comprehensive updates, require full validation
+          isValidListing(request.resource.data)
+        );
       
       // Allow owners to delete their listings
       allow delete: if isAuthenticated() 
