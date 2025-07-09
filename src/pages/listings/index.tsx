@@ -219,34 +219,43 @@ export default function ListingsPage() {
     // Apply search query filter
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(listing => 
-        listing.title?.toLowerCase().includes(query) ||
-        listing.description?.toLowerCase().includes(query)
-      );
+      filtered = filtered.filter(listing => {
+        const title = listing.title || '';
+        const description = listing.description || '';
+        return title.toLowerCase().includes(query) ||
+               description.toLowerCase().includes(query);
+      });
     }
 
     // Apply game filter
     if (selectedGame !== "all") {
       filtered = filtered.filter(listing => {
         const listingGameLower = listing.game?.toLowerCase() || '';
-        return GAME_NAME_MAPPING[selectedGame]?.some(name => 
+        const gameMapping = GAME_NAME_MAPPING[selectedGame];
+        if (!gameMapping || !Array.isArray(gameMapping)) {
+          console.warn(`No game mapping found for selectedGame: ${selectedGame}`);
+          return false;
+        }
+        return gameMapping.some(name => 
           listingGameLower === name.toLowerCase()
-        ) || false;
+        );
       });
     }
 
     // Apply condition filter
     if (selectedCondition !== "all") {
-      filtered = filtered.filter(listing => 
-        listing.condition?.toLowerCase() === selectedCondition.toLowerCase()
-      );
+      filtered = filtered.filter(listing => {
+        const condition = listing.condition || '';
+        return condition.toLowerCase() === selectedCondition.toLowerCase();
+      });
     }
 
     // Apply location filter
     if (selectedState !== "all") {
-      filtered = filtered.filter(listing => 
-        listing.state?.toLowerCase() === selectedState.toLowerCase()
-      );
+      filtered = filtered.filter(listing => {
+        const state = listing.state || '';
+        return state.toLowerCase() === selectedState.toLowerCase();
+      });
     }
 
     // Apply price filter
