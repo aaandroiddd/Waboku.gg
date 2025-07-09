@@ -215,11 +215,34 @@ export function getFirebaseAdmin() {
   }
 
   firebaseAdmin = admin;
-  return {
-    admin: firebaseAdmin,
-    db: firebaseAdmin.firestore(),
-    auth: firebaseAdmin.auth(),
-    storage: firebaseAdmin.storage(),
-    database: firebaseAdmin.database()
-  };
+  
+  // Add error handling for Firestore initialization
+  try {
+    const db = firebaseAdmin.firestore();
+    // Test the connection
+    console.log('[Firebase Admin] Firestore initialized successfully');
+    
+    return {
+      admin: firebaseAdmin,
+      db,
+      auth: firebaseAdmin.auth(),
+      storage: firebaseAdmin.storage(),
+      database: firebaseAdmin.database()
+    };
+  } catch (firestoreError: any) {
+    console.error('[Firebase Admin] Firestore initialization error:', {
+      message: firestoreError.message,
+      code: firestoreError.code,
+      name: firestoreError.name
+    });
+    
+    // Still return the admin instance but log the error
+    return {
+      admin: firebaseAdmin,
+      db: firebaseAdmin.firestore(),
+      auth: firebaseAdmin.auth(),
+      storage: firebaseAdmin.storage(),
+      database: firebaseAdmin.database()
+    };
+  }
 }

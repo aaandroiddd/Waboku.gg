@@ -273,29 +273,38 @@ export function useListings({
         throw new Error('You do not have permission to update this listing');
       }
 
-      // Prepare update data
-      const updateData: any = { status };
+      // Prepare update data with proper validation for Firestore security rules
       const now = new Date();
+      let updateData: any = {};
       
       if (status === 'archived') {
         // When archiving, set archive time and 7-day expiration
         const archiveExpiration = new Date(now);
         archiveExpiration.setDate(archiveExpiration.getDate() + 7);
         
-        updateData.archivedAt = now;
-        updateData.expiresAt = archiveExpiration;
-        updateData.originalCreatedAt = listingData.createdAt;
+        updateData = {
+          status: 'archived',
+          archivedAt: now,
+          expiresAt: archiveExpiration,
+          originalCreatedAt: listingData.createdAt,
+          updatedAt: now,
+          previousStatus: listingData.status,
+          previousExpiresAt: listingData.expiresAt
+        };
       } else if (status === 'active') {
-        // When activating/restoring, set new dates and remove archive-related fields
+        // When activating/restoring, ensure all required fields are present and properly typed
         
         // Get user data to determine account tier
         let accountTier = 'free'; // Default to free tier
+        let username = user.displayName || 'Anonymous';
+        
         try {
           const userRef = doc(db, 'users', user.uid);
           const userDoc = await getDoc(userRef);
           if (userDoc.exists()) {
             const userData = userDoc.data();
             accountTier = userData.accountTier || 'free';
+            username = userData.username || userData.displayName || user.displayName || 'Anonymous';
           }
         } catch (error) {
           console.error('Error getting user account tier:', error);
@@ -310,27 +319,53 @@ export function useListings({
         const expirationTime = new Date(now);
         expirationTime.setHours(expirationTime.getHours() + tierDuration);
         
-        // When restoring from archived, ensure we properly reset all archive-related fields
-        updateData.status = 'active';
-        updateData.createdAt = now;
-        updateData.updatedAt = now;
-        updateData.expiresAt = expirationTime;
-        
-        // IMPORTANT: Explicitly set all archive-related fields to null to ensure proper visibility
-        updateData.archivedAt = null; // Remove archived timestamp
-        updateData.originalCreatedAt = null; // Remove original creation date
-        updateData.expirationReason = null; // Remove expiration reason if it exists
-        updateData.soldTo = null; // Ensure the listing isn't marked as sold
-        updateData.previousStatus = null; // Clear previous status
-        updateData.previousExpiresAt = null; // Clear previous expiration date
-        
-        // Store the account tier with the listing
-        updateData.accountTier = accountTier;
+        // Ensure all required fields are present and properly typed for security rules
+        updateData = {
+          status: 'active',
+          createdAt: now,
+          updatedAt: now,
+          expiresAt: expirationTime,
+          accountTier: accountTier,
+          username: username,
+          userId: user.uid, // Ensure userId is present
+          // Preserve existing required fields
+          title: String(listingData.title || ''),
+          price: Number(listingData.price) || 0,
+          description: String(listingData.description || ''),
+          city: String(listingData.city || ''),
+          state: String(listingData.state || ''),
+          game: String(listingData.game || ''),
+          condition: String(listingData.condition || ''),
+          imageUrls: Array.isArray(listingData.imageUrls) ? listingData.imageUrls : [],
+          isGraded: Boolean(listingData.isGraded),
+          // Optional fields with proper type handling
+          ...(listingData.cardName && { cardName: String(listingData.cardName) }),
+          ...(listingData.quantity && { quantity: Number(listingData.quantity) }),
+          ...(listingData.language && { language: String(listingData.language) }),
+          ...(typeof listingData.finalSale === 'boolean' && { finalSale: Boolean(listingData.finalSale) }),
+          ...(typeof listingData.offersOnly === 'boolean' && { offersOnly: Boolean(listingData.offersOnly) }),
+          ...(typeof listingData.coverImageIndex === 'number' && { coverImageIndex: Number(listingData.coverImageIndex) }),
+          ...(typeof listingData.latitude === 'number' && { latitude: Number(listingData.latitude) }),
+          ...(typeof listingData.longitude === 'number' && { longitude: Number(listingData.longitude) }),
+          // Grading fields if applicable
+          ...(listingData.isGraded && listingData.gradeLevel && { gradeLevel: Number(listingData.gradeLevel) }),
+          ...(listingData.isGraded && listingData.gradingCompany && { gradingCompany: String(listingData.gradingCompany) }),
+          // Explicitly remove archive-related fields
+          archivedAt: null,
+          originalCreatedAt: null,
+          expirationReason: null,
+          soldTo: null,
+          previousStatus: null,
+          previousExpiresAt: null
+        };
       } else {
         // For inactive status, keep current expiration but remove archive-related fields
-        updateData.archivedAt = null;
-        updateData.originalCreatedAt = null;
-        updateData.updatedAt = now;
+        updateData = {
+          status: 'inactive',
+          updatedAt: now,
+          archivedAt: null,
+          originalCreatedAt: null
+        };
       }
 
       console.log(`Updating listing ${listingId} status to ${status} with data:`, updateData);
@@ -346,8 +381,7 @@ export function useListings({
         
         if (updatedData.status !== status) {
           console.error(`Failed to update listing status to ${status}. Current status: ${updatedData.status}`);
-          // Try one more time with a direct status update
-          await updateDoc(listingRef, { status: status });
+          throw new Error(`Failed to update listing status to ${status}`);
         }
       }
       
