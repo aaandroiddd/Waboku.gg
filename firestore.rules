@@ -59,7 +59,8 @@ service cloud.firestore {
         && (!("cardName" in data) || data.cardName is string) // SECURITY: Validate cardName field
         && (!("quantity" in data) || data.quantity is number) // SECURITY: Validate quantity field
         && (!("latitude" in data) || data.latitude is number) // SECURITY: Validate latitude field
-        && (!("longitude" in data) || data.longitude is number); // SECURITY: Validate longitude field
+        && (!("longitude" in data) || data.longitude is number) // SECURITY: Validate longitude field
+        && (!("updatedAt" in data) || data.updatedAt is timestamp); // SECURITY: Validate updatedAt timestamp
     }
 
     function isValidMessage(data) {

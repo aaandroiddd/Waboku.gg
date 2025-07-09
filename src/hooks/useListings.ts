@@ -320,51 +320,97 @@ export function useListings({
         expirationTime.setHours(expirationTime.getHours() + tierDuration);
         
         // Ensure all required fields are present and properly typed for security rules
+        // Build the update data step by step to ensure all required fields are included
         updateData = {
+          // Core required fields that must always be present
           status: 'active',
+          userId: String(user.uid),
+          username: String(username),
+          accountTier: String(accountTier),
           createdAt: now,
           updatedAt: now,
           expiresAt: expirationTime,
-          accountTier: accountTier,
-          username: username,
-          userId: user.uid, // Ensure userId is present
-          // Preserve existing required fields
-          title: String(listingData.title || ''),
-          price: Number(listingData.price) || 0,
-          description: String(listingData.description || ''),
-          city: String(listingData.city || ''),
-          state: String(listingData.state || ''),
-          game: String(listingData.game || ''),
-          condition: String(listingData.condition || ''),
-          imageUrls: Array.isArray(listingData.imageUrls) ? listingData.imageUrls : [],
-          isGraded: Boolean(listingData.isGraded),
-          // Optional fields with proper type handling
-          ...(listingData.cardName && { cardName: String(listingData.cardName) }),
-          ...(listingData.quantity && { quantity: Number(listingData.quantity) }),
-          ...(listingData.language && { language: String(listingData.language) }),
-          ...(typeof listingData.finalSale === 'boolean' && { finalSale: Boolean(listingData.finalSale) }),
-          ...(typeof listingData.offersOnly === 'boolean' && { offersOnly: Boolean(listingData.offersOnly) }),
-          ...(typeof listingData.coverImageIndex === 'number' && { coverImageIndex: Number(listingData.coverImageIndex) }),
-          ...(typeof listingData.latitude === 'number' && { latitude: Number(listingData.latitude) }),
-          ...(typeof listingData.longitude === 'number' && { longitude: Number(listingData.longitude) }),
-          // Grading fields if applicable
-          ...(listingData.isGraded && listingData.gradeLevel && { gradeLevel: Number(listingData.gradeLevel) }),
-          ...(listingData.isGraded && listingData.gradingCompany && { gradingCompany: String(listingData.gradingCompany) }),
-          // Explicitly remove archive-related fields
-          archivedAt: null,
-          originalCreatedAt: null,
-          expirationReason: null,
-          soldTo: null,
-          previousStatus: null,
-          previousExpiresAt: null
+          
+          // Required listing fields with proper type conversion and validation
+          title: String(listingData.title || '').trim(),
+          price: Math.max(0, Math.min(50000, Number(listingData.price) || 0)), // Validate price range
+          description: String(listingData.description || '').trim(),
+          city: String(listingData.city || '').trim(),
+          state: String(listingData.state || '').trim(),
+          game: String(listingData.game || '').trim(),
+          condition: String(listingData.condition || '').trim(),
+          imageUrls: Array.isArray(listingData.imageUrls) ? listingData.imageUrls.slice(0, 10) : [], // Limit to 10 images
+          isGraded: Boolean(listingData.isGraded)
         };
+
+        // Add optional fields only if they exist and are valid
+        if (listingData.cardName && String(listingData.cardName).trim()) {
+          updateData.cardName = String(listingData.cardName).trim();
+        }
+        
+        if (listingData.quantity && Number(listingData.quantity) > 0) {
+          updateData.quantity = Number(listingData.quantity);
+        }
+        
+        if (listingData.language && String(listingData.language).trim()) {
+          updateData.language = String(listingData.language).trim();
+        }
+        
+        if (typeof listingData.finalSale === 'boolean') {
+          updateData.finalSale = Boolean(listingData.finalSale);
+        }
+        
+        if (typeof listingData.offersOnly === 'boolean') {
+          updateData.offersOnly = Boolean(listingData.offersOnly);
+        }
+        
+        if (typeof listingData.coverImageIndex === 'number' && listingData.coverImageIndex >= 0) {
+          updateData.coverImageIndex = Number(listingData.coverImageIndex);
+        }
+        
+        if (typeof listingData.latitude === 'number' && typeof listingData.longitude === 'number') {
+          updateData.latitude = Number(listingData.latitude);
+          updateData.longitude = Number(listingData.longitude);
+        }
+        
+        // Handle grading fields properly
+        if (updateData.isGraded) {
+          if (listingData.gradeLevel && Number(listingData.gradeLevel) > 0) {
+            updateData.gradeLevel = Number(listingData.gradeLevel);
+          }
+          if (listingData.gradingCompany && String(listingData.gradingCompany).trim()) {
+            updateData.gradingCompany = String(listingData.gradingCompany).trim();
+          }
+        }
+
+        // Validate required fields before sending to Firestore
+        const requiredFields = ['title', 'price', 'description', 'city', 'state', 'game', 'condition', 'userId', 'username', 'createdAt', 'expiresAt'];
+        for (const field of requiredFields) {
+          if (!updateData[field] && updateData[field] !== 0 && updateData[field] !== false) {
+            console.error(`Missing required field: ${field}`, updateData[field]);
+            throw new Error(`Missing required field: ${field}`);
+          }
+        }
+
+        // Validate field lengths and constraints
+        if (updateData.title.length < 3 || updateData.title.length > 100) {
+          throw new Error('Title must be between 3 and 100 characters');
+        }
+        
+        if (updateData.price < 0 || updateData.price > 50000) {
+          throw new Error('Price must be between 0 and 50000');
+        }
+        
+        if (!Array.isArray(updateData.imageUrls) || updateData.imageUrls.length > 10) {
+          throw new Error('Invalid image URLs or too many images');
+        }
+
+        console.log('Validation passed for all required fields');
       } else {
         // For inactive status, keep current expiration but remove archive-related fields
         updateData = {
           status: 'inactive',
-          updatedAt: now,
-          archivedAt: null,
-          originalCreatedAt: null
+          updatedAt: now
         };
       }
 
