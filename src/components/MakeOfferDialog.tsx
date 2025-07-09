@@ -304,6 +304,8 @@ export function MakeOfferDialog({
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="24">24 hours</SelectItem>
+                    <SelectItem value="48">48 hours</SelectItem>
+                    <SelectItem value="72">3 days</SelectItem>
                     <SelectItem value="168">7 days</SelectItem>
                   </SelectContent>
                 </Select>

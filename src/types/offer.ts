@@ -9,7 +9,7 @@ export interface Offer {
   cleared?: boolean;
   createdAt: Date;
   updatedAt: Date;
-  expiresAt?: Date; // When the offer expires (24 hours from creation, 7 days for premium users)
+  expiresAt?: Date; // When the offer expires (24h default, premium users can choose 24h, 48h, 3 days, or 7 days)
   listingSnapshot: {
     title: string;
     price: number;

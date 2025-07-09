@@ -162,8 +162,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const isPremium = userData?.accountTier === 'premium';
         
         if (isPremium) {
-          // Premium users can choose between 24 hours and 7 days (168 hours)
-          if (expirationHours === 24 || expirationHours === 168) {
+          // Premium users can choose between 24h, 48h, 3 days (72h), and 7 days (168h)
+          const validPremiumHours = [24, 48, 72, 168];
+          if (validPremiumHours.includes(expirationHours)) {
             offerExpirationHours = expirationHours;
             console.log(`Premium user ${userId} set offer expiration to ${offerExpirationHours} hours`);
           } else {

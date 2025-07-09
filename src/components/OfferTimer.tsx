@@ -31,14 +31,24 @@ export function OfferTimer({ expiresAt, status, offerId, onExpired }: OfferTimer
     const endTime = expiresAt.getTime();
     
     // Calculate total duration based on the actual expiration time
-    // This supports both 24-hour (default) and 7-day (premium) offers
-    const createdAt = new Date(endTime - (24 * 60 * 60 * 1000)); // Assume 24h default
+    // This supports 24h, 48h, 3 days (72h), and 7 days (168h) offers
+    const createdAt = new Date(endTime - (24 * 60 * 60 * 1000)); // Assume 24h as baseline
     const actualDuration = endTime - createdAt.getTime();
     
-    // If the duration seems to be around 7 days, use that, otherwise use 24 hours
-    const totalDuration = actualDuration > (5 * 24 * 60 * 60 * 1000) 
-      ? 7 * 24 * 60 * 60 * 1000  // 7 days for premium offers
-      : 24 * 60 * 60 * 1000;     // 24 hours for standard offers
+    // Determine the total duration based on the actual expiration time
+    let totalDuration;
+    const hoursInMs = 60 * 60 * 1000;
+    const actualHours = actualDuration / hoursInMs;
+    
+    if (actualHours >= 150) { // Close to 7 days (168h)
+      totalDuration = 7 * 24 * hoursInMs; // 7 days
+    } else if (actualHours >= 60) { // Close to 3 days (72h)
+      totalDuration = 3 * 24 * hoursInMs; // 3 days
+    } else if (actualHours >= 36) { // Close to 48h
+      totalDuration = 48 * hoursInMs; // 48 hours
+    } else {
+      totalDuration = 24 * hoursInMs; // 24 hours (default)
+    }
     
     const remaining = Math.max(0, endTime - now);
     const elapsed = totalDuration - remaining;
