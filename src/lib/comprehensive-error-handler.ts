@@ -10,7 +10,7 @@ interface ErrorPattern {
 }
 
 const ERROR_PATTERNS: ErrorPattern[] = [
-  // String/JavaScript errors
+  // String/JavaScript errors - Enhanced patterns
   {
     pattern: /Cannot read properties of undefined \(reading 'includes'\)/i,
     type: 'critical',
@@ -31,6 +31,13 @@ const ERROR_PATTERNS: ErrorPattern[] = [
     severity: 'medium',
     recoveryAction: 'ignore',
     description: 'Legacy undefined property access (handled gracefully)'
+  },
+  {
+    pattern: /TypeError: Failed to fetch/i,
+    type: 'network',
+    severity: 'high',
+    recoveryAction: 'ignore',
+    description: 'Network fetch error (handled by enhanced error handler)'
   },
   
   // Firebase/Firestore errors

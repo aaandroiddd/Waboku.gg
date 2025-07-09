@@ -1,163 +1,14 @@
-// Install early error handler FIRST, before any other imports
-import '@/lib/early-error-handler';
+// Install enhanced error handler FIRST, before any other imports
+import { initializeEnhancedErrorHandler, initializeFirestoreRecovery } from '@/lib/enhanced-error-handler';
+
+// Initialize enhanced error handling immediately
+if (typeof window !== 'undefined') {
+  initializeEnhancedErrorHandler();
+  initializeFirestoreRecovery();
+}
 
 import { installResizeObserverErrorHandler } from '@/lib/resize-observer-error-handler';
 installResizeObserverErrorHandler();
-
-// Aggressive fix for includes() errors - patch String prototype and add comprehensive error handling
-if (typeof window !== 'undefined') {
-  // Store original methods
-  const originalStringIncludes = String.prototype.includes;
-  const originalArrayIncludes = Array.prototype.includes;
-  const originalError = console.error;
-  
-  // Patch String.prototype.includes to be more defensive
-  String.prototype.includes = function(searchString, position) {
-    try {
-      // Ensure 'this' is a valid string
-      if (this == null) {
-        console.warn('String.includes called on null/undefined, returning false');
-        return false;
-      }
-      
-      // Convert to string if needed
-      const str = String(this);
-      return originalStringIncludes.call(str, searchString, position);
-    } catch (error) {
-      console.warn('Error in String.prototype.includes:', error, { this: this, searchString, position });
-      return false;
-    }
-  };
-  
-  // Patch Array.prototype.includes to be more defensive
-  Array.prototype.includes = function(searchElement, fromIndex) {
-    try {
-      // Ensure 'this' is a valid array-like object
-      if (this == null) {
-        console.warn('Array.includes called on null/undefined, returning false');
-        return false;
-      }
-      
-      return originalArrayIncludes.call(this, searchElement, fromIndex);
-    } catch (error) {
-      console.warn('Error in Array.prototype.includes:', error, { this: this, searchElement, fromIndex });
-      return false;
-    }
-  };
-
-  // Enhanced console.error interceptor
-  console.error = (...args) => {
-    const errorMessage = args.join(' ');
-    if (errorMessage.includes('Cannot read properties of undefined (reading \'includes\')')) {
-      console.warn('Intercepted includes() error (should be fixed by prototype patch):', ...args);
-      console.trace('Stack trace for includes() error');
-      
-      // Log additional debugging information
-      console.warn('This error has been caught and handled. The application should continue to work normally.');
-      
-      // Don't call the original console.error for this specific error to reduce noise
-      return;
-    }
-    
-    // Call original console.error for other errors
-    originalError(...args);
-  };
-
-  // Enhanced global error handler with more specific error catching
-  window.addEventListener('error', (event) => {
-    const error = event.error;
-    const message = error?.message || event.message || '';
-    
-    if (message.includes('Cannot read properties of undefined (reading \'includes\')')) {
-      console.warn('Global error handler caught includes() error:', error);
-      console.warn('Error details:', {
-        filename: event.filename,
-        lineno: event.lineno,
-        colno: event.colno,
-        stack: error?.stack
-      });
-      
-      event.preventDefault();
-      event.stopPropagation();
-      return false;
-    }
-    
-    // Also catch other common undefined property access errors
-    if (message.includes('Cannot read properties of undefined') || 
-        message.includes('Cannot read property') ||
-        message.includes('undefined is not an object')) {
-      console.warn('Global error handler caught undefined property access:', error);
-      event.preventDefault();
-      event.stopPropagation();
-      return false;
-    }
-  });
-
-  // Enhanced global unhandled promise rejection handler
-  window.addEventListener('unhandledrejection', (event) => {
-    const reason = event.reason;
-    const message = reason?.message || reason?.toString() || '';
-    
-    if (message.includes('Cannot read properties of undefined (reading \'includes\')')) {
-      console.warn('Global promise rejection handler caught includes() error:', reason);
-      event.preventDefault();
-      return false;
-    }
-    
-    // Also catch other common undefined property access errors in promises
-    if (message.includes('Cannot read properties of undefined') || 
-        message.includes('Cannot read property') ||
-        message.includes('undefined is not an object')) {
-      console.warn('Global promise rejection handler caught undefined property access:', reason);
-      event.preventDefault();
-      return false;
-    }
-  });
-
-  // Add a React error boundary fallback at the global level
-  const originalReactError = window.React?.createElement;
-  if (originalReactError) {
-    // This is a more aggressive approach - wrap React.createElement to catch errors
-    try {
-      const ReactErrorBoundary = class extends React.Component {
-        constructor(props) {
-          super(props);
-          this.state = { hasError: false };
-        }
-        
-        static getDerivedStateFromError(error) {
-          if (error?.message?.includes('Cannot read properties of undefined (reading \'includes\')')) {
-            console.warn('React Error Boundary caught includes() error:', error);
-            return { hasError: true };
-          }
-          throw error; // Re-throw other errors
-        }
-        
-        componentDidCatch(error, errorInfo) {
-          if (error?.message?.includes('Cannot read properties of undefined (reading \'includes\')')) {
-            console.warn('React Error Boundary componentDidCatch - includes() error:', error, errorInfo);
-          }
-        }
-        
-        render() {
-          if (this.state.hasError) {
-            return React.createElement('div', { 
-              style: { padding: '10px', color: '#666', fontSize: '14px' } 
-            }, 'Content temporarily unavailable');
-          }
-          return this.props.children;
-        }
-      };
-      
-      // Store the boundary for potential use
-      window.__ReactErrorBoundary = ReactErrorBoundary;
-    } catch (e) {
-      console.warn('Could not set up React error boundary:', e);
-    }
-  }
-  
-  console.log('Enhanced error handling and prototype patches installed');
-}
 
 import '@/styles/globals.css';
 import type { AppProps } from 'next/app';
@@ -181,7 +32,9 @@ import { FirebaseConnectionManager } from '@/components/FirebaseConnectionManage
 import { FirestoreConnectionManager } from '@/components/FirestoreConnectionManager';
 import { FirestoreListenerDebugger } from '@/components/FirestoreListenerDebugger';
 import { FirebaseErrorBoundary } from '@/components/FirebaseErrorBoundary';
+import { EnhancedErrorBoundary } from '@/components/EnhancedErrorBoundary';
 import { ListenChannelErrorHandler } from '@/components/ListenChannelErrorHandler';
+import { FirestoreListenChannelHandler } from '@/components/FirestoreListenChannelHandler';
 import { CriticalErrorHandler } from '@/components/CriticalErrorHandler';
 import { SessionManagerInitializer } from '@/components/SessionManagerInitializer';
 import { ComprehensiveErrorHandlerInitializer } from '@/components/ComprehensiveErrorHandlerInitializer';
@@ -266,6 +119,7 @@ const MainContent = memo(({ Component, pageProps, pathname }: {
           <FirebaseConnectionManager />
           <FirestoreConnectionManager />
           <ListenChannelErrorHandler />
+          <FirestoreListenChannelHandler />
           {process.env.NODE_ENV === 'development' && <FirestoreListenerDebugger />}
         </>
       )}
@@ -299,28 +153,32 @@ export default function App({ Component, pageProps }: AppProps) {
           }
         `}</style>
       </Head>
-      <FirebaseErrorBoundary>
-        <ThemeProvider>
-          <LoadingProvider>
-            <AuthProvider>
-              <AuthRedirectProvider>
-                <AccountProvider>
-                  <UnreadProvider>
-                    <TutorialProvider>
-                      <RouteGuard requireAuth={requireAuth}>
-                        <MainContent 
-                          Component={Component}
-                          pageProps={pageProps}
-                          pathname={router.pathname}
-                        />
-                      </RouteGuard>
-                    </TutorialProvider>
-                  </UnreadProvider>
-                </AccountProvider>
-              </AuthRedirectProvider>
-            </AuthProvider>
-          </LoadingProvider>
-        </ThemeProvider>
-      </FirebaseErrorBoundary>
+      <EnhancedErrorBoundary>
+        <FirebaseErrorBoundary>
+          <ThemeProvider>
+            <LoadingProvider>
+              <AuthProvider>
+                <AuthRedirectProvider>
+                  <AccountProvider>
+                    <UnreadProvider>
+                      <TutorialProvider>
+                        <RouteGuard requireAuth={requireAuth}>
+                          <EnhancedErrorBoundary>
+                            <MainContent 
+                              Component={Component}
+                              pageProps={pageProps}
+                              pathname={router.pathname}
+                            />
+                          </EnhancedErrorBoundary>
+                        </RouteGuard>
+                      </TutorialProvider>
+                    </UnreadProvider>
+                  </AccountProvider>
+                </AuthRedirectProvider>
+              </AuthProvider>
+            </LoadingProvider>
+          </ThemeProvider>
+        </FirebaseErrorBoundary>
+      </EnhancedErrorBoundary>
     </>);
 }
