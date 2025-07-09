@@ -169,25 +169,55 @@ export default function ListingsPage() {
   const { recordSearch } = useTrendingSearches();
   const { updateSearchSession } = useSearchAnalytics();
 
-  // Function to calculate distances and add proximity categories
+  // Function to calculate distances and add proximity categories with enhanced safety
   const addDistanceInfo = (listings: Listing[]) => {
-    if (!latitude || !longitude) return listings;
+    try {
+      if (!Array.isArray(listings)) {
+        console.error('addDistanceInfo: listings is not an array');
+        return [];
+      }
+      
+      if (!latitude || !longitude || typeof latitude !== 'number' || typeof longitude !== 'number') {
+        // Return listings without distance info if no valid location
+        return listings.map(listing => {
+          if (!listing || typeof listing !== 'object') return listing;
+          return { ...listing, distance: Infinity, proximity: 'far' };
+        });
+      }
 
-    return listings.map(listing => {
-      const listingLat = listing.coordinates?.latitude;
-      const listingLng = listing.coordinates?.longitude;
-      const distance = listingLat && listingLng
-        ? calculateDistance(latitude, longitude, listingLat, listingLng)
-        : Infinity;
-      
-      // Add proximity category
-      let proximity = 'far';
-      if (distance <= 5) proximity = 'very-close';
-      else if (distance <= 15) proximity = 'close';
-      else if (distance <= 30) proximity = 'medium';
-      
-      return { ...listing, distance, proximity };
-    });
+      return listings.map(listing => {
+        try {
+          if (!listing || typeof listing !== 'object') {
+            console.warn('addDistanceInfo: Invalid listing object', listing);
+            return listing;
+          }
+          
+          const listingLat = listing.coordinates?.latitude;
+          const listingLng = listing.coordinates?.longitude;
+          
+          const distance = (listingLat != null && listingLng != null && 
+                           typeof listingLat === 'number' && typeof listingLng === 'number')
+            ? calculateDistance(latitude, longitude, listingLat, listingLng)
+            : Infinity;
+          
+          // Add proximity category with safety checks
+          let proximity = 'far';
+          if (typeof distance === 'number' && !isNaN(distance)) {
+            if (distance <= 5) proximity = 'very-close';
+            else if (distance <= 15) proximity = 'close';
+            else if (distance <= 30) proximity = 'medium';
+          }
+          
+          return { ...listing, distance, proximity };
+        } catch (error) {
+          console.error('Error processing listing in addDistanceInfo:', error, listing);
+          return { ...listing, distance: Infinity, proximity: 'far' };
+        }
+      });
+    } catch (error) {
+      console.error('Critical error in addDistanceInfo:', error);
+      return Array.isArray(listings) ? listings : [];
+    }
   };
 
   const [filteredListings, setFilteredListings] = useState<Listing[]>([]);
@@ -214,45 +244,62 @@ export default function ListingsPage() {
 
   useEffect(() => {
     try {
-      // First filter out inactive listings with null safety
-      let filtered = (allListings || []).filter(listing => {
+      // Ensure allListings is an array and filter out null/undefined entries
+      const safeListings = Array.isArray(allListings) ? allListings.filter(Boolean) : [];
+      
+      // First filter out inactive listings with comprehensive null safety
+      let filtered = safeListings.filter(listing => {
         try {
-          return listing && listing.status === 'active';
+          return listing && 
+                 typeof listing === 'object' && 
+                 listing.status && 
+                 String(listing.status) === 'active';
         } catch (error) {
           console.error('Error checking listing status:', error, listing);
           return false;
         }
       });
 
-      // Apply search query filter
-      if (searchQuery && searchQuery.trim()) {
+      // Apply search query filter with enhanced safety
+      if (searchQuery && String(searchQuery).trim()) {
         const query = String(searchQuery).toLowerCase().trim();
         filtered = filtered.filter(listing => {
           try {
-            if (!listing) return false;
+            if (!listing || typeof listing !== 'object') return false;
             
-            const title = listing.title ? String(listing.title).toLowerCase() : '';
-            const description = listing.description ? String(listing.description).toLowerCase() : '';
+            // Safely extract and convert title and description to strings
+            const title = listing.title != null ? String(listing.title).toLowerCase() : '';
+            const description = listing.description != null ? String(listing.description).toLowerCase() : '';
             
-            // Ensure both title and description are strings before using includes
-            if (typeof title === 'string' && typeof description === 'string') {
-              return title.includes(query) || description.includes(query);
-            }
-            return false;
+            // Double-check that we have valid strings before using includes
+            const titleIsString = typeof title === 'string' && title.length >= 0;
+            const descriptionIsString = typeof description === 'string' && description.length >= 0;
+            const queryIsString = typeof query === 'string' && query.length > 0;
+            
+            if (!queryIsString) return false;
+            
+            // Use includes only if we have valid strings
+            const titleMatch = titleIsString && title.includes ? title.includes(query) : false;
+            const descriptionMatch = descriptionIsString && description.includes ? description.includes(query) : false;
+            
+            return titleMatch || descriptionMatch;
           } catch (error) {
-            console.error('Error filtering by search query:', error, { listing, query });
+            console.error('Error filtering by search query:', error, { 
+              listing: listing ? { id: listing.id, title: listing.title } : null, 
+              query 
+            });
             return false;
           }
         });
       }
 
-      // Apply game filter
-      if (selectedGame && selectedGame !== "all") {
+      // Apply game filter with enhanced safety
+      if (selectedGame && String(selectedGame) !== "all") {
         filtered = filtered.filter(listing => {
           try {
-            if (!listing || !listing.game) return false;
+            if (!listing || typeof listing !== 'object' || !listing.game) return false;
             
-            const listingGameLower = String(listing.game).toLowerCase();
+            const listingGame = String(listing.game || '').toLowerCase();
             const gameMapping = GAME_NAME_MAPPING[selectedGame];
             
             if (!gameMapping || !Array.isArray(gameMapping)) {
@@ -262,77 +309,103 @@ export default function ListingsPage() {
             
             return gameMapping.some(name => {
               try {
-                if (!name || typeof name !== 'string') return false;
+                if (name == null || typeof name !== 'string') return false;
                 const nameString = String(name).toLowerCase();
-                return typeof listingGameLower === 'string' && typeof nameString === 'string' && 
-                       listingGameLower === nameString;
+                
+                // Ensure both strings are valid before comparison
+                const gameIsString = typeof listingGame === 'string' && listingGame.length >= 0;
+                const nameIsString = typeof nameString === 'string' && nameString.length >= 0;
+                
+                return gameIsString && nameIsString && listingGame === nameString;
               } catch (error) {
-                console.error('Error comparing game names:', error, { name, listingGameLower });
+                console.error('Error comparing game names:', error, { name, listingGame });
                 return false;
               }
             });
           } catch (error) {
-            console.error('Error filtering by game:', error, { listing, selectedGame });
+            console.error('Error filtering by game:', error, { 
+              listing: listing ? { id: listing.id, game: listing.game } : null, 
+              selectedGame 
+            });
             return false;
           }
         });
       }
 
-      // Apply condition filter
-      if (selectedCondition && selectedCondition !== "all") {
+      // Apply condition filter with enhanced safety
+      if (selectedCondition && String(selectedCondition) !== "all") {
         filtered = filtered.filter(listing => {
           try {
-            if (!listing || !listing.condition) return false;
+            if (!listing || typeof listing !== 'object' || !listing.condition) return false;
             
-            const condition = String(listing.condition).toLowerCase();
-            const selectedConditionLower = String(selectedCondition).toLowerCase();
+            const condition = String(listing.condition || '').toLowerCase();
+            const selectedConditionLower = String(selectedCondition || '').toLowerCase();
             
-            return typeof condition === 'string' && typeof selectedConditionLower === 'string' && 
-                   condition === selectedConditionLower;
+            // Ensure both are valid strings before comparison
+            const conditionIsString = typeof condition === 'string' && condition.length >= 0;
+            const selectedIsString = typeof selectedConditionLower === 'string' && selectedConditionLower.length >= 0;
+            
+            return conditionIsString && selectedIsString && condition === selectedConditionLower;
           } catch (error) {
-            console.error('Error filtering by condition:', error, { listing, selectedCondition });
+            console.error('Error filtering by condition:', error, { 
+              listing: listing ? { id: listing.id, condition: listing.condition } : null, 
+              selectedCondition 
+            });
             return false;
           }
         });
       }
 
-      // Apply location filter
-      if (selectedState && selectedState !== "all") {
+      // Apply location filter with enhanced safety
+      if (selectedState && String(selectedState) !== "all") {
         filtered = filtered.filter(listing => {
           try {
-            if (!listing || !listing.state) return false;
+            if (!listing || typeof listing !== 'object' || !listing.state) return false;
             
-            const state = String(listing.state).toLowerCase();
-            const selectedStateLower = String(selectedState).toLowerCase();
+            const state = String(listing.state || '').toLowerCase();
+            const selectedStateLower = String(selectedState || '').toLowerCase();
             
-            return typeof state === 'string' && typeof selectedStateLower === 'string' && 
-                   state === selectedStateLower;
+            // Ensure both are valid strings before comparison
+            const stateIsString = typeof state === 'string' && state.length >= 0;
+            const selectedIsString = typeof selectedStateLower === 'string' && selectedStateLower.length >= 0;
+            
+            return stateIsString && selectedIsString && state === selectedStateLower;
           } catch (error) {
-            console.error('Error filtering by state:', error, { listing, selectedState });
+            console.error('Error filtering by state:', error, { 
+              listing: listing ? { id: listing.id, state: listing.state } : null, 
+              selectedState 
+            });
             return false;
           }
         });
       }
 
-      // Apply price filter with null safety
+      // Apply price filter with enhanced null safety
       filtered = filtered.filter(listing => {
         try {
-          if (!listing) return false;
-          const price = typeof listing.price === 'number' ? listing.price : 0;
-          const minPrice = typeof priceRange[0] === 'number' ? priceRange[0] : 0;
-          const maxPrice = typeof priceRange[1] === 'number' ? priceRange[1] : 50000;
+          if (!listing || typeof listing !== 'object') return false;
+          
+          const price = listing.price != null && !isNaN(Number(listing.price)) ? Number(listing.price) : 0;
+          const minPrice = priceRange && priceRange[0] != null && !isNaN(Number(priceRange[0])) ? Number(priceRange[0]) : 0;
+          const maxPrice = priceRange && priceRange[1] != null && !isNaN(Number(priceRange[1])) ? Number(priceRange[1]) : 50000;
+          
           return price >= minPrice && price <= maxPrice;
         } catch (error) {
-          console.error('Error filtering by price:', error, { listing, priceRange });
+          console.error('Error filtering by price:', error, { 
+            listing: listing ? { id: listing.id, price: listing.price } : null, 
+            priceRange 
+          });
           return false;
         }
       });
 
-      // Apply graded filter
+      // Apply graded filter with enhanced safety
       if (showGradedOnly) {
         filtered = filtered.filter(listing => {
           try {
-            return listing && Boolean(listing.isGraded);
+            return listing && 
+                   typeof listing === 'object' && 
+                   Boolean(listing.isGraded);
           } catch (error) {
             console.error('Error filtering by graded status:', error, listing);
             return false;
@@ -348,7 +421,7 @@ export default function ListingsPage() {
         // Continue without distance info if there's an error
       }
 
-      // Apply sorting
+      // Apply sorting with enhanced safety
       try {
         filtered = sortListings(filtered, sortBy);
       } catch (error) {
@@ -356,12 +429,12 @@ export default function ListingsPage() {
         // Continue with unsorted listings if there's an error
       }
 
-      setFilteredListings(filtered);
+      setFilteredListings(Array.isArray(filtered) ? filtered : []);
 
       // Update search session for analytics
       try {
-        if (searchQuery && searchQuery.trim()) {
-          updateSearchSession(searchQuery.trim(), filtered.length);
+        if (searchQuery && String(searchQuery).trim()) {
+          updateSearchSession(String(searchQuery).trim(), filtered.length);
         }
       } catch (error) {
         console.error('Error updating search session:', error);
@@ -374,27 +447,41 @@ export default function ListingsPage() {
     }
   }, [allListings, searchQuery, selectedState, selectedGame, selectedCondition, priceRange, showGradedOnly, sortBy, latitude, longitude, updateSearchSession]);
 
-  // Function to sort listings based on selected criteria
+  // Function to sort listings based on selected criteria with enhanced safety
   const sortListings = (listings: Listing[], sortBy: string) => {
     try {
-      console.log(`Sorting ${listings.length} listings by: ${sortBy}`);
+      console.log(`Sorting ${listings?.length || 0} listings by: ${sortBy}`);
       
-      if (!Array.isArray(listings)) {
-        console.error('Invalid listings array provided to sortListings');
+      if (!Array.isArray(listings) || listings.length === 0) {
+        console.error('Invalid or empty listings array provided to sortListings');
         return [];
       }
       
-      const sorted = [...listings];
+      // Filter out any null/undefined entries before sorting
+      const validListings = listings.filter(listing => 
+        listing && typeof listing === 'object'
+      );
+      
+      if (validListings.length === 0) {
+        console.warn('No valid listings found after filtering');
+        return [];
+      }
+      
+      const sorted = [...validListings];
       
       switch (sortBy) {
         case "newest":
           return sorted.sort((a, b) => {
             try {
-              const dateA = a?.createdAt ? new Date(a.createdAt).getTime() : 0;
-              const dateB = b?.createdAt ? new Date(b.createdAt).getTime() : 0;
+              if (!a || !b) return 0;
+              const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+              const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
               return dateB - dateA;
             } catch (error) {
-              console.error('Error sorting by newest:', error, { a, b });
+              console.error('Error sorting by newest:', error, { 
+                a: a ? { id: a.id, createdAt: a.createdAt } : null, 
+                b: b ? { id: b.id, createdAt: b.createdAt } : null 
+              });
               return 0;
             }
           });
@@ -402,11 +489,15 @@ export default function ListingsPage() {
         case "oldest":
           return sorted.sort((a, b) => {
             try {
-              const dateA = a?.createdAt ? new Date(a.createdAt).getTime() : 0;
-              const dateB = b?.createdAt ? new Date(b.createdAt).getTime() : 0;
+              if (!a || !b) return 0;
+              const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+              const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
               return dateA - dateB;
             } catch (error) {
-              console.error('Error sorting by oldest:', error, { a, b });
+              console.error('Error sorting by oldest:', error, { 
+                a: a ? { id: a.id, createdAt: a.createdAt } : null, 
+                b: b ? { id: b.id, createdAt: b.createdAt } : null 
+              });
               return 0;
             }
           });
@@ -414,11 +505,15 @@ export default function ListingsPage() {
         case "price-low":
           return sorted.sort((a, b) => {
             try {
-              const priceA = typeof a?.price === 'number' ? a.price : 0;
-              const priceB = typeof b?.price === 'number' ? b.price : 0;
+              if (!a || !b) return 0;
+              const priceA = a.price != null && !isNaN(Number(a.price)) ? Number(a.price) : 0;
+              const priceB = b.price != null && !isNaN(Number(b.price)) ? Number(b.price) : 0;
               return priceA - priceB;
             } catch (error) {
-              console.error('Error sorting by price low:', error, { a, b });
+              console.error('Error sorting by price low:', error, { 
+                a: a ? { id: a.id, price: a.price } : null, 
+                b: b ? { id: b.id, price: b.price } : null 
+              });
               return 0;
             }
           });
@@ -426,11 +521,15 @@ export default function ListingsPage() {
         case "price-high":
           return sorted.sort((a, b) => {
             try {
-              const priceA = typeof a?.price === 'number' ? a.price : 0;
-              const priceB = typeof b?.price === 'number' ? b.price : 0;
+              if (!a || !b) return 0;
+              const priceA = a.price != null && !isNaN(Number(a.price)) ? Number(a.price) : 0;
+              const priceB = b.price != null && !isNaN(Number(b.price)) ? Number(b.price) : 0;
               return priceB - priceA;
             } catch (error) {
-              console.error('Error sorting by price high:', error, { a, b });
+              console.error('Error sorting by price high:', error, { 
+                a: a ? { id: a.id, price: a.price } : null, 
+                b: b ? { id: b.id, price: b.price } : null 
+              });
               return 0;
             }
           });
@@ -438,11 +537,19 @@ export default function ListingsPage() {
         case "game":
           return sorted.sort((a, b) => {
             try {
-              const gameA = a?.game ? String(a.game).toLowerCase() : '';
-              const gameB = b?.game ? String(b.game).toLowerCase() : '';
+              if (!a || !b) return 0;
+              const gameA = a.game != null ? String(a.game).toLowerCase() : '';
+              const gameB = b.game != null ? String(b.game).toLowerCase() : '';
+              
+              // Ensure both are valid strings before using localeCompare
+              if (typeof gameA !== 'string' || typeof gameB !== 'string') return 0;
+              
               return gameA.localeCompare(gameB);
             } catch (error) {
-              console.error('Error sorting by game:', error, { a, b });
+              console.error('Error sorting by game:', error, { 
+                a: a ? { id: a.id, game: a.game } : null, 
+                b: b ? { id: b.id, game: b.game } : null 
+              });
               return 0;
             }
           });
@@ -463,15 +570,22 @@ export default function ListingsPage() {
           
           return sorted.sort((a, b) => {
             try {
-              const conditionA = a?.condition ? String(a.condition).toLowerCase() : '';
-              const conditionB = b?.condition ? String(b.condition).toLowerCase() : '';
+              if (!a || !b) return 0;
+              const conditionA = a.condition != null ? String(a.condition).toLowerCase() : '';
+              const conditionB = b.condition != null ? String(b.condition).toLowerCase() : '';
+              
+              // Ensure both are valid strings
+              if (typeof conditionA !== 'string' || typeof conditionB !== 'string') return 0;
               
               const orderA = conditionOrder[conditionA as keyof typeof conditionOrder] || 999;
               const orderB = conditionOrder[conditionB as keyof typeof conditionOrder] || 999;
               
               return orderA - orderB;
             } catch (error) {
-              console.error('Error sorting by condition:', error, { a, b });
+              console.error('Error sorting by condition:', error, { 
+                a: a ? { id: a.id, condition: a.condition } : null, 
+                b: b ? { id: b.id, condition: b.condition } : null 
+              });
               return 0;
             }
           });
@@ -479,18 +593,25 @@ export default function ListingsPage() {
         default:
           return sorted.sort((a, b) => {
             try {
-              const dateA = a?.createdAt ? new Date(a.createdAt).getTime() : 0;
-              const dateB = b?.createdAt ? new Date(b.createdAt).getTime() : 0;
+              if (!a || !b) return 0;
+              const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+              const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
               return dateB - dateA;
             } catch (error) {
-              console.error('Error sorting by default (newest):', error, { a, b });
+              console.error('Error sorting by default (newest):', error, { 
+                a: a ? { id: a.id, createdAt: a.createdAt } : null, 
+                b: b ? { id: b.id, createdAt: b.createdAt } : null 
+              });
               return 0;
             }
           });
       }
     } catch (error) {
-      console.error('Critical error in sortListings:', error, { listings, sortBy });
-      return listings || [];
+      console.error('Critical error in sortListings:', error, { 
+        listingsLength: listings?.length || 0, 
+        sortBy 
+      });
+      return Array.isArray(listings) ? listings.filter(Boolean) : [];
     }
   };
 
