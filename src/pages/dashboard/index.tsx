@@ -1112,6 +1112,7 @@ const DashboardComponent = () => {
               listings={activeListings}
               type="active"
               accountTier={profile?.tier || 'free'}
+              viewMode={viewMode}
               onEdit={handleEditListing}
               onDelete={handleDeleteListing}
               onMessage={handleMessage}
@@ -1134,6 +1135,7 @@ const DashboardComponent = () => {
               listings={archivedListings}
               type="archived"
               accountTier={profile?.tier || 'free'}
+              viewMode={viewMode}
               onEdit={handleEditListing}
               onDelete={(listingId) => {
                 setDialogState({
