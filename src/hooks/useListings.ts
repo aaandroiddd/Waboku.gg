@@ -312,10 +312,10 @@ export function useListings({
         }
         
         // Get the appropriate listing duration based on account tier
-        // Free tier: 48 hours, Premium tier: 720 hours (30 days)
-        const tierDuration = accountTier === 'premium' ? 720 : 48;
+        const tierDuration = ACCOUNT_TIERS[accountTier as 'free' | 'premium'].listingDuration;
         
-        // Calculate expiration time in hours
+        // Calculate expiration time based on current time to give the listing a fresh duration
+        // This ensures restored listings get a full listing period and don't immediately expire
         const expirationTime = new Date(now);
         expirationTime.setHours(expirationTime.getHours() + tierDuration);
         
@@ -327,7 +327,7 @@ export function useListings({
           userId: String(user.uid),
           username: String(username),
           accountTier: String(accountTier),
-          createdAt: now,
+          createdAt: now, // Set to current time for fresh start
           updatedAt: now,
           expiresAt: expirationTime,
           

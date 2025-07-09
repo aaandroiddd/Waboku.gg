@@ -461,44 +461,17 @@ export function useOptimizedListings({ userId, searchQuery, showOnlyActive = fal
         // Get the appropriate listing duration based on account tier
         const tierDuration = ACCOUNT_TIERS[accountTier as 'free' | 'premium'].listingDuration;
         
-        // Calculate expiration time based on the original creation date, not current time
-        // This ensures restored listings show their proper remaining time
-        let originalCreatedAt = listingData.originalCreatedAt || listingData.createdAt;
-        
-        // Convert originalCreatedAt to a proper Date object
-        let createdAtDate: Date;
-        try {
-          if (originalCreatedAt?.toDate) {
-            createdAtDate = originalCreatedAt.toDate();
-          } else if (originalCreatedAt instanceof Date) {
-            createdAtDate = originalCreatedAt;
-          } else if (originalCreatedAt) {
-            createdAtDate = new Date(originalCreatedAt);
-          } else {
-            // Fallback to current createdAt if no originalCreatedAt
-            if (listingData.createdAt?.toDate) {
-              createdAtDate = listingData.createdAt.toDate();
-            } else if (listingData.createdAt instanceof Date) {
-              createdAtDate = listingData.createdAt;
-            } else {
-              createdAtDate = new Date(listingData.createdAt || now);
-            }
-          }
-        } catch (error) {
-          console.error('Error parsing creation date for restoration:', error);
-          createdAtDate = new Date(now);
-        }
-        
-        // Calculate expiration time based on original creation date + tier duration
-        const expirationTime = new Date(createdAtDate);
+        // Calculate expiration time based on current time to give the listing a fresh duration
+        // This ensures restored listings get a full listing period and don't immediately expire
+        const expirationTime = new Date(now);
         expirationTime.setHours(expirationTime.getHours() + tierDuration);
         
         console.log(`Restoring listing ${listingId}:`, {
-          originalCreatedAt: createdAtDate.toISOString(),
+          currentTime: now.toISOString(),
           accountTier,
           tierDuration: `${tierDuration} hours`,
           newExpirationTime: expirationTime.toISOString(),
-          timeFromNow: Math.round((expirationTime.getTime() - now.getTime()) / (1000 * 60 * 60)) + ' hours'
+          hoursFromNow: Math.round((expirationTime.getTime() - now.getTime()) / (1000 * 60 * 60)) + ' hours'
         });
         
         // Create a clean update object with only the fields we want to update
@@ -509,8 +482,8 @@ export function useOptimizedListings({ userId, searchQuery, showOnlyActive = fal
           updatedAt: now,
           expiresAt: expirationTime,
           
-          // Restore the original creation date if it was stored during archiving
-          ...(listingData.originalCreatedAt ? { createdAt: listingData.originalCreatedAt } : {}),
+          // Set creation date to current time to give the listing a fresh start
+          createdAt: now,
           
           // Clear archive-related fields
           archivedAt: null,
