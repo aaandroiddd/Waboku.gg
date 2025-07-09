@@ -92,7 +92,7 @@ export function useOptimizedListings({ userId, searchQuery, showOnlyActive = fal
     }
   }, []);
 
-  // Setup the Firestore listener
+  // Setup the Firestore listener with enhanced navigation handling
   useEffect(() => {
     // For user-specific queries, wait for userId to be properly defined
     // userId should be either a string (authenticated) or null (not authenticated)
@@ -114,11 +114,26 @@ export function useOptimizedListings({ userId, searchQuery, showOnlyActive = fal
     // Check if we have cached data first
     const { data: cachedListings, expired } = getFromCache();
     
+    // Enhanced cache handling for navigation scenarios
     if (cachedListings && !expired && !skipInitialFetch) {
       console.log(`Using cached listings data (${cachedListings.length} items) while setting up listener`);
       // Set listings from cache immediately to improve perceived performance
       setListings(cachedListings);
-      setIsLoading(false);
+      
+      // For navigation scenarios, show cached data immediately but don't set loading to false
+      // This allows the fresh data to load in the background
+      const isLikelyNavigation = typeof window !== 'undefined' && 
+        window.performance && 
+        window.performance.navigation && 
+        (window.performance.navigation.type === window.performance.navigation.TYPE_BACK_FORWARD ||
+         window.performance.navigation.type === window.performance.navigation.TYPE_NAVIGATE);
+      
+      if (isLikelyNavigation) {
+        console.log('Navigation detected, using cache but keeping loading state for fresh data');
+        // Keep loading true to fetch fresh data in background
+      } else {
+        setIsLoading(false);
+      }
     }
 
     // Skip setting up listener if we're supposed to skip initial fetch

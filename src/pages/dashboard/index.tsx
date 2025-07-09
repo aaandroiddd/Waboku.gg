@@ -39,6 +39,7 @@ import { FirebaseConnectionHandler } from '@/components/FirebaseConnectionHandle
 import { useLoading } from '@/hooks/useLoading';
 import { ViewCounter } from '@/components/ViewCounter';
 import { useDashboardListingsCache } from '@/hooks/useDashboardCache';
+import { useDashboardNavigationDetection } from '@/hooks/useNavigationState';
 import { getListingUrl, getProfileUrl } from '@/lib/listing-slug';
 
 const DashboardComponent = () => {
@@ -70,15 +71,46 @@ const DashboardComponent = () => {
     userId: user?.uid 
   });
 
+  // Navigation detection for better cache handling
+  const { 
+    isDashboardReturn, 
+    isFromDashboardSubpage, 
+    isNavigating, 
+    isBackForward,
+    previousPath 
+  } = useDashboardNavigationDetection();
+
   const { toast } = useToast();
   const router = useRouter();
   const { tab = 'active', new: newListingId } = router.query;
   const [error, setError] = useState<string | null>(null);
   
+  // Enhanced authentication state handling for navigation
+  // Use a more stable userId that doesn't flip between undefined and string during navigation
+  const [stableUserId, setStableUserId] = useState<string | null | undefined>(undefined);
+  
+  // Update stable user ID only when we have a definitive auth state
+  useEffect(() => {
+    if (authLoading) {
+      // Don't change stableUserId while auth is loading unless we don't have one yet
+      if (stableUserId === undefined) {
+        console.log('Dashboard: Auth loading, keeping stableUserId as undefined');
+      }
+      return;
+    }
+    
+    // Auth is not loading, so we have a definitive state
+    const newUserId = user?.uid || null;
+    if (stableUserId !== newUserId) {
+      console.log('Dashboard: Updating stableUserId from', stableUserId, 'to', newUserId);
+      setStableUserId(newUserId);
+    }
+  }, [authLoading, user?.uid, stableUserId]);
+
   // Always fetch fresh data, but use cache for immediate display
-  // Pass null instead of undefined when user is not authenticated to avoid race conditions
+  // Use stableUserId to prevent unnecessary re-fetching during navigation
   const { listings: fetchedListings, setListings, loading: listingsLoading, error: listingsError, refreshListings, updateListingStatus, permanentlyDeleteListing } = useOptimizedListings({ 
-    userId: authLoading ? undefined : (user?.uid || null), // undefined = still loading auth, null = not authenticated, string = authenticated
+    userId: stableUserId, // Use stable user ID that doesn't change during navigation
     showOnlyActive: false,
     skipInitialFetch: false // Always fetch fresh data
   });
@@ -284,24 +316,30 @@ const DashboardComponent = () => {
     userId: null
   });
   
-  // Force refresh listings when the component mounts or when the user logs in
+  // Enhanced navigation-aware refresh logic
   useEffect(() => {
-    // Don't do anything if we don't have a user yet
-    if (!user) {
-      console.log('Dashboard: No user yet, waiting for authentication');
+    // Don't do anything if we don't have a stable user ID yet
+    if (stableUserId === undefined) {
+      console.log('Dashboard: Stable user ID not determined yet, waiting');
+      return;
+    }
+    
+    // If no user, clear state and return
+    if (!stableUserId) {
+      console.log('Dashboard: No authenticated user');
       return;
     }
 
     // Check if this is a new login (user changed from null to a value)
-    const isNewLogin = user && (!prevAuthState.isLoggedIn || prevAuthState.userId !== user.uid);
+    const isNewLogin = stableUserId && (!prevAuthState.isLoggedIn || prevAuthState.userId !== stableUserId);
     
     // Update previous auth state
-    if (user !== null && (user?.uid !== prevAuthState.userId || !prevAuthState.isLoggedIn)) {
+    if (stableUserId !== null && (stableUserId !== prevAuthState.userId || !prevAuthState.isLoggedIn)) {
       setPrevAuthState({
         isLoggedIn: true,
-        userId: user.uid
+        userId: stableUserId
       });
-    } else if (user === null && prevAuthState.isLoggedIn) {
+    } else if (stableUserId === null && prevAuthState.isLoggedIn) {
       setPrevAuthState({
         isLoggedIn: false,
         userId: null
@@ -322,19 +360,28 @@ const DashboardComponent = () => {
       localStorage.removeItem('relist_success');
     }
     
-    // Clear any cached listings data to ensure fresh data
+    // Enhanced navigation-aware cache clearing and refresh logic
     try {
       // Create cache keys for the user's listings
-      const userListingsCacheKey = `listings_${user.uid}_all_none`;
-      const activeListingsCacheKey = `listings_${user.uid}_active_none`;
+      const userListingsCacheKey = `listings_${stableUserId}_all_none`;
+      const activeListingsCacheKey = `listings_${stableUserId}_active_none`;
       
-      // Clear from localStorage to ensure fresh data
-      localStorage.removeItem(userListingsCacheKey);
-      localStorage.removeItem(activeListingsCacheKey);
+      console.log('Dashboard: Navigation state:', {
+        isDashboardReturn,
+        isFromDashboardSubpage,
+        isNavigating,
+        isBackForward,
+        previousPath,
+        hasCachedListings: !!(cachedListings && cachedListings.length > 0)
+      });
       
-      // If this is a new login, log it and force a refresh
+      // If this is a new login, clear everything and force refresh
       if (isNewLogin) {
         console.log('Dashboard: User logged in, clearing listings cache and forcing refresh');
+        
+        // Clear from localStorage to ensure fresh data
+        localStorage.removeItem(userListingsCacheKey);
+        localStorage.removeItem(activeListingsCacheKey);
         
         // Clear dashboard cache as well
         clearListingsCache();
@@ -343,10 +390,14 @@ const DashboardComponent = () => {
         setTimeout(() => {
           console.log('Dashboard: Executing delayed refresh for new login');
           refreshListings();
-        }, 1000); // Increased from 500ms to 1000ms
-      } else if (forceRefresh === 'true') {
+        }, 1000);
+      } 
+      // If force refresh flag is set, clear cache and refresh
+      else if (forceRefresh === 'true') {
         console.log('Dashboard: Force refresh flag detected, refreshing listings');
         localStorage.removeItem('force_listings_refresh');
+        localStorage.removeItem(userListingsCacheKey);
+        localStorage.removeItem(activeListingsCacheKey);
         
         // Clear dashboard cache as well
         clearListingsCache();
@@ -355,17 +406,42 @@ const DashboardComponent = () => {
         setTimeout(() => {
           refreshListings();
         }, 100);
-      } else {
-        console.log('Dashboard: Cleared listings cache on dashboard mount, refreshing');
-        // Small delay even for regular refreshes to ensure everything is ready
+      }
+      // If returning to dashboard from a subpage with cached data, use cache and refresh in background
+      else if (isFromDashboardSubpage && cachedListings && cachedListings.length > 0) {
+        console.log('Dashboard: Returning from dashboard subpage with cached data, using cache and refreshing in background');
+        
+        // Don't clear cache, but refresh in background to ensure data is current
+        setTimeout(() => {
+          refreshListings();
+        }, 300);
+      }
+      // If returning from navigation (back/forward) and we have cached data, prioritize cache
+      else if ((isDashboardReturn || isBackForward) && cachedListings && cachedListings.length > 0) {
+        console.log('Dashboard: Navigation return detected with cached data, using cache and refreshing in background');
+        
+        // Don't clear cache, but refresh in background
+        setTimeout(() => {
+          refreshListings();
+        }, 500);
+      }
+      // Regular dashboard load - clear cache and refresh
+      else {
+        console.log('Dashboard: Regular dashboard load, clearing cache and refreshing');
+        
+        // Clear from localStorage to ensure fresh data
+        localStorage.removeItem(userListingsCacheKey);
+        localStorage.removeItem(activeListingsCacheKey);
+        
+        // Small delay for regular refreshes to ensure everything is ready
         setTimeout(() => {
           refreshListings();
         }, 200);
       }
     } catch (cacheError) {
-      console.error('Error clearing listings cache:', cacheError);
+      console.error('Error in dashboard refresh logic:', cacheError);
     }
-  }, [user, prevAuthState.isLoggedIn, prevAuthState.userId, clearListingsCache, refreshListings, toast]);
+  }, [stableUserId, prevAuthState.isLoggedIn, prevAuthState.userId, clearListingsCache, refreshListings, toast, cachedListings, isDashboardReturn, isFromDashboardSubpage, isBackForward]);
   
   const sortedListings = [...(allListings || [])].sort((a, b) => {
     if (sortBy === 'date') {
