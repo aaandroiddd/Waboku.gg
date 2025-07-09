@@ -213,148 +213,284 @@ export default function ListingsPage() {
   }, [router.query]);
 
   useEffect(() => {
-    // First filter out inactive listings
-    let filtered = allListings.filter(listing => listing.status === 'active');
-
-    // Apply search query filter
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(listing => {
+    try {
+      // First filter out inactive listings with null safety
+      let filtered = (allListings || []).filter(listing => {
         try {
-          const title = String(listing.title || '').toLowerCase();
-          const description = String(listing.description || '').toLowerCase();
-          return title.includes(query) || description.includes(query);
+          return listing && listing.status === 'active';
         } catch (error) {
-          console.error('Error filtering by search query:', error, listing);
+          console.error('Error checking listing status:', error, listing);
           return false;
         }
       });
-    }
 
-    // Apply game filter
-    if (selectedGame !== "all") {
-      filtered = filtered.filter(listing => {
-        try {
-          const listingGameLower = String(listing.game || '').toLowerCase();
-          const gameMapping = GAME_NAME_MAPPING[selectedGame];
-          if (!gameMapping || !Array.isArray(gameMapping)) {
-            console.warn(`No game mapping found for selectedGame: ${selectedGame}`);
+      // Apply search query filter
+      if (searchQuery && searchQuery.trim()) {
+        const query = String(searchQuery).toLowerCase().trim();
+        filtered = filtered.filter(listing => {
+          try {
+            if (!listing) return false;
+            
+            const title = listing.title ? String(listing.title).toLowerCase() : '';
+            const description = listing.description ? String(listing.description).toLowerCase() : '';
+            
+            // Ensure both title and description are strings before using includes
+            if (typeof title === 'string' && typeof description === 'string') {
+              return title.includes(query) || description.includes(query);
+            }
+            return false;
+          } catch (error) {
+            console.error('Error filtering by search query:', error, { listing, query });
             return false;
           }
-          return gameMapping.some(name => {
-            if (!name || typeof name !== 'string') return false;
-            try {
-              return listingGameLower === String(name).toLowerCase();
-            } catch (error) {
-              console.error('Error comparing game names:', error, { name, listingGameLower });
+        });
+      }
+
+      // Apply game filter
+      if (selectedGame && selectedGame !== "all") {
+        filtered = filtered.filter(listing => {
+          try {
+            if (!listing || !listing.game) return false;
+            
+            const listingGameLower = String(listing.game).toLowerCase();
+            const gameMapping = GAME_NAME_MAPPING[selectedGame];
+            
+            if (!gameMapping || !Array.isArray(gameMapping)) {
+              console.warn(`No game mapping found for selectedGame: ${selectedGame}`);
               return false;
             }
-          });
-        } catch (error) {
-          console.error('Error filtering by game:', error, listing);
-          return false;
-        }
-      });
-    }
+            
+            return gameMapping.some(name => {
+              try {
+                if (!name || typeof name !== 'string') return false;
+                const nameString = String(name).toLowerCase();
+                return typeof listingGameLower === 'string' && typeof nameString === 'string' && 
+                       listingGameLower === nameString;
+              } catch (error) {
+                console.error('Error comparing game names:', error, { name, listingGameLower });
+                return false;
+              }
+            });
+          } catch (error) {
+            console.error('Error filtering by game:', error, { listing, selectedGame });
+            return false;
+          }
+        });
+      }
 
-    // Apply condition filter
-    if (selectedCondition !== "all") {
+      // Apply condition filter
+      if (selectedCondition && selectedCondition !== "all") {
+        filtered = filtered.filter(listing => {
+          try {
+            if (!listing || !listing.condition) return false;
+            
+            const condition = String(listing.condition).toLowerCase();
+            const selectedConditionLower = String(selectedCondition).toLowerCase();
+            
+            return typeof condition === 'string' && typeof selectedConditionLower === 'string' && 
+                   condition === selectedConditionLower;
+          } catch (error) {
+            console.error('Error filtering by condition:', error, { listing, selectedCondition });
+            return false;
+          }
+        });
+      }
+
+      // Apply location filter
+      if (selectedState && selectedState !== "all") {
+        filtered = filtered.filter(listing => {
+          try {
+            if (!listing || !listing.state) return false;
+            
+            const state = String(listing.state).toLowerCase();
+            const selectedStateLower = String(selectedState).toLowerCase();
+            
+            return typeof state === 'string' && typeof selectedStateLower === 'string' && 
+                   state === selectedStateLower;
+          } catch (error) {
+            console.error('Error filtering by state:', error, { listing, selectedState });
+            return false;
+          }
+        });
+      }
+
+      // Apply price filter with null safety
       filtered = filtered.filter(listing => {
         try {
-          const condition = String(listing.condition || '').toLowerCase();
-          return condition === selectedCondition.toLowerCase();
+          if (!listing) return false;
+          const price = typeof listing.price === 'number' ? listing.price : 0;
+          const minPrice = typeof priceRange[0] === 'number' ? priceRange[0] : 0;
+          const maxPrice = typeof priceRange[1] === 'number' ? priceRange[1] : 50000;
+          return price >= minPrice && price <= maxPrice;
         } catch (error) {
-          console.error('Error filtering by condition:', error, listing);
+          console.error('Error filtering by price:', error, { listing, priceRange });
           return false;
         }
       });
-    }
 
-    // Apply location filter
-    if (selectedState !== "all") {
-      filtered = filtered.filter(listing => {
-        try {
-          const state = String(listing.state || '').toLowerCase();
-          return state === selectedState.toLowerCase();
-        } catch (error) {
-          console.error('Error filtering by state:', error, listing);
-          return false;
+      // Apply graded filter
+      if (showGradedOnly) {
+        filtered = filtered.filter(listing => {
+          try {
+            return listing && Boolean(listing.isGraded);
+          } catch (error) {
+            console.error('Error filtering by graded status:', error, listing);
+            return false;
+          }
+        });
+      }
+
+      // Add distance information to filtered listings
+      try {
+        filtered = addDistanceInfo(filtered);
+      } catch (error) {
+        console.error('Error adding distance info:', error);
+        // Continue without distance info if there's an error
+      }
+
+      // Apply sorting
+      try {
+        filtered = sortListings(filtered, sortBy);
+      } catch (error) {
+        console.error('Error sorting listings:', error);
+        // Continue with unsorted listings if there's an error
+      }
+
+      setFilteredListings(filtered);
+
+      // Update search session for analytics
+      try {
+        if (searchQuery && searchQuery.trim()) {
+          updateSearchSession(searchQuery.trim(), filtered.length);
         }
-      });
-    }
-
-    // Apply price filter
-    filtered = filtered.filter(listing => 
-      listing.price >= priceRange[0] && 
-      listing.price <= priceRange[1]
-    );
-
-    // Apply graded filter
-    if (showGradedOnly) {
-      filtered = filtered.filter(listing => listing.isGraded);
-    }
-
-    // Add distance information to filtered listings
-    filtered = addDistanceInfo(filtered);
-
-    // Apply sorting
-    filtered = sortListings(filtered, sortBy);
-
-    setFilteredListings(filtered);
-
-    // Update search session for analytics
-    if (searchQuery.trim()) {
-      updateSearchSession(searchQuery.trim(), filtered.length);
+      } catch (error) {
+        console.error('Error updating search session:', error);
+        // Continue without analytics if there's an error
+      }
+    } catch (error) {
+      console.error('Critical error in listings filter effect:', error);
+      // Set empty array as fallback
+      setFilteredListings([]);
     }
   }, [allListings, searchQuery, selectedState, selectedGame, selectedCondition, priceRange, showGradedOnly, sortBy, latitude, longitude, updateSearchSession]);
 
   // Function to sort listings based on selected criteria
   const sortListings = (listings: Listing[], sortBy: string) => {
-    console.log(`Sorting ${listings.length} listings by: ${sortBy}`);
-    const sorted = [...listings];
-    
-    switch (sortBy) {
-      case "newest":
-        return sorted.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    try {
+      console.log(`Sorting ${listings.length} listings by: ${sortBy}`);
       
-      case "oldest":
-        return sorted.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+      if (!Array.isArray(listings)) {
+        console.error('Invalid listings array provided to sortListings');
+        return [];
+      }
       
-      case "price-low":
-        return sorted.sort((a, b) => a.price - b.price);
+      const sorted = [...listings];
       
-      case "price-high":
-        return sorted.sort((a, b) => b.price - a.price);
-      
-      case "game":
-        return sorted.sort((a, b) => {
-          const gameA = a.game?.toLowerCase() || '';
-          const gameB = b.game?.toLowerCase() || '';
-          return gameA.localeCompare(gameB);
-        });
-      
-      case "condition":
-        // Define condition hierarchy for sorting
-        const conditionOrder = {
-          'mint': 1,
-          'near mint': 2,
-          'near-mint': 2,
-          'excellent': 3,
-          'good': 4,
-          'light played': 5,
-          'light-played': 5,
-          'played': 6,
-          'poor': 7
-        };
+      switch (sortBy) {
+        case "newest":
+          return sorted.sort((a, b) => {
+            try {
+              const dateA = a?.createdAt ? new Date(a.createdAt).getTime() : 0;
+              const dateB = b?.createdAt ? new Date(b.createdAt).getTime() : 0;
+              return dateB - dateA;
+            } catch (error) {
+              console.error('Error sorting by newest:', error, { a, b });
+              return 0;
+            }
+          });
         
-        return sorted.sort((a, b) => {
-          const conditionA = conditionOrder[a.condition?.toLowerCase() as keyof typeof conditionOrder] || 999;
-          const conditionB = conditionOrder[b.condition?.toLowerCase() as keyof typeof conditionOrder] || 999;
-          return conditionA - conditionB;
-        });
-      
-      default:
-        return sorted.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        case "oldest":
+          return sorted.sort((a, b) => {
+            try {
+              const dateA = a?.createdAt ? new Date(a.createdAt).getTime() : 0;
+              const dateB = b?.createdAt ? new Date(b.createdAt).getTime() : 0;
+              return dateA - dateB;
+            } catch (error) {
+              console.error('Error sorting by oldest:', error, { a, b });
+              return 0;
+            }
+          });
+        
+        case "price-low":
+          return sorted.sort((a, b) => {
+            try {
+              const priceA = typeof a?.price === 'number' ? a.price : 0;
+              const priceB = typeof b?.price === 'number' ? b.price : 0;
+              return priceA - priceB;
+            } catch (error) {
+              console.error('Error sorting by price low:', error, { a, b });
+              return 0;
+            }
+          });
+        
+        case "price-high":
+          return sorted.sort((a, b) => {
+            try {
+              const priceA = typeof a?.price === 'number' ? a.price : 0;
+              const priceB = typeof b?.price === 'number' ? b.price : 0;
+              return priceB - priceA;
+            } catch (error) {
+              console.error('Error sorting by price high:', error, { a, b });
+              return 0;
+            }
+          });
+        
+        case "game":
+          return sorted.sort((a, b) => {
+            try {
+              const gameA = a?.game ? String(a.game).toLowerCase() : '';
+              const gameB = b?.game ? String(b.game).toLowerCase() : '';
+              return gameA.localeCompare(gameB);
+            } catch (error) {
+              console.error('Error sorting by game:', error, { a, b });
+              return 0;
+            }
+          });
+        
+        case "condition":
+          // Define condition hierarchy for sorting
+          const conditionOrder = {
+            'mint': 1,
+            'near mint': 2,
+            'near-mint': 2,
+            'excellent': 3,
+            'good': 4,
+            'light played': 5,
+            'light-played': 5,
+            'played': 6,
+            'poor': 7
+          };
+          
+          return sorted.sort((a, b) => {
+            try {
+              const conditionA = a?.condition ? String(a.condition).toLowerCase() : '';
+              const conditionB = b?.condition ? String(b.condition).toLowerCase() : '';
+              
+              const orderA = conditionOrder[conditionA as keyof typeof conditionOrder] || 999;
+              const orderB = conditionOrder[conditionB as keyof typeof conditionOrder] || 999;
+              
+              return orderA - orderB;
+            } catch (error) {
+              console.error('Error sorting by condition:', error, { a, b });
+              return 0;
+            }
+          });
+        
+        default:
+          return sorted.sort((a, b) => {
+            try {
+              const dateA = a?.createdAt ? new Date(a.createdAt).getTime() : 0;
+              const dateB = b?.createdAt ? new Date(b.createdAt).getTime() : 0;
+              return dateB - dateA;
+            } catch (error) {
+              console.error('Error sorting by default (newest):', error, { a, b });
+              return 0;
+            }
+          });
+      }
+    } catch (error) {
+      console.error('Critical error in sortListings:', error, { listings, sortBy });
+      return listings || [];
     }
   };
 
