@@ -151,9 +151,9 @@ service cloud.firestore {
       allow read, write, delete: if true;
     }
 
-    // Listings collection rules with rate limiting and validation
+    // CRITICAL FIX: Listings collection rules - ALLOW PUBLIC READ ACCESS
     match /listings/{listingId} {
-      // Allow anyone to read listings without authentication
+      // FIXED: Allow ANYONE to read listings without authentication - this is essential for the marketplace
       allow read: if true;
       
       // Allow authenticated users to create listings with validation
@@ -265,7 +265,7 @@ service cloud.firestore {
         (resource.data.buyerId == request.auth.uid || resource.data.sellerId == request.auth.uid);
     }
 
-    // Wanted posts collection rules
+    // Wanted posts collection rules - ALLOW PUBLIC READ ACCESS
     match /wantedPosts/{postId} {
       allow read: if true;
       allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
@@ -273,7 +273,7 @@ service cloud.firestore {
       allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
     }
     
-    // SECURITY FIX: Reviews collection with proper authentication
+    // SECURITY FIX: Reviews collection with proper authentication - ALLOW PUBLIC READ ACCESS
     match /reviews/{reviewId} {
       allow read: if true; // Anyone can read reviews
       allow create: if isAuthenticated() && 
@@ -284,14 +284,14 @@ service cloud.firestore {
       allow delete: if isAuthenticated() && resource.data.reviewerId == request.auth.uid;
     }
     
-    // Review stats collection rules
+    // Review stats collection rules - ALLOW PUBLIC READ ACCESS
     match /reviewStats/{sellerId} {
       allow read: if true; // Anyone can read review stats
       allow create, update: if true; // Allow creation from server-side code
       allow delete: if false; // Don't allow deletion of review stats
     }
 
-    // Short ID mappings collection rules
+    // Short ID mappings collection rules - ALLOW PUBLIC READ ACCESS
     match /shortIdMappings/{shortId} {
       allow read: if true; // Anyone can read mappings
       allow create, update: if true; // Allow creation from server-side code
