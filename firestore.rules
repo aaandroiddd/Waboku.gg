@@ -60,7 +60,23 @@ service cloud.firestore {
         && (!("quantity" in data) || data.quantity is number) // SECURITY: Validate quantity field
         && (!("latitude" in data) || data.latitude is number) // SECURITY: Validate latitude field
         && (!("longitude" in data) || data.longitude is number) // SECURITY: Validate longitude field
-        && (!("updatedAt" in data) || data.updatedAt is timestamp); // SECURITY: Validate updatedAt timestamp
+        && (!("updatedAt" in data) || data.updatedAt is timestamp) // SECURITY: Validate updatedAt timestamp
+        && (!("archivedAt" in data) || data.archivedAt == null || data.archivedAt is timestamp) // SECURITY: Validate archivedAt field
+        && (!("originalCreatedAt" in data) || data.originalCreatedAt == null || data.originalCreatedAt is timestamp) // SECURITY: Validate originalCreatedAt field
+        && (!("expirationReason" in data) || data.expirationReason == null || data.expirationReason is string) // SECURITY: Validate expirationReason field
+        && (!("soldTo" in data) || data.soldTo == null || data.soldTo is string) // SECURITY: Validate soldTo field
+        && (!("previousStatus" in data) || data.previousStatus == null || data.previousStatus is string) // SECURITY: Validate previousStatus field
+        && (!("previousExpiresAt" in data) || data.previousExpiresAt == null || data.previousExpiresAt is timestamp) // SECURITY: Validate previousExpiresAt field
+        && (!("favoriteCount" in data) || data.favoriteCount is number) // SECURITY: Validate favoriteCount field
+        && (!("viewCount" in data) || data.viewCount is number) // SECURITY: Validate viewCount field
+        && (!("distance" in data) || data.distance is number) // SECURITY: Validate distance field
+        && (!("isMockListing" in data) || data.isMockListing is bool) // SECURITY: Validate isMockListing field
+        && (!("needsReview" in data) || data.needsReview is bool) // SECURITY: Validate needsReview field
+        && (!("reviewReason" in data) || data.reviewReason is string) // SECURITY: Validate reviewReason field
+        && (!("reviewCategory" in data) || data.reviewCategory is string) // SECURITY: Validate reviewCategory field
+        && (!("moderationStatus" in data) || data.moderationStatus is string) // SECURITY: Validate moderationStatus field
+        && (!("moderatedAt" in data) || data.moderatedAt is timestamp) // SECURITY: Validate moderatedAt field
+        && (!("hasBeenReviewed" in data) || data.hasBeenReviewed is bool); // SECURITY: Validate hasBeenReviewed field
     }
 
     function isValidMessage(data) {

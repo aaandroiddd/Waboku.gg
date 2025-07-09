@@ -466,101 +466,61 @@ export function useOptimizedListings({ userId, searchQuery, showOnlyActive = fal
         const expirationTime = new Date(now);
         expirationTime.setHours(expirationTime.getHours() + tierDuration);
         
-        // Ensure all required fields are present and properly typed for security rules
-        // Build the update data step by step to ensure all required fields are included
+        // Create a clean update object with only the fields we want to update
+        // This approach avoids potential field validation issues by being more selective
         updateData = {
-          // Core required fields that must always be present
+          // Core status and timing fields
           status: 'active',
-          userId: String(user.uid),
-          username: String(username),
-          accountTier: String(accountTier),
-          createdAt: now,
           updatedAt: now,
           expiresAt: expirationTime,
           
-          // Required listing fields with proper type conversion and validation
-          title: String(listingData.title || '').trim(),
-          price: Math.max(0, Math.min(50000, Number(listingData.price) || 0)), // Validate price range
-          description: String(listingData.description || '').trim(),
-          city: String(listingData.city || '').trim(),
-          state: String(listingData.state || '').trim(),
-          game: String(listingData.game || '').trim(),
-          condition: String(listingData.condition || '').trim(),
-          imageUrls: Array.isArray(listingData.imageUrls) ? listingData.imageUrls.slice(0, 10) : [], // Limit to 10 images
-          isGraded: Boolean(listingData.isGraded)
+          // Clear archive-related fields
+          archivedAt: null,
+          originalCreatedAt: null,
+          expirationReason: null,
+          soldTo: null,
+          previousStatus: null,
+          previousExpiresAt: null
         };
 
-        // Add optional fields only if they exist and are valid
-        if (listingData.cardName && String(listingData.cardName).trim()) {
-          updateData.cardName = String(listingData.cardName).trim();
+        // Only update core fields if they need to be refreshed
+        // This minimizes the risk of validation errors on existing data
+        if (!listingData.userId || listingData.userId !== user.uid) {
+          updateData.userId = String(user.uid);
         }
         
-        if (listingData.quantity && Number(listingData.quantity) > 0) {
-          updateData.quantity = Number(listingData.quantity);
+        if (!listingData.username || listingData.username !== username) {
+          updateData.username = String(username);
         }
         
-        if (listingData.language && String(listingData.language).trim()) {
-          updateData.language = String(listingData.language).trim();
-        }
-        
-        if (typeof listingData.finalSale === 'boolean') {
-          updateData.finalSale = Boolean(listingData.finalSale);
-        }
-        
-        if (typeof listingData.offersOnly === 'boolean') {
-          updateData.offersOnly = Boolean(listingData.offersOnly);
-        }
-        
-        if (typeof listingData.coverImageIndex === 'number' && listingData.coverImageIndex >= 0) {
-          updateData.coverImageIndex = Number(listingData.coverImageIndex);
-        }
-        
-        if (typeof listingData.latitude === 'number' && typeof listingData.longitude === 'number') {
-          updateData.latitude = Number(listingData.latitude);
-          updateData.longitude = Number(listingData.longitude);
-        }
-        
-        // Handle grading fields properly
-        if (updateData.isGraded) {
-          if (listingData.gradeLevel && Number(listingData.gradeLevel) > 0) {
-            updateData.gradeLevel = Number(listingData.gradeLevel);
-          }
-          if (listingData.gradingCompany && String(listingData.gradingCompany).trim()) {
-            updateData.gradingCompany = String(listingData.gradingCompany).trim();
-          }
+        if (!listingData.accountTier || listingData.accountTier !== accountTier) {
+          updateData.accountTier = String(accountTier);
         }
 
-        // Validate required fields before sending to Firestore
-        const requiredFields = ['title', 'price', 'description', 'city', 'state', 'game', 'condition', 'userId', 'username', 'createdAt', 'expiresAt'];
+        // Validate that essential fields exist in the original data
+        const requiredFields = ['title', 'price', 'description', 'city', 'state', 'game', 'condition', 'imageUrls'];
         for (const field of requiredFields) {
-          if (!updateData[field] && updateData[field] !== 0 && updateData[field] !== false) {
-            console.error(`Missing required field: ${field}`, updateData[field]);
-            throw new Error(`Missing required field: ${field}`);
+          if (!listingData[field] && listingData[field] !== 0 && listingData[field] !== false) {
+            console.error(`Missing required field in existing listing: ${field}`);
+            throw new Error(`Listing is missing required field: ${field}. Cannot restore.`);
           }
         }
 
-        // Validate field lengths and constraints
-        if (updateData.title.length < 3 || updateData.title.length > 100) {
-          throw new Error('Title must be between 3 and 100 characters');
+        // Validate field constraints on existing data
+        if (typeof listingData.title !== 'string' || listingData.title.length < 3 || listingData.title.length > 100) {
+          throw new Error('Listing title is invalid. Cannot restore.');
         }
         
-        if (updateData.price < 0 || updateData.price > 50000) {
-          throw new Error('Price must be between 0 and 50000');
+        const price = Number(listingData.price);
+        if (isNaN(price) || price < 0 || price > 50000) {
+          throw new Error('Listing price is invalid. Cannot restore.');
         }
         
-        if (!Array.isArray(updateData.imageUrls) || updateData.imageUrls.length > 10) {
-          throw new Error('Invalid image URLs or too many images');
+        if (!Array.isArray(listingData.imageUrls) || listingData.imageUrls.length === 0 || listingData.imageUrls.length > 10) {
+          throw new Error('Listing images are invalid. Cannot restore.');
         }
 
-        console.log('Validation passed for all required fields');
-
-        // Explicitly set archive-related fields to null when restoring to 'active'
-        updateData.archivedAt = null;
-        updateData.originalCreatedAt = null;
-        updateData.expirationReason = null;
-        updateData.soldTo = null;
-        updateData.previousStatus = null;
-        updateData.previousExpiresAt = null;
+        console.log('Validation passed for restore operation');
       } else {
         // For inactive status, keep current expiration but remove archive-related fields
         updateData = {
@@ -571,9 +531,9 @@ export function useOptimizedListings({ userId, searchQuery, showOnlyActive = fal
         };
       }
 
-      console.log(`Updating listing ${listingId} status to ${status} with data:`, updateData);
+      console.log(`Updating listing ${listingId} status to ${status} with minimal update data:`, updateData);
       
-      // Update the listing status
+      // Update the listing status with minimal data to avoid validation issues
       await updateDoc(listingRef, updateData);
       
       // Verify the update was successful
@@ -612,6 +572,16 @@ export function useOptimizedListings({ userId, searchQuery, showOnlyActive = fal
       return true;
     } catch (error: any) {
       console.error('Error updating listing status:', error);
+      
+      // Provide more specific error messages
+      if (error.message?.includes('payment')) {
+        throw new Error('Security validation failed. Please try again or contact support if the issue persists.');
+      } else if (error.message?.includes('permissions')) {
+        throw new Error('Permission denied. Please ensure you own this listing and try again.');
+      } else if (error.message?.includes('Missing or insufficient permissions')) {
+        throw new Error('Database permission error. Please refresh the page and try again.');
+      }
+      
       throw new Error(error.message || 'Error updating listing status');
     }
   };
