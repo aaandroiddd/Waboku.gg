@@ -364,7 +364,7 @@ export function useListings({
           updateData.offersOnly = Boolean(listingData.offersOnly);
         }
         
-        if (typeof listingData.coverImageIndex === 'number' && listingData.coverImageIndex >= 0) {
+        if (typeof listingData.coverImageIndex === 'number') {
           updateData.coverImageIndex = Number(listingData.coverImageIndex);
         }
         
@@ -589,7 +589,7 @@ export function useListings({
         imageUrls: Array.isArray(data.imageUrls) ? data.imageUrls : [],
         // Ensure boolean values are properly typed
         isGraded: Boolean(data.isGraded),
-        // Ensure numeric index is properly typed
+        // Ensure numeric index is properly typed, allowing negative values
         coverImageIndex: typeof data.coverImageIndex === 'number' ? data.coverImageIndex : 0,
         // Ensure string values have fallbacks
         status: data.status || 'active',

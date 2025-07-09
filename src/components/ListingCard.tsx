@@ -500,9 +500,15 @@ const ListingCardContent = memo(({ listing, isFavorite, onFavoriteClick, getCond
                     const coverIndex = typeof listing.coverImageIndex === 'number' ? listing.coverImageIndex : 0;
                     
                     // Ensure the cover index is within bounds of the available images
-                    const safeIndex = Array.isArray(listing.imageUrls) && listing.imageUrls.length > 0 
-                      ? Math.min(coverIndex, listing.imageUrls.length - 1) 
-                      : 0;
+                    // Handle negative values by defaulting to 0
+                    let safeIndex = 0;
+                    if (Array.isArray(listing.imageUrls) && listing.imageUrls.length > 0) {
+                      if (coverIndex < 0) {
+                        safeIndex = 0; // Default to first image if coverImageIndex is negative
+                      } else {
+                        safeIndex = Math.min(coverIndex, listing.imageUrls.length - 1);
+                      }
+                    }
                     
                     const imageUrl = Array.isArray(listing.imageUrls) && 
                                     listing.imageUrls.length > 0 ? 
@@ -515,7 +521,8 @@ const ListingCardContent = memo(({ listing, isFavorite, onFavoriteClick, getCond
                         imageUrl,
                         requestedCoverIndex: coverIndex,
                         actualIndex: safeIndex,
-                        totalImages: listing.imageUrls?.length || 0
+                        totalImages: listing.imageUrls?.length || 0,
+                        wasNegative: coverIndex < 0
                       });
                     }
                     
