@@ -596,43 +596,44 @@ export function useListings({
       
       // Create the listing document with image URLs
       const listingRef = collection(db, 'listings');
-      // Prepare base listing data without grading fields
-      const { gradeLevel, gradingCompany, ...baseData } = cleanListingData;
-      
-      // Remove cardReference if it's null
-      const { cardReference, ...dataWithoutCard } = baseData;
       
       // Set expiration date based on account tier
       const expiresAt = new Date();
       expiresAt.setHours(expiresAt.getHours() + tierDuration);
 
-      // Don't automatically request user's location for the listing
-      let latitude = null;
-      let longitude = null;
-
-      const newListing = {
-        ...dataWithoutCard,
+      // Prepare the listing data with proper type conversions
+      const newListing: any = {
+        title: cleanListingData.title,
+        description: cleanListingData.description || '',
+        price: Number(cleanListingData.price) || 0, // Convert price to number
+        condition: cleanListingData.condition,
+        game: cleanListingData.game,
+        city: cleanListingData.city,
+        state: cleanListingData.state || '',
         imageUrls,
-        coverImageIndex: cleanListingData.coverImageIndex || 0,
+        coverImageIndex: Number(cleanListingData.coverImageIndex) || 0,
         userId: user.uid,
         username: user.displayName || 'Anonymous',
         createdAt: new Date(),
-        expiresAt, // Add expiration date based on account tier
+        expiresAt,
         status: 'active',
         isGraded: Boolean(cleanListingData.isGraded),
-        accountTier, // Store the account tier with the listing
-        ...(cardReference ? { cardReference } : {}),
-        // Add location data if available
-        ...(latitude !== null && longitude !== null ? { latitude, longitude } : {}),
-        // Ensure state is set even if empty for backward compatibility
-        state: cleanListingData.state || ''
+        accountTier,
+        // Optional fields with proper type handling
+        ...(cleanListingData.cardName && { cardName: String(cleanListingData.cardName) }),
+        ...(cleanListingData.quantity && { quantity: Number(cleanListingData.quantity) }),
+        ...(cleanListingData.language && { language: String(cleanListingData.language) }),
+        ...(typeof cleanListingData.finalSale === 'boolean' && { finalSale: cleanListingData.finalSale }),
+        ...(typeof cleanListingData.offersOnly === 'boolean' && { offersOnly: cleanListingData.offersOnly })
       };
 
       // Only add grading fields if the card is graded
-      if (newListing.isGraded && gradeLevel && gradingCompany) {
-        newListing.gradeLevel = Number(gradeLevel);
-        newListing.gradingCompany = gradingCompany;
+      if (newListing.isGraded && cleanListingData.gradeLevel && cleanListingData.gradingCompany) {
+        newListing.gradeLevel = Number(cleanListingData.gradeLevel);
+        newListing.gradingCompany = String(cleanListingData.gradingCompany);
       }
+
+      console.log('Final listing data being sent to Firestore:', newListing);
 
       const docRef = await addDoc(listingRef, newListing);
       return { id: docRef.id, ...newListing };

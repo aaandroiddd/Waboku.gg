@@ -31,7 +31,7 @@ service cloud.firestore {
       return data.title is string
         && data.title.size() >= 3
         && data.title.size() <= 100
-        && (data.price is number || data.price is string)
+        && (data.price is number && data.price >= 0 && data.price <= 50000) // SECURITY: Validate price range
         && (data.description is string || !("description" in data))
         && data.userId is string
         && data.userId == request.auth.uid // SECURITY: Ensure userId matches authenticated user
@@ -43,15 +43,23 @@ service cloud.firestore {
         && data.state is string
         && data.game is string
         && data.condition is string
+        && data.username is string // SECURITY: Validate username field
+        && data.createdAt is timestamp // SECURITY: Validate createdAt timestamp
+        && data.expiresAt is timestamp // SECURITY: Validate expiresAt timestamp
         && (data.isGraded == true || data.isGraded == false)
         && (!data.isGraded || (
           (!("gradeLevel" in data) || data.gradeLevel == null || data.gradeLevel is number) &&
           (!("gradingCompany" in data) || data.gradingCompany == null || data.gradingCompany is string)
         ))
-        && (!("price" in data) || (data.price is number && data.price > 0 && data.price <= 50000)) // SECURITY: Validate price range
         && (!("language" in data) || data.language is string) // SECURITY: Validate language field
         && (!("finalSale" in data) || data.finalSale is bool) // SECURITY: Validate finalSale field
-        && (!("offersOnly" in data) || data.offersOnly is bool); // SECURITY: Validate offersOnly field
+        && (!("offersOnly" in data) || data.offersOnly is bool) // SECURITY: Validate offersOnly field
+        && (!("accountTier" in data) || data.accountTier is string) // SECURITY: Validate accountTier field
+        && (!("coverImageIndex" in data) || data.coverImageIndex is number) // SECURITY: Validate coverImageIndex field
+        && (!("cardName" in data) || data.cardName is string) // SECURITY: Validate cardName field
+        && (!("quantity" in data) || data.quantity is number) // SECURITY: Validate quantity field
+        && (!("latitude" in data) || data.latitude is number) // SECURITY: Validate latitude field
+        && (!("longitude" in data) || data.longitude is number); // SECURITY: Validate longitude field
     }
 
     function isValidMessage(data) {
