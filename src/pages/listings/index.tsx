@@ -220,41 +220,66 @@ export default function ListingsPage() {
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(listing => {
-        const title = (listing.title || '').toLowerCase();
-        const description = (listing.description || '').toLowerCase();
-        return title.includes(query) || description.includes(query);
+        try {
+          const title = String(listing.title || '').toLowerCase();
+          const description = String(listing.description || '').toLowerCase();
+          return title.includes(query) || description.includes(query);
+        } catch (error) {
+          console.error('Error filtering by search query:', error, listing);
+          return false;
+        }
       });
     }
 
     // Apply game filter
     if (selectedGame !== "all") {
       filtered = filtered.filter(listing => {
-        const listingGameLower = (listing.game || '').toLowerCase();
-        const gameMapping = GAME_NAME_MAPPING[selectedGame];
-        if (!gameMapping || !Array.isArray(gameMapping)) {
-          console.warn(`No game mapping found for selectedGame: ${selectedGame}`);
+        try {
+          const listingGameLower = String(listing.game || '').toLowerCase();
+          const gameMapping = GAME_NAME_MAPPING[selectedGame];
+          if (!gameMapping || !Array.isArray(gameMapping)) {
+            console.warn(`No game mapping found for selectedGame: ${selectedGame}`);
+            return false;
+          }
+          return gameMapping.some(name => {
+            if (!name || typeof name !== 'string') return false;
+            try {
+              return listingGameLower === String(name).toLowerCase();
+            } catch (error) {
+              console.error('Error comparing game names:', error, { name, listingGameLower });
+              return false;
+            }
+          });
+        } catch (error) {
+          console.error('Error filtering by game:', error, listing);
           return false;
         }
-        return gameMapping.some(name => {
-          if (!name || typeof name !== 'string') return false;
-          return listingGameLower === name.toLowerCase();
-        });
       });
     }
 
     // Apply condition filter
     if (selectedCondition !== "all") {
       filtered = filtered.filter(listing => {
-        const condition = listing.condition || '';
-        return condition.toLowerCase() === selectedCondition.toLowerCase();
+        try {
+          const condition = String(listing.condition || '').toLowerCase();
+          return condition === selectedCondition.toLowerCase();
+        } catch (error) {
+          console.error('Error filtering by condition:', error, listing);
+          return false;
+        }
       });
     }
 
     // Apply location filter
     if (selectedState !== "all") {
       filtered = filtered.filter(listing => {
-        const state = listing.state || '';
-        return state.toLowerCase() === selectedState.toLowerCase();
+        try {
+          const state = String(listing.state || '').toLowerCase();
+          return state === selectedState.toLowerCase();
+        } catch (error) {
+          console.error('Error filtering by state:', error, listing);
+          return false;
+        }
       });
     }
 
