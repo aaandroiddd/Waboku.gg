@@ -13,7 +13,7 @@ import { Toaster } from '@/components/ui/toaster';
 import { RouteGuard } from '@/components/RouteGuard';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/router';
-import { useEffect, useState, memo } from 'react';
+import { useEffect, useState, memo, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAccount } from '@/contexts/AccountContext';
 import { AnimatePresence } from 'framer-motion';
@@ -28,7 +28,6 @@ import { CriticalErrorHandler } from '@/components/CriticalErrorHandler';
 import { SessionManagerInitializer } from '@/components/SessionManagerInitializer';
 import { ComprehensiveErrorHandlerInitializer } from '@/components/ComprehensiveErrorHandlerInitializer';
 import { getFirebaseServices } from '@/lib/firebase';
-import { useCallback } from 'react';
 import { useThemeSync } from '@/hooks/useThemeSync';
 
 const LoadingScreen = dynamic(() => import('@/components/LoadingScreen').then(mod => ({ default: mod.LoadingScreen })), {

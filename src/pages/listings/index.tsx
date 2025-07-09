@@ -220,25 +220,25 @@ export default function ListingsPage() {
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(listing => {
-        const title = listing.title || '';
-        const description = listing.description || '';
-        return title.toLowerCase().includes(query) ||
-               description.toLowerCase().includes(query);
+        const title = (listing.title || '').toLowerCase();
+        const description = (listing.description || '').toLowerCase();
+        return title.includes(query) || description.includes(query);
       });
     }
 
     // Apply game filter
     if (selectedGame !== "all") {
       filtered = filtered.filter(listing => {
-        const listingGameLower = listing.game?.toLowerCase() || '';
+        const listingGameLower = (listing.game || '').toLowerCase();
         const gameMapping = GAME_NAME_MAPPING[selectedGame];
         if (!gameMapping || !Array.isArray(gameMapping)) {
           console.warn(`No game mapping found for selectedGame: ${selectedGame}`);
           return false;
         }
-        return gameMapping.some(name => 
-          listingGameLower === name.toLowerCase()
-        );
+        return gameMapping.some(name => {
+          if (!name || typeof name !== 'string') return false;
+          return listingGameLower === name.toLowerCase();
+        });
       });
     }
 
