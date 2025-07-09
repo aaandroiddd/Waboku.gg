@@ -128,7 +128,7 @@ export function MobileSelect({
       <div className="relative w-full">
         <select
           ref={selectRef}
-          className={`block w-full h-12 rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring appearance-none cursor-pointer text-foreground disabled:cursor-not-allowed disabled:opacity-50 ${className}`}
+          className={`block w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring appearance-none cursor-pointer text-foreground disabled:cursor-not-allowed disabled:opacity-50 ${className}`}
           value={internalValue}
           onChange={handleNativeChange}
           onFocus={handleFocus}
@@ -143,7 +143,8 @@ export function MobileSelect({
             backgroundSize: '16px',
             paddingRight: '40px',
             minWidth: 0,
-            touchAction: 'manipulation'
+            touchAction: 'manipulation',
+            marginBottom: 0
           }}
         >
           {placeholder && (

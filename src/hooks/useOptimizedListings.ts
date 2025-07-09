@@ -548,7 +548,7 @@ export function useOptimizedListings({ userId, searchQuery, showOnlyActive = fal
         }
       }
       
-      // Update local state
+      // Update local state immediately with the new status
       setListings(prevListings => 
         prevListings.map(listing => 
           listing.id === listingId 
@@ -568,6 +568,29 @@ export function useOptimizedListings({ userId, searchQuery, showOnlyActive = fal
 
       // Clear any cached listings data to ensure fresh data on next load
       clearAllListingCaches();
+      
+      // Force a small delay to ensure Firestore has processed the update
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Verify the update persisted by checking Firestore again
+      const finalVerification = await getDoc(listingRef);
+      if (finalVerification.exists()) {
+        const finalData = finalVerification.data();
+        console.log(`Final verification - Listing ${listingId} status: ${finalData.status}`);
+        
+        if (finalData.status !== status) {
+          console.error(`Status mismatch after update. Expected: ${status}, Got: ${finalData.status}`);
+          // Update local state again to match Firestore
+          setListings(prevListings => 
+            prevListings.map(listing => 
+              listing.id === listingId 
+                ? { ...listing, status: finalData.status }
+                : listing
+            )
+          );
+          throw new Error(`Failed to persist status change to ${status}. Current status: ${finalData.status}`);
+        }
+      }
 
       return true;
     } catch (error: any) {
