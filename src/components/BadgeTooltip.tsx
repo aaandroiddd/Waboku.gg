@@ -5,6 +5,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { hasClass } from '@/lib/string-utils';
 
 interface BadgeTooltipProps {
   children: React.ReactNode;
@@ -19,11 +20,10 @@ export function BadgeTooltip({
   side = 'top', 
   align = 'center' 
 }: BadgeTooltipProps) {
-  // Check if the child has cursor-pointer class to determine cursor style
+  // Use safe string utility to check for cursor-pointer class
   const childHasCursorPointer = React.isValidElement(children) && 
-    children.props?.className && 
-    typeof children.props.className === 'string' && 
-    children.props.className.includes('cursor-pointer');
+    children.props && 
+    hasClass(children.props.className, 'cursor-pointer');
 
   return (
     <TooltipProvider>

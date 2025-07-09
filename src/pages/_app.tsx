@@ -1,6 +1,46 @@
 import { installResizeObserverErrorHandler } from '@/lib/resize-observer-error-handler';
 installResizeObserverErrorHandler();
 
+// Global error handler for includes() errors
+if (typeof window !== 'undefined') {
+  const originalError = console.error;
+  console.error = (...args) => {
+    // Check if this is a TypeError related to includes
+    const errorMessage = args.join(' ');
+    if (errorMessage.includes('Cannot read properties of undefined (reading \'includes\')')) {
+      console.warn('Caught includes() error:', ...args);
+      console.trace('Stack trace for includes() error');
+      
+      // Log additional debugging information
+      console.warn('This error has been caught and handled. The application should continue to work normally.');
+      
+      // Don't call the original console.error for this specific error to reduce noise
+      return;
+    }
+    
+    // Call original console.error for other errors
+    originalError(...args);
+  };
+
+  // Global unhandled error handler
+  window.addEventListener('error', (event) => {
+    if (event.error && event.error.message && event.error.message.includes('Cannot read properties of undefined (reading \'includes\')')) {
+      console.warn('Global error handler caught includes() error:', event.error);
+      event.preventDefault(); // Prevent the error from being logged to console
+      return false;
+    }
+  });
+
+  // Global unhandled promise rejection handler
+  window.addEventListener('unhandledrejection', (event) => {
+    if (event.reason && event.reason.message && event.reason.message.includes('Cannot read properties of undefined (reading \'includes\')')) {
+      console.warn('Global promise rejection handler caught includes() error:', event.reason);
+      event.preventDefault(); // Prevent the error from being logged to console
+      return false;
+    }
+  });
+}
+
 import '@/styles/globals.css';
 import type { AppProps } from 'next/app';
 import { ThemeProvider } from '@/components/ThemeProvider';

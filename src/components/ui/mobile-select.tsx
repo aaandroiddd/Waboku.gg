@@ -39,15 +39,40 @@ export function MobileSelect({
     const checkMobile = () => {
       if (typeof window === "undefined") return false;
       
-      // Check user agent
-      const userAgent = navigator.userAgent || '';
-      const isMobileUserAgent = /Mobi|Android|iPhone|iPad|iPod|Opera Mini|IEMobile|WPDesktop/i.test(userAgent);
+      // Enhanced defensive check for navigator and userAgent
+      let userAgent = '';
+      try {
+        if (typeof navigator !== 'undefined' && navigator && typeof navigator.userAgent === 'string') {
+          userAgent = navigator.userAgent;
+        }
+      } catch (error) {
+        console.warn('Error accessing navigator.userAgent:', error);
+        userAgent = '';
+      }
       
-      // Check screen size
-      const isSmallScreen = window.innerWidth <= 768;
+      const isMobileUserAgent = userAgent.length > 0 && /Mobi|Android|iPhone|iPad|iPod|Opera Mini|IEMobile|WPDesktop/i.test(userAgent);
       
-      // Check touch capability
-      const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+      // Check screen size with defensive programming
+      let isSmallScreen = false;
+      try {
+        if (typeof window !== 'undefined' && window && typeof window.innerWidth === 'number') {
+          isSmallScreen = window.innerWidth <= 768;
+        }
+      } catch (error) {
+        console.warn('Error accessing window.innerWidth:', error);
+        isSmallScreen = false;
+      }
+      
+      // Check touch capability with defensive programming
+      let isTouchDevice = false;
+      try {
+        if (typeof window !== 'undefined' && window) {
+          isTouchDevice = ('ontouchstart' in window) || (typeof navigator !== 'undefined' && navigator && typeof navigator.maxTouchPoints === 'number' && navigator.maxTouchPoints > 0);
+        }
+      } catch (error) {
+        console.warn('Error checking touch capability:', error);
+        isTouchDevice = false;
+      }
       
       const result = isMobileUserAgent || (isSmallScreen && isTouchDevice);
       
@@ -57,7 +82,7 @@ export function MobileSelect({
         isMobileUserAgent,
         isSmallScreen,
         isTouchDevice,
-        windowWidth: window.innerWidth,
+        windowWidth: typeof window !== 'undefined' && window ? window.innerWidth : 'undefined',
         result
       });
       
@@ -66,18 +91,26 @@ export function MobileSelect({
 
     setIsMobile(checkMobile());
     
-    // Listen for resize events
+    // Listen for resize events with defensive programming
     const handleResize = () => {
-      setIsMobile(checkMobile());
+      try {
+        setIsMobile(checkMobile());
+      } catch (error) {
+        console.warn('Error in resize handler:', error);
+      }
     };
     
-    window.addEventListener('resize', handleResize);
-    window.addEventListener('orientationchange', handleResize);
-    
-    return () => {
-      window.removeEventListener('resize', handleResize);
-      window.removeEventListener('orientationchange', handleResize);
-    };
+    if (typeof window !== 'undefined' && window && typeof window.addEventListener === 'function') {
+      window.addEventListener('resize', handleResize);
+      window.addEventListener('orientationchange', handleResize);
+      
+      return () => {
+        if (typeof window !== 'undefined' && window && typeof window.removeEventListener === 'function') {
+          window.removeEventListener('resize', handleResize);
+          window.removeEventListener('orientationchange', handleResize);
+        }
+      };
+    }
   }, []);
 
   // Sync internal value with prop value

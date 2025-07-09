@@ -23,6 +23,7 @@ import { useStripeSellerStatus } from '@/hooks/useStripeSellerStatus';
 import { getListingUrl } from '@/lib/listing-slug';
 import { MobileAnimationWrapper, MobileMotionButton, MobileMotionSpan } from './MobileAnimationWrapper';
 import { useSearchAnalytics } from '@/hooks/useSearchAnalytics';
+import { StringErrorBoundary } from './StringErrorBoundary';
 
 const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
   const R = 3959; // Earth's radius in miles
@@ -162,7 +163,7 @@ const BuyNowButton = ({ listing, className }: BuyNowButtonProps) => {
   );
 };
 
-export const ListingCard = memo(({ listing, isFavorite, onFavoriteClick, getConditionColor, searchTerm, resultPosition }: ListingCardProps) => {
+const ListingCardContent = memo(({ listing, isFavorite, onFavoriteClick, getConditionColor, searchTerm, resultPosition }: ListingCardProps) => {
   const { location } = useLocation({ autoRequest: false });
   const [calculatedDistance, setCalculatedDistance] = useState<number | null>(null);
   const [isCheckingExpiration, setIsCheckingExpiration] = useState(false);
@@ -561,12 +562,14 @@ export const ListingCard = memo(({ listing, isFavorite, onFavoriteClick, getCond
               <div className="flex items-center gap-2 flex-wrap mt-1">
                 <MobileAnimationWrapper whileHover={{ scale: 1.05 }}>
                   {listing.game && (
-                    <GameCategoryBadge 
-                      game={listing.game} 
-                      variant="outline" 
-                      className="text-xs font-medium shadow-sm"
-                      onClick={(e) => e.stopPropagation()} // Prevent link navigation when clicking the badge
-                    />
+                    <StringErrorBoundary fallback={<span className="text-xs text-muted-foreground">Game</span>}>
+                      <GameCategoryBadge 
+                        game={listing.game} 
+                        variant="outline" 
+                        className="text-xs font-medium shadow-sm"
+                        onClick={(e) => e.stopPropagation()} // Prevent link navigation when clicking the badge
+                      />
+                    </StringErrorBoundary>
                   )}
                 </MobileAnimationWrapper>
                 <MobileAnimationWrapper whileHover={{ scale: 1.05 }}>
@@ -575,7 +578,9 @@ export const ListingCard = memo(({ listing, isFavorite, onFavoriteClick, getCond
                   </Badge>
                 </MobileAnimationWrapper>
                 <MobileAnimationWrapper whileHover={{ scale: 1.05 }}>
-                  <StripeSellerBadge userId={listing.userId} className="text-xs" />
+                  <StringErrorBoundary fallback={<span className="text-xs text-muted-foreground">Seller</span>}>
+                    <StripeSellerBadge userId={listing.userId} className="text-xs" />
+                  </StringErrorBoundary>
                 </MobileAnimationWrapper>
                 {listing.isGraded && (
                   <MobileMotionSpan 
@@ -626,6 +631,32 @@ export const ListingCard = memo(({ listing, isFavorite, onFavoriteClick, getCond
         </Link>
       </Card>
     </MobileAnimationWrapper>
+  );
+});
+
+ListingCardContent.displayName = 'ListingCardContent';
+
+export const ListingCard = memo(({ listing, isFavorite, onFavoriteClick, getConditionColor, searchTerm, resultPosition }: ListingCardProps) => {
+  return (
+    <StringErrorBoundary fallback={
+      <Card className="relative overflow-hidden group h-full">
+        <CardContent className="p-3 h-full flex flex-col items-center justify-center" style={{ minHeight: '420px' }}>
+          <div className="text-center text-muted-foreground">
+            <p className="text-sm">Unable to display listing</p>
+            <p className="text-xs mt-1">Please refresh the page</p>
+          </div>
+        </CardContent>
+      </Card>
+    }>
+      <ListingCardContent 
+        listing={listing}
+        isFavorite={isFavorite}
+        onFavoriteClick={onFavoriteClick}
+        getConditionColor={getConditionColor}
+        searchTerm={searchTerm}
+        resultPosition={resultPosition}
+      />
+    </StringErrorBoundary>
   );
 });
 
