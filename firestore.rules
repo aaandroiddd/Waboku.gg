@@ -48,7 +48,10 @@ service cloud.firestore {
           (!("gradeLevel" in data) || data.gradeLevel == null || data.gradeLevel is number) &&
           (!("gradingCompany" in data) || data.gradingCompany == null || data.gradingCompany is string)
         ))
-        && (!("price" in data) || (data.price is number && data.price > 0 && data.price <= 50000)); // SECURITY: Validate price range
+        && (!("price" in data) || (data.price is number && data.price > 0 && data.price <= 50000)) // SECURITY: Validate price range
+        && (!("language" in data) || data.language is string) // SECURITY: Validate language field
+        && (!("finalSale" in data) || data.finalSale is bool) // SECURITY: Validate finalSale field
+        && (!("offersOnly" in data) || data.offersOnly is bool); // SECURITY: Validate offersOnly field
     }
 
     function isValidMessage(data) {

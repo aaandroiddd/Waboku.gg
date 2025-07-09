@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useCardSearch } from "@/hooks/useCardSearch";
@@ -50,6 +50,7 @@ const CreateListingPage = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [stripeConnectStatus, setStripeConnectStatus] = useState<'none' | 'pending' | 'active' | 'error'>('none');
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   const [formData, setFormData] = useState({
     title: "",
@@ -260,6 +261,63 @@ const CreateListingPage = () => {
       }));
     }
   }, [profile]);
+
+  // Check if form has unsaved changes
+  const checkForUnsavedChanges = useCallback(() => {
+    const hasContent = 
+      formData.title.trim() !== "" ||
+      formData.description.trim() !== "" ||
+      formData.price.trim() !== "" ||
+      formData.game !== "" ||
+      formData.condition !== "" ||
+      formData.cardName.trim() !== "" ||
+      formData.quantity.trim() !== "" ||
+      formData.images.length > 0 ||
+      formData.isGraded ||
+      formData.offersOnly ||
+      formData.finalSale ||
+      formData.language !== "English";
+    
+    setHasUnsavedChanges(hasContent);
+    return hasContent;
+  }, [formData]);
+
+  // Monitor form changes
+  useEffect(() => {
+    checkForUnsavedChanges();
+  }, [checkForUnsavedChanges]);
+
+  // Handle browser navigation/refresh
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasUnsavedChanges && !isSubmitting) {
+        e.preventDefault();
+        e.returnValue = 'You have unsaved changes. Are you sure you want to leave?';
+        return e.returnValue;
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasUnsavedChanges, isSubmitting]);
+
+  // Handle Next.js router navigation
+  useEffect(() => {
+    const handleRouteChange = (url: string) => {
+      if (hasUnsavedChanges && !isSubmitting) {
+        const confirmLeave = window.confirm('You have unsaved changes. Are you sure you want to leave?');
+        if (!confirmLeave) {
+          router.events.emit('routeChangeError');
+          throw 'Route change aborted by user';
+        }
+      }
+    };
+
+    router.events.on('routeChangeStart', handleRouteChange);
+    return () => {
+      router.events.off('routeChangeStart', handleRouteChange);
+    };
+  }, [router, hasUnsavedChanges, isSubmitting]);
 
   // Handle relist functionality - pre-fill form with data from URL parameters
   useEffect(() => {
