@@ -10,6 +10,29 @@ interface ErrorPattern {
 }
 
 const ERROR_PATTERNS: ErrorPattern[] = [
+  // String/JavaScript errors
+  {
+    pattern: /Cannot read properties of undefined \(reading 'includes'\)/i,
+    type: 'critical',
+    severity: 'high',
+    recoveryAction: 'ignore',
+    description: 'Undefined includes() method call (should be handled by prototype patches)'
+  },
+  {
+    pattern: /Cannot read properties of undefined/i,
+    type: 'critical',
+    severity: 'medium',
+    recoveryAction: 'ignore',
+    description: 'Undefined property access (handled gracefully)'
+  },
+  {
+    pattern: /Cannot read property.*of undefined/i,
+    type: 'critical',
+    severity: 'medium',
+    recoveryAction: 'ignore',
+    description: 'Legacy undefined property access (handled gracefully)'
+  },
+  
   // Firebase/Firestore errors
   {
     pattern: /Unknown SID/i,

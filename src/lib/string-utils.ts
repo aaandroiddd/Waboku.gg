@@ -10,20 +10,38 @@
  */
 export function safeIncludes(str: any, searchString: string): boolean {
   try {
-    // Check if str is null, undefined, or not a string
-    if (str == null || typeof str !== 'string') {
+    // Handle null/undefined str
+    if (str == null) {
       return false;
     }
     
-    // Check if searchString is valid
-    if (typeof searchString !== 'string') {
+    // Handle null/undefined searchString
+    if (searchString == null) {
       return false;
     }
     
-    // Perform the includes check
-    return str.includes(searchString);
+    // Convert both to strings safely
+    let strValue: string;
+    let searchValue: string;
+    
+    try {
+      strValue = String(str);
+    } catch (e) {
+      console.warn('Error converting str to string in safeIncludes:', e, { str });
+      return false;
+    }
+    
+    try {
+      searchValue = String(searchString);
+    } catch (e) {
+      console.warn('Error converting searchString to string in safeIncludes:', e, { searchString });
+      return false;
+    }
+    
+    // Use the native includes method on the converted strings
+    return strValue.includes(searchValue);
   } catch (error) {
-    console.warn('Error in safeIncludes:', error, { str, searchString });
+    console.warn('Error in safeIncludes:', error, { str, searchString, strType: typeof str, searchType: typeof searchString });
     return false;
   }
 }
