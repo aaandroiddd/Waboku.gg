@@ -19,14 +19,21 @@ export function ListingTimer({ createdAt, archivedAt, accountTier, status, listi
   const [progress, setProgress] = useState<number>(0);
   const [isExpired, setIsExpired] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
   const { toast } = useToast();
   const router = useRouter();
 
+  // Track component mount state to prevent state updates on unmounted components
+  useEffect(() => {
+    setIsMounted(true);
+    return () => setIsMounted(false);
+  }, []);
+
   // Enhanced function to proactively handle expired listings
   const triggerManualCleanup = useCallback(async () => {
-    if (isProcessing || !listingId) return;
+    if (isProcessing || !listingId || !isMounted) return;
     
-    setIsProcessing(true);
+    if (isMounted) setIsProcessing(true);
     try {
       console.log(`Attempting to fix expired listing: ${listingId}`);
       const response = await fetch('/api/listings/fix-expired', {
@@ -48,11 +55,13 @@ export function ListingTimer({ createdAt, archivedAt, accountTier, status, listi
       console.log('Fix expired response:', data);
       
       if (data.status === 'archived' && status === 'active') {
-        toast({
-          title: "Listing Archived",
-          description: "The listing has been moved to archived status.",
-          duration: 5000,
-        });
+        if (isMounted) {
+          toast({
+            title: "Listing Archived",
+            description: "The listing has been moved to archived status.",
+            duration: 5000,
+          });
+        }
         
         // If we're on the listing page, redirect to listings
         if (router.pathname.includes('/listings/[id]')) {
@@ -62,27 +71,31 @@ export function ListingTimer({ createdAt, archivedAt, accountTier, status, listi
           window.location.reload();
         }
       } else if (data.status === 'deleted' && status === 'archived') {
-        toast({
-          title: "Listing Deleted",
-          description: "The archived listing has been permanently deleted.",
-          duration: 5000,
-        });
+        if (isMounted) {
+          toast({
+            title: "Listing Deleted",
+            description: "The archived listing has been permanently deleted.",
+            duration: 5000,
+          });
+        }
         
         // Refresh the page to update the UI
         window.location.reload();
       }
     } catch (error) {
       console.error('Error triggering manual cleanup:', error);
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to process the listing. The system will automatically handle this soon.",
-        variant: "destructive",
-        duration: 5000,
-      });
+      if (isMounted) {
+        toast({
+          title: "Error",
+          description: error instanceof Error ? error.message : "Failed to process the listing. The system will automatically handle this soon.",
+          variant: "destructive",
+          duration: 5000,
+        });
+      }
     } finally {
-      setIsProcessing(false);
+      if (isMounted) setIsProcessing(false);
     }
-  }, [router, toast, isProcessing, status, listingId]);
+  }, [router, toast, isProcessing, status, listingId, isMounted]);
 
   // Add a state to track if we've initialized the timer
   const [isInitialized, setIsInitialized] = useState(false);
@@ -91,189 +104,204 @@ export function ListingTimer({ createdAt, archivedAt, accountTier, status, listi
     // Set a longer delay before initializing the timer to prevent showing expired state on initial load
     // This gives more time for data to be properly loaded and processed
     const initTimer = setTimeout(() => {
-      setIsInitialized(true);
+      if (isMounted) {
+        setIsInitialized(true);
+      }
     }, 1500);
     
     return () => clearTimeout(initTimer);
-  }, []);
+  }, [isMounted]);
 
   useEffect(() => {
     // Skip calculation until initialized
-    if (!isInitialized) return;
+    if (!isInitialized || !isMounted) return;
     
     const calculateTimeLeft = () => {
-      const now = Date.now();
-      let startTime: number;
-      let endTime: number;
-      let duration: number;
+      try {
+        const now = Date.now();
+        let startTime: number;
+        let endTime: number;
+        let duration: number;
 
-      if (status === 'archived' && archivedAt) {
-        // For archived listings, use archivedAt as start time and 7 days duration
-        try {
-          if (archivedAt instanceof Date) {
-            startTime = archivedAt.getTime();
-          } else if (typeof archivedAt === 'object') {
-            // Handle Firestore Timestamp with toDate method
-            if ('toDate' in archivedAt && typeof archivedAt.toDate === 'function') {
-              startTime = archivedAt.toDate().getTime();
-            }
-            // Handle Firestore Timestamp with seconds and nanoseconds
-            else if ('seconds' in archivedAt) {
-              startTime = archivedAt.seconds * 1000;
-            } else if ('_seconds' in archivedAt) {
-              startTime = archivedAt._seconds * 1000;
+        if (status === 'archived' && archivedAt) {
+          // For archived listings, use archivedAt as start time and 7 days duration
+          try {
+            if (archivedAt instanceof Date) {
+              startTime = archivedAt.getTime();
+            } else if (typeof archivedAt === 'object' && archivedAt !== null) {
+              // Handle Firestore Timestamp with toDate method
+              if ('toDate' in archivedAt && typeof archivedAt.toDate === 'function') {
+                startTime = archivedAt.toDate().getTime();
+              }
+              // Handle Firestore Timestamp with seconds and nanoseconds
+              else if ('seconds' in archivedAt) {
+                startTime = (archivedAt as any).seconds * 1000;
+              } else if ('_seconds' in archivedAt) {
+                startTime = (archivedAt as any)._seconds * 1000;
+              } else {
+                console.error('Unknown timestamp format:', archivedAt);
+                startTime = now;
+              }
+            } else if (typeof archivedAt === 'string') {
+              startTime = Date.parse(archivedAt);
+            } else if (typeof archivedAt === 'number') {
+              startTime = archivedAt;
             } else {
-              console.error('Unknown timestamp format:', archivedAt);
+              console.error('Invalid archivedAt type:', typeof archivedAt);
               startTime = now;
             }
-          } else if (typeof archivedAt === 'string') {
-            startTime = Date.parse(archivedAt);
-          } else if (typeof archivedAt === 'number') {
-            startTime = archivedAt;
-          } else {
-            console.error('Invalid archivedAt type:', typeof archivedAt);
-            startTime = now;
-          }
-          
-          if (isNaN(startTime)) {
-            console.error('Invalid archivedAt timestamp:', archivedAt);
+            
+            if (isNaN(startTime)) {
+              console.error('Invalid archivedAt timestamp:', archivedAt);
+              startTime = now; // Fallback to current time
+            }
+          } catch (error) {
+            console.error('Error parsing archivedAt:', error);
             startTime = now; // Fallback to current time
           }
-        } catch (error) {
-          console.error('Error parsing archivedAt:', error);
-          startTime = now; // Fallback to current time
-        }
-        duration = 7 * 24 * 60 * 60 * 1000; // 7 days for archived listings
-        endTime = startTime + duration;
-      } else {
-        // For active listings, first try to use the expiresAt field directly if available
-        const expiresAt = (window as any).listingExpiresAt;
-        
-        if (expiresAt) {
-          try {
-            // Try to parse the expiresAt timestamp
-            if (expiresAt instanceof Date) {
-              endTime = expiresAt.getTime();
-            } else if (typeof expiresAt === 'object') {
-              // Handle Firestore Timestamp with toDate method
-              if ('toDate' in expiresAt && typeof expiresAt.toDate === 'function') {
-                endTime = expiresAt.toDate().getTime();
-              }
-              // Handle Firestore Timestamp
-              else if ('seconds' in expiresAt) {
-                endTime = expiresAt.seconds * 1000;
-              } else if ('_seconds' in expiresAt) {
-                endTime = expiresAt._seconds * 1000;
+          duration = 7 * 24 * 60 * 60 * 1000; // 7 days for archived listings
+          endTime = startTime + duration;
+        } else {
+          // For active listings, first try to use the expiresAt field directly if available
+          const expiresAt = (window as any).listingExpiresAt;
+          
+          if (expiresAt) {
+            try {
+              // Try to parse the expiresAt timestamp
+              if (expiresAt instanceof Date) {
+                endTime = expiresAt.getTime();
+              } else if (typeof expiresAt === 'object' && expiresAt !== null) {
+                // Handle Firestore Timestamp with toDate method
+                if ('toDate' in expiresAt && typeof expiresAt.toDate === 'function') {
+                  endTime = expiresAt.toDate().getTime();
+                }
+                // Handle Firestore Timestamp
+                else if ('seconds' in expiresAt) {
+                  endTime = (expiresAt as any).seconds * 1000;
+                } else if ('_seconds' in expiresAt) {
+                  endTime = (expiresAt as any)._seconds * 1000;
+                } else {
+                  console.error('Invalid expiresAt format:', expiresAt);
+                  // Fall back to calculating from createdAt
+                  endTime = 0; // This will trigger the fallback below
+                }
+              } else if (typeof expiresAt === 'string') {
+                endTime = Date.parse(expiresAt);
+              } else if (typeof expiresAt === 'number') {
+                endTime = expiresAt;
               } else {
                 console.error('Invalid expiresAt format:', expiresAt);
                 // Fall back to calculating from createdAt
                 endTime = 0; // This will trigger the fallback below
               }
-            } else if (typeof expiresAt === 'string') {
-              endTime = Date.parse(expiresAt);
-            } else if (typeof expiresAt === 'number') {
-              endTime = expiresAt;
-            } else {
-              console.error('Invalid expiresAt format:', expiresAt);
-              // Fall back to calculating from createdAt
+              
+              if (isNaN(endTime)) {
+                console.error('Invalid expiresAt timestamp:', expiresAt);
+                endTime = 0; // This will trigger the fallback below
+              } else {
+                console.log('Successfully parsed expiresAt:', new Date(endTime).toISOString());
+              }
+            } catch (error) {
+              console.error('Error parsing expiresAt:', error);
               endTime = 0; // This will trigger the fallback below
             }
-            
-            if (isNaN(endTime)) {
-              console.error('Invalid expiresAt timestamp:', expiresAt);
-              endTime = 0; // This will trigger the fallback below
-            } else {
-              console.log('Successfully parsed expiresAt:', new Date(endTime).toISOString());
-            }
-          } catch (error) {
-            console.error('Error parsing expiresAt:', error);
+          } else {
+            console.log('No expiresAt found, will calculate from createdAt');
             endTime = 0; // This will trigger the fallback below
           }
-        } else {
-          console.log('No expiresAt found, will calculate from createdAt');
-          endTime = 0; // This will trigger the fallback below
-        }
-        
-        // If we couldn't get a valid endTime from expiresAt, calculate it from createdAt
-        if (endTime <= 0) {
-          try {
-            if (createdAt instanceof Date) {
-              startTime = createdAt.getTime();
-            } else if (typeof createdAt === 'object') {
-              // Handle Firestore Timestamp with toDate method
-              if ('toDate' in createdAt && typeof createdAt.toDate === 'function') {
-                startTime = createdAt.toDate().getTime();
-              }
-              // Handle Firestore Timestamp
-              else if ('seconds' in createdAt) {
-                startTime = createdAt.seconds * 1000;
-              } else if ('_seconds' in createdAt) {
-                startTime = createdAt._seconds * 1000;
+          
+          // If we couldn't get a valid endTime from expiresAt, calculate it from createdAt
+          if (endTime <= 0) {
+            try {
+              if (createdAt instanceof Date) {
+                startTime = createdAt.getTime();
+              } else if (typeof createdAt === 'object' && createdAt !== null) {
+                // Handle Firestore Timestamp with toDate method
+                if ('toDate' in createdAt && typeof createdAt.toDate === 'function') {
+                  startTime = createdAt.toDate().getTime();
+                }
+                // Handle Firestore Timestamp
+                else if ('seconds' in createdAt) {
+                  startTime = (createdAt as any).seconds * 1000;
+                } else if ('_seconds' in createdAt) {
+                  startTime = (createdAt as any)._seconds * 1000;
+                } else {
+                  console.error('Invalid createdAt format:', createdAt);
+                  startTime = now - 1000; // Fallback to current time minus 1 second
+                }
+              } else if (typeof createdAt === 'string') {
+                startTime = Date.parse(createdAt);
+              } else if (typeof createdAt === 'number') {
+                startTime = createdAt;
               } else {
                 console.error('Invalid createdAt format:', createdAt);
                 startTime = now - 1000; // Fallback to current time minus 1 second
               }
-            } else if (typeof createdAt === 'string') {
-              startTime = Date.parse(createdAt);
-            } else if (typeof createdAt === 'number') {
-              startTime = createdAt;
-            } else {
-              console.error('Invalid createdAt format:', createdAt);
+              
+              if (isNaN(startTime)) {
+                console.error('Invalid createdAt timestamp:', createdAt);
+                startTime = now - 1000; // Fallback to current time minus 1 second
+              }
+            } catch (error) {
+              console.error('Error parsing createdAt:', error);
               startTime = now - 1000; // Fallback to current time minus 1 second
             }
             
-            if (isNaN(startTime)) {
-              console.error('Invalid createdAt timestamp:', createdAt);
-              startTime = now - 1000; // Fallback to current time minus 1 second
-            }
-          } catch (error) {
-            console.error('Error parsing createdAt:', error);
-            startTime = now - 1000; // Fallback to current time minus 1 second
+            // Get the appropriate listing duration based on account tier
+            // This ensures we're using the correct duration for the account tier
+            // Free tier: 48 hours, Premium tier: 720 hours (30 days)
+            duration = ACCOUNT_TIERS[accountTier].listingDuration * 60 * 60 * 1000;
+            console.log(`ListingTimer: Using account tier ${accountTier} with duration ${ACCOUNT_TIERS[accountTier].listingDuration} hours`);
+            endTime = startTime + duration;
           }
           
-          // Get the appropriate listing duration based on account tier
-          // This ensures we're using the correct duration for the account tier
-          // Free tier: 48 hours, Premium tier: 720 hours (30 days)
-          duration = ACCOUNT_TIERS[accountTier].listingDuration * 60 * 60 * 1000;
-          console.log(`ListingTimer: Using account tier ${accountTier} with duration ${ACCOUNT_TIERS[accountTier].listingDuration} hours`);
-          endTime = startTime + duration;
+          // Calculate duration based on start and end time
+          // Make sure we have a valid startTime
+          if (!startTime || isNaN(startTime)) {
+            startTime = createdAt instanceof Date ? createdAt.getTime() : 
+                       typeof createdAt === 'object' && createdAt !== null && ('toDate' in createdAt && typeof createdAt.toDate === 'function') ? 
+                       createdAt.toDate().getTime() :
+                       typeof createdAt === 'object' && createdAt !== null && ((createdAt as any).seconds || (createdAt as any)._seconds) ? 
+                       ((createdAt as any).seconds || (createdAt as any)._seconds) * 1000 : 
+                       typeof createdAt === 'string' ? Date.parse(createdAt) : 
+                       typeof createdAt === 'number' ? createdAt : now - 1000;
+          }
+          
+          // Debug log the time calculations
+          console.log(`ListingTimer calculations for ${listingId || 'unknown'}:`, {
+            now: new Date(now).toISOString(),
+            startTime: new Date(startTime).toISOString(),
+            endTime: new Date(endTime).toISOString(),
+            duration: duration / (60 * 60 * 1000) + ' hours',
+            accountTier
+          });
+                     
+          duration = endTime - startTime;
         }
         
-        // Calculate duration based on start and end time
-        // Make sure we have a valid startTime
-        if (!startTime || isNaN(startTime)) {
-          startTime = createdAt instanceof Date ? createdAt.getTime() : 
-                     typeof createdAt === 'object' && ('toDate' in createdAt && typeof createdAt.toDate === 'function') ? 
-                     createdAt.toDate().getTime() :
-                     typeof createdAt === 'object' && (createdAt.seconds || createdAt._seconds) ? 
-                     (createdAt.seconds || createdAt._seconds) * 1000 : 
-                     typeof createdAt === 'string' ? Date.parse(createdAt) : 
-                     typeof createdAt === 'number' ? createdAt : now - 1000;
-        }
+        const elapsed = now - startTime;
+        const remaining = Math.max(0, duration - elapsed);
+        const progressValue = ((duration - remaining) / duration) * 100;
         
-        // Debug log the time calculations
-        console.log(`ListingTimer calculations for ${listingId || 'unknown'}:`, {
-          now: new Date(now).toISOString(),
-          startTime: new Date(startTime).toISOString(),
-          endTime: new Date(endTime).toISOString(),
-          duration: duration / (60 * 60 * 1000) + ' hours',
-          accountTier
-        });
-                   
-        duration = endTime - startTime;
-      }
-      
-      const elapsed = now - startTime;
-      const remaining = Math.max(0, duration - elapsed);
-      const progressValue = ((duration - remaining) / duration) * 100;
-      
-      setTimeLeft(remaining);
-      setProgress(progressValue);
+        // Only update state if component is still mounted
+        if (isMounted) {
+          setTimeLeft(remaining);
+          setProgress(progressValue);
 
-      // Only set UI state to expired, but don't trigger cleanup automatically
-      // The server-side cron job will handle the actual archiving/deletion
-      if (remaining === 0) {
-        setIsExpired(true);
+          // Only set UI state to expired, but don't trigger cleanup automatically
+          // The server-side cron job will handle the actual archiving/deletion
+          if (remaining === 0) {
+            setIsExpired(true);
+          }
+        }
+      } catch (error) {
+        console.error('Error in ListingTimer calculateTimeLeft:', error);
+        // Set safe fallback values if calculation fails
+        if (isMounted) {
+          setTimeLeft(0);
+          setProgress(100);
+          setIsExpired(true);
+        }
       }
     };
 
@@ -281,7 +309,7 @@ export function ListingTimer({ createdAt, archivedAt, accountTier, status, listi
     const timer = setInterval(calculateTimeLeft, 1000);
 
     return () => clearInterval(timer);
-  }, [createdAt, archivedAt, accountTier, status, isInitialized]);
+  }, [createdAt, archivedAt, accountTier, status, isInitialized, isMounted, listingId]);
 
   const formatTimeLeft = () => {
     const days = Math.floor(timeLeft / (1000 * 60 * 60 * 24));

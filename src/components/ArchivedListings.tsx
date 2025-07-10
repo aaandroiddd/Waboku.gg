@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Listing } from "@/types/database";
 import { ExternalLink, Trash2 } from "lucide-react";
-import { ListingTimer } from "@/components/ListingTimer";
+import { SafeListingTimer } from "@/components/SafeListingTimer";
 import { EmptyStateCard } from "@/components/EmptyStateCard";
 import { getListingUrl } from "@/lib/listing-slug";
 
@@ -77,11 +77,12 @@ export function ArchivedListings({
               </div>
               {/* Timer for archived listings */}
               <div className="mt-2">
-                <ListingTimer
+                <SafeListingTimer
                   createdAt={listing.createdAt}
                   archivedAt={listing.archivedAt || listing.createdAt}
-                  accountTier={accountTier}
+                  accountTier={accountTier as 'free' | 'premium'}
                   status="archived"
+                  listingId={listing.id}
                 />
               </div>
               {/* Display archived status with date */}
