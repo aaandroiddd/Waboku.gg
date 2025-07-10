@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { ListingTimer } from "@/components/ListingTimer";
 import { ViewCounter } from "@/components/ViewCounter";
+import { parseDate, formatDate } from "@/lib/date-utils";
 
 interface MultiSelectListingsProps {
   listings: Listing[];
@@ -313,12 +314,12 @@ export function MultiSelectListings({
                     <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground mb-2">
                       <span>{listing.game}</span>
                       <span>•</span>
-                      <span>Listed on {new Date(listing.createdAt).toLocaleDateString()}</span>
+                      <span>Listed on {formatDate(listing.createdAt)}</span>
                       {type === 'archived' && listing.archivedAt && (
                         <>
                           <span>•</span>
                           <span className="text-amber-600 font-medium">
-                            Archived on {new Date(listing.archivedAt).toLocaleDateString()}
+                            Archived on {formatDate(listing.archivedAt)}
                           </span>
                         </>
                       )}
@@ -508,7 +509,7 @@ export function MultiSelectListings({
                   )}
 
                   <div className="text-sm text-muted-foreground">
-                    Listed on {new Date(listing.createdAt).toLocaleDateString()}
+                    Listed on {formatDate(listing.createdAt)}
                   </div>
 
                   {/* Timer */}
@@ -524,7 +525,7 @@ export function MultiSelectListings({
                   {/* Archived status */}
                   {type === 'archived' && listing.archivedAt && (
                     <div className="text-sm text-amber-600 font-medium">
-                      Archived on {new Date(listing.archivedAt).toLocaleDateString()}
+                      Archived on {formatDate(listing.archivedAt)}
                     </div>
                   )}
 

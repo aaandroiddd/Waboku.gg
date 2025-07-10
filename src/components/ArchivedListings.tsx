@@ -6,6 +6,7 @@ import { ExternalLink, Trash2 } from "lucide-react";
 import { SafeListingTimer } from "@/components/SafeListingTimer";
 import { EmptyStateCard } from "@/components/EmptyStateCard";
 import { getListingUrl } from "@/lib/listing-slug";
+import { parseDate, formatDate } from "@/lib/date-utils";
 
 interface ArchivedListingsProps {
   listings: Listing[];
@@ -73,7 +74,7 @@ export function ArchivedListings({
                 <span className="font-bold">${listing.price.toFixed(2)}</span>
               </div>
               <div className="text-sm text-muted-foreground">
-                Listed on {new Date(listing.createdAt).toLocaleDateString()}
+                Listed on {formatDate(listing.createdAt)}
               </div>
               {/* Timer for archived listings */}
               <div className="mt-2">
@@ -88,7 +89,7 @@ export function ArchivedListings({
               {/* Display archived status with date */}
               {listing.archivedAt && (
                 <div className="text-sm text-amber-600 font-medium">
-                  Archived on {new Date(listing.archivedAt).toLocaleDateString()}
+                  Archived on {formatDate(listing.archivedAt)}
                 </div>
               )}
               <div className="flex flex-wrap gap-2 mt-4">
