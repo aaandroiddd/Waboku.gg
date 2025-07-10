@@ -9,6 +9,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useFavorites } from "@/hooks/useFavorites";
 import { ContentLoader } from "./ContentLoader";
 import { Skeleton } from "./ui/skeleton";
+import { getListingUrl } from "@/lib/listing-slug";
 
 interface SearchListingListProps {
   listings: Listing[];
@@ -105,7 +106,7 @@ export function SearchListingList({ listings, loading }: SearchListingListProps)
               key={listing.id} 
               className="relative overflow-hidden group transition-all duration-200 hover:bg-accent/50"
             >
-              <Link href={`/listings/${listing.id}`}>
+              <Link href={getListingUrl(listing)}>
                 <div className="p-4 flex gap-4">
                   {/* Image Section */}
                   <div className="relative h-24 sm:h-32 w-24 sm:w-32 flex-shrink-0 bg-muted rounded-lg overflow-hidden">
