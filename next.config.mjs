@@ -100,25 +100,6 @@ const nextConfig = {
   },
   // Disable build trace collection to reduce file operations
   outputFileTracing: false,
-  // Add webpack configuration to handle module resolution issues
-  webpack: (config, { isServer }) => {
-    // Fix for missing Next.js internal modules
-    if (isServer) {
-      config.resolve.fallback = {
-        ...config.resolve.fallback,
-        'next/dist/server/future/route-modules/pages/vendored/contexts/amp-context': false,
-      };
-    }
-    
-    // Optimize bundle size
-    config.resolve.alias = {
-      ...config.resolve.alias,
-      // Ensure proper module resolution
-      '@': require('path').resolve(__dirname, 'src'),
-    };
-    
-    return config;
-  },
 };
 
 export default nextConfig;
