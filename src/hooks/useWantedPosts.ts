@@ -37,6 +37,7 @@ interface WantedPostsOptions {
   state?: string;
   userId?: string;
   limit?: number;
+  refreshKey?: number;
 }
 
 export function useWantedPosts(options: WantedPostsOptions = {}) {
@@ -65,7 +66,8 @@ export function useWantedPosts(options: WantedPostsOptions = {}) {
     // Check if we have cached data in sessionStorage (only if available)
     let cachedPosts: WantedPost[] | null = null;
     
-    if (typeof window !== 'undefined' && window.sessionStorage) {
+    // If refreshKey is provided, skip cache and force fresh fetch
+    if (typeof window !== 'undefined' && window.sessionStorage && !options.refreshKey) {
       try {
         const cachedData = sessionStorage.getItem(cacheKey);
         if (cachedData) {
@@ -281,7 +283,7 @@ export function useWantedPosts(options: WantedPostsOptions = {}) {
 
     // Always fetch fresh data, but we might show cached data first
     fetchWantedPosts();
-  }, [options.game, options.state, options.userId, options.limit]);
+  }, [options.game, options.state, options.userId, options.limit, options.refreshKey]);
 
   // Helper function to log to server
   const logToServer = async (message: string, data: any, level: 'info' | 'warn' | 'error' = 'error') => {

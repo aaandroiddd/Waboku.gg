@@ -25,8 +25,10 @@ export function WantedPostsSection() {
   const router = useRouter();
   const { user } = useAuth();
   const [retryCount, setRetryCount] = useState(0);
+  const [refreshKey, setRefreshKey] = useState(0);
   const { posts, isLoading, error, deleteWantedPost } = useWantedPosts({ 
-    userId: user?.uid 
+    userId: user?.uid,
+    refreshKey // Add refresh key to force re-fetch
   });
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [postToDelete, setPostToDelete] = useState<string | null>(null);
@@ -82,6 +84,33 @@ export function WantedPostsSection() {
       }
     }
   }, [user, posts, error, retryCount]);
+
+  // Listen for page focus to refresh data when user returns from editing
+  useEffect(() => {
+    const handleFocus = () => {
+      // Clear cache and refresh data when user returns to the page
+      if (typeof window !== 'undefined' && window.sessionStorage) {
+        try {
+          // Clear wanted posts cache to force fresh data
+          const keys = Object.keys(sessionStorage);
+          keys.forEach(key => {
+            if (key.startsWith('wantedPosts_')) {
+              sessionStorage.removeItem(key);
+              sessionStorage.removeItem(`${key}_timestamp`);
+            }
+          });
+        } catch (e) {
+          console.error('Error clearing cache:', e);
+        }
+      }
+      
+      // Force refresh by updating the refresh key
+      setRefreshKey(prev => prev + 1);
+    };
+
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, []);
 
   const handleCreateClick = () => {
     router.push("/wanted/create");
@@ -227,21 +256,24 @@ export function WantedPostsSection() {
                         </div>
                       </div>
                       
-                      <div className="flex flex-col gap-2 min-w-0 sm:min-w-[140px]">
-                        <div className="text-sm font-medium whitespace-nowrap">
-                          {post.priceRange && !post.isPriceNegotiable
-                            ? `$${post.priceRange.min} - $${post.priceRange.max}` 
-                            : "Price Negotiable"
-                          }
+                      <div className="flex flex-col gap-2 flex-shrink-0 min-w-[120px] sm:min-w-[160px]">
+                        <div className="text-sm font-medium text-right">
+                          <span className="block break-words">
+                            {post.priceRange && !post.isPriceNegotiable
+                              ? `$${post.priceRange.min} - $${post.priceRange.max}` 
+                              : "Price Negotiable"
+                            }
+                          </span>
                         </div>
                         <Button 
                           variant="outline" 
                           size="sm"
-                          className="flex items-center gap-1"
+                          className="flex items-center gap-1 w-full"
                           onClick={() => router.push(`/wanted/${post.id}`)}
                         >
                           <ExternalLink className="h-3 w-3" />
-                          <span>View Post</span>
+                          <span className="hidden sm:inline">View Post</span>
+                          <span className="sm:hidden">View</span>
                         </Button>
                       </div>
                     </div>
