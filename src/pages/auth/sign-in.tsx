@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { Logo } from "@/components/Logo";
@@ -48,6 +49,7 @@ function SignInComponent() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [rememberMe, setRememberMe] = useState(false);
   const [authError, setAuthError] = useState<Error | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
@@ -58,6 +60,13 @@ function SignInComponent() {
 
   useEffect(() => {
     setMounted(true);
+    
+    // Load saved email from localStorage if it exists
+    const savedEmail = localStorage.getItem('rememberedEmail');
+    if (savedEmail) {
+      setEmail(savedEmail);
+      setRememberMe(true);
+    }
   }, []);
 
   useEffect(() => {
@@ -146,6 +155,13 @@ function SignInComponent() {
       // Check if MFA is required
       if (result.mfaResolver) {
         setMfaResolver(result.mfaResolver);
+      } else {
+        // Sign in was successful, handle remember me functionality
+        if (rememberMe) {
+          localStorage.setItem('rememberedEmail', email);
+        } else {
+          localStorage.removeItem('rememberedEmail');
+        }
       }
       // If sign in is successful, the router.replace in the useEffect will handle redirection
     } catch (err: any) {
@@ -231,6 +247,12 @@ function SignInComponent() {
           resolver={mfaResolver} 
           onComplete={() => {
             // MFA verification completed successfully
+            // Handle remember me functionality for MFA completion
+            if (rememberMe) {
+              localStorage.setItem('rememberedEmail', email);
+            } else {
+              localStorage.removeItem('rememberedEmail');
+            }
             // The user will be redirected by the useEffect hook that watches for user changes
           }}
           onCancel={() => {
@@ -313,6 +335,26 @@ function SignInComponent() {
                 disabled={isLoading}
                 autoComplete="current-password"
               />
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="remember-me"
+                checked={rememberMe}
+                onCheckedChange={(checked) => {
+                  setRememberMe(checked as boolean);
+                  if (!checked) {
+                    // If unchecked, remove saved email from localStorage
+                    localStorage.removeItem('rememberedEmail');
+                  }
+                }}
+                disabled={isLoading}
+              />
+              <label
+                htmlFor="remember-me"
+                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+              >
+                Remember my email
+              </label>
             </div>
           </CardContent>
           <CardFooter className="flex flex-col space-y-4">
