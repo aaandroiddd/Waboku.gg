@@ -56,6 +56,14 @@ export function MultiSelectListings({
   const [isSelectMode, setIsSelectMode] = useState(false);
   const { toast } = useToast();
 
+  const formatPrice = (price: any): string => {
+    if (typeof price === 'number') {
+      return price.toFixed(2);
+    }
+    const numPrice = parseFloat(price || '0');
+    return isNaN(numPrice) ? '0.00' : numPrice.toFixed(2);
+  };
+
   const getConditionColor = (condition: string | undefined | null) => {
     if (!condition || typeof condition !== 'string') return 'bg-gray-100 text-gray-800';
     
@@ -330,7 +338,7 @@ export function MultiSelectListings({
                   {/* Right side - Price and actions */}
                   <div className="flex flex-col sm:items-end gap-3">
                     <div className="flex items-center justify-between sm:justify-end gap-4">
-                      <span className="font-bold text-lg">${listing.price.toFixed(2)}</span>
+                      <span className="font-bold text-lg">${formatPrice(listing.price)}</span>
                       
                       {/* View counter for premium users */}
                       {accountTier === 'premium' && type === 'active' && (
@@ -489,7 +497,7 @@ export function MultiSelectListings({
                     <Badge className={getConditionColor(listing.condition)}>
                       {listing.condition}
                     </Badge>
-                    <span className="font-bold">${listing.price.toFixed(2)}</span>
+                    <span className="font-bold">${formatPrice(listing.price)}</span>
                   </div>
 
                   {/* View counter for premium users */}
