@@ -1,4 +1,3 @@
-import dynamic from 'next/dynamic';
 import type { NextPage } from 'next';
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/router';
@@ -43,7 +42,7 @@ import { useDashboardListingsCache } from '@/hooks/useDashboardCache';
 import { useDashboardNavigationDetection } from '@/hooks/useNavigationState';
 import { getListingUrl, getProfileUrl } from '@/lib/listing-slug';
 
-const DashboardComponent = () => {
+const DashboardPage: NextPage = () => {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [sortBy, setSortBy] = useState<'date' | 'price' | 'title'>('date');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
@@ -1263,7 +1262,4 @@ const DashboardComponent = () => {
   );
 };
 
-// Use dynamic import with ssr disabled
-export default dynamic(() => Promise.resolve(DashboardComponent), {
-  ssr: false
-});
+export default DashboardPage;
