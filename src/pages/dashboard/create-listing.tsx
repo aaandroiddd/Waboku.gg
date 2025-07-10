@@ -18,7 +18,7 @@ import { useListings } from "@/hooks/useListings";
 import { useProfile } from "@/hooks/useProfile";
 import { Progress } from "@/components/ui/progress";
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
-import { HelpCircle, AlertCircle } from "lucide-react";
+import { HelpCircle, AlertCircle, Info } from "lucide-react";
 import { LocationInput } from "@/components/LocationInput";
 import { validateTextContent } from "@/util/string";
 import CardSearchInput from "@/components/CardSearchInput";
@@ -44,13 +44,14 @@ const CreateListingPage = () => {
   const { user, loading } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
-  const { createListing } = useListings();
+  const { createListing, checkActiveListingCount } = useListings();
   const { profile } = useProfile(user?.uid);
-  const { accountTier } = useAccount();
+  const { accountTier, features } = useAccount();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [stripeConnectStatus, setStripeConnectStatus] = useState<'none' | 'pending' | 'active' | 'error'>('none');
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [activeListingCount, setActiveListingCount] = useState<number | null>(null);
 
   const [formData, setFormData] = useState({
     title: "",
@@ -251,6 +252,23 @@ const CreateListingPage = () => {
     checkStripeConnectStatus();
   }, [user]);
 
+  // Check active listing count for free users
+  useEffect(() => {
+    if (!user || accountTier !== 'free') return;
+
+    const fetchActiveListingCount = async () => {
+      try {
+        const count = await checkActiveListingCount();
+        setActiveListingCount(count);
+      } catch (error) {
+        console.error('Error checking active listing count:', error);
+        setActiveListingCount(0);
+      }
+    };
+
+    fetchActiveListingCount();
+  }, [user, accountTier, checkActiveListingCount]);
+
   // Initialize location from profile
   useEffect(() => {
     if (profile && profile.city && profile.state) {
@@ -436,6 +454,60 @@ const CreateListingPage = () => {
               >
                 Set Up Stripe Connect
               </Button>
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {/* Show listing limit information for free users */}
+        {accountTier === 'free' && activeListingCount !== null && (
+          <Alert className={`${activeListingCount >= features.maxActiveListings ? 'bg-red-500/10 border-red-500 text-red-700 dark:text-red-500' : 'bg-blue-500/10 border-blue-500 text-blue-700 dark:text-blue-500'}`}>
+            <Info className="h-4 w-4" />
+            <AlertTitle>
+              {activeListingCount >= features.maxActiveListings ? 'Listing Limit Reached' : 'Free Account Listing Limit'}
+            </AlertTitle>
+            <AlertDescription>
+              <p className="mb-2">
+                You currently have <strong>{activeListingCount}</strong> of <strong>{features.maxActiveListings}</strong> active listings.
+              </p>
+              {activeListingCount >= features.maxActiveListings ? (
+                <div>
+                  <p className="mb-2">You've reached your free account limit. To create more listings, you can:</p>
+                  <ul className="list-disc list-inside mb-3 space-y-1">
+                    <li>Delete or archive an existing listing</li>
+                    <li>Upgrade to Premium for unlimited listings</li>
+                  </ul>
+                  <div className="flex gap-2">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="bg-blue-500/20 hover:bg-blue-500/30 border-blue-500/50"
+                      onClick={() => router.push('/dashboard')}
+                    >
+                      Manage Listings
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="bg-green-500/20 hover:bg-green-500/30 border-green-500/50"
+                      onClick={() => router.push('/dashboard/seller-account')}
+                    >
+                      Upgrade to Premium
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <p className="mb-2">Upgrade to Premium for unlimited listings and additional features!</p>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="bg-green-500/20 hover:bg-green-500/30 border-green-500/50"
+                    onClick={() => router.push('/dashboard/seller-account')}
+                  >
+                    Learn About Premium
+                  </Button>
+                </div>
+              )}
             </AlertDescription>
           </Alert>
         )}
@@ -894,9 +966,11 @@ const CreateListingPage = () => {
                 
                 <Button
                   type="submit"
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || (accountTier === 'free' && activeListingCount !== null && activeListingCount >= features.maxActiveListings)}
                 >
-                  {isSubmitting ? 'Creating...' : 'Create Listing'}
+                  {isSubmitting ? 'Creating...' : 
+                   (accountTier === 'free' && activeListingCount !== null && activeListingCount >= features.maxActiveListings) ? 'Listing Limit Reached' : 
+                   'Create Listing'}
                 </Button>
               </div>
             </form>

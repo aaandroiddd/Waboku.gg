@@ -608,11 +608,60 @@ export function useListings({
     }
   };
 
+  // Function to check user's active listing count
+  const checkActiveListingCount = async (): Promise<number> => {
+    if (!user) return 0;
+
+    try {
+      const { db } = await getFirebaseServices();
+      const listingsRef = collection(db, 'listings');
+      
+      // Query for active listings by the current user
+      const q = query(
+        listingsRef,
+        where('userId', '==', user.uid),
+        where('status', '==', 'active')
+      );
+      
+      const querySnapshot = await getDocs(q);
+      return querySnapshot.docs.length;
+    } catch (error) {
+      console.error('Error checking active listing count:', error);
+      return 0;
+    }
+  };
+
   const createListing = async (listingData: any) => {
     if (!user) throw new Error('Must be logged in to create a listing');
 
     try {
       console.log('Creating new listing:', listingData);
+      
+      // Get user data to determine account tier first
+      const { db } = await getFirebaseServices();
+      let accountTier = 'free'; // Default to free tier
+      try {
+        const userRef = doc(db, 'users', user.uid);
+        const userDoc = await getDoc(userRef);
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+          accountTier = userData.accountTier || 'free';
+        }
+      } catch (error) {
+        console.error('Error getting user account tier:', error);
+        // Continue with free tier as fallback
+      }
+      
+      // Check listing limits for free users
+      if (accountTier === 'free') {
+        const activeListingCount = await checkActiveListingCount();
+        const maxListings = ACCOUNT_TIERS.free.maxActiveListings;
+        
+        if (activeListingCount >= maxListings) {
+          throw new Error(`Free users can only have ${maxListings} active listings. You currently have ${activeListingCount} active listings. Please upgrade to Premium for unlimited listings, or delete/archive an existing listing first.`);
+        }
+      }
+      
       // First, upload images to Firebase Storage
       const imageUrls = [];
       const storage = getStorage();
@@ -652,22 +701,6 @@ export function useListings({
 
       // Remove the File objects and progress callback from listing data
       const { images, onUploadProgress, ...cleanListingData } = listingData;
-
-      const { db } = await getFirebaseServices();
-      
-      // Get user data to determine account tier
-      let accountTier = 'free'; // Default to free tier
-      try {
-        const userRef = doc(db, 'users', user.uid);
-        const userDoc = await getDoc(userRef);
-        if (userDoc.exists()) {
-          const userData = userDoc.data();
-          accountTier = userData.accountTier || 'free';
-        }
-      } catch (error) {
-        console.error('Error getting user account tier:', error);
-        // Continue with free tier as fallback
-      }
       
       // Get the appropriate listing duration based on account tier from ACCOUNT_TIERS
       // Free tier: 48 hours, Premium tier: 720 hours (30 days)
@@ -1484,6 +1517,7 @@ const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: numbe
     deleteListing,
     restoreListing,
     refreshListings,
-    clearAllListingCaches // Expose the cache clearing function
+    clearAllListingCaches, // Expose the cache clearing function
+    checkActiveListingCount // Expose the active listing count function
   };
 }
