@@ -28,6 +28,7 @@ import { WantedPostsDebugger } from "@/components/dashboard/WantedPostsDebugger"
 import { useOptimizedListings } from '@/hooks/useOptimizedListings';
 import { useProfile } from '@/hooks/useProfile';
 import { useListingVisibility } from '@/hooks/useListingVisibility';
+import { useDashboard } from '@/contexts/DashboardContext';
 import { Listing } from '@/types/database';
 import { ContentLoader } from '@/components/ContentLoader';
 import { LoadingAnimation } from '@/components/LoadingAnimation';
@@ -61,8 +62,9 @@ const DashboardComponent = () => {
     mode: 'deactivate'
   });
   
-  // Get cached dashboard data
+  // Get auth and dashboard data
   const { user, loading: authLoading } = useAuth();
+  const { data: dashboardData, loading: dashboardLoading, isInitialized, getListings } = useDashboard();
   const { 
     cachedListings,
     saveListingsToCache,
@@ -127,23 +129,26 @@ const DashboardComponent = () => {
     }
   }, [authLoading, user?.uid, stableUserId]);
 
-  // Always fetch fresh data, but use cache for immediate display
-  // Use stableUserId to prevent unnecessary re-fetching during navigation
-  const { listings: fetchedListings, setListings, loading: listingsLoading, error: listingsError, refreshListings, updateListingStatus, permanentlyDeleteListing } = useOptimizedListings({ 
+  // Use dashboard preloader data as primary source, with fallback to individual hook for actions
+  const preloaderListings = getListings();
+  const { listings: fallbackListings, setListings, loading: listingsLoading, error: listingsError, refreshListings, updateListingStatus, permanentlyDeleteListing } = useOptimizedListings({ 
     userId: stableUserId, // Use stable user ID that doesn't change during navigation
     showOnlyActive: false,
-    skipInitialFetch: false // Always fetch fresh data
+    skipInitialFetch: isInitialized && preloaderListings.length > 0 // Skip if preloader has data
   });
   
-  // Use fetched listings as the primary source, with safe cached listings as fallback only during loading
-  const allListings = fetchedListings.length > 0 ? fetchedListings : (listingsLoading && safeCachedListings ? safeCachedListings : fetchedListings);
+  // Use preloader data if available and initialized, otherwise use fallback
+  const allListings = (isInitialized && preloaderListings.length >= 0) ? preloaderListings : 
+                     (fallbackListings.length > 0 ? fallbackListings : 
+                     (listingsLoading && safeCachedListings ? safeCachedListings : fallbackListings));
   
-  // Update cache when new listings are fetched
+  // Update cache when new listings are available
   useEffect(() => {
-    if (fetchedListings && fetchedListings.length >= 0 && user) { // Changed to >= 0 to cache even empty arrays
-      saveListingsToCache(fetchedListings);
+    const listingsToCache = isInitialized ? preloaderListings : fallbackListings;
+    if (listingsToCache && listingsToCache.length >= 0 && user) {
+      saveListingsToCache(listingsToCache);
     }
-  }, [fetchedListings, user, saveListingsToCache]);
+  }, [preloaderListings, fallbackListings, isInitialized, user, saveListingsToCache]);
   
   const { profile, loading: profileLoading } = useProfile(user?.uid || null);
   
@@ -945,10 +950,11 @@ const DashboardComponent = () => {
     return () => clearInterval(autoRefreshInterval);
   }, [user, refreshListings]);
 
-  // No need to show DashboardLoadingScreen here as it's already handled in DashboardLayout for the main dashboard page
-  if (loading) {
+  // Don't show individual loading screen - let DashboardLayout handle the preloading screen
+  // Only show loading for specific error states or when there's no preloader
+  if (loading && !user) {
     return (
-      <DashboardLayout>
+      <DashboardLayout showPreloader={false}>
         <div className="flex items-center justify-center h-[calc(100vh-200px)]">
           <LoadingAnimation size="60" color="var(--theme-primary, #000)" />
         </div>

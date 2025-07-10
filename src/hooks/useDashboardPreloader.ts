@@ -16,24 +16,32 @@ export function useDashboardPreloader() {
     try {
       setError(null);
       
-      // Check if we have cached data first
-      const cachedData = dashboardPreloader.getCachedData(user.uid);
-      const cachedLoading = dashboardPreloader.getLoadingState(user.uid);
-      
-      if (cachedData && cachedLoading && !forceRefresh) {
-        setData(cachedData);
-        setLoading(cachedLoading);
-        setIsInitialized(true);
-        return;
+      // Check if we have cached data first and not forcing refresh
+      if (!forceRefresh) {
+        const cachedData = dashboardPreloader.getCachedData(user.uid);
+        const cachedLoading = dashboardPreloader.getLoadingState(user.uid);
+        
+        if (cachedData && cachedLoading && !cachedLoading.overall) {
+          console.log('Dashboard preloader: Using cached data');
+          setData(cachedData);
+          setLoading(cachedLoading);
+          setIsInitialized(true);
+          return;
+        }
       }
 
+      // Set initial loading state
+      setIsInitialized(false);
+      
       // Start preloading
+      console.log('Dashboard preloader: Starting fresh data load');
       const dashboardData = await dashboardPreloader.preloadDashboard(user, forceRefresh);
       const loadingState = dashboardPreloader.getLoadingState(user.uid);
       
       setData(dashboardData);
       setLoading(loadingState);
       setIsInitialized(true);
+      console.log('Dashboard preloader: Data load completed');
     } catch (err) {
       console.error('Failed to initialize dashboard:', err);
       setError(err instanceof Error ? err.message : 'Failed to load dashboard data');

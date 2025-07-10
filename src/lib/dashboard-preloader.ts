@@ -108,11 +108,16 @@ class DashboardPreloader {
 
     currentState[section] = isLoading;
     
-    // Update overall loading state
-    currentState.overall = Object.values(currentState).some(loading => loading && loading !== currentState.overall);
+    // Update overall loading state - only false when ALL sections are done loading
+    const sectionsLoading = ['listings', 'offers', 'orders', 'messages', 'notifications', 'wantedPosts', 'reviews', 'favorites'];
+    currentState.overall = sectionsLoading.some(key => currentState[key as keyof DashboardLoadingState] === true);
     
     this.loadingStates.set(userId, currentState);
-    this.notifyCallbacks(userId);
+    
+    // Only notify callbacks when overall loading state changes or when all sections are done
+    if (!currentState.overall || section === 'overall') {
+      this.notifyCallbacks(userId);
+    }
   }
 
   // Notify all callbacks for a user

@@ -61,8 +61,19 @@ function DashboardLayoutContent({ children, showPreloader = true }: DashboardLay
   }, [user, router]);
 
   // Show preloading screen if enabled and data is still loading
-  if (showPreloader && (!isInitialized || (loading?.overall && isInitialized))) {
-    return loading ? <DashboardPreloadingScreen loading={loading} /> : null;
+  // Only show preloader for main dashboard page or when explicitly requested
+  if (showPreloader && isMainDashboardPage && (!isInitialized || loading?.overall)) {
+    return loading ? <DashboardPreloadingScreen loading={loading} /> : <DashboardPreloadingScreen loading={{
+      listings: true,
+      offers: true,
+      orders: true,
+      messages: true,
+      notifications: true,
+      wantedPosts: true,
+      reviews: true,
+      favorites: true,
+      overall: true
+    }} />;
   }
   
   // Show auth error state
