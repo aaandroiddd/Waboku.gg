@@ -154,6 +154,7 @@ service cloud.firestore {
     // CRITICAL FIX: Listings collection rules - ALLOW PUBLIC READ ACCESS
     match /listings/{listingId} {
       // FIXED: Allow ANYONE to read listings without authentication - this is essential for the marketplace
+      // This includes both individual document reads and collection queries
       allow read: if true;
       
       // Allow authenticated users to create listings with validation

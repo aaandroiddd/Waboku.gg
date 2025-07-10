@@ -111,6 +111,21 @@ export function useOptimizedListings({ userId, searchQuery, showOnlyActive = fal
       return;
     }
 
+    // Additional safety check: if we're expecting a user-specific query but the auth context user doesn't match
+    if (userId && user && userId !== user.uid) {
+      console.warn('useOptimizedListings: userId mismatch with auth context, waiting for sync');
+      setIsLoading(true);
+      return;
+    }
+
+    // Safety check: if we're in the middle of a sign-out process, don't set up listeners
+    if (typeof window !== 'undefined' && localStorage.getItem('waboku_signout_in_progress') === 'true') {
+      console.log('useOptimizedListings: Sign-out in progress, skipping listener setup');
+      setIsLoading(false);
+      setListings([]);
+      return;
+    }
+
     // Check if we have cached data first
     const { data: cachedListings, expired } = getFromCache();
     
@@ -370,7 +385,7 @@ export function useOptimizedListings({ userId, searchQuery, showOnlyActive = fal
         removeListener(`${componentId}-listings`);
       }
     };
-  }, [userId, showOnlyActive, componentId, getFromCache, saveToCache, skipInitialFetch]);
+  }, [userId, showOnlyActive, componentId, getFromCache, saveToCache, skipInitialFetch, user]);
 
   // CRUD operations remain the same as in the original hook
   const updateListing = async (listingId: string, updateData: Partial<Listing>) => {
