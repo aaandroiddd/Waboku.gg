@@ -114,11 +114,28 @@ export function useOptimizedListings({ userId, searchQuery, showOnlyActive = fal
     // Check if we have cached data first
     const { data: cachedListings, expired } = getFromCache();
     
-    // Enhanced cache handling for navigation scenarios
+    // Security check: Never use cached data from a different user
+    let safeCachedListings = null;
     if (cachedListings && !expired && !skipInitialFetch) {
-      console.log(`Using cached listings data (${cachedListings.length} items) while setting up listener`);
+      // Verify all cached listings belong to the current user
+      const hasWrongUserData = cachedListings.some(listing => 
+        listing.userId && listing.userId !== userId
+      );
+      
+      if (hasWrongUserData) {
+        console.warn('Security: Cached listings contain data from different user, clearing cache');
+        // Clear the invalid cache
+        localStorage.removeItem(cacheKey);
+      } else {
+        safeCachedListings = cachedListings;
+      }
+    }
+    
+    // Enhanced cache handling for navigation scenarios
+    if (safeCachedListings && !expired && !skipInitialFetch) {
+      console.log(`Using safe cached listings data (${safeCachedListings.length} items) while setting up listener`);
       // Set listings from cache immediately to improve perceived performance
-      setListings(cachedListings);
+      setListings(safeCachedListings);
       
       // For navigation scenarios, show cached data immediately but don't set loading to false
       // This allows the fresh data to load in the background

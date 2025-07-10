@@ -209,21 +209,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       }
       
-      // Clear listing caches when user logs in to ensure fresh data
-      if (user && typeof window !== 'undefined') {
+      // Clear ALL user-specific caches when user state changes to ensure security
+      if (typeof window !== 'undefined') {
         try {
-          // Clear all listing-related caches to ensure fresh data on login
-          const cacheKeys = Object.keys(localStorage).filter(key => 
-            key.startsWith('listings_') || key.startsWith('dashboard_data_')
+          // Get all cache keys that might contain user-specific data
+          const allKeys = Object.keys(localStorage);
+          const userSpecificKeys = allKeys.filter(key => 
+            key.startsWith('listings_') || 
+            key.startsWith('dashboard_data_') ||
+            key.startsWith('profile_') ||
+            key.startsWith('cache_') ||
+            key.includes('_cache') ||
+            key.includes('user_') ||
+            key.includes('_user')
           );
           
-          for (const key of cacheKeys) {
+          // Clear all user-specific caches
+          for (const key of userSpecificKeys) {
             localStorage.removeItem(key);
           }
           
-          console.log('Cleared all listing and dashboard caches on login');
+          console.log(`Cleared ${userSpecificKeys.length} user-specific cache entries on auth state change`);
+          
+          // If user is signing in, log the user ID for debugging
+          if (user) {
+            console.log(`User ${user.uid} authenticated - all previous caches cleared`);
+          } else {
+            console.log('User signed out - all user caches cleared');
+          }
         } catch (cacheError) {
-          console.error('Error clearing caches on login:', cacheError);
+          console.error('Error clearing user-specific caches:', cacheError);
         }
       }
       
@@ -685,7 +700,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const hasCurrentUser = !!currentUser;
       const userId = currentUser?.uid;
       
-      // Clear local storage first to prevent any cached data issues
+      // Clear ALL user-specific data from localStorage to prevent security issues
+      if (typeof window !== 'undefined') {
+        try {
+          // Get all keys that might contain user-specific data
+          const allKeys = Object.keys(localStorage);
+          const userSpecificKeys = allKeys.filter(key => 
+            key.startsWith('listings_') || 
+            key.startsWith('dashboard_data_') ||
+            key.startsWith('profile_') ||
+            key.startsWith('cache_') ||
+            key.includes('_cache') ||
+            key.includes('user_') ||
+            key.includes('_user') ||
+            key.startsWith('onboarding_completed_') ||
+            key === 'needs_profile_completion' ||
+            key === 'force_listings_refresh' ||
+            key === 'relist_success'
+          );
+          
+          // Clear all user-specific data
+          for (const key of userSpecificKeys) {
+            localStorage.removeItem(key);
+          }
+          
+          console.log(`Cleared ${userSpecificKeys.length} user-specific data entries on sign out`);
+        } catch (error) {
+          console.error('Error clearing user-specific data on sign out:', error);
+        }
+      }
+      
+      // Clear stored auth data
       clearStoredAuthData();
       
       // Clear state immediately to prevent React errors

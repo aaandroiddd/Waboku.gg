@@ -1,6 +1,6 @@
 import dynamic from 'next/dynamic';
 import type { NextPage } from 'next';
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/router';
 import { useAuth } from '@/contexts/AuthContext';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
@@ -70,6 +70,26 @@ const DashboardComponent = () => {
   } = useDashboardListingsCache({ 
     userId: user?.uid 
   });
+  
+  // Security check: Never use cached data from a different user
+  const safeCachedListings = useMemo(() => {
+    if (!user?.uid || !cachedListings || cachedListings.length === 0) {
+      return null;
+    }
+    
+    // Check if any cached listing belongs to a different user
+    const hasWrongUserData = cachedListings.some(listing => 
+      listing.userId && listing.userId !== user.uid
+    );
+    
+    if (hasWrongUserData) {
+      console.warn('Security: Cached listings contain data from different user, clearing cache');
+      clearListingsCache();
+      return null;
+    }
+    
+    return cachedListings;
+  }, [user?.uid, cachedListings, clearListingsCache]);
 
   // Navigation detection for better cache handling
   const { 
@@ -115,8 +135,8 @@ const DashboardComponent = () => {
     skipInitialFetch: false // Always fetch fresh data
   });
   
-  // Use fetched listings as the primary source, with cached listings as fallback only during loading
-  const allListings = fetchedListings.length > 0 ? fetchedListings : (listingsLoading && cachedListings ? cachedListings : fetchedListings);
+  // Use fetched listings as the primary source, with safe cached listings as fallback only during loading
+  const allListings = fetchedListings.length > 0 ? fetchedListings : (listingsLoading && safeCachedListings ? safeCachedListings : fetchedListings);
   
   // Update cache when new listings are fetched
   useEffect(() => {

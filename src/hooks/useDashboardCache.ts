@@ -48,6 +48,21 @@ export function useDashboardCache<T>({
         const cache = JSON.parse(cachedItem) as CacheItem<T>;
         
         if (isCacheValid(cache)) {
+          // Additional security check for listings data
+          if (userId && Array.isArray(cache.data)) {
+            // Check if any cached listing belongs to a different user
+            const hasWrongUserData = cache.data.some((item: any) => 
+              item.userId && item.userId !== userId
+            );
+            
+            if (hasWrongUserData) {
+              console.warn('Security: Dashboard cache contains data from different user, clearing cache');
+              localStorage.removeItem(cacheKey);
+              setIsInitialized(true);
+              return;
+            }
+          }
+          
           setCachedData(cache.data);
           console.log('Dashboard data loaded from cache');
         } else {
@@ -64,7 +79,7 @@ export function useDashboardCache<T>({
       if (cacheKey) localStorage.removeItem(cacheKey);
       setIsInitialized(true);
     }
-  }, [cacheKey, isCacheValid, isInitialized]);
+  }, [cacheKey, isCacheValid, isInitialized, userId]);
   
   // Save data to cache
   const saveToCache = useCallback((data: T) => {
