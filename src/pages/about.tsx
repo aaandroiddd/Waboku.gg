@@ -196,6 +196,91 @@ export default function AboutPage() {
             </div>
           </Alert>
         </div>
+
+        <Separator />
+
+        {/* Intellectual Property Disclaimer */}
+        <div className="bg-card rounded-lg p-8 border">
+          <h2 className="text-2xl font-bold mb-6 text-primary">Intellectual Property Disclaimer</h2>
+          
+          <div className="prose prose-gray dark:prose-invert max-w-none">
+            <p className="text-muted-foreground mb-6">
+              We want to be completely transparent about intellectual property rights. Our platform facilitates the buying and selling of trading cards, but we do not own, claim ownership of, or have any affiliation with the intellectual property rights of the games, characters, artwork, or trademarks featured on trading cards sold through our marketplace.
+            </p>
+
+            <div className="space-y-6">
+              <div>
+                <h3 className="text-lg font-semibold mb-3 text-primary">Pokémon Trading Card Game</h3>
+                <p className="text-muted-foreground">
+                  Pokémon, Pokémon Trading Card Game, and all related characters, names, marks, and logos are trademarks of Nintendo, Game Freak, and Creatures Inc. The Pokémon Trading Card Game is published by The Pokémon Company International. We are not affiliated with or endorsed by Nintendo, Game Freak, Creatures Inc., or The Pokémon Company International.
+                </p>
+              </div>
+
+              <div>
+                <h3 className="text-lg font-semibold mb-3 text-primary">Yu-Gi-Oh! Trading Card Game</h3>
+                <p className="text-muted-foreground">
+                  Yu-Gi-Oh!, including all characters, names, marks, logos, and the "Waboku" copyright, are trademarks and copyrights of Kazuki Takahashi, Konami Digital Entertainment, and TV Tokyo. The Yu-Gi-Oh! Trading Card Game is published by Konami. We do not own or claim any rights to the Yu-Gi-Oh! intellectual property, including but not limited to the Waboku copyright symbol that appears on Yu-Gi-Oh! cards. We are not affiliated with or endorsed by Kazuki Takahashi's estate, Konami, or TV Tokyo.
+                </p>
+              </div>
+
+              <div>
+                <h3 className="text-lg font-semibold mb-3 text-primary">Magic: The Gathering</h3>
+                <p className="text-muted-foreground">
+                  Magic: The Gathering, including all card names, artwork, characters, and the "Magic" name and logo are trademarks and copyrights of Wizards of the Coast LLC, a subsidiary of Hasbro, Inc. We are not affiliated with or endorsed by Wizards of the Coast or Hasbro.
+                </p>
+              </div>
+
+              <div>
+                <h3 className="text-lg font-semibold mb-3 text-primary">Dragon Ball Super Card Game</h3>
+                <p className="text-muted-foreground">
+                  Dragon Ball, Dragon Ball Super, and all related characters, names, marks, and logos are trademarks and copyrights of Akira Toriyama, Toei Animation, and Bandai. The Dragon Ball Super Card Game is published by Bandai. We are not affiliated with or endorsed by Akira Toriyama's studio, Toei Animation, or Bandai.
+                </p>
+              </div>
+
+              <div>
+                <h3 className="text-lg font-semibold mb-3 text-primary">One Piece Card Game</h3>
+                <p className="text-muted-foreground">
+                  One Piece and all related characters, names, marks, and logos are trademarks and copyrights of Eiichiro Oda, Shueisha, and Toei Animation. The One Piece Card Game is published by Bandai. We are not affiliated with or endorsed by Eiichiro Oda, Shueisha, Toei Animation, or Bandai.
+                </p>
+              </div>
+
+              <div>
+                <h3 className="text-lg font-semibold mb-3 text-primary">Digimon Card Game</h3>
+                <p className="text-muted-foreground">
+                  Digimon and all related characters, names, marks, and logos are trademarks and copyrights of Akiyoshi Hongo, Toei Animation, and Bandai. The Digimon Card Game is published by Bandai. We are not affiliated with or endorsed by Akiyoshi Hongo, Toei Animation, or Bandai.
+                </p>
+              </div>
+
+              <div>
+                <h3 className="text-lg font-semibold mb-3 text-primary">Flesh and Blood</h3>
+                <p className="text-muted-foreground">
+                  Flesh and Blood and all related artwork, characters, names, marks, and logos are trademarks and copyrights of Legend Story Studios. We are not affiliated with or endorsed by Legend Story Studios.
+                </p>
+              </div>
+
+              <div>
+                <h3 className="text-lg font-semibold mb-3 text-primary">Lorcana</h3>
+                <p className="text-muted-foreground">
+                  Disney Lorcana and all related Disney characters, names, marks, and logos are trademarks and copyrights of The Walt Disney Company. The Disney Lorcana Trading Card Game is published by Ravensburger. We are not affiliated with or endorsed by The Walt Disney Company or Ravensburger.
+                </p>
+              </div>
+
+              <div>
+                <h3 className="text-lg font-semibold mb-3 text-primary">Other Trading Card Games</h3>
+                <p className="text-muted-foreground">
+                  All other trading card games, collectible card games, and related intellectual property featured on our platform belong to their respective owners and publishers. We do not claim ownership of any trademarks, copyrights, or other intellectual property rights associated with these games.
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-8 p-4 bg-muted rounded-lg">
+              <h4 className="font-semibold mb-2 text-primary">Our Role</h4>
+              <p className="text-muted-foreground text-sm">
+                We operate solely as a marketplace platform that connects buyers and sellers of trading cards. All cards sold through our platform are legitimate, previously-owned collectibles being resold by individual collectors and sellers. We respect all intellectual property rights and encourage our users to do the same.
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
       <Footer />
     </>
