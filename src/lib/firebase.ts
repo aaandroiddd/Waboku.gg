@@ -313,6 +313,13 @@ export function getFirebaseServices() {
 
 // Initialize Firebase on module load if in browser environment
 if (typeof window !== 'undefined') {
+  // Initialize Firestore session management
+  import('./firestore-session-manager').then(({ initializeFirestoreSessionManagement }) => {
+    initializeFirestoreSessionManagement();
+  }).catch(error => {
+    console.error('[Firebase] Error initializing Firestore session management:', error);
+  });
+
   // Add a global error handler for unhandled Firebase errors
   window.addEventListener('unhandledrejection', (event) => {
     if (event.reason) {

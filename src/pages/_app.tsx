@@ -1,10 +1,12 @@
 // Install enhanced error handler FIRST, before any other imports
 import { initializeEnhancedErrorHandler, initializeFirestoreRecovery } from '@/lib/enhanced-error-handler';
+import { initializeFirestoreSessionManagement } from '@/lib/firestore-session-manager';
 
 // Initialize enhanced error handling immediately
 if (typeof window !== 'undefined') {
   initializeEnhancedErrorHandler();
   initializeFirestoreRecovery();
+  initializeFirestoreSessionManagement();
 }
 
 import { installResizeObserverErrorHandler } from '@/lib/resize-observer-error-handler';

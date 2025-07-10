@@ -15,6 +15,7 @@ import {
 } from 'firebase/firestore';
 import { getStorage, ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { getFirebaseServices, registerListener, removeListener } from '@/lib/firebase';
+import { firestoreSessionManager } from '@/lib/firestore-session-manager';
 import { Listing } from '@/types/database';
 import { useAuth } from '@/contexts/AuthContext';
 import { useClientCache } from './useClientCache';
@@ -224,7 +225,7 @@ export function useOptimizedListings({ userId, searchQuery, showOnlyActive = fal
         // Register a new listener with the centralized system
         const listenerId = `${componentId}-listings`;
         
-        // Set up the listener
+        // Set up the listener with enhanced error handling
         listenerRef.current = registerListener(
           listenerId,
           q,
@@ -345,6 +346,21 @@ export function useOptimizedListings({ userId, searchQuery, showOnlyActive = fal
           },
           (error) => {
             console.error('Error in Firestore listener:', error);
+            
+            // Check if this is a session-related error that should trigger session reset
+            if (error.message && 
+                (error.message.includes('Unknown SID') || 
+                 error.message.includes('Listen channel') ||
+                 error.code === 'failed-precondition' ||
+                 error.code === 'unavailable')) {
+              console.warn('Session-related error detected in listener, triggering session reset');
+              
+              // Use the session manager to handle the error
+              firestoreSessionManager.handleUnknownSIDError('listener-error', 400).catch(sessionError => {
+                console.error('Error handling session reset:', sessionError);
+              });
+            }
+            
             setError(error.message || 'Error fetching listings');
             setIsLoading(false);
             
