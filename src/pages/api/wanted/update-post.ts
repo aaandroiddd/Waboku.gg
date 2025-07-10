@@ -21,8 +21,7 @@ export default async function handler(
 
   try {
     // Initialize Firebase Admin if not already initialized
-    const admin = initializeFirebaseAdmin();
-    const db = getDatabase();
+    const { database } = initializeFirebaseAdmin();
     
     // Extract data from request body
     const { postId, userId, updates } = req.body;
@@ -52,7 +51,7 @@ export default async function handler(
     // Check each path until we find the post
     for (const path of paths) {
       console.log(`API: Checking path: ${path}`);
-      postRef = admin.database().ref(path);
+      postRef = database.ref(path);
       const snapshot = await postRef.once('value');
       
       if (snapshot.exists()) {
