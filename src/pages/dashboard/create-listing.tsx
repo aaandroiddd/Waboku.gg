@@ -489,7 +489,7 @@ const CreateListingPage = () => {
                       variant="outline" 
                       size="sm" 
                       className="bg-green-500/20 hover:bg-green-500/30 border-green-500/50"
-                      onClick={() => router.push('/dashboard/seller-account')}
+                      onClick={() => router.push('/dashboard/account-status')}
                     >
                       Upgrade to Premium
                     </Button>
@@ -502,7 +502,7 @@ const CreateListingPage = () => {
                     variant="outline" 
                     size="sm" 
                     className="bg-green-500/20 hover:bg-green-500/30 border-green-500/50"
-                    onClick={() => router.push('/dashboard/seller-account')}
+                    onClick={() => router.push('/dashboard/account-status')}
                   >
                     Learn About Premium
                   </Button>
