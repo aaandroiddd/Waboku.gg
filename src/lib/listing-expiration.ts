@@ -235,8 +235,7 @@ export async function checkAndArchiveExpiredListing(listingId: string) {
         console.log(`[ListingExpiration] Listing ${listingId} has expired. Archiving...`);
         
         // Archive the listing
-        const sevenDaysFromNow = new Date(now);
-        sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
+        const sevenDaysFromNow = new Date(now.getTime() + (7 * 24 * 60 * 60 * 1000));
         
         try {
           await listingRef.update({
