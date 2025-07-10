@@ -42,7 +42,8 @@ import { useDashboardListingsCache } from '@/hooks/useDashboardCache';
 import { useDashboardNavigationDetection } from '@/hooks/useNavigationState';
 import { getListingUrl, getProfileUrl } from '@/lib/listing-slug';
 
-const DashboardPage: NextPage = () => {
+// Create a separate component that uses the dashboard context
+const DashboardContent = () => {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [sortBy, setSortBy] = useState<'date' | 'price' | 'title'>('date');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
@@ -998,175 +999,132 @@ const DashboardPage: NextPage = () => {
   }
 
   return (
-    <DashboardLayout>
-      <FirebaseConnectionHandler>
-        <DeleteListingDialog
-          isOpen={dialogState.isOpen}
-          onClose={() => setDialogState({ ...dialogState, isOpen: false })}
-          onConfirm={() => {
-            handleDeleteListing(dialogState.listingId, dialogState.mode);
-            setDialogState({ ...dialogState, isOpen: false });
-          }}
-          mode={dialogState.mode}
-        />
-      
-      {/* Show a simplified message if there are no active listings but there are listings in total */}
-      {allListings.length > 0 && properlyFilteredActiveListings.length === 0 && (
-        <div className="mb-6">
-          <Alert variant="warning" className="mb-4">
-            <AlertCircle className="h-4 w-4" />
-            <AlertTitle>No Active Listings Visible</AlertTitle>
-            <AlertDescription>
-              You have {allListings.length} total listings, but none are currently showing as active. 
-              This could be due to expired listings or listings set to "offers only".
-              Try refreshing your listings or creating a new listing.
-            </AlertDescription>
-          </Alert>
+    <FirebaseConnectionHandler>
+      <DeleteListingDialog
+        isOpen={dialogState.isOpen}
+        onClose={() => setDialogState({ ...dialogState, isOpen: false })}
+        onConfirm={() => {
+          handleDeleteListing(dialogState.listingId, dialogState.mode);
+          setDialogState({ ...dialogState, isOpen: false });
+        }}
+        mode={dialogState.mode}
+      />
+    
+    {/* Show a simplified message if there are no active listings but there are listings in total */}
+    {allListings.length > 0 && properlyFilteredActiveListings.length === 0 && (
+      <div className="mb-6">
+        <Alert variant="warning" className="mb-4">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>No Active Listings Visible</AlertTitle>
+          <AlertDescription>
+            You have {allListings.length} total listings, but none are currently showing as active. 
+            This could be due to expired listings or listings set to "offers only".
+            Try refreshing your listings or creating a new listing.
+          </AlertDescription>
+        </Alert>
+        
+        <div className="flex justify-end">
+          <Button 
+            variant="outline" 
+            onClick={handleRefreshListings} 
+            disabled={refreshLoading}
+            className="mr-2"
+          >
+            {refreshLoading ? (
+              <>
+                <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                Refreshing...
+              </>
+            ) : (
+              <>
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Refresh Listings
+              </>
+            )}
+          </Button>
           
-          <div className="flex justify-end">
-            <Button 
-              variant="outline" 
-              onClick={handleRefreshListings} 
-              disabled={refreshLoading}
-              className="mr-2"
-            >
-              {refreshLoading ? (
-                <>
-                  <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                  Refreshing...
-                </>
-              ) : (
-                <>
-                  <RefreshCw className="mr-2 h-4 w-4" />
-                  Refresh Listings
-                </>
-              )}
-            </Button>
-            
-            <Button onClick={() => router.push('/dashboard/create-listing')}>
-              Create New Listing
-            </Button>
-          </div>
+          <Button onClick={() => router.push('/dashboard/create-listing')}>
+            Create New Listing
+          </Button>
         </div>
-      )}
-      
+      </div>
+    )}
+    
 
-      
-      {/* Dashboard Header */}
-      <div className="mb-8">
-        <div className="flex items-start gap-8">
-          {/* Use the new ProfileAvatar component for consistent avatar display */}
-          <ProfileAvatar user={user} size="xl" />
-          <div className="flex-1 pt-2">
-            <div className="group cursor-pointer" onClick={() => router.push(getProfileUrl({ uid: user.uid, username: profile?.username }))}>
-              <h1 className="text-3xl font-bold tracking-tight hover:text-primary transition-colors">
-                {/* Use the new ProfileName component for consistent name display */}
-                <ProfileName user={user} />
-              </h1>
-              <p className="text-muted-foreground hover:text-primary transition-colors truncate max-w-[300px] mt-2">
-                {user.email}
-              </p>
-            </div>
+    
+    {/* Dashboard Header */}
+    <div className="mb-8">
+      <div className="flex items-start gap-8">
+        {/* Use the new ProfileAvatar component for consistent avatar display */}
+        <ProfileAvatar user={user} size="xl" />
+        <div className="flex-1 pt-2">
+          <div className="group cursor-pointer" onClick={() => router.push(getProfileUrl({ uid: user.uid, username: profile?.username }))}>
+            <h1 className="text-3xl font-bold tracking-tight hover:text-primary transition-colors">
+              {/* Use the new ProfileName component for consistent name display */}
+              <ProfileName user={user} />
+            </h1>
+            <p className="text-muted-foreground hover:text-primary transition-colors truncate max-w-[300px] mt-2">
+              {user.email}
+            </p>
           </div>
         </div>
       </div>
+    </div>
 
-      {/* Tabs Section */}
+    {/* Tabs Section */}
 
 
-      <Tabs defaultValue="active" className="space-y-4">
-        <TabsList className="w-full flex flex-wrap">
-          <TabsTrigger value="active" className="flex-1 min-w-[150px]">Active Listings ({activeListings.length})</TabsTrigger>
-          <TabsTrigger value="previous" className="flex-1 min-w-[150px]">Archived Listings ({archivedListings.length})</TabsTrigger>
-        </TabsList>
+    <Tabs defaultValue="active" className="space-y-4">
+      <TabsList className="w-full flex flex-wrap">
+        <TabsTrigger value="active" className="flex-1 min-w-[150px]">Active Listings ({activeListings.length})</TabsTrigger>
+        <TabsTrigger value="previous" className="flex-1 min-w-[150px]">Archived Listings ({archivedListings.length})</TabsTrigger>
+      </TabsList>
 
-        <TabsContent value="active" className="space-y-4">
-          <div className="flex flex-col gap-4 mb-4">
-            {/* View Mode Controls and Filtering/Sorting Controls - All aligned in one row */}
-            <div className="flex flex-wrap items-center gap-2">
-              {/* View Mode Controls */}
-              <Button
-                variant={viewMode === 'grid' ? 'default' : 'outline'}
-                size="sm"
-                className="h-9 w-[60px]"
-                onClick={() => setViewMode('grid')}
-              >
-                Grid
-              </Button>
-              <Button
-                variant={viewMode === 'list' ? 'default' : 'outline'}
-                size="sm"
-                className="h-9 w-[60px]"
-                onClick={() => setViewMode('list')}
-              >
-                List
-              </Button>
-              
-              {/* Date/Price/Title Sorting */}
-              <select
-                className="border rounded-md px-2 py-1 bg-background text-foreground h-9 w-[80px]"
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as 'date' | 'price' | 'title')}
-              >
-                <option value="date">Date</option>
-                <option value="price">Price</option>
-                <option value="title">Title</option>
-              </select>
-              
-              {/* Ascending/Descending Button */}
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-9 w-9"
-                onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-              >
-                {sortOrder === 'asc' ? '↑' : '↓'}
-              </Button>
-              
-              {/* Game Categories Filter - On same line for desktop, below for mobile */}
-              <div className="hidden md:block md:w-[300px]">
-                <MobileSelect 
-                  value={gameFilter} 
-                  onValueChange={setGameFilter}
-                  options={[
-                    { value: "all", label: "All Games" },
-                    { value: "dbs", label: "Dragon Ball Super Card Game" },
-                    { value: "digimon", label: "Digimon" },
-                    { value: "lorcana", label: "Disney Lorcana" },
-                    { value: "flesh-and-blood", label: "Flesh and Blood" },
-                    { value: "mtg", label: "Magic: The Gathering" },
-                    { value: "onepiece", label: "One Piece Card Game" },
-                    { value: "pokemon", label: "Pokemon" },
-                    { value: "star-wars", label: "Star Wars: Unlimited" },
-                    { value: "union-arena", label: "Union Arena" },
-                    { value: "universus", label: "Universus" },
-                    { value: "vanguard", label: "Vanguard" },
-                    { value: "weiss", label: "Weiss Schwarz" },
-                    { value: "yugioh", label: "Yu-Gi-Oh!" },
-                    { value: "other", label: "Other" }
-                  ]}
-                  placeholder="All Games"
-                  className="h-9"
-                />
-              </div>
-              
-              {/* Refresh button moved to the right on the same row */}
-              <div className="flex-1 flex justify-end">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-9 w-9"
-                  onClick={handleRefreshListings}
-                  disabled={refreshLoading}
-                  title="Refresh listings"
-                >
-                  <RefreshCw className={`h-4 w-4 ${refreshLoading ? 'animate-spin' : ''}`} />
-                </Button>
-              </div>
-            </div>
+      <TabsContent value="active" className="space-y-4">
+        <div className="flex flex-col gap-4 mb-4">
+          {/* View Mode Controls and Filtering/Sorting Controls - All aligned in one row */}
+          <div className="flex flex-wrap items-center gap-2">
+            {/* View Mode Controls */}
+            <Button
+              variant={viewMode === 'grid' ? 'default' : 'outline'}
+              size="sm"
+              className="h-9 w-[60px]"
+              onClick={() => setViewMode('grid')}
+            >
+              Grid
+            </Button>
+            <Button
+              variant={viewMode === 'list' ? 'default' : 'outline'}
+              size="sm"
+              className="h-9 w-[60px]"
+              onClick={() => setViewMode('list')}
+            >
+              List
+            </Button>
             
-            {/* Game Categories Filter - Only visible on mobile */}
-            <div className="md:hidden w-full">
+            {/* Date/Price/Title Sorting */}
+            <select
+              className="border rounded-md px-2 py-1 bg-background text-foreground h-9 w-[80px]"
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as 'date' | 'price' | 'title')}
+            >
+              <option value="date">Date</option>
+              <option value="price">Price</option>
+              <option value="title">Title</option>
+            </select>
+            
+            {/* Ascending/Descending Button */}
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-9 w-9"
+              onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+            >
+              {sortOrder === 'asc' ? '↑' : '↓'}
+            </Button>
+            
+            {/* Game Categories Filter - On same line for desktop, below for mobile */}
+            <div className="hidden md:block md:w-[300px]">
               <MobileSelect 
                 value={gameFilter} 
                 onValueChange={setGameFilter}
@@ -1188,76 +1146,126 @@ const DashboardPage: NextPage = () => {
                   { value: "other", label: "Other" }
                 ]}
                 placeholder="All Games"
-                className="h-9 w-full"
+                className="h-9"
               />
             </div>
             
-            {/* Search Bar - Full width on mobile */}
-            <div className="w-full">
-              <ListingsSearchBar
-                value={searchQuery}
-                onChange={setSearchQuery}
-                onSearch={() => {}} // Empty function since we're handling search directly
-                placeholder="Search your listings..."
-              />
+            {/* Refresh button moved to the right on the same row */}
+            <div className="flex-1 flex justify-end">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-9 w-9"
+                onClick={handleRefreshListings}
+                disabled={refreshLoading}
+                title="Refresh listings"
+              >
+                <RefreshCw className={`h-4 w-4 ${refreshLoading ? 'animate-spin' : ''}`} />
+              </Button>
             </div>
           </div>
           
-          {refreshLoading ? (
-            <div className="flex flex-col items-center justify-center py-12">
-              <LoadingAnimation size="80" color="currentColor" className="text-primary" />
-              <p className="mt-4 text-muted-foreground">Refreshing your listings...</p>
-            </div>
-          ) : (
-            <MultiSelectListings
-              listings={activeListings}
-              type="active"
-              accountTier={profile?.tier || 'free'}
-              viewMode={viewMode}
-              onEdit={handleEditListing}
-              onDelete={handleDeleteListing}
-              onMessage={handleMessage}
-              onView={handleViewListing}
-              onShare={handleShare}
-              onBulkArchive={handleBulkArchive}
-              onBulkDelete={handleBulkDelete}
+          {/* Game Categories Filter - Only visible on mobile */}
+          <div className="md:hidden w-full">
+            <MobileSelect 
+              value={gameFilter} 
+              onValueChange={setGameFilter}
+              options={[
+                { value: "all", label: "All Games" },
+                { value: "dbs", label: "Dragon Ball Super Card Game" },
+                { value: "digimon", label: "Digimon" },
+                { value: "lorcana", label: "Disney Lorcana" },
+                { value: "flesh-and-blood", label: "Flesh and Blood" },
+                { value: "mtg", label: "Magic: The Gathering" },
+                { value: "onepiece", label: "One Piece Card Game" },
+                { value: "pokemon", label: "Pokemon" },
+                { value: "star-wars", label: "Star Wars: Unlimited" },
+                { value: "union-arena", label: "Union Arena" },
+                { value: "universus", label: "Universus" },
+                { value: "vanguard", label: "Vanguard" },
+                { value: "weiss", label: "Weiss Schwarz" },
+                { value: "yugioh", label: "Yu-Gi-Oh!" },
+                { value: "other", label: "Other" }
+              ]}
+              placeholder="All Games"
+              className="h-9 w-full"
             />
-          )}
-        </TabsContent>
-
-        <TabsContent value="previous" className="space-y-6">
-          {refreshLoading ? (
-            <div className="flex flex-col items-center justify-center py-12">
-              <LoadingAnimation size="80" color="currentColor" className="text-primary" />
-              <p className="mt-4 text-muted-foreground">Refreshing your archived listings...</p>
-            </div>
-          ) : (
-            <MultiSelectListings
-              listings={archivedListings}
-              type="archived"
-              accountTier={profile?.tier || 'free'}
-              viewMode={viewMode}
-              onEdit={handleEditListing}
-              onDelete={(listingId) => {
-                setDialogState({
-                  isOpen: true,
-                  listingId,
-                  mode: 'permanent'
-                });
-              }}
-              onMessage={handleMessage}
-              onView={handleViewListing}
-              onShare={handleShare}
-              onRestore={handleRestoreListing}
-              onBulkDelete={handleBulkDelete}
-              onBulkRestore={handleBulkRestore}
+          </div>
+          
+          {/* Search Bar - Full width on mobile */}
+          <div className="w-full">
+            <ListingsSearchBar
+              value={searchQuery}
+              onChange={setSearchQuery}
+              onSearch={() => {}} // Empty function since we're handling search directly
+              placeholder="Search your listings..."
             />
-          )}
-        </TabsContent>
-      </Tabs>
-      
+          </div>
+        </div>
+        
+        {refreshLoading ? (
+          <div className="flex flex-col items-center justify-center py-12">
+            <LoadingAnimation size="80" color="currentColor" className="text-primary" />
+            <p className="mt-4 text-muted-foreground">Refreshing your listings...</p>
+          </div>
+        ) : (
+          <MultiSelectListings
+            listings={activeListings}
+            type="active"
+            accountTier={profile?.tier || 'free'}
+            viewMode={viewMode}
+            onEdit={handleEditListing}
+            onDelete={handleDeleteListing}
+            onMessage={handleMessage}
+            onView={handleViewListing}
+            onShare={handleShare}
+            onBulkArchive={handleBulkArchive}
+            onBulkDelete={handleBulkDelete}
+          />
+        )}
+      </TabsContent>
 
-      </FirebaseConnectionHandler>
+      <TabsContent value="previous" className="space-y-6">
+        {refreshLoading ? (
+          <div className="flex flex-col items-center justify-center py-12">
+            <LoadingAnimation size="80" color="currentColor" className="text-primary" />
+            <p className="mt-4 text-muted-foreground">Refreshing your archived listings...</p>
+          </div>
+        ) : (
+          <MultiSelectListings
+            listings={archivedListings}
+            type="archived"
+            accountTier={profile?.tier || 'free'}
+            viewMode={viewMode}
+            onEdit={handleEditListing}
+            onDelete={(listingId) => {
+              setDialogState({
+                isOpen: true,
+                listingId,
+                mode: 'permanent'
+              });
+            }}
+            onMessage={handleMessage}
+            onView={handleViewListing}
+            onShare={handleShare}
+            onRestore={handleRestoreListing}
+            onBulkDelete={handleBulkDelete}
+            onBulkRestore={handleBulkRestore}
+          />
+        )}
+      </TabsContent>
+    </Tabs>
+    
+
+    </FirebaseConnectionHandler>
+  );
+};
+
+// Main page component that wraps the content with DashboardLayout
+const DashboardPage: NextPage = () => {
+  return (
+    <DashboardLayout>
+      <DashboardContent />
     </DashboardLayout>
   );
 };
