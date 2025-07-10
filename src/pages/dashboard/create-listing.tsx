@@ -676,6 +676,7 @@ const CreateListingPage = () => {
                         { value: "digimon", label: "Digimon" },
                         { value: "lorcana", label: "Disney Lorcana" },
                         { value: "flesh-and-blood", label: "Flesh and Blood" },
+                        { value: "gundam", label: "Gundam" },
                         { value: "mtg", label: "Magic: The Gathering" },
                         { value: "onepiece", label: "One Piece Card Game" },
                         { value: "pokemon", label: "Pokemon" },

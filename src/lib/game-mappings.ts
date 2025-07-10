@@ -11,6 +11,7 @@ export const GAME_MAPPING = {
 export const OTHER_GAME_MAPPING = {
   "Dragon Ball Super": "dbs",
   "Flesh and Blood": "flesh-and-blood",
+  "Gundam": "gundam",
   "Star Wars: Unlimited": "star-wars",
   "Union Arena": "union-arena",
   "Universus": "universus",
@@ -35,6 +36,7 @@ export const GAME_NAME_MAPPING = {
   "digimon": ["digimon", "Digimon Card Game", "DIGIMON"],
   "dbs": ["dbs", "Dragon Ball Super", "Dragon Ball Super Card Game"],
   "flesh-and-blood": ["flesh-and-blood", "Flesh and Blood", "FAB"],
+  "gundam": ["gundam", "Gundam", "GUNDAM", "Gundam Card Game"],
   "star-wars": ["star-wars", "Star Wars: Unlimited", "Star Wars"],
   "union-arena": ["union-arena", "Union Arena"],
   "universus": ["universus", "Universus"],
@@ -54,6 +56,7 @@ export const GAME_ICONS: Record<string, string> = {
   "digimon": "🦖",
   "dbs": "🐉",
   "flesh-and-blood": "⚔️",
+  "gundam": "🤖",
   "star-wars": "🚀",
   "union-arena": "🎮",
   "universus": "🌌",

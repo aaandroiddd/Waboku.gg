@@ -259,6 +259,13 @@ export default function AboutPage() {
               </div>
 
               <div>
+                <h3 className="text-lg font-semibold mb-3 text-primary">Gundam</h3>
+                <p className="text-muted-foreground">
+                  Gundam and all related characters, mobile suits, names, marks, and logos are trademarks and copyrights of Sotsu and Sunrise. The Gundam Card Game and related trading card products are published by Bandai. We are not affiliated with or endorsed by Sotsu, Sunrise, or Bandai.
+                </p>
+              </div>
+
+              <div>
                 <h3 className="text-lg font-semibold mb-3 text-primary">Lorcana</h3>
                 <p className="text-muted-foreground">
                   Disney Lorcana and all related Disney characters, names, marks, and logos are trademarks and copyrights of The Walt Disney Company. The Disney Lorcana Trading Card Game is published by Ravensburger. We are not affiliated with or endorsed by The Walt Disney Company or Ravensburger.
