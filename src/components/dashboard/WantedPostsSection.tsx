@@ -256,7 +256,7 @@ export function WantedPostsSection() {
                         </div>
                       </div>
                       
-                      <div className="flex flex-col gap-2 flex-shrink-0 min-w-[120px] sm:min-w-[160px]">
+                      <div className="flex flex-col justify-between gap-3 flex-shrink-0 min-w-[120px] sm:min-w-[160px]">
                         <div className="text-sm font-medium text-right">
                           <span className="block break-words">
                             {post.priceRange && !post.isPriceNegotiable
@@ -265,16 +265,18 @@ export function WantedPostsSection() {
                             }
                           </span>
                         </div>
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          className="flex items-center gap-1 w-full"
-                          onClick={() => router.push(`/wanted/${post.id}`)}
-                        >
-                          <ExternalLink className="h-3 w-3" />
-                          <span className="hidden sm:inline">View Post</span>
-                          <span className="sm:hidden">View</span>
-                        </Button>
+                        <div className="mt-auto">
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            className="flex items-center gap-1 w-full"
+                            onClick={() => router.push(`/wanted/${post.id}`)}
+                          >
+                            <ExternalLink className="h-3 w-3" />
+                            <span className="hidden sm:inline">View Post</span>
+                            <span className="sm:hidden">View</span>
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   </CardContent>
