@@ -227,8 +227,8 @@ export function WantedPostsSection() {
                         </div>
                       </div>
                       
-                      <div className="flex flex-col gap-2">
-                        <div className="text-sm font-medium">
+                      <div className="flex flex-col gap-2 min-w-0 sm:min-w-[140px]">
+                        <div className="text-sm font-medium whitespace-nowrap">
                           {post.priceRange 
                             ? `$${post.priceRange.min} - $${post.priceRange.max}` 
                             : "Price Negotiable"
