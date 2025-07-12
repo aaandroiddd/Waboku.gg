@@ -42,6 +42,8 @@ import { SessionManagerInitializer } from '@/components/SessionManagerInitialize
 import { ComprehensiveErrorHandlerInitializer } from '@/components/ComprehensiveErrorHandlerInitializer';
 import { getFirebaseServices } from '@/lib/firebase';
 import { useThemeSync } from '@/hooks/useThemeSync';
+import { performanceOptimizer } from '@/lib/performance-optimizer';
+import { PerformanceMonitor } from '@/components/PerformanceMonitor';
 
 const LoadingScreen = dynamic(() => import('@/components/LoadingScreen').then(mod => ({ default: mod.LoadingScreen })), {
   ssr: false
@@ -123,6 +125,8 @@ const MainContent = memo(({ Component, pageProps, pathname }: {
           <ListenChannelErrorHandler />
           <FirestoreListenChannelHandler />
           {process.env.NODE_ENV === 'development' && <FirestoreListenerDebugger />}
+          {/* Performance Monitor - only shows in development by default */}
+          <PerformanceMonitor />
         </>
       )}
     </>
