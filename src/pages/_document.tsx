@@ -32,10 +32,31 @@ export default function Document() {
         <meta name="twitter:description" content="Mobile-first trading card marketplace for buying and selling TCG cards" />
         <meta name="twitter:image" content="/icon-512.svg" />
         
+        {/* Font optimization */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link rel="preload" href="/fonts/inter-var.woff2" as="font" type="font/woff2" crossOrigin="anonymous" />
+        
+        {/* Preload critical assets */}
+        <link rel="preload" href="/images/tcg-bg.svg" as="image" />
+        
+        {/* DNS prefetch for external services */}
         <link rel="dns-prefetch" href="https://firestore.googleapis.com" />
         <link rel="dns-prefetch" href="https://firebasestorage.googleapis.com" />
+        
+        {/* Font face definition */}
+        <style dangerouslySetInnerHTML={{
+          __html: `
+            @font-face {
+              font-family: 'Inter';
+              font-style: normal;
+              font-weight: 100 900;
+              font-display: swap;
+              src: url('/fonts/inter-var.woff2') format('woff2');
+              unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+            }
+          `
+        }} />
       </Head>
       <body>
         <Main />

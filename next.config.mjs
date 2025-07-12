@@ -94,12 +94,9 @@ const nextConfig = {
   experimental: {
     optimizeCss: false, // Disable this as it's causing issues
     largePageDataBytes: 256 * 1000, // Increase to 256KB to reduce file operations
-    esmExternals: false, // Disable ESM externals to reduce file operations
-    // Fix for Next.js 14.2.6 AMP context module issue
-    serverComponentsExternalPackages: [],
   },
-  // Disable build trace collection to reduce file operations
-  outputFileTracing: false,
+  // Keep output file tracing enabled for proper deployment
+  outputFileTracing: true,
 };
 
 export default nextConfig;
