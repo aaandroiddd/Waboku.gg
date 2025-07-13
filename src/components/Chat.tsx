@@ -60,7 +60,7 @@ export function Chat({
   className = ''
 }: ChatProps) {
   const { profile: receiverProfile } = useProfile(receiverId);
-  const [displayName, setDisplayName] = useState(initialReceiverName);
+  const [displayName, setDisplayName] = useState(initialReceiverName || 'Loading...');
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showBlockDialog, setShowBlockDialog] = useState(false);
 
@@ -108,8 +108,51 @@ export function Chat({
   const { messages: messagesList, loading: messagesLoading, sendMessage, markAsRead, deleteChat } = useMessages(chatId);
   const [messages, setMessages] = useState(messagesList);
 
+  // Fetch receiver's username from Realtime Database when Firestore might be disabled
   useEffect(() => {
-    if (receiverProfile?.username) {
+    const fetchReceiverUsername = async () => {
+      if (!receiverId || receiverId === 'system_moderation') return;
+      
+      // If we already have a good username from receiverProfile, use it
+      if (receiverProfile?.username && receiverProfile.username !== 'Unknown User') {
+        setDisplayName(receiverProfile.username);
+        return;
+      }
+      
+      // Otherwise, fetch from Realtime Database
+      try {
+        const { database } = getFirebaseServices();
+        if (!database) return;
+        
+        const { ref, get } = await import('firebase/database');
+        const userRef = ref(database, `users/${receiverId}`);
+        const userSnapshot = await get(userRef);
+        
+        if (userSnapshot.exists()) {
+          const userData = userSnapshot.val();
+          const username = userData.displayName || userData.username || userData.email?.split('@')[0] || 'Unknown User';
+          setDisplayName(username);
+        } else {
+          // Fallback to a more user-friendly format
+          const fallbackUsername = `User ${receiverId.substring(0, 8)}`;
+          setDisplayName(fallbackUsername);
+        }
+      } catch (error) {
+        console.error('Error fetching receiver username:', error);
+        // Keep the existing displayName or use fallback
+        if (!displayName || displayName === 'Loading...') {
+          const fallbackUsername = `User ${receiverId.substring(0, 8)}`;
+          setDisplayName(fallbackUsername);
+        }
+      }
+    };
+    
+    fetchReceiverUsername();
+  }, [receiverId, receiverProfile]);
+  
+  // Also update when receiverProfile changes (for when Firestore is available)
+  useEffect(() => {
+    if (receiverProfile?.username && receiverProfile.username !== 'Unknown User') {
       setDisplayName(receiverProfile.username);
     }
   }, [receiverProfile]);
