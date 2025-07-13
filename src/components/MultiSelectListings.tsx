@@ -314,12 +314,12 @@ export function MultiSelectListings({
                     <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground mb-2">
                       <span>{listing.game}</span>
                       <span>•</span>
-                      <span>Listed on {formatDate(listing.createdAt)}</span>
+                      <span>Listed on {formatDate(listing.createdAt, true)}</span>
                       {type === 'archived' && listing.archivedAt && (
                         <>
                           <span>•</span>
                           <span className="text-amber-600 font-medium">
-                            Archived on {formatDate(listing.archivedAt)}
+                            Archived on {formatDate(listing.archivedAt, true)}
                           </span>
                         </>
                       )}
@@ -509,7 +509,7 @@ export function MultiSelectListings({
                   )}
 
                   <div className="text-sm text-muted-foreground">
-                    Listed on {formatDate(listing.createdAt)}
+                    Listed on {formatDate(listing.createdAt, true)}
                   </div>
 
                   {/* Timer */}
@@ -525,7 +525,7 @@ export function MultiSelectListings({
                   {/* Archived status */}
                   {type === 'archived' && listing.archivedAt && (
                     <div className="text-sm text-amber-600 font-medium">
-                      Archived on {formatDate(listing.archivedAt)}
+                      Archived on {formatDate(listing.archivedAt, true)}
                     </div>
                   )}
 

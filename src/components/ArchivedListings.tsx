@@ -74,7 +74,7 @@ export function ArchivedListings({
                 <span className="font-bold">${listing.price.toFixed(2)}</span>
               </div>
               <div className="text-sm text-muted-foreground">
-                Listed on {formatDate(listing.createdAt)}
+                Listed on {formatDate(listing.createdAt, true)}
               </div>
               {/* Timer for archived listings */}
               <div className="mt-2">
@@ -89,7 +89,7 @@ export function ArchivedListings({
               {/* Display archived status with date */}
               {listing.archivedAt && (
                 <div className="text-sm text-amber-600 font-medium">
-                  Archived on {formatDate(listing.archivedAt)}
+                  Archived on {formatDate(listing.archivedAt, true)}
                 </div>
               )}
               <div className="flex flex-wrap gap-2 mt-4">

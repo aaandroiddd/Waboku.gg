@@ -54,6 +54,7 @@ import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { FirestoreRequestCounter } from '@/components/FirestoreRequestCounter';
 import { extractListingIdFromSlug } from '@/lib/listing-slug';
 import { getCleanImageUrl, getImageFilename } from '@/lib/image-utils';
+import { formatDate } from '@/lib/date-utils';
 
 const getConditionColor = (condition: string) => {
   const colors: Record<string, string> = {
@@ -1456,7 +1457,7 @@ export default function ListingPage() {
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                   <div className="flex items-center text-sm text-muted-foreground">
                     <Calendar className="h-4 w-4 mr-2" />
-                    Listed on {listing.createdAt.toLocaleDateString()}
+                    Listed on {formatDate(listing.createdAt, true)}
                   </div>
                   {user && user.uid !== listing?.userId && (
                     <Button
