@@ -530,14 +530,9 @@ export default function MessagesPage() {
                         )}
                         <div className="text-left w-full space-y-1.5">
                           <div className="font-medium flex items-center gap-2">
-                            {otherParticipant.id ? (
-                              <UserNameLink 
-                                userId={otherParticipant.id} 
-                                initialUsername={otherParticipant.name !== 'Unknown User' ? otherParticipant.name : undefined}
-                              />
-                            ) : (
-                              <span>Unknown User</span>
-                            )}
+                            <span className="font-medium">
+                              {otherParticipant.name}
+                            </span>
                             {isUnread && (
                               <div className="h-2 w-2 rounded-full bg-primary"></div>
                             )}
