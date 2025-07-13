@@ -85,9 +85,9 @@ export function UserNameLink({
     }
   }, [userId, displayName, defaultDisplayName]);
   
-  // Update local state and cache when userData changes
+  // Update local state and cache when userData changes (only if Firestore is enabled)
   useEffect(() => {
-    if (userData?.username && userData.username !== 'Unknown User') {
+    if (!isFirestoreDisabled && userData?.username && userData.username !== 'Unknown User') {
       // Update local state
       setDisplayName(userData.username);
       
@@ -110,7 +110,7 @@ export function UserNameLink({
         console.warn('[UserNameLink] Error saving to sessionStorage:', e);
       }
     }
-  }, [userData, userId]);
+  }, [userData, userId, isFirestoreDisabled]);
   
   // Fallback to Realtime Database when Firestore is disabled
   useEffect(() => {
@@ -183,14 +183,16 @@ export function UserNameLink({
     }
   }, [isFirestoreDisabled, userId, isDeletedUser]);
   
-  // Update display name when userData changes (from Firestore)
+  // Update display name when userData changes (from Firestore) - but only if Firestore is enabled
   useEffect(() => {
-    if (userData) {
+    // Only update from Firestore data if Firestore is not disabled
+    if (!isFirestoreDisabled && userData) {
       setDisplayName(userData.username || initialUsername || `User ${userId.substring(0, 6)}...`);
-    } else if (initialUsername) {
+    } else if (!isFirestoreDisabled && initialUsername && !userData) {
       setDisplayName(initialUsername);
     }
-  }, [userData, initialUsername, userId]);
+    // If Firestore is disabled, don't override the display name that was set by Realtime Database
+  }, [userData, initialUsername, userId, isFirestoreDisabled]);
   
   // Show skeleton while loading, but only for a short time and not for deleted users
   // to avoid flickering between "Loading..." and actual data
