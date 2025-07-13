@@ -16,15 +16,22 @@
     
     "users": {
       "$uid": {
-        ".read": "auth != null && (auth.uid === $uid || root.child('users').child(auth.uid).child('account').child('tier').val() === 'admin')",
+        ".read": "auth != null",
         ".write": "auth != null && (auth.uid === $uid || auth.token.admin === true)",
         "email": {
+          ".read": "auth != null && (auth.uid === $uid || root.child('users').child(auth.uid).child('account').child('tier').val() === 'admin')",
           ".validate": "newData.isString()"
         },
         "displayName": {
+          ".read": "auth != null",
           ".validate": "newData.isString() && newData.val().length >= 3 && newData.val().length <= 50"
         },
+        "username": {
+          ".read": "auth != null",
+          ".validate": "!newData.exists() || (newData.isString() && newData.val().length >= 3 && newData.val().length <= 50)"
+        },
         "account": {
+          ".read": "auth != null && (auth.uid === $uid || root.child('users').child(auth.uid).child('account').child('tier').val() === 'admin')",
           ".validate": "newData.hasChildren(['tier'])",
           "tier": {
             ".validate": "newData.isString() && (newData.val() === 'free' || newData.val() === 'premium' || newData.val() === 'admin')"
