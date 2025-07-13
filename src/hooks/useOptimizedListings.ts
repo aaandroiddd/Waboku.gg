@@ -592,13 +592,31 @@ export function useOptimizedListings({ userId, searchQuery, showOnlyActive = fal
         }
 
         // Validate that essential fields exist in the original data
-        const requiredFields = ['title', 'price', 'description', 'city', 'state', 'game', 'condition', 'imageUrls'];
-        for (const field of requiredFields) {
+        // Only check for truly critical fields that are needed for a listing to function
+        const criticalFields = ['title', 'price', 'imageUrls'];
+        for (const field of criticalFields) {
           if (!listingData[field] && listingData[field] !== 0 && listingData[field] !== false) {
-            console.error(`Missing required field in existing listing: ${field}`);
-            throw new Error(`Listing is missing required field: ${field}. Cannot restore.`);
+            console.error(`Missing critical field in existing listing: ${field}`);
+            throw new Error(`Listing is missing critical field: ${field}. Cannot restore.`);
           }
         }
+
+        // For other fields, provide defaults if they're missing
+        const fieldsWithDefaults = {
+          description: listingData.description || 'No description provided',
+          city: listingData.city || 'Unknown',
+          state: listingData.state || 'Unknown', 
+          game: listingData.game || 'Other',
+          condition: listingData.condition || 'Not specified'
+        };
+
+        // Add the default values to the update data if the original fields are missing
+        Object.entries(fieldsWithDefaults).forEach(([field, defaultValue]) => {
+          if (!listingData[field]) {
+            console.log(`Setting default value for missing field ${field}: ${defaultValue}`);
+            updateData[field] = defaultValue;
+          }
+        });
 
         // Validate field constraints on existing data
         if (typeof listingData.title !== 'string' || listingData.title.length < 3 || listingData.title.length > 100) {
