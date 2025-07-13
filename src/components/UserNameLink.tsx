@@ -2,6 +2,8 @@ import Link from 'next/link';
 import { useOptimizedUserData } from '@/hooks/useFirestoreOptimizer';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useEffect, useState } from 'react';
+import { getFirebaseServices } from '@/lib/firebase';
+import { ref, get } from 'firebase/database';
 
 // Local cache for usernames to prevent "unknown user" flashes
 const localUsernameCache: Record<string, { 
@@ -34,10 +36,33 @@ export function UserNameLink({
   
   // Use local state to ensure consistent display even during loading
   const [displayName, setDisplayName] = useState<string>(defaultDisplayName);
+  const [isFirestoreDisabled, setIsFirestoreDisabled] = useState<boolean>(false);
   
-  // Use our optimized hook only if not a deleted user and if we have a valid userId
-  // Also check if Firestore is available (it might be disabled on some pages like messages)
-  const shouldFetchUserData = !isDeletedUser && userId && userId !== 'none';
+  // Check if Firestore is disabled
+  useEffect(() => {
+    const checkFirestoreStatus = async () => {
+      try {
+        const { db } = getFirebaseServices();
+        if (!db) {
+          setIsFirestoreDisabled(true);
+          return;
+        }
+        
+        // Try to access Firestore to see if it's disabled
+        // This is a simple way to detect if FirestoreDisabler has been used
+        const firestoreDisabled = localStorage.getItem('firestore_disabled') === 'true';
+        setIsFirestoreDisabled(firestoreDisabled);
+      } catch (error) {
+        console.warn('[UserNameLink] Firestore appears to be disabled:', error);
+        setIsFirestoreDisabled(true);
+      }
+    };
+    
+    checkFirestoreStatus();
+  }, []);
+  
+  // Use our optimized hook only if not a deleted user, valid userId, and Firestore is available
+  const shouldFetchUserData = !isDeletedUser && userId && userId !== 'none' && !isFirestoreDisabled;
   const { userData, loading } = useOptimizedUserData(shouldFetchUserData ? userId : null);
   
   // Load from sessionStorage on mount
@@ -87,7 +112,78 @@ export function UserNameLink({
     }
   }, [userData, userId]);
   
-  // Update display name when userData changes
+  // Fallback to Realtime Database when Firestore is disabled
+  useEffect(() => {
+    if (isFirestoreDisabled && userId && userId !== 'none' && !isDeletedUser) {
+      // Check if we already have cached data
+      if (localUsernameCache[userId]?.username && 
+          Date.now() - localUsernameCache[userId].timestamp < CACHE_EXPIRATION) {
+        setDisplayName(localUsernameCache[userId].username);
+        return;
+      }
+      
+      // Fetch from Realtime Database
+      const fetchFromRealtimeDB = async () => {
+        try {
+          const { database } = getFirebaseServices();
+          if (!database) {
+            console.warn('[UserNameLink] Realtime Database not available');
+            return;
+          }
+          
+          const userRef = ref(database, `users/${userId}`);
+          const userSnapshot = await get(userRef);
+          
+          if (userSnapshot.exists()) {
+            const userData = userSnapshot.val();
+            const username = userData.displayName || userData.username || userData.email?.split('@')[0] || `User ${userId.substring(0, 8)}`;
+            
+            // Update display name
+            setDisplayName(username);
+            
+            // Update cache
+            localUsernameCache[userId] = {
+              username: username,
+              timestamp: Date.now()
+            };
+            
+            // Also persist to sessionStorage
+            try {
+              const existingCache = sessionStorage.getItem('usernameCache');
+              const cacheObj = existingCache ? JSON.parse(existingCache) : {};
+              cacheObj[userId] = {
+                username: username,
+                timestamp: Date.now()
+              };
+              sessionStorage.setItem('usernameCache', JSON.stringify(cacheObj));
+            } catch (e) {
+              console.warn('[UserNameLink] Error saving to sessionStorage:', e);
+            }
+            
+            console.log(`[UserNameLink] Fetched username from Realtime DB: ${username}`);
+          } else {
+            // User not found, use fallback
+            const fallbackUsername = `User ${userId.substring(0, 8)}`;
+            setDisplayName(fallbackUsername);
+            
+            // Cache with shorter expiration
+            localUsernameCache[userId] = {
+              username: fallbackUsername,
+              timestamp: Date.now() - (CACHE_EXPIRATION / 2)
+            };
+          }
+        } catch (error) {
+          console.error('[UserNameLink] Error fetching from Realtime Database:', error);
+          const fallbackUsername = `User ${userId.substring(0, 8)}`;
+          setDisplayName(fallbackUsername);
+        }
+      };
+      
+      fetchFromRealtimeDB();
+    }
+  }, [isFirestoreDisabled, userId, isDeletedUser]);
+  
+  // Update display name when userData changes (from Firestore)
   useEffect(() => {
     if (userData) {
       setDisplayName(userData.username || initialUsername || `User ${userId.substring(0, 6)}...`);
