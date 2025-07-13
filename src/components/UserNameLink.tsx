@@ -35,8 +35,10 @@ export function UserNameLink({
   // Use local state to ensure consistent display even during loading
   const [displayName, setDisplayName] = useState<string>(defaultDisplayName);
   
-  // Use our optimized hook only if not a deleted user
-  const { userData, loading } = useOptimizedUserData(isDeletedUser ? null : userId);
+  // Use our optimized hook only if not a deleted user and if we have a valid userId
+  // Also check if Firestore is available (it might be disabled on some pages like messages)
+  const shouldFetchUserData = !isDeletedUser && userId && userId !== 'none';
+  const { userData, loading } = useOptimizedUserData(shouldFetchUserData ? userId : null);
   
   // Load from sessionStorage on mount
   useEffect(() => {

@@ -83,42 +83,67 @@ export default function MessagesPage() {
         return cachedProfile.data;
       }
       
-      // Try to get from Firestore
-      const userDoc = await getDoc(doc(db, 'users', userId));
-      
-      let result;
-      if (userDoc.exists()) {
-        const userData = userDoc.data();
-        result = {
-          username: userData.displayName || userData.username || 'Unknown User',
-          avatarUrl: userData.avatarUrl || userData.photoURL || null
-        };
-      } else {
-        // If document doesn't exist, try a second attempt after a short delay
-        await new Promise(resolve => setTimeout(resolve, 500));
-        const retryDoc = await getDoc(doc(db, 'users', userId));
-        
-        if (retryDoc.exists()) {
-          const userData = retryDoc.data();
-          result = {
-            username: userData.displayName || userData.username || 'Unknown User',
-            avatarUrl: userData.avatarUrl || userData.photoURL || null
-          };
-        } else {
-          result = { username: 'Unknown User', avatarUrl: null };
-        }
+      // Use Realtime Database instead of Firestore since Firestore is disabled on this page
+      const { database } = getFirebaseServices();
+      if (!database) {
+        console.error('Realtime Database not available for user profile fetch');
+        return { username: 'Unknown User', avatarUrl: null };
       }
       
-      // Update cache
-      profileCache.current[userId] = {
-        data: result,
-        timestamp: Date.now()
-      };
-      
-      return result;
+      try {
+        const userRef = ref(database, `users/${userId}`);
+        const userSnapshot = await get(userRef);
+        
+        let result;
+        if (userSnapshot.exists()) {
+          const userData = userSnapshot.val();
+          result = {
+            username: userData.displayName || userData.username || userData.email?.split('@')[0] || 'Unknown User',
+            avatarUrl: userData.avatarUrl || userData.photoURL || null
+          };
+          console.log(`Fetched user profile from Realtime Database for ${userId}:`, result.username);
+        } else {
+          // If user doesn't exist in Realtime Database, try to get from localStorage cache
+          // or use a fallback that's more user-friendly
+          const fallbackUsername = `User ${userId.substring(0, 8)}`;
+          result = { 
+            username: fallbackUsername, 
+            avatarUrl: null 
+          };
+          console.log(`User ${userId} not found in Realtime Database, using fallback: ${fallbackUsername}`);
+        }
+        
+        // Update cache
+        profileCache.current[userId] = {
+          data: result,
+          timestamp: Date.now()
+        };
+        
+        return result;
+      } catch (dbError) {
+        console.error(`Error fetching from Realtime Database for ${userId}:`, dbError);
+        
+        // Fallback to a more user-friendly unknown user format
+        const fallbackUsername = `User ${userId.substring(0, 8)}`;
+        const result = { 
+          username: fallbackUsername, 
+          avatarUrl: null 
+        };
+        
+        // Cache the fallback with shorter expiration
+        profileCache.current[userId] = {
+          data: result,
+          timestamp: Date.now() - (CACHE_EXPIRATION / 2) // Expire sooner to retry later
+        };
+        
+        return result;
+      }
     } catch (err) {
       console.error(`Error fetching profile for ${userId}:`, err);
-      return { username: 'Unknown User', avatarUrl: null };
+      
+      // More user-friendly fallback
+      const fallbackUsername = `User ${userId.substring(0, 8)}`;
+      return { username: fallbackUsername, avatarUrl: null };
     } finally {
       setProfilesLoading(prev => ({ ...prev, [userId]: false }));
     }
