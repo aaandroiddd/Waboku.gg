@@ -272,6 +272,9 @@
           "id": {
             ".validate": "newData.isString()"
           },
+          "read": {
+            ".validate": "!newData.exists() || newData.isBoolean()"
+          },
           "subject": {
             ".validate": "!newData.exists() || newData.isString()"
           },

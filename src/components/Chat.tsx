@@ -33,7 +33,7 @@ import { useRouter } from 'next/router';
 import { useProfile } from '@/hooks/useProfile';
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { getDatabase, ref as dbRef, remove, set } from 'firebase/database';
-import { getDoc, doc, enableNetwork, disableNetwork } from 'firebase/firestore';
+import { getDoc, doc } from 'firebase/firestore';
 import { firebaseDb, getFirebaseServices } from '@/lib/firebase';
 import { getListingUrl } from '@/lib/listing-slug';
 
@@ -343,16 +343,6 @@ export function Chat({
       
       if (unreadMessages.length > 0) {
         markAsRead(unreadMessages.map(msg => msg.id));
-        
-        // Update the chat's lastMessage.read status in the database
-        if (unreadMessages.some(msg => msg.id === messages[messages.length - 1].id)) {
-          const database = getDatabase();
-          // Use the imported dbRef function instead of undefined 'ref'
-          const lastMessageReadRef = dbRef(database, `chats/${chatId}/lastMessage/read`);
-          set(lastMessageReadRef, true).catch(err => {
-            console.error('Error updating lastMessage read status:', err);
-          });
-        }
       }
     }
   }, [messages, chatId, user?.uid, markAsRead]);
@@ -600,9 +590,8 @@ export function Chat({
 
   if (!user) return null;
 
-  // Track user profiles for messages using Firestore for most updated names
+  // Track user profiles for messages using Realtime Database only
   const [userProfiles, setUserProfiles] = useState<Record<string, any>>({});
-  const [profilesLoading, setProfilesLoading] = useState<Record<string, boolean>>({});
   
   // Cache for user profiles to avoid repeated fetches
   const profileCache = useRef<Record<string, {
@@ -617,214 +606,51 @@ export function Chat({
     if (!userId) return null;
     
     try {
-      setProfilesLoading(prev => ({ ...prev, [userId]: true }));
-      
       // Check cache first
       const cachedProfile = profileCache.current[userId];
       if (cachedProfile && Date.now() - cachedProfile.timestamp < CACHE_EXPIRATION) {
-        console.log(`Using cached profile for ${userId}`);
         return cachedProfile.data;
       }
       
-      // Try to fetch from Firestore first for most updated names
-      const { db, enableNetwork } = getFirebaseServices();
-      if (db) {
-        try {
-          // Check if Firestore is disabled and temporarily enable it for this fetch
-          const firestoreDisabled = localStorage.getItem('firestore_disabled') === 'true';
-          if (firestoreDisabled) {
-            console.log(`Temporarily enabling Firestore to fetch profile for ${userId}`);
-            await enableNetwork(db);
-          }
-          
-          const userDoc = await getDoc(doc(db, 'users', userId));
-          
-          let result;
-          if (userDoc.exists()) {
-            const userData = userDoc.data();
-            result = {
-              username: userData.displayName || userData.username || userData.email?.split('@')[0] || 'Unknown User',
-              avatarUrl: userData.avatarUrl || userData.photoURL || null
-            };
-            console.log(`Fetched user profile from Firestore for ${userId}:`, result.username);
-          } else {
-            // If user doesn't exist in Firestore, try Realtime Database as fallback
-            const { database } = getFirebaseServices();
-            if (database) {
-              const { ref, get } = await import('firebase/database');
-              const userRef = ref(database, `users/${userId}`);
-              const userSnapshot = await get(userRef);
-              
-              if (userSnapshot.exists()) {
-                const userData = userSnapshot.val();
-                result = {
-                  username: userData.displayName || userData.username || userData.email?.split('@')[0] || 'Unknown User',
-                  avatarUrl: userData.avatarUrl || userData.photoURL || null
-                };
-                console.log(`Fetched user profile from Realtime Database fallback for ${userId}:`, result.username);
-              } else {
-                const fallbackUsername = `User ${userId.substring(0, 8)}`;
-                result = { 
-                  username: fallbackUsername, 
-                  avatarUrl: null 
-                };
-                console.log(`User ${userId} not found in either database, using fallback: ${fallbackUsername}`);
-              }
-            } else {
-              const fallbackUsername = `User ${userId.substring(0, 8)}`;
-              result = { 
-                username: fallbackUsername, 
-                avatarUrl: null 
-              };
-              console.log(`No database available for ${userId}, using fallback: ${fallbackUsername}`);
-            }
-          }
-          
-          // Re-disable Firestore if it was disabled before
-          if (firestoreDisabled) {
-            console.log('Re-disabling Firestore after profile fetch');
-            const { disableNetwork } = await import('firebase/firestore');
-            await disableNetwork(db);
-          }
-          
-          // Update cache
-          profileCache.current[userId] = {
-            data: result,
-            timestamp: Date.now()
-          };
-          
-          return result;
-        } catch (firestoreError) {
-          console.error(`Error fetching from Firestore for ${userId}:`, firestoreError);
-          
-          // Fallback to Realtime Database
-          const { database } = getFirebaseServices();
-          if (database) {
-            try {
-              const { ref, get } = await import('firebase/database');
-              const userRef = ref(database, `users/${userId}`);
-              const userSnapshot = await get(userRef);
-              
-              let result;
-              if (userSnapshot.exists()) {
-                const userData = userSnapshot.val();
-                result = {
-                  username: userData.displayName || userData.username || userData.email?.split('@')[0] || 'Unknown User',
-                  avatarUrl: userData.avatarUrl || userData.photoURL || null
-                };
-                console.log(`Fetched user profile from Realtime Database fallback for ${userId}:`, result.username);
-              } else {
-                const fallbackUsername = `User ${userId.substring(0, 8)}`;
-                result = { 
-                  username: fallbackUsername, 
-                  avatarUrl: null 
-                };
-                console.log(`User ${userId} not found in Realtime Database, using fallback: ${fallbackUsername}`);
-              }
-              
-              // Update cache
-              profileCache.current[userId] = {
-                data: result,
-                timestamp: Date.now()
-              };
-              
-              return result;
-            } catch (dbError) {
-              console.error(`Error fetching from Realtime Database for ${userId}:`, dbError);
-              
-              const fallbackUsername = `User ${userId.substring(0, 8)}`;
-              const result = { 
-                username: fallbackUsername, 
-                avatarUrl: null 
-              };
-              
-              // Cache the fallback with shorter expiration
-              profileCache.current[userId] = {
-                data: result,
-                timestamp: Date.now() - (CACHE_EXPIRATION / 2) // Expire sooner to retry later
-              };
-              
-              return result;
-            }
-          } else {
-            const fallbackUsername = `User ${userId.substring(0, 8)}`;
-            const result = { 
-              username: fallbackUsername, 
-              avatarUrl: null 
-            };
-            
-            // Cache the fallback with shorter expiration
-            profileCache.current[userId] = {
-              data: result,
-              timestamp: Date.now() - (CACHE_EXPIRATION / 2) // Expire sooner to retry later
-            };
-            
-            return result;
-          }
-        }
-      } else {
-        // If Firestore is not available, use Realtime Database
-        const { database } = getFirebaseServices();
-        if (!database) {
-          console.error('No database available for user profile fetch');
-          return { username: 'Unknown User', avatarUrl: null };
-        }
-        
-        try {
-          const { ref, get } = await import('firebase/database');
-          const userRef = ref(database, `users/${userId}`);
-          const userSnapshot = await get(userRef);
-          
-          let result;
-          if (userSnapshot.exists()) {
-            const userData = userSnapshot.val();
-            result = {
-              username: userData.displayName || userData.username || userData.email?.split('@')[0] || 'Unknown User',
-              avatarUrl: userData.avatarUrl || userData.photoURL || null
-            };
-            console.log(`Fetched user profile from Realtime Database for ${userId}:`, result.username);
-          } else {
-            const fallbackUsername = `User ${userId.substring(0, 8)}`;
-            result = { 
-              username: fallbackUsername, 
-              avatarUrl: null 
-            };
-            console.log(`User ${userId} not found in Realtime Database, using fallback: ${fallbackUsername}`);
-          }
-          
-          // Update cache
-          profileCache.current[userId] = {
-            data: result,
-            timestamp: Date.now()
-          };
-          
-          return result;
-        } catch (dbError) {
-          console.error(`Error fetching from Realtime Database for ${userId}:`, dbError);
-          
-          const fallbackUsername = `User ${userId.substring(0, 8)}`;
-          const result = { 
-            username: fallbackUsername, 
-            avatarUrl: null 
-          };
-          
-          // Cache the fallback with shorter expiration
-          profileCache.current[userId] = {
-            data: result,
-            timestamp: Date.now() - (CACHE_EXPIRATION / 2) // Expire sooner to retry later
-          };
-          
-          return result;
-        }
+      // Use Realtime Database only to avoid conflicts with FirestoreDisabler
+      const { database } = getFirebaseServices();
+      if (!database) {
+        console.error('No database available for user profile fetch');
+        return { username: 'Unknown User', avatarUrl: null };
       }
+      
+      const { ref, get } = await import('firebase/database');
+      const userRef = ref(database, `users/${userId}`);
+      const userSnapshot = await get(userRef);
+      
+      let result;
+      if (userSnapshot.exists()) {
+        const userData = userSnapshot.val();
+        result = {
+          username: userData.displayName || userData.username || userData.email?.split('@')[0] || 'Unknown User',
+          avatarUrl: userData.avatarUrl || userData.photoURL || null
+        };
+      } else {
+        const fallbackUsername = `User ${userId.substring(0, 8)}`;
+        result = { 
+          username: fallbackUsername, 
+          avatarUrl: null 
+        };
+      }
+      
+      // Update cache
+      profileCache.current[userId] = {
+        data: result,
+        timestamp: Date.now()
+      };
+      
+      return result;
     } catch (err) {
       console.error(`Error fetching profile for ${userId}:`, err);
       
       // More user-friendly fallback
       const fallbackUsername = `User ${userId.substring(0, 8)}`;
       return { username: fallbackUsername, avatarUrl: null };
-    } finally {
-      setProfilesLoading(prev => ({ ...prev, [userId]: false }));
     }
   };
   
