@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { MessageCircle, Check, CheckCheck, Image, Smile, Trash2, Ban } from 'lucide-react';
 import { BlockUserDialog } from './BlockUserDialog';
-import { UserNameLink } from './UserNameLink';
+
 import { useAuth } from '@/contexts/AuthContext';
 import { useMessages } from '@/hooks/useMessages';
 import { TypingIndicator, useTypingStatus } from './TypingIndicator';
@@ -600,10 +600,99 @@ export function Chat({
 
   if (!user) return null;
 
-  // Track user profiles for messages using the centralized useUserData hook
+  // Track user profiles for messages using Realtime Database (since Firestore is disabled on messages page)
   const [userProfiles, setUserProfiles] = useState<Record<string, any>>({});
+  const [profilesLoading, setProfilesLoading] = useState<Record<string, boolean>>({});
   
-  // Fetch user profiles for messages using the prefetchUserData function
+  // Cache for user profiles to avoid repeated fetches
+  const profileCache = useRef<Record<string, {
+    data: { username: string; avatarUrl: string | null };
+    timestamp: number;
+  }>>({});
+  
+  // Cache expiration time (5 minutes)
+  const CACHE_EXPIRATION = 5 * 60 * 1000;
+
+  const fetchUserProfile = async (userId: string) => {
+    if (!userId) return null;
+    
+    try {
+      setProfilesLoading(prev => ({ ...prev, [userId]: true }));
+      
+      // Check cache first
+      const cachedProfile = profileCache.current[userId];
+      if (cachedProfile && Date.now() - cachedProfile.timestamp < CACHE_EXPIRATION) {
+        console.log(`Using cached profile for ${userId}`);
+        return cachedProfile.data;
+      }
+      
+      // Use Realtime Database instead of Firestore since Firestore is disabled on this page
+      const { database } = getFirebaseServices();
+      if (!database) {
+        console.error('Realtime Database not available for user profile fetch');
+        return { username: 'Unknown User', avatarUrl: null };
+      }
+      
+      try {
+        const { ref, get } = await import('firebase/database');
+        const userRef = ref(database, `users/${userId}`);
+        const userSnapshot = await get(userRef);
+        
+        let result;
+        if (userSnapshot.exists()) {
+          const userData = userSnapshot.val();
+          result = {
+            username: userData.displayName || userData.username || userData.email?.split('@')[0] || 'Unknown User',
+            avatarUrl: userData.avatarUrl || userData.photoURL || null
+          };
+          console.log(`Fetched user profile from Realtime Database for ${userId}:`, result.username);
+        } else {
+          // If user doesn't exist in Realtime Database, use a fallback that's more user-friendly
+          const fallbackUsername = `User ${userId.substring(0, 8)}`;
+          result = { 
+            username: fallbackUsername, 
+            avatarUrl: null 
+          };
+          console.log(`User ${userId} not found in Realtime Database, using fallback: ${fallbackUsername}`);
+        }
+        
+        // Update cache
+        profileCache.current[userId] = {
+          data: result,
+          timestamp: Date.now()
+        };
+        
+        return result;
+      } catch (dbError) {
+        console.error(`Error fetching from Realtime Database for ${userId}:`, dbError);
+        
+        // Fallback to a more user-friendly unknown user format
+        const fallbackUsername = `User ${userId.substring(0, 8)}`;
+        const result = { 
+          username: fallbackUsername, 
+          avatarUrl: null 
+        };
+        
+        // Cache the fallback with shorter expiration
+        profileCache.current[userId] = {
+          data: result,
+          timestamp: Date.now() - (CACHE_EXPIRATION / 2) // Expire sooner to retry later
+        };
+        
+        return result;
+      }
+    } catch (err) {
+      console.error(`Error fetching profile for ${userId}:`, err);
+      
+      // More user-friendly fallback
+      const fallbackUsername = `User ${userId.substring(0, 8)}`;
+      return { username: fallbackUsername, avatarUrl: null };
+    } finally {
+      setProfilesLoading(prev => ({ ...prev, [userId]: false }));
+    }
+  };
+  
+  // Fetch user profiles for messages using Realtime Database
   useEffect(() => {
     if (messages.length === 0) return;
     
@@ -618,34 +707,23 @@ export function Chat({
     
     if (missingUserIds.length === 0) return;
     
-    // Import the prefetchUserData function dynamically to avoid circular dependencies
-    import('@/hooks/useUserData').then(({ prefetchUserData }) => {
-      // Prefetch all missing user profiles at once
-      prefetchUserData(missingUserIds).then(() => {
-        // After prefetching, get the data from the global cache
-        const newProfiles: Record<string, any> = {};
-        
-        // Access the userCache directly from the module
-        const userCacheModule = require('@/hooks/useUserData');
-        const userCache = userCacheModule.default?.userCache || {};
-        
-        missingUserIds.forEach(userId => {
-          if (userCache[userId]?.data) {
-            newProfiles[userId] = userCache[userId].data;
-          } else {
-            // Fallback if not in cache
-            newProfiles[userId] = { username: 'Unknown User', avatarUrl: null };
+    // Fetch profiles for missing users
+    const fetchProfiles = async () => {
+      const profiles: Record<string, any> = {};
+      await Promise.all(
+        missingUserIds.map(async (userId) => {
+          const profile = await fetchUserProfile(userId);
+          if (profile) {
+            profiles[userId] = profile;
           }
-        });
-        
-        // Update the local state with the new profiles
-        setUserProfiles(prev => ({
-          ...prev,
-          ...newProfiles
-        }));
-      }).catch(err => {
-        console.error('Error prefetching user data:', err);
-      });
+        })
+      );
+      
+      setUserProfiles(prev => ({ ...prev, ...profiles }));
+    };
+    
+    fetchProfiles().catch(err => {
+      console.error('Error fetching user profiles:', err);
     });
   }, [messages]);
 
@@ -669,7 +747,7 @@ export function Chat({
                 )}
               </Avatar>
               <div className="flex flex-col">
-                <UserNameLink userId={receiverId} initialUsername={displayName} />
+                <span className="font-medium">{displayName || 'Unknown User'}</span>
                 {messages[0]?.subject && (
                   <div className="text-sm font-medium text-primary">
                     {messages[0].subject}
@@ -790,10 +868,9 @@ export function Chat({
                       <div className={`flex flex-col gap-1 max-w-[80%] md:max-w-[70%]`}>
                         {!isUserMessage && (
                           <div className="text-xs text-muted-foreground ml-2">
-                            <UserNameLink 
-                              userId={message.senderId} 
-                              initialUsername={userProfiles[message.senderId]?.username || 'Loading...'}
-                            />
+                            <span>
+                              {userProfiles[message.senderId]?.username || 'Loading...'}
+                            </span>
                           </div>
                         )}
                         <div
