@@ -1,7 +1,38 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { getFirebaseAdmin } from '@/lib/firebase-admin';
-import { getSubscriptionData, syncSubscriptionData } from '@/lib/subscription-sync';
 import Stripe from 'stripe';
+
+// Dynamic imports to handle module resolution issues
+let firebaseAdminInstance: any = null;
+let subscriptionSyncModule: any = null;
+
+async function getFirebaseAdminInstance() {
+  if (firebaseAdminInstance) {
+    return firebaseAdminInstance;
+  }
+  
+  try {
+    const { getFirebaseAdmin } = await import('@/lib/firebase-admin');
+    firebaseAdminInstance = getFirebaseAdmin();
+    return firebaseAdminInstance;
+  } catch (error) {
+    console.error('Failed to import Firebase admin:', error);
+    throw new Error('Firebase admin not available');
+  }
+}
+
+async function getSubscriptionSyncModule() {
+  if (subscriptionSyncModule) {
+    return subscriptionSyncModule;
+  }
+  
+  try {
+    subscriptionSyncModule = await import('@/lib/subscription-sync');
+    return subscriptionSyncModule;
+  } catch (error) {
+    console.error('Failed to import subscription sync module:', error);
+    throw new Error('Subscription sync module not available');
+  }
+}
 
 // Initialize Stripe with error handling
 const initializeStripe = () => {
@@ -106,7 +137,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     
     try {
       // Initialize Firebase Admin and verify token
-      const { admin } = getFirebaseAdmin();
+      const { admin } = await getFirebaseAdminInstance();
       console.log(`[Subscription Check ${requestId}] Firebase Admin initialized successfully`);
       
       // Log token details for debugging (safely)
@@ -155,7 +186,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       });
 
       // Get subscription data using our utility function
-      const { source, data: subscriptionData } = await getSubscriptionData(userId);
+      const syncModule = await getSubscriptionSyncModule();
+      const { source, data: subscriptionData } = await syncModule.getSubscriptionData(userId);
       
       console.log(`[Subscription Check ${requestId}] Retrieved subscription data from ${source}:`, {
         userId,
@@ -194,7 +226,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         };
         
         // Sync the updated data to both databases
-        await syncSubscriptionData(userId, updatedSubscription);
+        await syncModule.syncSubscriptionData(userId, updatedSubscription);
         
         return res.status(200).json({
           isPremium: true,
@@ -232,7 +264,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           };
           
           // Sync the updated data to both databases
-          await syncSubscriptionData(userId, updatedSubscription);
+          await syncModule.syncSubscriptionData(userId, updatedSubscription);
 
           console.log(`[Subscription Check ${requestId}] Updated subscription with Stripe data:`, {
             userId,
@@ -363,7 +395,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           };
           
           // Sync these updated dates for admin subs back to DB
-          await syncSubscriptionData(userId, adminUpdatedSubscription);
+          await syncModule.syncSubscriptionData(userId, adminUpdatedSubscription);
           
           // Update local subscriptionData for the response
           subscriptionData.startDate = adminUpdatedSubscription.startDate;

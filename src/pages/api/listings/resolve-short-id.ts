@@ -1,10 +1,17 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 
-// Dynamic import for Firebase admin to handle module resolution issues
+// Import Firebase admin directly
+let firebaseAdminInstance: any = null;
+
 async function getFirebaseAdminInstance() {
+  if (firebaseAdminInstance) {
+    return firebaseAdminInstance;
+  }
+  
   try {
     const { getFirebaseAdmin } = await import('@/lib/firebase-admin');
-    return getFirebaseAdmin();
+    firebaseAdminInstance = getFirebaseAdmin();
+    return firebaseAdminInstance;
   } catch (error) {
     console.error('Failed to import Firebase admin:', error);
     throw new Error('Firebase admin not available');
