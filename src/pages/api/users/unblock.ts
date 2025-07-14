@@ -1,9 +1,22 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { getAuth } from 'firebase-admin/auth'
-import { getDatabase } from 'firebase-admin/database'
-import { initAdmin } from '@/lib/firebase-admin'
 
-initAdmin()
+// Dynamic imports to handle module resolution issues
+let firebaseAdminInstance: any = null;
+
+async function getFirebaseAdminInstance() {
+  if (firebaseAdminInstance) {
+    return firebaseAdminInstance;
+  }
+  
+  try {
+    const { getFirebaseAdmin } = await import('@/lib/firebase-admin');
+    firebaseAdminInstance = getFirebaseAdmin();
+    return firebaseAdminInstance;
+  } catch (error) {
+    console.error('Failed to import Firebase admin:', error);
+    throw new Error('Firebase admin not available');
+  }
+}
 
 export default async function handler(
   req: NextApiRequest,
@@ -20,7 +33,11 @@ export default async function handler(
     }
 
     const token = authHeader.split('Bearer ')[1]
-    const decodedToken = await getAuth().verifyIdToken(token)
+    
+    // Get Firebase admin instance dynamically
+    const { admin, auth, database } = await getFirebaseAdminInstance()
+    
+    const decodedToken = await auth.verifyIdToken(token)
     const userId = decodedToken.uid
 
     const { unblockedUserId } = req.body
@@ -30,12 +47,12 @@ export default async function handler(
 
     // Verify that the unblocked user exists
     try {
-      await getAuth().getUser(unblockedUserId)
+      await auth.getUser(unblockedUserId)
     } catch (error) {
       return res.status(404).json({ error: 'User not found' })
     }
 
-    const db = getDatabase()
+    const db = database
     
     // Remove from blocked users list
     await db.ref(`users/${userId}/blockedUsers/${unblockedUserId}`).remove()
