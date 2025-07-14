@@ -688,37 +688,42 @@ export function Chat({
 
   const fetchUserProfile = async (userId: string) => {
     if (!userId) return null;
-    
+
     try {
       // Check cache first
       const cachedProfile = profileCache.current[userId];
       if (cachedProfile && Date.now() - cachedProfile.timestamp < CACHE_EXPIRATION) {
         return cachedProfile.data;
       }
-      
+
       // Try Firestore first since that's where user profiles are stored
       try {
         const userDoc = await getDoc(doc(firebaseDb, 'users', userId));
-        
+
         if (userDoc.exists()) {
           const userData = userDoc.data();
+          const username =
+            userData.displayName ||
+            userData.username ||
+            (userData.email && userData.email.split('@')[0]) ||
+            `User ${userId.substring(0, 8)}`;
           const result = {
-            username: userData.displayName || userData.username || userData.email?.split('@')[0] || 'Unknown User',
+            username,
             avatarUrl: userData.avatarUrl || userData.photoURL || null
           };
-          
+
           // Update cache
           profileCache.current[userId] = {
             data: result,
             timestamp: Date.now()
           };
-          
+
           return result;
         }
       } catch (firestoreError) {
         console.error(`Error fetching from Firestore for ${userId}:`, firestoreError);
       }
-      
+
       // Fallback to Realtime Database if Firestore fails
       const { database } = getFirebaseServices();
       if (database) {
@@ -726,44 +731,49 @@ export function Chat({
           const { ref, get } = await import('firebase/database');
           const userRef = ref(database, `users/${userId}`);
           const userSnapshot = await get(userRef);
-          
+
           if (userSnapshot.exists()) {
             const userData = userSnapshot.val();
+            const username =
+              userData.displayName ||
+              userData.username ||
+              (userData.email && userData.email.split('@')[0]) ||
+              `User ${userId.substring(0, 8)}`;
             const result = {
-              username: userData.displayName || userData.username || userData.email?.split('@')[0] || 'Unknown User',
+              username,
               avatarUrl: userData.avatarUrl || userData.photoURL || null
             };
-            
+
             // Update cache
             profileCache.current[userId] = {
               data: result,
               timestamp: Date.now()
             };
-            
+
             return result;
           }
         } catch (dbError) {
           console.error(`Error fetching from Realtime Database for ${userId}:`, dbError);
         }
       }
-      
+
       // Final fallback
       const fallbackUsername = `User ${userId.substring(0, 8)}`;
-      const result = { 
-        username: fallbackUsername, 
-        avatarUrl: null 
+      const result = {
+        username: fallbackUsername,
+        avatarUrl: null
       };
-      
+
       // Update cache
       profileCache.current[userId] = {
         data: result,
         timestamp: Date.now()
       };
-      
+
       return result;
     } catch (err) {
       console.error(`Error fetching profile for ${userId}:`, err);
-      
+
       // More user-friendly fallback
       const fallbackUsername = `User ${userId.substring(0, 8)}`;
       return { username: fallbackUsername, avatarUrl: null };
