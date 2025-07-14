@@ -168,13 +168,20 @@ export function BlockedUsersManager() {
     setUnblockingUsers(prev => new Set(prev).add(userId));
 
     try {
-      const { database } = getFirebaseServices();
-      if (!database) {
-        throw new Error('Database connection failed');
-      }
+      const response = await fetch('/api/users/unblock', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${await user.getIdToken()}`
+        },
+        body: JSON.stringify({
+          unblockedUserId: userId
+        })
+      });
 
-      const blockedUserRef = ref(database, `users/${user.uid}/blockedUsers/${userId}`);
-      await remove(blockedUserRef);
+      if (!response.ok) {
+        throw new Error('Failed to unblock user');
+      }
 
       toast({
         title: "User unblocked",

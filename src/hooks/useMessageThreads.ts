@@ -28,14 +28,32 @@ export const useMessageThreads = () => {
   const [error, setError] = useState<string | null>(null);
   const { user } = useAuth();
 
-  // Helper function to check if a user is blocked
+  // Cache for blocked status to avoid repeated checks
+  const [blockedStatusCache, setBlockedStatusCache] = useState<Record<string, { isBlocked: boolean; timestamp: number }>>({});
+  const CACHE_DURATION = 30000; // 30 seconds
+
+  // Helper function to check if a user is blocked with caching
   const isUserBlocked = async (otherUserId: string, database: any): Promise<boolean> => {
     if (!database || !user) return false;
+    
+    // Check cache first
+    const cached = blockedStatusCache[otherUserId];
+    if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+      return cached.isBlocked;
+    }
     
     try {
       const blockedUsersRef = ref(database, `users/${user.uid}/blockedUsers/${otherUserId}`);
       const snapshot = await get(blockedUsersRef);
-      return snapshot.exists();
+      const isBlocked = snapshot.exists();
+      
+      // Update cache
+      setBlockedStatusCache(prev => ({
+        ...prev,
+        [otherUserId]: { isBlocked, timestamp: Date.now() }
+      }));
+      
+      return isBlocked;
     } catch (error) {
       console.error('Error checking blocked status:', error);
       return false;
@@ -89,6 +107,16 @@ export const useMessageThreads = () => {
     setError(null); // Clear any previous errors
     
     const threadsRef = ref(database, `users/${user.uid}/messageThreads`);
+    
+    // Listen for unblock actions to clear cache
+    const unblockRef = ref(database, `users/${user.uid}/lastUnblockAction`);
+    const unblockUnsubscribe = onValue(unblockRef, (snapshot) => {
+      if (snapshot.exists()) {
+        // Clear the blocked status cache when an unblock action occurs
+        console.log('Unblock action detected, clearing blocked status cache');
+        setBlockedStatusCache({});
+      }
+    });
 
     const unsubscribe = onValue(threadsRef, async (snapshot) => {
       try {
@@ -158,7 +186,10 @@ export const useMessageThreads = () => {
       setLoading(false);
     });
 
-    return () => unsubscribe();
+    return () => {
+      unsubscribe();
+      unblockUnsubscribe();
+    };
   }, [user]);
 
   return {

@@ -57,6 +57,10 @@ export default async function handler(
     // Remove from blocked users list
     await db.ref(`users/${userId}/blockedUsers/${unblockedUserId}`).remove()
 
+    // Also clear any cached blocking status by updating a timestamp
+    // This helps ensure that database rules are re-evaluated
+    await db.ref(`users/${userId}/lastUnblockAction`).set(Date.now())
+
     console.log(`User ${userId} unblocked user ${unblockedUserId}`)
     return res.status(200).json({ success: true })
   } catch (error) {

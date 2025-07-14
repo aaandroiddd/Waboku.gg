@@ -266,8 +266,13 @@ export const useMessages = (chatId?: string) => {
       return 'Network error. Please check your internet connection and try again.';
     }
     
-    // For message loading errors, provide a generic message
-    return 'Unable to load messages. Please try refreshing the page.';
+    // For message loading errors, provide a more specific message
+    if (context === 'message_loading') {
+      return 'Unable to load messages. Please try refreshing the page.';
+    }
+    
+    // For other contexts, provide a generic message
+    return 'An error occurred. Please try again.';
   };
 
   const findExistingChat = async (userId: string, receiverId: string, listingId?: string) => {
