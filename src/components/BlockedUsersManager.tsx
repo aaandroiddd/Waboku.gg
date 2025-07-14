@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { getDatabase, ref, onValue, remove } from 'firebase/database';
+import { useEffect, useState, useRef } from 'react';
+import { getDatabase, ref, onValue, remove, get } from 'firebase/database';
 import { doc, getDoc } from 'firebase/firestore';
 import { db, getFirebaseServices } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
@@ -21,6 +21,81 @@ export function BlockedUsersManager() {
   const [blockedUsers, setBlockedUsers] = useState<BlockedUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [unblockingUsers, setUnblockingUsers] = useState<Set<string>>(new Set());
+  
+  // Cache for user profiles to avoid repeated fetches
+  const profileCache = useRef<Record<string, {
+    data: { username: string };
+    timestamp: number;
+  }>>({});
+  
+  // Cache expiration time (5 minutes)
+  const CACHE_EXPIRATION = 5 * 60 * 1000;
+
+  // Helper function to fetch user profile with caching
+  const fetchUserProfile = async (userId: string, database: any): Promise<string> => {
+    if (!userId) return `User ${userId.substring(0, 8)}`;
+
+    try {
+      // Check cache first
+      const cachedProfile = profileCache.current[userId];
+      if (cachedProfile && Date.now() - cachedProfile.timestamp < CACHE_EXPIRATION) {
+        return cachedProfile.data.username;
+      }
+
+      let username = `User ${userId.substring(0, 8)}`;
+
+      // Try Firestore first since that's where user profiles are stored
+      try {
+        const userDoc = await getDoc(doc(db, 'users', userId));
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+          username = userData.displayName || 
+                   userData.username || 
+                   (userData.email && userData.email.split('@')[0]) || 
+                   username;
+          
+          // Update cache
+          profileCache.current[userId] = {
+            data: { username },
+            timestamp: Date.now()
+          };
+          
+          return username;
+        }
+      } catch (firestoreError) {
+        console.error(`Error fetching user ${userId} from Firestore:`, firestoreError);
+      }
+
+      // Fallback to Realtime Database if Firestore fails
+      if (database) {
+        try {
+          const userRef = ref(database, `users/${userId}`);
+          const userSnapshot = await get(userRef);
+          
+          if (userSnapshot.exists()) {
+            const userData = userSnapshot.val();
+            username = userData.displayName || 
+                     userData.username || 
+                     (userData.email && userData.email.split('@')[0]) || 
+                     username;
+          }
+        } catch (dbError) {
+          console.error(`Error fetching user ${userId} from Realtime Database:`, dbError);
+        }
+      }
+
+      // Update cache
+      profileCache.current[userId] = {
+        data: { username },
+        timestamp: Date.now()
+      };
+
+      return username;
+    } catch (error) {
+      console.error(`Error fetching profile for ${userId}:`, error);
+      return `User ${userId.substring(0, 8)}`;
+    }
+  };
 
   useEffect(() => {
     if (!user) {
@@ -47,18 +122,7 @@ export function BlockedUsersManager() {
           // Fetch user details for each blocked user
           for (const userId of blockedUserIds) {
             try {
-              // Try Firestore first
-              let username = `User ${userId.substring(0, 8)}`;
-              
-              try {
-                const userDoc = await getDoc(doc(db, 'users', userId));
-                if (userDoc.exists()) {
-                  const userData = userDoc.data();
-                  username = userData.displayName || userData.username || userData.email?.split('@')[0] || username;
-                }
-              } catch (firestoreError) {
-                console.error(`Error fetching user ${userId} from Firestore:`, firestoreError);
-              }
+              const username = await fetchUserProfile(userId, database);
 
               blockedUsersData.push({
                 userId,
@@ -68,6 +132,12 @@ export function BlockedUsersManager() {
               });
             } catch (error) {
               console.error(`Error processing blocked user ${userId}:`, error);
+              // Add fallback entry even if there's an error
+              blockedUsersData.push({
+                userId,
+                username: `User ${userId.substring(0, 8)}`,
+                blockedAt: typeof data[userId] === 'number' ? data[userId] : Date.now()
+              });
             }
           }
 
