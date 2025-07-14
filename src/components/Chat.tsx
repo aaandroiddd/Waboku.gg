@@ -978,8 +978,20 @@ export function Chat({
                         {!isUserMessage && (
                           <div className="text-xs text-muted-foreground ml-2">
                             <span>
-                              {userProfiles[message.senderId]?.username || 
-                               (message.senderId ? `User ${message.senderId.substring(0, 8)}` : 'Unknown User')}
+                              {(() => {
+                                // If this message is from the receiver and we have a valid receiverName from the parent
+                                if (message.senderId === receiverId && 
+                                    initialReceiverName && 
+                                    initialReceiverName !== 'Loading...' && 
+                                    initialReceiverName !== 'Unknown User' && 
+                                    !initialReceiverName.startsWith('User ')) {
+                                  return initialReceiverName;
+                                }
+                                
+                                // Otherwise use userProfiles data or fallback
+                                return userProfiles[message.senderId]?.username || 
+                                       (message.senderId ? `User ${message.senderId.substring(0, 8)}` : 'Unknown User');
+                              })()}
                             </span>
                           </div>
                         )}
