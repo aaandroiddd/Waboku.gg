@@ -118,6 +118,13 @@
               ".validate": false
             }
           }
+        },
+        "blockedUsers": {
+          ".read": "auth != null && auth.uid === $uid",
+          ".write": "auth != null && auth.uid === $uid",
+          "$blockedUserId": {
+            ".validate": "newData.isBoolean() || newData.isNumber()"
+          }
         }
       }
     },
@@ -234,7 +241,7 @@
       ".indexOn": ["createdAt", "participants"],
       "$chatId": {
         ".read": "auth != null && (data.child('participants').child(auth.uid).exists() || !data.exists())",
-        ".write": "auth != null && (data.child('participants').child(auth.uid).exists() || !data.exists())",
+        ".write": "auth != null && (data.child('participants').child(auth.uid).exists() || !data.exists()) && !root.child('users').child(newData.child('participants').child(auth.uid).exists() ? Object.keys(newData.child('participants').val()).filter(function(key) { return key !== auth.uid; })[0] : '').child('blockedUsers').child(auth.uid).exists()",
         ".validate": "newData.hasChildren(['participants', 'createdAt'])",
         "participants": {
           ".validate": "newData.hasChildren()",

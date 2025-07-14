@@ -5,6 +5,7 @@ import { doc, getDoc } from 'firebase/firestore';
 import { db, getFirebaseServices } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUnread } from '@/contexts/UnreadContext';
+import { useMessageThreads } from '@/hooks/useMessageThreads';
 import { Skeleton } from "@/components/ui/skeleton";
 import { Chat } from '@/components/Chat';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -43,13 +44,9 @@ export default function MessagesPage() {
   const router = useRouter();
   const { user } = useAuth();
   const { clearUnreadCount, resetUnreadCount } = useUnread();
-  const [chats, setChats] = useState<ChatPreview[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { threads, loading, error } = useMessageThreads();
   const [selectedChat, setSelectedChat] = useState<string | null>(null);
-  const [participantProfiles, setParticipantProfiles] = useState<Record<string, ParticipantProfile>>({});
   const [isMobileView, setIsMobileView] = useState(false);
-  const [profilesLoading, setProfilesLoading] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     const handleResize = () => {
@@ -61,108 +58,7 @@ export default function MessagesPage() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Cache for user profiles to avoid repeated fetches
-  const profileCache = useRef<Record<string, {
-    data: { username: string; avatarUrl: string | null };
-    timestamp: number;
-  }>>({});
-  
-  // Cache expiration time (5 minutes)
-  const CACHE_EXPIRATION = 5 * 60 * 1000;
 
-  const fetchUserProfile = async (userId: string) => {
-    if (!userId) return null;
-    
-    try {
-      setProfilesLoading(prev => ({ ...prev, [userId]: true }));
-      
-      // Check cache first
-      const cachedProfile = profileCache.current[userId];
-      if (cachedProfile && Date.now() - cachedProfile.timestamp < CACHE_EXPIRATION) {
-        console.log(`Using cached profile for ${userId}`);
-        return cachedProfile.data;
-      }
-      
-      // Try Firestore first since that's where user profiles are stored
-      try {
-        const userDoc = await getDoc(doc(db, 'users', userId));
-        
-        if (userDoc.exists()) {
-          const userData = userDoc.data();
-          const result = {
-            username: userData.displayName || userData.username || userData.email?.split('@')[0] || 'Unknown User',
-            avatarUrl: userData.avatarUrl || userData.photoURL || null
-          };
-          
-          console.log(`Fetched user profile from Firestore for ${userId}:`, result.username);
-          
-          // Update cache
-          profileCache.current[userId] = {
-            data: result,
-            timestamp: Date.now()
-          };
-          
-          return result;
-        }
-      } catch (firestoreError) {
-        console.error(`Error fetching from Firestore for ${userId}:`, firestoreError);
-      }
-      
-      // Fallback to Realtime Database if Firestore fails
-      const { database } = getFirebaseServices();
-      if (database) {
-        try {
-          const userRef = ref(database, `users/${userId}`);
-          const userSnapshot = await get(userRef);
-          
-          if (userSnapshot.exists()) {
-            const userData = userSnapshot.val();
-            const result = {
-              username: userData.displayName || userData.username || userData.email?.split('@')[0] || 'Unknown User',
-              avatarUrl: userData.avatarUrl || userData.photoURL || null
-            };
-            
-            console.log(`Fetched user profile from Realtime Database for ${userId}:`, result.username);
-            
-            // Update cache
-            profileCache.current[userId] = {
-              data: result,
-              timestamp: Date.now()
-            };
-            
-            return result;
-          }
-        } catch (dbError) {
-          console.error(`Error fetching from Realtime Database for ${userId}:`, dbError);
-        }
-      }
-      
-      // Final fallback
-      const fallbackUsername = `User ${userId.substring(0, 8)}`;
-      const result = { 
-        username: fallbackUsername, 
-        avatarUrl: null 
-      };
-      
-      console.log(`User ${userId} not found in either database, using fallback: ${fallbackUsername}`);
-      
-      // Cache the fallback with shorter expiration
-      profileCache.current[userId] = {
-        data: result,
-        timestamp: Date.now() - (CACHE_EXPIRATION / 2) // Expire sooner to retry later
-      };
-      
-      return result;
-    } catch (err) {
-      console.error(`Error fetching profile for ${userId}:`, err);
-      
-      // More user-friendly fallback
-      const fallbackUsername = `User ${userId.substring(0, 8)}`;
-      return { username: fallbackUsername, avatarUrl: null };
-    } finally {
-      setProfilesLoading(prev => ({ ...prev, [userId]: false }));
-    }
-  };
 
   // Clear unread count when component mounts
   useEffect(() => {
@@ -197,180 +93,6 @@ export default function MessagesPage() {
       console.error('Error syncing message threads:', error);
     }
     return false;
-  };
-
-  useEffect(() => {
-    if (!user) {
-      setLoading(false);
-      return;
-    }
-
-    const { database } = getFirebaseServices();
-    
-    if (!database) {
-      setError('Database connection failed');
-      setLoading(false);
-      return;
-    }
-
-    // Use the user's messageThreads to get their chats
-    const userThreadsRef = ref(database, `users/${user.uid}/messageThreads`);
-
-    const processUserThreads = async (threadsData: any) => {
-      // If no message threads exist, try to sync them from existing chats
-      if (!threadsData) {
-        console.log('No message threads found, attempting to sync...');
-        
-        try {
-          const synced = await syncMessageThreads();
-          if (synced) {
-            // Reload after sync
-            const userThreadsRef = ref(database, `users/${user.uid}/messageThreads`);
-            const newThreadsSnapshot = await get(userThreadsRef);
-            const newThreadsData = newThreadsSnapshot.val();
-            
-            if (newThreadsData) {
-              return processUserThreads(newThreadsData);
-            }
-          }
-        } catch (error) {
-          console.error('Error syncing message threads:', error);
-        }
-        
-        setChats([]);
-        setLoading(false);
-        return;
-      }
-
-      // Get chat IDs from user's message threads
-      const chatIds = Object.keys(threadsData);
-      
-      if (chatIds.length === 0) {
-        setChats([]);
-        setLoading(false);
-        return;
-      }
-
-      // Fetch individual chats that the user participates in
-      const chatPromises = chatIds.map(async (chatId) => {
-        try {
-          const chatRef = ref(database, `chats/${chatId}`);
-          const chatSnapshot = await get(chatRef);
-          const chatData = chatSnapshot.val();
-          
-          if (chatData && chatData.participants?.[user.uid] && !chatData.deletedBy?.[user.uid]) {
-            return {
-              id: chatId,
-              ...chatData
-            };
-          }
-          return null;
-        } catch (error) {
-          console.error(`Error fetching chat ${chatId}:`, error);
-          return null;
-        }
-      });
-
-      const chatResults = await Promise.all(chatPromises);
-      const validChats = chatResults
-        .filter((chat): chat is ChatPreview => chat !== null)
-        .sort((a, b) => (b.lastMessage?.timestamp || 0) - (a.lastMessage?.timestamp || 0));
-
-      setChats(validChats);
-      
-      // Fetch user profiles for participants
-      const uniqueParticipants = new Set<string>();
-      validChats.forEach(chat => {
-        Object.keys(chat.participants || {}).forEach(participantId => {
-          if (participantId !== user.uid) {
-            uniqueParticipants.add(participantId);
-          }
-        });
-      });
-
-      // Fetch profiles for participants
-      const participantIds = Array.from(uniqueParticipants);
-      const profiles: Record<string, ParticipantProfile> = {};
-      await Promise.all(
-        participantIds.map(async (id) => {
-          const profile = await fetchUserProfile(id);
-          if (profile) {
-            profiles[id] = profile;
-          }
-        })
-      );
-      
-      setParticipantProfiles(prev => ({ ...prev, ...profiles }));
-      setLoading(false);
-    };
-
-    // Initial load
-    setLoading(true);
-    get(userThreadsRef)
-      .then(snapshot => processUserThreads(snapshot.val()))
-      .catch(err => {
-        console.error('Error loading user message threads:', err);
-        setError('Failed to load messages');
-        setLoading(false);
-      });
-
-    // Real-time updates for user's message threads
-    const unsubscribe = onValue(userThreadsRef, 
-      snapshot => processUserThreads(snapshot.val()),
-      error => {
-        console.error('Real-time update error:', error);
-        setError('Failed to receive updates');
-      }
-    );
-
-    return () => unsubscribe();
-  }, [user]);
-
-  const getOtherParticipant = (chat?: ChatPreview | null) => {
-    if (!chat?.participants) return { id: '', name: 'Unknown User' };
-    
-    const otherParticipantId = Object.keys(chat.participants).find(id => id !== user?.uid);
-    if (!otherParticipantId) return { id: '', name: 'Unknown User' };
-
-    // If we don't have this user's profile yet and it's not already loading, trigger a fetch
-    if (!participantProfiles[otherParticipantId] && !profilesLoading[otherParticipantId]) {
-      // Use a setTimeout to avoid blocking the render
-      setTimeout(() => {
-        fetchUserProfile(otherParticipantId).then(profile => {
-          if (profile) {
-            setParticipantProfiles(prev => ({ ...prev, [otherParticipantId]: profile }));
-          }
-        });
-      }, 0);
-    }
-
-    const profile = participantProfiles[otherParticipantId];
-    const isLoading = profilesLoading[otherParticipantId];
-    
-    // Try all available sources for the username in order of preference
-    let username = 'Unknown User';
-    
-    // First try chat participant names (from the chat object)
-    if (chat.participantNames?.[otherParticipantId]) {
-      username = chat.participantNames[otherParticipantId];
-    }
-    // Then try profile username (from our fetched profiles)
-    else if (profile?.username && profile.username !== 'Unknown User') {
-      username = profile.username;
-    }
-    // Show loading state if profile is being fetched
-    else if (isLoading) {
-      username = 'Loading...';
-    }
-    // Fallback to a more user-friendly format
-    else {
-      username = `User ${otherParticipantId.substring(0, 8)}`;
-    }
-    
-    return {
-      id: otherParticipantId,
-      name: username
-    };
   };
 
   if (!user) return null;
@@ -478,7 +200,7 @@ export default function MessagesPage() {
                 <Skeleton className="w-full h-20" />
                 <Skeleton className="w-full h-20" />
               </div>
-            ) : chats.length === 0 ? (
+            ) : threads.length === 0 ? (
               <div className="flex flex-col items-center justify-center flex-1 p-4 text-center">
                 <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-4">
                   <svg
@@ -535,18 +257,15 @@ export default function MessagesPage() {
             ) : (
               <ScrollArea className="flex-1">
                 <div className="space-y-3 p-4">
-                  {chats.map((chat) => {
-                    const otherParticipant = getOtherParticipant(chat);
-                    const isUnread = chat.lastMessage && 
-                                    chat.lastMessage.receiverId === user?.uid && 
-                                    chat.lastMessage.read === false;
+                  {threads.map((thread) => {
+                    const isUnread = thread.unreadCount > 0;
                     
                     return (
                       <Button
-                        key={chat.id}
-                        variant={selectedChat === chat.id ? "secondary" : "ghost"}
+                        key={thread.chatId}
+                        variant={selectedChat === thread.chatId ? "secondary" : "ghost"}
                         className={`w-full justify-start h-auto py-3 relative ${isUnread ? 'bg-muted/50' : ''}`}
-                        onClick={() => setSelectedChat(chat.id)}
+                        onClick={() => setSelectedChat(thread.chatId)}
                       >
                         {isUnread && (
                           <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary rounded-full"></div>
@@ -554,25 +273,25 @@ export default function MessagesPage() {
                         <div className="text-left w-full space-y-1.5">
                           <div className="font-medium flex items-center gap-2">
                             <span className="font-medium">
-                              {otherParticipant.name}
+                              {thread.recipientName || `User ${thread.recipientId.substring(0, 8)}`}
                             </span>
                             {isUnread && (
                               <div className="h-2 w-2 rounded-full bg-primary"></div>
                             )}
                           </div>
-                          {chat.subject && (
+                          {thread.subject && (
                             <div className="text-sm font-medium text-primary truncate">
-                              {chat.subject}
+                              {thread.subject}
                             </div>
                           )}
-                          {chat.listingTitle && (
+                          {thread.listingTitle && (
                             <div className="text-sm font-medium text-muted-foreground truncate border-l-2 border-primary pl-2">
-                              {chat.listingTitle}
+                              {thread.listingTitle}
                             </div>
                           )}
-                          {chat.lastMessage && (
+                          {thread.lastMessage && (
                             <div className={`text-sm truncate mt-1 ${isUnread ? 'font-medium text-foreground' : 'text-muted-foreground'}`}>
-                              {chat.lastMessage.content}
+                              {thread.lastMessage.content}
                             </div>
                           )}
                         </div>
@@ -605,10 +324,10 @@ export default function MessagesPage() {
                 <div className="flex-1 overflow-hidden">
                   <Chat
                     chatId={selectedChat}
-                    receiverId={getOtherParticipant(chats.find(c => c.id === selectedChat)!).id}
-                    receiverName={getOtherParticipant(chats.find(c => c.id === selectedChat)!).name}
-                    listingId={chats.find(c => c.id === selectedChat)?.listingId}
-                    listingTitle={chats.find(c => c.id === selectedChat)?.listingTitle}
+                    receiverId={threads.find(t => t.chatId === selectedChat)?.recipientId || ''}
+                    receiverName={threads.find(t => t.chatId === selectedChat)?.recipientName || 'Unknown User'}
+                    listingId={threads.find(t => t.chatId === selectedChat)?.listingId}
+                    listingTitle={threads.find(t => t.chatId === selectedChat)?.listingTitle}
                     className="h-full max-w-none rounded-none border-0"
                     onDelete={() => setSelectedChat(null)}
                   />

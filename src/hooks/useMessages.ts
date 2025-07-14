@@ -4,6 +4,18 @@ import { useAuth } from '@/contexts/AuthContext';
 import { getFirebaseServices, database as firebaseDatabase } from '@/lib/firebase';
 import { databaseOptimizer } from '@/lib/database-usage-optimizer';
 
+// Helper function to check if a user is blocked
+const isUserBlocked = async (database: any, currentUserId: string, otherUserId: string): Promise<boolean> => {
+  try {
+    const blockedUsersRef = ref(database, `users/${currentUserId}/blockedUsers/${otherUserId}`);
+    const snapshot = await get(blockedUsersRef);
+    return snapshot.exists();
+  } catch (error) {
+    console.error('Error checking blocked status:', error);
+    return false;
+  }
+};
+
 export interface Message {
   id: string;
   senderId: string;

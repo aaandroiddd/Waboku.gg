@@ -47,6 +47,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return res.status(404).json({ error: 'Recipient not found' })
       }
 
+      // Check if sender is blocked by recipient
+      try {
+        const blockedUsersRef = admin.database.ref(`users/${recipientId}/blockedUsers/${senderId}`)
+        const blockedSnapshot = await blockedUsersRef.once('value')
+        
+        if (blockedSnapshot.exists()) {
+          console.log(`Message blocked: User ${senderId} is blocked by ${recipientId}`)
+          return res.status(403).json({ 
+            error: 'You are unable to send messages to this user',
+            code: 'USER_BLOCKED'
+          })
+        }
+      } catch (error) {
+        console.error('Error checking blocked status:', error)
+        // Continue with message sending if we can't check blocked status
+      }
+
       const chatsRef = admin.database.ref('chats')
       let chatId = null
 
