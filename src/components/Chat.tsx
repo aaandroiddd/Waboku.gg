@@ -843,12 +843,18 @@ export function Chat({
               <div className="flex flex-col">
                 <span className="font-medium">
                   {
-                    // Always prefer up-to-date profile info for header
-                    receiverProfile?.displayName ||
-                    receiverProfile?.username ||
-                    (receiverProfile?.email && receiverProfile.email.split('@')[0]) ||
-                    displayName || // fallback to state if profile not loaded yet
-                    'Unknown User'
+                    // First check if we have a valid receiverName prop (from messages page)
+                    (initialReceiverName && 
+                     initialReceiverName !== 'Loading...' && 
+                     initialReceiverName !== 'Unknown User' && 
+                     !initialReceiverName.startsWith('User ')) 
+                      ? initialReceiverName
+                      : // Then prefer up-to-date profile info
+                        receiverProfile?.displayName ||
+                        receiverProfile?.username ||
+                        (receiverProfile?.email && receiverProfile.email.split('@')[0]) ||
+                        displayName || // fallback to state if profile not loaded yet
+                        'Unknown User'
                   }
                 </span>
                 {messages[0]?.subject && (
