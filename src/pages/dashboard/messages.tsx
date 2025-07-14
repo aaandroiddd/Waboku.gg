@@ -321,7 +321,11 @@ export default function MessagesPage() {
     if (!participantProfiles[otherParticipantId] && !profilesLoading[otherParticipantId]) {
       // Use a setTimeout to avoid blocking the render
       setTimeout(() => {
-        fetchUserProfile(otherParticipantId);
+        fetchUserProfile(otherParticipantId).then(profile => {
+          if (profile) {
+            setParticipantProfiles(prev => ({ ...prev, [otherParticipantId]: profile }));
+          }
+        });
       }, 0);
     }
 
@@ -336,12 +340,16 @@ export default function MessagesPage() {
       username = chat.participantNames[otherParticipantId];
     }
     // Then try profile username (from our fetched profiles)
-    else if (profile?.username) {
+    else if (profile?.username && profile.username !== 'Unknown User') {
       username = profile.username;
     }
     // Show loading state if profile is being fetched
     else if (isLoading) {
       username = 'Loading...';
+    }
+    // Fallback to a more user-friendly format
+    else {
+      username = `User ${otherParticipantId.substring(0, 8)}`;
     }
     
     return {

@@ -701,13 +701,13 @@ export function Chat({
   useEffect(() => {
     if (messages.length === 0) return;
     
-    const uniqueUserIds = [...new Set(messages.map(msg => msg.senderId))];
+    const uniqueUserIds = [...new Set(messages.map(msg => msg.senderId))].filter(Boolean);
     
     // Skip if we already have all profiles in state with valid usernames
     const missingUserIds = uniqueUserIds.filter(userId => 
-      !userId || 
       !userProfiles[userId]?.username || 
-      userProfiles[userId]?.username === 'Unknown User'
+      userProfiles[userId]?.username === 'Unknown User' ||
+      userProfiles[userId]?.username === 'Loading...'
     );
     
     if (missingUserIds.length === 0) return;
