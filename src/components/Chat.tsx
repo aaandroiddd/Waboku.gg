@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { MessageCircle, Check, CheckCheck, Image, Smile, Trash2, Ban } from 'lucide-react';
+import { MessageCircle, Check, CheckCheck, Image, Smile, Trash2, Ban, User } from 'lucide-react';
 import { BlockUserDialog } from './BlockUserDialog';
 
 import { useAuth } from '@/contexts/AuthContext';
@@ -840,23 +840,53 @@ export function Chat({
                   </svg>
                 )}
               </Avatar>
-              <div className="flex flex-col">
-                <span className="font-medium">
-                  {
-                    // First check if we have a valid receiverName prop (from messages page)
-                    (initialReceiverName && 
-                     initialReceiverName !== 'Loading...' && 
-                     initialReceiverName !== 'Unknown User' && 
-                     !initialReceiverName.startsWith('User ')) 
-                      ? initialReceiverName
-                      : // Then prefer up-to-date profile info
-                        receiverProfile?.displayName ||
-                        receiverProfile?.username ||
-                        (receiverProfile?.email && receiverProfile.email.split('@')[0]) ||
-                        displayName || // fallback to state if profile not loaded yet
-                        'Unknown User'
-                  }
-                </span>
+              <div className="flex flex-col flex-1">
+                <div className="flex items-center gap-2">
+                  <span className="font-medium">
+                    {
+                      // First check if we have a valid receiverName prop (from messages page)
+                      (initialReceiverName && 
+                       initialReceiverName !== 'Loading...' && 
+                       initialReceiverName !== 'Unknown User' && 
+                       !initialReceiverName.startsWith('User ')) 
+                        ? initialReceiverName
+                        : // Then prefer up-to-date profile info
+                          receiverProfile?.displayName ||
+                          receiverProfile?.username ||
+                          (receiverProfile?.email && receiverProfile.email.split('@')[0]) ||
+                          displayName || // fallback to state if profile not loaded yet
+                          'Unknown User'
+                    }
+                  </span>
+                  {receiverId && receiverId !== 'system_moderation' && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 px-2 text-xs"
+                      onClick={() => {
+                        // Navigate to the user's profile page
+                        const username = (initialReceiverName && 
+                                         initialReceiverName !== 'Loading...' && 
+                                         initialReceiverName !== 'Unknown User' && 
+                                         !initialReceiverName.startsWith('User ')) 
+                                        ? initialReceiverName
+                                        : receiverProfile?.displayName ||
+                                          receiverProfile?.username ||
+                                          (receiverProfile?.email && receiverProfile.email.split('@')[0]) ||
+                                          displayName ||
+                                          'Unknown User';
+                        
+                        // Create a URL-friendly slug from the username
+                        const slug = username.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+                        router.push(`/profile/${slug}?userId=${receiverId}`);
+                      }}
+                      title="View profile"
+                    >
+                      <User className="h-3 w-3 mr-1" />
+                      View Profile
+                    </Button>
+                  )}
+                </div>
                 {messages[0]?.subject && (
                   <div className="text-sm font-medium text-primary">
                     {messages[0].subject}
