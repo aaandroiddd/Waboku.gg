@@ -841,7 +841,16 @@ export function Chat({
                 )}
               </Avatar>
               <div className="flex flex-col">
-                <span className="font-medium">{displayName || 'Unknown User'}</span>
+                <span className="font-medium">
+                  {
+                    // Always prefer up-to-date profile info for header
+                    receiverProfile?.displayName ||
+                    receiverProfile?.username ||
+                    (receiverProfile?.email && receiverProfile.email.split('@')[0]) ||
+                    displayName || // fallback to state if profile not loaded yet
+                    'Unknown User'
+                  }
+                </span>
                 {messages[0]?.subject && (
                   <div className="text-sm font-medium text-primary">
                     {messages[0].subject}
