@@ -714,22 +714,28 @@ export function Chat({
     
     // Fetch profiles for missing users
     const fetchProfiles = async () => {
-      const profiles: Record<string, any> = {};
-      await Promise.all(
-        missingUserIds.map(async (userId) => {
+      for (const userId of missingUserIds) {
+        try {
           const profile = await fetchUserProfile(userId);
           if (profile) {
-            profiles[userId] = profile;
+            // Update state immediately for each profile to improve perceived performance
+            setUserProfiles(prev => ({ ...prev, [userId]: profile }));
           }
-        })
-      );
-      
-      setUserProfiles(prev => ({ ...prev, ...profiles }));
+        } catch (error) {
+          console.error(`Error fetching profile for ${userId}:`, error);
+          // Set a fallback profile to prevent infinite loading
+          setUserProfiles(prev => ({ 
+            ...prev, 
+            [userId]: { 
+              username: `User ${userId.substring(0, 8)}`, 
+              avatarUrl: null 
+            }
+          }));
+        }
+      }
     };
     
-    fetchProfiles().catch(err => {
-      console.error('Error fetching user profiles:', err);
-    });
+    fetchProfiles();
   }, [messages]);
 
   return (
@@ -874,7 +880,8 @@ export function Chat({
                         {!isUserMessage && (
                           <div className="text-xs text-muted-foreground ml-2">
                             <span>
-                              {userProfiles[message.senderId]?.username || 'Loading...'}
+                              {userProfiles[message.senderId]?.username || 
+                               (message.senderId ? `User ${message.senderId.substring(0, 8)}` : 'Unknown User')}
                             </span>
                           </div>
                         )}
