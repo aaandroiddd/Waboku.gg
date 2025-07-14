@@ -20,6 +20,7 @@ import { ClearFirestoreCache } from '@/components/ClearFirestoreCache';
 import { MessageThreadDebugger } from '@/components/MessageThreadDebugger';
 import { MessageSystemDebugger } from '@/components/MessageSystemDebugger';
 import { prefetchUserData } from '@/hooks/useUserData';
+import { toast } from '@/components/ui/use-toast';
 
 interface ChatPreview {
   id: string;
@@ -231,7 +232,6 @@ export default function MessagesPage() {
                   </Button>
                   <Button
                     onClick={async () => {
-                      setLoading(true);
                       try {
                         const synced = await syncMessageThreads();
                         if (synced) {
@@ -242,15 +242,13 @@ export default function MessagesPage() {
                         }
                       } catch (error) {
                         console.error('Error syncing messages:', error);
-                      } finally {
-                        setLoading(false);
                       }
                     }}
                     variant="outline"
                     size="sm"
                     disabled={loading}
                   >
-                    {loading ? 'Syncing...' : 'Sync Messages'}
+                    Sync Messages
                   </Button>
                 </div>
               </div>

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { getDatabase, ref, onValue, get } from 'firebase/database';
 import { useAuth } from '@/contexts/AuthContext';
-import { getFirebaseServices, database as firebaseDatabase } from '@/lib/firebase';
+import { getFirebaseServices } from '@/lib/firebase';
 
 export interface MessageThread {
   chatId: string;
@@ -26,36 +26,9 @@ export const useMessageThreads = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { user } = useAuth();
-  const [database, setDatabase] = useState<ReturnType<typeof getDatabase> | null>(null);
-
-  // Initialize database safely
-  useEffect(() => {
-    if (firebaseDatabase) {
-      setDatabase(firebaseDatabase);
-      return;
-    }
-    
-    try {
-      const { database: dbFromServices } = getFirebaseServices();
-      if (dbFromServices) {
-        setDatabase(dbFromServices);
-        return;
-      }
-      
-      const directDb = getDatabase();
-      if (directDb) {
-        setDatabase(directDb);
-        return;
-      }
-    } catch (err) {
-      console.error('[useMessageThreads] Error initializing database:', err);
-      setError('Database connection failed. Please try refreshing the page.');
-      setLoading(false);
-    }
-  }, []);
 
   // Helper function to check if a user is blocked
-  const isUserBlocked = async (otherUserId: string): Promise<boolean> => {
+  const isUserBlocked = async (otherUserId: string, database: any): Promise<boolean> => {
     if (!database || !user) return false;
     
     try {
@@ -69,13 +42,13 @@ export const useMessageThreads = () => {
   };
 
   // Filter out blocked users from threads
-  const filterBlockedUsers = async (threads: MessageThread[]): Promise<MessageThread[]> => {
+  const filterBlockedUsers = async (threads: MessageThread[], database: any): Promise<MessageThread[]> => {
     if (!user || threads.length === 0) return threads;
 
     const filteredThreads: MessageThread[] = [];
     
     for (const thread of threads) {
-      const isBlocked = await isUserBlocked(thread.recipientId);
+      const isBlocked = await isUserBlocked(thread.recipientId, database);
       if (!isBlocked) {
         filteredThreads.push(thread);
       }
@@ -85,16 +58,34 @@ export const useMessageThreads = () => {
   };
 
   useEffect(() => {
-    if (!user || !database) {
+    if (!user) {
       setThreads([]);
       setLoading(false);
+      return;
+    }
+
+    // Get database instance
+    let database: any = null;
+    try {
+      const services = getFirebaseServices();
+      database = services.database;
+      
       if (!database) {
+        console.error('[useMessageThreads] No database instance available');
         setError('Database connection failed');
+        setLoading(false);
+        return;
       }
+    } catch (err) {
+      console.error('[useMessageThreads] Error getting database services:', err);
+      setError('Database connection failed');
+      setLoading(false);
       return;
     }
 
     setLoading(true);
+    setError(null); // Clear any previous errors
+    
     const threadsRef = ref(database, `users/${user.uid}/messageThreads`);
 
     const unsubscribe = onValue(threadsRef, async (snapshot) => {
@@ -116,7 +107,7 @@ export const useMessageThreads = () => {
           const sortedThreads = threadList.sort((a, b) => b.lastMessageTime - a.lastMessageTime);
           
           // Filter out blocked users
-          const filteredThreads = await filterBlockedUsers(sortedThreads);
+          const filteredThreads = await filterBlockedUsers(sortedThreads, database);
           
           // Fetch additional data for each thread (last message, recipient info)
           const enrichedThreads = await Promise.all(
@@ -166,7 +157,7 @@ export const useMessageThreads = () => {
     });
 
     return () => unsubscribe();
-  }, [user, database]);
+  }, [user]);
 
   return {
     threads,
