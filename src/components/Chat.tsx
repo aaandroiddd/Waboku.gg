@@ -112,62 +112,89 @@ export function Chat({
   useEffect(() => {
     const fetchReceiverUsername = async () => {
       if (!receiverId || receiverId === 'system_moderation') return;
-      
-      // If we already have a good username from receiverProfile, use it
-      if (receiverProfile?.username && receiverProfile.username !== 'Unknown User') {
-        setDisplayName(receiverProfile.username);
+
+      // Prefer displayName, then username, then email prefix, then fallback
+      if (
+        receiverProfile &&
+        (
+          receiverProfile.displayName ||
+          receiverProfile.username ||
+          (receiverProfile.email && receiverProfile.email.split('@')[0])
+        )
+      ) {
+        setDisplayName(
+          receiverProfile.displayName ||
+          receiverProfile.username ||
+          (receiverProfile.email && receiverProfile.email.split('@')[0]) ||
+          `User ${receiverId.substring(0, 8)}`
+        );
         return;
       }
-      
+
       // Try Firestore first since that's where user profiles are stored
       try {
         const userDoc = await getDoc(doc(firebaseDb, 'users', receiverId));
-        
         if (userDoc.exists()) {
           const userData = userDoc.data();
-          const username = userData.displayName || userData.username || userData.email?.split('@')[0] || 'Unknown User';
+          const username =
+            userData.displayName ||
+            userData.username ||
+            (userData.email && userData.email.split('@')[0]) ||
+            `User ${receiverId.substring(0, 8)}`;
           setDisplayName(username);
           return;
         }
       } catch (firestoreError) {
         console.error('Error fetching receiver username from Firestore:', firestoreError);
       }
-      
+
       // Fallback to Realtime Database if Firestore fails
       try {
         const { database } = getFirebaseServices();
         if (!database) return;
-        
+
         const { ref, get } = await import('firebase/database');
         const userRef = ref(database, `users/${receiverId}`);
         const userSnapshot = await get(userRef);
-        
+
         if (userSnapshot.exists()) {
           const userData = userSnapshot.val();
-          const username = userData.displayName || userData.username || userData.email?.split('@')[0] || 'Unknown User';
+          const username =
+            userData.displayName ||
+            userData.username ||
+            (userData.email && userData.email.split('@')[0]) ||
+            `User ${receiverId.substring(0, 8)}`;
           setDisplayName(username);
         } else {
-          // Fallback to a more user-friendly format
-          const fallbackUsername = `User ${receiverId.substring(0, 8)}`;
-          setDisplayName(fallbackUsername);
+          setDisplayName(`User ${receiverId.substring(0, 8)}`);
         }
       } catch (error) {
         console.error('Error fetching receiver username from Realtime Database:', error);
-        // Keep the existing displayName or use fallback
         if (!displayName || displayName === 'Loading...') {
-          const fallbackUsername = `User ${receiverId.substring(0, 8)}`;
-          setDisplayName(fallbackUsername);
+          setDisplayName(`User ${receiverId.substring(0, 8)}`);
         }
       }
     };
-    
+
     fetchReceiverUsername();
   }, [receiverId, receiverProfile]);
-  
+
   // Also update when receiverProfile changes (for when Firestore is available)
   useEffect(() => {
-    if (receiverProfile?.username && receiverProfile.username !== 'Unknown User') {
-      setDisplayName(receiverProfile.username);
+    if (
+      receiverProfile &&
+      (
+        receiverProfile.displayName ||
+        receiverProfile.username ||
+        (receiverProfile.email && receiverProfile.email.split('@')[0])
+      )
+    ) {
+      setDisplayName(
+        receiverProfile.displayName ||
+        receiverProfile.username ||
+        (receiverProfile.email && receiverProfile.email.split('@')[0]) ||
+        `User ${receiverId.substring(0, 8)}`
+      );
     }
   }, [receiverProfile]);
   
