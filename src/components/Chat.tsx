@@ -83,9 +83,20 @@ export function Chat({
         throw new Error('Failed to block user');
       }
 
+      const correctUsername = (initialReceiverName && 
+                              initialReceiverName !== 'Loading...' && 
+                              initialReceiverName !== 'Unknown User' && 
+                              !initialReceiverName.startsWith('User ')) 
+                             ? initialReceiverName
+                             : receiverProfile?.displayName ||
+                               receiverProfile?.username ||
+                               (receiverProfile?.email && receiverProfile.email.split('@')[0]) ||
+                               displayName ||
+                               'Unknown User';
+
       toast({
         title: "User blocked",
-        description: `You have blocked ${displayName}. They can no longer send you messages.`
+        description: `You have blocked ${correctUsername}. They can no longer send you messages.`
       });
 
       if (onClose) {
@@ -1093,7 +1104,19 @@ export function Chat({
             open={showBlockDialog}
             onOpenChange={setShowBlockDialog}
             userId={receiverId}
-            username={displayName}
+            username={
+              // Use the same logic as the chat header to get the most accurate username
+              (initialReceiverName && 
+               initialReceiverName !== 'Loading...' && 
+               initialReceiverName !== 'Unknown User' && 
+               !initialReceiverName.startsWith('User ')) 
+                ? initialReceiverName
+                : receiverProfile?.displayName ||
+                  receiverProfile?.username ||
+                  (receiverProfile?.email && receiverProfile.email.split('@')[0]) ||
+                  displayName ||
+                  'Unknown User'
+            }
             onBlock={handleBlockUser}
           />
         </div>

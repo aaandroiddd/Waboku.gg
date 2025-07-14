@@ -63,6 +63,7 @@ export function BlockedUsersManager() {
               blockedUsersData.push({
                 userId,
                 username,
+                // Handle both old format (boolean true) and new format (timestamp)
                 blockedAt: typeof data[userId] === 'number' ? data[userId] : Date.now()
               });
             } catch (error) {

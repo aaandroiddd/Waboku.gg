@@ -50,8 +50,8 @@ export default async function handler(
 
     const db = database
     
-    // Add to blocked users list
-    await db.ref(`users/${userId}/blockedUsers/${blockedUserId}`).set(true)
+    // Add to blocked users list with timestamp
+    await db.ref(`users/${userId}/blockedUsers/${blockedUserId}`).set(Date.now())
     
     // Remove any existing chat between these users
     const chatsRef = db.ref('chats')
