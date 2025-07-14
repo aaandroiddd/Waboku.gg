@@ -116,7 +116,7 @@ export function Chat({
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const { messages: messagesList, loading: messagesLoading, sendMessage, markAsRead, deleteChat } = useMessages(chatId);
+  const { messages: messagesList, loading: messagesLoading, error: messagesError, sendMessage, markAsRead, deleteChat } = useMessages(chatId);
   const [messages, setMessages] = useState(messagesList);
 
   // Fetch receiver's username from Firestore first, then Realtime Database as fallback
@@ -244,12 +244,12 @@ export function Chat({
   useEffect(() => {
     if (messagesLoading) {
       setLoadingState('loading');
-    } else if (error) {
+    } else if (messagesError || error) {
       setLoadingState('error');
     } else {
       setLoadingState('success');
     }
-  }, [messagesLoading, error]);
+  }, [messagesLoading, messagesError, error]);
   const [isAtBottom, setIsAtBottom] = useState(true);
   const [displayedListingTitle, setDisplayedListingTitle] = useState(listingTitle);
   const [listingData, setListingData] = useState<{ title: string; game: string } | null>(null);
@@ -1139,9 +1139,25 @@ export function Chat({
             }}
           >
             <div className="p-4 space-y-4">
-              {error && (
+              {(messagesError || error) && (
                 <div className="bg-destructive/10 border border-destructive text-destructive px-4 py-3 rounded mb-4">
-                  {error}
+                  <div className="flex items-start gap-2">
+                    <svg 
+                      className="w-5 h-5 mt-0.5 flex-shrink-0" 
+                      fill="currentColor" 
+                      viewBox="0 0 20 20"
+                    >
+                      <path 
+                        fillRule="evenodd" 
+                        d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" 
+                        clipRule="evenodd" 
+                      />
+                    </svg>
+                    <div>
+                      <p className="font-medium">Unable to load conversation</p>
+                      <p className="text-sm mt-1">{messagesError || error}</p>
+                    </div>
+                  </div>
                 </div>
               )}
               

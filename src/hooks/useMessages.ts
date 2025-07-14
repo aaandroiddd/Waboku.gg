@@ -163,6 +163,7 @@ export const useMessages = (chatId?: string) => {
         }
       }).catch((error) => {
         console.error('Error getting initial messages:', error);
+        setError(getUserFriendlyErrorMessage(error));
         setMessages([]);
         setLoading(false);
       });
@@ -204,6 +205,7 @@ export const useMessages = (chatId?: string) => {
       }
     }, (error) => {
       console.error('Error in message subscription:', error);
+      setError(getUserFriendlyErrorMessage(error));
     });
     
     // Also listen for changes to the chat's deletion status
@@ -227,6 +229,39 @@ export const useMessages = (chatId?: string) => {
       chatUnsubscribe();
     };
   }, [chatId, user, database]);
+
+  // Helper function to check if error is due to being blocked
+  const isBlockedError = (error: any): boolean => {
+    if (!error) return false;
+    
+    const errorMessage = error.message || error.toString();
+    const errorCode = error.code;
+    
+    // Check for permission denied errors that might indicate blocking
+    return (
+      errorCode === 'PERMISSION_DENIED' ||
+      errorMessage.includes('Permission denied') ||
+      errorMessage.includes('permission-denied') ||
+      errorMessage.includes('PERMISSION_DENIED')
+    );
+  };
+
+  // Helper function to get user-friendly error message
+  const getUserFriendlyErrorMessage = (error: any): string => {
+    if (isBlockedError(error)) {
+      return 'This conversation is no longer available. The user may have blocked you or the conversation has been restricted.';
+    }
+    
+    if (error.message?.includes('Database connection failed')) {
+      return 'Unable to connect to the messaging service. Please check your internet connection and try again.';
+    }
+    
+    if (error.message?.includes('network')) {
+      return 'Network error. Please check your internet connection and try again.';
+    }
+    
+    return 'Unable to load messages. Please try refreshing the page.';
+  };
 
   const findExistingChat = async (userId: string, receiverId: string, listingId?: string) => {
     if (!database) {
@@ -349,7 +384,14 @@ export const useMessages = (chatId?: string) => {
           chatData.listingTitle = listingTitle;
         }
 
-        await set(newChatRef, chatData);
+        try {
+          await set(newChatRef, chatData);
+        } catch (error) {
+          if (isBlockedError(error)) {
+            throw new Error('Unable to send message. The user may have blocked you or restricted messages.');
+          }
+          throw error;
+        }
       }
     }
 
@@ -364,7 +406,14 @@ export const useMessages = (chatId?: string) => {
     };
 
     const messageRef = push(ref(database, `messages/${chatReference}`));
-    await set(messageRef, newMessage);
+    try {
+      await set(messageRef, newMessage);
+    } catch (error) {
+      if (isBlockedError(error)) {
+        throw new Error('Unable to send message. The user may have blocked you or restricted messages.');
+      }
+      throw error;
+    }
 
     // Update last message and listing info in chat, plus user message threads
     const chatUpdates: any = {
@@ -450,6 +499,7 @@ export const useMessages = (chatId?: string) => {
   return {
     messages,
     loading,
+    error,
     sendMessage,
     markAsRead,
     deleteChat,
