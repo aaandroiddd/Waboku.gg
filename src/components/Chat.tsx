@@ -47,6 +47,7 @@ interface ChatProps {
   onClose?: () => void;
   className?: string;
   onDelete?: () => void;
+  isBlocked?: boolean;
 }
 
 export function Chat({ 
@@ -57,7 +58,8 @@ export function Chat({
   listingTitle,
   onClose,
   onDelete,
-  className = ''
+  className = '',
+  isBlocked = false
 }: ChatProps) {
   const { profile: receiverProfile } = useProfile(receiverId);
   const [displayName, setDisplayName] = useState(initialReceiverName || 'Loading...');
@@ -1139,7 +1141,27 @@ export function Chat({
             }}
           >
             <div className="p-4 space-y-4">
-              {(messagesError || error) && (
+              {isBlocked ? (
+                <div className="bg-destructive/10 border border-destructive text-destructive px-4 py-3 rounded mb-4">
+                  <div className="flex items-start gap-2">
+                    <svg 
+                      className="w-5 h-5 mt-0.5 flex-shrink-0" 
+                      fill="currentColor" 
+                      viewBox="0 0 20 20"
+                    >
+                      <path 
+                        fillRule="evenodd" 
+                        d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" 
+                        clipRule="evenodd" 
+                      />
+                    </svg>
+                    <div>
+                      <p className="font-medium">Unable to load conversation</p>
+                      <p className="text-sm mt-1">This conversation is no longer available. The user may have blocked you or the conversation has been restricted.</p>
+                    </div>
+                  </div>
+                </div>
+              ) : (messagesError || error) && (
                 <div className="bg-destructive/10 border border-destructive text-destructive px-4 py-3 rounded mb-4">
                   <div className="flex items-start gap-2">
                     <svg 

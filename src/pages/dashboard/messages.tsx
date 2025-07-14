@@ -328,6 +328,7 @@ export default function MessagesPage() {
                     listingTitle={threads.find(t => t.chatId === selectedChat)?.listingTitle}
                     className="h-full max-w-none rounded-none border-0"
                     onDelete={() => setSelectedChat(null)}
+                    isBlocked={threads.find(t => t.chatId === selectedChat)?.isBlocked || false}
                   />
                 </div>
               </div>

@@ -19,6 +19,7 @@ export interface MessageThread {
   };
   recipientName?: string;
   recipientAvatar?: string;
+  isBlocked?: boolean;
 }
 
 export const useMessageThreads = () => {
@@ -41,20 +42,21 @@ export const useMessageThreads = () => {
     }
   };
 
-  // Filter out blocked users from threads
-  const filterBlockedUsers = async (threads: MessageThread[], database: any): Promise<MessageThread[]> => {
+  // Mark blocked users in threads instead of filtering them out
+  const markBlockedUsers = async (threads: MessageThread[], database: any): Promise<MessageThread[]> => {
     if (!user || threads.length === 0) return threads;
 
-    const filteredThreads: MessageThread[] = [];
+    const markedThreads: MessageThread[] = [];
     
     for (const thread of threads) {
       const isBlocked = await isUserBlocked(thread.recipientId, database);
-      if (!isBlocked) {
-        filteredThreads.push(thread);
-      }
+      markedThreads.push({
+        ...thread,
+        isBlocked
+      });
     }
 
-    return filteredThreads;
+    return markedThreads;
   };
 
   useEffect(() => {
@@ -106,12 +108,12 @@ export const useMessageThreads = () => {
           // Sort by last message time (most recent first)
           const sortedThreads = threadList.sort((a, b) => b.lastMessageTime - a.lastMessageTime);
           
-          // Filter out blocked users
-          const filteredThreads = await filterBlockedUsers(sortedThreads, database);
+          // Mark blocked users instead of filtering them out
+          const markedThreads = await markBlockedUsers(sortedThreads, database);
           
           // Fetch additional data for each thread (last message, recipient info)
           const enrichedThreads = await Promise.all(
-            filteredThreads.map(async (thread) => {
+            markedThreads.map(async (thread) => {
               try {
                 // Get last message from chat
                 const chatRef = ref(database, `chats/${thread.chatId}`);

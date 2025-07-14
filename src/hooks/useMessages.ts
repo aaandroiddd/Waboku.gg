@@ -230,14 +230,20 @@ export const useMessages = (chatId?: string) => {
     };
   }, [chatId, user, database]);
 
-  // Helper function to check if error is due to being blocked
-  const isBlockedError = (error: any): boolean => {
+  // Helper function to check if error is due to being blocked (only for chat creation/message sending)
+  const isBlockedError = (error: any, context: 'chat_creation' | 'message_sending' | 'message_loading' = 'message_loading'): boolean => {
     if (!error) return false;
     
     const errorMessage = error.message || error.toString();
     const errorCode = error.code;
     
-    // Check for permission denied errors that might indicate blocking
+    // Only treat permission errors as blocking errors when creating chats or sending messages
+    // NOT when loading existing messages
+    if (context === 'message_loading') {
+      return false; // Never treat message loading errors as blocking errors
+    }
+    
+    // For chat creation and message sending, check for permission denied errors
     return (
       errorCode === 'PERMISSION_DENIED' ||
       errorMessage.includes('Permission denied') ||
@@ -247,8 +253,8 @@ export const useMessages = (chatId?: string) => {
   };
 
   // Helper function to get user-friendly error message
-  const getUserFriendlyErrorMessage = (error: any): string => {
-    if (isBlockedError(error)) {
+  const getUserFriendlyErrorMessage = (error: any, context: 'chat_creation' | 'message_sending' | 'message_loading' = 'message_loading'): string => {
+    if (isBlockedError(error, context)) {
       return 'This conversation is no longer available. The user may have blocked you or the conversation has been restricted.';
     }
     
@@ -260,6 +266,7 @@ export const useMessages = (chatId?: string) => {
       return 'Network error. Please check your internet connection and try again.';
     }
     
+    // For message loading errors, provide a generic message
     return 'Unable to load messages. Please try refreshing the page.';
   };
 
@@ -387,7 +394,7 @@ export const useMessages = (chatId?: string) => {
         try {
           await set(newChatRef, chatData);
         } catch (error) {
-          if (isBlockedError(error)) {
+          if (isBlockedError(error, 'chat_creation')) {
             throw new Error('Unable to send message. The user may have blocked you or restricted messages.');
           }
           throw error;
@@ -409,7 +416,7 @@ export const useMessages = (chatId?: string) => {
     try {
       await set(messageRef, newMessage);
     } catch (error) {
-      if (isBlockedError(error)) {
+      if (isBlockedError(error, 'message_sending')) {
         throw new Error('Unable to send message. The user may have blocked you or restricted messages.');
       }
       throw error;
