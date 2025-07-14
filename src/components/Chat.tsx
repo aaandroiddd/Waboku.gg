@@ -108,7 +108,7 @@ export function Chat({
   const { messages: messagesList, loading: messagesLoading, sendMessage, markAsRead, deleteChat } = useMessages(chatId);
   const [messages, setMessages] = useState(messagesList);
 
-  // Fetch receiver's username from Realtime Database when Firestore might be disabled
+  // Fetch receiver's username from Firestore first, then Realtime Database as fallback
   useEffect(() => {
     const fetchReceiverUsername = async () => {
       if (!receiverId || receiverId === 'system_moderation') return;
@@ -119,7 +119,21 @@ export function Chat({
         return;
       }
       
-      // Otherwise, fetch from Realtime Database
+      // Try Firestore first since that's where user profiles are stored
+      try {
+        const userDoc = await getDoc(doc(firebaseDb, 'users', receiverId));
+        
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+          const username = userData.displayName || userData.username || userData.email?.split('@')[0] || 'Unknown User';
+          setDisplayName(username);
+          return;
+        }
+      } catch (firestoreError) {
+        console.error('Error fetching receiver username from Firestore:', firestoreError);
+      }
+      
+      // Fallback to Realtime Database if Firestore fails
       try {
         const { database } = getFirebaseServices();
         if (!database) return;
@@ -138,7 +152,7 @@ export function Chat({
           setDisplayName(fallbackUsername);
         }
       } catch (error) {
-        console.error('Error fetching receiver username:', error);
+        console.error('Error fetching receiver username from Realtime Database:', error);
         // Keep the existing displayName or use fallback
         if (!displayName || displayName === 'Loading...') {
           const fallbackUsername = `User ${receiverId.substring(0, 8)}`;
@@ -655,31 +669,63 @@ export function Chat({
         return cachedProfile.data;
       }
       
-      // Use Realtime Database only to avoid conflicts with FirestoreDisabler
+      // Try Firestore first since that's where user profiles are stored
+      try {
+        const userDoc = await getDoc(doc(firebaseDb, 'users', userId));
+        
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+          const result = {
+            username: userData.displayName || userData.username || userData.email?.split('@')[0] || 'Unknown User',
+            avatarUrl: userData.avatarUrl || userData.photoURL || null
+          };
+          
+          // Update cache
+          profileCache.current[userId] = {
+            data: result,
+            timestamp: Date.now()
+          };
+          
+          return result;
+        }
+      } catch (firestoreError) {
+        console.error(`Error fetching from Firestore for ${userId}:`, firestoreError);
+      }
+      
+      // Fallback to Realtime Database if Firestore fails
       const { database } = getFirebaseServices();
-      if (!database) {
-        console.error('No database available for user profile fetch');
-        return { username: 'Unknown User', avatarUrl: null };
+      if (database) {
+        try {
+          const { ref, get } = await import('firebase/database');
+          const userRef = ref(database, `users/${userId}`);
+          const userSnapshot = await get(userRef);
+          
+          if (userSnapshot.exists()) {
+            const userData = userSnapshot.val();
+            const result = {
+              username: userData.displayName || userData.username || userData.email?.split('@')[0] || 'Unknown User',
+              avatarUrl: userData.avatarUrl || userData.photoURL || null
+            };
+            
+            // Update cache
+            profileCache.current[userId] = {
+              data: result,
+              timestamp: Date.now()
+            };
+            
+            return result;
+          }
+        } catch (dbError) {
+          console.error(`Error fetching from Realtime Database for ${userId}:`, dbError);
+        }
       }
       
-      const { ref, get } = await import('firebase/database');
-      const userRef = ref(database, `users/${userId}`);
-      const userSnapshot = await get(userRef);
-      
-      let result;
-      if (userSnapshot.exists()) {
-        const userData = userSnapshot.val();
-        result = {
-          username: userData.displayName || userData.username || userData.email?.split('@')[0] || 'Unknown User',
-          avatarUrl: userData.avatarUrl || userData.photoURL || null
-        };
-      } else {
-        const fallbackUsername = `User ${userId.substring(0, 8)}`;
-        result = { 
-          username: fallbackUsername, 
-          avatarUrl: null 
-        };
-      }
+      // Final fallback
+      const fallbackUsername = `User ${userId.substring(0, 8)}`;
+      const result = { 
+        username: fallbackUsername, 
+        avatarUrl: null 
+      };
       
       // Update cache
       profileCache.current[userId] = {
