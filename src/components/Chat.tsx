@@ -826,8 +826,9 @@ export function Chat({
       <Card className={`flex flex-col h-full w-full overflow-hidden ${className}`}>
         {/* Chat Header */}
         <div className="flex-none p-4 border-b bg-card">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
+          {/* Mobile Layout */}
+          <div className="block md:hidden">
+            <div className="flex items-center gap-2 mb-3">
               <Avatar>
                 {receiverProfile?.avatarUrl ? (
                   <img src={receiverProfile.avatarUrl} alt={displayName} />
@@ -840,91 +841,72 @@ export function Chat({
                   </svg>
                 )}
               </Avatar>
-              <div className="flex flex-col flex-1">
-                <div className="flex items-center gap-2">
-                  <span className="font-medium">
-                    {
-                      // First check if we have a valid receiverName prop (from messages page)
-                      (initialReceiverName && 
-                       initialReceiverName !== 'Loading...' && 
-                       initialReceiverName !== 'Unknown User' && 
-                       !initialReceiverName.startsWith('User ')) 
-                        ? initialReceiverName
-                        : // Then prefer up-to-date profile info
-                          receiverProfile?.displayName ||
-                          receiverProfile?.username ||
-                          (receiverProfile?.email && receiverProfile.email.split('@')[0]) ||
-                          displayName || // fallback to state if profile not loaded yet
-                          'Unknown User'
-                    }
+              <div className="flex-1">
+                <span className="font-medium block">
+                  {
+                    // First check if we have a valid receiverName prop (from messages page)
+                    (initialReceiverName && 
+                     initialReceiverName !== 'Loading...' && 
+                     initialReceiverName !== 'Unknown User' && 
+                     !initialReceiverName.startsWith('User ')) 
+                      ? initialReceiverName
+                      : // Then prefer up-to-date profile info
+                        receiverProfile?.displayName ||
+                        receiverProfile?.username ||
+                        (receiverProfile?.email && receiverProfile.email.split('@')[0]) ||
+                        displayName || // fallback to state if profile not loaded yet
+                        'Unknown User'
+                  }
+                </span>
+              </div>
+              {onClose && (
+                <Button variant="ghost" size="sm" onClick={onClose}>
+                  Close
+                </Button>
+              )}
+            </div>
+            
+            {/* Subject line for mobile */}
+            {messages[0]?.subject && (
+              <div className="text-sm font-medium text-primary mb-3">
+                {messages[0].subject}
+              </div>
+            )}
+            
+            {/* Listing info for mobile */}
+            {listingTitle && (
+              <div className="flex items-center gap-2 mb-3">
+                <div className="h-4 w-1 bg-primary rounded-full"></div>
+                {listingId && listingData ? (
+                  <a 
+                    href={getListingUrl({ 
+                      id: listingId, 
+                      title: listingData.title, 
+                      game: listingData.game 
+                    })}
+                    className="text-sm font-medium hover:underline hover:text-primary transition-colors"
+                  >
+                    {listingTitle}
+                  </a>
+                ) : listingId ? (
+                  <a 
+                    href={getListingUrl({ id: listingId, title: listingTitle, game: 'other' })}
+                    className="text-sm font-medium hover:underline hover:text-primary transition-colors"
+                  >
+                    {listingTitle}
+                  </a>
+                ) : (
+                  <span className="text-sm font-medium">
+                    {listingTitle}
                   </span>
-                  {receiverId && receiverId !== 'system_moderation' && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-6 px-2 text-xs"
-                      onClick={() => {
-                        // Navigate to the user's profile page
-                        const username = (initialReceiverName && 
-                                         initialReceiverName !== 'Loading...' && 
-                                         initialReceiverName !== 'Unknown User' && 
-                                         !initialReceiverName.startsWith('User ')) 
-                                        ? initialReceiverName
-                                        : receiverProfile?.displayName ||
-                                          receiverProfile?.username ||
-                                          (receiverProfile?.email && receiverProfile.email.split('@')[0]) ||
-                                          displayName ||
-                                          'Unknown User';
-                        
-                        // Create a URL-friendly slug from the username
-                        const slug = username.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
-                        router.push(`/profile/${slug}?userId=${receiverId}`);
-                      }}
-                      title="View profile"
-                    >
-                      <User className="h-3 w-3 mr-1" />
-                      View Profile
-                    </Button>
-                  )}
-                </div>
-                {messages[0]?.subject && (
-                  <div className="text-sm font-medium text-primary">
-                    {messages[0].subject}
-                  </div>
-                )}
-                {listingTitle && (
-                  <div className="flex items-center gap-2 mt-1">
-                    <div className="h-4 w-1 bg-primary rounded-full"></div>
-                    {listingId && listingData ? (
-                      <a 
-                        href={getListingUrl({ 
-                          id: listingId, 
-                          title: listingData.title, 
-                          game: listingData.game 
-                        })}
-                        className="text-sm font-medium hover:underline hover:text-primary transition-colors"
-                      >
-                        {listingTitle}
-                      </a>
-                    ) : listingId ? (
-                      <a 
-                        href={getListingUrl({ id: listingId, title: listingTitle, game: 'other' })}
-                        className="text-sm font-medium hover:underline hover:text-primary transition-colors"
-                      >
-                        {listingTitle}
-                      </a>
-                    ) : (
-                      <span className="text-sm font-medium">
-                        {listingTitle}
-                      </span>
-                    )}
-                  </div>
                 )}
               </div>
-            </div>
-            <div className="flex items-center gap-2">
+            )}
+            
+            {/* Action buttons stacked for mobile */}
+            <div className="flex flex-col gap-2">
               {chatId && (
-                <>
+                <div className="flex items-center gap-2">
                   <Button
                     variant="ghost"
                     size="icon"
@@ -941,22 +923,179 @@ export function Chat({
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
-                </>
+                </div>
               )}
-              {onClose && (
-                <Button variant="ghost" size="sm" onClick={onClose}>
-                  Close
+              
+              {receiverId && receiverId !== 'system_moderation' && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 px-3 text-xs self-start"
+                  onClick={() => {
+                    // Navigate to the user's profile page
+                    const username = (initialReceiverName && 
+                                     initialReceiverName !== 'Loading...' && 
+                                     initialReceiverName !== 'Unknown User' && 
+                                     !initialReceiverName.startsWith('User ')) 
+                                    ? initialReceiverName
+                                    : receiverProfile?.displayName ||
+                                      receiverProfile?.username ||
+                                      (receiverProfile?.email && receiverProfile.email.split('@')[0]) ||
+                                      displayName ||
+                                      'Unknown User';
+                    
+                    // Create a URL-friendly slug from the username
+                    const slug = username.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+                    router.push(`/profile/${slug}?userId=${receiverId}`);
+                  }}
+                  title="View profile"
+                >
+                  <User className="h-3 w-3 mr-1" />
+                  View Profile
                 </Button>
               )}
             </div>
-            <BlockUserDialog
-              open={showBlockDialog}
-              onOpenChange={setShowBlockDialog}
-              userId={receiverId}
-              username={displayName}
-              onBlock={handleBlockUser}
-            />
           </div>
+
+          {/* Desktop Layout */}
+          <div className="hidden md:block">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Avatar>
+                  {receiverProfile?.avatarUrl ? (
+                    <img src={receiverProfile.avatarUrl} alt={displayName} />
+                  ) : (
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                      <path d="M8 10h.01"/>
+                      <path d="M12 10h.01"/>
+                      <path d="M16 10h.01"/>
+                    </svg>
+                  )}
+                </Avatar>
+                <div className="flex flex-col flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium">
+                      {
+                        // First check if we have a valid receiverName prop (from messages page)
+                        (initialReceiverName && 
+                         initialReceiverName !== 'Loading...' && 
+                         initialReceiverName !== 'Unknown User' && 
+                         !initialReceiverName.startsWith('User ')) 
+                          ? initialReceiverName
+                          : // Then prefer up-to-date profile info
+                            receiverProfile?.displayName ||
+                            receiverProfile?.username ||
+                            (receiverProfile?.email && receiverProfile.email.split('@')[0]) ||
+                            displayName || // fallback to state if profile not loaded yet
+                            'Unknown User'
+                      }
+                    </span>
+                  </div>
+                  {messages[0]?.subject && (
+                    <div className="text-sm font-medium text-primary">
+                      {messages[0].subject}
+                    </div>
+                  )}
+                  {listingTitle && (
+                    <div className="flex items-center gap-2 mt-1">
+                      <div className="h-4 w-1 bg-primary rounded-full"></div>
+                      {listingId && listingData ? (
+                        <a 
+                          href={getListingUrl({ 
+                            id: listingId, 
+                            title: listingData.title, 
+                            game: listingData.game 
+                          })}
+                          className="text-sm font-medium hover:underline hover:text-primary transition-colors"
+                        >
+                          {listingTitle}
+                        </a>
+                      ) : listingId ? (
+                        <a 
+                          href={getListingUrl({ id: listingId, title: listingTitle, game: 'other' })}
+                          className="text-sm font-medium hover:underline hover:text-primary transition-colors"
+                        >
+                          {listingTitle}
+                        </a>
+                      ) : (
+                        <span className="text-sm font-medium">
+                          {listingTitle}
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                {chatId && (
+                  <>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setShowBlockDialog(true)}
+                      title="Block user"
+                    >
+                      <Ban className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setShowDeleteDialog(true)}
+                      title="Delete chat"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </>
+                )}
+                {onClose && (
+                  <Button variant="ghost" size="sm" onClick={onClose}>
+                    Close
+                  </Button>
+                )}
+              </div>
+            </div>
+            
+            {/* View Profile button positioned under other buttons for desktop */}
+            {receiverId && receiverId !== 'system_moderation' && (
+              <div className="mt-3">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 px-2 text-xs"
+                  onClick={() => {
+                    // Navigate to the user's profile page
+                    const username = (initialReceiverName && 
+                                     initialReceiverName !== 'Loading...' && 
+                                     initialReceiverName !== 'Unknown User' && 
+                                     !initialReceiverName.startsWith('User ')) 
+                                    ? initialReceiverName
+                                    : receiverProfile?.displayName ||
+                                      receiverProfile?.username ||
+                                      (receiverProfile?.email && receiverProfile.email.split('@')[0]) ||
+                                      displayName ||
+                                      'Unknown User';
+                    
+                    // Create a URL-friendly slug from the username
+                    const slug = username.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+                    router.push(`/profile/${slug}?userId=${receiverId}`);
+                  }}
+                  title="View profile"
+                >
+                  <User className="h-3 w-3 mr-1" />
+                  View Profile
+                </Button>
+              </div>
+            )}
+          </div>
+          
+          <BlockUserDialog
+            open={showBlockDialog}
+            onOpenChange={setShowBlockDialog}
+            userId={receiverId}
+            username={displayName}
+            onBlock={handleBlockUser}
+          />
         </div>
 
         {/* Main Content Area - Fixed height and proper scrolling */}
