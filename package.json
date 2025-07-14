@@ -14,6 +14,8 @@
   },
   "dependencies": {
     "@next/env": "^14.2.6",
+    "@next/server": "^14.2.6",
+    "@next/font": "^14.2.6",
     "keen-slider": "^6.8.6",
     "ldrs": "^1.0.1",
     "bad-words": "^3.0.4",
