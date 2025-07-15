@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { MessageCircle, Check, CheckCheck, Image, Smile, Trash2, Ban, User } from 'lucide-react';
+import { MessageCircle, Check, CheckCheck, Image, Smile, Trash2, Ban, User, MoreVertical } from 'lucide-react';
 import { BlockUserDialog } from './BlockUserDialog';
 
 import { useAuth } from '@/contexts/AuthContext';
@@ -29,6 +29,12 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "./ui/popover";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "./ui/dropdown-menu";
 import { useRouter } from 'next/router';
 import { useProfile } from '@/hooks/useProfile';
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -65,6 +71,8 @@ export function Chat({
   const [displayName, setDisplayName] = useState(initialReceiverName || 'Loading...');
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showBlockDialog, setShowBlockDialog] = useState(false);
+  const [showDeleteMessageDialog, setShowDeleteMessageDialog] = useState(false);
+  const [messageToDelete, setMessageToDelete] = useState<string | null>(null);
 
   const handleBlockUser = async () => {
     if (!user || !receiverId) return;
@@ -118,7 +126,7 @@ export function Chat({
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const { messages: messagesList, loading: messagesLoading, error: messagesError, sendMessage, markAsRead, deleteChat } = useMessages(chatId);
+  const { messages: messagesList, loading: messagesLoading, error: messagesError, sendMessage, markAsRead, deleteChat, deleteMessage } = useMessages(chatId);
   const [messages, setMessages] = useState(messagesList);
 
   // Fetch receiver's username from Firestore first, then Realtime Database as fallback
@@ -670,6 +678,29 @@ export function Chat({
     }
   };
 
+  const handleDeleteMessage = async () => {
+    if (!messageToDelete || !user) return;
+    
+    try {
+      await deleteMessage(messageToDelete);
+      
+      toast({
+        title: "Success",
+        description: "Message deleted successfully."
+      });
+      
+      setShowDeleteMessageDialog(false);
+      setMessageToDelete(null);
+    } catch (error) {
+      console.error('Error deleting message:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete message. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+
   const formatMessageTime = (timestamp: number) => {
     const date = new Date(timestamp);
     const now = new Date();
@@ -1205,25 +1236,54 @@ export function Chat({
                             </span>
                           </div>
                         )}
-                        <div
-                          className={`rounded-lg p-3 break-words shadow-sm ${
-                            isUserMessage
-                              ? 'bg-primary text-primary-foreground'
-                              : 'bg-muted hover:bg-muted/90'
-                          }`}
-                        >
-                          <MessageContent 
-                            content={message.content}
-                            className={isUserMessage ? 'text-primary-foreground' : ''}
-                          />
-                          <div className="flex items-center justify-end gap-1 text-xs mt-1.5 opacity-75">
-                            <span>{formatMessageTime(message.timestamp)}</span>
-                            {isUserMessage && (
-                              message.read 
-                                ? <CheckCheck className="w-3 h-3" />
-                                : <Check className="w-3 h-3" />
-                            )}
+                        <div className="relative group">
+                          <div
+                            className={`rounded-lg p-3 break-words shadow-sm ${
+                              isUserMessage
+                                ? 'bg-primary text-primary-foreground'
+                                : 'bg-muted hover:bg-muted/90'
+                            }`}
+                          >
+                            <MessageContent 
+                              content={message.content}
+                              className={isUserMessage ? 'text-primary-foreground' : ''}
+                            />
+                            <div className="flex items-center justify-end gap-1 text-xs mt-1.5 opacity-75">
+                              <span>{formatMessageTime(message.timestamp)}</span>
+                              {isUserMessage && (
+                                message.read 
+                                  ? <CheckCheck className="w-3 h-3" />
+                                  : <Check className="w-3 h-3" />
+                              )}
+                            </div>
                           </div>
+                          
+                          {/* Delete button for user's own messages */}
+                          {isUserMessage && (
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="absolute -top-2 -right-2 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity bg-background border shadow-sm hover:bg-muted"
+                                >
+                                  <MoreVertical className="h-3 w-3" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem
+                                  onClick={() => {
+                                    setMessageToDelete(message.id);
+                                    setShowDeleteMessageDialog(true);
+                                  }}
+                                  className="text-destructive focus:text-destructive"
+                                >
+                                  <Trash2 className="h-4 w-4 mr-2" />
+                                  Delete Message
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -1404,6 +1464,29 @@ export function Chat({
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete Message Dialog */}
+      <AlertDialog open={showDeleteMessageDialog} onOpenChange={setShowDeleteMessageDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Message</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this message? This action cannot be undone and will permanently remove the message from the conversation for all participants.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setMessageToDelete(null)}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteMessage}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete Message
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

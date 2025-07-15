@@ -361,6 +361,35 @@ export const useMessages = (chatId?: string) => {
     }
   };
 
+  const deleteMessage = async (messageId: string) => {
+    if (!user) throw new Error('User not authenticated');
+    if (!chatId) throw new Error('No chat ID provided');
+
+    try {
+      const response = await fetch('/api/messages/delete-message', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${await user.getIdToken()}`
+        },
+        body: JSON.stringify({
+          chatId,
+          messageId
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to delete message');
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Error deleting message:', error);
+      throw error;
+    }
+  };
+
   const sendMessage = async (content: string, receiverId: string, listingId?: string, listingTitle?: string) => {
     if (!user) throw new Error('User not authenticated');
     if (!database) throw new Error('Database connection failed');
@@ -515,5 +544,6 @@ export const useMessages = (chatId?: string) => {
     sendMessage,
     markAsRead,
     deleteChat,
+    deleteMessage,
   };
 };

@@ -205,6 +205,7 @@
         ".read": "auth != null && root.child('chats').child($chatId).child('participants').child(auth.uid).exists()",
         ".write": "auth != null && root.child('chats').child($chatId).child('participants').child(auth.uid).exists()",
         "$messageId": {
+          ".write": "auth != null && (data.child('senderId').val() === auth.uid || !newData.exists())",
           ".validate": "newData.hasChildren(['senderId', 'content', 'timestamp', 'type'])",
           "senderId": {
             ".validate": "newData.val() === auth.uid"
