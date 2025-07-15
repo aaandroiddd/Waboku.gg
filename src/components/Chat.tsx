@@ -13,6 +13,7 @@ import { Input } from './ui/input';
 import { Avatar } from './ui/avatar';
 import { useToast } from './ui/use-toast';
 import { MessageContent } from './MessageContent';
+import { BlockingDebugger } from './BlockingDebugger';
 import data from '@emoji-mart/data';
 import Picker from '@emoji-mart/react';
 import {
@@ -952,6 +953,12 @@ export function Chat({
 
   return (
     <>
+      {/* Temporary debugging component */}
+      <BlockingDebugger 
+        otherUserId={receiverId} 
+        otherUsername={displayName} 
+      />
+      
       <Card className={`flex flex-col h-full w-full overflow-hidden ${className}`}>
         {/* Chat Header */}
         <div className="flex-none p-4 border-b bg-card">
