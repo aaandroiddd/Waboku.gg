@@ -67,12 +67,38 @@ export function Chat({
   className = '',
   isBlocked = false
 }: ChatProps) {
+  // Move all hooks to the top of the component
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const router = useRouter();
   const { profile: receiverProfile } = useProfile(receiverId);
+  
   const [displayName, setDisplayName] = useState(initialReceiverName || 'Loading...');
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showBlockDialog, setShowBlockDialog] = useState(false);
   const [showDeleteMessageDialog, setShowDeleteMessageDialog] = useState(false);
   const [messageToDelete, setMessageToDelete] = useState<string | null>(null);
+  const [newMessage, setNewMessage] = useState('');
+  const [error, setError] = useState('');
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [loadingState, setLoadingState] = useState<'loading' | 'error' | 'success'>('loading');
+  const [isAtBottom, setIsAtBottom] = useState(true);
+  const [displayedListingTitle, setDisplayedListingTitle] = useState(listingTitle);
+  const [listingData, setListingData] = useState<{ title: string; game: string } | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const observerRef = useRef<IntersectionObserver | null>(null);
+  const bottomRef = useRef<HTMLDivElement>(null);
+
+  const { messages: messagesList, loading: messagesLoading, error: messagesError, sendMessage, markAsRead, deleteChat, deleteMessage } = useMessages(chatId);
+  const [messages, setMessages] = useState(messagesList);
+  const [localIsBlocked, setLocalIsBlocked] = useState(isBlocked);
+
+  // Initialize typing status hook
+  const { setTypingStatus } = useTypingStatus(chatId || '');
 
   const handleBlockUser = async () => {
     if (!user || !receiverId) return;
@@ -123,13 +149,6 @@ export function Chat({
       });
     }
   };
-  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const { messages: messagesList, loading: messagesLoading, error: messagesError, sendMessage, markAsRead, deleteChat, deleteMessage } = useMessages(chatId);
-  const [messages, setMessages] = useState(messagesList);
-  const [localIsBlocked, setLocalIsBlocked] = useState(isBlocked);
-
   // Fetch receiver's username from Firestore first, then Realtime Database as fallback
   useEffect(() => {
     const fetchReceiverUsername = async () => {
@@ -306,16 +325,6 @@ export function Chat({
       }
     };
   }, [user, receiverId, localIsBlocked]);
-  const [loadingState, setLoadingState] = useState<'loading' | 'error' | 'success'>('loading');
-  const { user } = useAuth();
-  const { toast } = useToast();
-  const router = useRouter();
-  const [newMessage, setNewMessage] = useState('');
-  const [error, setError] = useState('');
-  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
-  
-  // Initialize typing status hook
-  const { setTypingStatus } = useTypingStatus(chatId || '');
   
   // Handle typing status updates
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -343,13 +352,6 @@ export function Chat({
       setLoadingState('success');
     }
   }, [messagesLoading, messagesError, error]);
-  const [isAtBottom, setIsAtBottom] = useState(true);
-  const [displayedListingTitle, setDisplayedListingTitle] = useState(listingTitle);
-  const [listingData, setListingData] = useState<{ title: string; game: string } | null>(null);
-  const [isUploading, setIsUploading] = useState(false);
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const observerRef = useRef<IntersectionObserver | null>(null);
-  const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (listingTitle) {
