@@ -1,41 +1,35 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import Stripe from 'stripe';
 
-// Dynamic imports to handle module resolution issues
-let firebaseAdminInstance: any = null;
-let subscriptionSyncModule: any = null;
+// Module cache to prevent repeated imports
+const moduleCache = new Map();
 
-async function getFirebaseAdminInstance() {
-  if (firebaseAdminInstance) {
-    return firebaseAdminInstance;
+async function getModule(modulePath: string) {
+  if (moduleCache.has(modulePath)) {
+    return moduleCache.get(modulePath);
   }
   
   try {
-    const { getFirebaseAdmin } = await import('@/lib/firebase-admin');
-    firebaseAdminInstance = getFirebaseAdmin();
-    return firebaseAdminInstance;
+    const module = await import(modulePath);
+    moduleCache.set(modulePath, module);
+    return module;
   } catch (error) {
-    console.error('Failed to import Firebase admin:', error);
-    throw new Error('Firebase admin not available');
+    console.error(`Failed to import module ${modulePath}:`, error);
+    throw new Error(`Module ${modulePath} not available`);
   }
+}
+
+async function getFirebaseAdminInstance() {
+  const { getFirebaseAdmin } = await getModule('@/lib/firebase-admin');
+  return getFirebaseAdmin();
 }
 
 async function getSubscriptionSyncModule() {
-  if (subscriptionSyncModule) {
-    return subscriptionSyncModule;
-  }
-  
-  try {
-    subscriptionSyncModule = await import('@/lib/subscription-sync');
-    return subscriptionSyncModule;
-  } catch (error) {
-    console.error('Failed to import subscription sync module:', error);
-    throw new Error('Subscription sync module not available');
-  }
+  return await getModule('@/lib/subscription-sync');
 }
 
-// Initialize Stripe with error handling
-const initializeStripe = () => {
+async function getStripe() {
+  const { default: Stripe } = await getModule('stripe');
+  
   if (!process.env.STRIPE_SECRET_KEY) {
     console.error('[Subscription Check] Missing STRIPE_SECRET_KEY');
     throw new Error('Missing STRIPE_SECRET_KEY');
@@ -57,16 +51,9 @@ const initializeStripe = () => {
     });
     throw error;
   }
-};
-
-// Initialize Stripe outside the handler for better performance
-let stripe: Stripe;
-try {
-  stripe = initializeStripe();
-} catch (error) {
-  console.error('[Subscription Check] Stripe initialization failed at module level');
-  // We'll try again in the handler
 }
+
+
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const requestId = Math.random().toString(36).substring(7);
@@ -96,19 +83,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  // Initialize Stripe if not already initialized
-  if (!stripe) {
-    try {
-      stripe = initializeStripe();
-    } catch (error: any) {
-      console.error(`[Subscription Check ${requestId}] Failed to initialize Stripe:`, error.message);
-      return res.status(500).json({ 
-        error: 'Internal server error',
-        message: 'Payment service unavailable',
-        code: 'STRIPE_INIT_FAILED'
-      });
-    }
-  }
+
 
   try {
     // Get the authorization header
@@ -253,6 +228,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       let stripeSubscription = null;
       if (subscriptionData.stripeSubscriptionId && !subscriptionData.stripeSubscriptionId.includes('admin_')) {
         try {
+          const stripe = await getStripe();
           stripeSubscription = await stripe.subscriptions.retrieve(subscriptionData.stripeSubscriptionId);
           
           // Update subscription status from Stripe
@@ -291,8 +267,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             // Check if this might be a user who deleted their account and created a new one
             if (userEmail) {
               try {
+                const stripeInstance = await getStripe();
                 // Look for customer in Stripe by email
-                const customers = await stripe.customers.list({
+                const customers = await stripeInstance.customers.list({
                   email: userEmail,
                   limit: 1
                 });
@@ -305,7 +282,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                   });
                   
                   // Check if this customer has any subscriptions
-                  const subscriptions = await stripe.subscriptions.list({
+                  const subscriptions = await stripeInstance.subscriptions.list({
                     customer: stripeCustomerId,
                     limit: 5
                   });
@@ -319,7 +296,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                     // Cancel all existing subscriptions
                     for (const subscription of subscriptions.data) {
                       if (subscription.status !== 'canceled') {
-                        await stripe.subscriptions.cancel(subscription.id);
+                        await stripeInstance.subscriptions.cancel(subscription.id);
                         console.log(`[Subscription Check ${requestId}] Canceled subscription:`, subscription.id);
                       }
                     }
@@ -327,7 +304,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                   
                   // Always try to delete the customer for users who recreated accounts
                   try {
-                    await stripe.customers.del(stripeCustomerId);
+                    await stripeInstance.customers.del(stripeCustomerId);
                     console.log(`[Subscription Check ${requestId}] Deleted Stripe customer:`, stripeCustomerId);
                   } catch (deleteError) {
                     console.error(`[Subscription Check ${requestId}] Error deleting customer:`, deleteError);

@@ -1,5 +1,28 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 
+// Module cache to prevent repeated imports
+const moduleCache = new Map();
+
+async function getModule(modulePath: string) {
+  if (moduleCache.has(modulePath)) {
+    return moduleCache.get(modulePath);
+  }
+  
+  try {
+    const module = await import(modulePath);
+    moduleCache.set(modulePath, module);
+    return module;
+  } catch (error) {
+    console.error(`Failed to import module ${modulePath}:`, error);
+    throw new Error(`Module ${modulePath} not available`);
+  }
+}
+
+async function getFirebaseAdminInstance() {
+  const { getFirebaseAdmin } = await getModule('@/lib/firebase-admin');
+  return getFirebaseAdmin();
+}
+
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
@@ -17,8 +40,7 @@ export default async function handler(
     const token = authHeader.split('Bearer ')[1]
     
     // Dynamic import to handle module resolution
-    const { getFirebaseAdmin } = await import('@/lib/firebase-admin')
-    const { admin, auth, database } = getFirebaseAdmin()
+    const { admin, auth, database } = await getFirebaseAdminInstance()
     
     const decodedToken = await auth.verifyIdToken(token)
     const userId = decodedToken.uid
