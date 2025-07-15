@@ -1,19 +1,25 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { getDatabase, ref, remove, get, update } from 'firebase/database';
-import { getFirebaseServices } from '@/lib/firebase';
-import { getAuth } from 'firebase-admin/auth';
-import { getApps, initializeApp, cert } from 'firebase-admin/app';
+import { ref, remove, get, query, orderByChild, limitToLast, update } from 'firebase/database';
 
-// Initialize Firebase Admin if not already initialized
-if (!getApps().length) {
-  initializeApp({
-    credential: cert({
-      projectId: process.env.FIREBASE_PROJECT_ID,
-      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-    }),
-    databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL,
-  });
+// Dynamic import to avoid module loading issues
+async function getFirebaseAdmin() {
+  try {
+    const { getFirebaseAdmin } = await import('@/lib/firebase-admin');
+    return getFirebaseAdmin();
+  } catch (error) {
+    console.error('Error loading firebase-admin:', error);
+    return null;
+  }
+}
+
+async function getFirebaseServices() {
+  try {
+    const { getFirebaseServices } = await import('@/lib/firebase');
+    return getFirebaseServices();
+  } catch (error) {
+    console.error('Error loading firebase services:', error);
+    return null;
+  }
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -23,43 +29,54 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     const { chatId, messageId } = req.body;
-    const authHeader = req.headers.authorization;
-
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
-
-    const token = authHeader.split('Bearer ')[1];
-    const decodedToken = await getAuth().verifyIdToken(token);
-    const userId = decodedToken.uid;
 
     if (!chatId || !messageId) {
       return res.status(400).json({ error: 'Chat ID and message ID are required' });
     }
 
-    const { database } = getFirebaseServices();
-    if (!database) {
+    // Get the authorization header
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ error: 'Authorization token required' });
+    }
+
+    const token = authHeader.split('Bearer ')[1];
+    
+    // Verify the Firebase ID token
+    const admin = await getFirebaseAdmin();
+    if (!admin) {
+      return res.status(500).json({ error: 'Firebase admin not available' });
+    }
+
+    let decodedToken;
+    try {
+      decodedToken = await admin.auth().verifyIdToken(token);
+    } catch (error) {
+      console.error('Error verifying token:', error);
+      return res.status(401).json({ error: 'Invalid authentication token' });
+    }
+
+    const userId = decodedToken.uid;
+    
+    // Get Firebase services
+    const firebaseServices = await getFirebaseServices();
+    if (!firebaseServices?.database) {
       return res.status(500).json({ error: 'Database connection failed' });
     }
 
-    // Check if user is a participant in the chat
-    const chatRef = ref(database, `chats/${chatId}`);
-    const chatSnapshot = await get(chatRef);
-    const chatData = chatSnapshot.val();
+    const { database } = firebaseServices;
 
-    if (!chatData || !chatData.participants || !chatData.participants[userId]) {
-      return res.status(403).json({ error: 'Access denied' });
-    }
-
-    // Check if the message exists and belongs to the user
+    // Verify the message exists and belongs to the authenticated user
     const messageRef = ref(database, `messages/${chatId}/${messageId}`);
     const messageSnapshot = await get(messageRef);
-    const messageData = messageSnapshot.val();
-
-    if (!messageData) {
+    
+    if (!messageSnapshot.exists()) {
       return res.status(404).json({ error: 'Message not found' });
     }
 
+    const messageData = messageSnapshot.val();
+    
+    // Check if the user is the sender of the message
     if (messageData.senderId !== userId) {
       return res.status(403).json({ error: 'You can only delete your own messages' });
     }
@@ -67,42 +84,55 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Delete the message
     await remove(messageRef);
 
-    // Update the last message in the chat if this was the last message
-    if (chatData.lastMessage && chatData.lastMessage.id === messageId) {
-      // Find the new last message
-      const messagesRef = ref(database, `messages/${chatId}`);
-      const messagesSnapshot = await get(messagesRef);
-      const messagesData = messagesSnapshot.val();
-
-      if (messagesData) {
-        const remainingMessages = Object.entries(messagesData)
-          .map(([id, message]: [string, any]) => ({ id, ...message }))
-          .sort((a, b) => b.timestamp - a.timestamp);
-
-        if (remainingMessages.length > 0) {
-          const newLastMessage = remainingMessages[0];
-          await update(chatRef, {
-            lastMessage: {
-              id: newLastMessage.id,
-              senderId: newLastMessage.senderId,
-              receiverId: newLastMessage.receiverId,
-              content: newLastMessage.content,
-              timestamp: newLastMessage.timestamp,
-              type: newLastMessage.type || 'text'
-            }
-          });
-        } else {
-          // No messages left, remove last message
-          await update(chatRef, {
-            lastMessage: null
-          });
+    // Check if this was the last message in the chat and update accordingly
+    try {
+      const chatRef = ref(database, `chats/${chatId}`);
+      const chatSnapshot = await get(chatRef);
+      
+      if (chatSnapshot.exists()) {
+        const chatData = chatSnapshot.val();
+        
+        // If the deleted message was the last message, find the new last message
+        if (chatData.lastMessage && chatData.lastMessage.id === messageId) {
+          const messagesQuery = query(
+            ref(database, `messages/${chatId}`),
+            orderByChild('timestamp'),
+            limitToLast(1)
+          );
+          
+          const remainingMessagesSnapshot = await get(messagesQuery);
+          
+          if (remainingMessagesSnapshot.exists()) {
+            // Update with the new last message
+            const remainingMessages = remainingMessagesSnapshot.val();
+            const newLastMessageId = Object.keys(remainingMessages)[0];
+            const newLastMessage = remainingMessages[newLastMessageId];
+            
+            await update(chatRef, {
+              lastMessage: {
+                ...newLastMessage,
+                id: newLastMessageId
+              },
+              lastMessageTime: newLastMessage.timestamp
+            });
+          } else {
+            // No messages left, remove lastMessage and lastMessageTime
+            await update(chatRef, {
+              lastMessage: null,
+              lastMessageTime: null
+            });
+          }
         }
       }
+    } catch (error) {
+      console.error('Error updating chat after message deletion:', error);
+      // Don't fail the request if chat update fails
     }
 
-    res.status(200).json({ success: true });
+    return res.status(200).json({ success: true, message: 'Message deleted successfully' });
+
   } catch (error) {
     console.error('Error deleting message:', error);
-    res.status(500).json({ error: 'Failed to delete message' });
+    return res.status(500).json({ error: 'Internal server error' });
   }
 }
