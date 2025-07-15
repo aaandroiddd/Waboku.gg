@@ -1,23 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 
-// Dynamic imports to handle module resolution issues
-let firebaseAdminInstance: any = null;
-
-async function getFirebaseAdminInstance() {
-  if (firebaseAdminInstance) {
-    return firebaseAdminInstance;
-  }
-  
-  try {
-    const { getFirebaseAdmin } = await import('@/lib/firebase-admin');
-    firebaseAdminInstance = getFirebaseAdmin();
-    return firebaseAdminInstance;
-  } catch (error) {
-    console.error('Failed to import Firebase admin:', error);
-    throw new Error('Firebase admin not available');
-  }
-}
-
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
@@ -34,8 +16,9 @@ export default async function handler(
 
     const token = authHeader.split('Bearer ')[1]
     
-    // Get Firebase admin instance dynamically
-    const { admin, auth, database } = await getFirebaseAdminInstance()
+    // Dynamic import to handle module resolution
+    const { getFirebaseAdmin } = await import('@/lib/firebase-admin')
+    const { admin, auth, database } = getFirebaseAdmin()
     
     const decodedToken = await auth.verifyIdToken(token)
     const userId = decodedToken.uid
@@ -43,6 +26,10 @@ export default async function handler(
     const { unblockedUserId } = req.body
     if (!unblockedUserId) {
       return res.status(400).json({ error: 'Missing unblockedUserId' })
+    }
+
+    if (userId === unblockedUserId) {
+      return res.status(400).json({ error: 'Cannot unblock yourself' })
     }
 
     // Verify that the unblocked user exists
@@ -56,10 +43,29 @@ export default async function handler(
     
     // Remove from blocked users list
     await db.ref(`users/${userId}/blockedUsers/${unblockedUserId}`).remove()
+    
+    // Remove the reverse blocking
+    await db.ref(`users/${unblockedUserId}/blockedBy/${userId}`).remove()
+    
+    // Remove blocking from any existing chats
+    const chatsRef = db.ref('chats')
+    const chatsSnapshot = await chatsRef.get()
 
-    // Also clear any cached blocking status by updating a timestamp
-    // This helps ensure that database rules are re-evaluated
-    await db.ref(`users/${userId}/lastUnblockAction`).set(Date.now())
+    const updates: { [key: string]: any } = {}
+    
+    chatsSnapshot.forEach((chat) => {
+      const chatData = chat.val()
+      const participants = chatData.participants || {}
+      if (participants[userId] && participants[unblockedUserId]) {
+        const chatId = chat.key as string
+        updates[`${chatId}/blockedBy/${userId}`] = null
+        updates[`${chatId}/blockedBy/${unblockedUserId}`] = null
+      }
+    })
+
+    if (Object.keys(updates).length > 0) {
+      await chatsRef.update(updates)
+    }
 
     console.log(`User ${userId} unblocked user ${unblockedUserId}`)
     return res.status(200).json({ success: true })

@@ -125,6 +125,13 @@
           "$blockedUserId": {
             ".validate": "newData.isBoolean() || newData.isNumber()"
           }
+        },
+        "blockedBy": {
+          ".read": "auth != null && auth.uid === $uid",
+          ".write": "auth != null && auth.uid === $uid",
+          "$blockedByUserId": {
+            ".validate": "newData.isBoolean() || newData.isNumber()"
+          }
         }
       }
     },
@@ -258,6 +265,11 @@
         "deletedBy": {
           "$uid": {
             ".validate": "auth != null && $uid === auth.uid"
+          }
+        },
+        "blockedBy": {
+          "$uid": {
+            ".validate": "newData.isBoolean() || newData.isNumber()"
           }
         },
         "lastMessage": {

@@ -28,68 +28,34 @@ export const useMessageThreads = () => {
   const [error, setError] = useState<string | null>(null);
   const { user } = useAuth();
 
-  // Cache for blocked status to avoid repeated checks
-  const [blockedStatusCache, setBlockedStatusCache] = useState<Record<string, { isBlocked: boolean; timestamp: number }>>({});
-  const CACHE_DURATION = 30000; // 30 seconds
-
-  // Helper function to check if a user is blocked with caching
-  const isUserBlocked = async (otherUserId: string, database: any): Promise<boolean> => {
+  // Helper function to check if a user is blocked or blocked by
+  const checkBlockingStatus = async (otherUserId: string, database: any): Promise<boolean> => {
     if (!database || !user) return false;
     
-    // Check cache first
-    const cached = blockedStatusCache[otherUserId];
-    if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
-      return cached.isBlocked;
-    }
-    
     try {
+      // Check if current user has blocked the other user
       const blockedUsersRef = ref(database, `users/${user.uid}/blockedUsers/${otherUserId}`);
-      const snapshot = await get(blockedUsersRef);
-      const isBlocked = snapshot.exists();
+      const blockedSnapshot = await get(blockedUsersRef);
       
-      // Update cache
-      setBlockedStatusCache(prev => ({
-        ...prev,
-        [otherUserId]: { isBlocked, timestamp: Date.now() }
-      }));
+      // Check if current user is blocked by the other user
+      const blockedByRef = ref(database, `users/${user.uid}/blockedBy/${otherUserId}`);
+      const blockedBySnapshot = await get(blockedByRef);
       
-      return isBlocked;
+      return blockedSnapshot.exists() || blockedBySnapshot.exists();
     } catch (error) {
       console.error('Error checking blocked status:', error);
       return false;
     }
   };
 
-  // Function to force refresh blocked status for a specific user
-  const refreshBlockedStatus = async (otherUserId: string, database: any): Promise<boolean> => {
-    if (!database || !user) return false;
-    
-    try {
-      const blockedUsersRef = ref(database, `users/${user.uid}/blockedUsers/${otherUserId}`);
-      const snapshot = await get(blockedUsersRef);
-      const isBlocked = snapshot.exists();
-      
-      // Force update cache
-      setBlockedStatusCache(prev => ({
-        ...prev,
-        [otherUserId]: { isBlocked, timestamp: Date.now() }
-      }));
-      
-      return isBlocked;
-    } catch (error) {
-      console.error('Error refreshing blocked status:', error);
-      return false;
-    }
-  };
-
-  // Mark blocked users in threads instead of filtering them out
+  // Mark blocked users in threads
   const markBlockedUsers = async (threads: MessageThread[], database: any): Promise<MessageThread[]> => {
     if (!user || threads.length === 0) return threads;
 
     const markedThreads: MessageThread[] = [];
     
     for (const thread of threads) {
-      const isBlocked = await isUserBlocked(thread.recipientId, database);
+      const isBlocked = await checkBlockingStatus(thread.recipientId, database);
       markedThreads.push({
         ...thread,
         isBlocked
@@ -129,31 +95,6 @@ export const useMessageThreads = () => {
     setError(null); // Clear any previous errors
     
     const threadsRef = ref(database, `users/${user.uid}/messageThreads`);
-    
-    // Listen for unblock actions to clear cache and refresh threads
-    const unblockRef = ref(database, `users/${user.uid}/lastUnblockAction`);
-    const unblockUnsubscribe = onValue(unblockRef, async (snapshot) => {
-      if (snapshot.exists()) {
-        // Clear the blocked status cache when an unblock action occurs
-        console.log('Unblock action detected, clearing blocked status cache and refreshing threads');
-        setBlockedStatusCache({});
-        
-        // Force refresh all thread blocked statuses
-        const currentThreads = threads;
-        if (currentThreads.length > 0) {
-          const refreshedThreads = await Promise.all(
-            currentThreads.map(async (thread) => {
-              const isBlocked = await refreshBlockedStatus(thread.recipientId, database);
-              return {
-                ...thread,
-                isBlocked
-              };
-            })
-          );
-          setThreads(refreshedThreads);
-        }
-      }
-    });
 
     const unsubscribe = onValue(threadsRef, async (snapshot) => {
       try {
@@ -243,7 +184,6 @@ export const useMessageThreads = () => {
 
     return () => {
       unsubscribe();
-      unblockUnsubscribe();
     };
   }, [user]);
 

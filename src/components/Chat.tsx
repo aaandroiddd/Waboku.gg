@@ -4,6 +4,7 @@ import { BlockUserDialog } from './BlockUserDialog';
 
 import { useAuth } from '@/contexts/AuthContext';
 import { useMessages } from '@/hooks/useMessages';
+import { useBlockingStatus } from '@/hooks/useBlockingStatus';
 import { TypingIndicator, useTypingStatus } from './TypingIndicator';
 import { Card } from './ui/card';
 import { ScrollArea } from './ui/scroll-area';
@@ -53,7 +54,6 @@ interface ChatProps {
   onClose?: () => void;
   className?: string;
   onDelete?: () => void;
-  isBlocked?: boolean;
 }
 
 export function Chat({ 
@@ -64,14 +64,14 @@ export function Chat({
   listingTitle,
   onClose,
   onDelete,
-  className = '',
-  isBlocked = false
+  className = ''
 }: ChatProps) {
   // Move all hooks to the top of the component
   const { user } = useAuth();
   const { toast } = useToast();
   const router = useRouter();
   const { profile: receiverProfile } = useProfile(receiverId);
+  const { isEitherBlocked, isBlocked, isBlockedBy, loading: blockingLoading } = useBlockingStatus(receiverId);
   
   const [displayName, setDisplayName] = useState(initialReceiverName || 'Loading...');
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -1257,23 +1257,20 @@ export function Chat({
             }}
           >
             <div className="p-4 space-y-4">
-              {localIsBlocked ? (
+              {isEitherBlocked ? (
                 <div className="bg-destructive/10 border border-destructive text-destructive px-4 py-3 rounded mb-4">
                   <div className="flex items-start gap-2">
-                    <svg 
-                      className="w-5 h-5 mt-0.5 flex-shrink-0" 
-                      fill="currentColor" 
-                      viewBox="0 0 20 20"
-                    >
-                      <path 
-                        fillRule="evenodd" 
-                        d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" 
-                        clipRule="evenodd" 
-                      />
-                    </svg>
+                    <Ban className="w-5 h-5 mt-0.5 flex-shrink-0" />
                     <div>
-                      <p className="font-medium">Unable to load conversation</p>
-                      <p className="text-sm mt-1">This conversation is no longer available. The user may have blocked you or the conversation has been restricted.</p>
+                      <p className="font-medium">
+                        {isBlocked ? 'User Blocked' : 'You have been blocked'}
+                      </p>
+                      <p className="text-sm mt-1">
+                        {isBlocked 
+                          ? `You have blocked ${displayName}. You cannot send or receive messages from this user.`
+                          : `${displayName} has blocked you. You cannot send messages to this user.`
+                        }
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -1422,6 +1419,15 @@ export function Chat({
           {(receiverId === 'system_moderation' || messages.some(msg => msg.canReply === false || msg.isSystemMessage)) ? (
             <div className="p-4 text-center text-muted-foreground">
               <p className="text-sm">This is a system message. You cannot reply to this conversation.</p>
+            </div>
+          ) : isEitherBlocked ? (
+            <div className="p-4 text-center text-muted-foreground">
+              <p className="text-sm">
+                {isBlocked 
+                  ? `You have blocked ${displayName}. Messaging is disabled.`
+                  : `${displayName} has blocked you. You cannot send messages.`
+                }
+              </p>
             </div>
           ) : (
             <form onSubmit={handleSend} className="p-4">

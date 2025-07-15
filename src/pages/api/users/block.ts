@@ -1,23 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 
-// Dynamic imports to handle module resolution issues
-let firebaseAdminInstance: any = null;
-
-async function getFirebaseAdminInstance() {
-  if (firebaseAdminInstance) {
-    return firebaseAdminInstance;
-  }
-  
-  try {
-    const { getFirebaseAdmin } = await import('@/lib/firebase-admin');
-    firebaseAdminInstance = getFirebaseAdmin();
-    return firebaseAdminInstance;
-  } catch (error) {
-    console.error('Failed to import Firebase admin:', error);
-    throw new Error('Firebase admin not available');
-  }
-}
-
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
@@ -34,8 +16,9 @@ export default async function handler(
 
     const token = authHeader.split('Bearer ')[1]
     
-    // Get Firebase admin instance dynamically
-    const { admin, auth, database } = await getFirebaseAdminInstance()
+    // Dynamic import to handle module resolution
+    const { getFirebaseAdmin } = await import('@/lib/firebase-admin')
+    const { admin, auth, database } = getFirebaseAdmin()
     
     const decodedToken = await auth.verifyIdToken(token)
     const userId = decodedToken.uid
@@ -45,26 +28,38 @@ export default async function handler(
       return res.status(400).json({ error: 'Missing blockedUserId' })
     }
 
+    if (userId === blockedUserId) {
+      return res.status(400).json({ error: 'Cannot block yourself' })
+    }
+
     // Verify that the blocked user exists
-    await auth.getUser(blockedUserId)
+    try {
+      await auth.getUser(blockedUserId)
+    } catch (error) {
+      return res.status(400).json({ error: 'User not found' })
+    }
 
     const db = database
     
     // Add to blocked users list with timestamp
     await db.ref(`users/${userId}/blockedUsers/${blockedUserId}`).set(Date.now())
     
-    // Remove any existing chat between these users
+    // Also add the reverse blocking to prevent the blocked user from messaging back
+    await db.ref(`users/${blockedUserId}/blockedBy/${userId}`).set(Date.now())
+    
+    // Mark any existing chats as blocked for both users
     const chatsRef = db.ref('chats')
-    const chatsSnapshot = await chatsRef
-      .orderByChild('participants')
-      .get()
+    const chatsSnapshot = await chatsRef.get()
 
-    const updates: { [key: string]: null } = {}
+    const updates: { [key: string]: any } = {}
     
     chatsSnapshot.forEach((chat) => {
-      const participants = chat.val().participants || {}
+      const chatData = chat.val()
+      const participants = chatData.participants || {}
       if (participants[userId] && participants[blockedUserId]) {
-        updates[chat.key as string] = null
+        const chatId = chat.key as string
+        updates[`${chatId}/blockedBy/${userId}`] = Date.now()
+        updates[`${chatId}/blockedBy/${blockedUserId}`] = Date.now()
       }
     })
 

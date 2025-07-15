@@ -16,7 +16,8 @@ import { useToast } from "./ui/use-toast"
 import { getFirebaseServices } from "@/lib/firebase"
 import { useAuthRedirect } from "@/contexts/AuthRedirectContext"
 import { useRouter } from "next/router"
-import { MessageCircle } from "lucide-react"
+import { MessageCircle, Ban } from "lucide-react"
+import { useBlockingStatus } from "@/hooks/useBlockingStatus"
 
 interface MessageDialogProps {
   recipientId: string
@@ -34,6 +35,8 @@ export function MessageDialog({ recipientId, recipientName, listingId: propListi
   const { toast } = useToast()
   const { saveRedirectState } = useAuthRedirect()
   const router = useRouter()
+  const { isEitherBlocked, isBlocked, isBlockedBy } = useBlockingStatus(recipientId)
+  
   // Use props first, then fall back to URL query parameters
   const { query } = router
   const listingId = propListingId || (query.listingId as string)
@@ -266,6 +269,21 @@ export function MessageDialog({ recipientId, recipientName, listingId: propListi
     setIsOpen(true);
   };
 
+  // Show blocked button if users are blocked
+  if (isEitherBlocked) {
+    return (
+      <Button 
+        variant="destructive" 
+        size="lg" 
+        className="w-full"
+        disabled={true}
+      >
+        <Ban className="h-5 w-5 mr-2" />
+        {isBlocked ? 'User Blocked' : 'Cannot Message'}
+      </Button>
+    )
+  }
+
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
@@ -290,6 +308,21 @@ export function MessageDialog({ recipientId, recipientName, listingId: propListi
         {isSelfMessage ? (
           <div className="py-4 text-center text-destructive font-medium">
             You cannot send messages to yourself.
+          </div>
+        ) : isEitherBlocked ? (
+          <div className="py-4 text-center text-destructive">
+            <div className="flex items-center justify-center gap-2 mb-2">
+              <Ban className="h-5 w-5" />
+              <span className="font-medium">
+                {isBlocked ? 'User Blocked' : 'Cannot Send Message'}
+              </span>
+            </div>
+            <p className="text-sm">
+              {isBlocked 
+                ? `You have blocked ${recipientName}. Unblock them to send messages.`
+                : `${recipientName} has blocked you. You cannot send messages to this user.`
+              }
+            </p>
           </div>
         ) : (
           <>
