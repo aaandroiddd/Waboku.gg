@@ -1,27 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-
-// Module cache to prevent repeated imports
-const moduleCache = new Map();
-
-async function getModule(modulePath: string) {
-  if (moduleCache.has(modulePath)) {
-    return moduleCache.get(modulePath);
-  }
-  
-  try {
-    const module = await import(modulePath);
-    moduleCache.set(modulePath, module);
-    return module;
-  } catch (error) {
-    console.error(`Failed to import module ${modulePath}:`, error);
-    throw new Error(`Module ${modulePath} not available`);
-  }
-}
-
-async function getFirebaseAdminInstance() {
-  const { getFirebaseAdmin } = await getModule('@/lib/firebase-admin');
-  return getFirebaseAdmin();
-}
+import { getFirebaseAdmin } from '@/lib/firebase-admin'
 
 export default async function handler(
   req: NextApiRequest,
@@ -35,7 +13,7 @@ export default async function handler(
     console.log('[Test Block API] Testing Firebase Admin initialization');
     
     // Test Firebase Admin initialization
-    const { admin, auth, database } = await getFirebaseAdminInstance()
+    const { admin, auth, database } = getFirebaseAdmin()
     console.log('[Test Block API] Firebase Admin initialized successfully');
     
     // Test database connection
