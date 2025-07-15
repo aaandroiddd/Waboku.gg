@@ -148,6 +148,22 @@ export const useMessageThreads = () => {
                 const chatSnapshot = await get(chatRef);
                 const chatData = chatSnapshot.val();
 
+                // Check if chat is deleted for current user
+                if (chatData?.deletedBy?.[user.uid]) {
+                  return null; // Mark for filtering
+                }
+
+                // Check if there are any messages in this chat
+                const messagesRef = ref(database, `messages/${thread.chatId}`);
+                const messagesSnapshot = await get(messagesRef);
+                const hasMessages = messagesSnapshot.exists() && 
+                  Object.keys(messagesSnapshot.val() || {}).length > 0;
+
+                // If no messages exist, mark for filtering
+                if (!hasMessages) {
+                  return null;
+                }
+
                 if (chatData?.lastMessage) {
                   thread.lastMessage = {
                     content: chatData.lastMessage.content,
@@ -170,7 +186,9 @@ export const useMessageThreads = () => {
             })
           );
 
-          setThreads(enrichedThreads);
+          // Filter out null threads (deleted or empty conversations)
+          const validThreads = enrichedThreads.filter(thread => thread !== null);
+          setThreads(validThreads);
         } else {
           setThreads([]);
         }

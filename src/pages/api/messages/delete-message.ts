@@ -84,6 +84,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Delete the message
     await remove(messageRef);
 
+    // Check if there are any remaining messages in the chat
+    const remainingMessagesRef = ref(database, `messages/${chatId}`);
+    const remainingMessagesSnapshot = await get(remainingMessagesRef);
+    const hasRemainingMessages = remainingMessagesSnapshot.exists() && 
+      Object.keys(remainingMessagesSnapshot.val() || {}).length > 0;
+
     // Check if this was the last message in the chat and update accordingly
     try {
       const chatRef = ref(database, `chats/${chatId}`);
@@ -122,6 +128,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
               lastMessageTime: null
             });
           }
+        }
+      }
+
+      // If no messages remain, mark the chat as deleted for both participants
+      // This will hide the empty conversation from the dashboard
+      if (!hasRemainingMessages) {
+        const chatData = chatSnapshot.val();
+        if (chatData && chatData.participants) {
+          const updates: Record<string, any> = {};
+          const deletionTimestamp = Date.now();
+          
+          // Mark chat as deleted for all participants
+          Object.keys(chatData.participants).forEach(participantId => {
+            updates[`chats/${chatId}/deletedBy/${participantId}`] = deletionTimestamp;
+          });
+          
+          await update(ref(database), updates);
         }
       }
     } catch (error) {

@@ -1258,7 +1258,7 @@ export function Chat({
                             </div>
                           </div>
                           
-                          {/* Delete button for user's own messages */}
+                          {/* Delete button for user's own messages - available regardless of blocking status */}
                           {isUserMessage && (
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
