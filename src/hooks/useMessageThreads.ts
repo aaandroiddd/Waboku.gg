@@ -60,6 +60,28 @@ export const useMessageThreads = () => {
     }
   };
 
+  // Function to force refresh blocked status for a specific user
+  const refreshBlockedStatus = async (otherUserId: string, database: any): Promise<boolean> => {
+    if (!database || !user) return false;
+    
+    try {
+      const blockedUsersRef = ref(database, `users/${user.uid}/blockedUsers/${otherUserId}`);
+      const snapshot = await get(blockedUsersRef);
+      const isBlocked = snapshot.exists();
+      
+      // Force update cache
+      setBlockedStatusCache(prev => ({
+        ...prev,
+        [otherUserId]: { isBlocked, timestamp: Date.now() }
+      }));
+      
+      return isBlocked;
+    } catch (error) {
+      console.error('Error refreshing blocked status:', error);
+      return false;
+    }
+  };
+
   // Mark blocked users in threads instead of filtering them out
   const markBlockedUsers = async (threads: MessageThread[], database: any): Promise<MessageThread[]> => {
     if (!user || threads.length === 0) return threads;
@@ -108,13 +130,28 @@ export const useMessageThreads = () => {
     
     const threadsRef = ref(database, `users/${user.uid}/messageThreads`);
     
-    // Listen for unblock actions to clear cache
+    // Listen for unblock actions to clear cache and refresh threads
     const unblockRef = ref(database, `users/${user.uid}/lastUnblockAction`);
-    const unblockUnsubscribe = onValue(unblockRef, (snapshot) => {
+    const unblockUnsubscribe = onValue(unblockRef, async (snapshot) => {
       if (snapshot.exists()) {
         // Clear the blocked status cache when an unblock action occurs
-        console.log('Unblock action detected, clearing blocked status cache');
+        console.log('Unblock action detected, clearing blocked status cache and refreshing threads');
         setBlockedStatusCache({});
+        
+        // Force refresh all thread blocked statuses
+        const currentThreads = threads;
+        if (currentThreads.length > 0) {
+          const refreshedThreads = await Promise.all(
+            currentThreads.map(async (thread) => {
+              const isBlocked = await refreshBlockedStatus(thread.recipientId, database);
+              return {
+                ...thread,
+                isBlocked
+              };
+            })
+          );
+          setThreads(refreshedThreads);
+        }
       }
     });
 

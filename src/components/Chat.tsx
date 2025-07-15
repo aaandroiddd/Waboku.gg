@@ -128,6 +128,7 @@ export function Chat({
 
   const { messages: messagesList, loading: messagesLoading, error: messagesError, sendMessage, markAsRead, deleteChat, deleteMessage } = useMessages(chatId);
   const [messages, setMessages] = useState(messagesList);
+  const [localIsBlocked, setLocalIsBlocked] = useState(isBlocked);
 
   // Fetch receiver's username from Firestore first, then Realtime Database as fallback
   useEffect(() => {
@@ -223,6 +224,88 @@ export function Chat({
   useEffect(() => {
     setMessages(messagesList);
   }, [messagesList]);
+
+  // Update local blocked status when isBlocked prop changes
+  useEffect(() => {
+    setLocalIsBlocked(isBlocked);
+  }, [isBlocked]);
+
+  // Check blocking status dynamically when chat loads or receiverId changes
+  useEffect(() => {
+    const checkBlockingStatus = async () => {
+      if (!user || !receiverId || receiverId === 'system_moderation') return;
+
+      try {
+        const { database } = getFirebaseServices();
+        if (!database) return;
+
+        const { ref, get } = await import('firebase/database');
+        const blockedUsersRef = ref(database, `users/${user.uid}/blockedUsers/${receiverId}`);
+        const snapshot = await get(blockedUsersRef);
+        const isCurrentlyBlocked = snapshot.exists();
+        
+        // Update local blocked status if it differs from the prop
+        if (isCurrentlyBlocked !== isBlocked) {
+          setLocalIsBlocked(isCurrentlyBlocked);
+        }
+      } catch (error) {
+        console.error('Error checking blocking status:', error);
+      }
+    };
+
+    checkBlockingStatus();
+  }, [user, receiverId, isBlocked]);
+
+  // Listen for unblock actions to update local blocked status in real-time
+  useEffect(() => {
+    if (!user || !receiverId || receiverId === 'system_moderation') return;
+
+    const setupUnblockListener = async () => {
+      try {
+        const { database } = getFirebaseServices();
+        if (!database) return;
+
+        const { ref, onValue } = await import('firebase/database');
+        
+        // Listen for unblock actions
+        const unblockRef = ref(database, `users/${user.uid}/lastUnblockAction`);
+        const unsubscribe = onValue(unblockRef, async (snapshot) => {
+          if (snapshot.exists()) {
+            // When an unblock action is detected, re-check the blocking status for this specific user
+            console.log('Unblock action detected in Chat component, checking blocking status for:', receiverId);
+            
+            const blockedUsersRef = ref(database, `users/${user.uid}/blockedUsers/${receiverId}`);
+            const blockedSnapshot = await get(blockedUsersRef);
+            const isCurrentlyBlocked = blockedSnapshot.exists();
+            
+            // Update local blocked status
+            setLocalIsBlocked(isCurrentlyBlocked);
+            
+            if (!isCurrentlyBlocked && localIsBlocked) {
+              console.log('User has been unblocked, updating local state');
+            }
+          }
+        });
+
+        return unsubscribe;
+      } catch (error) {
+        console.error('Error setting up unblock listener:', error);
+        return () => {};
+      }
+    };
+
+    let unsubscribe: (() => void) | undefined;
+    
+    setupUnblockListener().then((unsub) => {
+      unsubscribe = unsub;
+    });
+
+    return () => {
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    };
+  }, [user, receiverId, localIsBlocked]);
   const [loadingState, setLoadingState] = useState<'loading' | 'error' | 'success'>('loading');
   const { user } = useAuth();
   const { toast } = useToast();
@@ -1172,7 +1255,7 @@ export function Chat({
             }}
           >
             <div className="p-4 space-y-4">
-              {isBlocked ? (
+              {localIsBlocked ? (
                 <div className="bg-destructive/10 border border-destructive text-destructive px-4 py-3 rounded mb-4">
                   <div className="flex items-start gap-2">
                     <svg 
