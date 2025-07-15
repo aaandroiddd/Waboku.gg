@@ -101,6 +101,20 @@ export function Chat({
   // Initialize typing status hook
   const { setTypingStatus } = useTypingStatus(chatId || '');
 
+  // Helper function to get consistent username across all components
+  const getConsistentUsername = () => {
+    return (initialReceiverName && 
+            initialReceiverName !== 'Loading...' && 
+            initialReceiverName !== 'Unknown User' && 
+            !initialReceiverName.startsWith('User ')) 
+           ? initialReceiverName
+           : receiverProfile?.displayName ||
+             receiverProfile?.username ||
+             (receiverProfile?.email && receiverProfile.email.split('@')[0]) ||
+             displayName ||
+             'Unknown User';
+  };
+
   const handleBlockUser = async () => {
     if (!user || !receiverId) return;
     
@@ -120,17 +134,8 @@ export function Chat({
         throw new Error('Failed to block user');
       }
 
-      // Use the same username logic as the chat header for consistency
-      const username = (initialReceiverName && 
-                       initialReceiverName !== 'Loading...' && 
-                       initialReceiverName !== 'Unknown User' && 
-                       !initialReceiverName.startsWith('User ')) 
-                      ? initialReceiverName
-                      : receiverProfile?.displayName ||
-                        receiverProfile?.username ||
-                        (receiverProfile?.email && receiverProfile.email.split('@')[0]) ||
-                        displayName ||
-                        'Unknown User';
+      // Use the consistent username helper function
+      const username = getConsistentUsername();
 
       toast({
         title: "User blocked",
