@@ -1274,8 +1274,8 @@ export function Chat({
                       </p>
                       <p className="text-sm mt-1">
                         {isBlocked 
-                          ? `You have blocked ${displayName}. You cannot send or receive messages from this user.`
-                          : `${displayName} has blocked you. You cannot send messages to this user.`
+                          ? `You have blocked ${getConsistentUsername()}. You cannot send or receive messages from this user.`
+                          : `${getConsistentUsername()} has blocked you. You cannot send messages to this user.`
                         }
                       </p>
                     </div>
@@ -1431,8 +1431,8 @@ export function Chat({
             <div className="p-4 text-center text-muted-foreground">
               <p className="text-sm">
                 {isBlocked 
-                  ? `You have blocked ${displayName}. Messaging is disabled.`
-                  : `${displayName} has blocked you. You cannot send messages.`
+                  ? `You have blocked ${getConsistentUsername()}. Messaging is disabled.`
+                  : `${getConsistentUsername()} has blocked you. You cannot send messages.`
                 }
               </p>
             </div>
