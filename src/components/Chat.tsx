@@ -120,20 +120,21 @@ export function Chat({
         throw new Error('Failed to block user');
       }
 
-      const correctUsername = (initialReceiverName && 
-                              initialReceiverName !== 'Loading...' && 
-                              initialReceiverName !== 'Unknown User' && 
-                              !initialReceiverName.startsWith('User ')) 
-                             ? initialReceiverName
-                             : receiverProfile?.displayName ||
-                               receiverProfile?.username ||
-                               (receiverProfile?.email && receiverProfile.email.split('@')[0]) ||
-                               displayName ||
-                               'Unknown User';
+      // Use the same username logic as the chat header for consistency
+      const username = (initialReceiverName && 
+                       initialReceiverName !== 'Loading...' && 
+                       initialReceiverName !== 'Unknown User' && 
+                       !initialReceiverName.startsWith('User ')) 
+                      ? initialReceiverName
+                      : receiverProfile?.displayName ||
+                        receiverProfile?.username ||
+                        (receiverProfile?.email && receiverProfile.email.split('@')[0]) ||
+                        displayName ||
+                        'Unknown User';
 
       toast({
         title: "User blocked",
-        description: `You have blocked ${correctUsername}. They can no longer send you messages.`
+        description: `You have blocked ${username}. They can no longer send you messages.`
       });
 
       if (onClose) {
@@ -953,12 +954,6 @@ export function Chat({
 
   return (
     <>
-      {/* Temporary debugging component */}
-      <BlockingDebugger 
-        otherUserId={receiverId} 
-        otherUsername={displayName} 
-      />
-      
       <Card className={`flex flex-col h-full w-full overflow-hidden ${className}`}>
         {/* Chat Header */}
         <div className="flex-none p-4 border-b bg-card">
