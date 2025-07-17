@@ -23,6 +23,7 @@ import { EmailNotificationTester } from '@/components/EmailNotificationTester';
 import { MockListingGenerator } from '@/components/admin/MockListingGenerator';
 import { PickupCodeDebugger } from '@/components/admin/PickupCodeDebugger';
 import { ListingUsernameDebugger } from '@/components/admin/ListingUsernameDebugger';
+import ProductionUsernameDebugger from '@/components/admin/ProductionUsernameDebugger';
 import {
   Accordion,
   AccordionItem,
@@ -53,6 +54,7 @@ const SECTIONS = [
   { id: "moderator", label: "Moderator Management" },
   { id: "notification-debug", label: "Notification System Debugger" },
   { id: "pickup-code-debug", label: "Pickup Code Debugger" },
+  { id: "production-username-debug", label: "Production Username Debugger" },
   { id: "review-system", label: "Review System Debug" },
   { id: "subscription", label: "Subscription Management" },
   { id: "support-management", label: "Support Ticket Management" },
@@ -747,6 +749,19 @@ export default function AdminDashboard() {
                     Debug and test the 6-digit pickup code system for local pickup orders. Generate codes, verify them, and inspect database storage.
                   </p>
                   <PickupCodeDebugger />
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+
+            {/* Production Username Debugger */}
+            <AccordionItem value="production-username-debug" id="production-username-debug" ref={el => (sectionRefs.current["production-username-debug"] = el)}>
+              <AccordionTrigger>Production Username Debugger</AccordionTrigger>
+              <AccordionContent>
+                <div className="space-y-4 py-4">
+                  <p className="text-sm text-muted-foreground">
+                    Fix production listings that show user IDs instead of usernames. This tool directly accesses the production database to identify and fix username issues that affect the live marketplace.
+                  </p>
+                  <ProductionUsernameDebugger />
                 </div>
               </AccordionContent>
             </AccordionItem>
