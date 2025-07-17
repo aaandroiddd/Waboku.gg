@@ -14,7 +14,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Loader2 } from "lucide-react";
 import { TrendingSearches } from "@/components/TrendingSearches";
 import { checkAndClearStaleAuthData } from "@/lib/auth-token-manager";
-import AnimatedBackground from "@/components/AnimatedBackground";
+import StaticBackground from "@/components/StaticBackground";
 import { ContentLoader } from "@/components/ContentLoader";
 import { useListings } from "@/hooks/useListings";
 import { useTrendingSearches } from "@/hooks/useTrendingSearches";
@@ -491,7 +491,7 @@ export default function Home() {
                 shouldAnimate={shouldAnimate}
                 style={{ willChange: "transform, opacity" }}
               >
-                <AnimatedBackground className="opacity-80" />
+                <StaticBackground className="opacity-80" />
               </OptimizedMotion>
             </ErrorBoundary>
             
