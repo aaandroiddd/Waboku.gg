@@ -1,5 +1,4 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { getFirebaseAdmin } from '@/lib/firebase-admin';
 
 export default async function handler(
   req: NextApiRequest,
@@ -36,7 +35,52 @@ export default async function handler(
 
     // If not admin secret, try to verify as Firebase ID token
     try {
-      const { auth, db } = getFirebaseAdmin();
+      // Use direct imports to avoid module resolution issues
+      const admin = require('firebase-admin');
+      
+      // Initialize Firebase Admin if not already initialized
+      if (!admin.apps.length) {
+        const projectId = process.env.FIREBASE_PROJECT_ID || process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
+        const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
+        let privateKey = process.env.FIREBASE_PRIVATE_KEY;
+        const storageBucket = process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET;
+        const databaseURL = process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL;
+        
+        if (!projectId || !clientEmail || !privateKey) {
+          console.error('[Admin Verify] Missing Firebase configuration');
+          return res.status(500).json({ error: 'Server configuration error' });
+        }
+
+        // Handle private key formatting
+        if ((privateKey.startsWith('"') && privateKey.endsWith('"')) ||
+            (privateKey.startsWith("'") && privateKey.endsWith("'"))) {
+          privateKey = privateKey.substring(1, privateKey.length - 1);
+        }
+        
+        if (privateKey.includes('\\n')) {
+          privateKey = privateKey.replace(/\\n/g, '\n');
+        }
+
+        const options: any = {
+          credential: admin.credential.cert({
+            projectId,
+            clientEmail,
+            privateKey,
+          }),
+          storageBucket,
+        };
+
+        if (databaseURL) {
+          options.databaseURL = databaseURL;
+        }
+
+        admin.initializeApp(options);
+        console.log('[Admin Verify] Firebase Admin initialized');
+      }
+
+      const auth = admin.auth();
+      const db = admin.firestore();
+      
       console.log('[Admin Verify] Got Firebase admin instances');
       
       const decodedToken = await auth.verifyIdToken(token);
