@@ -22,6 +22,7 @@ import { NotificationDebugger } from '@/components/NotificationDebugger';
 import { EmailNotificationTester } from '@/components/EmailNotificationTester';
 import { MockListingGenerator } from '@/components/admin/MockListingGenerator';
 import { PickupCodeDebugger } from '@/components/admin/PickupCodeDebugger';
+import { ListingUsernameDebugger } from '@/components/admin/ListingUsernameDebugger';
 import {
   Accordion,
   AccordionItem,
@@ -45,6 +46,7 @@ const SECTIONS = [
   { id: "firebase", label: "Firebase Diagnostics" },
   { id: "listing-analytics", label: "Listing Analytics & Capacity Monitoring" },
   { id: "listing-debug", label: "Listing Debug Tool" },
+  { id: "listing-username-debug", label: "Listing Username Debugger" },
   { id: "listing-visibility", label: "Listing Visibility Diagnostics" },
   { id: "mock-listings", label: "Mock Listing Generator" },
   { id: "moderation", label: "Content Moderation" },
@@ -670,6 +672,19 @@ export default function AdminDashboard() {
                       </ScrollArea>
                     </div>
                   )}
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+
+            {/* Listing Username Debugger */}
+            <AccordionItem value="listing-username-debug" id="listing-username-debug" ref={el => (sectionRefs.current["listing-username-debug"] = el)}>
+              <AccordionTrigger>Listing Username Debugger</AccordionTrigger>
+              <AccordionContent>
+                <div className="space-y-4 py-4">
+                  <p className="text-sm text-muted-foreground">
+                    Diagnose and fix issues where user IDs are showing instead of usernames on listing cards. This tool can detect listings with user ID usernames and automatically fix them.
+                  </p>
+                  <ListingUsernameDebugger />
                 </div>
               </AccordionContent>
             </AccordionItem>
