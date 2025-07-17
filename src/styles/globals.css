@@ -104,20 +104,19 @@
     opacity: 1 !important;
   }
   
-  /* Optimize background animations for mobile */
+  /* Optimize background elements for mobile */
   .hero-background::before,
   .hero-background::after,
   .dark .hero-background::before,
   .dark .hero-background::after,
   .midnight .hero-background::before,
   .midnight .hero-background::after {
-    /* Slower animations on mobile */
-    animation-duration: 30s !important;
+    /* No animations - static backgrounds for better performance */
+    animation: none !important;
     /* Reduce opacity for better performance */
     opacity: 0.15 !important;
-    /* Disable animations on low-end devices */
+    /* Further reduce opacity on low-end devices */
     @media (prefers-reduced-motion: reduce) {
-      animation: none !important;
       opacity: 0.1 !important;
     }
   }
@@ -388,10 +387,8 @@
     linear-gradient(-45deg, transparent 48%, rgba(0, 160, 255, 0.08) 50%, transparent 52%);
   background-size: 60px 60px;
   opacity: 0.4; /* Reduced opacity */
-  /* Use will-change to optimize animation performance */
-  will-change: transform;
-  /* Slower animation for better performance */
-  animation: gradientMove 12s linear infinite;
+  /* Removed animation for better performance */
+  will-change: auto;
   mask-image: linear-gradient(to bottom,
     rgba(0, 0, 0, 1) 0%,
     rgba(0, 0, 0, 1) 60%,
@@ -404,7 +401,7 @@
     rgba(0, 0, 0, 0.3) 85%,
     rgba(0, 0, 0, 0) 100%
   );
-  /* Add transform to use GPU acceleration */
+  /* Static positioning for better performance */
   transform: translateZ(0);
 }
 
@@ -421,10 +418,8 @@
     radial-gradient(2px 2px at 30px 100px, rgba(0, 180, 255, 0.15), transparent);
   /* Reduced number of gradients */
   background-size: 120px 120px;
-  /* Use will-change to optimize animation performance */
-  will-change: transform;
-  /* Slower animation for better performance */
-  animation: starsMove 30s linear infinite;
+  /* Removed animation for better performance */
+  will-change: auto;
   mask-image: linear-gradient(to bottom,
     rgba(0, 0, 0, 1) 0%,
     rgba(0, 0, 0, 1) 50%,
@@ -437,7 +432,7 @@
     rgba(0, 0, 0, 0.2) 90%,
     rgba(0, 0, 0, 0) 100%
   );
-  /* Add transform to use GPU acceleration */
+  /* Static positioning for better performance */
   transform: translateZ(0);
 }
 
@@ -491,10 +486,8 @@
     linear-gradient(-45deg, transparent 48%, rgba(0, 140, 255, 0.1) 50%, transparent 52%);
   background-size: 60px 60px;
   opacity: 0.3; /* Reduced opacity */
-  /* Use will-change to optimize animation performance */
-  will-change: transform;
-  /* Slower animation for better performance */
-  animation: gradientMove 15s linear infinite;
+  /* Removed animation for better performance */
+  will-change: auto;
   mask-image: linear-gradient(to bottom,
     rgba(0, 0, 0, 1) 0%,
     rgba(0, 0, 0, 1) 60%,
@@ -507,7 +500,7 @@
     rgba(0, 0, 0, 0.3) 85%,
     rgba(0, 0, 0, 0) 100%
   );
-  /* Add transform to use GPU acceleration */
+  /* Static positioning for better performance */
   transform: translateZ(0);
 }
 
@@ -524,10 +517,8 @@
     radial-gradient(2px 2px at 30px 100px, rgba(0, 160, 255, 0.3), transparent);
   /* Reduced number of gradients */
   background-size: 120px 120px;
-  /* Use will-change to optimize animation performance */
-  will-change: transform;
-  /* Slower animation for better performance */
-  animation: starsMove 30s linear infinite;
+  /* Removed animation for better performance */
+  will-change: auto;
   mask-image: linear-gradient(to bottom,
     rgba(0, 0, 0, 1) 0%,
     rgba(0, 0, 0, 1) 50%,
@@ -540,7 +531,7 @@
     rgba(0, 0, 0, 0.2) 90%,
     rgba(0, 0, 0, 0) 100%
   );
-  /* Add transform to use GPU acceleration */
+  /* Static positioning for better performance */
   transform: translateZ(0);
 }
 
