@@ -37,6 +37,10 @@ export default function Document() {
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link rel="preload" href="/fonts/inter-var.woff2" as="font" type="font/woff2" crossOrigin="anonymous" />
         
+        {/* Prevent font loading errors */}
+        <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
+        <link rel="dns-prefetch" href="https://fonts.gstatic.com" />
+        
         {/* Preload critical assets */}
         <link rel="preload" href="/images/tcg-bg.svg" as="image" />
         

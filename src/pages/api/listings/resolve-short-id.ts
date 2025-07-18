@@ -1,22 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-
-// Import Firebase admin directly
-let firebaseAdminInstance: any = null;
-
-async function getFirebaseAdminInstance() {
-  if (firebaseAdminInstance) {
-    return firebaseAdminInstance;
-  }
-  
-  try {
-    const { getFirebaseAdmin } = await import('@/lib/firebase-admin');
-    firebaseAdminInstance = getFirebaseAdmin();
-    return firebaseAdminInstance;
-  } catch (error) {
-    console.error('Failed to import Firebase admin:', error);
-    throw new Error('Firebase admin not available');
-  }
-}
+import { getFirebaseAdmin } from '@/lib/firebase-admin';
 
 // Function to generate the same 7-digit numeric ID from a Firebase document ID
 function generateNumericShortId(listingId: string): string {
@@ -50,7 +33,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const { db } = await getFirebaseAdminInstance();
+    const { db } = getFirebaseAdmin();
     if (!db) {
       throw new Error('Database not initialized');
     }

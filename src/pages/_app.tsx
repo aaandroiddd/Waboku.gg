@@ -1,12 +1,17 @@
 // Install enhanced error handler FIRST, before any other imports
 import { initializeEnhancedErrorHandler, initializeFirestoreRecovery } from '@/lib/enhanced-error-handler';
 import { initializeFirestoreSessionManagement } from '@/lib/firestore-session-manager';
+import { initializeAnalyticsErrorHandler } from '@/lib/analytics-error-handler';
+import { initializeFontErrorHandler, preloadCriticalFonts } from '@/lib/font-error-handler';
 
 // Initialize enhanced error handling immediately
 if (typeof window !== 'undefined') {
   initializeEnhancedErrorHandler();
   initializeFirestoreRecovery();
   initializeFirestoreSessionManagement();
+  initializeAnalyticsErrorHandler();
+  initializeFontErrorHandler();
+  preloadCriticalFonts();
 }
 
 import { installResizeObserverErrorHandler } from '@/lib/resize-observer-error-handler';
@@ -44,6 +49,7 @@ import { getFirebaseServices } from '@/lib/firebase';
 import { useThemeSync } from '@/hooks/useThemeSync';
 import { performanceOptimizer } from '@/lib/performance-optimizer';
 import { PerformanceMonitor } from '@/components/PerformanceMonitor';
+import { ConsoleErrorSuppressor } from '@/components/ConsoleErrorSuppressor';
 
 const LoadingScreen = dynamic(() => import('@/components/LoadingScreen').then(mod => ({ default: mod.LoadingScreen })), {
   ssr: false
@@ -114,6 +120,9 @@ const MainContent = memo(({ Component, pageProps, pathname }: {
       </AnimatePresence>
       
       <Toaster />
+      {/* Console Error Suppressor - always active */}
+      <ConsoleErrorSuppressor />
+      
       {/* Firebase connection management */}
       {isMounted && (
         <>
