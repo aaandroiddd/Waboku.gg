@@ -625,6 +625,48 @@ export default function OrderDetailsPage() {
           </Badge>
         </div>
 
+        {/* Shipping Required Banner */}
+        {!order.isPickup && order.status === 'awaiting_shipping' && !order.shippingAddress && (
+          <Card className="border-l-4 border-l-orange-500 bg-orange-50 dark:bg-orange-900/20">
+            <CardContent className="pt-6">
+              <div className="flex items-start gap-3">
+                <div className="flex items-center justify-center w-10 h-10 rounded-full bg-orange-100 dark:bg-orange-900/30">
+                  <Truck className="h-5 w-5 text-orange-600 dark:text-orange-400" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-lg font-semibold text-orange-800 dark:text-orange-200 mb-2">
+                    Shipping Information Required
+                  </h3>
+                  <p className="text-orange-700 dark:text-orange-300 mb-4">
+                    {isUserBuyer 
+                      ? "This order requires shipping information before it can be processed. Please provide your shipping address to continue."
+                      : "This order is waiting for the buyer to provide shipping information before you can ship the item."
+                    }
+                  </p>
+                  {isUserBuyer && (
+                    <Button 
+                      variant="default" 
+                      className="bg-orange-600 hover:bg-orange-700 text-white"
+                      onClick={() => setShowShippingInfoDialog(true)}
+                    >
+                      <MapPin className="mr-2 h-4 w-4" />
+                      Provide Shipping Information
+                    </Button>
+                  )}
+                  {!isUserBuyer && (
+                    <div className="flex items-center gap-2 p-3 rounded-md bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300">
+                      <Clock className="h-4 w-4 flex-shrink-0" />
+                      <p className="text-sm">
+                        The buyer will be notified to provide their shipping address. You'll be able to ship once they complete this step.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         <Card>
           <CardHeader>
             <CardTitle>Order Details</CardTitle>
@@ -759,14 +801,21 @@ export default function OrderDetailsPage() {
                     )}
                     {order.platformFee !== undefined && (
                       <div className="flex justify-between">
-                        <span>Platform Fee:</span>
-                        <span>{formatPrice(order.platformFee)}</span>
+                        <span>Platform Fee{isUserBuyer ? '' : ' (deducted)'}:</span>
+                        <span className={isUserBuyer ? '' : 'text-red-600 dark:text-red-400'}>
+                          {isUserBuyer ? '' : '-'}{formatPrice(order.platformFee)}
+                        </span>
                       </div>
                     )}
                     <Separator />
                     <div className="flex justify-between font-semibold">
-                      <span>Total:</span>
-                      <span>{formatPrice(order.amount || (order.offerPrice || 0))}</span>
+                      <span>{isUserBuyer ? 'Total Paid:' : 'Your Earnings:'}</span>
+                      <span>
+                        {isUserBuyer 
+                          ? formatPrice(order.amount || (order.offerPrice || 0))
+                          : formatPrice((order.amount || (order.offerPrice || 0)) - (order.platformFee || 0))
+                        }
+                      </span>
                     </div>
                   </div>
                 </div>
