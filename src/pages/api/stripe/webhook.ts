@@ -467,6 +467,18 @@ export default async function handler(
             let billingFromSession = null;
             let finalShippingAddress = null;
             
+            console.log('[Stripe Webhook] Starting shipping address extraction for new order:', {
+              sessionId: session.id,
+              hasSessionShipping: !!session.shipping,
+              sessionShippingDetails: session.shipping ? {
+                name: session.shipping.name,
+                hasAddress: !!session.shipping.address,
+                address: session.shipping.address
+              } : null,
+              hasCustomerDetails: !!session.customer_details,
+              customerDetailsAddress: session.customer_details?.address || null
+            });
+            
             // First, try to get shipping from the session directly
             if (session.shipping?.address) {
               shippingFromSession = {
@@ -478,7 +490,7 @@ export default async function handler(
                 postal_code: session.shipping.address.postal_code || '',
                 country: session.shipping.address.country || '',
               };
-              console.log('[Stripe Webhook] Retrieved shipping address from session:', {
+              console.log('[Stripe Webhook] ✅ Retrieved shipping address from session:', {
                 name: session.shipping.name,
                 city: session.shipping.address.city,
                 state: session.shipping.address.state,
@@ -488,7 +500,7 @@ export default async function handler(
                 country: session.shipping.address.country
               });
             } else {
-              console.log('[Stripe Webhook] No shipping address found in session for new order');
+              console.log('[Stripe Webhook] ❌ No shipping address found in session for new order');
             }
 
             // Try to get billing address from session as fallback for shipping
@@ -502,7 +514,7 @@ export default async function handler(
                 postal_code: session.customer_details.address.postal_code || '',
                 country: session.customer_details.address.country || '',
               };
-              console.log('[Stripe Webhook] Retrieved billing address from session as potential shipping fallback:', {
+              console.log('[Stripe Webhook] ✅ Retrieved billing address from session as potential shipping fallback:', {
                 name: session.customer_details.name,
                 city: session.customer_details.address.city,
                 state: session.customer_details.address.state,
@@ -511,6 +523,8 @@ export default async function handler(
                 postal_code: session.customer_details.address.postal_code,
                 country: session.customer_details.address.country
               });
+            } else {
+              console.log('[Stripe Webhook] ❌ No billing address found in session customer details');
             }
             
             if (paymentIntentId) {
@@ -585,7 +599,8 @@ export default async function handler(
             // Priority: 1) Payment intent shipping, 2) Session shipping, 3) Billing address as shipping fallback
             if (shippingFromPaymentIntent) {
               finalShippingAddress = shippingFromPaymentIntent;
-              console.log('[Stripe Webhook] Using shipping address from payment intent (most reliable for Buy Now orders):', {
+              console.log('[Stripe Webhook] 🎯 Using shipping address from payment intent (most reliable for Buy Now orders):', {
+                source: 'payment_intent',
                 name: shippingFromPaymentIntent.name,
                 city: shippingFromPaymentIntent.city,
                 state: shippingFromPaymentIntent.state,
@@ -593,7 +608,8 @@ export default async function handler(
               });
             } else if (shippingFromSession) {
               finalShippingAddress = shippingFromSession;
-              console.log('[Stripe Webhook] Using shipping address from session (fallback):', {
+              console.log('[Stripe Webhook] 🎯 Using shipping address from session (fallback):', {
+                source: 'session_shipping',
                 name: shippingFromSession.name,
                 city: shippingFromSession.city,
                 state: shippingFromSession.state,
@@ -601,14 +617,15 @@ export default async function handler(
               });
             } else if (billingFromSession) {
               finalShippingAddress = billingFromSession;
-              console.log('[Stripe Webhook] Using billing address as shipping address (final fallback):', {
+              console.log('[Stripe Webhook] 🎯 Using billing address as shipping address (final fallback):', {
+                source: 'billing_as_shipping',
                 name: billingFromSession.name,
                 city: billingFromSession.city,
                 state: billingFromSession.state,
                 line1: billingFromSession.line1
               });
             } else {
-              console.log('[Stripe Webhook] No shipping or billing address found in session or payment intent');
+              console.log('[Stripe Webhook] ❌ CRITICAL: No shipping or billing address found in session or payment intent');
             }
 
             // Additional validation to ensure we have a complete shipping address
@@ -622,7 +639,7 @@ export default async function handler(
                                       finalShippingAddress.country;
               
               if (!hasRequiredFields) {
-                console.warn('[Stripe Webhook] Shipping address is incomplete, missing required fields:', {
+                console.warn('[Stripe Webhook] ⚠️ Shipping address is incomplete, missing required fields:', {
                   hasName: !!finalShippingAddress.name,
                   hasLine1: !!finalShippingAddress.line1,
                   hasCity: !!finalShippingAddress.city,
@@ -631,12 +648,16 @@ export default async function handler(
                   hasCountry: !!finalShippingAddress.country,
                   shippingAddress: finalShippingAddress
                 });
+                // Set finalShippingAddress to null if incomplete
+                finalShippingAddress = null;
+                console.log('[Stripe Webhook] ❌ Setting finalShippingAddress to null due to incomplete data');
               } else {
-                console.log('[Stripe Webhook] Final shipping address validated successfully:', {
+                console.log('[Stripe Webhook] ✅ Final shipping address validated successfully:', {
                   name: finalShippingAddress.name,
                   city: finalShippingAddress.city,
                   state: finalShippingAddress.state,
-                  country: finalShippingAddress.country
+                  country: finalShippingAddress.country,
+                  isComplete: true
                 });
               }
             }
