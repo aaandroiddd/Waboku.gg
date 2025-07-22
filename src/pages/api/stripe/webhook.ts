@@ -464,6 +464,7 @@ export default async function handler(
             let paymentMethod = null;
             let shippingFromPaymentIntent = null;
             let shippingFromSession = null;
+            let billingFromSession = null;
             let finalShippingAddress = null;
             
             // First, try to get shipping from the session directly
@@ -488,6 +489,28 @@ export default async function handler(
               });
             } else {
               console.log('[Stripe Webhook] No shipping address found in session for new order');
+            }
+
+            // Try to get billing address from session as fallback for shipping
+            if (session.customer_details?.address) {
+              billingFromSession = {
+                name: session.customer_details.name || '',
+                line1: session.customer_details.address.line1 || '',
+                line2: session.customer_details.address.line2 || '',
+                city: session.customer_details.address.city || '',
+                state: session.customer_details.address.state || '',
+                postal_code: session.customer_details.address.postal_code || '',
+                country: session.customer_details.address.country || '',
+              };
+              console.log('[Stripe Webhook] Retrieved billing address from session as potential shipping fallback:', {
+                name: session.customer_details.name,
+                city: session.customer_details.address.city,
+                state: session.customer_details.address.state,
+                line1: session.customer_details.address.line1,
+                line2: session.customer_details.address.line2,
+                postal_code: session.customer_details.address.postal_code,
+                country: session.customer_details.address.country
+              });
             }
             
             if (paymentIntentId) {
@@ -559,7 +582,7 @@ export default async function handler(
             }
 
             // Determine the best shipping address source
-            // For Buy Now orders, payment intent shipping is more reliable than session shipping
+            // Priority: 1) Payment intent shipping, 2) Session shipping, 3) Billing address as shipping fallback
             if (shippingFromPaymentIntent) {
               finalShippingAddress = shippingFromPaymentIntent;
               console.log('[Stripe Webhook] Using shipping address from payment intent (most reliable for Buy Now orders):', {
@@ -576,8 +599,16 @@ export default async function handler(
                 state: shippingFromSession.state,
                 line1: shippingFromSession.line1
               });
+            } else if (billingFromSession) {
+              finalShippingAddress = billingFromSession;
+              console.log('[Stripe Webhook] Using billing address as shipping address (final fallback):', {
+                name: billingFromSession.name,
+                city: billingFromSession.city,
+                state: billingFromSession.state,
+                line1: billingFromSession.line1
+              });
             } else {
-              console.log('[Stripe Webhook] No shipping address found in either session or payment intent');
+              console.log('[Stripe Webhook] No shipping or billing address found in session or payment intent');
             }
 
             // Additional validation to ensure we have a complete shipping address

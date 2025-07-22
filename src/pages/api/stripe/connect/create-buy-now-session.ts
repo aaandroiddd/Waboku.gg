@@ -210,6 +210,9 @@ export default async function handler(
           sellerId: listingData.userId,
           platformFee,
         },
+        // Always collect billing address for payment processing
+        billing_address_collection: 'required',
+        // Also collect shipping address - Stripe will use billing as default
         shipping_address_collection: {
           allowed_countries: ['US'],
         },

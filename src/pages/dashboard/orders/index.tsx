@@ -28,6 +28,7 @@ import { format, subDays } from 'date-fns';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
 import { ReviewPrompt } from '@/components/ReviewPrompt';
+import { PostCheckoutShippingDialog } from '@/components/PostCheckoutShippingDialog';
 import { sortOrdersByAttention, getAttentionCounts } from '@/lib/order-utils';
 
 type OrderStatus = 'all' | 'pending' | 'paid' | 'awaiting_shipping' | 'shipped' | 'completed' | 'cancelled';
@@ -50,6 +51,8 @@ const OrdersContent = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [sellerNames, setSellerNames] = useState<Record<string, string>>({});
   const [dismissedReviewPrompts, setDismissedReviewPrompts] = useState<string[]>([]);
+  const [showShippingDialog, setShowShippingDialog] = useState(false);
+  const [shippingDialogOrderId, setShippingDialogOrderId] = useState<string | null>(null);
   
   // Filtering and sorting state
   const [searchTerm, setSearchTerm] = useState('');
@@ -138,6 +141,25 @@ const OrdersContent = () => {
             
             // Refresh the orders data
             await refreshSection('orders');
+            
+            // Check if the created order needs shipping address
+            if (data.orderId) {
+              // Wait a moment for the orders to refresh, then check if shipping address is needed
+              setTimeout(() => {
+                const allOrders = getOrders();
+                const createdOrder = allOrders.find((order: any) => order.id === data.orderId);
+                
+                if (createdOrder && 
+                    createdOrder.buyerId === user?.uid && 
+                    createdOrder.paymentStatus === 'paid' && 
+                    !createdOrder.shippingAddress &&
+                    !createdOrder.isPickup) {
+                  console.log('[Orders Page] Order needs shipping address, showing dialog:', data.orderId);
+                  setShippingDialogOrderId(data.orderId);
+                  setShowShippingDialog(true);
+                }
+              }, 1000);
+            }
           } else {
             // There was an error
             toast.error('Failed to process order. Please contact support.', { id: toastId });
@@ -849,6 +871,22 @@ const OrdersContent = () => {
           )}
         </TabsContent>
       </Tabs>
+
+      {/* Post-checkout shipping dialog */}
+      {shippingDialogOrderId && (
+        <PostCheckoutShippingDialog
+          open={showShippingDialog}
+          onOpenChange={setShowShippingDialog}
+          orderId={shippingDialogOrderId}
+          onComplete={() => {
+            setShowShippingDialog(false);
+            setShippingDialogOrderId(null);
+            // Refresh orders to show updated shipping info
+            refreshSection('orders');
+            toast.success('Your order is now ready for shipment!');
+          }}
+        />
+      )}
     </>
   );
 };
