@@ -1068,7 +1068,7 @@ export function Chat({
                   size="sm"
                   className="h-8 px-3 text-xs self-start"
                   onClick={() => {
-                    // Navigate to the user's profile page
+                    // Navigate to the user's profile page using the proper username format
                     const username = (initialReceiverName && 
                                      initialReceiverName !== 'Loading...' && 
                                      initialReceiverName !== 'Unknown User' && 
@@ -1080,9 +1080,9 @@ export function Chat({
                                       displayName ||
                                       'Unknown User';
                     
-                    // Create a URL-friendly slug from the username
-                    const slug = username.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
-                    router.push(`/profile/${slug}?userId=${receiverId}`);
+                    // Use the actual username directly in the URL path (no slug conversion needed)
+                    // The profile page will handle username resolution to userId
+                    router.push(`/profile/${encodeURIComponent(username)}`);
                   }}
                   title="View profile"
                 >
@@ -1200,7 +1200,7 @@ export function Chat({
                   size="sm"
                   className="h-6 px-2 text-xs"
                   onClick={() => {
-                    // Navigate to the user's profile page
+                    // Navigate to the user's profile page using the proper username format
                     const username = (initialReceiverName && 
                                      initialReceiverName !== 'Loading...' && 
                                      initialReceiverName !== 'Unknown User' && 
@@ -1212,9 +1212,9 @@ export function Chat({
                                       displayName ||
                                       'Unknown User';
                     
-                    // Create a URL-friendly slug from the username
-                    const slug = username.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
-                    router.push(`/profile/${slug}?userId=${receiverId}`);
+                    // Use the actual username directly in the URL path (no slug conversion needed)
+                    // The profile page will handle username resolution to userId
+                    router.push(`/profile/${encodeURIComponent(username)}`);
                   }}
                   title="View profile"
                 >
