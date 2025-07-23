@@ -1,5 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { ref, remove, get, query, orderByChild, limitToLast, update } from 'firebase/database';
+import { isValidMessageId } from '@/lib/message-id-generator';
 
 // Dynamic import to avoid module loading issues
 async function getFirebaseAdmin() {
@@ -34,8 +35,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: 'Chat ID and message ID are required' });
     }
 
+    // Validate message ID format (supports both new MSG format and legacy Firebase format)
+    if (!isValidMessageId(messageId)) {
+      console.warn(`Invalid message ID format: ${messageId}`);
+      return res.status(400).json({ error: 'Invalid message ID format' });
+    }
+
     // Log the deletion attempt for debugging
-    console.log(`Attempting to delete message ${messageId} from chat ${chatId}`);
+    console.log(`Attempting to delete message ${messageId} from chat ${chatId} (format: ${messageId.startsWith('MSG') ? 'new' : 'legacy'})`);
 
     // Get the authorization header
     const authHeader = req.headers.authorization;

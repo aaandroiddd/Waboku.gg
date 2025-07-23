@@ -427,6 +427,16 @@
       }
     },
 
+    "system": {
+      "messageIdCounters": {
+        ".read": "auth != null",
+        ".write": "auth != null",
+        "$dateString": {
+          ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 9999999"
+        }
+      }
+    },
+
     "$other": {
       ".validate": false
     }

@@ -404,149 +404,48 @@ export const useMessages = (chatId?: string) => {
 
   const sendMessage = async (content: string, receiverId: string, listingId?: string, listingTitle?: string) => {
     if (!user) throw new Error('User not authenticated');
-    if (!database) throw new Error('Database connection failed');
 
-    let chatReference = chatId;
-    
-    if (!chatReference) {
-      // Try to find existing chat first for this specific listing
-      chatReference = await findExistingChat(user.uid, receiverId, listingId);
-
-      if (!chatReference) {
-        // Create new chat if it doesn't exist
-        const chatsRef = ref(database, 'chats');
-        const newChatRef = push(chatsRef);
-        chatReference = newChatRef.key as string;
-        
-        // Create participants object with both users
-        const participants: Record<string, boolean> = {
-          [user.uid]: true,
-          [receiverId]: true
-        };
-
-        const chatData: any = {
-          participants,
-          createdAt: Date.now(),
-        };
-
-        if (listingId) {
-          chatData.listingId = listingId;
-        }
-        
-        if (listingTitle) {
-          chatData.listingTitle = listingTitle;
-        }
-
-        try {
-          await set(newChatRef, chatData);
-        } catch (error) {
-          if (isBlockedError(error, 'chat_creation')) {
-            throw new Error('Unable to send message. The user may have blocked you or restricted messages.');
-          }
-          throw error;
-        }
-      }
-    }
-
-    const newMessage: Omit<Message, 'id'> = {
-      senderId: user.uid,
-      receiverId,
-      content,
-      timestamp: Date.now(),
-      read: false,
-      type: content.startsWith('![Image]') ? 'image' : 'text',
-      ...(listingId ? { listingId } : {})
-    };
-
-    const messageRef = push(ref(database, `messages/${chatReference}`));
+    // Use the API endpoint for sending messages to ensure consistent message ID generation
     try {
-      await set(messageRef, newMessage);
-    } catch (error) {
-      if (isBlockedError(error, 'message_sending')) {
-        throw new Error('Unable to send message. The user may have blocked you or restricted messages.');
+      const response = await fetch('/api/messages/send', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${await user.getIdToken()}`
+        },
+        body: JSON.stringify({
+          recipientId: receiverId,
+          message: content,
+          listingId,
+          listingTitle
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('Send message API failed:', errorData);
+        
+        if (errorData.code === 'USER_BLOCKED') {
+          throw new Error('Unable to send message. The user may have blocked you or restricted messages.');
+        }
+        
+        throw new Error(errorData.error || 'Failed to send message');
       }
+
+      const result = await response.json();
+      console.log('Message sent successfully:', result);
+      
+      return result.chatId;
+    } catch (error) {
+      console.error('Error sending message:', error);
+      
+      // Provide more specific error handling for common issues
+      if (error instanceof TypeError && error.message.includes('fetch')) {
+        throw new Error('Network error. Please check your internet connection and try again.');
+      }
+      
       throw error;
     }
-
-    // Update last message and listing info in chat, plus user message threads
-    const chatUpdates: any = {
-      [`chats/${chatReference}/lastMessage`]: {
-        ...newMessage,
-        id: messageRef.key,
-        type: content.startsWith('![Image]') ? 'image' : 'text'
-      }
-    };
-
-    // Update listing info if provided
-    if (listingId && listingTitle) {
-      chatUpdates[`chats/${chatReference}/listingId`] = listingId;
-      chatUpdates[`chats/${chatReference}/listingTitle`] = listingTitle;
-    }
-
-    // Update message threads for both participants
-    const messageTime = newMessage.timestamp;
-    
-    // Update sender's message thread
-    chatUpdates[`users/${user.uid}/messageThreads/${chatReference}`] = {
-      recipientId: receiverId,
-      chatId: chatReference,
-      lastMessageTime: messageTime,
-      unreadCount: 0, // Sender doesn't have unread messages
-      ...(listingId ? { listingId } : {}),
-      ...(listingTitle ? { listingTitle } : {})
-    };
-
-    // Update receiver's message thread (increment unread count)
-    chatUpdates[`users/${receiverId}/messageThreads/${chatReference}`] = {
-      recipientId: user.uid,
-      chatId: chatReference,
-      lastMessageTime: messageTime,
-      unreadCount: 1, // Receiver has 1 new unread message
-      ...(listingId ? { listingId } : {}),
-      ...(listingTitle ? { listingTitle } : {})
-    };
-
-    try {
-      // Try to update using the root reference first
-      await update(ref(database), chatUpdates);
-    } catch (error) {
-      console.error('Error updating chat with root update:', error);
-      
-      // Fallback: update chat directly if root update fails
-      try {
-        console.log('Falling back to direct chat update');
-        const chatRef = ref(database, `chats/${chatReference}`);
-        
-        // Extract just the chat updates (removing the path prefix)
-        const directChatUpdates = {};
-        Object.entries(chatUpdates).forEach(([path, value]) => {
-          if (path.startsWith(`chats/${chatReference}/`)) {
-            const relativePath = path.replace(`chats/${chatReference}/`, '');
-            directChatUpdates[relativePath] = value;
-          }
-        });
-        
-        await update(chatRef, directChatUpdates);
-        
-        // Also update user message threads separately
-        const userUpdates = {};
-        Object.entries(chatUpdates).forEach(([path, value]) => {
-          if (path.startsWith('users/')) {
-            userUpdates[path] = value;
-          }
-        });
-        
-        if (Object.keys(userUpdates).length > 0) {
-          await update(ref(database), userUpdates);
-        }
-        
-        console.log('Direct chat and user thread updates completed successfully');
-      } catch (fallbackError) {
-        console.error('Error in fallback chat update:', fallbackError);
-      }
-    }
-
-    return chatReference;
   };
 
   return {

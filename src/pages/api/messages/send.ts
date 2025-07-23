@@ -3,6 +3,7 @@ import { getAuth } from 'firebase-admin/auth'
 import { getDatabase } from 'firebase-admin/database'
 import { getFirebaseAdmin } from '@/lib/firebase-admin'
 import { notificationService } from '@/lib/notification-service'
+import { generateMessageId } from '@/lib/message-id-generator'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -117,7 +118,58 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         throw new Error('Failed to create or find chat')
       }
 
-      // Create the message
+      // Generate a new message ID using our custom format
+      let messageId: string;
+      try {
+        // Try to generate a new message ID using the client-side generator
+        // Since we're in a server environment, we need to use Firebase Admin SDK
+        const { database } = admin;
+        const counterPath = `system/messageIdCounters`;
+        
+        // Get current date in YYYYMMDD format
+        const now = new Date();
+        const dateStr = now.getFullYear().toString() + 
+                       (now.getMonth() + 1).toString().padStart(2, '0') + 
+                       now.getDate().toString().padStart(2, '0');
+
+        // Counter reference for today's date
+        const counterRef = database.ref(`${counterPath}/${dateStr}`);
+        
+        // Use a transaction to atomically increment the counter
+        const result = await counterRef.transaction((currentValue) => {
+          return (currentValue || 0) + 1;
+        });
+
+        if (!result.committed) {
+          throw new Error('Failed to generate unique message ID - transaction not committed');
+        }
+
+        const counter = result.snapshot.val();
+        
+        // Format the counter as a 7-digit number (padded with zeros)
+        const counterStr = counter.toString().padStart(7, '0');
+        
+        // Construct the final message ID
+        messageId = `MSG${dateStr}${counterStr}`;
+        
+        console.log(`[MessageID] Generated new message ID: ${messageId} (counter: ${counter})`);
+      } catch (idError) {
+        console.error('[MessageID] Error generating message ID, using fallback:', idError);
+        
+        // Fallback to timestamp-based ID if counter system fails
+        const now = new Date();
+        const dateStr = now.getFullYear().toString() + 
+                       (now.getMonth() + 1).toString().padStart(2, '0') + 
+                       now.getDate().toString().padStart(2, '0');
+        
+        const timestamp = Date.now().toString();
+        const fallbackCounter = timestamp.slice(-7);
+        
+        messageId = `MSG${dateStr}${fallbackCounter}`;
+        console.warn(`[MessageID] Using fallback ID: ${messageId}`);
+      }
+
+      // Create the message with our custom ID
       const messageData = {
         senderId,
         recipientId,
@@ -130,13 +182,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
 
       const messagesRef = admin.database.ref(`messages/${chatId}`)
-      const newMessageRef = await messagesRef.push(messageData)
+      const messageRef = messagesRef.child(messageId)
+      await messageRef.set(messageData)
 
       // Update chat with last message
       const updates: { [key: string]: any } = {
         [`chats/${chatId}/lastMessage`]: {
           ...messageData,
-          id: newMessageRef.key
+          id: messageId
         },
         [`chats/${chatId}/lastMessageTime`]: messageData.timestamp
       }
@@ -214,7 +267,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         // Don't fail the message send if notification creation fails
       }
 
-      return res.status(200).json({ success: true, chatId, messageId: newMessageRef.key })
+      return res.status(200).json({ success: true, chatId, messageId })
     } catch (error) {
       console.error('Token verification error:', error)
       
