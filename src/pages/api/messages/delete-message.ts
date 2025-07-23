@@ -99,7 +99,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       // For orphaned messages (no senderId), allow the current user to delete them
       // This handles blank messages that might have been created incorrectly
     } else if (messageData.senderId !== userId) {
-      return res.status(403).json({ error: 'You can only delete your own messages' });
+      // Check if the sender's user account still exists
+      try {
+        const senderDoc = await admin.firestore().collection('users').doc(messageData.senderId).get();
+        if (!senderDoc.exists) {
+          console.warn(`Message ${messageId} has senderId ${messageData.senderId} but user account no longer exists, treating as orphaned message`);
+          // Allow deletion of messages from non-existent users (orphaned messages)
+        } else {
+          return res.status(403).json({ error: 'You can only delete your own messages' });
+        }
+      } catch (error) {
+        console.error(`Error checking if sender ${messageData.senderId} exists:`, error);
+        // If we can't verify the sender exists, treat as orphaned and allow deletion
+        console.warn(`Cannot verify sender ${messageData.senderId} exists, treating message ${messageId} as orphaned`);
+      }
     }
 
     // Delete the message

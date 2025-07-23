@@ -1096,11 +1096,28 @@ export function Chat({
                                       displayName ||
                                       'Unknown User';
                     
+                    // Check if this is a fallback username (indicates non-existent user)
+                    if (username === 'Unknown User' || username.startsWith('User ')) {
+                      toast({
+                        title: "Profile not available",
+                        description: "This user's profile is no longer available.",
+                        variant: "destructive"
+                      });
+                      return;
+                    }
+                    
                     // Use the actual username directly in the URL path (no slug conversion needed)
                     // The profile page will handle username resolution to userId
                     router.push(`/profile/${encodeURIComponent(username)}`);
                   }}
                   title="View profile"
+                  disabled={!initialReceiverName || 
+                           initialReceiverName === 'Loading...' || 
+                           initialReceiverName === 'Unknown User' || 
+                           initialReceiverName.startsWith('User ') ||
+                           (!receiverProfile?.displayName && 
+                            !receiverProfile?.username && 
+                            !receiverProfile?.email)}
                 >
                   <User className="h-3 w-3 mr-1" />
                   View Profile
@@ -1228,11 +1245,28 @@ export function Chat({
                                       displayName ||
                                       'Unknown User';
                     
+                    // Check if this is a fallback username (indicates non-existent user)
+                    if (username === 'Unknown User' || username.startsWith('User ')) {
+                      toast({
+                        title: "Profile not available",
+                        description: "This user's profile is no longer available.",
+                        variant: "destructive"
+                      });
+                      return;
+                    }
+                    
                     // Use the actual username directly in the URL path (no slug conversion needed)
                     // The profile page will handle username resolution to userId
                     router.push(`/profile/${encodeURIComponent(username)}`);
                   }}
                   title="View profile"
+                  disabled={!initialReceiverName || 
+                           initialReceiverName === 'Loading...' || 
+                           initialReceiverName === 'Unknown User' || 
+                           initialReceiverName.startsWith('User ') ||
+                           (!receiverProfile?.displayName && 
+                            !receiverProfile?.username && 
+                            !receiverProfile?.email)}
                 >
                   <User className="h-3 w-3 mr-1" />
                   View Profile
