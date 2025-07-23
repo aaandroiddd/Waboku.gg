@@ -364,8 +364,11 @@ export const useMessages = (chatId?: string) => {
   const deleteMessage = async (messageId: string) => {
     if (!user) throw new Error('User not authenticated');
     if (!chatId) throw new Error('No chat ID provided');
+    if (!messageId || messageId.trim() === '') throw new Error('Invalid message ID');
 
     try {
+      console.log(`[useMessages] Attempting to delete message ${messageId} from chat ${chatId}`);
+      
       const response = await fetch('/api/messages/delete-message', {
         method: 'DELETE',
         headers: {
@@ -373,19 +376,28 @@ export const useMessages = (chatId?: string) => {
           'Authorization': `Bearer ${await user.getIdToken()}`
         },
         body: JSON.stringify({
-          chatId,
-          messageId
+          chatId: chatId.trim(),
+          messageId: messageId.trim()
         })
       });
 
       if (!response.ok) {
         const errorData = await response.json();
+        console.error(`[useMessages] Delete message failed with status ${response.status}:`, errorData);
         throw new Error(errorData.error || 'Failed to delete message');
       }
 
+      const result = await response.json();
+      console.log(`[useMessages] Message deleted successfully:`, result);
       return true;
     } catch (error) {
-      console.error('Error deleting message:', error);
+      console.error('[useMessages] Error deleting message:', error);
+      
+      // Provide more specific error handling for common issues
+      if (error instanceof TypeError && error.message.includes('fetch')) {
+        throw new Error('Network error. Please check your internet connection and try again.');
+      }
+      
       throw error;
     }
   };

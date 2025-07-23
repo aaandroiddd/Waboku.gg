@@ -34,6 +34,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: 'Chat ID and message ID are required' });
     }
 
+    // Log the deletion attempt for debugging
+    console.log(`Attempting to delete message ${messageId} from chat ${chatId}`);
+
     // Get the authorization header
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -76,8 +79,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const messageData = messageSnapshot.val();
     
+    // Handle malformed message data (common with blank messages)
+    if (!messageData || typeof messageData !== 'object') {
+      console.warn(`Malformed message data for ${messageId}:`, messageData);
+      // Still allow deletion of malformed messages if they exist
+      try {
+        await remove(messageRef);
+        return res.status(200).json({ success: true, message: 'Malformed message deleted successfully' });
+      } catch (deleteError) {
+        console.error('Error deleting malformed message:', deleteError);
+        return res.status(500).json({ error: 'Failed to delete malformed message' });
+      }
+    }
+    
     // Check if the user is the sender of the message
-    if (messageData.senderId !== userId) {
+    // Handle cases where senderId might be missing (blank messages)
+    if (!messageData.senderId) {
+      console.warn(`Message ${messageId} has no senderId, treating as orphaned message`);
+      // For orphaned messages (no senderId), allow the current user to delete them
+      // This handles blank messages that might have been created incorrectly
+    } else if (messageData.senderId !== userId) {
       return res.status(403).json({ error: 'You can only delete your own messages' });
     }
 
@@ -114,13 +135,25 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             const newLastMessageId = Object.keys(remainingMessages)[0];
             const newLastMessage = remainingMessages[newLastMessageId];
             
-            await update(chatRef, {
-              lastMessage: {
-                ...newLastMessage,
-                id: newLastMessageId
-              },
-              lastMessageTime: newLastMessage.timestamp
-            });
+            // Validate the new last message before updating
+            if (newLastMessage && typeof newLastMessage === 'object') {
+              await update(chatRef, {
+                lastMessage: {
+                  content: newLastMessage.content || '',
+                  senderId: newLastMessage.senderId || '',
+                  timestamp: newLastMessage.timestamp || Date.now(),
+                  type: newLastMessage.type || 'text',
+                  id: newLastMessageId
+                },
+                lastMessageTime: newLastMessage.timestamp || Date.now()
+              });
+            } else {
+              // If the new last message is also malformed, clear it
+              await update(chatRef, {
+                lastMessage: null,
+                lastMessageTime: null
+              });
+            }
           } else {
             // No messages left, remove lastMessage and lastMessageTime
             await update(chatRef, {

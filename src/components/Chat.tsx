@@ -785,9 +785,25 @@ export function Chat({
       setMessageToDelete(null);
     } catch (error) {
       console.error('Error deleting message:', error);
+      
+      // Provide more specific error messages based on the error type
+      let errorMessage = "Failed to delete message. Please try again.";
+      
+      if (error instanceof Error) {
+        if (error.message.includes('Message not found')) {
+          errorMessage = "This message has already been deleted or no longer exists.";
+        } else if (error.message.includes('You can only delete your own messages')) {
+          errorMessage = "You can only delete your own messages.";
+        } else if (error.message.includes('Database connection failed')) {
+          errorMessage = "Connection error. Please check your internet connection and try again.";
+        } else if (error.message.includes('Authorization token required')) {
+          errorMessage = "Authentication error. Please refresh the page and try again.";
+        }
+      }
+      
       toast({
         title: "Error",
-        description: "Failed to delete message. Please try again.",
+        description: errorMessage,
         variant: "destructive"
       });
     }
