@@ -24,7 +24,7 @@ interface UnreadContextType {
 
 const UnreadContext = createContext<UnreadContextType | undefined>(undefined);
 
-export const UnreadProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const OptimizedUnreadProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user } = useAuth();
   const [unreadCounts, setUnreadCounts] = useState<UnreadCounts>({
     messages: 0,
@@ -50,7 +50,7 @@ export const UnreadProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       const isVisible = document.visibilityState === 'visible';
       isPageVisibleRef.current = isVisible;
       
-      console.log(`[UnreadContext] Page visibility changed: ${isVisible ? 'visible' : 'hidden'}`);
+      console.log(`[OptimizedUnreadContext] Page visibility changed: ${isVisible ? 'visible' : 'hidden'}`);
       
       if (!isVisible) {
         // Page is hidden, pause all listeners to reduce database usage
@@ -71,7 +71,7 @@ export const UnreadProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   }, [user]);
 
   const pauseListeners = useCallback(() => {
-    console.log('[UnreadContext] Pausing listeners due to page visibility');
+    console.log('[OptimizedUnreadContext] Pausing listeners due to page visibility');
     
     // Clean up existing listeners
     listenersRef.current.forEach(id => databaseOptimizer.removeListener(id));
@@ -92,11 +92,11 @@ export const UnreadProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   const resumeListeners = useCallback(() => {
     if (!user || !isPageVisibleRef.current) {
-      console.log('[UnreadContext] Not resuming listeners - user not authenticated or page not visible');
+      console.log('[OptimizedUnreadContext] Not resuming listeners - user not authenticated or page not visible');
       return;
     }
     
-    console.log('[UnreadContext] Resuming listeners due to page visibility');
+    console.log('[OptimizedUnreadContext] Resuming listeners due to page visibility');
     setupListeners();
   }, [user]);
 
@@ -110,11 +110,11 @@ export const UnreadProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   const setupListeners = useCallback(() => {
     if (!user || !isPageVisibleRef.current) {
-      console.log('[UnreadContext] Skipping listener setup - user not authenticated or page not visible');
+      console.log('[OptimizedUnreadContext] Skipping listener setup - user not authenticated or page not visible');
       return;
     }
 
-    console.log('[UnreadContext] Setting up optimized listeners');
+    console.log('[OptimizedUnreadContext] Setting up optimized listeners');
     setIsLoading(true);
 
     // Clean up previous listeners
@@ -128,11 +128,11 @@ export const UnreadProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
 
     try {
-      // Set up real-time notification listener with high priority
+      // Set up real-time notification listener
       notificationUnsubscribeRef.current = notificationService.subscribeToUnreadCount(
         user.uid,
         (count) => {
-          console.log('[UnreadContext] Received notification count update:', count);
+          console.log('[OptimizedUnreadContext] Received notification count update:', count);
           if (activeSection !== 'notifications') {
             setUnreadCounts(prev => ({ ...prev, notifications: count }));
           }
@@ -141,7 +141,7 @@ export const UnreadProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         }
       );
 
-      // Use optimized listener for messages with high priority and exponential backoff
+      // Use optimized listener for messages with exponential backoff
       const messagesListenerId = databaseOptimizer.createOptimizedListener({
         path: `users/${user.uid}/messageThreads`,
         callback: async (threadsData) => {
@@ -158,13 +158,13 @@ export const UnreadProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             const { database } = getFirebaseServices();
             
             if (!database) {
-              console.error('[UnreadContext] Database not available for unread count');
+              console.error('[OptimizedUnreadContext] Database not available for unread count');
               return;
             }
             
             const chatIds = Object.keys(threadsData);
             
-            // Use smaller chunks and longer delays to be more respectful to the database
+            // Use batch processing with smaller chunks to reduce load
             const maxConcurrentChecks = 3; // Reduced from 5
             const chunks = [];
             for (let i = 0; i < chatIds.length; i += maxConcurrentChecks) {
@@ -174,7 +174,7 @@ export const UnreadProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             for (const chunk of chunks) {
               // Only process if page is still visible and user is still authenticated
               if (!isPageVisibleRef.current || !user) {
-                console.log('[UnreadContext] Stopping message processing - page hidden or user logged out');
+                console.log('[OptimizedUnreadContext] Stopping message processing - page hidden or user logged out');
                 break;
               }
 
@@ -195,7 +195,7 @@ export const UnreadProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                   }
                   return 0;
                 } catch (error) {
-                  console.error(`[UnreadContext] Error checking unread status for chat ${chatId}:`, error);
+                  console.error(`[OptimizedUnreadContext] Error checking unread status for chat ${chatId}:`, error);
                   return 0;
                 }
               });
@@ -211,13 +211,13 @@ export const UnreadProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             
             setUnreadCounts(prev => ({ ...prev, messages: unreadMessageCount }));
           } catch (error) {
-            console.error('[UnreadContext] Error counting unread messages:', error);
+            console.error('[OptimizedUnreadContext] Error counting unread messages:', error);
             
             // Implement exponential backoff for reconnection
             reconnectAttemptsRef.current++;
             if (reconnectAttemptsRef.current <= maxReconnectAttempts) {
               const delay = getReconnectDelay();
-              console.log(`[UnreadContext] Retrying in ${delay}ms (attempt ${reconnectAttemptsRef.current}/${maxReconnectAttempts})`);
+              console.log(`[OptimizedUnreadContext] Retrying in ${delay}ms (attempt ${reconnectAttemptsRef.current}/${maxReconnectAttempts})`);
               
               setTimeout(() => {
                 if (user && isPageVisibleRef.current) {
@@ -227,10 +227,7 @@ export const UnreadProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             }
           }
         },
-        options: { 
-          once: false,
-          priority: 'high' // High priority for messages
-        }
+        options: { once: false }
       });
 
       if (messagesListenerId) {
@@ -260,7 +257,7 @@ export const UnreadProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             await fetchUnreadOrders();
           }
         } catch (error) {
-          console.error('[UnreadContext] Error in fetchUnreadData:', error);
+          console.error('[OptimizedUnreadContext] Error in fetchUnreadData:', error);
         }
       };
 
@@ -280,7 +277,7 @@ export const UnreadProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
       setIsLoading(false);
     } catch (error) {
-      console.error('[UnreadContext] Error setting up listeners:', error);
+      console.error('[OptimizedUnreadContext] Error setting up listeners:', error);
       setIsLoading(false);
       
       // Implement exponential backoff for setup errors
@@ -299,7 +296,7 @@ export const UnreadProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   // Main effect that manages listeners based on authentication
   useEffect(() => {
     if (!user) {
-      console.log('[UnreadContext] User not authenticated, cleaning up all listeners to reduce database usage');
+      console.log('[OptimizedUnreadContext] User not authenticated, cleaning up all listeners');
       setUnreadCounts({ messages: 0, offers: 0, orders: 0, notifications: 0 });
       setIsLoading(false);
       
@@ -318,7 +315,7 @@ export const UnreadProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
 
     return () => {
-      console.log('[UnreadContext] Cleaning up listeners on unmount');
+      console.log('[OptimizedUnreadContext] Cleaning up listeners on unmount');
       pauseListeners();
     };
   }, [user, setupListeners, pauseListeners]);
@@ -340,7 +337,7 @@ export const UnreadProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       
       setUnreadCounts(prev => ({ ...prev, offers: unreadOfferCount }));
     } catch (error) {
-      console.error('[UnreadContext] Error counting unread offers:', error);
+      console.error('[OptimizedUnreadContext] Error counting unread offers:', error);
     }
   };
 
@@ -379,73 +376,72 @@ export const UnreadProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       
       setUnreadCounts(prev => ({ ...prev, orders: attentionCount }));
     } catch (error) {
-      console.error('[UnreadContext] Error counting orders needing attention:', error);
+      console.error('[OptimizedUnreadContext] Error counting orders needing attention:', error);
     }
   };
 
   // Clear unread count when user views a section
-  const clearUnreadCount = (section: keyof UnreadCounts) => {
+  const clearUnreadCount = useCallback((section: keyof UnreadCounts) => {
     setActiveSection(section);
     setUnreadCounts(prev => ({ ...prev, [section]: 0 }));
     
-    // For messages, we need to update the database to mark messages as read
+    // For messages, update the database to mark messages as read
     if (section === 'messages' && user) {
       const database = getDatabase();
       const chatsRef = ref(database, 'chats');
       
-      // Get all chats
       get(chatsRef).then((snapshot) => {
         const chatsData = snapshot.val();
         if (!chatsData) return;
         
         const updates: Record<string, any> = {};
         
-        // Process each chat
         for (const [chatId, chat] of Object.entries<any>(chatsData)) {
-          // Skip if user is not a participant or chat is deleted by user
           if (!chat.participants?.[user.uid] || chat.deletedBy?.[user.uid]) {
             continue;
           }
           
-          // Check if there's a last message and it's unread
           if (chat.lastMessage && 
               chat.lastMessage.receiverId === user.uid && 
               chat.lastMessage.read === false) {
-            // Mark the last message as read
             updates[`chats/${chatId}/lastMessage/read`] = true;
           }
         }
         
-        // Apply all updates at once
         if (Object.keys(updates).length > 0) {
           update(ref(database), updates).catch(err => {
-            console.error('Error updating message read status:', err);
+            console.error('[OptimizedUnreadContext] Error updating message read status:', err);
           });
         }
       }).catch(err => {
-        console.error('Error getting chats for read status update:', err);
+        console.error('[OptimizedUnreadContext] Error getting chats for read status update:', err);
       });
     }
-  };
+  }, [user]);
 
   // Reset tracking when user leaves a section
-  const resetUnreadCount = (section: keyof UnreadCounts) => {
+  const resetUnreadCount = useCallback((section: keyof UnreadCounts) => {
     if (activeSection === section) {
       setActiveSection(null);
     }
-  };
+  }, [activeSection]);
 
   return (
-    <UnreadContext.Provider value={{ unreadCounts, clearUnreadCount, resetUnreadCount, isLoading }}>
+    <UnreadContext.Provider value={{ 
+      unreadCounts, 
+      clearUnreadCount, 
+      resetUnreadCount, 
+      isLoading 
+    }}>
       {children}
     </UnreadContext.Provider>
   );
 };
 
-export const useUnread = () => {
+export const useOptimizedUnread = () => {
   const context = useContext(UnreadContext);
   if (context === undefined) {
-    throw new Error('useUnread must be used within an UnreadProvider');
+    throw new Error('useOptimizedUnread must be used within an OptimizedUnreadProvider');
   }
   return context;
 };
