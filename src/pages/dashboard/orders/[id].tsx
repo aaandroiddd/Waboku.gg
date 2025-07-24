@@ -667,6 +667,45 @@ export default function OrderDetailsPage() {
           </Card>
         )}
 
+        {/* Seller Shipping Action Banner */}
+        {!isUserBuyer && !order.isPickup && order.status === 'awaiting_shipping' && order.shippingAddress && (
+          <Card className="border-l-4 border-l-blue-500 bg-blue-50 dark:bg-blue-900/20">
+            <CardContent className="pt-6">
+              <div className="flex items-start gap-3">
+                <div className="flex items-center justify-center w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/30">
+                  <Package className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-lg font-semibold text-blue-800 dark:text-blue-200 mb-2">
+                    Ready to Ship
+                  </h3>
+                  <p className="text-blue-700 dark:text-blue-300 mb-4">
+                    The buyer has provided shipping information and this order is ready to be shipped. Please add tracking information or mark as shipped to continue.
+                  </p>
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <Button 
+                      variant="default" 
+                      className="bg-blue-600 hover:bg-blue-700 text-white"
+                      onClick={() => setShowTrackingDialog(true)}
+                    >
+                      <Truck className="mr-2 h-4 w-4" />
+                      Add Tracking Information
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      className="border-blue-600 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                      onClick={() => setShowNoTrackingDialog(true)}
+                    >
+                      <Package className="mr-2 h-4 w-4" />
+                      Ship Without Tracking
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         <Card>
           <CardHeader>
             <CardTitle>Order Details</CardTitle>
