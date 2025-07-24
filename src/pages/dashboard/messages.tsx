@@ -102,7 +102,11 @@ export default function MessagesPage() {
     if (!user) return;
 
     try {
-      const token = await user.getIdToken();
+      // Force token refresh to ensure we have a valid token
+      console.log('Getting fresh Firebase ID token for cleanup...');
+      const token = await user.getIdToken(true); // Force refresh
+      console.log('Token obtained, making cleanup request...');
+      
       const response = await fetch('/api/messages/cleanup-threads', {
         method: 'POST',
         headers: {
@@ -110,6 +114,8 @@ export default function MessagesPage() {
           'Content-Type': 'application/json'
         }
       });
+
+      console.log('Cleanup response status:', response.status);
 
       if (response.ok) {
         const result = await response.json();
@@ -132,13 +138,25 @@ export default function MessagesPage() {
         return result.cleaned > 0;
       } else {
         const errorData = await response.json();
+        console.error('Cleanup API error:', errorData);
         throw new Error(errorData.error || 'Failed to clean up threads');
       }
     } catch (error) {
       console.error('Error cleaning up orphaned threads:', error);
+      
+      // Provide more specific error messages
+      let errorMessage = "Unable to clean up message threads. Please try again.";
+      if (error instanceof Error) {
+        if (error.message.includes('Invalid authentication token')) {
+          errorMessage = "Authentication expired. Please refresh the page and try again.";
+        } else if (error.message.includes('network')) {
+          errorMessage = "Network error. Please check your connection and try again.";
+        }
+      }
+      
       toast({
         title: "Cleanup Failed",
-        description: "Unable to clean up message threads. Please try again.",
+        description: errorMessage,
         variant: "destructive"
       });
     }
