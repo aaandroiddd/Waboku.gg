@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { ref, remove, get, query, orderByChild, limitToLast, update } from 'firebase/database';
 import { isValidMessageId } from '@/lib/message-id-generator';
+import { cleanupSpecificThread } from '@/lib/message-thread-cleanup';
 
 // Dynamic import to avoid module loading issues
 async function getFirebaseAdmin() {
@@ -198,6 +199,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           });
           
           await update(ref(database), updates);
+          
+          // Clean up orphaned message threads for all participants
+          const participantIds = Object.keys(chatData.participants);
+          for (const participantId of participantIds) {
+            try {
+              await cleanupSpecificThread(participantId, chatId);
+              console.log(`[MessageDelete] Cleaned up orphaned thread for participant ${participantId}`);
+            } catch (cleanupError) {
+              console.error(`[MessageDelete] Error cleaning up thread for participant ${participantId}:`, cleanupError);
+              // Don't fail the deletion if cleanup fails
+            }
+          }
         }
       }
     } catch (error) {

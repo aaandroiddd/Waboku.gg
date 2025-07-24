@@ -121,9 +121,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       // Generate a new message ID using our custom format
       let messageId: string;
       try {
-        // Try to generate a new message ID using the client-side generator
-        // Since we're in a server environment, we need to use Firebase Admin SDK
-        const { database } = admin;
+        // Use Firebase Admin SDK for server-side message ID generation
+        const database = admin.database();
         const counterPath = `system/messageIdCounters`;
         
         // Get current date in YYYYMMDD format
@@ -135,16 +134,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         // Counter reference for today's date
         const counterRef = database.ref(`${counterPath}/${dateStr}`);
         
+        console.log(`[MessageID] Attempting to generate message ID for date: ${dateStr}`);
+        
         // Use a transaction to atomically increment the counter
         const result = await counterRef.transaction((currentValue) => {
-          return (currentValue || 0) + 1;
+          const newValue = (currentValue || 0) + 1;
+          console.log(`[MessageID] Transaction: ${currentValue} -> ${newValue}`);
+          return newValue;
         });
 
-        if (!result.committed) {
-          throw new Error('Failed to generate unique message ID - transaction not committed');
+        if (!result.committed || !result.snapshot.exists()) {
+          throw new Error(`Failed to generate unique message ID - transaction not committed or snapshot doesn't exist. Committed: ${result.committed}`);
         }
 
         const counter = result.snapshot.val();
+        
+        if (typeof counter !== 'number' || counter <= 0) {
+          throw new Error(`Invalid counter value: ${counter}`);
+        }
         
         // Format the counter as a 7-digit number (padded with zeros)
         const counterStr = counter.toString().padStart(7, '0');
@@ -152,21 +159,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         // Construct the final message ID
         messageId = `MSG${dateStr}${counterStr}`;
         
-        console.log(`[MessageID] Generated new message ID: ${messageId} (counter: ${counter})`);
+        console.log(`[MessageID] Successfully generated new message ID: ${messageId} (counter: ${counter})`);
       } catch (idError) {
         console.error('[MessageID] Error generating message ID, using fallback:', idError);
         
-        // Fallback to timestamp-based ID if counter system fails
+        // Enhanced fallback to timestamp-based ID if counter system fails
         const now = new Date();
         const dateStr = now.getFullYear().toString() + 
                        (now.getMonth() + 1).toString().padStart(2, '0') + 
                        now.getDate().toString().padStart(2, '0');
         
-        const timestamp = Date.now().toString();
-        const fallbackCounter = timestamp.slice(-7);
+        // Use a more unique fallback that includes microseconds
+        const timestamp = Date.now();
+        const randomSuffix = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+        const fallbackCounter = (timestamp.toString().slice(-4) + randomSuffix).padStart(7, '0');
         
         messageId = `MSG${dateStr}${fallbackCounter}`;
-        console.warn(`[MessageID] Using fallback ID: ${messageId}`);
+        console.warn(`[MessageID] Using enhanced fallback ID: ${messageId}`);
       }
 
       // Create the message with our custom ID

@@ -21,6 +21,7 @@ import { MessageThreadDebugger } from '@/components/MessageThreadDebugger';
 import { MessageSystemDebugger } from '@/components/MessageSystemDebugger';
 import { prefetchUserData } from '@/hooks/useUserData';
 import { toast } from '@/components/ui/use-toast';
+import { RefreshCw } from 'lucide-react';
 
 interface ChatPreview {
   id: string;
@@ -92,6 +93,54 @@ export default function MessagesPage() {
       }
     } catch (error) {
       console.error('Error syncing message threads:', error);
+    }
+    return false;
+  };
+
+  // Function to clean up orphaned message threads
+  const cleanupOrphanedThreads = async () => {
+    if (!user) return;
+
+    try {
+      const token = await user.getIdToken();
+      const response = await fetch('/api/messages/cleanup-threads', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log('Orphaned threads cleaned up:', result);
+        
+        if (result.cleaned > 0) {
+          toast({
+            title: "Cleanup Complete",
+            description: `Removed ${result.cleaned} empty conversation${result.cleaned === 1 ? '' : 's'} from your messages.`,
+          });
+          // Reload the page to show updated message list
+          window.location.reload();
+        } else {
+          toast({
+            title: "No Cleanup Needed",
+            description: "All your message threads are valid.",
+          });
+        }
+        
+        return result.cleaned > 0;
+      } else {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to clean up threads');
+      }
+    } catch (error) {
+      console.error('Error cleaning up orphaned threads:', error);
+      toast({
+        title: "Cleanup Failed",
+        description: "Unable to clean up message threads. Please try again.",
+        variant: "destructive"
+      });
     }
     return false;
   };
@@ -191,7 +240,20 @@ export default function MessagesPage() {
         {showChatList && (
           <div className={`${isMobileView ? 'w-full' : 'w-80'} border-r bg-background flex flex-col overflow-hidden`}>
             <div className="p-4 border-b flex-none">
-              <h2 className="text-xl font-semibold">Messages</h2>
+              <div className="flex items-center justify-between mb-2">
+                <h2 className="text-xl font-semibold">Messages</h2>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={cleanupOrphanedThreads}
+                  disabled={loading}
+                  className="gap-2"
+                  title="Clean up empty conversations"
+                >
+                  <RefreshCw className="w-4 h-4" />
+                  Cleanup
+                </Button>
+              </div>
               <p className="text-sm text-muted-foreground">Your conversations</p>
             </div>
             

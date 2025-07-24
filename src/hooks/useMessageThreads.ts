@@ -131,14 +131,30 @@ export const useMessageThreads = () => {
                   return null; // Mark for filtering
                 }
 
-                // Check if there are any messages in this chat
+                // Check if there are any valid messages in this chat
                 const messagesRef = ref(database, `messages/${thread.chatId}`);
                 const messagesSnapshot = await get(messagesRef);
-                const hasMessages = messagesSnapshot.exists() && 
-                  Object.keys(messagesSnapshot.val() || {}).length > 0;
+                
+                let hasValidMessages = false;
+                if (messagesSnapshot.exists()) {
+                  const messagesData = messagesSnapshot.val();
+                  if (messagesData && typeof messagesData === 'object') {
+                    // Check if there are any valid message objects (not just empty nodes)
+                    const messageEntries = Object.entries(messagesData);
+                    hasValidMessages = messageEntries.some(([messageId, messageData]) => {
+                      // Validate that the message data is a proper object with required fields
+                      return messageData && 
+                             typeof messageData === 'object' && 
+                             (messageData as any).content !== undefined &&
+                             (messageData as any).senderId !== undefined &&
+                             (messageData as any).timestamp !== undefined;
+                    });
+                  }
+                }
 
-                // If no messages exist, mark for filtering
-                if (!hasMessages) {
+                // If no valid messages exist, mark for filtering
+                if (!hasValidMessages) {
+                  console.log(`[MessageThreads] Filtering out thread ${thread.chatId} - no valid messages found`);
                   return null;
                 }
 
