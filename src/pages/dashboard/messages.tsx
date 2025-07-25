@@ -104,9 +104,43 @@ export default function MessagesPage() {
     try {
       // Force token refresh to ensure we have a valid token
       console.log('Getting fresh Firebase ID token for cleanup...');
-      const token = await user.getIdToken(true); // Force refresh
-      console.log('Token obtained, making cleanup request...');
+      console.log('User info:', {
+        uid: user.uid,
+        email: user.email,
+        emailVerified: user.emailVerified,
+        providerData: user.providerData.map(p => ({ providerId: p.providerId }))
+      });
       
+      const token = await user.getIdToken(true); // Force refresh
+      console.log('Token obtained successfully');
+      console.log('Token info:', {
+        length: token.length,
+        startsWithEy: token.startsWith('ey'),
+        hasDots: (token.match(/\./g) || []).length,
+        firstChars: token.substring(0, 10) + '...'
+      });
+      
+      // Try to decode the token to check its contents
+      try {
+        const tokenParts = token.split('.');
+        if (tokenParts.length === 3) {
+          const payload = JSON.parse(atob(tokenParts[1]));
+          console.log('Token payload info:', {
+            iss: payload.iss,
+            aud: payload.aud,
+            exp: payload.exp,
+            iat: payload.iat,
+            uid: payload.uid,
+            currentTime: Math.floor(Date.now() / 1000),
+            isExpired: payload.exp < Math.floor(Date.now() / 1000),
+            timeUntilExpiry: payload.exp - Math.floor(Date.now() / 1000)
+          });
+        }
+      } catch (decodeError) {
+        console.error('Error decoding token for debugging:', decodeError);
+      }
+      
+      console.log('Making cleanup request...');
       const response = await fetch('/api/messages/cleanup-threads', {
         method: 'POST',
         headers: {
@@ -116,6 +150,7 @@ export default function MessagesPage() {
       });
 
       console.log('Cleanup response status:', response.status);
+      console.log('Cleanup response headers:', Object.fromEntries(response.headers.entries()));
 
       if (response.ok) {
         const result = await response.json();
@@ -139,6 +174,11 @@ export default function MessagesPage() {
       } else {
         const errorData = await response.json();
         console.error('Cleanup API error:', errorData);
+        console.error('Full error response:', {
+          status: response.status,
+          statusText: response.statusText,
+          data: errorData
+        });
         throw new Error(errorData.error || 'Failed to clean up threads');
       }
     } catch (error) {
@@ -149,6 +189,8 @@ export default function MessagesPage() {
       if (error instanceof Error) {
         if (error.message.includes('Invalid authentication token')) {
           errorMessage = "Authentication expired. Please refresh the page and try again.";
+        } else if (error.message.includes('Token project mismatch')) {
+          errorMessage = "Configuration error. Please refresh the page and try again.";
         } else if (error.message.includes('network')) {
           errorMessage = "Network error. Please check your connection and try again.";
         }
