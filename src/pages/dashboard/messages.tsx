@@ -102,64 +102,79 @@ export default function MessagesPage() {
     if (!user) return;
 
     try {
-      // Force token refresh to ensure we have a valid token
-      console.log('Getting fresh Firebase ID token for cleanup...');
-      console.log('User info:', {
-        uid: user.uid,
-        email: user.email,
-        emailVerified: user.emailVerified,
-        providerData: user.providerData.map(p => ({ providerId: p.providerId }))
+      console.log('[Messages] Starting test cleanup process...');
+      
+      // Get a fresh ID token
+      const token = await user.getIdToken(true);
+      console.log('[Messages] Generated fresh ID token, length:', token.length);
+      
+      console.log('[Messages] Making API request to test-cleanup...');
+      
+      const response = await fetch('/api/test-cleanup', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
       });
       
-      const token = await user.getIdToken(true); // Force refresh
-      console.log('Token obtained successfully');
-      console.log('Token info:', {
-        length: token.length,
-        startsWithEy: token.startsWith('ey'),
-        hasDots: (token.match(/\./g) || []).length,
-        firstChars: token.substring(0, 10) + '...'
-      });
+      console.log('[Messages] API response status:', response.status);
       
-      // Try to decode the token to check its contents
-      try {
-        const tokenParts = token.split('.');
-        if (tokenParts.length === 3) {
-          const payload = JSON.parse(atob(tokenParts[1]));
-          console.log('Token payload info:', {
-            iss: payload.iss,
-            aud: payload.aud,
-            exp: payload.exp,
-            iat: payload.iat,
-            uid: payload.uid,
-            currentTime: Math.floor(Date.now() / 1000),
-            isExpired: payload.exp < Math.floor(Date.now() / 1000),
-            timeUntilExpiry: payload.exp - Math.floor(Date.now() / 1000)
-          });
+      const data = await response.json();
+      console.log('[Messages] API response data:', data);
+      
+      if (response.ok) {
+        toast({
+          title: "Test Cleanup Complete",
+          description: data.message || 'Test cleanup completed successfully',
+        });
+        
+        // If test works, try the real cleanup
+        if (data.success) {
+          console.log('[Messages] Test successful, attempting real cleanup...');
+          await realCleanup(token);
         }
-      } catch (decodeError) {
-        console.error('Error decoding token for debugging:', decodeError);
+      } else {
+        console.error('[Messages] Test API error response:', data);
+        toast({
+          title: "Test Cleanup Failed",
+          description: data.error || 'Test cleanup failed',
+          variant: "destructive"
+        });
       }
+    } catch (error: any) {
+      console.error('[Messages] Test cleanup error:', error);
+      toast({
+        title: "Test Cleanup Failed",
+        description: 'Test cleanup failed: ' + error.message,
+        variant: "destructive"
+      });
+    }
+    return false;
+  };
+
+  const realCleanup = async (token: string) => {
+    try {
+      console.log('[Messages] Attempting real cleanup...');
       
-      console.log('Making cleanup request...');
       const response = await fetch('/api/messages/cleanup-threads', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
+          'Content-Type': 'application/json',
+        },
       });
-
-      console.log('Cleanup response status:', response.status);
-      console.log('Cleanup response headers:', Object.fromEntries(response.headers.entries()));
-
+      
+      console.log('[Messages] Real cleanup response status:', response.status);
+      
+      const data = await response.json();
+      console.log('[Messages] Real cleanup response data:', data);
+      
       if (response.ok) {
-        const result = await response.json();
-        console.log('Orphaned threads cleaned up:', result);
-        
-        if (result.cleaned > 0) {
+        if (data.cleaned > 0) {
           toast({
             title: "Cleanup Complete",
-            description: `Removed ${result.cleaned} empty conversation${result.cleaned === 1 ? '' : 's'} from your messages.`,
+            description: `Removed ${data.cleaned} empty conversation${data.cleaned === 1 ? '' : 's'} from your messages.`,
           });
           // Reload the page to show updated message list
           window.location.reload();
@@ -169,40 +184,22 @@ export default function MessagesPage() {
             description: "All your message threads are valid.",
           });
         }
-        
-        return result.cleaned > 0;
       } else {
-        const errorData = await response.json();
-        console.error('Cleanup API error:', errorData);
-        console.error('Full error response:', {
-          status: response.status,
-          statusText: response.statusText,
-          data: errorData
+        console.error('[Messages] Real cleanup error:', data);
+        toast({
+          title: "Real Cleanup Failed",
+          description: 'Real cleanup failed: ' + (data.error || 'Unknown error'),
+          variant: "destructive"
         });
-        throw new Error(errorData.error || 'Failed to clean up threads');
       }
-    } catch (error) {
-      console.error('Error cleaning up orphaned threads:', error);
-      
-      // Provide more specific error messages
-      let errorMessage = "Unable to clean up message threads. Please try again.";
-      if (error instanceof Error) {
-        if (error.message.includes('Invalid authentication token')) {
-          errorMessage = "Authentication expired. Please refresh the page and try again.";
-        } else if (error.message.includes('Token project mismatch')) {
-          errorMessage = "Configuration error. Please refresh the page and try again.";
-        } else if (error.message.includes('network')) {
-          errorMessage = "Network error. Please check your connection and try again.";
-        }
-      }
-      
+    } catch (error: any) {
+      console.error('[Messages] Real cleanup error:', error);
       toast({
-        title: "Cleanup Failed",
-        description: errorMessage,
+        title: "Real Cleanup Failed",
+        description: 'Real cleanup failed: ' + error.message,
         variant: "destructive"
       });
     }
-    return false;
   };
 
   if (!user) return null;
