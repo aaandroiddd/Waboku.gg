@@ -94,15 +94,15 @@ export default function MessagesPage() {
     if (!user) return;
 
     try {
-      console.log('[Messages] Starting test cleanup process...');
+      console.log('[Messages] Starting cleanup process...');
       
       // Get a fresh ID token
       const token = await user.getIdToken(true);
       console.log('[Messages] Generated fresh ID token, length:', token.length);
       
-      console.log('[Messages] Making API request to test-cleanup...');
+      console.log('[Messages] Making API request to cleanup-threads-simple...');
       
-      const response = await fetch('/api/test-cleanup', {
+      const response = await fetch('/api/messages/cleanup-threads-simple', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -114,53 +114,6 @@ export default function MessagesPage() {
       
       const data = await response.json();
       console.log('[Messages] API response data:', data);
-      
-      if (response.ok) {
-        toast({
-          title: "Test Cleanup Complete",
-          description: data.message || 'Test cleanup completed successfully',
-        });
-        
-        // If test works, try the real cleanup
-        if (data.success) {
-          console.log('[Messages] Test successful, attempting real cleanup...');
-          await realCleanup(token);
-        }
-      } else {
-        console.error('[Messages] Test API error response:', data);
-        toast({
-          title: "Test Cleanup Failed",
-          description: data.error || 'Test cleanup failed',
-          variant: "destructive"
-        });
-      }
-    } catch (error: any) {
-      console.error('[Messages] Test cleanup error:', error);
-      toast({
-        title: "Test Cleanup Failed",
-        description: 'Test cleanup failed: ' + error.message,
-        variant: "destructive"
-      });
-    }
-    return false;
-  };
-
-  const realCleanup = async (token: string) => {
-    try {
-      console.log('[Messages] Attempting real cleanup...');
-      
-      const response = await fetch('/api/messages/cleanup-threads', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-      
-      console.log('[Messages] Real cleanup response status:', response.status);
-      
-      const data = await response.json();
-      console.log('[Messages] Real cleanup response data:', data);
       
       if (response.ok) {
         if (data.cleaned > 0) {
@@ -177,21 +130,22 @@ export default function MessagesPage() {
           });
         }
       } else {
-        console.error('[Messages] Real cleanup error:', data);
+        console.error('[Messages] Cleanup API error response:', data);
         toast({
-          title: "Real Cleanup Failed",
-          description: 'Real cleanup failed: ' + (data.error || 'Unknown error'),
+          title: "Cleanup Failed",
+          description: data.error || 'Cleanup failed',
           variant: "destructive"
         });
       }
     } catch (error: any) {
-      console.error('[Messages] Real cleanup error:', error);
+      console.error('[Messages] Cleanup error:', error);
       toast({
-        title: "Real Cleanup Failed",
-        description: 'Real cleanup failed: ' + error.message,
+        title: "Cleanup Failed",
+        description: 'Cleanup failed: ' + error.message,
         variant: "destructive"
       });
     }
+    return false;
   };
 
   if (!user) return null;
