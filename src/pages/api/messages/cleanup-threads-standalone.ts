@@ -75,9 +75,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const userId = decodedToken.uid;
     
-    // Get all message threads for the user from both messageThreads and chats
+    // Get all message threads for the user from multiple sources
     const threadsRef = db.ref('messageThreads');
     const chatsRef = db.ref('chats');
+    const userThreadsRef = db.ref(`users/${userId}/messageThreads`);
     
     // Get threads from messageThreads
     const userThreadsSnapshot = await threadsRef.orderByChild(`participants/${userId}`).equalTo(true).once('value');
@@ -96,12 +97,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     }
     
-    console.log('[CleanupStandalone] Found', Object.keys(userThreads).length, 'messageThreads and', Object.keys(userChats).length, 'chats for user');
+    // Get user-specific message thread references
+    const userSpecificThreadsSnapshot = await userThreadsRef.once('value');
+    const userSpecificThreads = userSpecificThreadsSnapshot.val() || {};
+    
+    console.log('[CleanupStandalone] Found', Object.keys(userThreads).length, 'messageThreads,', Object.keys(userChats).length, 'chats, and', Object.keys(userSpecificThreads).length, 'user-specific thread references');
     
     let cleanedCount = 0;
     const errors: string[] = [];
     const threadsToDelete: string[] = [];
     const chatsToDelete: string[] = [];
+    const userSpecificThreadsToDelete: string[] = [];
     
     // Check messageThreads for orphaned status
     for (const [threadId, threadData] of Object.entries(userThreads)) {
@@ -183,6 +189,48 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     }
     
+    // Check user-specific message thread references for orphaned status
+    for (const [chatId, threadData] of Object.entries(userSpecificThreads)) {
+      try {
+        // Check if the referenced thread/chat actually exists and has valid messages
+        const messagesRef = db.ref(`messages/${chatId}`);
+        const messagesSnapshot = await messagesRef.once('value');
+        const messages = messagesSnapshot.val();
+        
+        let hasValidMessages = false;
+        
+        if (messages && typeof messages === 'object') {
+          // Check if there are any valid messages (not just empty objects)
+          for (const [messageId, messageData] of Object.entries(messages)) {
+            const msg = messageData as any;
+            // A valid message should have content or be a proper message object
+            if (msg && typeof msg === 'object' && 
+                (msg.content || msg.type || msg.senderId || msg.timestamp)) {
+              hasValidMessages = true;
+              break;
+            }
+          }
+        }
+        
+        // Also check if the thread exists in global collections
+        const globalThreadExists = userThreads[chatId] || userChats[chatId];
+        
+        // If no valid messages and no global thread reference, it's orphaned
+        if (!hasValidMessages && !globalThreadExists) {
+          console.log('[CleanupStandalone] Found orphaned user-specific thread reference:', chatId);
+          userSpecificThreadsToDelete.push(chatId);
+        } else if (!hasValidMessages && globalThreadExists) {
+          // If global thread exists but has no messages, it will be cleaned by other logic
+          // But we should also clean the user-specific reference
+          console.log('[CleanupStandalone] Found user-specific reference to empty global thread:', chatId);
+          userSpecificThreadsToDelete.push(chatId);
+        }
+      } catch (userThreadError: any) {
+        console.error('[CleanupStandalone] Error processing user-specific thread', chatId, ':', userThreadError.message);
+        errors.push(`User-specific thread ${chatId}: ${userThreadError.message}`);
+      }
+    }
+    
     // Delete orphaned messageThreads
     for (const threadId of threadsToDelete) {
       try {
@@ -196,6 +244,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         // Remove from chats if exists
         const chatRef = db.ref(`chats/${threadId}`);
         await chatRef.remove();
+        
+        // Remove from user-specific threads if exists
+        await userThreadsRef.child(threadId).remove();
         
         cleanedCount++;
         console.log('[CleanupStandalone] Successfully cleaned messageThread:', threadId);
@@ -218,11 +269,36 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         // Remove from messageThreads if exists
         await threadsRef.child(chatId).remove();
         
+        // Remove from user-specific threads if exists
+        await userThreadsRef.child(chatId).remove();
+        
         cleanedCount++;
         console.log('[CleanupStandalone] Successfully cleaned chat:', chatId);
       } catch (deleteError: any) {
         console.error('[CleanupStandalone] Error deleting chat', chatId, ':', deleteError.message);
         errors.push(`Delete chat ${chatId}: ${deleteError.message}`);
+      }
+    }
+    
+    // Delete orphaned user-specific thread references
+    for (const chatId of userSpecificThreadsToDelete) {
+      try {
+        // Remove from user-specific threads
+        await userThreadsRef.child(chatId).remove();
+        
+        // Also clean up any associated empty messages and global references
+        const messagesRef = db.ref(`messages/${chatId}`);
+        await messagesRef.remove();
+        
+        // Remove from global collections if they exist but are empty
+        await threadsRef.child(chatId).remove();
+        await chatsRef.child(chatId).remove();
+        
+        cleanedCount++;
+        console.log('[CleanupStandalone] Successfully cleaned user-specific thread reference:', chatId);
+      } catch (deleteError: any) {
+        console.error('[CleanupStandalone] Error deleting user-specific thread', chatId, ':', deleteError.message);
+        errors.push(`Delete user-specific thread ${chatId}: ${deleteError.message}`);
       }
     }
     
@@ -238,8 +314,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       debug: {
         totalMessageThreadsFound: Object.keys(userThreads).length,
         totalChatsFound: Object.keys(userChats).length,
+        totalUserSpecificThreadsFound: Object.keys(userSpecificThreads).length,
         messageThreadsToDelete: threadsToDelete.length,
         chatsToDelete: chatsToDelete.length,
+        userSpecificThreadsToDelete: userSpecificThreadsToDelete.length,
         userId: userId
       }
     });
