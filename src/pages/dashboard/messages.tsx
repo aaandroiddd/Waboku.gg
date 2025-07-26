@@ -1,8 +1,5 @@
 import { useRouter } from 'next/router';
-import { useEffect, useState, useRef, useMemo } from 'react';
-import { getDatabase, ref, onValue, get, update } from 'firebase/database';
-import { doc, getDoc } from 'firebase/firestore';
-import { db, getFirebaseServices } from '@/lib/firebase';
+import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUnread } from '@/contexts/UnreadContext';
 import { useMessageThreads } from '@/hooks/useMessageThreads';
@@ -12,14 +9,9 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft } from 'lucide-react';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
-import { UserNameLink } from '@/components/UserNameLink';
 import { MessagesPageInitializer } from '@/components/MessagesPageInitializer';
-import { DatabaseConnectionStatus } from '@/components/DatabaseConnectionStatus';
 import { FirestoreDisabler } from '@/components/FirestoreDisabler';
 import { ClearFirestoreCache } from '@/components/ClearFirestoreCache';
-import { MessageThreadDebugger } from '@/components/MessageThreadDebugger';
-import { MessageSystemDebugger } from '@/components/MessageSystemDebugger';
-import { prefetchUserData } from '@/hooks/useUserData';
 import { toast } from '@/components/ui/use-toast';
 import { RefreshCw } from 'lucide-react';
 
