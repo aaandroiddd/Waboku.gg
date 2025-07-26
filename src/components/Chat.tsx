@@ -1042,14 +1042,31 @@ export function Chat({
                       variant="ghost"
                       size="icon"
                       className="h-8 w-8"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                      }}
+                      onTouchStart={(e) => {
+                        e.stopPropagation();
+                      }}
                     >
                       <MoreVertical className="h-4 w-4" />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-48">
+                  <DropdownMenuContent 
+                    align="end" 
+                    className="w-48 z-[200]"
+                    side="bottom"
+                    sideOffset={8}
+                    onCloseAutoFocus={(e) => e.preventDefault()}
+                    onEscapeKeyDown={(e) => e.preventDefault()}
+                  >
                     {receiverId && receiverId !== 'system_moderation' && (
                       <DropdownMenuItem
-                        onClick={() => {
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          
                           // Navigate to the user's profile page using the proper username format
                           const username = (initialReceiverName && 
                                            initialReceiverName !== 'Loading...' && 
@@ -1076,6 +1093,9 @@ export function Chat({
                           // The profile page will handle username resolution to userId
                           router.push(`/profile/${encodeURIComponent(username)}`);
                         }}
+                        onSelect={(e) => {
+                          e.preventDefault();
+                        }}
                         disabled={!initialReceiverName || 
                                  initialReceiverName === 'Loading...' || 
                                  initialReceiverName === 'Unknown User' || 
@@ -1091,14 +1111,28 @@ export function Chat({
                     {chatId && (
                       <>
                         <DropdownMenuItem
-                          onClick={() => setShowBlockDialog(true)}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setShowBlockDialog(true);
+                          }}
+                          onSelect={(e) => {
+                            e.preventDefault();
+                          }}
                           className="text-orange-600 focus:text-orange-600"
                         >
                           <Ban className="h-4 w-4 mr-2" />
                           Block User
                         </DropdownMenuItem>
                         <DropdownMenuItem
-                          onClick={() => setShowDeleteDialog(true)}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setShowDeleteDialog(true);
+                          }}
+                          onSelect={(e) => {
+                            e.preventDefault();
+                          }}
                           className="text-destructive focus:text-destructive"
                         >
                           <Trash2 className="h-4 w-4 mr-2" />
