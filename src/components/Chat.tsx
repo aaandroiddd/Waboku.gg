@@ -1035,28 +1035,79 @@ export function Chat({
                 </span>
               </div>
               <div className="flex items-center gap-1">
-                {chatId && (
-                  <>
+                {/* Three dots menu for mobile */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-7 w-7"
-                      onClick={() => setShowBlockDialog(true)}
-                      title="Block user"
+                      className="h-8 w-8"
                     >
-                      <Ban className="h-3 w-3" />
+                      <MoreVertical className="h-4 w-4" />
                     </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7"
-                      onClick={() => setShowDeleteDialog(true)}
-                      title="Delete chat"
-                    >
-                      <Trash2 className="h-3 w-3" />
-                    </Button>
-                  </>
-                )}
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48">
+                    {receiverId && receiverId !== 'system_moderation' && (
+                      <DropdownMenuItem
+                        onClick={() => {
+                          // Navigate to the user's profile page using the proper username format
+                          const username = (initialReceiverName && 
+                                           initialReceiverName !== 'Loading...' && 
+                                           initialReceiverName !== 'Unknown User' && 
+                                           !initialReceiverName.startsWith('User ')) 
+                                          ? initialReceiverName
+                                          : receiverProfile?.displayName ||
+                                            receiverProfile?.username ||
+                                            (receiverProfile?.email && receiverProfile.email.split('@')[0]) ||
+                                            displayName ||
+                                            'Unknown User';
+                          
+                          // Check if this is a fallback username (indicates non-existent user)
+                          if (username === 'Unknown User' || username.startsWith('User ')) {
+                            toast({
+                              title: "Profile not available",
+                              description: "This user's profile is no longer available.",
+                              variant: "destructive"
+                            });
+                            return;
+                          }
+                          
+                          // Use the actual username directly in the URL path (no slug conversion needed)
+                          // The profile page will handle username resolution to userId
+                          router.push(`/profile/${encodeURIComponent(username)}`);
+                        }}
+                        disabled={!initialReceiverName || 
+                                 initialReceiverName === 'Loading...' || 
+                                 initialReceiverName === 'Unknown User' || 
+                                 initialReceiverName.startsWith('User ') ||
+                                 (!receiverProfile?.displayName && 
+                                  !receiverProfile?.username && 
+                                  !receiverProfile?.email)}
+                      >
+                        <User className="h-4 w-4 mr-2" />
+                        View Profile
+                      </DropdownMenuItem>
+                    )}
+                    {chatId && (
+                      <>
+                        <DropdownMenuItem
+                          onClick={() => setShowBlockDialog(true)}
+                          className="text-orange-600 focus:text-orange-600"
+                        >
+                          <Ban className="h-4 w-4 mr-2" />
+                          Block User
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => setShowDeleteDialog(true)}
+                          className="text-destructive focus:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Delete Chat
+                        </DropdownMenuItem>
+                      </>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
                 {onClose && (
                   <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={onClose}>
                     Close
@@ -1102,52 +1153,6 @@ export function Chat({
                     </span>
                   )}
                 </div>
-              )}
-              
-              {receiverId && receiverId !== 'system_moderation' && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-6 px-2 text-xs self-start"
-                  onClick={() => {
-                    // Navigate to the user's profile page using the proper username format
-                    const username = (initialReceiverName && 
-                                     initialReceiverName !== 'Loading...' && 
-                                     initialReceiverName !== 'Unknown User' && 
-                                     !initialReceiverName.startsWith('User ')) 
-                                    ? initialReceiverName
-                                    : receiverProfile?.displayName ||
-                                      receiverProfile?.username ||
-                                      (receiverProfile?.email && receiverProfile.email.split('@')[0]) ||
-                                      displayName ||
-                                      'Unknown User';
-                    
-                    // Check if this is a fallback username (indicates non-existent user)
-                    if (username === 'Unknown User' || username.startsWith('User ')) {
-                      toast({
-                        title: "Profile not available",
-                        description: "This user's profile is no longer available.",
-                        variant: "destructive"
-                      });
-                      return;
-                    }
-                    
-                    // Use the actual username directly in the URL path (no slug conversion needed)
-                    // The profile page will handle username resolution to userId
-                    router.push(`/profile/${encodeURIComponent(username)}`);
-                  }}
-                  title="View profile"
-                  disabled={!initialReceiverName || 
-                           initialReceiverName === 'Loading...' || 
-                           initialReceiverName === 'Unknown User' || 
-                           initialReceiverName.startsWith('User ') ||
-                           (!receiverProfile?.displayName && 
-                            !receiverProfile?.username && 
-                            !receiverProfile?.email)}
-                >
-                  <User className="h-3 w-3 mr-1" />
-                  View Profile
-                </Button>
               )}
             </div>
           </div>
