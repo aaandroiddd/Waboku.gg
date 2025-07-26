@@ -771,18 +771,41 @@ export function Chat({
   };
 
   const handleDeleteMessage = async () => {
-    if (!messageToDelete || !user) return;
+    if (!messageToDelete || !user || !chatId) return;
     
     try {
-      await deleteMessage(messageToDelete);
-      
-      toast({
-        title: "Success",
-        description: "Message deleted successfully."
+      // Use the standalone delete message endpoint
+      const token = await user.getIdToken();
+      const response = await fetch('/api/messages/delete-message-standalone', {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          chatId: chatId,
+          messageId: messageToDelete
+        })
       });
-      
-      setShowDeleteMessageDialog(false);
-      setMessageToDelete(null);
+
+      const data = await response.json();
+
+      if (response.ok) {
+        toast({
+          title: "Success",
+          description: "Message deleted successfully."
+        });
+        
+        // If the entire chat was deleted (no messages remaining), handle it
+        if (data.chatDeleted && onDelete) {
+          onDelete();
+        }
+        
+        setShowDeleteMessageDialog(false);
+        setMessageToDelete(null);
+      } else {
+        throw new Error(data.error || 'Failed to delete message');
+      }
     } catch (error) {
       console.error('Error deleting message:', error);
       
@@ -794,9 +817,9 @@ export function Chat({
           errorMessage = "This message has already been deleted or no longer exists.";
         } else if (error.message.includes('You can only delete your own messages')) {
           errorMessage = "You can only delete your own messages.";
-        } else if (error.message.includes('Database connection failed')) {
+        } else if (error.message.includes('Firebase initialization failed')) {
           errorMessage = "Connection error. Please check your internet connection and try again.";
-        } else if (error.message.includes('Authorization token required')) {
+        } else if (error.message.includes('Invalid authentication token')) {
           errorMessage = "Authentication error. Please refresh the page and try again.";
         }
       }

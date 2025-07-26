@@ -100,9 +100,9 @@ export default function MessagesPage() {
       const token = await user.getIdToken(true);
       console.log('[Messages] Generated fresh ID token, length:', token.length);
       
-      console.log('[Messages] Making API request to cleanup-threads-simple...');
+      console.log('[Messages] Making API request to cleanup-threads-standalone...');
       
-      const response = await fetch('/api/messages/cleanup-threads-simple', {
+      const response = await fetch('/api/messages/cleanup-threads-standalone', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
