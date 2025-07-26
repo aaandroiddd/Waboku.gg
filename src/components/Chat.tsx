@@ -1060,6 +1060,20 @@ export function Chat({
                     sideOffset={8}
                     onCloseAutoFocus={(e) => e.preventDefault()}
                     onEscapeKeyDown={(e) => e.preventDefault()}
+                    onPointerDownOutside={(e) => {
+                      // Prevent closing when clicking on the trigger
+                      const target = e.target as Element;
+                      if (target.closest('[data-radix-dropdown-menu-trigger]')) {
+                        e.preventDefault();
+                      }
+                    }}
+                    onInteractOutside={(e) => {
+                      // Prevent interaction issues on mobile
+                      const target = e.target as Element;
+                      if (target.closest('[data-radix-dropdown-menu-trigger]')) {
+                        e.preventDefault();
+                      }
+                    }}
                   >
                     {receiverId && receiverId !== 'system_moderation' && (
                       <DropdownMenuItem

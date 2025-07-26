@@ -172,23 +172,37 @@
   [data-radix-dropdown-menu-content] {
     position: fixed !important;
     z-index: 200 !important;
-    transform: translateZ(0) !important;
+    /* Improved transform for better positioning stability */
+    transform: translate3d(0, 0, 0) !important;
     backface-visibility: hidden !important;
     -webkit-backface-visibility: hidden !important;
-    will-change: transform !important;
-    /* Prevent layout shifts */
-    contain: layout style paint !important;
+    will-change: transform, opacity !important;
+    /* Prevent layout shifts and improve containment */
+    contain: layout style paint size !important;
     /* Ensure proper touch handling */
     touch-action: manipulation !important;
     /* Prevent scrolling issues */
     overscroll-behavior: contain !important;
+    /* Improve rendering performance */
+    -webkit-transform: translate3d(0, 0, 0) !important;
+    /* Prevent content from being cut off */
+    max-height: calc(100vh - 20px) !important;
+    overflow: auto !important;
+    /* Ensure proper stacking context */
+    isolation: isolate !important;
+    /* Prevent pointer events on parent elements from interfering */
+    pointer-events: auto !important;
   }
   
-  /* Prevent body scroll when dropdown is open on mobile */
+  /* Prevent body scroll when dropdown is open on mobile - more specific targeting */
   body:has([data-radix-dropdown-menu-content][data-state="open"]) {
     overflow: hidden !important;
     position: fixed !important;
     width: 100% !important;
+    height: 100% !important;
+    /* Prevent bounce scrolling on iOS */
+    -webkit-overflow-scrolling: touch !important;
+    overscroll-behavior: none !important;
   }
   
   /* Fix for dropdown menu items on mobile */
@@ -203,6 +217,12 @@
     /* Prevent double-tap zoom */
     -webkit-touch-callout: none !important;
     -webkit-tap-highlight-color: transparent !important;
+    /* Ensure proper cursor behavior */
+    cursor: pointer !important;
+    /* Prevent layout shifts during interaction */
+    transform: translateZ(0) !important;
+    /* Ensure proper event handling */
+    pointer-events: auto !important;
   }
   
   /* Fix for dropdown menu trigger on mobile */
@@ -218,7 +238,40 @@
     /* Prevent double-tap zoom */
     -webkit-touch-callout: none !important;
     -webkit-tap-highlight-color: transparent !important;
+    /* Ensure proper cursor behavior */
+    cursor: pointer !important;
+    /* Prevent layout shifts during interaction */
+    transform: translateZ(0) !important;
+    /* Ensure proper event handling */
+    pointer-events: auto !important;
+    /* Prevent focus outline issues on mobile */
+    outline: none !important;
   }
+  
+  /* Additional fixes for dropdown menu portal/overlay */
+  [data-radix-dropdown-menu-portal] {
+    /* Ensure portal is properly positioned */
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    z-index: 199 !important;
+    pointer-events: none !important;
+  }
+  
+  /* Ensure dropdown content is clickable within the portal */
+  [data-radix-dropdown-menu-portal] [data-radix-dropdown-menu-content] {
+    pointer-events: auto !important;
+  }
+  
+  /* Fix for viewport positioning issues */
+  [data-radix-dropdown-menu-viewport] {
+    position: relative !important;
+    transform: translateZ(0) !important;
+    will-change: transform !important;
+  }
+=======
   
   /* Fix for image zoom dialog on mobile */
   .react-transform-wrapper {
