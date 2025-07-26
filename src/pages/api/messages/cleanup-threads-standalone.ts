@@ -75,18 +75,35 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const userId = decodedToken.uid;
     
-    // Get all message threads for the user from messageThreads
+    // Get all message threads for the user from both messageThreads and chats
     const threadsRef = db.ref('messageThreads');
+    const chatsRef = db.ref('chats');
+    
+    // Get threads from messageThreads
     const userThreadsSnapshot = await threadsRef.orderByChild(`participants/${userId}`).equalTo(true).once('value');
     const userThreads = userThreadsSnapshot.val() || {};
     
-    console.log('[CleanupStandalone] Found', Object.keys(userThreads).length, 'threads for user');
+    // Get chats where user is a participant (either senderId or recipientId)
+    const allChatsSnapshot = await chatsRef.once('value');
+    const allChats = allChatsSnapshot.val() || {};
+    const userChats: Record<string, any> = {};
+    
+    // Filter chats where user is involved
+    for (const [chatId, chatData] of Object.entries(allChats)) {
+      const chat = chatData as any;
+      if (chat && (chat.senderId === userId || chat.recipientId === userId)) {
+        userChats[chatId] = chat;
+      }
+    }
+    
+    console.log('[CleanupStandalone] Found', Object.keys(userThreads).length, 'messageThreads and', Object.keys(userChats).length, 'chats for user');
     
     let cleanedCount = 0;
     const errors: string[] = [];
     const threadsToDelete: string[] = [];
+    const chatsToDelete: string[] = [];
     
-    // Check each thread for orphaned status
+    // Check messageThreads for orphaned status
     for (const [threadId, threadData] of Object.entries(userThreads)) {
       try {
         const thread = threadData as any;
@@ -113,16 +130,60 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         
         // If no valid messages exist, this is an orphaned thread
         if (!hasValidMessages) {
-          console.log('[CleanupStandalone] Found orphaned thread:', threadId);
+          console.log('[CleanupStandalone] Found orphaned messageThread:', threadId);
           threadsToDelete.push(threadId);
         }
       } catch (threadError: any) {
-        console.error('[CleanupStandalone] Error processing thread', threadId, ':', threadError.message);
-        errors.push(`Thread ${threadId}: ${threadError.message}`);
+        console.error('[CleanupStandalone] Error processing messageThread', threadId, ':', threadError.message);
+        errors.push(`MessageThread ${threadId}: ${threadError.message}`);
       }
     }
     
-    // Delete orphaned threads
+    // Check chats for orphaned status
+    for (const [chatId, chatData] of Object.entries(userChats)) {
+      try {
+        const chat = chatData as any;
+        
+        // Check if chat has any messages
+        const messagesRef = db.ref(`messages/${chatId}`);
+        const messagesSnapshot = await messagesRef.once('value');
+        const messages = messagesSnapshot.val();
+        
+        let hasValidMessages = false;
+        
+        if (messages && typeof messages === 'object') {
+          // Check if there are any valid messages (not just empty objects)
+          for (const [messageId, messageData] of Object.entries(messages)) {
+            const msg = messageData as any;
+            // A valid message should have content or be a proper message object
+            if (msg && typeof msg === 'object' && 
+                (msg.content || msg.type || msg.senderId || msg.timestamp)) {
+              hasValidMessages = true;
+              break;
+            }
+          }
+        }
+        
+        // Additional check: if chat has no messages but also no valid metadata, it's orphaned
+        if (!hasValidMessages) {
+          // Check if it's just an empty chat with minimal metadata
+          const hasMinimalData = chat.subject || chat.listingTitle || chat.lastMessage;
+          if (!hasMinimalData) {
+            console.log('[CleanupStandalone] Found completely empty chat:', chatId);
+            chatsToDelete.push(chatId);
+          } else {
+            // Even if it has metadata, if there are no actual messages, it's still orphaned
+            console.log('[CleanupStandalone] Found orphaned chat with metadata:', chatId);
+            chatsToDelete.push(chatId);
+          }
+        }
+      } catch (chatError: any) {
+        console.error('[CleanupStandalone] Error processing chat', chatId, ':', chatError.message);
+        errors.push(`Chat ${chatId}: ${chatError.message}`);
+      }
+    }
+    
+    // Delete orphaned messageThreads
     for (const threadId of threadsToDelete) {
       try {
         // Remove from messageThreads
@@ -137,10 +198,31 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         await chatRef.remove();
         
         cleanedCount++;
-        console.log('[CleanupStandalone] Successfully cleaned thread:', threadId);
+        console.log('[CleanupStandalone] Successfully cleaned messageThread:', threadId);
       } catch (deleteError: any) {
-        console.error('[CleanupStandalone] Error deleting thread', threadId, ':', deleteError.message);
-        errors.push(`Delete ${threadId}: ${deleteError.message}`);
+        console.error('[CleanupStandalone] Error deleting messageThread', threadId, ':', deleteError.message);
+        errors.push(`Delete messageThread ${threadId}: ${deleteError.message}`);
+      }
+    }
+    
+    // Delete orphaned chats
+    for (const chatId of chatsToDelete) {
+      try {
+        // Remove from chats
+        await chatsRef.child(chatId).remove();
+        
+        // Remove any empty messages
+        const messagesRef = db.ref(`messages/${chatId}`);
+        await messagesRef.remove();
+        
+        // Remove from messageThreads if exists
+        await threadsRef.child(chatId).remove();
+        
+        cleanedCount++;
+        console.log('[CleanupStandalone] Successfully cleaned chat:', chatId);
+      } catch (deleteError: any) {
+        console.error('[CleanupStandalone] Error deleting chat', chatId, ':', deleteError.message);
+        errors.push(`Delete chat ${chatId}: ${deleteError.message}`);
       }
     }
     
@@ -154,8 +236,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         ? `Successfully removed ${cleanedCount} empty conversation${cleanedCount === 1 ? '' : 's'}`
         : 'No orphaned threads found - all conversations are valid',
       debug: {
-        totalThreadsFound: Object.keys(userThreads).length,
-        threadsToDelete: threadsToDelete.length,
+        totalMessageThreadsFound: Object.keys(userThreads).length,
+        totalChatsFound: Object.keys(userChats).length,
+        messageThreadsToDelete: threadsToDelete.length,
+        chatsToDelete: chatsToDelete.length,
         userId: userId
       }
     });
