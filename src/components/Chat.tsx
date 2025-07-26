@@ -1003,12 +1003,12 @@ export function Chat({
         <div className="flex-none p-4 border-b bg-card">
           {/* Mobile Layout */}
           <div className="block md:hidden">
-            <div className="flex items-center gap-2 mb-3">
-              <Avatar>
+            <div className="flex items-center gap-2 mb-2">
+              <Avatar className="h-8 w-8">
                 {receiverProfile?.avatarUrl ? (
                   <img src={receiverProfile.avatarUrl} alt={displayName} />
                 ) : (
-                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
                     <path d="M8 10h.01"/>
                     <path d="M12 10h.01"/>
@@ -1016,8 +1016,8 @@ export function Chat({
                   </svg>
                 )}
               </Avatar>
-              <div className="flex-1">
-                <span className="font-medium block">
+              <div className="flex-1 min-w-0">
+                <span className="font-medium block text-sm truncate">
                   {
                     // First check if we have a valid receiverName prop (from messages page)
                     (initialReceiverName && 
@@ -1034,70 +1034,73 @@ export function Chat({
                   }
                 </span>
               </div>
-              {onClose && (
-                <Button variant="ghost" size="sm" onClick={onClose}>
-                  Close
-                </Button>
-              )}
-            </div>
-            
-            {/* Subject line for mobile */}
-            {messages[0]?.subject && (
-              <div className="text-sm font-medium text-primary mb-3">
-                {messages[0].subject}
-              </div>
-            )}
-            
-            {/* Listing info for mobile */}
-            {listingTitle && (
-              <div className="flex items-center gap-2 mb-3">
-                <div className="h-4 w-1 bg-primary rounded-full"></div>
-                {listingId && listingData ? (
-                  <a 
-                    href={getListingUrl({ 
-                      id: listingId, 
-                      title: listingData.title, 
-                      game: listingData.game 
-                    })}
-                    className="text-sm font-medium hover:underline hover:text-primary transition-colors"
-                  >
-                    {listingTitle}
-                  </a>
-                ) : listingId ? (
-                  <a 
-                    href={getListingUrl({ id: listingId, title: listingTitle, game: 'other' })}
-                    className="text-sm font-medium hover:underline hover:text-primary transition-colors"
-                  >
-                    {listingTitle}
-                  </a>
-                ) : (
-                  <span className="text-sm font-medium">
-                    {listingTitle}
-                  </span>
+              <div className="flex items-center gap-1">
+                {chatId && (
+                  <>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7"
+                      onClick={() => setShowBlockDialog(true)}
+                      title="Block user"
+                    >
+                      <Ban className="h-3 w-3" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7"
+                      onClick={() => setShowDeleteDialog(true)}
+                      title="Delete chat"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  </>
+                )}
+                {onClose && (
+                  <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={onClose}>
+                    Close
+                  </Button>
                 )}
               </div>
-            )}
+            </div>
             
-            {/* Action buttons stacked for mobile */}
-            <div className="flex flex-col gap-2">
-              {chatId && (
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setShowBlockDialog(true)}
-                    title="Block user"
-                  >
-                    <Ban className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setShowDeleteDialog(true)}
-                    title="Delete chat"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+            {/* Condensed subject and listing info for mobile */}
+            <div className="space-y-1">
+              {messages[0]?.subject && (
+                <div className="text-xs font-medium text-primary truncate" title={messages[0].subject}>
+                  Re: {messages[0].subject.length > 50 ? `${messages[0].subject.substring(0, 50)}...` : messages[0].subject}
+                </div>
+              )}
+              
+              {listingTitle && (
+                <div className="flex items-center gap-1.5">
+                  <div className="h-3 w-0.5 bg-primary rounded-full flex-shrink-0"></div>
+                  {listingId && listingData ? (
+                    <a 
+                      href={getListingUrl({ 
+                        id: listingId, 
+                        title: listingData.title, 
+                        game: listingData.game 
+                      })}
+                      className="text-xs font-medium hover:underline hover:text-primary transition-colors truncate min-w-0"
+                      title={listingTitle}
+                    >
+                      {listingTitle.length > 60 ? `${listingTitle.substring(0, 60)}...` : listingTitle}
+                    </a>
+                  ) : listingId ? (
+                    <a 
+                      href={getListingUrl({ id: listingId, title: listingTitle, game: 'other' })}
+                      className="text-xs font-medium hover:underline hover:text-primary transition-colors truncate min-w-0"
+                      title={listingTitle}
+                    >
+                      {listingTitle.length > 60 ? `${listingTitle.substring(0, 60)}...` : listingTitle}
+                    </a>
+                  ) : (
+                    <span className="text-xs font-medium truncate min-w-0" title={listingTitle}>
+                      {listingTitle.length > 60 ? `${listingTitle.substring(0, 60)}...` : listingTitle}
+                    </span>
+                  )}
                 </div>
               )}
               
@@ -1105,7 +1108,7 @@ export function Chat({
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-8 px-3 text-xs self-start"
+                  className="h-6 px-2 text-xs self-start"
                   onClick={() => {
                     // Navigate to the user's profile page using the proper username format
                     const username = (initialReceiverName && 
