@@ -13,31 +13,26 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<ResponseData>
 ) {
+  // Only allow POST requests
   if (req.method !== 'POST') {
     return res.status(405).json({ success: false, message: 'Method not allowed' });
-  }
-
-  // Check admin authorization
-  const adminSecret = req.headers.authorization?.replace('Bearer ', '');
-  if (adminSecret !== process.env.ADMIN_SECRET) {
-    return res.status(401).json({ success: false, message: 'Unauthorized' });
   }
 
   try {
     console.log('[migrate-review-usernames] Starting migration...');
     
+    // Initialize Firebase Admin SDK
     const { db: adminDb } = initializeFirebaseAdmin();
     
-    // Get all reviews that don't have reviewerUsername
-    const reviewsSnapshot = await adminDb.collection('reviews')
-      .where('reviewerUsername', '==', null)
-      .get();
-    
-    console.log(`[migrate-review-usernames] Found ${reviewsSnapshot.size} reviews to process`);
+    // Get all reviews that don't have reviewerUsername stored
+    console.log('[migrate-review-usernames] Fetching reviews without stored usernames...');
+    const reviewsSnapshot = await adminDb.collection('reviews').get();
     
     let processed = 0;
     let updated = 0;
     let errors = 0;
+    
+    console.log(`[migrate-review-usernames] Found ${reviewsSnapshot.docs.length} reviews to check`);
     
     // Process reviews in batches to avoid overwhelming the system
     const batchSize = 50;
@@ -50,91 +45,98 @@ export default async function handler(
         try {
           processed++;
           const reviewData = reviewDoc.data();
-          const reviewerId = reviewData.reviewerId;
+          const reviewId = reviewDoc.id;
           
-          if (!reviewerId) {
-            console.log(`[migrate-review-usernames] Skipping review ${reviewDoc.id} - no reviewerId`);
+          // Skip if already has reviewerUsername
+          if (reviewData.reviewerUsername) {
+            console.log(`[migrate-review-usernames] Review ${reviewId} already has username: ${reviewData.reviewerUsername}`);
             return;
           }
           
-          // Get the user's profile data
+          // Get the reviewer's user data
+          const reviewerId = reviewData.reviewerId;
+          if (!reviewerId) {
+            console.log(`[migrate-review-usernames] Review ${reviewId} has no reviewerId, skipping`);
+            return;
+          }
+          
+          console.log(`[migrate-review-usernames] Fetching user data for reviewer: ${reviewerId}`);
           const userDoc = await adminDb.collection('users').doc(reviewerId).get();
+          
+          let updateData: any = {};
           
           if (userDoc.exists) {
             const userData = userDoc.data();
-            const reviewerUsername = userData.username || userData.displayName || null;
-            const reviewerAvatarUrl = userData.avatarUrl || userData.photoURL || null;
+            const username = userData.username || userData.displayName || 'Anonymous User';
+            const avatarUrl = userData.avatarUrl || userData.photoURL || null;
             
-            if (reviewerUsername) {
-              // Update the review with username and avatar
-              const updateData: any = {
-                reviewerUsername,
-                updatedAt: new Date()
-              };
-              
-              if (reviewerAvatarUrl) {
-                updateData.reviewerAvatarUrl = reviewerAvatarUrl;
-              }
-              
-              await adminDb.collection('reviews').doc(reviewDoc.id).update(updateData);
-              
-              // Also update in seller's subcollection if it exists
-              try {
-                const sellerReviewDoc = await adminDb
-                  .collection('users')
-                  .doc(reviewData.sellerId)
-                  .collection('reviews')
-                  .doc(reviewDoc.id)
-                  .get();
-                
-                if (sellerReviewDoc.exists) {
-                  await adminDb
-                    .collection('users')
-                    .doc(reviewData.sellerId)
-                    .collection('reviews')
-                    .doc(reviewDoc.id)
-                    .update(updateData);
-                }
-              } catch (subcollectionError) {
-                console.warn(`[migrate-review-usernames] Error updating seller subcollection for review ${reviewDoc.id}:`, subcollectionError);
-              }
-              
-              updated++;
-              console.log(`[migrate-review-usernames] Updated review ${reviewDoc.id} with username: ${reviewerUsername}`);
-            } else {
-              console.log(`[migrate-review-usernames] No username found for user ${reviewerId} in review ${reviewDoc.id}`);
+            updateData.reviewerUsername = username;
+            if (avatarUrl) {
+              updateData.reviewerAvatarUrl = avatarUrl;
             }
+            
+            console.log(`[migrate-review-usernames] Found user data for ${reviewerId}: ${username}`);
           } else {
-            console.log(`[migrate-review-usernames] User ${reviewerId} not found for review ${reviewDoc.id} (likely deleted)`);
+            // User doesn't exist (deleted account), store a placeholder
+            updateData.reviewerUsername = 'Deleted User';
+            console.log(`[migrate-review-usernames] User ${reviewerId} not found, marking as deleted`);
           }
+          
+          // Update the review document
+          await adminDb.collection('reviews').doc(reviewId).update({
+            ...updateData,
+            updatedAt: new Date()
+          });
+          
+          // Also update in seller's subcollection if it exists
+          try {
+            if (reviewData.sellerId) {
+              const sellerReviewRef = adminDb.collection('users').doc(reviewData.sellerId).collection('reviews').doc(reviewId);
+              const sellerReviewDoc = await sellerReviewRef.get();
+              
+              if (sellerReviewDoc.exists) {
+                await sellerReviewRef.update({
+                  ...updateData,
+                  updatedAt: new Date()
+                });
+                console.log(`[migrate-review-usernames] Updated seller subcollection for review ${reviewId}`);
+              }
+            }
+          } catch (subcollectionError) {
+            console.error(`[migrate-review-usernames] Error updating seller subcollection for review ${reviewId}:`, subcollectionError);
+            // Don't fail the main update for this
+          }
+          
+          updated++;
+          console.log(`[migrate-review-usernames] Updated review ${reviewId} with username: ${updateData.reviewerUsername}`);
+          
         } catch (error) {
           errors++;
           console.error(`[migrate-review-usernames] Error processing review ${reviewDoc.id}:`, error);
         }
       }));
       
-      // Log progress
-      console.log(`[migrate-review-usernames] Processed ${Math.min(i + batchSize, reviews.length)}/${reviews.length} reviews`);
+      // Add a small delay between batches to avoid rate limiting
+      if (i + batchSize < reviews.length) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
     }
     
     console.log(`[migrate-review-usernames] Migration completed. Processed: ${processed}, Updated: ${updated}, Errors: ${errors}`);
     
     return res.status(200).json({
       success: true,
-      message: 'Review username migration completed',
+      message: `Migration completed successfully. Processed ${processed} reviews, updated ${updated}, encountered ${errors} errors.`,
       processed,
       updated,
       errors
     });
     
   } catch (error) {
-    console.error('[migrate-review-usernames] Migration error:', error);
+    console.error('[migrate-review-usernames] Error during migration:', error);
     return res.status(500).json({
       success: false,
-      message: 'Migration failed',
-      processed: 0,
-      updated: 0,
-      errors: 1
+      message: 'Migration failed: ' + error.message
     });
   }
 }

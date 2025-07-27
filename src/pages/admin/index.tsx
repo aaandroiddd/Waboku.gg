@@ -56,6 +56,7 @@ const SECTIONS = [
   { id: "pickup-code-debug", label: "Pickup Code Debugger" },
   { id: "production-username-debug", label: "Production Username Debugger" },
   { id: "review-system", label: "Review System Debug" },
+  { id: "review-migration", label: "Review Username Migration" },
   { id: "subscription", label: "Subscription Management" },
   { id: "support-management", label: "Support Ticket Management" },
   { id: "user-tier", label: "User Tier Management" },
@@ -722,6 +723,48 @@ export default function AdminDashboard() {
                     className="w-full bg-green-600 hover:bg-green-700"
                   >
                     Review System Debug
+                  </Button>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+
+            {/* Review Username Migration */}
+            <AccordionItem value="review-migration" id="review-migration" ref={el => (sectionRefs.current["review-migration"] = el)}>
+              <AccordionTrigger>Review Username Migration</AccordionTrigger>
+              <AccordionContent>
+                <div className="space-y-4 py-4">
+                  <p className="text-sm text-muted-foreground">
+                    Migrate existing reviews to store usernames and avatar URLs for deleted user handling. This will update reviews that don't have stored usernames and mark deleted users appropriately.
+                  </p>
+                  <Alert className="border-yellow-200 bg-yellow-50 dark:border-yellow-800 dark:bg-yellow-950">
+                    <AlertDescription className="text-yellow-800 dark:text-yellow-200">
+                      ⚠️ This operation will update all reviews in the database. It's safe to run multiple times but may take a while for large datasets.
+                    </AlertDescription>
+                  </Alert>
+                  <Button 
+                    onClick={async () => {
+                      setLoading(true);
+                      try {
+                        const response = await fetch('/api/admin/migrate-review-usernames', {
+                          method: 'POST',
+                          headers: {
+                            'x-admin-secret': adminSecret,
+                            'Content-Type': 'application/json'
+                          }
+                        });
+                        const data = await response.json();
+                        setApiResponse(data);
+                        setResponseDialog(true);
+                      } catch (error) {
+                        setApiResponse({ error: 'Failed to run review username migration' });
+                        setResponseDialog(true);
+                      }
+                      setLoading(false);
+                    }}
+                    disabled={loading}
+                    className="w-full bg-purple-600 hover:bg-purple-700"
+                  >
+                    {loading ? 'Migrating Reviews...' : 'Migrate Review Usernames'}
                   </Button>
                 </div>
               </AccordionContent>
