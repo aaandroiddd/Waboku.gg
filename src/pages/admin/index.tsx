@@ -387,6 +387,32 @@ export default function AdminDashboard() {
                       </Button>
                     </Card>
                   ))}
+                  
+                  {/* Test Cleanup Archived - Debug Tool */}
+                  <Card className="p-4 border-yellow-200 bg-yellow-50 dark:border-yellow-800 dark:bg-yellow-950">
+                    <h3 className="font-semibold mb-2">Test Cleanup Analysis</h3>
+                    <p className="text-sm text-muted-foreground mb-4">Analyze archived listings without deleting them</p>
+                    <Button
+                      onClick={() => handleApiCall('/api/admin/test-cleanup-archived')}
+                      disabled={loading}
+                      className="w-full bg-yellow-600 hover:bg-yellow-700"
+                    >
+                      {loading ? 'Analyzing...' : 'Analyze Archived Listings'}
+                    </Button>
+                  </Card>
+                  
+                  {/* Force Cleanup Archived - Actual Deletion */}
+                  <Card className="p-4 border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-950">
+                    <h3 className="font-semibold mb-2">Force Cleanup Archived</h3>
+                    <p className="text-sm text-muted-foreground mb-4">⚠️ Actually delete expired archived listings</p>
+                    <Button
+                      onClick={() => handleApiCall('/api/admin/force-cleanup-archived')}
+                      disabled={loading}
+                      className="w-full bg-red-600 hover:bg-red-700"
+                    >
+                      {loading ? 'Deleting...' : 'Force Delete Expired'}
+                    </Button>
+                  </Card>
                 </div>
               </AccordionContent>
             </AccordionItem>
