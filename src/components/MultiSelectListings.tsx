@@ -330,8 +330,9 @@ export function MultiSelectListings({
                       <ListingTimer
                         createdAt={listing.createdAt}
                         archivedAt={type === 'archived' ? listing.archivedAt || listing.createdAt : undefined}
-                        accountTier={accountTier}
+                        accountTier={accountTier as 'free' | 'premium'}
                         status={type === 'archived' ? 'archived' : listing.status}
+                        listingId={listing.id}
                       />
                     </div>
                   </div>
@@ -517,8 +518,9 @@ export function MultiSelectListings({
                     <ListingTimer
                       createdAt={listing.createdAt}
                       archivedAt={type === 'archived' ? listing.archivedAt || listing.createdAt : undefined}
-                      accountTier={accountTier}
+                      accountTier={accountTier as 'free' | 'premium'}
                       status={type === 'archived' ? 'archived' : listing.status}
+                      listingId={listing.id}
                     />
                   </div>
 

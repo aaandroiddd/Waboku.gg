@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useToast } from "@/components/ui/use-toast";
 import { ListingVisibilityFixer } from "@/components/ListingVisibilityFixer";
+import { ListingExpirationDebugger } from "@/components/ListingExpirationDebugger";
 import { AdvancedTools } from "@/components/dashboard/AdvancedTools";
 import { ProfileAvatar } from "@/components/ProfileAvatar";
 import { ProfileName } from "@/components/ProfileName";
@@ -28,6 +29,7 @@ import { useOptimizedListings } from '@/hooks/useOptimizedListings';
 import { useProfile } from '@/hooks/useProfile';
 import { useListingVisibility } from '@/hooks/useListingVisibility';
 import { useDashboard } from '@/contexts/DashboardContext';
+import { useAccount } from '@/contexts/AccountContext';
 import { Listing } from '@/types/database';
 import { ContentLoader } from '@/components/ContentLoader';
 import { LoadingAnimation } from '@/components/LoadingAnimation';
@@ -51,6 +53,7 @@ const DashboardContent = () => {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [refreshLoading, setRefreshLoading] = useState<boolean>(false);
   const [showDiagnostics, setShowDiagnostics] = useState<boolean>(false);
+  const [showExpirationDebugger, setShowExpirationDebugger] = useState<boolean>(false);
   const [listingsLoadAttempts, setListingsLoadAttempts] = useState<number>(0);
   const [dialogState, setDialogState] = useState<{
     isOpen: boolean;
@@ -151,6 +154,7 @@ const DashboardContent = () => {
   }, [preloaderListings, fallbackListings, isInitialized, user, saveListingsToCache]);
   
   const { profile, loading: profileLoading } = useProfile(user?.uid || null);
+  const { accountTier, features, isLoading: accountLoading } = useAccount();
   
   // Use the listing visibility hook to properly filter active listings
   const { visibleListings: properlyFilteredActiveListings } = useListingVisibility(
@@ -178,7 +182,7 @@ const DashboardContent = () => {
                 createdAt: new Date(),
                 expiresAt: (() => {
                   const now = new Date();
-                  const tierDuration = (profile?.tier === 'premium' ? 720 : 48);
+                  const tierDuration = (accountTier === 'premium' ? 720 : 48);
                   const expirationTime = new Date(now);
                   expirationTime.setHours(expirationTime.getHours() + tierDuration);
                   return expirationTime;
@@ -583,6 +587,18 @@ const DashboardContent = () => {
       setShowDiagnostics(true);
     }
     
+    // Show expiration debugger if there are expiration-related issues
+    const hasExpirationIssues = allListings.some(listing => {
+      const listingTier = listing.accountTier || 'free';
+      const currentTier = accountTier || 'free';
+      return listingTier !== currentTier || !listing.expiresAt;
+    });
+    
+    if (hasExpirationIssues && !showExpirationDebugger && allListings.length > 0) {
+      console.warn('Dashboard - Potential listing expiration issues detected');
+      setShowExpirationDebugger(true);
+    }
+    
     // Log all listings with their key properties for debugging
     if (allListings.length > 0) {
       console.log('Dashboard - All listings details:');
@@ -870,7 +886,7 @@ const DashboardContent = () => {
                 createdAt: new Date(),
                 expiresAt: (() => {
                   const now = new Date();
-                  const tierDuration = (profile?.tier === 'premium' ? 720 : 48);
+                  const tierDuration = (accountTier === 'premium' ? 720 : 48);
                   const expirationTime = new Date(now);
                   expirationTime.setHours(expirationTime.getHours() + tierDuration);
                   return expirationTime;
@@ -1052,6 +1068,12 @@ const DashboardContent = () => {
     
 
     
+    {/* Listing Expiration Debugger */}
+    <ListingExpirationDebugger 
+      listings={allListings} 
+      visible={showExpirationDebugger}
+    />
+
     {/* Dashboard Header */}
     <div className="mb-8">
       <div className="flex items-start gap-8">
@@ -1212,7 +1234,7 @@ const DashboardContent = () => {
           <MultiSelectListings
             listings={activeListings}
             type="active"
-            accountTier={profile?.tier || 'free'}
+            accountTier={accountTier || 'free'}
             viewMode={viewMode}
             onEdit={handleEditListing}
             onDelete={handleDeleteListing}
@@ -1235,7 +1257,7 @@ const DashboardContent = () => {
           <MultiSelectListings
             listings={archivedListings}
             type="archived"
-            accountTier={profile?.tier || 'free'}
+            accountTier={accountTier || 'free'}
             viewMode={viewMode}
             onEdit={handleEditListing}
             onDelete={(listingId) => {

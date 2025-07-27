@@ -5,6 +5,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { AlertCircle } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
 import { useRouter } from 'next/router';
+import { useAccount } from '@/contexts/AccountContext';
 
 interface ListingTimerProps {
   createdAt: Date | number | string;
@@ -22,6 +23,12 @@ export function ListingTimer({ createdAt, archivedAt, accountTier, status, listi
   const [isMounted, setIsMounted] = useState(false);
   const { toast } = useToast();
   const router = useRouter();
+  
+  // Get the current account tier from AccountContext to ensure we're using the most up-to-date information
+  const { accountTier: currentAccountTier } = useAccount();
+  
+  // Use the current account tier from context, fallback to prop if context is not available
+  const effectiveAccountTier = currentAccountTier || accountTier || 'free';
 
   // Track component mount state to prevent state updates on unmounted components
   useEffect(() => {
@@ -250,8 +257,8 @@ export function ListingTimer({ createdAt, archivedAt, accountTier, status, listi
             // Get the appropriate listing duration based on account tier
             // This ensures we're using the correct duration for the account tier
             // Free tier: 48 hours, Premium tier: 720 hours (30 days)
-            duration = ACCOUNT_TIERS[accountTier].listingDuration * 60 * 60 * 1000;
-            console.log(`ListingTimer: Using account tier ${accountTier} with duration ${ACCOUNT_TIERS[accountTier].listingDuration} hours`);
+            duration = ACCOUNT_TIERS[effectiveAccountTier].listingDuration * 60 * 60 * 1000;
+            console.log(`ListingTimer: Using account tier ${effectiveAccountTier} with duration ${ACCOUNT_TIERS[effectiveAccountTier].listingDuration} hours`);
             endTime = startTime + duration;
           }
           
@@ -273,7 +280,7 @@ export function ListingTimer({ createdAt, archivedAt, accountTier, status, listi
             startTime: new Date(startTime).toISOString(),
             endTime: new Date(endTime).toISOString(),
             duration: duration / (60 * 60 * 1000) + ' hours',
-            accountTier
+            accountTier: effectiveAccountTier
           });
                      
           duration = endTime - startTime;
@@ -309,7 +316,7 @@ export function ListingTimer({ createdAt, archivedAt, accountTier, status, listi
     const timer = setInterval(calculateTimeLeft, 1000);
 
     return () => clearInterval(timer);
-  }, [createdAt, archivedAt, accountTier, status, isInitialized, isMounted, listingId]);
+  }, [createdAt, archivedAt, effectiveAccountTier, status, isInitialized, isMounted, listingId]);
 
   const formatTimeLeft = () => {
     const days = Math.floor(timeLeft / (1000 * 60 * 60 * 24));
@@ -374,7 +381,7 @@ export function ListingTimer({ createdAt, archivedAt, accountTier, status, listi
         <Alert>
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
-            {accountTier === 'free' ? 
+            {effectiveAccountTier === 'free' ? 
               `Free plan: Listing expires in ${formatTimeLeft()}` :
               `Listing expires in ${formatTimeLeft()}`}
           </AlertDescription>
