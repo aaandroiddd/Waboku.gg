@@ -27,7 +27,25 @@ export function ReviewCard({ review, showSellerResponse = true, allowHelpful = t
   
   // Use stored username/avatar if available (for deleted users), otherwise fetch from user data
   const { userData, loading: isLoadingUser } = useUserData(review.reviewerId);
-  const reviewerName = review.reviewerUsername || userData?.username || 'Anonymous User';
+  
+  // Determine if this is a deleted user - we have stored username but no current user data
+  // and we're not still loading (give it time to load)
+  const isDeletedUser = !!(review.reviewerUsername && !userData && !isLoadingUser);
+  
+  // For deleted users, show "Deleted User" instead of the stored username to be more clear
+  // For active users, prefer the current username over stored one (in case they changed it)
+  // For users without stored data, use fetched data or fallback
+  let reviewerName: string;
+  if (isDeletedUser) {
+    reviewerName = 'Deleted User';
+  } else if (userData?.username) {
+    reviewerName = userData.username;
+  } else if (review.reviewerUsername) {
+    reviewerName = review.reviewerUsername;
+  } else {
+    reviewerName = 'Anonymous User';
+  }
+  
   const reviewerAvatar = review.reviewerAvatarUrl || userData?.avatarUrl || null;
   
   // Check if the current user has already marked this review as helpful
@@ -117,7 +135,7 @@ export function ReviewCard({ review, showSellerResponse = true, allowHelpful = t
                   <UserNameLink 
                     userId={review.reviewerId} 
                     initialUsername={reviewerName}
-                    isDeletedUser={!!review.reviewerUsername && !userData}
+                    isDeletedUser={isDeletedUser}
                   />
                   {review.isVerifiedPurchase && (
                     <span className="ml-2 text-xs bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 px-2 py-0.5 rounded-full">

@@ -202,27 +202,35 @@ export function UserNameLink({
   
   if (showProfileOnClick) {
     // Only link to profile if we have a real username and the user is not deleted
-    const isRealUsername = !displayName.startsWith('User ') || displayName === 'User';
+    const isRealUsername = !displayName.startsWith('User ') && displayName !== 'Deleted User' && displayName !== 'Anonymous User';
     const canLinkToProfile = isRealUsername && !isDeletedUser;
     
     return (
       <Link 
         href={canLinkToProfile ? `/profile/${encodeURIComponent(displayName)}` : '#'} 
-        className={`font-medium ${canLinkToProfile ? 'hover:underline' : 'cursor-default'} ${className}`}
+        className={`font-medium ${canLinkToProfile ? 'hover:underline text-primary' : 'cursor-default text-muted-foreground'} ${className}`}
         onClick={(e) => {
           e.stopPropagation();
           
           // If it's not a real username or deleted user, show a message instead of navigating
           if (!canLinkToProfile) {
             e.preventDefault();
-            alert('This user\'s profile is not available');
+            if (isDeletedUser || displayName === 'Deleted User') {
+              alert('This user account has been deleted and their profile is no longer available.');
+            } else {
+              alert('This user\'s profile is not available.');
+            }
           }
         }}
       >
-        {displayName}
+        {isDeletedUser || displayName === 'Deleted User' ? 'Deleted User' : displayName}
       </Link>
     );
   }
   
-  return <span className={`font-medium ${className}`}>{displayName}</span>;
+  return (
+    <span className={`font-medium ${isDeletedUser || displayName === 'Deleted User' ? 'text-muted-foreground' : ''} ${className}`}>
+      {isDeletedUser || displayName === 'Deleted User' ? 'Deleted User' : displayName}
+    </span>
+  );
 }
