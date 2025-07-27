@@ -1599,59 +1599,74 @@ export function Chat({
         </AlertDialog>
       )}
 
-      {/* Delete Confirmation Dialog */}
-      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Conversation</AlertDialogTitle>
-            <AlertDialogDescription className="space-y-2">
-              <p>Are you sure you want to delete this conversation? This will:</p>
-              <ul className="list-disc list-inside space-y-1">
-                <li>Remove the messages from your view</li>
-                <li>Keep the conversation visible for {displayName}</li>
-                <li>Not affect the other person&apos;s access to the messages</li>
-                <li>The conversation will reappear if {displayName} sends you a new message</li>
-              </ul>
-              <div className="bg-muted p-3 rounded-md mt-3 text-sm">
-                <p className="font-medium">Note:</p>
-                <p>If you want to permanently stop receiving messages from this user, use the block feature instead.</p>
+      {/* Delete Confirmation Dialog - Native HTML Dialog */}
+      {showDeleteDialog && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-background border rounded-lg shadow-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <h2 className="text-lg font-semibold mb-4">Delete Conversation</h2>
+              <div className="space-y-3 text-sm text-muted-foreground mb-6">
+                <p>Are you sure you want to delete this conversation? This will:</p>
+                <ul className="list-disc list-inside space-y-1 ml-2">
+                  <li>Remove the messages from your view</li>
+                  <li>Keep the conversation visible for {displayName}</li>
+                  <li>Not affect the other person&apos;s access to the messages</li>
+                  <li>The conversation will reappear if {displayName} sends you a new message</li>
+                </ul>
+                <div className="bg-muted p-3 rounded-md mt-3">
+                  <p className="font-medium text-foreground">Note:</p>
+                  <p>If you want to permanently stop receiving messages from this user, use the block feature instead.</p>
+                </div>
               </div>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeleteChat}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+              <div className="flex gap-3 justify-end">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowDeleteDialog(false)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleDeleteChat}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  Delete
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
-      {/* Delete Message Dialog */}
-      <AlertDialog open={showDeleteMessageDialog} onOpenChange={setShowDeleteMessageDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Message</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete this message? This action cannot be undone and will permanently remove the message from the conversation for all participants.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setMessageToDelete(null)}>
-              Cancel
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeleteMessage}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              Delete Message
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {/* Delete Message Dialog - Native HTML Dialog */}
+      {showDeleteMessageDialog && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-background border rounded-lg shadow-lg max-w-md w-full">
+            <div className="p-6">
+              <h2 className="text-lg font-semibold mb-4">Delete Message</h2>
+              <p className="text-sm text-muted-foreground mb-6">
+                Are you sure you want to delete this message? This action cannot be undone and will permanently remove the message from the conversation for all participants.
+              </p>
+              <div className="flex gap-3 justify-end">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setShowDeleteMessageDialog(false);
+                    setMessageToDelete(null);
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleDeleteMessage}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  Delete Message
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
