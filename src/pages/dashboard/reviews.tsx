@@ -11,6 +11,7 @@ import { ReviewCard } from '@/components/ReviewCard';
 import { SellerResponseForm } from '@/components/SellerResponseForm';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { RatingStars } from '@/components/RatingStars';
+import { ReviewsDebugger } from '@/components/ReviewsDebugger';
 import { Loader2, Search, Star, MessageSquare } from 'lucide-react';
 
 export default function ReviewsDashboardPage() {
@@ -190,6 +191,11 @@ export default function ReviewsDashboardPage() {
             </CardContent>
           </Card>
         </div>
+        
+        {/* Debug Component - Remove after fixing */}
+        {process.env.NODE_ENV === 'development' && (
+          <ReviewsDebugger />
+        )}
         
         {/* Reviews List */}
         <Card>
