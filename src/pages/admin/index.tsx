@@ -135,7 +135,9 @@ export default function AdminDashboard() {
       let headers = {
         'Content-Type': 'application/json'
       };
-      if (endpoint === '/api/listings/cleanup-archived') {
+      if (endpoint === '/api/listings/cleanup-archived' || 
+          endpoint === '/api/admin/test-cleanup-archived' || 
+          endpoint === '/api/admin/force-cleanup-archived') {
         headers = {
           ...headers,
           'Authorization': `Bearer ${adminSecret}`
