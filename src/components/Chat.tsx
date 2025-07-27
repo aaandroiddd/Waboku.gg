@@ -31,12 +31,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "./ui/popover";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "./ui/dropdown-menu";
+
 import { useRouter } from 'next/router';
 import { useProfile } from '@/hooks/useProfile';
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -88,6 +83,7 @@ export function Chat({
   const [displayedListingTitle, setDisplayedListingTitle] = useState(listingTitle);
   const [listingData, setListingData] = useState<{ title: string; game: string } | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -155,6 +151,46 @@ export function Chat({
         variant: "destructive"
       });
     }
+  };
+
+  // Handle mobile menu selection
+  const handleMobileMenuChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const value = e.target.value;
+    
+    if (value === 'view-profile') {
+      // Navigate to the user's profile page using the proper username format
+      const username = (initialReceiverName && 
+                       initialReceiverName !== 'Loading...' && 
+                       initialReceiverName !== 'Unknown User' && 
+                       !initialReceiverName.startsWith('User ')) 
+                      ? initialReceiverName
+                      : receiverProfile?.displayName ||
+                        receiverProfile?.username ||
+                        (receiverProfile?.email && receiverProfile.email.split('@')[0]) ||
+                        displayName ||
+                        'Unknown User';
+      
+      // Check if this is a fallback username (indicates non-existent user)
+      if (username === 'Unknown User' || username.startsWith('User ')) {
+        toast({
+          title: "Profile not available",
+          description: "This user's profile is no longer available.",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      // Use the actual username directly in the URL path (no slug conversion needed)
+      // The profile page will handle username resolution to userId
+      router.push(`/profile/${encodeURIComponent(username)}`);
+    } else if (value === 'block-user') {
+      setShowBlockDialog(true);
+    } else if (value === 'delete-chat') {
+      setShowDeleteDialog(true);
+    }
+    
+    // Reset the select to default
+    e.target.value = '';
   };
   // Fetch receiver's username from Firestore first, then Realtime Database as fallback
   useEffect(() => {
@@ -1035,127 +1071,36 @@ export function Chat({
                 </span>
               </div>
               <div className="flex items-center gap-1">
-                {/* Three dots menu for mobile */}
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                      }}
-                      onTouchStart={(e) => {
-                        e.stopPropagation();
-                      }}
-                    >
-                      <MoreVertical className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent 
-                    align="end" 
-                    className="w-48 z-[200]"
-                    side="bottom"
-                    sideOffset={8}
-                    onCloseAutoFocus={(e) => e.preventDefault()}
-                    onEscapeKeyDown={(e) => e.preventDefault()}
-                    onPointerDownOutside={(e) => {
-                      // Prevent closing when clicking on the trigger
-                      const target = e.target as Element;
-                      if (target.closest('[data-radix-dropdown-menu-trigger]')) {
-                        e.preventDefault();
-                      }
-                    }}
-                    onInteractOutside={(e) => {
-                      // Prevent interaction issues on mobile
-                      const target = e.target as Element;
-                      if (target.closest('[data-radix-dropdown-menu-trigger]')) {
-                        e.preventDefault();
-                      }
-                    }}
+                {/* Native select menu for mobile */}
+                <div className="relative">
+                  <select
+                    onChange={handleMobileMenuChange}
+                    className="appearance-none bg-transparent border-0 text-transparent cursor-pointer h-8 w-8 absolute inset-0 z-10"
+                    style={{ WebkitAppearance: 'none' }}
                   >
-                    {receiverId && receiverId !== 'system_moderation' && (
-                      <DropdownMenuItem
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          
-                          // Navigate to the user's profile page using the proper username format
-                          const username = (initialReceiverName && 
-                                           initialReceiverName !== 'Loading...' && 
-                                           initialReceiverName !== 'Unknown User' && 
-                                           !initialReceiverName.startsWith('User ')) 
-                                          ? initialReceiverName
-                                          : receiverProfile?.displayName ||
-                                            receiverProfile?.username ||
-                                            (receiverProfile?.email && receiverProfile.email.split('@')[0]) ||
-                                            displayName ||
-                                            'Unknown User';
-                          
-                          // Check if this is a fallback username (indicates non-existent user)
-                          if (username === 'Unknown User' || username.startsWith('User ')) {
-                            toast({
-                              title: "Profile not available",
-                              description: "This user's profile is no longer available.",
-                              variant: "destructive"
-                            });
-                            return;
-                          }
-                          
-                          // Use the actual username directly in the URL path (no slug conversion needed)
-                          // The profile page will handle username resolution to userId
-                          router.push(`/profile/${encodeURIComponent(username)}`);
-                        }}
-                        onSelect={(e) => {
-                          e.preventDefault();
-                        }}
-                        disabled={!initialReceiverName || 
-                                 initialReceiverName === 'Loading...' || 
-                                 initialReceiverName === 'Unknown User' || 
-                                 initialReceiverName.startsWith('User ') ||
-                                 (!receiverProfile?.displayName && 
-                                  !receiverProfile?.username && 
-                                  !receiverProfile?.email)}
-                      >
-                        <User className="h-4 w-4 mr-2" />
-                        View Profile
-                      </DropdownMenuItem>
+                    <option value="">Actions</option>
+                    {receiverId && receiverId !== 'system_moderation' && 
+                     initialReceiverName && 
+                     initialReceiverName !== 'Loading...' && 
+                     initialReceiverName !== 'Unknown User' && 
+                     !initialReceiverName.startsWith('User ') && (
+                      <option value="view-profile">👤 View Profile</option>
                     )}
                     {chatId && (
                       <>
-                        <DropdownMenuItem
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            setShowBlockDialog(true);
-                          }}
-                          onSelect={(e) => {
-                            e.preventDefault();
-                          }}
-                          className="text-orange-600 focus:text-orange-600"
-                        >
-                          <Ban className="h-4 w-4 mr-2" />
-                          Block User
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            setShowDeleteDialog(true);
-                          }}
-                          onSelect={(e) => {
-                            e.preventDefault();
-                          }}
-                          className="text-destructive focus:text-destructive"
-                        >
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          Delete Chat
-                        </DropdownMenuItem>
+                        <option value="block-user">🚫 Block User</option>
+                        <option value="delete-chat">🗑️ Delete Chat</option>
                       </>
                     )}
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                  </select>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 pointer-events-none"
+                  >
+                    <MoreVertical className="h-4 w-4" />
+                  </Button>
+                </div>
                 {onClose && (
                   <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={onClose}>
                     Close
@@ -1478,29 +1423,18 @@ export function Chat({
                           
                           {/* Delete button for user's own messages - available regardless of blocking status */}
                           {isUserMessage && (
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="absolute -top-2 -right-2 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity bg-background border shadow-sm hover:bg-muted"
-                                >
-                                  <MoreVertical className="h-3 w-3" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem
-                                  onClick={() => {
-                                    setMessageToDelete(message.id);
-                                    setShowDeleteMessageDialog(true);
-                                  }}
-                                  className="text-destructive focus:text-destructive"
-                                >
-                                  <Trash2 className="h-4 w-4 mr-2" />
-                                  Delete Message
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="absolute -top-2 -right-2 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity bg-background border shadow-sm hover:bg-muted"
+                              onClick={() => {
+                                setMessageToDelete(message.id);
+                                setShowDeleteMessageDialog(true);
+                              }}
+                              title="Delete message"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
                           )}
                         </div>
                       </div>
