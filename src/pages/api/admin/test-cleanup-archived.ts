@@ -42,12 +42,21 @@ export default async function handler(
       let timeUntilExpiry = 0;
 
       try {
-        if (data.expiresAt) {
+        // For archived listings, we need to check the archive expiration time
+        // This should be 7 days after the archivedAt timestamp
+        if (data.archivedAt) {
+          const archivedDate = data.archivedAt.toDate ? data.archivedAt.toDate() : new Date(data.archivedAt);
+          // Archived listings expire 7 days after being archived
+          expiresAt = new Date(archivedDate.getTime() + (7 * 24 * 60 * 60 * 1000));
+          isExpired = now > expiresAt;
+          timeUntilExpiry = expiresAt.getTime() - now.getTime();
+        } else if (data.expiresAt) {
+          // Fallback to expiresAt field if archivedAt is not available
           expiresAt = data.expiresAt.toDate ? data.expiresAt.toDate() : new Date(data.expiresAt);
           isExpired = now > expiresAt;
           timeUntilExpiry = expiresAt.getTime() - now.getTime();
         } else {
-          // If no expiresAt, this is problematic
+          // If no timestamps, assume it should have been deleted (legacy data)
           expiresAt = null;
           isExpired = true; // Should be considered expired if no expiry date
         }
@@ -56,12 +65,14 @@ export default async function handler(
           listingId: doc.id,
           userId: data.userId,
           archivedAt: data.archivedAt?.toDate?.()?.toISOString() || 'unknown',
-          expiresAt: expiresAt?.toISOString() || 'missing',
+          calculatedExpiresAt: expiresAt?.toISOString() || 'missing',
+          firestoreExpiresAt: data.expiresAt?.toDate?.()?.toISOString() || 'not set',
           isExpired,
           timeUntilExpiryMs: timeUntilExpiry,
           timeUntilExpiryHours: Math.round(timeUntilExpiry / (1000 * 60 * 60)),
           timeUntilExpiryMinutes: Math.round(timeUntilExpiry / (1000 * 60)),
-          expirationReason: data.expirationReason || 'unknown'
+          expirationReason: data.expirationReason || 'unknown',
+          calculationMethod: data.archivedAt ? 'archivedAt + 7 days' : (data.expiresAt ? 'firestore expiresAt' : 'no timestamp')
         });
       } catch (error) {
         console.error(`[Test Cleanup Archived] Error analyzing listing ${doc.id}:`, error);
