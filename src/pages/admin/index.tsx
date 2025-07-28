@@ -142,6 +142,7 @@ export default function AdminDashboard() {
           endpoint === '/api/admin/ultra-nuclear-cleanup-archived' ||
           endpoint === '/api/admin/check-cleanup-status' ||
           endpoint === '/api/admin/manual-cleanup-specific' ||
+          endpoint === '/api/admin/test-specific-listing-delete' ||
           endpoint === '/api/debug/test-admin-privileges') {
         headers = {
           ...headers,
@@ -483,6 +484,19 @@ export default function AdminDashboard() {
                       className="w-full"
                     >
                       {loading ? 'Fixing Listing...' : 'Fix Expired Listing'}
+                    </Button>
+                  </Card>
+                  
+                  {/* Diagnostic Test for Specific Listing */}
+                  <Card className="p-4">
+                    <h3 className="font-semibold mb-2">Diagnostic Test - Specific Listing</h3>
+                    <p className="text-sm text-muted-foreground mb-4">🔍 Run detailed diagnostic test on the problematic listing to understand the FAILED_PRECONDITION error</p>
+                    <Button
+                      onClick={() => handleApiCall('/api/admin/test-specific-listing-delete')}
+                      disabled={loading}
+                      className="w-full"
+                    >
+                      {loading ? 'Running Diagnostic...' : 'Run Diagnostic Test'}
                     </Button>
                   </Card>
                 </div>
