@@ -137,7 +137,8 @@ export default function AdminDashboard() {
       };
       if (endpoint === '/api/listings/cleanup-archived' || 
           endpoint === '/api/admin/test-cleanup-archived' || 
-          endpoint === '/api/admin/force-cleanup-archived') {
+          endpoint === '/api/admin/force-cleanup-archived' ||
+          endpoint === '/api/debug/test-admin-privileges') {
         headers = {
           ...headers,
           'Authorization': `Bearer ${adminSecret}`
