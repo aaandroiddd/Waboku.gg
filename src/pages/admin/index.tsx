@@ -397,7 +397,7 @@ export default function AdminDashboard() {
                     <Button
                       onClick={() => handleApiCall('/api/admin/test-cleanup-archived')}
                       disabled={loading}
-                      className="w-full bg-yellow-600 hover:bg-yellow-700"
+                      className="w-full bg-secondary hover:bg-secondary/90 text-secondary-foreground"
                     >
                       {loading ? 'Analyzing...' : 'Analyze Archived Listings'}
                     </Button>
@@ -410,9 +410,22 @@ export default function AdminDashboard() {
                     <Button
                       onClick={() => handleApiCall('/api/admin/force-cleanup-archived')}
                       disabled={loading}
-                      className="w-full bg-red-600 hover:bg-red-700"
+                      className="w-full bg-destructive hover:bg-destructive/90 text-destructive-foreground"
                     >
                       {loading ? 'Deleting...' : 'Force Delete Expired'}
+                    </Button>
+                  </Card>
+                  
+                  {/* Test Admin Privileges - Debug Tool */}
+                  <Card className="p-4 border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950">
+                    <h3 className="font-semibold mb-2">Test Admin Privileges</h3>
+                    <p className="text-sm text-muted-foreground mb-4">Debug Firebase Admin SDK privileges and security rule bypass</p>
+                    <Button
+                      onClick={() => handleApiCall('/api/debug/test-admin-privileges')}
+                      disabled={loading}
+                      className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
+                    >
+                      {loading ? 'Testing...' : 'Test Admin SDK Privileges'}
                     </Button>
                   </Card>
                 </div>
@@ -513,7 +526,7 @@ export default function AdminDashboard() {
                         setLoading(false);
                       }}
                       disabled={loading || !moderatorUserId}
-                      className="flex-1 bg-purple-600 hover:bg-purple-700 text-white"
+                      className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground"
                     >
                       {loading ? 'Assigning...' : 'Assign Moderator'}
                     </Button>
@@ -600,7 +613,7 @@ export default function AdminDashboard() {
                     </Button>
                     <Button 
                       onClick={() => router.push(`/admin/firebase-connection-debug`)}
-                      className="w-full bg-blue-600 hover:bg-blue-700"
+                      className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
                     >
                       Connection Debugger
                     </Button>
@@ -619,7 +632,7 @@ export default function AdminDashboard() {
                   </p>
                   <Button 
                     onClick={() => router.push(`/admin/account-tier-sync`)}
-                    className="w-full bg-green-600 hover:bg-green-700"
+                    className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
                   >
                     Account Tier Sync
                   </Button>
@@ -638,19 +651,19 @@ export default function AdminDashboard() {
                   <div className="grid grid-cols-3 gap-2">
                     <Button 
                       onClick={() => router.push(`/admin/database-usage`)}
-                      className="w-full bg-yellow-600 hover:bg-yellow-700"
+                      className="w-full bg-secondary hover:bg-secondary/90 text-secondary-foreground"
                     >
                       Database Usage Monitor
                     </Button>
                     <Button 
                       onClick={() => router.push(`/admin/database-monitor`)}
-                      className="w-full bg-orange-600 hover:bg-orange-700"
+                      className="w-full bg-secondary hover:bg-secondary/90 text-secondary-foreground"
                     >
                       Real-time Database Monitor
                     </Button>
                     <Button 
                       onClick={() => router.push(`/admin/database-usage-audit`)}
-                      className="w-full bg-red-600 hover:bg-red-700"
+                      className="w-full bg-destructive hover:bg-destructive/90 text-destructive-foreground"
                     >
                       Database Usage Audit
                     </Button>
@@ -669,7 +682,7 @@ export default function AdminDashboard() {
                   </p>
                   <Button 
                     onClick={() => router.push(`/admin/listing-analytics`)}
-                    className="w-full bg-blue-600 hover:bg-blue-700"
+                    className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
                   >
                     Listing Analytics Dashboard
                   </Button>
@@ -688,7 +701,7 @@ export default function AdminDashboard() {
                   <Button 
                     onClick={debugListings}
                     disabled={isDebuggingListings}
-                    className="w-full bg-red-600 hover:bg-red-700"
+                    className="w-full bg-destructive hover:bg-destructive/90 text-destructive-foreground"
                   >
                     {isDebuggingListings ? 'Analyzing...' : 'Analyze Listings'}
                   </Button>
@@ -748,7 +761,7 @@ export default function AdminDashboard() {
                   </p>
                   <Button 
                     onClick={() => router.push(`/admin/review-system`)}
-                    className="w-full bg-green-600 hover:bg-green-700"
+                    className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
                   >
                     Review System Debug
                   </Button>
@@ -790,7 +803,7 @@ export default function AdminDashboard() {
                       setLoading(false);
                     }}
                     disabled={loading}
-                    className="w-full bg-purple-600 hover:bg-purple-700"
+                    className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
                   >
                     {loading ? 'Migrating Reviews...' : 'Migrate Review Usernames'}
                   </Button>
@@ -900,7 +913,7 @@ export default function AdminDashboard() {
                           setLoading(false);
                         }}
                         disabled={loading || !userId}
-                        className="bg-blue-600 hover:bg-blue-700"
+                        className="bg-primary hover:bg-primary/90 text-primary-foreground"
                       >
                         {loading ? 'Testing...' : 'Test Webhook Simulation'}
                       </Button>
@@ -934,7 +947,7 @@ export default function AdminDashboard() {
                           setLoading(false);
                         }}
                         disabled={loading || !userId}
-                        className="bg-green-600 hover:bg-green-700"
+                        className="bg-primary hover:bg-primary/90 text-primary-foreground"
                       >
                         {loading ? 'Testing...' : 'Test Notification System'}
                       </Button>
@@ -968,7 +981,7 @@ export default function AdminDashboard() {
                           setLoading(false);
                         }}
                         disabled={loading || !userId}
-                        className="bg-purple-600 hover:bg-purple-700"
+                        className="bg-primary hover:bg-primary/90 text-primary-foreground"
                       >
                         {loading ? 'Testing...' : 'Test Message Notifications'}
                       </Button>
@@ -1002,7 +1015,7 @@ export default function AdminDashboard() {
                           setLoading(false);
                         }}
                         disabled={loading || !userId}
-                        className="bg-orange-600 hover:bg-orange-700"
+                        className="bg-secondary hover:bg-secondary/90 text-secondary-foreground"
                       >
                         {loading ? 'Testing...' : 'Test Badge System'}
                       </Button>
@@ -1029,7 +1042,7 @@ export default function AdminDashboard() {
                   </p>
                   <Button 
                     onClick={() => router.push(`/admin/support-management`)}
-                    className="w-full bg-indigo-600 hover:bg-indigo-700"
+                    className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
                   >
                     Support Management Dashboard
                   </Button>
