@@ -140,6 +140,7 @@ export default function AdminDashboard() {
           endpoint === '/api/admin/force-cleanup-archived' ||
           endpoint === '/api/admin/nuclear-cleanup-archived' ||
           endpoint === '/api/admin/ultra-nuclear-cleanup-archived' ||
+          endpoint === '/api/admin/check-cleanup-status' ||
           endpoint === '/api/debug/test-admin-privileges') {
         headers = {
           ...headers,
@@ -455,6 +456,19 @@ export default function AdminDashboard() {
                       className="w-full bg-red-600 hover:bg-red-700 text-white"
                     >
                       {loading ? 'Ultra Nuclear Cleanup...' : 'Ultra Nuclear Cleanup'}
+                    </Button>
+                  </Card>
+                  
+                  {/* Check Cleanup Status - Status Monitor */}
+                  <Card className="p-4 border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950">
+                    <h3 className="font-semibold mb-2">Check Cleanup Status</h3>
+                    <p className="text-sm text-muted-foreground mb-4">📊 Monitor if automatic cleanup is working properly</p>
+                    <Button
+                      onClick={() => handleApiCall('/api/admin/check-cleanup-status')}
+                      disabled={loading}
+                      className="w-full bg-green-600 hover:bg-green-700 text-white"
+                    >
+                      {loading ? 'Checking Status...' : 'Check Cleanup Status'}
                     </Button>
                   </Card>
                 </div>
