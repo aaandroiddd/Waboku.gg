@@ -26,6 +26,18 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
+  // Enhanced logging for debugging
+  console.log('[Cleanup Archived] Request received', {
+    timestamp: new Date().toISOString(),
+    method: req.method,
+    headers: {
+      authorization: req.headers.authorization ? 'Bearer [REDACTED]' : 'missing',
+      'user-agent': req.headers['user-agent'],
+      'x-vercel-cron': req.headers['x-vercel-cron']
+    },
+    environment: process.env.NODE_ENV
+  });
+
   // Verify that this is a cron job request from Vercel or an admin request
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -40,7 +52,11 @@ export default async function handler(
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
-  console.log('[Cleanup Archived] Starting cleanup process', new Date().toISOString());
+  console.log('[Cleanup Archived] Starting cleanup process', {
+    timestamp: new Date().toISOString(),
+    isAutomatedCron: token === process.env.CRON_SECRET,
+    isManualAdmin: token === process.env.ADMIN_SECRET
+  });
 
   try {
     // Get Firebase admin instance
