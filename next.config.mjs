@@ -95,8 +95,8 @@ const nextConfig = {
     optimizeCss: false, // Disable this as it's causing issues
     largePageDataBytes: 256 * 1000, // Increase to 256KB to reduce file operations
   },
-  // Keep output file tracing enabled for proper deployment
-  outputFileTracing: true,
+  // Temporarily disable output file tracing to prevent EMFILE errors
+  outputFileTracing: false,
 };
 
 export default nextConfig;
