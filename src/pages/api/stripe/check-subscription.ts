@@ -1,35 +1,17 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-
-// Module cache to prevent repeated imports
-const moduleCache = new Map();
-
-async function getModule(modulePath: string) {
-  if (moduleCache.has(modulePath)) {
-    return moduleCache.get(modulePath);
-  }
-  
-  try {
-    const module = await import(modulePath);
-    moduleCache.set(modulePath, module);
-    return module;
-  } catch (error) {
-    console.error(`Failed to import module ${modulePath}:`, error);
-    throw new Error(`Module ${modulePath} not available`);
-  }
-}
+import { getFirebaseAdmin } from '@/lib/firebase-admin';
+import * as subscriptionSync from '@/lib/subscription-sync';
+import Stripe from 'stripe';
 
 async function getFirebaseAdminInstance() {
-  const { getFirebaseAdmin } = await getModule('@/lib/firebase-admin');
   return getFirebaseAdmin();
 }
 
 async function getSubscriptionSyncModule() {
-  return await getModule('@/lib/subscription-sync');
+  return subscriptionSync;
 }
 
 async function getStripe() {
-  const { default: Stripe } = await getModule('stripe');
-  
   if (!process.env.STRIPE_SECRET_KEY) {
     console.error('[Subscription Check] Missing STRIPE_SECRET_KEY');
     throw new Error('Missing STRIPE_SECRET_KEY');
