@@ -138,6 +138,7 @@ export default function AdminDashboard() {
       if (endpoint === '/api/listings/cleanup-archived' || 
           endpoint === '/api/admin/test-cleanup-archived' || 
           endpoint === '/api/admin/force-cleanup-archived' ||
+          endpoint === '/api/admin/nuclear-cleanup-archived' ||
           endpoint === '/api/debug/test-admin-privileges') {
         headers = {
           ...headers,
@@ -427,6 +428,19 @@ export default function AdminDashboard() {
                       className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
                     >
                       {loading ? 'Testing...' : 'Test Admin SDK Privileges'}
+                    </Button>
+                  </Card>
+                  
+                  {/* Nuclear Cleanup Archived - Last Resort */}
+                  <Card className="p-4 border-purple-200 bg-purple-50 dark:border-purple-800 dark:bg-purple-950">
+                    <h3 className="font-semibold mb-2">Nuclear Cleanup Archived</h3>
+                    <p className="text-sm text-muted-foreground mb-4">🚨 Last resort: Use transactions to bypass security rules</p>
+                    <Button
+                      onClick={() => handleApiCall('/api/admin/nuclear-cleanup-archived')}
+                      disabled={loading}
+                      className="w-full bg-purple-600 hover:bg-purple-700 text-white"
+                    >
+                      {loading ? 'Nuclear Cleanup...' : 'Nuclear Cleanup'}
                     </Button>
                   </Card>
                 </div>
