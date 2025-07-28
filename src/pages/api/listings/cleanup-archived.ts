@@ -64,17 +64,57 @@ export default async function handler(
     let totalFavoritesRemoved = 0;
     let completedBatches = 0;
 
-    // Get all archived listings that have expired
+    // Get all archived listings and check their archive expiration individually
     const now = new Date();
     const archivedSnapshot = await db.collection('listings')
       .where('status', '==', 'archived')
-      .where('expiresAt', '<', Timestamp.fromDate(now))
       .get();
 
-    console.log(`[Cleanup Archived] Found ${archivedSnapshot.size} archived listings to clean up`);
+    console.log(`[Cleanup Archived] Found ${archivedSnapshot.size} total archived listings to analyze`);
 
-    // Process each listing in parallel for better performance
-    const processPromises = archivedSnapshot.docs.map(async (doc) => {
+    // Filter for actually expired listings
+    const expiredListings = [];
+    
+    for (const doc of archivedSnapshot.docs) {
+      const data = doc.data();
+      if (!data) continue;
+
+      try {
+        let isExpired = false;
+        
+        // For archived listings, check if 7 days have passed since archivedAt
+        if (data.archivedAt) {
+          const archivedDate = data.archivedAt.toDate ? data.archivedAt.toDate() : new Date(data.archivedAt);
+          const archiveExpiresAt = new Date(archivedDate.getTime() + (7 * 24 * 60 * 60 * 1000));
+          isExpired = now > archiveExpiresAt;
+          
+          console.log(`[Cleanup Archived] Listing ${doc.id}: archived ${archivedDate.toISOString()}, expires ${archiveExpiresAt.toISOString()}, expired: ${isExpired}`);
+        } else if (data.expiresAt) {
+          // Fallback to expiresAt field if archivedAt is not available
+          const expiresAt = data.expiresAt.toDate ? data.expiresAt.toDate() : new Date(data.expiresAt);
+          isExpired = now > expiresAt;
+          
+          console.log(`[Cleanup Archived] Listing ${doc.id} (using expiresAt): expires ${expiresAt.toISOString()}, expired: ${isExpired}`);
+        } else {
+          // If no timestamps, assume it should have been deleted (legacy data)
+          isExpired = true;
+          console.log(`[Cleanup Archived] Listing ${doc.id} has no timestamps - marking as expired`);
+        }
+        
+        if (isExpired) {
+          expiredListings.push(doc);
+        }
+      } catch (error) {
+        console.error(`[Cleanup Archived] Error checking expiration for listing ${doc.id}:`, error);
+        // If we can't parse the date, assume it's expired
+        expiredListings.push(doc);
+      }
+    }
+
+    console.log(`[Cleanup Archived] Found ${expiredListings.length} actually expired archived listings to clean up`);
+
+    // Process each expired listing in parallel for better performance
+    const processPromises = expiredListings.map(async (doc) => {
       try {
         const listingId = doc.id;
         const listingData = doc.data();

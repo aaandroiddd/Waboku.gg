@@ -19,7 +19,10 @@ export default async function handler(
   console.log('[Force Cleanup Archived] Starting simplified cleanup process', new Date().toISOString());
 
   try {
-    const { db } = getFirebaseAdmin();
+    const { admin, db } = getFirebaseAdmin();
+    
+    // Ensure we're using admin privileges to bypass security rules
+    console.log('[Force Cleanup Archived] Using Firebase Admin SDK with elevated privileges');
     
     let totalDeleted = 0;
     let totalFavoritesRemoved = 0;
@@ -45,14 +48,40 @@ export default async function handler(
       let isExpired = false;
 
       try {
-        if (data.expiresAt) {
+        // For archived listings, we need to check the archive expiration time
+        // This should be 7 days after the archivedAt timestamp
+        if (data.archivedAt) {
+          const archivedDate = data.archivedAt.toDate ? data.archivedAt.toDate() : new Date(data.archivedAt);
+          // Archived listings expire 7 days after being archived
+          expiresAt = new Date(archivedDate.getTime() + (7 * 24 * 60 * 60 * 1000));
+          isExpired = now > expiresAt;
+          
+          console.log(`[Force Cleanup Archived] Listing ${doc.id}:`, {
+            archivedAt: archivedDate.toISOString(),
+            calculatedExpiresAt: expiresAt.toISOString(),
+            firestoreExpiresAt: data.expiresAt?.toDate?.()?.toISOString() || 'not set',
+            currentTime: now.toISOString(),
+            isExpired,
+            timeUntilExpiry: Math.round((expiresAt.getTime() - now.getTime()) / (1000 * 60 * 60)) + ' hours'
+          });
+        } else if (data.expiresAt) {
+          // Fallback to expiresAt field if archivedAt is not available
           expiresAt = data.expiresAt.toDate ? data.expiresAt.toDate() : new Date(data.expiresAt);
+          isExpired = now > expiresAt;
+          
+          console.log(`[Force Cleanup Archived] Listing ${doc.id} (using expiresAt):`, {
+            expiresAt: expiresAt.toISOString(),
+            currentTime: now.toISOString(),
+            isExpired,
+            timeUntilExpiry: Math.round((expiresAt.getTime() - now.getTime()) / (1000 * 60 * 60)) + ' hours'
+          });
         } else {
-          // If no expiresAt, assume it should have been deleted (legacy data)
+          // If no timestamps, assume it should have been deleted (legacy data)
           expiresAt = new Date(0); // Very old date
+          isExpired = true;
+          
+          console.log(`[Force Cleanup Archived] Listing ${doc.id} has no timestamps - marking as expired`);
         }
-
-        isExpired = now > expiresAt;
 
         if (isExpired) {
           expiredListings.push({ doc, data, expiresAt });
@@ -60,7 +89,7 @@ export default async function handler(
           nonExpiredListings.push({ doc, data, expiresAt });
         }
       } catch (error) {
-        console.error(`[Force Cleanup Archived] Error parsing expiresAt for listing ${doc.id}:`, error);
+        console.error(`[Force Cleanup Archived] Error parsing timestamps for listing ${doc.id}:`, error);
         // If we can't parse the date, assume it's expired
         expiredListings.push({ doc, data, expiresAt: new Date(0) });
       }
