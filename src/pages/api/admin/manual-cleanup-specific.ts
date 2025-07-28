@@ -16,24 +16,37 @@ export default async function handler(
     return res.status(401).json({ error: 'Unauthorized - invalid token' });
   }
 
-  console.log('[Manual Cleanup Specific] Starting manual cleanup for specific expired listing', new Date().toISOString());
+  console.log('[Manual Cleanup Specific] Starting enhanced manual cleanup for specific expired listing', new Date().toISOString());
 
   try {
-    const { db } = getFirebaseAdmin();
+    // Get Firebase admin instance with explicit initialization
+    const admin = getFirebaseAdmin();
+    
+    if (!admin || !admin.firestore) {
+      console.error('[Manual Cleanup Specific] Firebase Admin SDK not properly initialized');
+      return res.status(500).json({ 
+        error: 'Firebase Admin SDK initialization failed',
+        details: 'Admin instance or Firestore not available'
+      });
+    }
+    
+    const db = admin.firestore();
     const now = new Date();
     
     // Target the specific listing ID from the screenshot: NOlBNyOhmrqwr9QGHuze
     const listingId = 'NOlBNyOhmrqwr9QGHuze';
     
-    console.log(`[Manual Cleanup Specific] Checking listing ${listingId}`);
+    console.log(`[Manual Cleanup Specific] Checking listing ${listingId} with enhanced Firebase Admin SDK approach`);
     
-    // Get the specific listing
-    const listingDoc = await db.collection('listings').doc(listingId).get();
+    // Get the specific listing using Firebase Admin SDK (should bypass security rules)
+    const listingRef = db.collection('listings').doc(listingId);
+    const listingDoc = await listingRef.get();
     
     if (!listingDoc.exists) {
       return res.status(404).json({ 
         error: 'Listing not found',
-        listingId 
+        listingId,
+        timestamp: now.toISOString()
       });
     }
     
@@ -41,7 +54,8 @@ export default async function handler(
     if (!listingData) {
       return res.status(404).json({ 
         error: 'Listing data is empty',
-        listingId 
+        listingId,
+        timestamp: now.toISOString()
       });
     }
     
@@ -85,44 +99,85 @@ export default async function handler(
       });
     }
     
-    // Find all favorites for this listing
+    // Find all favorites for this listing using collectionGroup query
+    console.log(`[Manual Cleanup Specific] Searching for favorites with listingId: ${listingId}`);
     const favoritesQuery = await db.collectionGroup('favorites')
       .where('listingId', '==', listingId)
       .get();
     
     console.log(`[Manual Cleanup Specific] Found ${favoritesQuery.size} favorites to delete`);
     
-    // Use a batch to delete everything
-    const batch = db.batch();
+    // Enhanced deletion approach: Use individual operations instead of batch to avoid potential issues
+    const deletionResults = {
+      listingDeleted: false,
+      favoritesDeleted: 0,
+      errors: []
+    };
     
-    // Delete the listing
-    batch.delete(listingDoc.ref);
-    
-    // Delete all favorites
-    favoritesQuery.docs.forEach(favoriteDoc => {
-      batch.delete(favoriteDoc.ref);
-    });
-    
-    // Commit the batch
-    await batch.commit();
+    try {
+      // Delete all favorites first (individual operations)
+      for (const favoriteDoc of favoritesQuery.docs) {
+        try {
+          await favoriteDoc.ref.delete();
+          deletionResults.favoritesDeleted++;
+          console.log(`[Manual Cleanup Specific] Deleted favorite: ${favoriteDoc.id}`);
+        } catch (favoriteError: any) {
+          console.error(`[Manual Cleanup Specific] Error deleting favorite ${favoriteDoc.id}:`, favoriteError);
+          deletionResults.errors.push(`Favorite ${favoriteDoc.id}: ${favoriteError.message}`);
+        }
+      }
+      
+      // Delete the listing last
+      await listingRef.delete();
+      deletionResults.listingDeleted = true;
+      console.log(`[Manual Cleanup Specific] Successfully deleted listing: ${listingId}`);
+      
+    } catch (deleteError: any) {
+      console.error(`[Manual Cleanup Specific] Error during deletion:`, {
+        message: deleteError.message,
+        code: deleteError.code,
+        stack: deleteError.stack
+      });
+      
+      deletionResults.errors.push(`Listing deletion: ${deleteError.message}`);
+      
+      // If listing deletion failed, return the error details
+      return res.status(500).json({
+        error: 'Failed to delete listing',
+        details: deleteError.message,
+        code: deleteError.code,
+        listingId,
+        partialResults: deletionResults,
+        timestamp: now.toISOString()
+      });
+    }
     
     const summary = {
       listingId,
-      listingDeleted: true,
-      favoritesDeleted: favoritesQuery.size,
+      listingDeleted: deletionResults.listingDeleted,
+      favoritesDeleted: deletionResults.favoritesDeleted,
+      errors: deletionResults.errors,
       reason,
-      timestamp: now.toISOString()
+      timestamp: now.toISOString(),
+      method: 'individual_operations'
     };
     
-    console.log('[Manual Cleanup Specific] Successfully deleted expired listing', summary);
+    console.log('[Manual Cleanup Specific] Cleanup completed', summary);
+    
+    if (deletionResults.errors.length > 0) {
+      return res.status(207).json({
+        message: `Partially successful: deleted listing and ${deletionResults.favoritesDeleted} favorites with ${deletionResults.errors.length} errors`,
+        summary
+      });
+    }
     
     return res.status(200).json({
-      message: `Successfully deleted expired listing ${listingId} and ${favoritesQuery.size} associated favorites`,
+      message: `Successfully deleted expired listing ${listingId} and ${deletionResults.favoritesDeleted} associated favorites`,
       summary
     });
     
   } catch (error: any) {
-    console.error('[Manual Cleanup Specific] Error:', {
+    console.error('[Manual Cleanup Specific] Unexpected error:', {
       message: error.message,
       stack: error.stack,
       code: error.code,
@@ -131,7 +186,9 @@ export default async function handler(
     
     return res.status(500).json({
       error: 'Failed to cleanup specific listing',
-      details: error instanceof Error ? error.message : 'Unknown error'
+      details: error instanceof Error ? error.message : 'Unknown error',
+      code: error.code || 'UNKNOWN_ERROR',
+      timestamp: new Date().toISOString()
     });
   }
 }

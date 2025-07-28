@@ -474,13 +474,13 @@ export default function AdminDashboard() {
                   </Card>
                   
                   {/* Manual Cleanup Specific - Fix Individual Listing */}
-                  <Card className="p-4 border-orange-200 bg-orange-50 dark:border-orange-800 dark:bg-orange-950">
+                  <Card className="p-4">
                     <h3 className="font-semibold mb-2">Fix Specific Expired Listing</h3>
                     <p className="text-sm text-muted-foreground mb-4">🎯 Manually delete the specific expired listing (NOlBNyOhmrqwr9QGHuze)</p>
                     <Button
                       onClick={() => handleApiCall('/api/admin/manual-cleanup-specific')}
                       disabled={loading}
-                      className="w-full bg-orange-600 hover:bg-orange-700 text-white"
+                      className="w-full"
                     >
                       {loading ? 'Fixing Listing...' : 'Fix Expired Listing'}
                     </Button>
