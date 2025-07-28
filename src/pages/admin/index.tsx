@@ -139,6 +139,7 @@ export default function AdminDashboard() {
           endpoint === '/api/admin/test-cleanup-archived' || 
           endpoint === '/api/admin/force-cleanup-archived' ||
           endpoint === '/api/admin/nuclear-cleanup-archived' ||
+          endpoint === '/api/admin/ultra-nuclear-cleanup-archived' ||
           endpoint === '/api/debug/test-admin-privileges') {
         headers = {
           ...headers,
@@ -441,6 +442,19 @@ export default function AdminDashboard() {
                       className="w-full bg-purple-600 hover:bg-purple-700 text-white"
                     >
                       {loading ? 'Nuclear Cleanup...' : 'Nuclear Cleanup'}
+                    </Button>
+                  </Card>
+                  
+                  {/* Ultra Nuclear Cleanup Archived - Ultimate Last Resort */}
+                  <Card className="p-4 border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-950">
+                    <h3 className="font-semibold mb-2">Ultra Nuclear Cleanup Archived</h3>
+                    <p className="text-sm text-muted-foreground mb-4">💀 Ultimate last resort: Direct admin operations, no transactions</p>
+                    <Button
+                      onClick={() => handleApiCall('/api/admin/ultra-nuclear-cleanup-archived')}
+                      disabled={loading}
+                      className="w-full bg-red-600 hover:bg-red-700 text-white"
+                    >
+                      {loading ? 'Ultra Nuclear Cleanup...' : 'Ultra Nuclear Cleanup'}
                     </Button>
                   </Card>
                 </div>
