@@ -16,20 +16,22 @@ export default async function handler(
     return res.status(401).json({ error: 'Unauthorized - invalid token' });
   }
 
-  console.log('[Force Cleanup Archived] Starting simplified cleanup process', new Date().toISOString());
+  console.log('[Force Cleanup Archived] Starting enhanced cleanup process with admin privileges', new Date().toISOString());
 
   try {
     const { admin, db } = getFirebaseAdmin();
     
-    // Ensure we're using admin privileges to bypass security rules
-    console.log('[Force Cleanup Archived] Using Firebase Admin SDK with elevated privileges');
+    // Verify we have admin privileges
+    console.log('[Force Cleanup Archived] Verifying Firebase Admin SDK privileges...');
     
     let totalDeleted = 0;
     let totalFavoritesRemoved = 0;
     let errors = [];
 
-    // Get all archived listings
+    // Get all archived listings using admin privileges
     const now = new Date();
+    console.log('[Force Cleanup Archived] Querying archived listings with admin privileges...');
+    
     const archivedSnapshot = await db.collection('listings')
       .where('status', '==', 'archived')
       .get();
@@ -102,12 +104,84 @@ export default async function handler(
       currentTime: now.toISOString()
     });
 
-    // Process expired listings one by one for better error handling
-    for (const { doc, data } of expiredListings) {
-      try {
+    // Process expired listings using batch operations for better performance and admin privileges
+    console.log('[Force Cleanup Archived] Processing expired listings with batch operations...');
+    
+    const batchSize = 500; // Firestore batch limit
+    const batches = [];
+    
+    for (let i = 0; i < expiredListings.length; i += batchSize) {
+      const batch = db.batch();
+      const batchListings = expiredListings.slice(i, i + batchSize);
+      
+      console.log(`[Force Cleanup Archived] Creating batch ${Math.floor(i / batchSize) + 1} with ${batchListings.length} listings`);
+      
+      for (const { doc, data } of batchListings) {
         const listingId = doc.id;
-        console.log(`[Force Cleanup Archived] Processing listing ${listingId}...`);
-
+        
+        try {
+          // Add listing deletion to batch
+          batch.delete(doc.ref);
+          
+          console.log(`[Force Cleanup Archived] Added listing ${listingId} to batch for deletion`, {
+            userId: data.userId,
+            archivedAt: data.archivedAt?.toDate?.()?.toISOString() || 'unknown',
+            expiresAt: data.expiresAt?.toDate?.()?.toISOString() || 'unknown'
+          });
+          
+        } catch (error) {
+          console.error(`[Force Cleanup Archived] Error preparing listing ${listingId} for batch:`, error);
+          errors.push({
+            type: 'batch_preparation',
+            listingId,
+            error: error.message || 'Unknown error'
+          });
+        }
+      }
+      
+      batches.push({ batch, listings: batchListings });
+    }
+    
+    // Execute all batches
+    console.log(`[Force Cleanup Archived] Executing ${batches.length} batches...`);
+    
+    for (let i = 0; i < batches.length; i++) {
+      const { batch, listings } = batches[i];
+      
+      try {
+        console.log(`[Force Cleanup Archived] Executing batch ${i + 1}/${batches.length} with ${listings.length} operations...`);
+        
+        // Use admin privileges to commit the batch
+        await batch.commit();
+        
+        totalDeleted += listings.length;
+        console.log(`[Force Cleanup Archived] Successfully executed batch ${i + 1}, deleted ${listings.length} listings`);
+        
+      } catch (batchError: any) {
+        console.error(`[Force Cleanup Archived] Batch ${i + 1} execution failed:`, {
+          message: batchError.message,
+          code: batchError.code,
+          details: batchError.details
+        });
+        
+        // Add individual errors for each listing in the failed batch
+        for (const { doc } of listings) {
+          errors.push({
+            type: 'listing_deletion',
+            listingId: doc.id,
+            error: `Batch operation failed: ${batchError.code || batchError.message}`
+          });
+        }
+      }
+    }
+    
+    // Now handle favorites cleanup separately
+    console.log('[Force Cleanup Archived] Cleaning up favorites for deleted listings...');
+    
+    for (const { doc } of expiredListings) {
+      const listingId = doc.id;
+      
+      try {
         // Find all users who have this listing in their favorites
         const favoritesQuery = await db.collectionGroup('favorites')
           .where('listingId', '==', listingId)
@@ -115,40 +189,25 @@ export default async function handler(
 
         console.log(`[Force Cleanup Archived] Found ${favoritesQuery.size} favorites for listing ${listingId}`);
 
-        // Delete the listing first
-        await doc.ref.delete();
-        totalDeleted++;
-        console.log(`[Force Cleanup Archived] Deleted listing ${listingId}`);
-
-        // Delete all favorites referencing this listing
-        for (const favoriteDoc of favoritesQuery.docs) {
-          try {
-            await favoriteDoc.ref.delete();
-            totalFavoritesRemoved++;
-          } catch (favoriteError) {
-            console.error(`[Force Cleanup Archived] Error deleting favorite ${favoriteDoc.id}:`, favoriteError);
-            errors.push({
-              type: 'favorite_deletion',
-              listingId,
-              favoriteId: favoriteDoc.id,
-              error: favoriteError.message
-            });
+        // Delete all favorites referencing this listing using batch operations
+        if (favoritesQuery.size > 0) {
+          const favoriteBatch = db.batch();
+          
+          for (const favoriteDoc of favoritesQuery.docs) {
+            favoriteBatch.delete(favoriteDoc.ref);
           }
+          
+          await favoriteBatch.commit();
+          totalFavoritesRemoved += favoritesQuery.size;
+          console.log(`[Force Cleanup Archived] Deleted ${favoritesQuery.size} favorites for listing ${listingId}`);
         }
 
-        console.log(`[Force Cleanup Archived] Successfully processed listing ${listingId}`, {
-          userId: data.userId,
-          archivedAt: data.archivedAt?.toDate?.()?.toISOString() || 'unknown',
-          expiresAt: data.expiresAt?.toDate?.()?.toISOString() || 'unknown',
-          favoritesRemoved: favoritesQuery.size
-        });
-
-      } catch (error) {
-        console.error(`[Force Cleanup Archived] Error processing listing ${doc.id}:`, error);
+      } catch (favoriteError: any) {
+        console.error(`[Force Cleanup Archived] Error cleaning up favorites for listing ${listingId}:`, favoriteError);
         errors.push({
-          type: 'listing_deletion',
-          listingId: doc.id,
-          error: error.message
+          type: 'favorite_cleanup',
+          listingId,
+          error: favoriteError.message || 'Unknown error'
         });
       }
     }
@@ -161,13 +220,14 @@ export default async function handler(
       totalFavoritesRemoved,
       errors: errors.length,
       errorDetails: errors,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      batchesExecuted: batches.length
     };
 
     console.log('[Force Cleanup Archived] Process completed', summary);
 
     return res.status(200).json({
-      message: `Successfully cleaned up ${totalDeleted} expired archived listings and removed ${totalFavoritesRemoved} favorite references${errors.length > 0 ? ` (${errors.length} errors occurred)` : ''}`,
+      message: `Successfully cleaned up ${totalDeleted} expired archived listings and removed ${totalFavoritesRemoved} favorite references using ${batches.length} batch operations${errors.length > 0 ? ` (${errors.length} errors occurred)` : ''}`,
       summary
     });
   } catch (error: any) {
