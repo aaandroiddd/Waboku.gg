@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getFirebaseAdmin } from '@/lib/firebase-admin';
-import { verifyIdToken } from '@/lib/auth-utils';
+import { verifyIdToken } from '@/lib/firebase-admin';
 import { ACCOUNT_TIERS } from '@/types/account';
 import { Timestamp } from 'firebase-admin/firestore';
 

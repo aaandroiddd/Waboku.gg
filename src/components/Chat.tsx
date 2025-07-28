@@ -37,7 +37,7 @@ import { useProfile } from '@/hooks/useProfile';
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { getDatabase, ref as dbRef, remove, set } from 'firebase/database';
 import { getDoc, doc } from 'firebase/firestore';
-import { firebaseDb, getFirebaseServices } from '@/lib/firebase';
+import { db as firebaseDb, getFirebaseServices } from '@/lib/firebase';
 import { getListingUrl } from '@/lib/listing-slug';
 
 
