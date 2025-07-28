@@ -402,7 +402,7 @@ export default function AdminDashboard() {
                     <Button
                       onClick={() => handleApiCall('/api/admin/test-cleanup-archived')}
                       disabled={loading}
-                      className="w-full bg-secondary hover:bg-secondary/90 text-secondary-foreground"
+                      className="w-full"
                     >
                       {loading ? 'Analyzing...' : 'Analyze Archived Listings'}
                     </Button>
@@ -415,7 +415,7 @@ export default function AdminDashboard() {
                     <Button
                       onClick={() => handleApiCall('/api/admin/force-cleanup-archived')}
                       disabled={loading}
-                      className="w-full bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+                      className="w-full"
                     >
                       {loading ? 'Deleting...' : 'Force Delete Expired'}
                     </Button>
@@ -428,7 +428,7 @@ export default function AdminDashboard() {
                     <Button
                       onClick={() => handleApiCall('/api/debug/test-admin-privileges')}
                       disabled={loading}
-                      className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
+                      className="w-full"
                     >
                       {loading ? 'Testing...' : 'Test Admin SDK Privileges'}
                     </Button>
@@ -441,7 +441,7 @@ export default function AdminDashboard() {
                     <Button
                       onClick={() => handleApiCall('/api/admin/nuclear-cleanup-archived')}
                       disabled={loading}
-                      className="w-full bg-purple-600 hover:bg-purple-700 text-white"
+                      className="w-full"
                     >
                       {loading ? 'Nuclear Cleanup...' : 'Nuclear Cleanup'}
                     </Button>
@@ -454,7 +454,7 @@ export default function AdminDashboard() {
                     <Button
                       onClick={() => handleApiCall('/api/admin/ultra-nuclear-cleanup-archived')}
                       disabled={loading}
-                      className="w-full bg-red-600 hover:bg-red-700 text-white"
+                      className="w-full"
                     >
                       {loading ? 'Ultra Nuclear Cleanup...' : 'Ultra Nuclear Cleanup'}
                     </Button>
@@ -467,7 +467,7 @@ export default function AdminDashboard() {
                     <Button
                       onClick={() => handleApiCall('/api/admin/check-cleanup-status')}
                       disabled={loading}
-                      className="w-full bg-green-600 hover:bg-green-700 text-white"
+                      className="w-full"
                     >
                       {loading ? 'Checking Status...' : 'Check Cleanup Status'}
                     </Button>

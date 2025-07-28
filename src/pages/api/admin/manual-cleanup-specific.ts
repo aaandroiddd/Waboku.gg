@@ -19,18 +19,58 @@ export default async function handler(
   console.log('[Manual Cleanup Specific] Starting enhanced manual cleanup for specific expired listing', new Date().toISOString());
 
   try {
-    // Get Firebase admin instance with explicit initialization
-    const admin = getFirebaseAdmin();
+    // Enhanced Firebase Admin SDK initialization with detailed error checking
+    console.log('[Manual Cleanup Specific] Attempting to initialize Firebase Admin SDK...');
     
-    if (!admin || !admin.firestore) {
-      console.error('[Manual Cleanup Specific] Firebase Admin SDK not properly initialized');
+    let admin, db;
+    try {
+      const firebaseResult = getFirebaseAdmin();
+      console.log('[Manual Cleanup Specific] Firebase Admin result:', {
+        hasAdmin: !!firebaseResult?.admin,
+        hasDb: !!firebaseResult?.db,
+        hasAuth: !!firebaseResult?.auth,
+        hasStorage: !!firebaseResult?.storage,
+        hasDatabase: !!firebaseResult?.database
+      });
+      
+      if (!firebaseResult || !firebaseResult.admin) {
+        throw new Error('Firebase Admin instance not available');
+      }
+      
+      admin = firebaseResult.admin;
+      db = firebaseResult.db;
+      
+      if (!db) {
+        console.log('[Manual Cleanup Specific] Attempting to get Firestore directly from admin...');
+        db = admin.firestore();
+      }
+      
+      if (!db) {
+        throw new Error('Firestore instance not available');
+      }
+      
+      console.log('[Manual Cleanup Specific] Firebase Admin SDK initialized successfully');
+      
+    } catch (initError: any) {
+      console.error('[Manual Cleanup Specific] Firebase Admin SDK initialization failed:', {
+        message: initError.message,
+        stack: initError.stack?.split('\n').slice(0, 3).join('\n'),
+        name: initError.name,
+        code: initError.code
+      });
+      
       return res.status(500).json({ 
         error: 'Firebase Admin SDK initialization failed',
-        details: 'Admin instance or Firestore not available'
+        details: initError.message,
+        timestamp: new Date().toISOString(),
+        environmentCheck: {
+          hasProjectId: !!process.env.FIREBASE_PROJECT_ID,
+          hasClientEmail: !!process.env.FIREBASE_CLIENT_EMAIL,
+          hasPrivateKey: !!process.env.FIREBASE_PRIVATE_KEY,
+          privateKeyLength: process.env.FIREBASE_PRIVATE_KEY ? process.env.FIREBASE_PRIVATE_KEY.length : 0
+        }
       });
     }
-    
-    const db = admin.firestore();
     const now = new Date();
     
     // Target the specific listing ID from the screenshot: NOlBNyOhmrqwr9QGHuze
