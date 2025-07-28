@@ -396,7 +396,7 @@ export default function AdminDashboard() {
                   ))}
                   
                   {/* Test Cleanup Archived - Debug Tool */}
-                  <Card className="p-4 border-yellow-200 bg-yellow-50 dark:border-yellow-800 dark:bg-yellow-950">
+                  <Card className="p-4">
                     <h3 className="font-semibold mb-2">Test Cleanup Analysis</h3>
                     <p className="text-sm text-muted-foreground mb-4">Analyze archived listings without deleting them</p>
                     <Button
@@ -409,7 +409,7 @@ export default function AdminDashboard() {
                   </Card>
                   
                   {/* Force Cleanup Archived - Actual Deletion */}
-                  <Card className="p-4 border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-950">
+                  <Card className="p-4">
                     <h3 className="font-semibold mb-2">Force Cleanup Archived</h3>
                     <p className="text-sm text-muted-foreground mb-4">⚠️ Actually delete expired archived listings</p>
                     <Button
@@ -422,7 +422,7 @@ export default function AdminDashboard() {
                   </Card>
                   
                   {/* Test Admin Privileges - Debug Tool */}
-                  <Card className="p-4 border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950">
+                  <Card className="p-4">
                     <h3 className="font-semibold mb-2">Test Admin Privileges</h3>
                     <p className="text-sm text-muted-foreground mb-4">Debug Firebase Admin SDK privileges and security rule bypass</p>
                     <Button
@@ -435,7 +435,7 @@ export default function AdminDashboard() {
                   </Card>
                   
                   {/* Nuclear Cleanup Archived - Last Resort */}
-                  <Card className="p-4 border-purple-200 bg-purple-50 dark:border-purple-800 dark:bg-purple-950">
+                  <Card className="p-4">
                     <h3 className="font-semibold mb-2">Nuclear Cleanup Archived</h3>
                     <p className="text-sm text-muted-foreground mb-4">🚨 Last resort: Use transactions to bypass security rules</p>
                     <Button
@@ -448,7 +448,7 @@ export default function AdminDashboard() {
                   </Card>
                   
                   {/* Ultra Nuclear Cleanup Archived - Ultimate Last Resort */}
-                  <Card className="p-4 border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-950">
+                  <Card className="p-4">
                     <h3 className="font-semibold mb-2">Ultra Nuclear Cleanup Archived</h3>
                     <p className="text-sm text-muted-foreground mb-4">💀 Ultimate last resort: Direct admin operations, no transactions</p>
                     <Button
@@ -461,7 +461,7 @@ export default function AdminDashboard() {
                   </Card>
                   
                   {/* Check Cleanup Status - Status Monitor */}
-                  <Card className="p-4 border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950">
+                  <Card className="p-4">
                     <h3 className="font-semibold mb-2">Check Cleanup Status</h3>
                     <p className="text-sm text-muted-foreground mb-4">📊 Monitor if automatic cleanup is working properly</p>
                     <Button
@@ -670,7 +670,7 @@ export default function AdminDashboard() {
                     </Button>
                     <Button 
                       onClick={() => router.push(`/admin/firebase-connection-debug`)}
-                      className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
+                      className="w-full"
                     >
                       Connection Debugger
                     </Button>
@@ -689,7 +689,7 @@ export default function AdminDashboard() {
                   </p>
                   <Button 
                     onClick={() => router.push(`/admin/account-tier-sync`)}
-                    className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
+                    className="w-full"
                   >
                     Account Tier Sync
                   </Button>
@@ -708,19 +708,19 @@ export default function AdminDashboard() {
                   <div className="grid grid-cols-3 gap-2">
                     <Button 
                       onClick={() => router.push(`/admin/database-usage`)}
-                      className="w-full bg-secondary hover:bg-secondary/90 text-secondary-foreground"
+                      className="w-full"
                     >
                       Database Usage Monitor
                     </Button>
                     <Button 
                       onClick={() => router.push(`/admin/database-monitor`)}
-                      className="w-full bg-secondary hover:bg-secondary/90 text-secondary-foreground"
+                      className="w-full"
                     >
                       Real-time Database Monitor
                     </Button>
                     <Button 
                       onClick={() => router.push(`/admin/database-usage-audit`)}
-                      className="w-full bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+                      className="w-full"
                     >
                       Database Usage Audit
                     </Button>
@@ -739,7 +739,7 @@ export default function AdminDashboard() {
                   </p>
                   <Button 
                     onClick={() => router.push(`/admin/listing-analytics`)}
-                    className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
+                    className="w-full"
                   >
                     Listing Analytics Dashboard
                   </Button>
@@ -758,7 +758,7 @@ export default function AdminDashboard() {
                   <Button 
                     onClick={debugListings}
                     disabled={isDebuggingListings}
-                    className="w-full bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+                    className="w-full"
                   >
                     {isDebuggingListings ? 'Analyzing...' : 'Analyze Listings'}
                   </Button>
