@@ -595,6 +595,52 @@ export default function AdminDashboard() {
                       {loading ? 'Cleaning up...' : 'Run TTL Cleanup'}
                     </Button>
                   </Card>
+                  
+                  {/* Check TTL Listing Status */}
+                  <Card className="p-4">
+                    <h3 className="font-semibold mb-2">Check TTL Listing Status</h3>
+                    <p className="text-sm text-muted-foreground mb-4">🔍 Diagnose why a specific listing wasn't deleted by TTL policy</p>
+                    <div className="space-y-3">
+                      <div className="space-y-2">
+                        <Label htmlFor="checkTtlListingId">Listing ID</Label>
+                        <Input
+                          id="checkTtlListingId"
+                          placeholder="Enter listing ID to check (e.g., hem67FELn6lyPPQinm3L)"
+                          value={testTtlListingId}
+                          onChange={(e) => setTestTtlListingId(e.target.value)}
+                        />
+                      </div>
+                      <Button
+                        onClick={async () => {
+                          if (!testTtlListingId) {
+                            setApiResponse({ error: 'Listing ID is required' });
+                            setResponseDialog(true);
+                            return;
+                          }
+                          setLoading(true);
+                          try {
+                            const response = await fetch(`/api/admin/check-ttl-listing?listingId=${testTtlListingId}`, {
+                              method: 'GET',
+                              headers: {
+                                'Authorization': `Bearer ${adminSecret}`
+                              }
+                            });
+                            const data = await response.json();
+                            setApiResponse(data);
+                            setResponseDialog(true);
+                          } catch (error) {
+                            setApiResponse({ error: 'Failed to check TTL listing status' });
+                            setResponseDialog(true);
+                          }
+                          setLoading(false);
+                        }}
+                        disabled={loading || !testTtlListingId}
+                        className="w-full"
+                      >
+                        {loading ? 'Checking...' : 'Check TTL Status'}
+                      </Button>
+                    </div>
+                  </Card>
                 </div>
               </AccordionContent>
             </AccordionItem>
