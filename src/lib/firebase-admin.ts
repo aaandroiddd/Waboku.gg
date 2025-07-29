@@ -35,6 +35,9 @@ export function initializeFirebaseAdmin() {
 // Export database directly for convenience
 export const database = getFirebaseAdmin().database;
 
+// Export Firestore database directly for convenience
+export const adminDb = getFirebaseAdmin().db;
+
 /**
  * Verify Firebase ID token
  */
@@ -60,6 +63,7 @@ export function getFirebaseAdmin() {
   if (firebaseAdmin) {
     return {
       admin: firebaseAdmin,
+      firestore: firebaseAdmin.firestore,
       db: firebaseAdmin.firestore(),
       auth: firebaseAdmin.auth(),
       storage: firebaseAdmin.storage(),
@@ -224,6 +228,7 @@ export function getFirebaseAdmin() {
     
     return {
       admin: firebaseAdmin,
+      firestore: firebaseAdmin.firestore,
       db,
       auth: firebaseAdmin.auth(),
       storage: firebaseAdmin.storage(),
@@ -239,6 +244,7 @@ export function getFirebaseAdmin() {
     // Still return the admin instance but log the error
     return {
       admin: firebaseAdmin,
+      firestore: firebaseAdmin.firestore,
       db: firebaseAdmin.firestore(),
       auth: firebaseAdmin.auth(),
       storage: firebaseAdmin.storage(),

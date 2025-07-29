@@ -78,6 +78,7 @@ export default function AdminDashboard() {
   const [moderatorUserId, setModeratorUserId] = useState('');
   const [listingsDebugResult, setListingsDebugResult] = useState<string>('');
   const [isDebuggingListings, setIsDebuggingListings] = useState(false);
+  const [testTtlListingId, setTestTtlListingId] = useState('');
 
   // For smooth scroll to section
   const sectionRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
@@ -532,14 +533,53 @@ export default function AdminDashboard() {
                   {/* Test TTL Archive - 1 Minute Timer */}
                   <Card className="p-4">
                     <h3 className="font-semibold mb-2">Test TTL Archive (1 Minute)</h3>
-                    <p className="text-sm text-muted-foreground mb-4">🧪 Archive a random active listing with 1-minute TTL for testing automatic deletion</p>
-                    <Button
-                      onClick={() => handleApiCall('/api/admin/test-ttl-archive')}
-                      disabled={loading}
-                      className="w-full"
-                    >
-                      {loading ? 'Archiving...' : 'Test 1-Minute TTL Archive'}
-                    </Button>
+                    <p className="text-sm text-muted-foreground mb-4">🧪 Archive a specific listing or random active listing with 1-minute TTL for testing automatic deletion</p>
+                    <div className="space-y-3">
+                      <div className="space-y-2">
+                        <Label htmlFor="testTtlListingId">Listing ID (Optional)</Label>
+                        <Input
+                          id="testTtlListingId"
+                          placeholder="Enter specific listing ID or leave blank for random"
+                          value={testTtlListingId}
+                          onChange={(e) => setTestTtlListingId(e.target.value)}
+                        />
+                      </div>
+                      <Button
+                        onClick={async () => {
+                          setLoading(true);
+                          try {
+                            let headers = {
+                              'Content-Type': 'application/json',
+                              'Authorization': `Bearer ${adminSecret}`
+                            };
+                            
+                            const body = testTtlListingId ? { listingId: testTtlListingId } : {};
+                            
+                            const response = await fetch('/api/admin/test-ttl-archive', {
+                              method: 'POST',
+                              headers,
+                              body: JSON.stringify(body)
+                            });
+                            const data = await response.json();
+                            setApiResponse(data);
+                            setResponseDialog(true);
+                            
+                            // Clear the input on success
+                            if (response.ok) {
+                              setTestTtlListingId('');
+                            }
+                          } catch (error) {
+                            setApiResponse({ error: 'Failed to execute TTL archive test' });
+                            setResponseDialog(true);
+                          }
+                          setLoading(false);
+                        }}
+                        disabled={loading}
+                        className="w-full"
+                      >
+                        {loading ? 'Archiving...' : 'Test 1-Minute TTL Archive'}
+                      </Button>
+                    </div>
                   </Card>
                 </div>
               </AccordionContent>

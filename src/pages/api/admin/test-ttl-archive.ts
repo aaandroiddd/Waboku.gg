@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { adminDb } from '@/lib/firebase-admin';
+import { getFirebaseAdmin } from '@/lib/firebase-admin';
 import { Timestamp } from 'firebase-admin/firestore';
 
 interface ApiResponse {
@@ -34,23 +34,60 @@ export default async function handler(
   }
 
   try {
-    // Find an active listing to test with
-    const listingsSnapshot = await adminDb
-      .collection('listings')
-      .where('status', '==', 'active')
-      .limit(1)
-      .get();
-
-    if (listingsSnapshot.empty) {
-      return res.status(404).json({ 
-        error: 'No active listings found to test with',
-        message: 'Create an active listing first to test the TTL functionality'
+    // Get Firebase admin instance
+    const admin = getFirebaseAdmin();
+    
+    if (!admin.firestore) {
+      console.error('[Test TTL Archive] Firestore not available on admin instance');
+      return res.status(500).json({ 
+        error: 'Failed to initialize Firestore',
+        details: 'Firestore not available on admin instance'
       });
     }
+    
+    const db = admin.firestore();
+    console.log('[Test TTL Archive] Firestore initialized successfully');
 
-    const listingDoc = listingsSnapshot.docs[0];
-    const listingId = listingDoc.id;
-    const listingData = listingDoc.data();
+    // Get listing ID from request body
+    const { listingId: targetListingId } = req.body;
+    
+    let listingId: string;
+    let listingData: any;
+
+    if (targetListingId) {
+      // Use the specific listing ID provided
+      console.log(`[Test TTL Archive] Using specific listing ID: ${targetListingId}`);
+      const listingDoc = await db.collection('listings').doc(targetListingId).get();
+      
+      if (!listingDoc.exists) {
+        return res.status(404).json({ 
+          error: 'Listing not found',
+          message: `No listing found with ID: ${targetListingId}`
+        });
+      }
+      
+      listingId = listingDoc.id;
+      listingData = listingDoc.data();
+    } else {
+      // Find an active listing to test with (original behavior)
+      console.log('[Test TTL Archive] No specific listing ID provided, finding an active listing');
+      const listingsSnapshot = await db
+        .collection('listings')
+        .where('status', '==', 'active')
+        .limit(1)
+        .get();
+
+      if (listingsSnapshot.empty) {
+        return res.status(404).json({ 
+          error: 'No active listings found to test with',
+          message: 'Create an active listing first or provide a specific listing ID to test the TTL functionality'
+        });
+      }
+
+      const listingDoc = listingsSnapshot.docs[0];
+      listingId = listingDoc.id;
+      listingData = listingDoc.data();
+    }
 
     // Calculate TTL for 1 minute from now
     const now = new Date();
@@ -58,7 +95,7 @@ export default async function handler(
     const deleteAtTimestamp = Timestamp.fromDate(deleteAt);
 
     // Update the listing with archived status and 1-minute TTL
-    await adminDb.collection('listings').doc(listingId).update({
+    await db.collection('listings').doc(listingId).update({
       status: 'archived',
       archivedAt: Timestamp.now(),
       deleteAt: deleteAtTimestamp, // Firestore TTL field
