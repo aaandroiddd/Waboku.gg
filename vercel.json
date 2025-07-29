@@ -27,10 +27,14 @@
     },
     {
       "path": "/api/offers/expire-old",
-      "schedule": "0 0 * * *"
+      "schedule": "*/30 * * * *"
     },
     {
       "path": "/api/cron/cleanup-ttl-listings",
+      "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/cleanup-ttl-offers",
       "schedule": "*/5 * * * *"
     }
   ]

@@ -1,8 +1,7 @@
-import { useEffect, useState, useCallback } from 'react';
-import { Progress } from "@/components/ui/progress";
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Clock, AlertTriangle } from "lucide-react";
-import { format, formatDistanceToNow, differenceInHours, isPast } from 'date-fns';
+import { format, differenceInHours, isPast } from 'date-fns';
 
 interface OfferTimerProps {
   expiresAt: Date;
@@ -17,16 +16,29 @@ export function OfferTimer({ expiresAt, status, offerId, onExpired }: OfferTimer
   const [isExpired, setIsExpired] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
 
+  // Memoize the expiration check to avoid unnecessary calculations
+  const isOfferExpired = useMemo(() => {
+    return isPast(expiresAt);
+  }, [expiresAt]);
+
   // Initialize the timer after a short delay to prevent flash of expired state
   useEffect(() => {
+    // If the offer is already expired, don't bother with the timer
+    if (isOfferExpired || status !== 'pending') {
+      setIsInitialized(true);
+      setIsExpired(isOfferExpired);
+      return;
+    }
+
     const initTimer = setTimeout(() => {
       setIsInitialized(true);
     }, 500);
     
     return () => clearTimeout(initTimer);
-  }, []);
+  }, [isOfferExpired, status]);
 
-  const calculateTimeLeft = useCallback(() => {
+  // Memoize the total duration calculation
+  const totalDuration = useMemo(() => {
     const now = Date.now();
     const endTime = expiresAt.getTime();
     
@@ -36,19 +48,23 @@ export function OfferTimer({ expiresAt, status, offerId, onExpired }: OfferTimer
     const actualDuration = endTime - createdAt.getTime();
     
     // Determine the total duration based on the actual expiration time
-    let totalDuration;
     const hoursInMs = 60 * 60 * 1000;
     const actualHours = actualDuration / hoursInMs;
     
     if (actualHours >= 150) { // Close to 7 days (168h)
-      totalDuration = 7 * 24 * hoursInMs; // 7 days
+      return 7 * 24 * hoursInMs; // 7 days
     } else if (actualHours >= 60) { // Close to 3 days (72h)
-      totalDuration = 3 * 24 * hoursInMs; // 3 days
+      return 3 * 24 * hoursInMs; // 3 days
     } else if (actualHours >= 36) { // Close to 48h
-      totalDuration = 48 * hoursInMs; // 48 hours
+      return 48 * hoursInMs; // 48 hours
     } else {
-      totalDuration = 24 * hoursInMs; // 24 hours (default)
+      return 24 * hoursInMs; // 24 hours (default)
     }
+  }, [expiresAt]);
+
+  const calculateTimeLeft = useCallback(() => {
+    const now = Date.now();
+    const endTime = expiresAt.getTime();
     
     const remaining = Math.max(0, endTime - now);
     const elapsed = totalDuration - remaining;
@@ -61,22 +77,33 @@ export function OfferTimer({ expiresAt, status, offerId, onExpired }: OfferTimer
     const nowExpired = remaining === 0;
     setIsExpired(nowExpired);
 
-    // Call onExpired callback when offer just expired
+    // Call onExpired callback when offer just expired (only once)
     if (!wasExpired && nowExpired && onExpired) {
-      onExpired();
+      // Add a small delay to prevent multiple calls
+      setTimeout(() => {
+        onExpired();
+      }, 100);
     }
-  }, [expiresAt, isExpired, onExpired]);
+  }, [expiresAt, totalDuration, isExpired, onExpired]);
 
   useEffect(() => {
-    if (!isInitialized || status !== 'pending') return;
+    // Don't run timer for non-pending offers or if already expired
+    if (!isInitialized || status !== 'pending' || isOfferExpired) {
+      return;
+    }
     
     calculateTimeLeft();
-    const timer = setInterval(calculateTimeLeft, 1000);
+    
+    // Use a longer interval for offers that have more than 1 hour left
+    const hoursLeft = Math.floor((expiresAt.getTime() - Date.now()) / (1000 * 60 * 60));
+    const updateInterval = hoursLeft > 1 ? 30000 : 1000; // 30 seconds vs 1 second
+    
+    const timer = setInterval(calculateTimeLeft, updateInterval);
 
     return () => clearInterval(timer);
-  }, [calculateTimeLeft, isInitialized, status]);
+  }, [calculateTimeLeft, isInitialized, status, isOfferExpired]);
 
-  const formatTimeLeft = () => {
+  const formatTimeLeft = useCallback(() => {
     const hours = Math.floor(timeLeft / (1000 * 60 * 60));
     const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
     const seconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
@@ -88,14 +115,29 @@ export function OfferTimer({ expiresAt, status, offerId, onExpired }: OfferTimer
     } else {
       return `${seconds}s`;
     }
-  };
+  }, [timeLeft]);
 
   // Don't show timer for non-pending offers
   if (status !== 'pending') {
     return null;
   }
 
-  // Show loading state while initializing
+  // If offer is already expired, show expired state immediately
+  if (isOfferExpired) {
+    return (
+      <div className="flex flex-col gap-2">
+        <Alert variant="destructive">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription>
+            This offer has expired and will be updated automatically
+          </AlertDescription>
+        </Alert>
+        <div className="h-2 w-full bg-red-500 rounded-full" />
+      </div>
+    );
+  }
+
+  // Show loading state while initializing (only for non-expired offers)
   if (!isInitialized) {
     return (
       <div className="flex flex-col gap-2">
@@ -120,7 +162,7 @@ export function OfferTimer({ expiresAt, status, offerId, onExpired }: OfferTimer
         <Alert variant="destructive">
           <AlertTriangle className="h-4 w-4" />
           <AlertDescription>
-            This offer has expired
+            This offer has expired and will be updated automatically
           </AlertDescription>
         </Alert>
         <div className="h-2 w-full bg-red-500 rounded-full" />
