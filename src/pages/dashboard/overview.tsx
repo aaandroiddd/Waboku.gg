@@ -47,13 +47,13 @@ const DashboardOverview: NextPage = () => {
   const { isPremium, tier } = useSimplifiedPremiumStatus();
   const { account: stripeAccount, loading: stripeLoading } = useStripeConnectAccount();
 
-  // Calculate stats
-  const activeListings = listings?.filter(listing => listing.status === 'active') || [];
-  const unreadNotifications = notifications?.filter(notification => !notification.read) || [];
-  const latestNotification = notifications?.[0];
-  const latestOffer = receivedOffers?.[0];
-  const latestReview = reviews?.[0];
-  const latestMessage = messageThreads?.[0];
+  // Calculate stats with robust null checks
+  const activeListings = (listings || []).filter(listing => listing?.status === 'active');
+  const unreadNotifications = (notifications || []).filter(notification => notification && !notification.read);
+  const latestNotification = notifications && notifications.length > 0 ? notifications[0] : null;
+  const latestOffer = receivedOffers && receivedOffers.length > 0 ? receivedOffers[0] : null;
+  const latestReview = reviews && reviews.length > 0 ? reviews[0] : null;
+  const latestMessage = messageThreads && messageThreads.length > 0 ? messageThreads[0] : null;
 
   // Calculate current month's revenue (placeholder - would need actual sales data)
   const currentMonthRevenue = 0; // TODO: Implement actual revenue calculation
