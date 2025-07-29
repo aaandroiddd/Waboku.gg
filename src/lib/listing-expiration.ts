@@ -363,7 +363,12 @@ export async function restoreIncorrectlyArchivedListings(userId: string) {
             restoredAt: Timestamp.now(),
             restoredReason: 'premium_user_correction',
             archivedAt: null,
-            expirationReason: null
+            expirationReason: null,
+            // CRITICAL: Remove TTL field to prevent automatic deletion
+            // When a listing is restored to active, it should not be automatically deleted
+            deleteAt: null,
+            ttlSetAt: null,
+            ttlReason: null
           });
           
           restoredCount++;

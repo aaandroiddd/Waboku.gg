@@ -574,7 +574,13 @@ export function useOptimizedListings({ userId, searchQuery, showOnlyActive = fal
           expirationReason: null,
           soldTo: null,
           previousStatus: null,
-          previousExpiresAt: null
+          previousExpiresAt: null,
+          
+          // CRITICAL: Remove TTL field to prevent automatic deletion
+          // When a listing is restored to active, it should not be automatically deleted
+          deleteAt: null,
+          ttlSetAt: null,
+          ttlReason: null
         };
 
         // Only update core fields if they need to be refreshed
