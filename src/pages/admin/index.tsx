@@ -145,7 +145,8 @@ export default function AdminDashboard() {
           endpoint === '/api/admin/test-specific-listing-delete' ||
           endpoint === '/api/debug/test-admin-privileges' ||
           endpoint === '/api/admin/migrate-to-ttl' ||
-          endpoint === '/api/listings/cleanup-related-data') {
+          endpoint === '/api/listings/cleanup-related-data' ||
+          endpoint === '/api/admin/test-ttl-archive') {
         headers = {
           ...headers,
           'Authorization': `Bearer ${adminSecret}`
@@ -525,6 +526,19 @@ export default function AdminDashboard() {
                       className="w-full"
                     >
                       {loading ? 'Cleaning...' : 'Cleanup Related Data'}
+                    </Button>
+                  </Card>
+                  
+                  {/* Test TTL Archive - 1 Minute Timer */}
+                  <Card className="p-4">
+                    <h3 className="font-semibold mb-2">Test TTL Archive (1 Minute)</h3>
+                    <p className="text-sm text-muted-foreground mb-4">🧪 Archive a random active listing with 1-minute TTL for testing automatic deletion</p>
+                    <Button
+                      onClick={() => handleApiCall('/api/admin/test-ttl-archive')}
+                      disabled={loading}
+                      className="w-full"
+                    >
+                      {loading ? 'Archiving...' : 'Test 1-Minute TTL Archive'}
                     </Button>
                   </Card>
                 </div>
