@@ -26,20 +26,38 @@ const createNewBatchIfNeeded = (db: FirebaseFirestore.Firestore, currentBatch: F
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   // Verify that this is a cron job request from Vercel or an admin request
+  const isVercelCron = req.headers['x-vercel-cron'] === '1';
   const authHeader = req.headers.authorization;
-  const isValidCronRequest = authHeader === `Bearer ${process.env.CRON_SECRET}`;
-  const isValidAdminRequest = authHeader === `Bearer ${process.env.NEXT_PUBLIC_ADMIN_SECRET}`;
   
-  if (!isValidCronRequest && !isValidAdminRequest) {
+  let isAuthorized = false;
+  let requestType = 'unknown';
+  
+  if (isVercelCron) {
+    // This is a Vercel cron job - these are automatically authorized
+    isAuthorized = true;
+    requestType = 'vercel-cron';
+    console.log('[Archive Expired] Vercel cron job detected');
+  } else if (authHeader && authHeader.startsWith('Bearer ')) {
+    // This is a manual admin request - check the token
+    const token = authHeader.split(' ')[1];
+    if (token === process.env.CRON_SECRET || token === process.env.NEXT_PUBLIC_ADMIN_SECRET) {
+      isAuthorized = true;
+      requestType = token === process.env.CRON_SECRET ? 'manual-cron' : 'admin-dashboard';
+    }
+  }
+  
+  if (!isAuthorized) {
     console.warn('[Archive Expired] Unauthorized access attempt', {
-      providedAuth: authHeader ? authHeader.substring(0, 15) + '...' : 'none',
+      hasAuth: !!authHeader,
+      isVercelCron,
+      userAgent: req.headers['user-agent'],
       ip: req.headers['x-forwarded-for'] || req.socket.remoteAddress
     });
     return res.status(401).json({ error: 'Unauthorized' });
   }
   
   // Log the source of the request
-  console.log(`[Archive Expired] Request authorized as ${isValidCronRequest ? 'cron job' : 'admin request'}`)
+  console.log(`[Archive Expired] Request authorized as ${requestType}`)
 
   // Force console log to ensure visibility in Vercel logs
   console.log('[Archive Expired] Starting automated archival process', {

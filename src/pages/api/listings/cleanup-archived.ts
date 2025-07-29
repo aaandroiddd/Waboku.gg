@@ -39,23 +39,39 @@ export default async function handler(
   });
 
   // Verify that this is a cron job request from Vercel or an admin request
+  const isVercelCron = req.headers['x-vercel-cron'] === '1';
   const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    console.warn('[Cleanup Archived] Unauthorized access attempt - missing or invalid authorization header');
-    return res.status(401).json({ error: 'Unauthorized' });
+  
+  let isAuthorized = false;
+  let requestType = 'unknown';
+  
+  if (isVercelCron) {
+    // This is a Vercel cron job - these are automatically authorized
+    isAuthorized = true;
+    requestType = 'vercel-cron';
+    console.log('[Cleanup Archived] Vercel cron job detected');
+  } else if (authHeader && authHeader.startsWith('Bearer ')) {
+    // This is a manual admin request - check the token
+    const token = authHeader.split(' ')[1];
+    if (token === process.env.CRON_SECRET || token === process.env.ADMIN_SECRET) {
+      isAuthorized = true;
+      requestType = token === process.env.CRON_SECRET ? 'manual-cron' : 'admin-dashboard';
+    }
   }
   
-  const token = authHeader.split(' ')[1];
-  // Accept either CRON_SECRET (for automated jobs) or ADMIN_SECRET (for admin dashboard)
-  if (token !== process.env.CRON_SECRET && token !== process.env.ADMIN_SECRET) {
-    console.warn('[Cleanup Archived] Unauthorized access attempt - invalid token');
+  if (!isAuthorized) {
+    console.warn('[Cleanup Archived] Unauthorized access attempt', {
+      hasAuth: !!authHeader,
+      isVercelCron,
+      userAgent: req.headers['user-agent']
+    });
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
   console.log('[Cleanup Archived] Starting cleanup process', {
     timestamp: new Date().toISOString(),
-    isAutomatedCron: token === process.env.CRON_SECRET,
-    isManualAdmin: token === process.env.ADMIN_SECRET
+    requestType,
+    isVercelCron
   });
 
   try {
