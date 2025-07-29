@@ -2,7 +2,6 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import { getFirebaseAdmin } from '@/lib/firebase-admin';
 import * as admin from 'firebase-admin';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
-import { addTTLToOffer, OFFER_TTL_CONFIG } from '@/lib/offer-ttl';
 
 // Maximum number of operations in a single batch
 const BATCH_SIZE = 500;
@@ -26,7 +25,7 @@ const createNewBatchIfNeeded = (db: FirebaseFirestore.Firestore, currentBatch: F
 
 /**
  * Expires all pending offers that are past their expiresAt timestamp.
- * Now uses TTL for automatic deletion to reduce Firebase usage.
+ * Sets status to 'expired' so users can see them in their dashboard.
  * 
  * This route is protected by Vercel cron jobs or a manual secret.
  * 
@@ -104,7 +103,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       });
     }
 
-    // Process each expired offer with TTL
+    // Process each expired offer - just set status to expired
     expiredOffersSnap.forEach((doc) => {
       try {
         const data = doc.data();
@@ -115,15 +114,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
         batch = createNewBatchIfNeeded(db, batch, batchOperations);
         
-        // Use TTL for automatic deletion - Firestore will handle the deletion
-        const ttlData = addTTLToOffer({
-          ...data,
+        // Simply update status to expired (no TTL deletion)
+        batch.update(doc.ref, {
+          status: 'expired',
+          expiredAt: admin.firestore.Timestamp.fromDate(nowDate),
+          updatedAt: admin.firestore.Timestamp.fromDate(nowDate),
           // Store previous state for debugging
           previousStatus: data.status,
           previousExpiresAt: data.expiresAt
-        }, nowDate);
-        
-        batch.update(doc.ref, ttlData);
+        });
         
         batchOperations++;
         totalExpired++;
@@ -136,13 +135,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           batchOperations = 0;
         }
         
-        console.log(`[Expire Offers] Marked offer ${doc.id} for expiration with TTL`, {
+        console.log(`[Expire Offers] Marked offer ${doc.id} as expired`, {
           buyerId: data.buyerId,
           sellerId: data.sellerId,
           listingId: data.listingId,
           amount: data.amount,
           expiresAt: data.expiresAt?.toDate?.()?.toISOString(),
-          ttlDeleteAt: ttlData[OFFER_TTL_CONFIG.ttlField].toDate().toISOString()
+          expiredAt: nowDate.toISOString()
         });
       } catch (error) {
         logError('Processing expired offer', error, {
@@ -168,7 +167,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     console.log('[Expire Offers] Process completed successfully', summary);
 
     return res.status(200).json({ 
-      message: `Successfully expired ${totalExpired} offers with TTL for automatic deletion`,
+      message: `Successfully expired ${totalExpired} offers`,
       summary
     });
   } catch (error: any) {

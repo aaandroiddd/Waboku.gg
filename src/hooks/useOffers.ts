@@ -27,20 +27,20 @@ export function useOffers() {
         const now = new Date();
         
         // Fetch received offers (where user is the seller)
-        // Only fetch non-expired offers to reduce Firebase usage
+        // Include expired offers so users can see them in their dashboard
         const receivedOffersQuery = query(
           collection(db, 'offers'),
           where('sellerId', '==', user.uid),
-          where('status', 'in', ['pending', 'accepted', 'declined', 'countered', 'cancelled']),
+          where('status', 'in', ['pending', 'accepted', 'declined', 'countered', 'cancelled', 'expired']),
           orderBy('createdAt', 'desc')
         );
         
         // Fetch sent offers (where user is the buyer)
-        // Only fetch non-expired offers to reduce Firebase usage
+        // Include expired offers so users can see them in their dashboard
         const sentOffersQuery = query(
           collection(db, 'offers'),
           where('buyerId', '==', user.uid),
-          where('status', 'in', ['pending', 'accepted', 'declined', 'countered', 'cancelled']),
+          where('status', 'in', ['pending', 'accepted', 'declined', 'countered', 'cancelled', 'expired']),
           orderBy('createdAt', 'desc')
         );
 
@@ -70,19 +70,16 @@ export function useOffers() {
                 cleared: data.cleared === true
               } as Offer;
             })
-            // Filter out cleared offers and client-side expired offers
+            // Filter out cleared offers but keep expired offers for display
             .filter(offer => {
               if (offer.cleared) return false;
               
-              // Filter out expired offers on the client side to reduce UI flickering
-              if (offer.status === 'pending' && offer.expiresAt && offer.expiresAt < now) {
-                console.log(`Filtering out client-side expired offer ${offer.id}`);
-                return false;
-              }
+              // No longer filter out expired offers - let them show in the UI
+              // The server-side cron job will handle status updates
               
               return true;
             });
-          console.log(`Found ${receivedOffersData.length} received offers (excluding cleared and expired)`);
+          console.log(`Found ${receivedOffersData.length} received offers (excluding cleared)`);
         } catch (receivedErr: any) {
           console.error('Error fetching received offers:', receivedErr);
           // Continue with the rest of the function, we'll still try to fetch sent offers
@@ -110,19 +107,16 @@ export function useOffers() {
                 cleared: data.cleared === true
               } as Offer;
             })
-            // Filter out cleared offers and client-side expired offers
+            // Filter out cleared offers but keep expired offers for display
             .filter(offer => {
               if (offer.cleared) return false;
               
-              // Filter out expired offers on the client side to reduce UI flickering
-              if (offer.status === 'pending' && offer.expiresAt && offer.expiresAt < now) {
-                console.log(`Filtering out client-side expired offer ${offer.id}`);
-                return false;
-              }
+              // No longer filter out expired offers - let them show in the UI
+              // The server-side cron job will handle status updates
               
               return true;
             });
-          console.log(`Found ${sentOffersData.length} sent offers (excluding cleared and expired)`);
+          console.log(`Found ${sentOffersData.length} sent offers (excluding cleared)`);
         } catch (sentErr: any) {
           console.error('Error fetching sent offers:', sentErr);
           // Continue with the function, we'll still set whatever data we have

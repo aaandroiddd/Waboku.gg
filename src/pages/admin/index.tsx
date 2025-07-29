@@ -148,7 +148,10 @@ export default function AdminDashboard() {
           endpoint === '/api/admin/migrate-to-ttl' ||
           endpoint === '/api/listings/cleanup-related-data' ||
           endpoint === '/api/admin/test-ttl-archive' ||
-          endpoint === '/api/cron/cleanup-ttl-listings') {
+          endpoint === '/api/cron/cleanup-ttl-listings' ||
+          endpoint === '/api/admin/check-offers-status' ||
+          endpoint === '/api/cron/cleanup-old-offers' ||
+          endpoint === '/api/offers/expire-old') {
         headers = {
           ...headers,
           'Authorization': `Bearer ${adminSecret}`
@@ -655,16 +658,16 @@ export default function AdminDashboard() {
                     </Button>
                   </Card>
                   
-                  {/* Manual Offers Cleanup */}
+                  {/* Manual Old Offers Cleanup */}
                   <Card className="p-4">
-                    <h3 className="font-semibold mb-2">Manual Offers Cleanup</h3>
-                    <p className="text-sm text-muted-foreground mb-4">🧹 Manually run the TTL cleanup process for offers (backup to Firestore TTL)</p>
+                    <h3 className="font-semibold mb-2">Manual Old Offers Cleanup</h3>
+                    <p className="text-sm text-muted-foreground mb-4">🧹 Manually run cleanup for offers older than 30 days (keeps expired offers visible)</p>
                     <Button
-                      onClick={() => handleApiCall('/api/cron/cleanup-ttl-offers')}
+                      onClick={() => handleApiCall('/api/cron/cleanup-old-offers')}
                       disabled={loading}
                       className="w-full"
                     >
-                      {loading ? 'Cleaning up...' : 'Run Offers TTL Cleanup'}
+                      {loading ? 'Cleaning up...' : 'Run Old Offers Cleanup'}
                     </Button>
                   </Card>
                   

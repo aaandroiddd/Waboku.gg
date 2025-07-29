@@ -34,8 +34,8 @@
       "schedule": "*/5 * * * *"
     },
     {
-      "path": "/api/cron/cleanup-ttl-offers",
-      "schedule": "*/5 * * * *"
+      "path": "/api/cron/cleanup-old-offers",
+      "schedule": "0 2 * * *"
     }
   ]
 }
