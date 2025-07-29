@@ -6,8 +6,8 @@
       "schedule": "*/15 * * * *"
     },
     {
-      "path": "/api/listings/cleanup-archived",
-      "schedule": "0 */1 * * *"
+      "path": "/api/listings/cleanup-related-data",
+      "schedule": "0 */2 * * *"
     },
     {
       "path": "/api/cleanup/storage-cleanup",

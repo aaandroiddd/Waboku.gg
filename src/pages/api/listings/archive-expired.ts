@@ -3,6 +3,7 @@ import { getFirebaseAdmin } from '@/lib/firebase-admin';
 import { Timestamp } from 'firebase-admin/firestore';
 import { ACCOUNT_TIERS } from '@/types/account';
 import { determineUserAccountTier } from '@/lib/listing-expiration';
+import { addTTLToListing, LISTING_TTL_CONFIG } from '@/lib/listing-ttl';
 
 // Maximum number of operations in a single batch
 const BATCH_SIZE = 500;
@@ -104,27 +105,25 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         
         // Check if listing has expired
         if (now > expirationTime) {
-          // Prepare data for archiving
-          // Set expiration to exactly 7 days from now for consistent cleanup
-          const sevenDaysFromNow = new Date(now.getTime() + (7 * 24 * 60 * 60 * 1000));
+          // Use TTL for automatic deletion - Firestore will handle the deletion
+          const ttlData = addTTLToListing({
+            ...data,
+            originalCreatedAt: data.createdAt,
+            expirationReason: 'tier_duration_exceeded',
+            // Store previous state for debugging
+            previousStatus: data.status,
+            previousExpiresAt: data.expiresAt
+          }, now);
           
           return {
             docRef: doc.ref,
-            updateData: {
-              status: 'archived',
-              archivedAt: Timestamp.now(),
-              originalCreatedAt: data.createdAt,
-              expirationReason: 'tier_duration_exceeded',
-              expiresAt: Timestamp.fromDate(sevenDaysFromNow),
-              // Store previous state
-              previousStatus: data.status,
-              previousExpiresAt: data.expiresAt
-            },
+            updateData: ttlData,
             listingId: doc.id,
             userId: data.userId,
             accountTier,
             createdAt: createdAt.toISOString(),
-            expirationTime: expirationTime.toISOString()
+            expirationTime: expirationTime.toISOString(),
+            ttlDeleteAt: ttlData[LISTING_TTL_CONFIG.ttlField].toDate().toISOString()
           };
         }
         
@@ -189,15 +188,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
         batch = createNewBatchIfNeeded(db, batch, batchOperations);
         
-        const sevenDaysFromNow = new Date(now.getTime() + (7 * 24 * 60 * 60 * 1000));
-        
-        batch.update(doc.ref, {
-          status: 'archived',
-          archivedAt: Timestamp.now(),
+        // Use TTL for automatic deletion - Firestore will handle the deletion
+        const ttlData = addTTLToListing({
+          ...data,
           originalCreatedAt: data.createdAt,
-          expirationReason: 'inactive_timeout',
-          expiresAt: Timestamp.fromDate(sevenDaysFromNow)
-        });
+          expirationReason: 'inactive_timeout'
+        }, now);
+        
+        batch.update(doc.ref, ttlData);
         
         batchOperations++;
         totalArchived++;
@@ -210,9 +208,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           batchOperations = 0;
         }
         
-        console.log(`[Archive Expired] Marked inactive listing ${doc.id} for archival`, {
+        console.log(`[Archive Expired] Marked inactive listing ${doc.id} for archival with TTL`, {
           userId: data.userId,
-          updatedAt: data.updatedAt?.toDate().toISOString()
+          updatedAt: data.updatedAt?.toDate().toISOString(),
+          ttlDeleteAt: ttlData[LISTING_TTL_CONFIG.ttlField].toDate().toISOString()
         });
       } catch (error) {
         logError('Processing inactive listing', error, {

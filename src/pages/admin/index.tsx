@@ -143,7 +143,9 @@ export default function AdminDashboard() {
           endpoint === '/api/admin/check-cleanup-status' ||
           endpoint === '/api/admin/manual-cleanup-specific' ||
           endpoint === '/api/admin/test-specific-listing-delete' ||
-          endpoint === '/api/debug/test-admin-privileges') {
+          endpoint === '/api/debug/test-admin-privileges' ||
+          endpoint === '/api/admin/migrate-to-ttl' ||
+          endpoint === '/api/listings/cleanup-related-data') {
         headers = {
           ...headers,
           'Authorization': `Bearer ${adminSecret}`
@@ -497,6 +499,32 @@ export default function AdminDashboard() {
                       className="w-full"
                     >
                       {loading ? 'Running Diagnostic...' : 'Run Diagnostic Test'}
+                    </Button>
+                  </Card>
+                  
+                  {/* TTL Migration */}
+                  <Card className="p-4">
+                    <h3 className="font-semibold mb-2">Migrate to TTL System</h3>
+                    <p className="text-sm text-muted-foreground mb-4">🔄 Migrate existing archived listings to use Firestore TTL for automatic deletion</p>
+                    <Button
+                      onClick={() => handleApiCall('/api/admin/migrate-to-ttl')}
+                      disabled={loading}
+                      className="w-full"
+                    >
+                      {loading ? 'Migrating...' : 'Migrate to TTL'}
+                    </Button>
+                  </Card>
+                  
+                  {/* Related Data Cleanup */}
+                  <Card className="p-4">
+                    <h3 className="font-semibold mb-2">Cleanup Related Data</h3>
+                    <p className="text-sm text-muted-foreground mb-4">🧹 Clean up orphaned favorites and offers after TTL deletion</p>
+                    <Button
+                      onClick={() => handleApiCall('/api/listings/cleanup-related-data')}
+                      disabled={loading}
+                      className="w-full"
+                    >
+                      {loading ? 'Cleaning...' : 'Cleanup Related Data'}
                     </Button>
                   </Card>
                 </div>
