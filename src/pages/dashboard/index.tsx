@@ -1,5 +1,5 @@
 import type { NextPage } from 'next';
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { useAuth } from '@/contexts/AuthContext';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
@@ -35,7 +35,7 @@ const DashboardOverview: NextPage = () => {
   const router = useRouter();
   const [showRevenue, setShowRevenue] = useState(true);
 
-  // Hooks for data
+  // Hooks for data with error boundaries
   const { listings, loading: listingsLoading } = useOptimizedListings({ 
     userId: user?.uid, 
     showOnlyActive: false 
@@ -47,13 +47,105 @@ const DashboardOverview: NextPage = () => {
   const { isPremium, tier } = useSimplifiedPremiumStatus();
   const { account: stripeAccount, loading: stripeLoading } = useStripeConnectAccount();
 
-  // Calculate stats
-  const activeListings = listings.filter(listing => listing.status === 'active');
-  const unreadNotifications = notifications.filter(notification => !notification.read);
-  const latestNotification = notifications[0];
-  const latestOffer = receivedOffers[0];
-  const latestReview = reviews[0];
-  const latestMessage = messageThreads[0];
+  // Calculate stats with comprehensive null/undefined checks and error boundaries
+  const safeListings = React.useMemo(() => {
+    try {
+      return Array.isArray(listings) ? listings.filter(Boolean) : [];
+    } catch (error) {
+      console.warn('Error processing listings:', error);
+      return [];
+    }
+  }, [listings]);
+
+  const safeNotifications = React.useMemo(() => {
+    try {
+      return Array.isArray(notifications) ? notifications.filter(Boolean) : [];
+    } catch (error) {
+      console.warn('Error processing notifications:', error);
+      return [];
+    }
+  }, [notifications]);
+
+  const safeReceivedOffers = React.useMemo(() => {
+    try {
+      return Array.isArray(receivedOffers) ? receivedOffers.filter(Boolean) : [];
+    } catch (error) {
+      console.warn('Error processing offers:', error);
+      return [];
+    }
+  }, [receivedOffers]);
+
+  const safeReviews = React.useMemo(() => {
+    try {
+      return Array.isArray(reviews) ? reviews.filter(Boolean) : [];
+    } catch (error) {
+      console.warn('Error processing reviews:', error);
+      return [];
+    }
+  }, [reviews]);
+
+  const safeMessageThreads = React.useMemo(() => {
+    try {
+      return Array.isArray(messageThreads) ? messageThreads.filter(Boolean) : [];
+    } catch (error) {
+      console.warn('Error processing message threads:', error);
+      return [];
+    }
+  }, [messageThreads]);
+
+  const activeListings = React.useMemo(() => {
+    try {
+      return safeListings.filter(listing => listing && listing.status === 'active');
+    } catch (error) {
+      console.warn('Error filtering active listings:', error);
+      return [];
+    }
+  }, [safeListings]);
+
+  const unreadNotifications = React.useMemo(() => {
+    try {
+      return safeNotifications.filter(notification => notification && !notification.read);
+    } catch (error) {
+      console.warn('Error filtering unread notifications:', error);
+      return [];
+    }
+  }, [safeNotifications]);
+
+  const latestNotification = React.useMemo(() => {
+    try {
+      return safeNotifications.length > 0 && safeNotifications[0] ? safeNotifications[0] : null;
+    } catch (error) {
+      console.warn('Error getting latest notification:', error);
+      return null;
+    }
+  }, [safeNotifications]);
+
+  const latestOffer = React.useMemo(() => {
+    try {
+      return safeReceivedOffers.length > 0 && safeReceivedOffers[0] ? safeReceivedOffers[0] : null;
+    } catch (error) {
+      console.warn('Error getting latest offer:', error);
+      return null;
+    }
+  }, [safeReceivedOffers]);
+
+  const latestReview = React.useMemo(() => {
+    try {
+      return safeReviews.length > 0 && safeReviews[0] ? safeReviews[0] : null;
+    } catch (error) {
+      console.warn('Error getting latest review:', error);
+      return null;
+    }
+  }, [safeReviews]);
+
+  const latestMessage = React.useMemo(() => {
+    try {
+      return safeMessageThreads.length > 0 && safeMessageThreads[0] ? safeMessageThreads[0] : null;
+    } catch (error) {
+      console.warn('Error getting latest message:', error);
+      return null;
+    }
+  }, [safeMessageThreads]);
 
   // Calculate current month's revenue (placeholder - would need actual sales data)
   const currentMonthRevenue = 0; // TODO: Implement actual revenue calculation
@@ -121,7 +213,7 @@ const DashboardOverview: NextPage = () => {
                 {listingsLoading ? <Skeleton className="h-8 w-12" /> : activeListings.length}
               </div>
               <p className="text-xs text-muted-foreground">
-                {listings.length - activeListings.length} archived
+                {safeListings.length - activeListings.length} archived
               </p>
             </CardContent>
           </Card>
@@ -189,11 +281,11 @@ const DashboardOverview: NextPage = () => {
               ) : (
                 <>
                   <div className="flex items-center gap-2">
-                    <div className="text-2xl font-bold">{averageRating.toFixed(1)}</div>
-                    <RatingStars rating={averageRating} size="sm" />
+                    <div className="text-2xl font-bold">{(averageRating || 0).toFixed(1)}</div>
+                    <RatingStars rating={averageRating || 0} size="sm" />
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    {reviews.length} total reviews
+                    {safeReviews.length} total reviews
                   </p>
                 </>
               )}
@@ -211,7 +303,7 @@ const DashboardOverview: NextPage = () => {
                 <Skeleton className="h-8 w-12" />
               ) : (
                 <>
-                  <div className="text-2xl font-bold">{messageThreads.length}</div>
+                  <div className="text-2xl font-bold">{safeMessageThreads.length}</div>
                   {latestMessage && (
                     <p className="text-xs text-muted-foreground truncate">
                       Latest: {latestMessage.subject || 'No subject'}
