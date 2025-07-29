@@ -841,7 +841,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             currentPlan: 'free',
             status: 'inactive'
           },
-          profileCompleted: true
+          profileCompleted: true,
+          // Include theme if provided
+          theme: data.theme || 'system'
         };
         
         try {
@@ -941,6 +943,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           ...profile.social,
           ...(data.social || {})
         },
+        // Only update theme if explicitly provided
+        ...(data.theme && { theme: data.theme }),
         lastUpdated: new Date().toISOString(),
         profileCompleted: true // Mark profile as completed when updated
       };

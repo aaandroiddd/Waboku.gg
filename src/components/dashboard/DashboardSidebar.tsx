@@ -44,13 +44,16 @@ export function DashboardSidebar({ onNavigate }: DashboardSidebarProps) {
       setTheme(newTheme);
       console.log('Theme set in next-themes:', newTheme);
       
-      // Save to user profile if logged in
+      // Save to user profile if logged in (but don't await it to prevent conflicts)
       if (user) {
         console.log('Saving theme preference to user profile...');
-        await updateProfile({ theme: newTheme });
-        console.log('Theme preference saved successfully');
+        updateProfile({ theme: newTheme }).then(() => {
+          console.log('Theme preference saved successfully');
+        }).catch((error) => {
+          console.error('Failed to save theme preference:', error);
+        });
         
-        // Show success toast
+        // Show success toast immediately
         toast({
           title: "Theme Updated",
           description: `Theme changed to ${getThemeDisplayName(newTheme).toLowerCase()}`,
@@ -67,12 +70,12 @@ export function DashboardSidebar({ onNavigate }: DashboardSidebarProps) {
         });
       }
     } catch (error) {
-      console.error('Failed to save theme preference:', error);
+      console.error('Error in theme change handler:', error);
       
       // Show error toast
       toast({
-        title: "Theme Save Failed",
-        description: "Theme changed locally but couldn't be saved to your profile. It will reset when you sign out.",
+        title: "Theme Change Error",
+        description: "There was an error changing the theme. Please try again.",
         variant: "destructive",
       });
     }
