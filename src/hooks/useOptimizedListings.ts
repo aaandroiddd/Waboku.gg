@@ -20,6 +20,7 @@ import { Listing } from '@/types/database';
 import { useAuth } from '@/contexts/AuthContext';
 import { useClientCache } from './useClientCache';
 import { ACCOUNT_TIERS } from '@/types/account';
+import { addTTLToListing, LISTING_TTL_CONFIG } from '@/lib/listing-ttl';
 
 // Game name mappings for consistent filtering
 const GAME_NAME_MAPPING: { [key: string]: string[] } = {
@@ -508,19 +509,24 @@ export function useOptimizedListings({ userId, searchQuery, showOnlyActive = fal
       let updateData: any = {};
       
       if (status === 'archived') {
-        // When archiving, set archive time and 7-day expiration
-        const archiveExpiration = new Date(now);
-        archiveExpiration.setDate(archiveExpiration.getDate() + 7);
-        
-        updateData = {
+        // When archiving, use TTL functionality for automatic deletion
+        const baseUpdateData = {
           status: 'archived',
           archivedAt: now,
-          expiresAt: archiveExpiration,
           originalCreatedAt: listingData.createdAt,
           updatedAt: now,
           previousStatus: listingData.status,
           previousExpiresAt: listingData.expiresAt
         };
+        
+        // Use the TTL functionality to add automatic deletion
+        updateData = addTTLToListing(baseUpdateData, now);
+        
+        console.log(`Archiving listing ${listingId} with TTL:`, {
+          archivedAt: now.toISOString(),
+          deleteAt: updateData[LISTING_TTL_CONFIG.ttlField]?.toDate?.()?.toISOString() || updateData[LISTING_TTL_CONFIG.ttlField],
+          ttlDuration: `${LISTING_TTL_CONFIG.archiveDuration / (24 * 60 * 60 * 1000)} days`
+        });
       } else if (status === 'active') {
         // When activating/restoring, ensure all required fields are present and properly typed
         
