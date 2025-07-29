@@ -35,7 +35,7 @@ const DashboardOverview: NextPage = () => {
   const router = useRouter();
   const [showRevenue, setShowRevenue] = useState(true);
 
-  // Hooks for data
+  // Hooks for data with error boundaries
   const { listings, loading: listingsLoading } = useOptimizedListings({ 
     userId: user?.uid, 
     showOnlyActive: false 
@@ -47,13 +47,19 @@ const DashboardOverview: NextPage = () => {
   const { isPremium, tier } = useSimplifiedPremiumStatus();
   const { account: stripeAccount, loading: stripeLoading } = useStripeConnectAccount();
 
-  // Calculate stats with robust null checks
-  const activeListings = (listings || []).filter(listing => listing?.status === 'active');
-  const unreadNotifications = (notifications || []).filter(notification => notification && !notification.read);
-  const latestNotification = notifications && notifications.length > 0 ? notifications[0] : null;
-  const latestOffer = receivedOffers && receivedOffers.length > 0 ? receivedOffers[0] : null;
-  const latestReview = reviews && reviews.length > 0 ? reviews[0] : null;
-  const latestMessage = messageThreads && messageThreads.length > 0 ? messageThreads[0] : null;
+  // Calculate stats with comprehensive null/undefined checks
+  const safeListings = Array.isArray(listings) ? listings : [];
+  const safeNotifications = Array.isArray(notifications) ? notifications : [];
+  const safeReceivedOffers = Array.isArray(receivedOffers) ? receivedOffers : [];
+  const safeReviews = Array.isArray(reviews) ? reviews : [];
+  const safeMessageThreads = Array.isArray(messageThreads) ? messageThreads : [];
+
+  const activeListings = safeListings.filter(listing => listing && listing.status === 'active');
+  const unreadNotifications = safeNotifications.filter(notification => notification && !notification.read);
+  const latestNotification = safeNotifications.length > 0 ? safeNotifications[0] : null;
+  const latestOffer = safeReceivedOffers.length > 0 ? safeReceivedOffers[0] : null;
+  const latestReview = safeReviews.length > 0 ? safeReviews[0] : null;
+  const latestMessage = safeMessageThreads.length > 0 ? safeMessageThreads[0] : null;
 
   // Calculate current month's revenue (placeholder - would need actual sales data)
   const currentMonthRevenue = 0; // TODO: Implement actual revenue calculation
@@ -121,7 +127,7 @@ const DashboardOverview: NextPage = () => {
                 {listingsLoading ? <Skeleton className="h-8 w-12" /> : activeListings.length}
               </div>
               <p className="text-xs text-muted-foreground">
-                {(listings?.length || 0) - activeListings.length} archived
+                {safeListings.length - activeListings.length} archived
               </p>
             </CardContent>
           </Card>
@@ -193,7 +199,7 @@ const DashboardOverview: NextPage = () => {
                     <RatingStars rating={averageRating || 0} size="sm" />
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    {reviews?.length || 0} total reviews
+                    {safeReviews.length} total reviews
                   </p>
                 </>
               )}
@@ -211,7 +217,7 @@ const DashboardOverview: NextPage = () => {
                 <Skeleton className="h-8 w-12" />
               ) : (
                 <>
-                  <div className="text-2xl font-bold">{messageThreads?.length || 0}</div>
+                  <div className="text-2xl font-bold">{safeMessageThreads.length}</div>
                   {latestMessage && (
                     <p className="text-xs text-muted-foreground truncate">
                       Latest: {latestMessage.subject || 'No subject'}
