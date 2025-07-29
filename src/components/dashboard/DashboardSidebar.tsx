@@ -30,19 +30,51 @@ export function DashboardSidebar({ onNavigate }: DashboardSidebarProps) {
   const { user, isEmailVerified, updateProfile } = useAuth();
   const { unreadCounts } = useUnread();
   const { theme, setTheme } = useTheme();
+  const { toast } = useToast();
   
   // Use the simplified premium status hook as the single source of truth
   const { isPremium, tier, isLoading: isPremiumLoading, source } = useSimplifiedPremiumStatus();
 
   // Theme handling function
   const handleThemeChange = async (newTheme: 'light' | 'dark' | 'midnight' | 'system') => {
-    setTheme(newTheme);
-    if (user) {
-      try {
+    console.log('Theme change requested:', newTheme);
+    
+    try {
+      // Set theme immediately for instant UI feedback
+      setTheme(newTheme);
+      console.log('Theme set in next-themes:', newTheme);
+      
+      // Save to user profile if logged in
+      if (user) {
+        console.log('Saving theme preference to user profile...');
         await updateProfile({ theme: newTheme });
-      } catch (error) {
-        console.error('Failed to save theme preference:', error);
+        console.log('Theme preference saved successfully');
+        
+        // Show success toast
+        toast({
+          title: "Theme Updated",
+          description: `Theme changed to ${getThemeDisplayName(newTheme).toLowerCase()}`,
+          variant: "default",
+        });
+      } else {
+        console.log('No user logged in, theme saved to localStorage only');
+        
+        // Show info toast for non-logged-in users
+        toast({
+          title: "Theme Changed",
+          description: `Theme changed to ${getThemeDisplayName(newTheme).toLowerCase()}. Sign in to save your preference.`,
+          variant: "default",
+        });
       }
+    } catch (error) {
+      console.error('Failed to save theme preference:', error);
+      
+      // Show error toast
+      toast({
+        title: "Theme Save Failed",
+        description: "Theme changed locally but couldn't be saved to your profile. It will reset when you sign out.",
+        variant: "destructive",
+      });
     }
   };
 
