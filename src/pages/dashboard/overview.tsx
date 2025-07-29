@@ -48,12 +48,12 @@ const DashboardOverview: NextPage = () => {
   const { account: stripeAccount, loading: stripeLoading } = useStripeConnectAccount();
 
   // Calculate stats
-  const activeListings = listings.filter(listing => listing.status === 'active');
-  const unreadNotifications = notifications.filter(notification => !notification.read);
-  const latestNotification = notifications[0];
-  const latestOffer = receivedOffers[0];
-  const latestReview = reviews[0];
-  const latestMessage = messageThreads[0];
+  const activeListings = listings?.filter(listing => listing.status === 'active') || [];
+  const unreadNotifications = notifications?.filter(notification => !notification.read) || [];
+  const latestNotification = notifications?.[0];
+  const latestOffer = receivedOffers?.[0];
+  const latestReview = reviews?.[0];
+  const latestMessage = messageThreads?.[0];
 
   // Calculate current month's revenue (placeholder - would need actual sales data)
   const currentMonthRevenue = 0; // TODO: Implement actual revenue calculation
@@ -121,7 +121,7 @@ const DashboardOverview: NextPage = () => {
                 {listingsLoading ? <Skeleton className="h-8 w-12" /> : activeListings.length}
               </div>
               <p className="text-xs text-muted-foreground">
-                {listings.length - activeListings.length} archived
+                {(listings?.length || 0) - activeListings.length} archived
               </p>
             </CardContent>
           </Card>
@@ -189,11 +189,11 @@ const DashboardOverview: NextPage = () => {
               ) : (
                 <>
                   <div className="flex items-center gap-2">
-                    <div className="text-2xl font-bold">{averageRating.toFixed(1)}</div>
-                    <RatingStars rating={averageRating} size="sm" />
+                    <div className="text-2xl font-bold">{(averageRating || 0).toFixed(1)}</div>
+                    <RatingStars rating={averageRating || 0} size="sm" />
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    {reviews.length} total reviews
+                    {reviews?.length || 0} total reviews
                   </p>
                 </>
               )}
@@ -211,7 +211,7 @@ const DashboardOverview: NextPage = () => {
                 <Skeleton className="h-8 w-12" />
               ) : (
                 <>
-                  <div className="text-2xl font-bold">{messageThreads.length}</div>
+                  <div className="text-2xl font-bold">{messageThreads?.length || 0}</div>
                   {latestMessage && (
                     <p className="text-xs text-muted-foreground truncate">
                       Latest: {latestMessage.subject || 'No subject'}
