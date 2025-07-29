@@ -641,6 +641,45 @@ export default function AdminDashboard() {
                       </Button>
                     </div>
                   </Card>
+                  
+                  {/* Check Offers Status */}
+                  <Card className="p-4">
+                    <h3 className="font-semibold mb-2">Check Current Offers Status</h3>
+                    <p className="text-sm text-muted-foreground mb-4">📊 Analyze current offers in the system and TTL implementation status</p>
+                    <Button
+                      onClick={() => handleApiCall('/api/admin/check-offers-status')}
+                      disabled={loading}
+                      className="w-full"
+                    >
+                      {loading ? 'Analyzing...' : 'Analyze Current Offers'}
+                    </Button>
+                  </Card>
+                  
+                  {/* Manual Offers Cleanup */}
+                  <Card className="p-4">
+                    <h3 className="font-semibold mb-2">Manual Offers Cleanup</h3>
+                    <p className="text-sm text-muted-foreground mb-4">🧹 Manually run the TTL cleanup process for offers (backup to Firestore TTL)</p>
+                    <Button
+                      onClick={() => handleApiCall('/api/cron/cleanup-ttl-offers')}
+                      disabled={loading}
+                      className="w-full"
+                    >
+                      {loading ? 'Cleaning up...' : 'Run Offers TTL Cleanup'}
+                    </Button>
+                  </Card>
+                  
+                  {/* Manual Expire Old Offers */}
+                  <Card className="p-4">
+                    <h3 className="font-semibold mb-2">Manual Expire Old Offers</h3>
+                    <p className="text-sm text-muted-foreground mb-4">⏰ Manually run the process to expire pending offers that have passed their expiration time</p>
+                    <Button
+                      onClick={() => handleApiCall('/api/offers/expire-old')}
+                      disabled={loading}
+                      className="w-full"
+                    >
+                      {loading ? 'Expiring...' : 'Expire Old Offers'}
+                    </Button>
+                  </Card>
                 </div>
               </AccordionContent>
             </AccordionItem>
