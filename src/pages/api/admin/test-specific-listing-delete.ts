@@ -30,7 +30,7 @@ export default async function handler(
       });
     }
 
-    const listingId = 'NOlBNyOhmrqwr9QGHuze';
+    const listingId = 'Gze7qt051XMClg9Ur0af';
     
     console.log(`[Test] Step 1: Checking if listing ${listingId} exists`);
     
