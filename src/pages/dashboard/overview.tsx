@@ -1,5 +1,5 @@
 import type { NextPage } from 'next';
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { useAuth } from '@/contexts/AuthContext';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
@@ -47,19 +47,105 @@ const DashboardOverview: NextPage = () => {
   const { isPremium, tier } = useSimplifiedPremiumStatus();
   const { account: stripeAccount, loading: stripeLoading } = useStripeConnectAccount();
 
-  // Calculate stats with comprehensive null/undefined checks
-  const safeListings = Array.isArray(listings) ? listings : [];
-  const safeNotifications = Array.isArray(notifications) ? notifications : [];
-  const safeReceivedOffers = Array.isArray(receivedOffers) ? receivedOffers : [];
-  const safeReviews = Array.isArray(reviews) ? reviews : [];
-  const safeMessageThreads = Array.isArray(messageThreads) ? messageThreads : [];
+  // Calculate stats with comprehensive null/undefined checks and error boundaries
+  const safeListings = React.useMemo(() => {
+    try {
+      return Array.isArray(listings) ? listings.filter(Boolean) : [];
+    } catch (error) {
+      console.warn('Error processing listings:', error);
+      return [];
+    }
+  }, [listings]);
 
-  const activeListings = safeListings.filter(listing => listing && listing.status === 'active');
-  const unreadNotifications = safeNotifications.filter(notification => notification && !notification.read);
-  const latestNotification = safeNotifications.length > 0 ? safeNotifications[0] : null;
-  const latestOffer = safeReceivedOffers.length > 0 ? safeReceivedOffers[0] : null;
-  const latestReview = safeReviews.length > 0 ? safeReviews[0] : null;
-  const latestMessage = safeMessageThreads.length > 0 ? safeMessageThreads[0] : null;
+  const safeNotifications = React.useMemo(() => {
+    try {
+      return Array.isArray(notifications) ? notifications.filter(Boolean) : [];
+    } catch (error) {
+      console.warn('Error processing notifications:', error);
+      return [];
+    }
+  }, [notifications]);
+
+  const safeReceivedOffers = React.useMemo(() => {
+    try {
+      return Array.isArray(receivedOffers) ? receivedOffers.filter(Boolean) : [];
+    } catch (error) {
+      console.warn('Error processing offers:', error);
+      return [];
+    }
+  }, [receivedOffers]);
+
+  const safeReviews = React.useMemo(() => {
+    try {
+      return Array.isArray(reviews) ? reviews.filter(Boolean) : [];
+    } catch (error) {
+      console.warn('Error processing reviews:', error);
+      return [];
+    }
+  }, [reviews]);
+
+  const safeMessageThreads = React.useMemo(() => {
+    try {
+      return Array.isArray(messageThreads) ? messageThreads.filter(Boolean) : [];
+    } catch (error) {
+      console.warn('Error processing message threads:', error);
+      return [];
+    }
+  }, [messageThreads]);
+
+  const activeListings = React.useMemo(() => {
+    try {
+      return safeListings.filter(listing => listing && listing.status === 'active');
+    } catch (error) {
+      console.warn('Error filtering active listings:', error);
+      return [];
+    }
+  }, [safeListings]);
+
+  const unreadNotifications = React.useMemo(() => {
+    try {
+      return safeNotifications.filter(notification => notification && !notification.read);
+    } catch (error) {
+      console.warn('Error filtering unread notifications:', error);
+      return [];
+    }
+  }, [safeNotifications]);
+
+  const latestNotification = React.useMemo(() => {
+    try {
+      return safeNotifications.length > 0 && safeNotifications[0] ? safeNotifications[0] : null;
+    } catch (error) {
+      console.warn('Error getting latest notification:', error);
+      return null;
+    }
+  }, [safeNotifications]);
+
+  const latestOffer = React.useMemo(() => {
+    try {
+      return safeReceivedOffers.length > 0 && safeReceivedOffers[0] ? safeReceivedOffers[0] : null;
+    } catch (error) {
+      console.warn('Error getting latest offer:', error);
+      return null;
+    }
+  }, [safeReceivedOffers]);
+
+  const latestReview = React.useMemo(() => {
+    try {
+      return safeReviews.length > 0 && safeReviews[0] ? safeReviews[0] : null;
+    } catch (error) {
+      console.warn('Error getting latest review:', error);
+      return null;
+    }
+  }, [safeReviews]);
+
+  const latestMessage = React.useMemo(() => {
+    try {
+      return safeMessageThreads.length > 0 && safeMessageThreads[0] ? safeMessageThreads[0] : null;
+    } catch (error) {
+      console.warn('Error getting latest message:', error);
+      return null;
+    }
+  }, [safeMessageThreads]);
 
   // Calculate current month's revenue (placeholder - would need actual sales data)
   const currentMonthRevenue = 0; // TODO: Implement actual revenue calculation
