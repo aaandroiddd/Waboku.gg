@@ -147,7 +147,8 @@ export default function AdminDashboard() {
           endpoint === '/api/debug/test-admin-privileges' ||
           endpoint === '/api/admin/migrate-to-ttl' ||
           endpoint === '/api/listings/cleanup-related-data' ||
-          endpoint === '/api/admin/test-ttl-archive') {
+          endpoint === '/api/admin/test-ttl-archive' ||
+          endpoint === '/api/cron/cleanup-ttl-listings') {
         headers = {
           ...headers,
           'Authorization': `Bearer ${adminSecret}`
@@ -580,6 +581,19 @@ export default function AdminDashboard() {
                         {loading ? 'Archiving...' : 'Test 1-Minute TTL Archive'}
                       </Button>
                     </div>
+                  </Card>
+                  
+                  {/* Manual TTL Cleanup */}
+                  <Card className="p-4">
+                    <h3 className="font-semibold mb-2">Manual TTL Cleanup</h3>
+                    <p className="text-sm text-muted-foreground mb-4">🧹 Manually run the TTL cleanup process to delete expired listings (backup to Firestore TTL)</p>
+                    <Button
+                      onClick={() => handleApiCall('/api/cron/cleanup-ttl-listings')}
+                      disabled={loading}
+                      className="w-full"
+                    >
+                      {loading ? 'Cleaning up...' : 'Run TTL Cleanup'}
+                    </Button>
                   </Card>
                 </div>
               </AccordionContent>
