@@ -26,6 +26,7 @@ import { ListingUsernameDebugger } from '@/components/admin/ListingUsernameDebug
 import ProductionUsernameDebugger from '@/components/admin/ProductionUsernameDebugger';
 import { ListingExpirationDebugger } from '@/components/ListingExpirationDebugger';
 import DashboardOfferDebugger from '@/components/admin/DashboardOfferDebugger';
+import UserMigrationTool from '@/components/admin/UserMigrationTool';
 import {
   Accordion,
   AccordionItem,
@@ -63,6 +64,7 @@ const SECTIONS = [
   { id: "review-migration", label: "Review Username Migration" },
   { id: "subscription", label: "Subscription Management" },
   { id: "support-management", label: "Support Ticket Management" },
+  { id: "user-migration", label: "User Account Migration" },
   { id: "user-tier", label: "User Tier Management" },
   { id: "wanted-posts", label: "Wanted Posts Debugging Tools" },
   { id: "webhook", label: "Stripe Webhook Fix" },
@@ -1331,6 +1333,16 @@ export default function AdminDashboard() {
                   >
                     Support Management Dashboard
                   </Button>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+
+            {/* User Account Migration */}
+            <AccordionItem value="user-migration" id="user-migration" ref={el => (sectionRefs.current["user-migration"] = el)}>
+              <AccordionTrigger>User Account Migration</AccordionTrigger>
+              <AccordionContent>
+                <div className="py-4">
+                  <UserMigrationTool />
                 </div>
               </AccordionContent>
             </AccordionItem>
