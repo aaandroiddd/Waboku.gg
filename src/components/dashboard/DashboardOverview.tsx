@@ -165,12 +165,12 @@ export default function DashboardOverview() {
             <TooltipTrigger asChild>
               <button 
                 onClick={handleViewProfile}
-                className="cursor-pointer hover:opacity-80 transition-opacity"
+                className="cursor-pointer hover:scale-105 transition-all duration-200 group"
               >
                 <ProfileAvatar 
                   user={user} 
-                  size="md" 
-                  className="border-2 border-primary/20 hover:border-primary/40 transition-colors"
+                  size="xl" 
+                  className="border-4 border-primary/30 hover:border-primary/60 transition-all duration-200 shadow-lg hover:shadow-xl group-hover:ring-4 group-hover:ring-primary/20"
                 />
               </button>
             </TooltipTrigger>
